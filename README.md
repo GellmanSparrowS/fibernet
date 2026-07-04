@@ -4,8 +4,10 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-426%20passing-green.svg)]()
+[![Tests](https://img.shields.io/badge/tests-430%20passing-green.svg)]()
 [![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)]()
+[![CI/CD](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml/badge.svg)](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml)
+[![Documentation Status](https://readthedocs.org/projects/fibernet/badge/?version=latest)](https://fibernet.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://img.shields.io/badge/DOI-pending-orange.svg)]()
 [![GitHub](https://img.shields.io/github/stars/GellmanSparrowS/fibernet?style=social)](https://github.com/GellmanSparrowS/fibernet)
 
@@ -386,6 +388,20 @@ from fibernet.utils.units import convert_network
 
 # Convert to micrometers
 net_micro = convert_network(net, from_unit='si', to_unit='micro')
+```
+
+## Examples
+
+FiberNet includes several example scripts in the `examples/` directory:
+
+- **`basic_usage.py`** — Quick start with network generation and analysis
+- **`full_workflow.py`** — Complete pipeline: generate → analyze → simulate → export
+- **`ml_example.py`** — Machine learning integration with feature extraction and prediction
+- **`comprehensive_demo.py`** — Showcase of all major features
+
+Run any example:
+```bash
+python examples/full_workflow.py
 ```
 
 ## Project Structure
