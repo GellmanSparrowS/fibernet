@@ -4,24 +4,35 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Tests](https://img.shields.io/badge/tests-202%20passing-green.svg)]()
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)]()
+[![GitHub](https://img.shields.io/github/stars/GellmanSparrowS/fibernet?style=social)](https://github.com/GellmanSparrowS/fibernet)
 
-FiberNet provides tools for:
-- **Generating** 2D/3D fiber networks (ordered, disordered, chiral, woven, hierarchical, biomimetic)
-- **Transforming** networks (mirror, rotate, scale, merge, tile, pattern)
-- **Simulating** physics (mechanics, dynamics, fracture, thermal, electromagnetic)
-- **Analyzing** structure (topology, morphology, spectral, pore distribution)
-- **Accelerating** computations with Taichi (CPU/GPU parallel)
+FiberNet enables researchers to generate, analyze, simulate, and visualize fiber network structures for applications in materials science, biomechanics, polymer physics, and composites engineering.
+
+## Features
+
+| Category | Capabilities |
+|----------|-------------|
+| **Generation** | 50+ generators: random, ordered, chiral, woven, hierarchical, biomimetic, CNT, paper, textile, electrospun |
+| **Simulation** | Mechanical (linear/nonlinear), dynamics, fracture, thermal, electromagnetic, fluid flow, acoustic |
+| **Analysis** | Morphology, topology, spectral, pore structure, anisotropy, networkx graph analysis, statistics |
+| **ML Integration** | Feature extraction, property prediction with sklearn, dataset generation |
+| **I/O** | JSON, LAMMPS, VTK, GMSH, PDB, XYZ formats |
+| **Acceleration** | Taichi CPU/GPU parallel computing |
+| **Units** | SI, CGS, micro, nano, molecular unit systems |
 
 ## Installation
 
 ```bash
-pip install -e .
+pip install fibernet
 
 # With all optional dependencies
-pip install -e ".[all]"
+pip install fibernet[full]
 
-# For development
-pip install -e ".[dev]"
+# Development install
+git clone https://github.com/GellmanSparrowS/fibernet.git
+cd fibernet && pip install -e ".[dev]"
 ```
 
 ## Quick Start
@@ -29,235 +40,208 @@ pip install -e ".[dev]"
 ```python
 import fibernet as fn
 from fibernet import gen
-from fibernet.sim.mechanical import FiberFEM
-from fibernet.analysis import MorphologyAnalyzer
 
-# Generate a 2D random fiber network
-net = gen.random_straight_2d(num_fibers=100, fiber_length=15, box_size=(50, 50), seed=42)
-print(f"Network: {net.num_fibers} fibers, {net.num_crosslinks} crosslinks")
+# Generate a random 2D fiber network
+net = gen.random_straight_2d(
+    num_fibers=100,
+    fiber_length=15.0,
+    box_size=(50, 50),
+    radius=0.1,
+    seed=42
+)
 
-# Analyze morphology
-morph = MorphologyAnalyzer(net)
-print(f"Mean fiber length: {morph.mean_fiber_length():.2f}")
-print(f"Nematic order: {morph.nematic_order_parameter():.3f}")
+# Quick analysis
+results = fn.analyze(net)
+print(f"Nematic order: {results['nematic_order']:.3f}")
 
 # Run mechanical simulation
-fem = FiberFEM(net, segments_per_fiber=5)
-result = fem.apply_uniaxial_strain(strain=0.001, axis=0)
-print(f"Effective modulus: {fem.effective_modulus():.2e} Pa")
+mech = fn.simulate_mechanics(net, strain=0.01, axis=0)
+print(f"Effective modulus: {mech['modulus']:.2e} Pa")
+
+# Export to VTK for Paraview visualization
+fn.export(net, "network.vtk")
 ```
 
-## Structure Generators
+## Network Generators
 
 ### Disordered Networks
-- `random_straight_2d` / `random_straight_3d` - Mikado model
-- `random_walk_fibers` - Random walk polymer chains
-- `oriented_random_2d` - Partially aligned fibers
-- `poisson_line_network_2d` - Poisson line process
+- `random_straight_2d` / `random_straight_3d` — Random straight fibers
+- `random_walk_fibers` — Random walk (polymer-like)
+- `random_curved_fibers` — Curved fibers with persistence
+- `poisson_voronoi_2d` / `_3d` — Voronoi-based networks
+- `electrospun_mat` — Electrospun nanofiber mats
 
-### Ordered Lattices
-- `square_lattice_2d` / `triangular_lattice_2d` / `honeycomb_lattice_2d`
-- `cubic_lattice_3d` / `octet_truss_3d` / `kagome_lattice_2d`
-- `diamond_lattice_3d` - Tetrahedral bonding
+### Ordered Structures
+- `square_lattice_2d` / `cubic_lattice_3d` — Regular lattices
+- `honeycomb_lattice_2d` — Honeycomb structure
+- `triangular_lattice_2d` — Triangular lattice
+- `diamond_lattice_3d` — Diamond cubic
+- `octet_truss_3d` — Octet truss
 
-### Chiral Structures
-- `single_helix` / `double_helix` - DNA-like helices
-- `braided_rope` - Multi-strand braiding
-- `twisted_bundle` - Twisted fiber bundles
-- `chiral_metamaterial` - Chiral lattice structures
+### Chiral & Special
+- `double_helix` — DNA-like double helix
+- `triple_helix` — Collagen-like triple helix
+- `chiral_braided` — Braided chiral structures
+- `auxetic_reentrant` — Auxetic (negative Poisson ratio)
 
-### Woven Structures
-- `plain_weave_2d` / `twill_weave_2d` / `satin_weave_2d`
-- `woven_3d_orthogonal` - 3D orthogonal woven
+### Woven & Textile
+- `plain_weave_2d` / `plain_weave_3d` — Plain weave
+- `satin_weave` — Satin weave pattern
+- `twill_weave` — Twill weave pattern
+- `textile_weave` — General weave with crimp
 
-### Hierarchical Structures
-- `hierarchical_bundle` - Multi-level fiber bundles
-- `gradient_density_network` - Spatially varying density
-- `core_shell_fiber` - Core-shell composite fibers
-- `fractal_network` - Self-similar fractal structures
+### Biomimetic
+- `biomimetic_collagen` — Collagen-like D-banding
+- `cnt_network_2d` / `cnt_network_3d` — Carbon nanotube networks
+- `paper_network` — Cellulose paper fibers
+- `fiber_reinforced_composite` — Composite structures
 
-### Advanced Generators
-- `voronoi_network_2d` / `voronoi_network_3d` - Voronoi tessellation
-- `electrospun_network` - Electrospun nanofiber mats (4 deposition modes)
-- `meltblown_network` - Melt-blown nonwovens
-- `biomimetic_collagen` - Type-I collagen with D-banding
-- `biomimetic_fibrin` - Fibrin clot with branching
-- `defected_lattice` - Lattices with controlled defects
-- `composite_network` - Multi-material composites
-- `graded_network` - Spatially graded properties
-- `auxetic_structure` - Negative Poisson's ratio
-- `kirigami_structure` - Cut-pattern metamaterials
+### Hierarchical
+- `hierarchical_bundle` — Multi-scale bundled fibers
+- `gyroid_scaffold` — Gyroid triply periodic surface
+- `foam_scaffold` — Stochastic foam structure
+- `voronoi_fiber` — Voronoi fiber networks
 
-### Variant Generators
-- `lattice_2d_to_3d` - Extrude 2D to 3D with vertical bonds
-- `curved_lattice` - Apply curvature deformation
-- `multi_radius_network` - Bimodal/uniform/normal/power-law radius
-- `variable_stiffness_network` - Spatially varying stiffness
-- `gyroid_infill` - TPMS gyroid structures
-- `foam_like_3d` - Open-cell foam with curved struts
+## Simulation Capabilities
 
-## Network Transformations
-
+### Mechanical (Linear)
 ```python
-from fibernet.core.transform import mirror, rotate, scale, translate, merge, tile, create_pattern
-
-# Basic transforms
-mirrored = mirror(net, axis=0)
-rotated = rotate(net, angle=np.pi/4, axis=[0, 0, 1])
-scaled = scale(net, factor=2.0)
-translated = translate(net, offset=[10, 10, 0])
-
-# Merge multiple networks
-composite = merge([net1, net2], offsets=[np.zeros(3), np.array([50, 0, 0])])
-
-# Tile for periodic structures
-tiled = tile(net, repeats=(3, 3, 1))
-
-# Create patterns (circular, linear, grid, spiral)
-patterned = create_pattern(net, pattern_type="circular", num_units=8, radius=30)
-```
-
-## Simulation Engines
-
-### Mechanical (FEM)
-```python
-from fibernet.sim.mechanical import FiberFEM, stress_strain_curve
+from fibernet.sim.mechanical import FiberFEM
 
 fem = FiberFEM(net, segments_per_fiber=5)
 result = fem.apply_uniaxial_strain(strain=0.01, axis=0)
-print(f"Max displacement: {result.max_displacement()}")
-print(f"Effective modulus: {fem.effective_modulus():.2e} Pa")
+print(f"Energy: {result.energy:.4e} J")
+print(f"Modulus: {fem.effective_modulus(strain=0.001, axis=0):.2e} Pa")
 ```
 
-### Dynamics
+### Nonlinear Mechanics
 ```python
-from fibernet.sim.dynamics import FiberDynamics
+from fibernet.sim.nonlinear import NonlinearFEM, BilinearPlasticity
 
-dyn = FiberDynamics(net, dt=1e-6, damping=0.01)
-dyn.run(steps=1000, temperature=300)
+model = BilinearPlasticity(E=1e9, sigma_y=1e7, Et=1e8)
+fem = NonlinearFEM(net, constitutive_model=model)
+strains, stresses, energies = fem.stress_strain_curve(axis=0, max_strain=0.05)
 ```
 
-### Fracture
-```python
-from fibernet.sim.fracture import FiberFracture
+Constitutive models: Neo-Hookean, Mooney-Rivlin, Arruda-Boyce, Bilinear Plasticity, Power-Law Hardening, Maxwell/Kelvin-Voigt Viscoelasticity
 
-frac = FiberFracture(net, strength_mean=1e9, strength_std=1e8)
-result = frac.progressive_failure(max_strain=0.1)
+### Fluid Flow
+```python
+from fibernet.sim.fluid import DarcySolver
+
+solver = DarcySolver(net)
+porosity = solver.compute_porosity()
+K = solver.kozeny_carman_permeability()
+print(f"Permeability: {K:.4e} m²")
 ```
 
 ### Thermal
 ```python
-from fibernet.sim.thermal import ThermalSolver
-
-thermal = ThermalSolver(net)
-result = thermal.solve_steady_state(T_hot=100, T_cold=0, axis=0)
-print(f"Effective conductivity: {result.effective_conductivity:.2f} W/(m·K)")
+thermal = fn.simulate_thermal(net, T_hot=100, T_cold=0)
+print(f"Conductivity: {thermal['conductivity']:.2f} W/(m·K)")
 ```
 
-### Electromagnetic
+### Acoustic
 ```python
-from fibernet.sim.electromagnetic import EMSolver
+from fibernet.sim.acoustic import AcousticSolver
 
-em = EMSolver(net)
-result = em.solve_conductivity(axis=0)
-print(f"Effective conductivity: {result.effective_conductivity:.2e} S/m")
+solver = AcousticSolver(net, segments_per_fiber=5)
+result = solver.compute_modes(num_modes=20)
+print(f"Fundamental frequency: {result.fundamental_frequency():.2f} Hz")
 ```
 
-### Taichi Acceleration
-```python
-from fibernet.sim.accelerated import TaichiEngine
-
-engine = TaichiEngine(arch="cpu", num_threads=8)
-forces = engine.parallel_force_computation(positions, rest_lengths, stiffness, edges)
-```
-
-## Analysis Tools
+## Machine Learning
 
 ```python
-from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
-from fibernet.analysis.advanced import SpectralAnalyzer, PoreAnalyzer, AnisotropyAnalyzer
+from fibernet.ml.features import extract_features
+from fibernet.ml.predictor import PropertyPredictor
 
-# Morphology
-morph = MorphologyAnalyzer(net)
-print(f"Nematic order: {morph.nematic_order_parameter():.3f}")
-print(f"Mean tortuosity: {morph.mean_tortuosity():.3f}")
+# Extract structural features
+features = extract_features(net)
 
-# Topology
-topo = TopologyAnalyzer(net)
-print(f"Mean degree: {topo.degree_statistics()['mean']:.2f}")
-print(f"Connected: {topo.is_connected()}")
+# Train property predictor
+predictor = PropertyPredictor(model_type='random_forest')
+predictor.fit(networks, properties)
 
-# Spectral analysis
-spectral = SpectralAnalyzer(net)
-print(f"Spectral gap: {spectral.spectral_gap():.4f}")
-print(f"Spectral entropy: {spectral.spectral_entropy():.4f}")
-
-# Pore distribution
-pore = PoreAnalyzer(net)
-stats = pore.pore_size_statistics()
-print(f"Mean pore size: {stats['mean']:.3f}")
-
-# Anisotropy
-aniso = AnisotropyAnalyzer(net)
-print(f"Anisotropy index: {aniso.anisotropy_index():.3f}")
+# Predict
+predicted = predictor.predict(new_network)
 ```
 
-## Visualization
+## Transformations
 
 ```python
-from fibernet.viz.plot2d import plot_network_2d
-from fibernet.viz.render3d import render_network_3d
+from fibernet.core.transform import rotate, scale, mirror, merge, tile
 
-# 2D plot
-fig = plot_network_2d(net, color_by="orientation")
-fig.savefig("network_2d.png", dpi=150)
-
-# 3D render
-plotter = render_network_3d(net, color_by="stress")
-plotter.screenshot("network_3d.png")
+rotated = rotate(net, angle=0.785, axis=[0, 0, 1])  # 45° rotation
+scaled = scale(net, factor=2.0)
+mirrored = mirror(net, axis=0)
+merged = merge([net1, net2, net3])
+tiled = tile(net, repeats=(2, 2, 1))  # 2×2 supercell
 ```
 
-## Built-in Materials
+## Periodic Boundary Conditions
 
-21 pre-defined materials:
-- Carbon fiber, Glass fiber, Kevlar, Dyneema
-- Collagen, Fibrin, Silk, Cellulose
-- Steel, Aluminum, Titanium, Copper
-- CNT, Graphene, Polymer (generic)
-- Nylon, Polyester, Polypropylene
-- Ceramic, Bio-glass
+```python
+from fibernet.core.pbc import PeriodicBox, apply_pbc, compute_rdf
 
-## Examples
-
-```bash
-python examples/basic_usage.py           # Simple introduction
-python examples/advanced_generators.py   # Advanced generators
-python examples/transformations.py       # Transform operations
-python examples/full_workflow.py         # Complete research workflow
+wrapped, box = apply_pbc(net, box_size=[50, 50, 50])
+r, g = compute_rdf(wrapped, box, r_max=20, num_bins=50)
 ```
+
+## Unit Systems
+
+```python
+from fibernet.utils.units import UnitConverter
+
+# Convert between unit systems
+E_si = 200e9  # Pa
+E_cgs = UnitConverter.from_si(E_si, 'stress', to_unit='CGS')  # dyn/cm²
+```
+
+## I/O Formats
+
+| Format | Extension | Use Case |
+|--------|-----------|----------|
+| JSON | `.json` | Native serialization |
+| LAMMPS | `.lammps` | Molecular dynamics |
+| VTK | `.vtk` | Paraview/VisIt visualization |
+| GMSH | `.msh` | FEM meshing |
+| PDB | `.pdb` | Molecular visualization |
+| XYZ | `.xyz` | Simple atomic coordinates |
 
 ## Project Structure
 
 ```
 fibernet/
-├── core/           # Data structures (Fiber, Network, Material, Transform)
-├── gen/            # Structure generators (disordered, ordered, chiral, woven, hierarchical, advanced, variants)
-├── sim/            # Simulation engines (mechanical, dynamics, fracture, thermal, electromagnetic, coupling, accelerated)
-├── analysis/       # Analysis tools (topology, morphology, properties, advanced)
-├── viz/            # Visualization (2D plots, 3D rendering, animations)
-├── utils/          # Utilities (geometry, I/O)
-└── examples/       # Example scripts
+├── core/           # Data structures (Fiber, Network, Material, PBC, Crosslinks)
+├── gen/            # Network generators (50+)
+├── sim/            # Simulation engines (9 physics modules)
+├── analysis/       # Structural analysis (morphology, topology, spectral)
+├── io/             # I/O format support (6 formats)
+├── ml/             # Machine learning integration
+├── viz/            # Visualization
+├── utils/          # Utilities (units, validation)
+└── api.py          # High-level convenience API
 ```
 
 ## Testing
 
 ```bash
-python -m pytest tests/ -v
+pytest tests/ -v          # Run all 202 tests
+pytest tests/ --cov       # With coverage
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines. We welcome:
+- New generators
+- Simulation models
+- Analysis tools
+- Bug fixes and improvements
 
 ## License
 
-MIT License - see LICENSE file for details.
+MIT License. See [LICENSE](LICENSE).
 
 ## Citation
 
@@ -265,7 +249,7 @@ If you use FiberNet in your research, please cite:
 
 ```bibtex
 @software{fibernet2026,
-  title = {FiberNet: A Comprehensive Toolkit for Fiber Network Simulation},
+  title = {FiberNet: A Comprehensive Fiber Network Simulation Toolkit},
   author = {FiberNet Contributors},
   year = {2026},
   url = {https://github.com/GellmanSparrowS/fibernet}
