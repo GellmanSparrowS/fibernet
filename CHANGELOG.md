@@ -7,12 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.5.1] - 2026-07-05
 
+### Added
+- **18 edge case tests** for robustness validation (448 total tests)
+- Comprehensive Sphinx documentation with autodoc
+- Full workflow example (`examples/full_workflow.py`)
+- ML integration example (`examples/ml_example.py`)
+- CONTRIBUTING.md with development guidelines
+- Read the Docs configuration for automated documentation hosting
+- GitHub Actions CI/CD workflow for multi-platform testing
+
 ### Fixed
 - Made optional dependencies truly optional (networkx, tqdm, matplotlib, pyvista, etc.)
 - Fixed `api.analyze()` to gracefully handle missing topology analysis
 - Added proper error messages when optional dependencies are not installed
 - Fixed pyproject.toml license format to modern SPDX expression
-- Added comprehensive integration tests
+- Fixed comprehensive demo script API usage
+
 
 ### Added
 - Comprehensive demo script (`examples/comprehensive_demo.py`)
