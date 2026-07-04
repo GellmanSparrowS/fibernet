@@ -143,3 +143,15 @@ __all__.extend([
     "DamageState", "FatigueResult", "ProgressiveFailureResult",
     "compute_damage_tolerance"
 ])
+
+# Multi-scale modeling
+from .multiscale import (
+    HomogenizationSolver, RVEAnalyzer,
+    HomogenizedProperties, RVEResult,
+    compute_effective_properties, estimate_rve_size
+)
+__all__.extend([
+    "HomogenizationSolver", "RVEAnalyzer",
+    "HomogenizedProperties", "RVEResult",
+    "compute_effective_properties", "estimate_rve_size"
+])

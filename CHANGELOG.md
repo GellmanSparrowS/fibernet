@@ -343,3 +343,29 @@ FiberNet has reached 1.0.0! This marks the first stable release of our comprehen
 ### Documentation
 - Added damage mechanics module documentation
 - Updated README with fatigue analysis examples
+
+## [1.5.0] - 2026-07-05
+
+### Added
+- **Multi-scale Modeling Framework** (`fibernet/sim/multiscale.py`)
+  - HomogenizationSolver for effective property computation
+  - RVEAnalyzer for representative volume element analysis
+  - Elastic property homogenization (orientation averaging)
+  - Thermal property homogenization
+  - Periodic boundary condition application
+  - Effective stiffness tensor computation
+  - RVE size convergence study utilities
+  - `compute_effective_properties()` convenience function
+  - `estimate_rve_size()` for convergence analysis
+  - HomogenizedProperties and RVEResult data classes
+
+- **Tests**
+  - 10 new tests for multi-scale modeling
+  - Total: 411 tests (all passing)
+
+### Changed
+- Version bump to 1.5.0
+
+### Documentation
+- Added multi-scale modeling documentation
+- Updated README with homogenization examples
