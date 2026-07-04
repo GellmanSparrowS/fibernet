@@ -240,3 +240,57 @@
 - Time-dependent behavior for biological/polymer fibers
 - Ready for GitHub Pages deployment
 
+
+### ✅ Phase 8 (Complete): DMA, Configuration, Crosslinks & Ensemble
+- [x] **Dynamic Mechanical Analysis** (`fibernet/sim/dma.py`)
+  - `frequency_sweep()`: Frequency-domain DMA simulation
+  - `temperature_sweep()`: Temperature-domain with TTS
+  - `master_curve()`: Time-temperature superposition
+  - `DMAResult` with storage/loss modulus, tan(δ), complex modulus
+  - Glass transition detection from tan(δ) peak
+  - Crossover frequency identification
+  - Cole-Cole plot support
+  - 11 new tests
+
+- [x] **Configuration System** (`fibernet/utils/config.py`)
+  - `ExperimentConfig` dataclass for reproducibility
+  - YAML/JSON save/load support
+  - Template configs (mechanical, thermal, DMA, parametric)
+  - `run_from_config()`: Execute experiment from config file
+  - Config hashing for reproducibility tracking
+  - Validation with error reporting
+  - 19 new tests
+
+- [x] **Advanced Crosslink Models** (`fibernet/core/crosslinks.py`)
+  - `CovalentBond`: Morse potential with bond breaking
+  - `HydrogenBond`: Angle-dependent, breakable/reformable
+  - `PhysicalEntanglement`: Topological constraints with slip
+  - `IonicBond`: Yukawa screened Coulomb potential
+  - `create_crosslink()` factory function
+  - 19 new tests
+
+- [x] **Ensemble Generation** (`fibernet/utils/ensemble.py`)
+  - `generate_ensemble()`: Multiple realizations with seed control
+  - `ensemble_analysis()`: Run analysis on each network
+  - `convergence_study()`: Statistical convergence analysis
+  - `EnsembleResult` with auto-computed statistics
+  - Parallel generation support (ThreadPoolExecutor)
+  - 12 new tests
+
+- [x] **Testing**
+  - 49 new tests added this phase
+  - All 328 tests passing (279 + 49)
+  - test_dma.py: 11 tests
+  - test_config.py: 19 tests
+  - test_crosslinks.py: 19 tests
+  - test_ensemble.py: 12 tests
+
+- [x] **Version Update**: 0.7.0 → 0.8.0
+
+**Impact**:
+- DMA enables viscoelastic characterization (critical for polymers/biological fibers)
+- Configuration system ensures reproducibility (essential for research)
+- Advanced crosslinks enable realistic network mechanics
+- Ensemble generation enables statistical rigor
+- Ready for GitHub release v0.8.0
+

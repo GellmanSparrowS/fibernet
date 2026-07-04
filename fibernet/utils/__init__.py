@@ -33,3 +33,13 @@ from .parametric import (
 
 # Batch simulation utilities
 from .batch import batch_simulate, parameter_study, BatchResult
+
+# Configuration system
+from .config import (
+    ExperimentConfig, create_template_config, run_from_config
+)
+
+# Ensemble generation
+from .ensemble import (
+    EnsembleResult, generate_ensemble, ensemble_analysis, convergence_study
+)

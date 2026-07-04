@@ -83,3 +83,11 @@ __all__.extend([
     "ViscoelasticResult", "MaxwellModel", "KelvinVoigtModel",
     "StandardLinearSolid", "GeneralizedMaxwell"
 ])
+
+# Dynamic Mechanical Analysis
+from .dma import (
+    DMAResult, frequency_sweep, temperature_sweep, master_curve
+)
+__all__.extend([
+    "DMAResult", "frequency_sweep", "temperature_sweep", "master_curve"
+])
