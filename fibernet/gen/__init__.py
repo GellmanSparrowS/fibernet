@@ -84,3 +84,31 @@ __all__ += [
     "electrospun_mat",
     "fiber_reinforced_composite",
 ]
+
+# Fractal networks
+from .fractal import (
+    sierpinski_triangle,
+    koch_curve,
+    fractal_tree,
+    hilbert_curve,
+)
+
+__all__.extend([
+    "sierpinski_triangle",
+    "koch_curve",
+    "fractal_tree",
+    "hilbert_curve",
+])
+
+# Gradient networks
+from .gradient import (
+    density_gradient_2d,
+    property_gradient_2d,
+    multi_zone_2d,
+)
+
+__all__.extend([
+    "density_gradient_2d",
+    "property_gradient_2d",
+    "multi_zone_2d",
+])
