@@ -121,3 +121,13 @@ __all__.extend([
     "CrackPropagationSolver", "FractureResult", "CrackTip",
     "compute_energy_release_rate", "compute_fracture_toughness"
 ])
+
+# Rheology
+from .rheology import (
+    FiberSuspensionRheology, RheologyResult, JefferyOrbit,
+    compute_intrinsic_viscosity, compute_dilute_limit_viscosity
+)
+__all__.extend([
+    "FiberSuspensionRheology", "RheologyResult", "JefferyOrbit",
+    "compute_intrinsic_viscosity", "compute_dilute_limit_viscosity"
+])

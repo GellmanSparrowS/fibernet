@@ -283,3 +283,37 @@ FiberNet has reached 1.0.0! This marks the first stable release of our comprehen
 ### Documentation
 - Added percolation analysis documentation
 - Enhanced README with percolation examples
+
+## [1.3.0] - 2026-07-05
+
+### Added
+- **Rheology Module** (`fibernet/sim/rheology.py`)
+  - FiberSuspensionRheology for suspension rheology
+  - Effective viscosity computation (Batchelor theory)
+  - Normal stress differences (Dinh-Armstrong model)
+  - Jeffery orbit computation for single fibers
+  - Orientation tensor evolution (Folgar-Tucker equation)
+  - Shear flow sweep and transient shear simulations
+  - Intrinsic viscosity and dilute limit utilities
+
+- **Interactive Plotly Visualization** (`fibernet/viz/plotly_viz.py`)
+  - Interactive 3D visualization with rotation, zoom, hover
+  - Stress field visualization with colorbars
+  - Network comparison side-by-side
+  - HTML export for web sharing
+  - Configurable colors, opacity, and sizes
+
+- **ML Tutorial Notebook**
+  - `03_machine_learning.ipynb` - ML workflows with FiberNet
+  - Feature extraction and property prediction
+  - GNN integration examples
+  - Structure-property visualization
+
+### Changed
+- Version bump to 1.3.0
+- Updated README with rheology and plotly examples
+
+### Documentation
+- Added ML tutorial notebook
+- Added rheology module documentation
+- Added plotly visualization guide

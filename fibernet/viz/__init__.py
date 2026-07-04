@@ -23,3 +23,20 @@ __all__ = [
     'plot_network_3d',
     'render_network_3d',
 ]
+
+# Interactive Plotly visualization
+try:
+    from .plotly_viz import (
+        visualize_interactive,
+        visualize_stress_field,
+        visualize_comparison,
+        export_html,
+    )
+    __all__ += [
+        'visualize_interactive',
+        'visualize_stress_field',
+        'visualize_comparison',
+        'export_html',
+    ]
+except ImportError:
+    pass
