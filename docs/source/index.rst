@@ -1,81 +1,53 @@
-Welcome to FiberNet's documentation!
-=====================================
+FiberNet Documentation
+=====================
 
-**FiberNet** is a comprehensive Python library for generating, analyzing, and simulating fiber network structures. It provides tools for studying mechanical, thermal, electromagnetic, and multi-physics properties of fiber-based materials.
+.. image:: https://img.shields.io/badge/version-0.6.0-blue
+   :target: https://github.com/GellmanSparrowS/fibernet
 
-.. note::
-   This documentation is for FiberNet version |version|.
+FiberNet is a comprehensive toolkit for fiber network structure research.
+It provides tools for generating, analyzing, and simulating 2D/3D fiber networks.
 
-Key Features
-------------
+**Features:**
 
-- **50+ Network Generators**: From simple random networks to complex biomimetic structures
-- **Multi-Physics Simulation**: Mechanical, thermal, electromagnetic, fluid flow, acoustic
-- **Advanced Analysis**: Topology, morphology, spectral analysis, statistical tools
-- **Machine Learning Integration**: Feature extraction and property prediction
-- **High-Performance Computing**: Taichi GPU acceleration support
-- **Professional I/O**: LAMMPS, VTK, GMSH, PDB, XYZ format support
-
-Quick Start
------------
-
-Install FiberNet:
-
-.. code-block:: bash
-
-   pip install fibernet
-
-Generate and analyze a fiber network:
-
-.. code-block:: python
-
-   import fibernet as fn
-   from fibernet import gen
-
-   # Generate a random 2D network
-   net = gen.random_straight_2d(
-       num_fibers=100,
-       fiber_length=10.0,
-       box_size=(50, 50),
-       radius=0.1,
-       seed=42
-   )
-
-   # Analyze structure
-   from fibernet.analysis import MorphologyAnalyzer
-   analyzer = MorphologyAnalyzer(net)
-   print(f"Nematic order: {analyzer.nematic_order():.3f}")
-
-   # Run mechanical simulation
-   from fibernet.sim import MechanicalSolver
-   solver = MechanicalSolver(net)
-   result = solver.uniaxial_tension(strain=0.01, axis=0)
-   print(f"Effective modulus: {result.modulus:.2e} Pa")
-
-Documentation Contents
-----------------------
+- **Generation**: 26+ generators (disordered, ordered, chiral, woven, hierarchical, specialized)
+- **Simulation**: Mechanical, dynamics, fracture, thermal, electromagnetic, nonlinear
+- **Analysis**: Topology, morphology, network statistics
+- **Visualization**: 2D/3D rendering, animations, statistical plots
+- **I/O**: LAMMPS, VTK, PDB, GMSH, XYZ, Pandas DataFrame
+- **Integration**: NetworkX, Pandas, Matplotlib, PyVista
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
+   :caption: Getting Started
 
    installation
    quickstart
-   tutorials/index
-   examples/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   tutorials/basic_workflow
+   tutorials/mechanical_simulation
+   tutorials/machine_learning
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
-   api/index
    api/generators
    api/simulation
    api/analysis
    api/io
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :caption: Examples
+
+   examples/index
+
+.. toctree::
+   :maxdepth: 2
    :caption: Development
 
    contributing

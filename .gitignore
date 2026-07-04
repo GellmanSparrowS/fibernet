@@ -23,3 +23,5 @@ venv/
 .env
 .env_token
 .bundle
+docs/_build/
+docs/_static/

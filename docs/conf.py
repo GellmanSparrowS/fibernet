@@ -5,14 +5,16 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'FiberNet'
 copyright = '2026, FiberNet Contributors'
 author = 'FiberNet Contributors'
-version = '0.3'
-release = '0.3.0'
+version = '0.6'
+release = '0.6.0'
 
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.todo',
 ]
 
 templates_path = ['_templates']
@@ -27,3 +29,7 @@ autodoc_default_options = {
     'undoc-members': True,
     'show-inheritance': True,
 }
+
+
+mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
+todo_include_todos = True

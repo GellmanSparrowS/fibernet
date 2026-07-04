@@ -1,105 +1,56 @@
 API Reference
 =============
 
-Complete API documentation for all FiberNet modules.
+.. toctree::
+   :maxdepth: 2
 
-Core Modules
+   generators
+   simulation
+   analysis
+   io
+
+Core Classes
 ------------
 
-.. autosummary::
-   :toctree: generated
+.. automodule:: fibernet.core.fiber
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-   fibernet.core.fiber
-   fibernet.core.network
-   fibernet.core.material
-   fibernet.core.pbc
-   fibernet.core.crosslinks
-   fibernet.core.transform
+.. automodule:: fibernet.core.network
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-Generation
-----------
+.. automodule:: fibernet.core.material
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-.. autosummary::
-   :toctree: generated
+.. automodule:: fibernet.core.pbc
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-   fibernet.gen.disordered
-   fibernet.gen.ordered
-   fibernet.gen.chiral
-   fibernet.gen.woven
-   fibernet.gen.hierarchical
-   fibernet.gen.specialized
-
-Simulation
-----------
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.sim.mechanical
-   fibernet.sim.dynamics
-   fibernet.sim.fracture
-   fibernet.sim.thermal
-   fibernet.sim.electromagnetic
-   fibernet.sim.nonlinear
-   fibernet.sim.fluid
-   fibernet.sim.acoustic
-
-Analysis
---------
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.analysis.morphology
-   fibernet.analysis.topology
-   fibernet.analysis.advanced
-   fibernet.analysis.statistics
-
-I/O
----
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.io.json_io
-   fibernet.io.lammps
-   fibernet.io.vtk
-   fibernet.io.pdb
-   fibernet.io.xyz
-   fibernet.io.gmsh
-
-Machine Learning
-----------------
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.ml.features
-   fibernet.ml.predictor
-   fibernet.ml.dataset
-
-Visualization
--------------
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.viz.plot
-   fibernet.viz.advanced
+.. automodule:: fibernet.core.transform
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Utilities
 ---------
 
-.. autosummary::
-   :toctree: generated
+.. automodule:: fibernet.utils.exceptions
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-   fibernet.utils.units
-   fibernet.utils.validation
+.. automodule:: fibernet.utils.parametric
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-High-Level API
---------------
-
-.. autosummary::
-   :toctree: generated
-
-   fibernet.api
+.. automodule:: fibernet.utils.batch
+   :members:
+   :undoc-members:
+   :show-inheritance:
