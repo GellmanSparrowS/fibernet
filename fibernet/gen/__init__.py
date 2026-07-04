@@ -129,3 +129,22 @@ __all__.extend([
     "braided_bundle_3d",
     "tendon_like_bundle_3d",
 ])
+
+# Curved fibers
+from .curved import (
+    sinusoidal_fiber_2d,
+    helical_fiber_3d,
+    arc_fiber_2d,
+    bezier_fiber_3d,
+    random_curved_network_3d,
+    crimped_network_2d,
+)
+
+__all__.extend([
+    "sinusoidal_fiber_2d",
+    "helical_fiber_3d",
+    "arc_fiber_2d",
+    "bezier_fiber_3d",
+    "random_curved_network_3d",
+    "crimped_network_2d",
+])
