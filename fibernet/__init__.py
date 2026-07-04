@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.13.0"
+__version__ = "1.14.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
@@ -124,4 +124,22 @@ from .doe import (
 __all__.extend([
     "DesignOfExperiments", "ExperimentDesign", "ExperimentResult", "SweepResult",
     "run_parameter_sweep"
+])
+
+# Materials database
+from .materials import (
+    get_material, list_materials, compare_materials, get_material_database, m
+)
+__all__.extend([
+    "get_material", "list_materials", "compare_materials", "get_material_database", "m"
+])
+
+# Unit conversions
+from .units import (
+    convert_length, convert_force, convert_pressure, convert_temperature,
+    convert_energy, parse_unit_string, scale_network_properties
+)
+__all__.extend([
+    "convert_length", "convert_force", "convert_pressure", "convert_temperature",
+    "convert_energy", "parse_unit_string", "scale_network_properties"
 ])

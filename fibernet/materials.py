@@ -1,558 +1,558 @@
 """
-Predefined material database for common fiber materials.
+Material Database Module
 
-Provides ready-to-use Material objects for common fiber types used in research.
-All properties are at room temperature (25°C) unless otherwise noted.
+Provides a comprehensive database of pre-defined materials for fiber networks:
+- Polymers (natural and synthetic)
+- Metals
+- Ceramics
+- Biological materials
+- Composites
+- Carbon-based materials
+
+All properties are at room temperature (293 K) unless otherwise specified.
 
 References:
-- Callister, W.D. "Materials Science and Engineering"
-- ASM Handbook
-- Various manufacturer datasheets
+- Ashby, M.F., "Materials Selection in Mechanical Design", Butterworth-Heinemann, 2016
+- Callister, W.D., "Materials Science and Engineering", Wiley, 2018
 """
 
-from .core.material import Material
-from typing import Dict, Optional
-import numpy as np
+from fibernet.core.material import Material
 
 
-def carbon_fiber(grade: str = 'standard') -> Material:
-    """
-    Carbon fiber material.
+def _create_material_db():
+    """Create the material database."""
     
-    Parameters
-    ----------
-    grade : str
-        'standard', 'intermediate', 'high_strength', 'high_modulus'
+    db = {}
     
-    Returns
-    -------
-    Material
-        Carbon fiber material object
+    # ================================================================
+    # POLYMERS
+    # ================================================================
     
-    Examples
-    --------
-    >>> mat = carbon_fiber('high_strength')
-    >>> print(mat.youngs_modulus)
-    """
-    grades = {
-        'standard': {
-            'E': 230e9,  # Pa
-            'sigma_y': 3.5e9,  # Pa
-            'density': 1750,  # kg/m³
-            'nu': 0.28,
-        },
-        'intermediate': {
-            'E': 294e9,
-            'sigma_y': 4.9e9,
-            'density': 1800,
-            'nu': 0.28,
-        },
-        'high_strength': {
-            'E': 294e9,
-            'sigma_y': 7.0e9,
-            'density': 1800,
-            'nu': 0.28,
-        },
-        'high_modulus': {
-            'E': 588e9,
-            'sigma_y': 3.9e9,
-            'density': 1900,
-            'nu': 0.28,
-        },
-    }
-    
-    props = grades.get(grade, grades['standard'])
-    
-    return Material(
-        name=f'Carbon Fiber ({grade})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=props['nu'],
-        yield_strength=props['sigma_y'],
-        tensile_strength=props['sigma_y'],  # Carbon fiber is brittle
-        fracture_toughness=0.5e6,  # Pa·√m
-        thermal_conductivity=10.0,  # W/(m·K) along fiber
-        specific_heat=710,  # J/(kg·K)
-        thermal_expansion=-0.5e-6,  # 1/K (negative along fiber)
-        electrical_conductivity=1e5,  # S/m
+    db['polypropylene'] = Material(
+        name='polypropylene',
+        density=900.0,  # kg/m³
+        youngs_modulus=1.5e9,  # Pa
+        poissons_ratio=0.42,
+        yield_strength=30e6,  # Pa
+        tensile_strength=35e6,  # Pa
+        fracture_toughness=5e6,  # Pa·√m
+        thermal_conductivity=0.12,  # W/(m·K)
+        specific_heat=1900.0,  # J/(kg·K)
+        thermal_expansion=100e-6,  # 1/K
     )
-
-
-def glass_fiber(fiber_type: str = 'E-glass') -> Material:
-    """
-    Glass fiber material.
     
-    Parameters
-    ----------
-    fiber_type : str
-        'E-glass', 'S-glass', 'C-glass', 'AR-glass'
-    
-    Returns
-    -------
-    Material
-        Glass fiber material object
-    """
-    types = {
-        'E-glass': {
-            'E': 72.4e9,
-            'sigma_y': 3.45e9,
-            'density': 2540,
-            'nu': 0.22,
-        },
-        'S-glass': {
-            'E': 85.5e9,
-            'sigma_y': 4.58e9,
-            'density': 2480,
-            'nu': 0.22,
-        },
-        'C-glass': {
-            'E': 69e9,
-            'sigma_y': 3.1e9,
-            'density': 2490,
-            'nu': 0.22,
-        },
-        'AR-glass': {
-            'E': 73e9,
-            'sigma_y': 3.5e9,
-            'density': 2700,
-            'nu': 0.22,
-        },
-    }
-    
-    props = types.get(fiber_type, types['E-glass'])
-    
-    return Material(
-        name=f'Glass Fiber ({fiber_type})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=props['nu'],
-        yield_strength=props['sigma_y'],
-        tensile_strength=props['sigma_y'],
-        fracture_toughness=0.8e6,
-        thermal_conductivity=1.3,
-        specific_heat=840,
-        thermal_expansion=5.0e-6,
-        electrical_conductivity=1e-12,  # Insulator
+    db['polyethylene_hdpe'] = Material(
+        name='polyethylene_hdpe',
+        density=950.0,
+        youngs_modulus=1.0e9,
+        poissons_ratio=0.42,
+        yield_strength=25e6,
+        tensile_strength=30e6,
+        fracture_toughness=4e6,
+        thermal_conductivity=0.46,
+        specific_heat=1800.0,
+        thermal_expansion=150e-6,
     )
-
-
-def aramid_fiber(fiber_type: str = 'Kevlar-49') -> Material:
-    """
-    Aramid fiber material (Kevlar, Twaron, etc.).
     
-    Parameters
-    ----------
-    fiber_type : str
-        'Kevlar-29', 'Kevlar-49', 'Kevlar-129', 'Twaron'
-    
-    Returns
-    -------
-    Material
-        Aramid fiber material object
-    """
-    types = {
-        'Kevlar-29': {
-            'E': 70e9,
-            'sigma_y': 2.9e9,
-            'density': 1440,
-            'nu': 0.36,
-        },
-        'Kevlar-49': {
-            'E': 131e9,
-            'sigma_y': 3.6e9,
-            'density': 1440,
-            'nu': 0.36,
-        },
-        'Kevlar-129': {
-            'E': 100e9,
-            'sigma_y': 3.4e9,
-            'density': 1440,
-            'nu': 0.36,
-        },
-        'Twaron': {
-            'E': 120e9,
-            'sigma_y': 3.2e9,
-            'density': 1440,
-            'nu': 0.35,
-        },
-    }
-    
-    props = types.get(fiber_type, types['Kevlar-49'])
-    
-    return Material(
-        name=f'Aramid Fiber ({fiber_type})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=props['nu'],
-        yield_strength=props['sigma_y'],
-        tensile_strength=props['sigma_y'],
-        fracture_toughness=3.0e6,  # High toughness
-        thermal_conductivity=0.04,
-        specific_heat=1420,
-        thermal_expansion=-2.0e-6,
-        electrical_conductivity=1e-14,
+    db['nylon_6'] = Material(
+        name='nylon_6',
+        density=1140.0,
+        youngs_modulus=2.5e9,
+        poissons_ratio=0.40,
+        yield_strength=70e6,
+        tensile_strength=80e6,
+        fracture_toughness=6e6,
+        thermal_conductivity=0.25,
+        specific_heat=1600.0,
+        thermal_expansion=80e-6,
     )
-
-
-def collagen_fiber() -> Material:
-    """
-    Type I collagen fiber (biological fibers).
     
-    Based on literature values for tendon collagen.
-    
-    Returns
-    -------
-    Material
-        Collagen fiber material object
-    
-    References
-    ----------
-    - Fratzl et al., J Struct Biol (2004)
-    - Svensson et al., PNAS (2017)
-    """
-    return Material(
-        name='Collagen Type I',
-        density=1340,  # kg/m³
-        youngs_modulus=1.2e9,  # Pa (fibril level)
-        poissons_ratio=0.3,
-        yield_strength=50e6,  # Pa
-        tensile_strength=100e6,  # Pa
-        fracture_toughness=1.0e6,
-        thermal_conductivity=0.6,
-        specific_heat=1500,
-        thermal_expansion=50e-6,
-        extra={
-            'persistence_length': 14e-9,  # m
-            'diameter_range': (50e-9, 500e-9),  # m
-            'water_content': 0.6,  # fraction
-        }
-    )
-
-
-def cellulose_nanofiber() -> Material:
-    """
-    Cellulose nanofiber (CNF/CNC).
-    
-    Returns
-    -------
-    Material
-        Cellulose nanofiber material object
-    
-    References
-    ----------
-    - Dufresne, Prog Polym Sci (2013)
-    - Moon et al., Adv Mater (2011)
-    """
-    return Material(
-        name='Cellulose Nanofiber',
-        density=1500,  # kg/m³
-        youngs_modulus=150e9,  # Pa (crystalline cellulose)
-        poissons_ratio=0.3,
-        yield_strength=2.0e9,  # Pa
-        tensile_strength=3.0e9,  # Pa
-        fracture_toughness=0.5e6,
-        thermal_conductivity=0.6,
-        specific_heat=1200,
-        thermal_expansion=1.0e-6,
-        extra={
-            'crystallinity': 0.8,
-            'diameter_range': (5e-9, 50e-9),  # m
-            'aspect_ratio_range': (50, 200),
-        }
-    )
-
-
-def spider_silk(silk_type: str = 'dragline') -> Material:
-    """
-    Spider silk material.
-    
-    Parameters
-    ----------
-    silk_type : str
-        'dragline', 'capture', 'minor_ampullate'
-    
-    Returns
-    -------
-    Material
-        Spider silk material object
-    
-    References
-    ----------
-    - Gosline et al., J Exp Biol (1999)
-    - Vollrath & Porter, Polymer (2006)
-    """
-    types = {
-        'dragline': {
-            'E': 10e9,
-            'sigma_y': 1.2e9,
-            'strain_failure': 0.30,
-            'density': 1300,
-        },
-        'capture': {
-            'E': 3e6,
-            'sigma_y': 500e6,
-            'strain_failure': 5.0,
-            'density': 1300,
-        },
-        'minor_ampullate': {
-            'E': 10e9,
-            'sigma_y': 800e6,
-            'strain_failure': 0.25,
-            'density': 1300,
-        },
-    }
-    
-    props = types.get(silk_type, types['dragline'])
-    
-    return Material(
-        name=f'Spider Silk ({silk_type})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=0.4,
-        yield_strength=props['sigma_y'] * 0.7,
-        tensile_strength=props['sigma_y'],
-        fracture_toughness=150e6,  # Extremely tough
-        thermal_conductivity=0.2,
-        specific_heat=1300,
-        thermal_expansion=50e-6,
-        extra={
-            'strain_at_failure': props['strain_failure'],
-            'toughness': 0.5 * props['sigma_y'] * props['strain_failure'],  # J/m³
-        }
-    )
-
-
-def polymer_fiber(polymer: str = 'nylon') -> Material:
-    """
-    Synthetic polymer fiber.
-    
-    Parameters
-    ----------
-    polymer : str
-        'nylon', 'polyester', 'polypropylene', 'UHMWPE'
-    
-    Returns
-    -------
-    Material
-        Polymer fiber material object
-    """
-    types = {
-        'nylon': {
-            'E': 3.5e9,
-            'sigma_y': 800e6,
-            'density': 1140,
-            'nu': 0.4,
-        },
-        'polyester': {
-            'E': 14e9,
-            'sigma_y': 700e6,
-            'density': 1380,
-            'nu': 0.38,
-        },
-        'polypropylene': {
-            'E': 1.5e9,
-            'sigma_y': 400e6,
-            'density': 900,
-            'nu': 0.42,
-        },
-        'UHMWPE': {
-            'E': 100e9,
-            'sigma_y': 3.0e9,
-            'density': 970,
-            'nu': 0.35,
-        },
-    }
-    
-    props = types.get(polymer, types['nylon'])
-    
-    return Material(
-        name=f'Polymer Fiber ({polymer})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=props['nu'],
-        yield_strength=props['sigma_y'] * 0.8,
-        tensile_strength=props['sigma_y'],
-        fracture_toughness=5.0e6,
-        thermal_conductivity=0.2,
-        specific_heat=1500,
-        thermal_expansion=100e-6,
-    )
-
-
-def metal_fiber(metal: str = 'steel') -> Material:
-    """
-    Metal fiber material.
-    
-    Parameters
-    ----------
-    metal : str
-        'steel', 'aluminum', 'titanium', 'copper'
-    
-    Returns
-    -------
-    Material
-        Metal fiber material object
-    """
-    types = {
-        'steel': {
-            'E': 210e9,
-            'sigma_y': 2000e6,
-            'density': 7850,
-            'nu': 0.3,
-        },
-        'aluminum': {
-            'E': 70e9,
-            'sigma_y': 500e6,
-            'density': 2700,
-            'nu': 0.33,
-        },
-        'titanium': {
-            'E': 110e9,
-            'sigma_y': 1200e6,
-            'density': 4500,
-            'nu': 0.32,
-        },
-        'copper': {
-            'E': 117e9,
-            'sigma_y': 400e6,
-            'density': 8960,
-            'nu': 0.34,
-        },
-    }
-    
-    props = types.get(metal, types['steel'])
-    
-    return Material(
-        name=f'Metal Fiber ({metal})',
-        density=props['density'],
-        youngs_modulus=props['E'],
-        poissons_ratio=props['nu'],
-        yield_strength=props['sigma_y'] * 0.9,
-        tensile_strength=props['sigma_y'],
+    db['kevlar'] = Material(
+        name='kevlar',
+        density=1440.0,
+        youngs_modulus=70e9,
+        poissons_ratio=0.36,
+        yield_strength=2800e6,
+        tensile_strength=3600e6,
         fracture_toughness=50e6,
+        thermal_conductivity=0.04,
+        specific_heat=1420.0,
+        thermal_expansion=-2e-6,
+    )
+    
+    db['pla'] = Material(
+        name='pla',
+        density=1240.0,
+        youngs_modulus=3.5e9,
+        poissons_ratio=0.36,
+        yield_strength=60e6,
+        tensile_strength=65e6,
+        fracture_toughness=2e6,
+        thermal_conductivity=0.13,
+        specific_heat=1800.0,
+        thermal_expansion=68e-6,
+    )
+    
+    db['pva'] = Material(
+        name='pva',
+        density=1190.0,
+        youngs_modulus=3.0e9,
+        poissons_ratio=0.38,
+        yield_strength=50e6,
+        tensile_strength=60e6,
+        fracture_toughness=3e6,
+        thermal_conductivity=0.20,
+        specific_heat=1500.0,
+        thermal_expansion=70e-6,
+    )
+    
+    # ================================================================
+    # NATURAL FIBERS
+    # ================================================================
+    
+    db['cotton'] = Material(
+        name='cotton',
+        density=1500.0,
+        youngs_modulus=10e9,
+        poissons_ratio=0.30,
+        yield_strength=None,
+        tensile_strength=500e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.07,
+        specific_heat=1300.0,
+        thermal_expansion=6e-6,
+    )
+    
+    db['silk'] = Material(
+        name='silk',
+        density=1300.0,
+        youngs_modulus=15e9,
+        poissons_ratio=0.33,
+        yield_strength=None,
+        tensile_strength=500e6,
+        fracture_toughness=70e6,
+        thermal_conductivity=0.04,
+        specific_heat=1400.0,
+        thermal_expansion=10e-6,
+    )
+    
+    db['wool'] = Material(
+        name='wool',
+        density=1300.0,
+        youngs_modulus=3e9,
+        poissons_ratio=0.35,
+        yield_strength=None,
+        tensile_strength=200e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.04,
+        specific_heat=1360.0,
+        thermal_expansion=25e-6,
+    )
+    
+    db['cellulose'] = Material(
+        name='cellulose',
+        density=1500.0,
+        youngs_modulus=120e9,
+        poissons_ratio=0.30,
+        yield_strength=None,
+        tensile_strength=1000e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.05,
+        specific_heat=1300.0,
+        thermal_expansion=2e-6,
+    )
+    
+    # ================================================================
+    # BIOLOGICAL MATERIALS
+    # ================================================================
+    
+    db['collagen'] = Material(
+        name='collagen',
+        density=1300.0,
+        youngs_modulus=1e9,
+        poissons_ratio=0.35,
+        yield_strength=None,
+        tensile_strength=100e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.20,
+        specific_heat=1500.0,
+        thermal_expansion=10e-6,
+    )
+    
+    db['elastin'] = Material(
+        name='elastin',
+        density=1100.0,
+        youngs_modulus=1e6,
+        poissons_ratio=0.49,
+        yield_strength=None,
+        tensile_strength=2e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.20,
+        specific_heat=1500.0,
+        thermal_expansion=10e-6,
+    )
+    
+    db['fibrin'] = Material(
+        name='fibrin',
+        density=1100.0,
+        youngs_modulus=5e6,
+        poissons_ratio=0.45,
+        yield_strength=None,
+        tensile_strength=10e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.20,
+        specific_heat=1500.0,
+        thermal_expansion=10e-6,
+    )
+    
+    db['actin'] = Material(
+        name='actin',
+        density=1300.0,
+        youngs_modulus=2e9,
+        poissons_ratio=0.35,
+        yield_strength=None,
+        tensile_strength=100e6,
+        fracture_toughness=None,
+        thermal_conductivity=0.20,
+        specific_heat=1500.0,
+        thermal_expansion=10e-6,
+    )
+    
+    # ================================================================
+    # METALS
+    # ================================================================
+    
+    db['steel'] = Material(
+        name='steel',
+        density=7850.0,
+        youngs_modulus=210e9,
+        poissons_ratio=0.28,
+        yield_strength=250e6,
+        tensile_strength=400e6,
+        fracture_toughness=60e6,
         thermal_conductivity=50.0,
-        specific_heat=500,
+        specific_heat=500.0,
         thermal_expansion=12e-6,
-        electrical_conductivity=1e6,
     )
-
-
-def basalt_fiber() -> Material:
-    """
-    Basalt fiber material.
     
-    Returns
-    -------
-    Material
-        Basalt fiber material object
-    """
-    return Material(
-        name='Basalt Fiber',
-        density=2700,
-        youngs_modulus=89e9,
+    db['aluminum'] = Material(
+        name='aluminum',
+        density=2700.0,
+        youngs_modulus=69e9,
+        poissons_ratio=0.33,
+        yield_strength=40e6,
+        tensile_strength=90e6,
+        fracture_toughness=30e6,
+        thermal_conductivity=237.0,
+        specific_heat=900.0,
+        thermal_expansion=23e-6,
+    )
+    
+    db['titanium'] = Material(
+        name='titanium',
+        density=4500.0,
+        youngs_modulus=110e9,
+        poissons_ratio=0.32,
+        yield_strength=800e6,
+        tensile_strength=900e6,
+        fracture_toughness=75e6,
+        thermal_conductivity=21.9,
+        specific_heat=520.0,
+        thermal_expansion=8.6e-6,
+    )
+    
+    db['copper'] = Material(
+        name='copper',
+        density=8960.0,
+        youngs_modulus=110e9,
+        poissons_ratio=0.34,
+        yield_strength=70e6,
+        tensile_strength=220e6,
+        fracture_toughness=40e6,
+        thermal_conductivity=401.0,
+        specific_heat=385.0,
+        thermal_expansion=16.5e-6,
+        electrical_conductivity=5.96e7,  # S/m
+    )
+    
+    db['tungsten'] = Material(
+        name='tungsten',
+        density=19300.0,
+        youngs_modulus=411e9,
+        poissons_ratio=0.28,
+        yield_strength=750e6,
+        tensile_strength=1500e6,
+        fracture_toughness=80e6,
+        thermal_conductivity=174.0,
+        specific_heat=132.0,
+        thermal_expansion=4.5e-6,
+    )
+    
+    # ================================================================
+    # CERAMICS
+    # ================================================================
+    
+    db['alumina'] = Material(
+        name='alumina',
+        density=3950.0,
+        youngs_modulus=390e9,
         poissons_ratio=0.22,
-        yield_strength=4.0e9,
-        tensile_strength=4.8e9,
-        fracture_toughness=0.6e6,
-        thermal_conductivity=0.4,
-        specific_heat=800,
-        thermal_expansion=8.0e-6,
-        electrical_conductivity=1e-12,
+        yield_strength=None,
+        tensile_strength=300e6,
+        fracture_toughness=4e6,
+        thermal_conductivity=30.0,
+        specific_heat=880.0,
+        thermal_expansion=8.1e-6,
     )
+    
+    db['silicon_carbide'] = Material(
+        name='silicon_carbide',
+        density=3200.0,
+        youngs_modulus=410e9,
+        poissons_ratio=0.14,
+        yield_strength=None,
+        tensile_strength=250e6,
+        fracture_toughness=4e6,
+        thermal_conductivity=120.0,
+        specific_heat=750.0,
+        thermal_expansion=4.0e-6,
+    )
+    
+    db['glass'] = Material(
+        name='glass',
+        density=2500.0,
+        youngs_modulus=70e9,
+        poissons_ratio=0.22,
+        yield_strength=None,
+        tensile_strength=50e6,
+        fracture_toughness=0.7e6,
+        thermal_conductivity=1.0,
+        specific_heat=840.0,
+        thermal_expansion=9e-6,
+    )
+    
+    # ================================================================
+    # CARBON-BASED MATERIALS
+    # ================================================================
+    
+    db['carbon_fiber'] = Material(
+        name='carbon_fiber',
+        density=1800.0,
+        youngs_modulus=230e9,
+        poissons_ratio=0.27,
+        yield_strength=None,
+        tensile_strength=3500e6,
+        fracture_toughness=30e6,
+        thermal_conductivity=10.0,
+        specific_heat=710.0,
+        thermal_expansion=-0.5e-6,
+        electrical_conductivity=1e5,  # S/m (axial)
+    )
+    
+    db['graphene'] = Material(
+        name='graphene',
+        density=2200.0,
+        youngs_modulus=1e12,
+        poissons_ratio=0.19,
+        yield_strength=None,
+        tensile_strength=130e9,
+        fracture_toughness=None,
+        thermal_conductivity=5000.0,
+        specific_heat=710.0,
+        thermal_expansion=-7e-6,
+        electrical_conductivity=1e8,  # S/m
+    )
+    
+    db['cnt'] = Material(
+        name='cnt',
+        density=1300.0,
+        youngs_modulus=1e12,
+        poissons_ratio=0.19,
+        yield_strength=None,
+        tensile_strength=50e9,
+        fracture_toughness=None,
+        thermal_conductivity=3500.0,
+        specific_heat=710.0,
+        thermal_expansion=-1e-6,
+        electrical_conductivity=1e7,  # S/m
+    )
+    
+    # ================================================================
+    # GENERIC/DEFAULT MATERIALS
+    # ================================================================
+    
+    db['generic_polymer'] = Material(
+        name='generic_polymer',
+        density=1200.0,
+        youngs_modulus=2e9,
+        poissons_ratio=0.35,
+    )
+    
+    db['generic_metal'] = Material(
+        name='generic_metal',
+        density=7800.0,
+        youngs_modulus=200e9,
+        poissons_ratio=0.30,
+        yield_strength=250e6,
+    )
+    
+    db['generic_ceramic'] = Material(
+        name='generic_ceramic',
+        density=3500.0,
+        youngs_modulus=300e9,
+        poissons_ratio=0.25,
+    )
+    
+    db['rubber'] = Material(
+        name='rubber',
+        density=1100.0,
+        youngs_modulus=0.05e9,
+        poissons_ratio=0.49,
+        yield_strength=None,
+        tensile_strength=20e6,
+    )
+    
+    return db
 
 
-def silica_fiber() -> Material:
-    """
-    Fused silica (optical fiber) material.
+# Global material database instance
+_MATERIAL_DB = None
+
+
+def get_material_database():
+    """Get the material database (lazy initialization).
     
     Returns
     -------
-    Material
-        Silica fiber material object
+    db : dict
+        Dictionary mapping material names to Material objects.
     """
-    return Material(
-        name='Silica Fiber',
-        density=2200,
-        youngs_modulus=72e9,
-        poissons_ratio=0.17,
-        yield_strength=5.0e9,
-        tensile_strength=6.0e9,
-        fracture_toughness=0.8e6,
-        thermal_conductivity=1.4,
-        specific_heat=700,
-        thermal_expansion=0.5e-6,
-        electrical_conductivity=1e-18,
-        extra={
-            'refractive_index': 1.46,
-            'transmission_range': (0.2e-6, 2.0e-6),  # m
-        }
-    )
+    global _MATERIAL_DB
+    if _MATERIAL_DB is None:
+        _MATERIAL_DB = _create_material_db()
+    return _MATERIAL_DB
 
 
-# Material registry for easy access
-MATERIAL_DATABASE = {
-    'carbon': carbon_fiber,
-    'glass': glass_fiber,
-    'aramid': aramid_fiber,
-    'collagen': collagen_fiber,
-    'cellulose': cellulose_nanofiber,
-    'spider_silk': spider_silk,
-    'polymer': polymer_fiber,
-    'metal': metal_fiber,
-    'basalt': basalt_fiber,
-    'silica': silica_fiber,
-}
-
-
-def get_material(name: str, **kwargs) -> Material:
-    """
-    Get a predefined material by name.
+def get_material(name: str) -> Material:
+    """Get a pre-defined material by name.
     
     Parameters
     ----------
     name : str
-        Material name (e.g., 'carbon', 'glass', 'collagen')
-    **kwargs
-        Additional arguments passed to material constructor
+        Material name (case-insensitive).
     
     Returns
     -------
-    Material
-        Material object
+    material : Material
+        Material object with pre-defined properties.
+    
+    Raises
+    ------
+    KeyError
+        If material not found.
     
     Examples
     --------
-    >>> mat = get_material('carbon', grade='high_strength')
-    >>> mat = get_material('glass', fiber_type='S-glass')
-    >>> mat = get_material('collagen')
+    >>> from fibernet.materials import get_material
+    >>> steel = get_material('steel')
+    >>> print(f"Steel modulus: {steel.youngs_modulus/1e9:.1f} GPa")
+    Steel modulus: 210.0 GPa
     """
-    name_lower = name.lower()
+    db = get_material_database()
+    name_lower = name.lower().replace(' ', '_').replace('-', '_')
     
-    if name_lower not in MATERIAL_DATABASE:
-        available = ', '.join(MATERIAL_DATABASE.keys())
-        raise ValueError(f"Unknown material '{name}'. Available: {available}")
+    if name_lower not in db:
+        available = list(db.keys())
+        raise KeyError(
+            f"Material '{name}' not found. Available: {available}"
+        )
     
-    return MATERIAL_DATABASE[name_lower](**kwargs)
+    return db[name_lower]
 
 
-def list_materials() -> Dict[str, str]:
-    """
-    List all available predefined materials.
+def list_materials():
+    """List all available pre-defined materials.
     
     Returns
     -------
-    dict
-        Dictionary of material names and descriptions
+    materials : list
+        List of material names.
+    
+    Examples
+    --------
+    >>> from fibernet.materials import list_materials
+    >>> materials = list_materials()
+    >>> print(f"Available: {len(materials)} materials")
     """
-    return {
-        'carbon': 'Carbon fiber (standard, intermediate, high_strength, high_modulus)',
-        'glass': 'Glass fiber (E-glass, S-glass, C-glass, AR-glass)',
-        'aramid': 'Aramid fiber (Kevlar-29, Kevlar-49, Kevlar-129, Twaron)',
-        'collagen': 'Type I collagen (biological)',
-        'cellulose': 'Cellulose nanofiber (CNF/CNC)',
-        'spider_silk': 'Spider silk (dragline, capture, minor_ampullate)',
-        'polymer': 'Polymer fiber (nylon, polyester, polypropylene, UHMWPE)',
-        'metal': 'Metal fiber (steel, aluminum, titanium, copper)',
-        'basalt': 'Basalt fiber',
-        'silica': 'Silica fiber (optical)',
+    db = get_material_database()
+    return sorted(db.keys())
+
+
+def compare_materials(material_names):
+    """Compare properties of multiple materials.
+    
+    Parameters
+    ----------
+    material_names : list of str
+        List of material names.
+    
+    Returns
+    -------
+    comparison : dict
+        Dictionary of property comparisons.
+    
+    Examples
+    --------
+    >>> from fibernet.materials import compare_materials
+    >>> comp = compare_materials(['steel', 'aluminum', 'carbon_fiber'])
+    >>> print(f"Stiffest: {comp['stiffest']}")
+    """
+    db = get_material_database()
+    materials = {name: get_material(name) for name in material_names}
+    
+    # Find extremes
+    youngs_moduli = {name: m.youngs_modulus for name, m in materials.items()}
+    densities = {name: m.density for name, m in materials.items()}
+    
+    stiffest = max(youngs_moduli, key=youngs_moduli.get)
+    lightest = min(densities, key=densities.get)
+    
+    # Specific stiffness (E/ρ)
+    specific_stiffness = {
+        name: m.youngs_modulus / m.density 
+        for name, m in materials.items()
     }
+    best_specific = max(specific_stiffness, key=specific_stiffness.get)
+    
+    return {
+        'stiffest': stiffest,
+        'lightest': lightest,
+        'best_specific_stiffness': best_specific,
+        'youngs_moduli': youngs_moduli,
+        'densities': densities,
+        'specific_stiffness': specific_stiffness,
+    }
+
+
+# Convenience function
+def m(name: str) -> Material:
+    """Shortcut for get_material.
+    
+    Parameters
+    ----------
+    name : str
+        Material name.
+    
+    Returns
+    -------
+    material : Material
+        Material object.
+    
+    Examples
+    --------
+    >>> from fibernet.materials import m
+    >>> steel = m('steel')
+    """
+    return get_material(name)
+
+
