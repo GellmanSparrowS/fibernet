@@ -68,3 +68,13 @@ __all__.extend([
     "SpatialStatistics", "OrientationAnalysis", "LengthAnalysis",
     "ConnectivityAnalysis", "AnisotropyAnalysis", "compute_spatial_statistics"
 ])
+
+# Homogenization
+from .homogenization import (
+    EffectiveElasticProperties, EffectiveThermalProperties,
+    EffectiveElectricalProperties, compute_effective_properties
+)
+__all__.extend([
+    "EffectiveElasticProperties", "EffectiveThermalProperties",
+    "EffectiveElectricalProperties", "compute_effective_properties"
+])
