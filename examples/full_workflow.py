@@ -1,158 +1,177 @@
 """
-Complete workflow example - from network generation to analysis and simulation.
+Full FiberNet Workflow Example
+===============================
 
-Demonstrates a research workflow:
-1. Generate complex fiber network
-2. Apply transformations
-3. Analyze structure
-4. Run mechanical simulation
-5. Run thermal simulation
-6. Export results
+This example demonstrates the complete pipeline:
+1. Generate a fiber network
+2. Analyze its structure
+3. Simulate mechanical properties
+4. Export to multiple formats
+5. Visualize the results
+
+Run: python examples/full_workflow.py
 """
-import sys
-sys.path.insert(0, '/home/codex/projects/codex_test/fibernet')
 
 import numpy as np
-from fibernet import gen
-from fibernet.core.transform import merge, rotate, tile
-from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
-from fibernet.analysis.advanced import SpectralAnalyzer, PoreAnalyzer, AnisotropyAnalyzer
-from fibernet.sim.mechanical import FiberFEM
-from fibernet.sim.thermal import ThermalSolver
+import fibernet as fn
+from fibernet import gen, sim, analysis
+import tempfile
+import os
 
-def main():
-    print("=" * 70)
-    print("FiberNet Complete Workflow Example")
-    print("=" * 70)
-    
-    # ===== Step 1: Generate Base Structures =====
-    print("\n[Step 1] Generating Base Structures")
-    print("-" * 70)
-    
-    print("Creating square lattice unit cell...")
-    lattice = gen.square_lattice_2d(spacing=5, grid_size=(3, 3))
-    print(f"  Lattice: {lattice.num_fibers} fibers, {lattice.num_crosslinks} crosslinks")
-    
-    print("Creating electrospun nanofiber mat...")
-    electrospun = gen.electrospun_network(
-        num_fibers=50, fiber_length=20, box_size=(20, 20),
-        radius_mean=0.2, waviness=0.3, seed=42,
-    )
-    print(f"  Electrospun: {electrospun.num_fibers} fibers")
-    
-    # ===== Step 2: Apply Transformations =====
-    print("\n[Step 2] Applying Transformations")
-    print("-" * 70)
-    
-    lattice_rot = rotate(lattice, angle=np.pi/6, axis=np.array([0, 0, 1]))
-    print("Rotated lattice by 30 degrees")
-    
-    composite = merge([lattice_rot, electrospun])
-    print(f"  Composite: {composite.num_fibers} fibers")
-    
-    tiled = tile(composite, repeats=(2, 2, 1), spacing=np.array([30, 30, 0]))
-    print(f"  Tiled (2x2): {tiled.num_fibers} fibers")
-    
-    # ===== Step 3: Structural Analysis =====
-    print("\n[Step 3] Structural Analysis")
-    print("-" * 70)
-    
-    morph = MorphologyAnalyzer(tiled)
-    morph_report = morph.full_report()
-    print("Morphology:")
-    print(f"  Total length: {morph_report['total_length']:.1f}")
-    print(f"  Mean length: {morph_report['mean_length']:.2f}")
-    print(f"  Nematic order: {morph_report['nematic_order']:.3f}")
-    
-    topo = TopologyAnalyzer(tiled)
-    topo_report = topo.full_report()
-    print("\nTopology:")
-    print(f"  Nodes: {topo_report['num_nodes']}")
-    print(f"  Edges: {topo_report['num_edges']}")
-    print(f"  Connected: {topo_report['is_connected']}")
-    
-    spectral = SpectralAnalyzer(tiled)
-    print("\nSpectral:")
-    print(f"  Spectral gap: {spectral.spectral_gap():.4f}")
-    print(f"  Spectral entropy: {spectral.spectral_entropy():.4f}")
-    
-    pore = PoreAnalyzer(tiled)
-    pore_stats = pore.pore_size_statistics()
-    print("\nPore Structure:")
-    print(f"  Mean pore size: {pore_stats['mean']:.3f}")
-    print(f"  Median pore size: {pore_stats['median']:.3f}")
-    
-    aniso = AnisotropyAnalyzer(tiled)
-    print("\nAnisotropy:")
-    print(f"  Anisotropy index: {aniso.anisotropy_index():.3f}")
-    
-    # ===== Step 4: Mechanical Simulation =====
-    print("\n[Step 4] Mechanical Simulation")
-    print("-" * 70)
-    
-    small = gen.square_lattice_2d(spacing=5, grid_size=(3, 3))
-    fem = FiberFEM(small, segments_per_fiber=3)
-    print(f"  FEM: {fem.num_nodes} nodes, {fem.num_elements} elements")
-    
-    result = fem.apply_uniaxial_strain(strain=0.001, axis=0)
-    print(f"  Max displacement: {result.max_displacement():.6f}")
-    print(f"  Strain energy: {result.energy:.2e} J")
-    
-    E_eff = fem.effective_modulus(strain=0.001, axis=0)
-    print(f"  Effective modulus: {E_eff:.2e} Pa")
-    
-    # ===== Step 5: Thermal Simulation =====
-    print("\n[Step 5] Thermal Simulation")
-    print("-" * 70)
-    
-    thermal = ThermalSolver(small)
-    print(f"  Thermal: {thermal.num_nodes} nodes, {thermal.num_elements} elements")
-    
-    result_x = thermal.solve_steady_state(T_hot=100, T_cold=0, axis=0)
-    result_y = thermal.solve_steady_state(T_hot=100, T_cold=0, axis=1)
-    
-    print(f"  k_x: {result_x.effective_conductivity:.2f} W/(m*K)")
-    print(f"  k_y: {result_y.effective_conductivity:.2f} W/(m*K)")
-    
-    # ===== Step 6: Export Results =====
-    print("\n[Step 6] Exporting Results")
-    print("-" * 70)
-    
-    output_path = "/tmp/fibernet_workflow.json"
-    tiled.save_json(output_path)
-    print(f"  Network saved to: {output_path}")
-    
-    import json
-    report = {
-        "structure": {
-            "num_fibers": tiled.num_fibers,
-            "num_crosslinks": tiled.num_crosslinks,
-            "nematic_order": morph_report['nematic_order'],
-        },
-        "mechanical": {
-            "effective_modulus_Pa": E_eff,
-            "strain_energy_J": result.energy,
-        },
-        "thermal": {
-            "k_x_W_mK": result_x.effective_conductivity,
-            "k_y_W_mK": result_y.effective_conductivity,
-        },
-        "pore_structure": pore_stats,
-    }
-    
-    report_path = "/tmp/fibernet_report.json"
-    with open(report_path, 'w') as f:
-        json.dump(report, f, indent=2, default=str)
-    print(f"  Report saved to: {report_path}")
-    
-    # ===== Summary =====
-    print("\n" + "=" * 70)
-    print("Workflow Complete!")
-    print("=" * 70)
-    print(f"  {tiled.num_fibers} fibers, {tiled.num_crosslinks} crosslinks")
-    print(f"  Effective modulus: {E_eff:.2e} Pa")
-    print(f"  k_x: {result_x.effective_conductivity:.2f}, k_y: {result_y.effective_conductivity:.2f} W/(m*K)")
-    print("=" * 70)
+print("="*70)
+print("FiberNet Full Workflow Example")
+print("="*70)
 
-if __name__ == "__main__":
-    main()
+# 1. Generate a fiber network
+print("\n1. Generating fiber network...")
+print("-" * 70)
+
+net = gen.random_straight_2d(
+    num_fibers=150,
+    fiber_length=12.0,
+    box_size=(50, 50),
+    seed=42
+)
+
+print(f"✓ Generated network with {net.num_fibers} fibers")
+print(f"  - Fiber length: {net.fibers[0].length:.1f}")
+print(f"  - Box size: {net.box_size}")
+print(f"  - Crosslinks: {net.num_crosslinks}")
+
+# 2. Analyze the structure
+print("\n2. Analyzing network structure...")
+print("-" * 70)
+
+# Morphology analysis
+morph = analysis.MorphologyAnalyzer(net)
+nematic = morph.nematic_order_parameter()
+porosity = morph.porosity()
+tortuosity = morph.tortuosity_distribution()
+
+print(f"✓ Morphology analysis:")
+print(f"  - Nematic order parameter: {nematic:.3f}")
+print(f"  - Porosity: {porosity:.3f}")
+print(f"  - Mean tortuosity: {np.mean(tortuosity):.3f}")
+
+# Length distribution
+lengths = [f.length for f in net.fibers]
+print(f"  - Mean fiber length: {np.mean(lengths):.2f}")
+print(f"  - Std fiber length: {np.std(lengths):.2f}")
+
+# Topology analysis (if networkx available)
+try:
+    topo = analysis.TopologyAnalyzer(net)
+    num_components = topo.num_connected_components()
+    largest = topo.largest_component_fraction()
+    is_conn = topo.is_connected()
+    print(f"✓ Topology analysis:")
+    print(f"  - Connected: {is_conn}")
+    print(f"  - Connected components: {num_components}")
+    print(f"  - Largest component fraction: {largest:.3f}")
+except ImportError:
+    print("  (Skipping topology analysis - networkx not installed)")
+
+# 3. Simulate mechanical properties
+print("\n3. Running mechanical simulation...")
+print("-" * 70)
+
+fem = sim.FiberFEM(net, segments_per_fiber=5)
+
+# Compute effective modulus
+print("  Computing effective modulus...")
+E_eff = fem.effective_modulus(strain=0.001)
+print(f"  ✓ Effective Young's modulus: {E_eff:.2e} Pa")
+
+# Apply uniaxial strain
+print("  Applying uniaxial strain (ε = 0.01)...")
+result = fem.apply_uniaxial_strain(strain=0.01, axis=0)
+print(f"  ✓ Simulation complete:")
+print(f"    - Energy: {result.energy:.2e} J")
+print(f"    - Max stress: {result.max_stress():.2e} Pa")
+print(f"    - Max displacement: {result.max_displacement():.3f}")
+
+# Thermal simulation
+print("\n4. Running thermal simulation...")
+print("-" * 70)
+
+thermal = fn.simulate_thermal(net, T_hot=100.0, T_cold=0.0)
+print(f"✓ Thermal simulation complete:")
+print(f"  - Effective conductivity: {thermal['conductivity']:.2e} W/(m·K)")
+
+# 5. Export to multiple formats
+print("\n5. Exporting to multiple formats...")
+print("-" * 70)
+
+with tempfile.TemporaryDirectory() as tmpdir:
+    # JSON export
+    json_path = os.path.join(tmpdir, 'network.json')
+    fn.export(net, json_path, format='json')
+    json_size = os.path.getsize(json_path) / 1024
+    print(f"✓ JSON: {json_size:.1f} KB")
+    
+    # LAMMPS export
+    lammps_path = os.path.join(tmpdir, 'network.lammps')
+    fn.export(net, lammps_path, format='lammps')
+    lammps_size = os.path.getsize(lammps_path) / 1024
+    print(f"✓ LAMMPS: {lammps_size:.1f} KB")
+    
+    # VTK export (if pyvista available)
+    try:
+        vtk_path = os.path.join(tmpdir, 'network.vtk')
+        fn.export(net, vtk_path, format='vtk')
+        vtk_size = os.path.getsize(vtk_path) / 1024
+        print(f"✓ VTK: {vtk_size:.1f} KB")
+    except Exception as e:
+        print(f"  (VTK export failed: {e})")
+    
+    # Reload and verify
+    net_loaded = fn.load(json_path, format='json')
+    print(f"✓ Verified: reloaded {net_loaded.num_fibers} fibers from JSON")
+
+# 6. Create comparison networks
+print("\n6. Comparing different network types...")
+print("-" * 70)
+
+networks = {
+    'Random 2D': net,
+    'Square lattice': gen.square_lattice_2d(spacing=5.0, grid_size=(5, 5)),
+    'Honeycomb': gen.honeycomb_lattice_2d(cell_size=5.0, grid_size=(4, 4)),
+}
+
+print("Network comparison:")
+for name, n in networks.items():
+    morph = analysis.MorphologyAnalyzer(n)
+    order = morph.nematic_order_parameter()
+    print(f"  {name:20s}: {n.num_fibers:3d} fibers, order={order:.3f}")
+
+# 7. Network transformations
+print("\n7. Demonstrating network transformations...")
+print("-" * 70)
+
+# Scale
+net_scaled = fn.scale(net, factor=2.0)
+print(f"✓ Scaled by 2.0: {net_scaled.num_fibers} fibers")
+
+# Rotate
+net_rotated = fn.rotate(net, angle=np.pi/4, axis=[0, 0, 1])
+print(f"✓ Rotated by 45°: {net_rotated.num_fibers} fibers")
+
+# Merge
+net_merged = fn.merge([net, net_scaled])
+print(f"✓ Merged two networks: {net_merged.num_fibers} fibers")
+
+# Summary
+print("\n" + "="*70)
+print("Workflow Summary")
+print("="*70)
+print(f"✓ Generated: {net.num_fibers} fibers with {net.num_crosslinks} crosslinks")
+print(f"✓ Analyzed: morphology, topology, structure")
+print(f"✓ Simulated: mechanical (E={E_eff:.2e} Pa), thermal")
+print(f"✓ Exported: JSON, LAMMPS, VTK")
+print(f"✓ Transformed: scale, rotate, merge")
+print("\nNext steps:")
+print("  - Try different generator types (3D, chiral, woven)")
+print("  - Explore damage mechanics and fatigue simulation")
+print("  - Use ML features to predict properties")
+print("  - Visualize with matplotlib or pyvista")
+print("\n🎉 Full workflow complete!")
