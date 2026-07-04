@@ -411,3 +411,138 @@ class FiberNetwork:
             lines.append(f"Materials: {', '.join(mat_names)}")
 
         return '\n'.join(lines)
+
+    def plot(self, **kwargs):
+        """Quick visualization of the fiber network.
+
+        For 2D networks, creates a 2D plot.
+        For 3D networks, creates a 3D render.
+
+        Parameters
+        ----------
+        **kwargs
+            Passed to plot_network_2d or render_network_3d.
+            
+            2D options:
+            - ax: matplotlib axes
+            - color_by: 'uniform', 'stress', 'strain', 'material' (default: 'uniform')
+            - colormap: matplotlib colormap name (default: 'viridis')
+            - show_crosslinks: bool (default: True)
+            - line_width: float (default: 1.0)
+            - title: str
+            - figsize: tuple (default: (8, 8))
+            - save_path: str
+            
+            3D options:
+            - color_by: 'uniform', 'stress', 'strain', 'material' (default: 'uniform')
+            - colormap: str (default: 'viridis')
+            - tube_radius: float
+            - show_crosslinks: bool (default: True)
+            - background: str (default: 'white')
+            - window_size: tuple (default: (1024, 768))
+            - save_path: str
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure or None
+            The matplotlib figure (2D only).
+
+        Examples
+        --------
+        >>> net = gen.random_straight_2d(num_fibers=50, fiber_length=10, box_size=(30, 30))
+        >>> net.plot(color_by='material', show_crosslinks=False)
+        >>>
+        >>> net_3d = gen.random_straight_3d(num_fibers=30, fiber_length=8, box_size=(20, 20, 20))
+        >>> net_3d.plot(background='black')  # Opens 3D viewer
+        """
+        if self.dimension == 2:
+            from fibernet.viz import plot_network_2d
+            import inspect
+            sig = inspect.signature(plot_network_2d)
+            valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+            return plot_network_2d(self, **valid_kwargs)
+        else:
+            from fibernet.viz import render_network_3d
+            import inspect
+            sig = inspect.signature(render_network_3d)
+            valid_kwargs = {k: v for k, v in kwargs.items() if k in sig.parameters}
+            return render_network_3d(self, **valid_kwargs)
+
+    def plot_statistics(self, figsize=(12, 4)):
+        """Plot statistical distributions of network properties.
+
+        Creates a figure with three subplots:
+        1. Length distribution
+        2. Orientation distribution (2D only)
+        3. Tortuosity distribution
+
+        Parameters
+        ----------
+        figsize : tuple, optional
+            Figure size, by default (12, 4).
+
+        Returns
+        -------
+        fig : matplotlib.figure.Figure
+            The matplotlib figure.
+
+        Examples
+        --------
+        >>> net = gen.random_straight_2d(num_fibers=100, fiber_length=10, box_size=(30, 30))
+        >>> fig = net.plot_statistics()
+        >>> fig.savefig('statistics.png', dpi=150, bbox_inches='tight')
+        """
+        import matplotlib.pyplot as plt
+        import numpy as np
+
+        fig, axes = plt.subplots(1, 3, figsize=figsize)
+
+        # Length distribution
+        lengths = [f.length for f in self.fibers]
+        length_range = np.ptp(lengths)
+        min_range = np.mean(lengths) * 1e-10  # Relative threshold
+        if length_range > min_range:
+            axes[0].hist(lengths, bins=20, edgecolor='black', alpha=0.7)
+        else:
+            # All same length (within precision) - use single bar
+            axes[0].bar([np.mean(lengths)], [len(lengths)], width=np.mean(lengths)*0.1, edgecolor='black', alpha=0.7)
+        axes[0].set_xlabel('Fiber Length')
+        axes[0].set_ylabel('Count')
+        axes[0].set_title('Length Distribution')
+        axes[0].axvline(np.mean(lengths), color='red', linestyle='--', label=f'Mean: {np.mean(lengths):.2f}')
+        axes[0].legend()
+
+        # Orientation distribution
+        if self.dimension == 2:
+            orientations = [f.direction for f in self.fibers]
+            angles = np.degrees(orientations)
+            axes[1].hist(angles, bins=36, range=(-180, 180), edgecolor='black', alpha=0.7)
+            axes[1].set_xlabel('Orientation Angle (degrees)')
+            axes[1].set_ylabel('Count')
+            axes[1].set_title('Orientation Distribution')
+        else:
+            # For 3D, plot polar angles
+            orientations = [f.direction for f in self.fibers]
+            # Extract theta (polar angle)
+            thetas = [np.degrees(np.arccos(ori[2] / np.linalg.norm(ori))) for ori in orientations]
+            axes[1].hist(thetas, bins=20, edgecolor='black', alpha=0.7)
+            axes[1].set_xlabel('Polar Angle (degrees)')
+            axes[1].set_ylabel('Count')
+            axes[1].set_title('Orientation Distribution')
+
+        # Tortuosity distribution
+        tortuosities = [f.tortuosity() for f in self.fibers]
+        tort_range = np.ptp(tortuosities)
+        min_tort_range = np.mean(tortuosities) * 1e-10
+        if tort_range > min_tort_range:
+            axes[2].hist(tortuosities, bins=20, edgecolor='black', alpha=0.7)
+        else:
+            axes[2].bar([np.mean(tortuosities)], [len(tortuosities)], width=0.05, edgecolor='black', alpha=0.7)
+        axes[2].set_xlabel('Tortuosity')
+        axes[2].set_ylabel('Count')
+        axes[2].set_title('Tortuosity Distribution')
+        axes[2].axvline(np.mean(tortuosities), color='red', linestyle='--', label=f'Mean: {np.mean(tortuosities):.3f}')
+        axes[2].legend()
+
+        plt.tight_layout()
+        return fig
