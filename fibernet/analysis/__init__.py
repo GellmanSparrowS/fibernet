@@ -78,3 +78,11 @@ __all__.extend([
     "EffectiveElasticProperties", "EffectiveThermalProperties",
     "EffectiveElectricalProperties", "compute_effective_properties"
 ])
+
+# Network comparison
+from .comparison import (
+    NetworkFingerprint, NetworkComparator, compare_networks, network_similarity
+)
+__all__.extend([
+    "NetworkFingerprint", "NetworkComparator", "compare_networks", "network_similarity"
+])
