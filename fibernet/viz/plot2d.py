@@ -10,12 +10,20 @@ Provides:
 
 import numpy as np
 from typing import Optional, List, Tuple, Dict
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-from matplotlib.colors import Normalize
-from matplotlib.cm import ScalarMappable
+try:
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import Normalize
+    from matplotlib.cm import ScalarMappable
+    HAS_MATPLOTLIB = True
+except ImportError:
+    HAS_MATPLOTLIB = False
+    plt = None
+    LineCollection = None
+    Normalize = None
+    ScalarMappable = None
 from fibernet.core.network import FiberNetwork
 
 

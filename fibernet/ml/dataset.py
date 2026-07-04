@@ -8,7 +8,13 @@ import numpy as np
 from typing import List, Dict, Optional, Callable, Tuple
 from pathlib import Path
 import json
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    def tqdm(iterable, **kwargs):
+        return iterable
 
 from fibernet.core.network import FiberNetwork
 from fibernet import gen

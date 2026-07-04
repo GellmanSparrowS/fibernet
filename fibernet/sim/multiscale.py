@@ -212,6 +212,8 @@ class HomogenizationSolver:
                 rve_volume = bbox[0] * bbox[1] * 1.0
             rve_volume = max(rve_volume, 1.0)
         
+        if rve_volume <= 0:
+            return 0.0
         V_f = fiber_volume / rve_volume
         return min(V_f, 0.9)  # Cap at 90%
     

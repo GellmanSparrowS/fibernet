@@ -228,7 +228,10 @@ class FiberNetwork:
 
     def to_networkx(self):
         """Convert to a NetworkX graph for topology analysis."""
-        import networkx as nx
+        try:
+            import networkx as nx
+        except ImportError:
+            raise ImportError("networkx is required. Install with: pip install networkx")
         G = nx.Graph()
         for i, f in enumerate(self.fibers):
             G.add_node(i, fiber=f, length=f.length, orientation=f.direction.tolist())

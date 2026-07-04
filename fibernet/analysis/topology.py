@@ -13,6 +13,19 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional
 from fibernet.core.network import FiberNetwork
 
+try:
+    import networkx as nx
+    HAS_NETWORKX = True
+except ImportError:
+    HAS_NETWORKX = False
+    nx = None
+
+
+def _check_networkx():
+    if not HAS_NETWORKX:
+        raise ImportError("networkx is required for topology analysis. Install with: pip install networkx")
+
+
 
 class TopologyAnalyzer:
     """Analyze topological properties of fiber networks."""
@@ -43,22 +56,22 @@ class TopologyAnalyzer:
     
     def clustering_coefficient(self) -> float:
         """Average clustering coefficient of the network."""
-        import networkx as nx
+        _check_networkx()
         return float(nx.average_clustering(self.graph))
     
     def is_connected(self) -> bool:
         """Check if the fiber network is fully connected."""
-        import networkx as nx
+        _check_networkx()
         return nx.is_connected(self.graph) if len(self.graph.nodes) > 0 else False
     
     def num_connected_components(self) -> int:
         """Number of connected components."""
-        import networkx as nx
+        _check_networkx()
         return nx.number_connected_components(self.graph) if len(self.graph.nodes) > 0 else 0
     
     def largest_component_fraction(self) -> float:
         """Fraction of fibers in the largest connected component."""
-        import networkx as nx
+        _check_networkx()
         if len(self.graph.nodes) == 0:
             return 0.0
         components = list(nx.connected_components(self.graph))
@@ -67,12 +80,12 @@ class TopologyAnalyzer:
     
     def betweenness_centrality(self) -> Dict[int, float]:
         """Betweenness centrality for each fiber node."""
-        import networkx as nx
+        _check_networkx()
         return nx.betweenness_centrality(self.graph)
     
     def average_path_length(self) -> float:
         """Average shortest path length (over largest component)."""
-        import networkx as nx
+        _check_networkx()
         if len(self.graph.nodes) == 0:
             return 0.0
         if not nx.is_connected(self.graph):
@@ -86,7 +99,7 @@ class TopologyAnalyzer:
     
     def full_report(self) -> Dict[str, any]:
         """Generate comprehensive topology report."""
-        import networkx as nx
+        _check_networkx()
         
         report = {
             "num_fibers": self.network.num_fibers,

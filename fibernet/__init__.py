@@ -3,28 +3,37 @@ FiberNet - A comprehensive toolkit for fiber network structure research.
 
 Provides tools for:
 - Generation: 2D/3D fiber networks (ordered, disordered, chiral, bundled, woven, hierarchical)
-- Simulation: Mechanical, dynamics, fracture, thermal, electromagnetic
-- Analysis: Topology, morphology, properties
-- Visualization: 3D rendering, animation, 2D plots
+- Simulation: Mechanical, dynamics, fracture, thermal, electromagnetic, fluid, acoustic
+- Analysis: Topology, morphology, properties, percolation, multi-scale
+- Visualization: 3D rendering, animation, 2D plots, interactive
+- Machine Learning: Feature extraction, GNN models
 
 Homepage: https://ml-biomat.com
 GitHub: https://github.com/GellmanSparrowS/fibernet
+
+Quick Start
+-----------
+>>> import fibernet as fn
+>>> # Create a random 2D network
+>>> net = fn.create("random_2d", num_fibers=100, fiber_length=10.0, box_size=(20, 20))
+>>> # Analyze structure
+>>> stats = fn.analyze(net)
+>>> # Run mechanical simulation
+>>> result = fn.simulate_mechanics(net, strain=0.01)
+>>> # Visualize
+>>> fn.plot(net)
+
+For more examples, see the tutorials/ directory.
 """
 
 __version__ = "1.5.0"
 __author__ = "ML-BioMat Lab"
 
+# Core data structures
 from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork
 from fibernet.core.material import Material
 from fibernet.core.copy_utils import copy_fiber, copy_material, copy_network
-
-__all__ = [
-    "Fiber",
-    "FiberNetwork",
-    "Material",
-    "__version__",
-]
 
 # High-level convenience API
 from .api import (
@@ -35,15 +44,66 @@ from .api import (
 # Version information
 from .version import __version__, __author__, __license__
 
-# ML module (optional)
-try:
-    from . import ml
-except ImportError:
-    pass
-
-# Fluid and acoustic simulation
+# Simulation modules (lazy imports for optional dependencies)
 from .sim.fluid import DarcySolver, PoreNetworkModel
 from .sim.acoustic import AcousticSolver
 
 # Visualization module
 from . import viz
+
+# ML module (optional)
+try:
+    from . import ml
+except ImportError:
+    ml = None
+
+# Submodules for advanced usage
+from . import gen      # Network generators
+from . import sim      # Simulators
+from . import analysis # Analyzers
+from . import io       # I/O utilities
+from . import utils    # Utilities
+
+__all__ = [
+    # Core classes
+    "Fiber",
+    "FiberNetwork", 
+    "Material",
+    "copy_fiber",
+    "copy_material",
+    "copy_network",
+    
+    # High-level API
+    "create",
+    "mirror",
+    "rotate",
+    "scale",
+    "translate",
+    "merge",
+    "tile",
+    "simulate_mechanics",
+    "simulate_thermal",
+    "analyze",
+    "export",
+    "load",
+    "plot",
+    
+    # Simulators
+    "DarcySolver",
+    "PoreNetworkModel",
+    "AcousticSolver",
+    
+    # Submodules
+    "gen",
+    "sim",
+    "analysis",
+    "io",
+    "viz",
+    "ml",
+    "utils",
+    
+    # Metadata
+    "__version__",
+    "__author__",
+    "__license__",
+]

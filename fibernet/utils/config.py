@@ -40,7 +40,12 @@ output:
 ```
 """
 
-import yaml
+try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+    yaml = None
 import json
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
@@ -104,6 +109,8 @@ class ExperimentConfig:
     @classmethod
     def from_yaml(cls, filepath: Union[str, Path]) -> 'ExperimentConfig':
         """Load configuration from YAML file."""
+        if not HAS_YAML:
+            raise ImportError("PyYAML is required for YAML support. Install with: pip install pyyaml")
         filepath = Path(filepath)
         with open(filepath, 'r') as f:
             data = yaml.safe_load(f)

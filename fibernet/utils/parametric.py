@@ -8,7 +8,13 @@ on fiber network properties.
 import numpy as np
 import itertools
 from typing import Callable, Dict, List, Tuple, Any
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+    HAS_TQDM = True
+except ImportError:
+    HAS_TQDM = False
+    def tqdm(iterable, **kwargs):
+        return iterable
 
 
 def parametric_sweep(

@@ -233,7 +233,10 @@ def analyze(network: FiberNetwork) -> Dict:
     topo = TopologyAnalyzer(network)
     
     morph_report = morph.full_report()
-    topo_report = topo.full_report()
+    try:
+        topo_report = topo.full_report()
+    except ImportError:
+        topo_report = {}
     
     return {
         'num_fibers': network.num_fibers,
