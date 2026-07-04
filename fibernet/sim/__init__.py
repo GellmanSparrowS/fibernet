@@ -65,3 +65,11 @@ __all__ += [
     # Acoustic
     "AcousticSolver", "AcousticResult",
 ]
+
+# Multi-physics coupled simulations
+from .coupled import (
+    ThermoMechanicalSolver,
+    ElectroMechanicalSolver,
+    MultiPhysicsSolver,
+    CoupledResult
+)

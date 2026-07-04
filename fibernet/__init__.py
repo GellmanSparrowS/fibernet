@@ -11,12 +11,13 @@ Homepage: https://ml-biomat.com
 GitHub: https://github.com/GellmanSparrowS/fibernet
 """
 
-__version__ = "0.1.0"
+__version__ = "0.5.0"
 __author__ = "ML-BioMat Lab"
 
 from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork
 from fibernet.core.material import Material
+from fibernet.core.copy_utils import copy_fiber, copy_material, copy_network
 
 __all__ = [
     "Fiber",

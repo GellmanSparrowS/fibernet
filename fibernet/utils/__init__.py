@@ -22,3 +22,11 @@ from fibernet.utils.validation import (
     validate_integer, validate_box_size, validate_probability,
     validate_angle, validate_seed, validate_material_properties,
 )
+
+# Parametric study and sensitivity analysis
+from .parametric import (
+    parametric_sweep,
+    sensitivity_analysis,
+    monte_carlo_analysis,
+    correlation_matrix
+)
