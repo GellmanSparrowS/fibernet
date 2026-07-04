@@ -5,8 +5,8 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'FiberNet'
 copyright = '2026, FiberNet Contributors'
 author = 'FiberNet Contributors'
-version = '0.6'
-release = '0.6.0'
+version = '1.5'
+release = '1.5.1'
 
 extensions = [
     'sphinx.ext.autodoc',
@@ -15,6 +15,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
     'sphinx.ext.todo',
+    'sphinx.ext.autosummary',
 ]
 
 templates_path = ['_templates']
@@ -26,10 +27,23 @@ html_static_path = ['_static']
 autodoc_default_options = {
     'members': True,
     'member-order': 'bysource',
-    'undoc-members': True,
+    'undoc-members': False,
     'show-inheritance': True,
+    'special-members': '__init__',
 }
 
+autosummary_generate = True
+napoleon_google_docstring = True
+napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = False
 
 mathjax_path = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'
 todo_include_todos = True
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'numpy': ('https://numpy.org/doc/stable/', None),
+    'scipy': ('https://docs.scipy.org/doc/scipy/', None),
+    'matplotlib': ('https://matplotlib.org/stable/', None),
+}

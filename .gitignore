@@ -25,3 +25,4 @@ venv/
 .bundle
 docs/_build/
 docs/_static/
+docs/_build/
