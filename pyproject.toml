@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fibernet"
+version = "0.1.0"
+description = "FiberNet - A comprehensive toolkit for generation, simulation, and analysis of fiber network structures"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "ML-BioMat Lab", email = "contact@ml-biomat.com"},
+]
+keywords = ["fiber", "network", "simulation", "materials", "mechanics", "topology"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "networkx>=3.0",
+    "matplotlib>=3.7",
+    "h5py>=3.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+gpu = ["taichi>=1.6"]
+viz3d = ["pyvista>=0.40"]
+all = ["taichi>=1.6", "pyvista>=0.40", "scikit-learn>=1.2"]
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "ruff>=0.1"]
+
+[project.urls]
+Homepage = "https://ml-biomat.com"
+Repository = "https://github.com/GellmanSparrowS/fibernet"
+Documentation = "https://github.com/GellmanSparrowS/fibernet/wiki"
+
+[tool.setuptools.packages.find]
+include = ["fibernet*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

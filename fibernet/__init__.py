@@ -1,0 +1,26 @@
+"""
+FiberNet - A comprehensive toolkit for fiber network structure research.
+
+Provides tools for:
+- Generation: 2D/3D fiber networks (ordered, disordered, chiral, bundled, woven, hierarchical)
+- Simulation: Mechanical, dynamics, fracture, thermal, electromagnetic
+- Analysis: Topology, morphology, properties
+- Visualization: 3D rendering, animation, 2D plots
+
+Homepage: https://ml-biomat.com
+GitHub: https://github.com/GellmanSparrowS/fibernet
+"""
+
+__version__ = "0.1.0"
+__author__ = "ML-BioMat Lab"
+
+from fibernet.core.fiber import Fiber
+from fibernet.core.network import FiberNetwork
+from fibernet.core.material import Material
+
+__all__ = [
+    "Fiber",
+    "FiberNetwork",
+    "Material",
+    "__version__",
+]
