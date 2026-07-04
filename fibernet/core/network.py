@@ -354,3 +354,60 @@ class FiberNetwork:
             f"FiberNetwork(fibers={self.num_fibers}, crosslinks={self.num_crosslinks}, "
             f"dim={self.dimension}D, L_total={self.total_length:.2f})"
         )
+
+    def describe(self) -> str:
+        """Return a statistical summary of the network.
+
+        Returns
+        -------
+        str
+            Multi-line string with network statistics.
+        """
+        import numpy as np
+
+        lines = [
+            f"FiberNetwork Summary",
+            f"{'='*40}",
+            f"Fibers: {self.num_fibers}",
+            f"Crosslinks: {self.num_crosslinks}",
+            f"Dimension: {self.dimension}D",
+        ]
+
+        if self.num_fibers == 0:
+            return '\n'.join(lines)
+
+        lengths = np.array([f.length for f in self.fibers])
+        radii = np.array([f.radius for f in self.fibers])
+        tortuosities = np.array([f.tortuosity() for f in self.fibers])
+
+        lines.extend([
+            f"",
+            f"Fiber Length:",
+            f"  Mean: {np.mean(lengths):.3f}",
+            f"  Std:  {np.std(lengths):.3f}",
+            f"  Min:  {np.min(lengths):.3f}",
+            f"  Max:  {np.max(lengths):.3f}",
+            f"",
+            f"Fiber Radius:",
+            f"  Mean: {np.mean(radii):.4f}",
+            f"  Std:  {np.std(radii):.4f}",
+            f"",
+            f"Tortuosity:",
+            f"  Mean: {np.mean(tortuosities):.3f}",
+            f"  Std:  {np.std(tortuosities):.3f}",
+        ])
+
+        # Connectivity
+        if self.num_crosslinks > 0:
+            lines.append(f"")
+            lines.append(f"Connectivity:")
+            lines.append(f"  Crosslinks per fiber: {2*self.num_crosslinks/self.num_fibers:.2f}")
+
+        # Material
+        mat_names = list(set(f.material.name for f in self.fibers))
+        if len(mat_names) == 1:
+            lines.append(f"Material: {mat_names[0]}")
+        else:
+            lines.append(f"Materials: {', '.join(mat_names)}")
+
+        return '\n'.join(lines)

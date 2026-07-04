@@ -13,7 +13,8 @@ Submodules:
 
 from fibernet.gen.disordered import (
     random_straight_2d, random_straight_3d, random_walk_fibers,
-    oriented_random_2d, poisson_line_network_2d,
+    oriented_random_2d, oriented_random_3d,
+    poisson_line_network_2d, random_curved_fibers_3d,
 )
 from fibernet.gen.ordered import (
     square_lattice_2d, triangular_lattice_2d, honeycomb_lattice_2d,
@@ -43,7 +44,8 @@ from fibernet.gen.variants import (
 __all__ = [
     # Disordered
     "random_straight_2d", "random_straight_3d", "random_walk_fibers",
-    "oriented_random_2d", "poisson_line_network_2d",
+    "oriented_random_2d", "oriented_random_3d",
+    "poisson_line_network_2d", "random_curved_fibers_3d",
     # Ordered
     "square_lattice_2d", "triangular_lattice_2d", "honeycomb_lattice_2d",
     "cubic_lattice_3d", "octet_truss_3d", "kagome_lattice_2d",

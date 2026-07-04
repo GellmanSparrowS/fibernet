@@ -1,0 +1,85 @@
+"""Tests for pandas I/O integration."""
+
+import pytest
+import numpy as np
+from fibernet import gen
+from fibernet.io import to_dataframe, from_dataframe, network_summary, parametric_to_dataframe
+
+
+def test_to_dataframe():
+    """Test converting network to DataFrame."""
+    net = gen.random_straight_2d(num_fibers=10, fiber_length=8, box_size=(20, 20), seed=42)
+    df = to_dataframe(net)
+    
+    assert df is not None
+    assert 'fiber_id' in df.columns
+    assert 'x' in df.columns
+    assert 'y' in df.columns
+    assert 'radius' in df.columns
+    assert df['fiber_id'].nunique() == 10
+
+
+def test_from_dataframe_roundtrip():
+    """Test round-trip: network -> DataFrame -> network."""
+    net = gen.random_straight_2d(num_fibers=15, fiber_length=12, box_size=(30, 30), seed=42)
+    
+    df = to_dataframe(net)
+    net2 = from_dataframe(df)
+    
+    assert net2.num_fibers == net.num_fibers
+    # Note: point counts may differ due to resampling
+
+
+def test_network_summary():
+    """Test network_summary function."""
+    net = gen.random_straight_2d(num_fibers=20, fiber_length=10, box_size=(25, 25), seed=42)
+    
+    summary = network_summary(net)
+    
+    assert summary is not None
+    assert 'fiber_id' in summary.columns
+    assert 'length' in summary.columns
+    assert 'tortuosity' in summary.columns
+    assert len(summary) == 20
+    
+    # Check statistics
+    assert summary['length'].mean() == pytest.approx(10.0, abs=1e-6)
+
+
+def test_parametric_to_dataframe():
+    """Test parametric study results to DataFrame."""
+    params = {'num_fibers': np.array([10, 20, 30]), 'length': np.array([5, 10, 15])}
+    metrics = {'nematic': np.array([0.5, 0.6, 0.7]), 'porosity': np.array([0.8, 0.7, 0.6])}
+    
+    df = parametric_to_dataframe(params, metrics)
+    
+    assert df is not None
+    assert 'num_fibers' in df.columns
+    assert 'length' in df.columns
+    assert 'nematic' in df.columns
+    assert 'porosity' in df.columns
+    assert len(df) == 3
+
+
+def test_describe_method():
+    """Test FiberNetwork.describe() method."""
+    net = gen.random_straight_2d(num_fibers=30, fiber_length=10, box_size=(25, 25), seed=42)
+    
+    desc = net.describe()
+    
+    assert desc is not None
+    assert isinstance(desc, str)
+    assert 'FiberNetwork Summary' in desc
+    assert 'Fibers: 30' in desc
+    assert 'Mean:' in desc
+    assert 'Material:' in desc
+
+
+def test_empty_network():
+    """Test with empty network."""
+    from fibernet.core.network import FiberNetwork
+    
+    net = FiberNetwork()
+    desc = net.describe()
+    
+    assert 'Fibers: 0' in desc

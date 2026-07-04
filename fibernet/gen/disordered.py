@@ -395,3 +395,183 @@ def poisson_line_network_2d(
     
     net.auto_crosslink(threshold=2.5 * radius)
     return net
+
+
+def oriented_random_3d(
+    num_fibers: int = 100,
+    fiber_length: float = 10.0,
+    box_size: Tuple[float, float, float] = (50.0, 50.0, 50.0),
+    radius: float = 0.1,
+    preferred_direction: Tuple[float, float, float] = (1.0, 0.0, 0.0),
+    angular_spread: float = 0.3,
+    material: Optional[Material] = None,
+    seed: Optional[int] = None,
+) -> FiberNetwork:
+    """Generate a 3D fiber network with preferred orientation.
+
+    Fibers are distributed randomly in 3D space but tend to align
+    with the preferred direction, with angular spread controlling
+    the degree of alignment.
+
+    Parameters
+    ----------
+    num_fibers : int
+        Number of fibers.
+    fiber_length : float
+        Length of each fiber.
+    box_size : tuple of float
+        (Lx, Ly, Lz) box dimensions.
+    radius : float
+        Fiber radius.
+    preferred_direction : tuple of float
+        Preferred alignment direction (will be normalized).
+    angular_spread : float
+        Standard deviation of angular distribution (radians).
+        0 = perfect alignment, pi/2 = isotropic.
+    material : Material, optional
+        Material properties.
+    seed : int, optional
+        Random seed for reproducibility.
+
+    Returns
+    -------
+    FiberNetwork
+        3D oriented fiber network.
+    """
+    if seed is not None:
+        rng = np.random.RandomState(seed)
+    else:
+        rng = np.random.RandomState()
+
+    if material is None:
+        material = Material()
+
+    # Normalize preferred direction
+    pref_dir = np.array(preferred_direction, dtype=float)
+    pref_dir /= np.linalg.norm(pref_dir)
+
+    # Create orthogonal basis
+    if abs(pref_dir[0]) < 0.9:
+        up = np.array([1.0, 0.0, 0.0])
+    else:
+        up = np.array([0.0, 1.0, 0.0])
+    u = np.cross(pref_dir, up)
+    u /= np.linalg.norm(u)
+    v = np.cross(pref_dir, u)
+
+    network = FiberNetwork(dimension=3)
+
+    for i in range(num_fibers):
+        # Sample orientation using von Mises-Fisher-like distribution
+        theta = rng.normal(0, angular_spread)
+        phi = rng.uniform(0, 2 * np.pi)
+
+        # Direction in local frame
+        cos_theta = np.cos(theta)
+        sin_theta = np.sin(theta)
+        local_dir = np.array([cos_theta, sin_theta * np.cos(phi), sin_theta * np.sin(phi)])
+
+        # Transform to global frame
+        direction = local_dir[0] * pref_dir + local_dir[1] * u + local_dir[2] * v
+        direction /= np.linalg.norm(direction)
+
+        # Random center
+        center = np.array([
+            rng.uniform(0, box_size[0]),
+            rng.uniform(0, box_size[1]),
+            rng.uniform(0, box_size[2]),
+        ])
+
+        # Create fiber centerline
+        start = center - 0.5 * fiber_length * direction
+        end = center + 0.5 * fiber_length * direction
+        centerline = np.array([start, end])
+
+        fiber = Fiber(centerline=centerline, radius=radius, material=material, fiber_id=i)
+        network.add_fiber(fiber)
+
+    network.detect_contacts()
+    return network
+
+
+def random_curved_fibers_3d(
+    num_fibers: int = 50,
+    fiber_length: float = 10.0,
+    box_size: Tuple[float, float, float] = (50.0, 50.0, 50.0),
+    radius: float = 0.1,
+    curvature: float = 0.5,
+    num_segments: int = 20,
+    material: Optional[Material] = None,
+    seed: Optional[int] = None,
+) -> FiberNetwork:
+    """Generate a 3D network of curved fibers.
+
+    Fibers are generated as curved paths with controlled curvature.
+
+    Parameters
+    ----------
+    num_fibers : int
+        Number of fibers.
+    fiber_length : float
+        Arc length of each fiber.
+    box_size : tuple of float
+        (Lx, Ly, Lz) box dimensions.
+    radius : float
+        Fiber radius.
+    curvature : float
+        Curvature magnitude (higher = more curved).
+    num_segments : int
+        Number of segments per fiber.
+    material : Material, optional
+        Material properties.
+    seed : int, optional
+        Random seed.
+
+    Returns
+    -------
+    FiberNetwork
+        3D curved fiber network.
+    """
+    if seed is not None:
+        rng = np.random.RandomState(seed)
+    else:
+        rng = np.random.RandomState()
+
+    if material is None:
+        material = Material()
+
+    network = FiberNetwork(dimension=3)
+    step_length = fiber_length / num_segments
+
+    for i in range(num_fibers):
+        # Random starting point and direction
+        pos = np.array([
+            rng.uniform(0, box_size[0]),
+            rng.uniform(0, box_size[1]),
+            rng.uniform(0, box_size[2]),
+        ])
+
+        # Random initial direction
+        direction = rng.randn(3)
+        direction /= np.linalg.norm(direction)
+
+        centerline = [pos.copy()]
+
+        for _ in range(num_segments - 1):
+            # Random curvature perturbation
+            perturbation = rng.randn(3) * curvature
+            # Remove component along current direction (keep orthogonal)
+            perturbation -= np.dot(perturbation, direction) * direction
+            direction = direction + perturbation
+            direction /= np.linalg.norm(direction)
+
+            pos = pos + step_length * direction
+            centerline.append(pos.copy())
+
+        centerline = np.array(centerline)
+
+        fiber = Fiber(centerline=centerline, radius=radius, material=material, fiber_id=i)
+        network.add_fiber(fiber)
+
+    network.detect_contacts()
+    return network
