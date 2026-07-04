@@ -19,3 +19,21 @@ __all__ = [
     "TopologyAnalyzer", "MorphologyAnalyzer", "PropertyEstimator",
     "SpectralAnalyzer", "PoreAnalyzer", "AnisotropyAnalyzer", "StructuralFingerprint",
 ]
+
+# Statistical analysis
+from fibernet.analysis.statistics import StatisticalAnalyzer
+
+# NetworkX integration
+try:
+    from fibernet.analysis.networkx_integration import (
+        to_networkx, compute_centrality, detect_communities,
+        compute_graph_metrics, find_shortest_path, compute_small_world_metrics,
+    )
+except ImportError:
+    pass
+
+__all__ += [
+    "StatisticalAnalyzer",
+    "to_networkx", "compute_centrality", "detect_communities",
+    "compute_graph_metrics", "find_shortest_path", "compute_small_world_metrics",
+]

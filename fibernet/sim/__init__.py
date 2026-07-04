@@ -51,3 +51,17 @@ __all__ = [
     # Acceleration
     "TaichiEngine", "AcceleratedResult",
 ]
+
+# Fluid flow simulation
+from fibernet.sim.fluid import DarcySolver, PoreNetworkModel, FluidResult
+
+# Acoustic wave propagation
+from fibernet.sim.acoustic import AcousticSolver, AcousticResult
+
+# Update __all__
+__all__ += [
+    # Fluid
+    "DarcySolver", "PoreNetworkModel", "FluidResult",
+    # Acoustic
+    "AcousticSolver", "AcousticResult",
+]

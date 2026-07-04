@@ -30,3 +30,16 @@ from .api import (
     create, mirror, rotate, scale, translate, merge, tile,
     simulate_mechanics, simulate_thermal, analyze, export, load, plot,
 )
+
+# Version information
+from .version import __version__, __author__, __license__
+
+# ML module (optional)
+try:
+    from . import ml
+except ImportError:
+    pass
+
+# Fluid and acoustic simulation
+from .sim.fluid import DarcySolver, PoreNetworkModel
+from .sim.acoustic import AcousticSolver
