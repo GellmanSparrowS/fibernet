@@ -83,6 +83,44 @@ class EMSolver:
             
             node_offset += n_pts
         
+        # Add conductance at crosslink points (connect different fibers)
+        if hasattr(self.network, 'crosslinks') and self.network.crosslinks:
+            fiber_node_offsets = []
+            offset = 0
+            for fiber in self.network.fibers:
+                fiber_node_offsets.append(offset)
+                offset += len(fiber.centerline)
+            
+            for cl in self.network.crosslinks:
+                # Get the two fibers and find nearest nodes
+                fi, fj = cl.fiber_i, cl.fiber_j
+                if fi >= len(fiber_node_offsets) or fj >= len(fiber_node_offsets):
+                    continue
+                
+                # Find nearest node on each fiber to the crosslink position
+                cl_pos = cl.position
+                fiber_i = self.network.fibers[fi]
+                fiber_j = self.network.fibers[fj]
+                
+                # Nearest node on fiber i
+                dists_i = np.linalg.norm(fiber_i.centerline - cl_pos, axis=1)
+                node_i = fiber_node_offsets[fi] + np.argmin(dists_i)
+                
+                # Nearest node on fiber j
+                dists_j = np.linalg.norm(fiber_j.centerline - cl_pos, axis=1)
+                node_j = fiber_node_offsets[fj] + np.argmin(dists_j)
+                
+                if node_i != node_j:
+                    # Connect with high conductance (low contact resistance)
+                    contact_cond = 1e6  # High conductance at crosslinks
+                    if contact_resistance > 0:
+                        contact_cond = 1.0 / contact_resistance
+                    
+                    G[node_i, node_i] += contact_cond
+                    G[node_j, node_j] += contact_cond
+                    G[node_i, node_j] -= contact_cond
+                    G[node_j, node_i] -= contact_cond
+        
         tol = L * 0.05
         high_nodes = np.where(positions >= pos_max - tol)[0]
         low_nodes = np.where(positions <= pos_min + tol)[0]
@@ -124,10 +162,20 @@ class EMSolver:
         I_total = 0.0
         G_csr = G.tocsr()
         for node in high_nodes:
-            I_total += abs(G_csr[node, :] @ V)
+            current = G_csr[node, :] @ V
+            if hasattr(current, '__len__'):
+                current = current.item() if current.size == 1 else current.sum()
+            I_total += abs(float(current))
         
         bb_min, bb_max = self.network.bounding_box()
         dims = bb_max - bb_min
+        
+        # Handle 2D networks: use average fiber radius as thickness
+        if np.any(dims < 1e-10):
+            avg_radius = np.mean([f.radius for f in self.network.fibers])
+            thickness = avg_radius * 10  # Use 10x average radius as thickness
+            dims = np.where(dims < 1e-10, thickness, dims)
+        
         if axis == 0:
             area = dims[1] * dims[2] if len(dims) > 2 else dims[1]
         elif axis == 1:
@@ -135,7 +183,7 @@ class EMSolver:
         else:
             area = dims[0] * dims[1]
         
-        sigma_eff = I_total * L / (area * voltage) if area > 1e-12 and voltage > 1e-12 else 0.0
+        sigma_eff = float(I_total * L / (area * voltage)) if area > 1e-12 and voltage > 1e-12 else 0.0
         
         is_perc = I_total > 1e-12
         
