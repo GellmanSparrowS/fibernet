@@ -131,3 +131,15 @@ __all__.extend([
     "FiberSuspensionRheology", "RheologyResult", "JefferyOrbit",
     "compute_intrinsic_viscosity", "compute_dilute_limit_viscosity"
 ])
+
+# Damage mechanics and fatigue
+from .damage import (
+    DamageMechanicsSolver, FatigueSolver,
+    DamageState, FatigueResult, ProgressiveFailureResult,
+    compute_damage_tolerance
+)
+__all__.extend([
+    "DamageMechanicsSolver", "FatigueSolver",
+    "DamageState", "FatigueResult", "ProgressiveFailureResult",
+    "compute_damage_tolerance"
+])

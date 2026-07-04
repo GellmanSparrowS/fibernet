@@ -317,3 +317,29 @@ FiberNet has reached 1.0.0! This marks the first stable release of our comprehen
 - Added ML tutorial notebook
 - Added rheology module documentation
 - Added plotly visualization guide
+
+## [1.4.0] - 2026-07-05
+
+### Added
+- **Damage Mechanics and Fatigue Module** (`fibernet/sim/damage.py`)
+  - DamageMechanicsSolver for continuum damage mechanics
+  - Progressive failure simulation under monotonic loading
+  - Fiber breakage tracking with damage evolution laws
+  - Residual stiffness and strength computation
+  - FatigueSolver for fatigue life prediction
+  - S-N curve generation (Basquin's law)
+  - Miner's rule for variable amplitude loading
+  - Damage tolerance analysis utility
+  - FatigueResult and ProgressiveFailureResult data classes
+
+- **Tests**
+  - 12 new tests for damage mechanics and fatigue
+  - Total: 401 tests (all passing)
+
+### Changed
+- Version bump to 1.4.0
+- Fixed numpy 2.0 compatibility (np.trapz → np.trapezoid)
+
+### Documentation
+- Added damage mechanics module documentation
+- Updated README with fatigue analysis examples
