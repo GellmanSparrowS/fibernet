@@ -4,8 +4,8 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-420%20passing-green.svg)]()
-[![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)]()
+[![Tests](https://img.shields.io/badge/tests-426%20passing-green.svg)]()
+[![Version](https://img.shields.io/badge/version-1.5.1-blue.svg)]()
 [![DOI](https://img.shields.io/badge/DOI-pending-orange.svg)]()
 [![GitHub](https://img.shields.io/github/stars/GellmanSparrowS/fibernet?style=social)](https://github.com/GellmanSparrowS/fibernet)
 
