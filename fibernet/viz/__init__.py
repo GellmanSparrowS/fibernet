@@ -20,3 +20,9 @@ __all__ = [
     "plot_stress_strain", "plot_length_distribution",
     "render_network_3d", "render_deformation",
 ]
+
+from fibernet.viz.advanced import (
+    plot_stress_field, plot_temperature_field,
+    plot_displacement_field, plot_cross_section,
+    create_animation,
+)
