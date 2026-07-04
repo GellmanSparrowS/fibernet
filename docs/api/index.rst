@@ -41,6 +41,22 @@ Analysis
    :undoc-members:
    :show-inheritance:
 
+Materials Database
+------------------
+
+.. automodule:: fibernet.materials
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Unit Conversions
+----------------
+
+.. automodule:: fibernet.units
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Machine Learning
 ----------------
 
