@@ -86,3 +86,6 @@ from .comparison import (
 __all__.extend([
     "NetworkFingerprint", "NetworkComparator", "compare_networks", "network_similarity"
 ])
+
+# Export all from spatial
+from .spatial import compute_spatial_statistics

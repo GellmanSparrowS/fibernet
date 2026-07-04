@@ -32,3 +32,9 @@ __all__ = [
     "to_dataframe", "from_dataframe",
     "network_summary", "parametric_to_dataframe",
 ]
+
+# Mesh export
+from .mesh_export import export_stl, export_obj, export_ply
+__all__.extend([
+    "export_stl", "export_obj", "export_ply"
+])

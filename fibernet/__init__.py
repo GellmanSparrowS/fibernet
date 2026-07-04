@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.17.0"
+__version__ = "1.18.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
