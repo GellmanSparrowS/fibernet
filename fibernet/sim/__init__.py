@@ -212,3 +212,33 @@ __all__.extend([
     "run_fiber_md"
 ])
 
+
+# Fatigue analysis
+from .fatigue import (
+    FatigueAnalyzer, FatigueResult, CyclicLoadResult, SNPoint,
+    analyze_fatigue
+)
+__all__.extend([
+    "FatigueAnalyzer", "FatigueResult", "CyclicLoadResult", "SNPoint",
+    "analyze_fatigue"
+])
+
+# Creep analysis
+from .creep import (
+    CreepAnalyzer, CreepResult, CreepModelParameters,
+    analyze_creep
+)
+__all__.extend([
+    "CreepAnalyzer", "CreepResult", "CreepModelParameters",
+    "analyze_creep"
+])
+
+# Diffusion and transport
+from .diffusion import (
+    DiffusionAnalyzer, DiffusionResult, FiltrationResult,
+    analyze_diffusion
+)
+__all__.extend([
+    "DiffusionAnalyzer", "DiffusionResult", "FiltrationResult",
+    "analyze_diffusion"
+])
