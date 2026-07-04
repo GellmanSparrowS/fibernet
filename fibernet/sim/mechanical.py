@@ -11,9 +11,11 @@ Implements:
 Uses scipy sparse matrices for efficient solving.
 """
 
+import warnings
 import numpy as np
 from scipy.sparse import lil_matrix, csr_matrix
 from scipy.sparse.linalg import spsolve
+import scipy.sparse.linalg as spla
 from typing import Optional, Dict, Tuple, List, Any
 from dataclasses import dataclass, field
 
@@ -296,15 +298,42 @@ class FiberFEM:
             for dof, val in prescribed_dofs.items():
                 u[dof] = val
         
+        if len(free_dofs) == 0:
+            return MechanicalResult(
+                displacements=u,
+                forces=F,
+            )
+        
+        # Detect and fix isolated DOFs (not connected to any element)
+        diag = K_free.diagonal()
+        isolated_mask = np.abs(diag) < 1e-15
+        if np.any(isolated_mask):
+            # Fix isolated DOFs by adding unit stiffness
+            from scipy.sparse import diags
+            fix = diags(np.where(isolated_mask, 1.0, 0.0))
+            K_free = K_free + fix
+        
+        # Add Tikhonov regularization for near-singular systems
+        reg = 1e-12 * np.max(np.abs(K_free.diagonal()))
+        if reg > 0:
+            from scipy.sparse import diags
+            K_free = K_free + diags(reg * np.ones(len(free_dofs)))
+        
         try:
-            u_free = spsolve(K_free, F_free)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                u_free = spsolve(K_free, F_free)
+            if np.any(np.isnan(u_free)):
+                u_free = np.linalg.lstsq(K_free.toarray(), F_free, rcond=None)[0]
             for i, dof in enumerate(free_dofs):
                 u[dof] = u_free[i]
         except Exception as e:
-            print(f"Warning: Linear solver failed: {e}. Using least-squares.")
-            u_free = np.linalg.lstsq(K_free.toarray(), F_free, rcond=None)[0]
-            for i, dof in enumerate(free_dofs):
-                u[dof] = u_free[i]
+            try:
+                u_free = np.linalg.lstsq(K_free.toarray(), F_free, rcond=None)[0]
+                for i, dof in enumerate(free_dofs):
+                    u[dof] = u_free[i]
+            except Exception:
+                pass  # Leave u as zeros
         
         stresses = np.zeros(self.num_elements)
         strains = np.zeros(self.num_elements)

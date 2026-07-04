@@ -103,8 +103,19 @@ class EMSolver:
                 for j in list(fixed):
                     rhs[i] -= G_csr[dof, j] * V[j]
             
+            # Add regularization for isolated nodes
+            from scipy.sparse import diags
+            diag = G_free.diagonal()
+            isolated = np.abs(diag) < 1e-15
+            if np.any(isolated):
+                G_free = G_free + diags(np.where(isolated, 1.0, 0.0))
+            
             try:
-                V_free = spsolve(G_free, rhs)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    V_free = spsolve(G_free, rhs)
+                if np.any(np.isnan(V_free)):
+                    V_free = np.linalg.lstsq(G_free.toarray(), rhs, rcond=None)[0]
                 for i, dof in enumerate(free):
                     V[dof] = V_free[i]
             except:

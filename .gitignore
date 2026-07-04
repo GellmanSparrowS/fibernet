@@ -22,3 +22,4 @@ venv/
 *.log
 .env
 .env_token
+.bundle

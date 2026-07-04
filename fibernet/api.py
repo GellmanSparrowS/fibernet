@@ -10,6 +10,10 @@ Provides easy access to common operations:
 """
 
 import numpy as np
+from fibernet.utils.exceptions import (
+    EmptyNetworkError, InvalidParameterError,
+    check_nonempty, check_positive, check_range, check_integer
+)
 from typing import Optional, Dict, List, Union, Tuple
 from pathlib import Path
 
@@ -220,6 +224,9 @@ def analyze(network: FiberNetwork) -> Dict:
         Analysis results with keys: num_fibers, num_crosslinks,
         nematic_order, mean_length, total_length, volume_fraction, etc.
     """
+    # Validate input
+    check_nonempty(network, 'analyze')
+
     from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
     
     morph = MorphologyAnalyzer(network)

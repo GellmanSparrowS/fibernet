@@ -30,20 +30,30 @@ class PeriodicBox:
     
     def wrap_point(self, point: np.ndarray) -> np.ndarray:
         """Wrap a point into the periodic box."""
-        rel = np.asarray(point) - self.origin
-        wrapped = rel % self.box_size
+        rel = np.asarray(point, dtype=float) - self.origin
+        wrapped = np.copy(rel)
+        for d in range(len(self.box_size)):
+            if self.box_size[d] > 1e-15:
+                wrapped[d] = rel[d] % self.box_size[d]
         return wrapped + self.origin
     
     def wrap_points(self, points: np.ndarray) -> np.ndarray:
         """Wrap multiple points into the periodic box."""
-        rel = np.asarray(points) - self.origin
-        wrapped = rel % self.box_size
+        rel = np.asarray(points, dtype=float) - self.origin
+        wrapped = np.copy(rel)
+        for d in range(len(self.box_size)):
+            if self.box_size[d] > 1e-15:
+                wrapped[:, d] = rel[:, d] % self.box_size[d]
         return wrapped + self.origin
     
     def minimum_image(self, r: np.ndarray) -> np.ndarray:
         """Apply minimum image convention to displacement vector."""
-        r = np.asarray(r)
-        return r - self.box_size * np.round(r / self.box_size)
+        r = np.asarray(r, dtype=float)
+        result = np.copy(r)
+        for d in range(len(self.box_size)):
+            if self.box_size[d] > 1e-15:
+                result[d] -= self.box_size[d] * np.round(r[d] / self.box_size[d])
+        return result
     
     def distance(self, p1: np.ndarray, p2: np.ndarray) -> float:
         """Compute minimum-image distance between two points."""
@@ -68,8 +78,12 @@ class PeriodicBox:
         return np.asarray(target) + dr_mic
     
     def volume(self) -> float:
-        """Box volume."""
-        return float(np.prod(self.box_size))
+        """Box volume. For 2D networks, returns area instead."""
+        # Filter out zero or very small dimensions
+        valid_dims = [d for d in self.box_size if d > 1e-15]
+        if len(valid_dims) == 0:
+            return 1.0
+        return float(np.prod(valid_dims))
     
     def wrap_network(self, network: FiberNetwork) -> FiberNetwork:
         """Wrap all fiber centerlines into the periodic box.
