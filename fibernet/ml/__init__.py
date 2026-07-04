@@ -23,3 +23,13 @@ __all__ = [
 
 # GNN feature extraction
 from .features import GNNFeatureExtractor
+
+# Graph Neural Network
+from .graph_neural_network import (
+    GraphData, NetworkGraphConverter, GNNPropertyPredictor,
+    predict_property
+)
+__all__.extend([
+    "GraphData", "NetworkGraphConverter", "GNNPropertyPredictor",
+    "predict_property"
+])

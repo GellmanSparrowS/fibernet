@@ -175,3 +175,29 @@ __all__.extend([
     "BucklingAnalyzer", "FiberBucklingResult", "NetworkBucklingResult",
     "analyze_buckling"
 ])
+
+# Permeability and diffusion
+from .permeability import (
+    PermeabilitySolver, PermeabilityResult,
+    DiffusionSolver, DiffusionResult,
+    compute_permeability, compute_diffusion
+)
+__all__.extend([
+    "PermeabilitySolver", "PermeabilityResult",
+    "DiffusionSolver", "DiffusionResult",
+    "compute_permeability", "compute_diffusion"
+])
+
+# Uncertainty quantification
+from .uncertainty import (
+    EnsembleResult, monte_carlo_ensemble,
+    sensitivity_analysis, convergence_study
+)
+__all__.extend([
+    "EnsembleResult", "monte_carlo_ensemble",
+    "sensitivity_analysis", "convergence_study"
+])
+
+# Coefficient of Thermal Expansion
+from .cte import CTEAnalyzer, CTEResult, compute_cte
+__all__.extend(["CTEAnalyzer", "CTEResult", "compute_cte"])
