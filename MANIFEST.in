@@ -1,0 +1,12 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements.txt
+include requirements-dev.txt
+recursive-include fibernet *.py
+recursive-include tests *.py
+recursive-include examples *.py
+recursive-include docs *.rst *.py
+global-exclude __pycache__
+global-exclude *.py[cod]

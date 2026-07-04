@@ -63,3 +63,22 @@ __all__ = [
     "lattice_2d_to_3d", "curved_lattice", "multi_radius_network",
     "variable_stiffness_network", "gyroid_infill", "diamond_lattice_3d", "foam_like_3d",
 ]
+
+# Specialized generators
+from fibernet.gen.specialized import (
+    cnt_network_2d,
+    cnt_network_3d,
+    paper_network,
+    textile_weave,
+    electrospun_mat,
+    fiber_reinforced_composite,
+)
+
+__all__ += [
+    "cnt_network_2d",
+    "cnt_network_3d",
+    "paper_network",
+    "textile_weave",
+    "electrospun_mat",
+    "fiber_reinforced_composite",
+]
