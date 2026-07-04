@@ -14,3 +14,9 @@ __all__ = [
     "mirror", "rotate", "scale", "translate", "merge", "tile",
     "trim_to_box", "duplicate_and_transform", "align_by_anchor", "create_pattern",
 ]
+from .pbc import PeriodicBox, apply_pbc, compute_rdf
+from .crosslinks import (
+    CrosslinkModel, CrosslinkState,
+    RigidCrosslink, SpringCrosslink, BreakableCrosslink,
+    FrictionCrosslink, BondedCrosslink,
+)

@@ -24,3 +24,9 @@ __all__ = [
     "Material",
     "__version__",
 ]
+
+# High-level convenience API
+from .api import (
+    create, mirror, rotate, scale, translate, merge, tile,
+    simulate_mechanics, simulate_thermal, analyze, export, load, plot,
+)
