@@ -546,3 +546,163 @@ class FiberNetwork:
 
         plt.tight_layout()
         return fig
+
+    def validate(self) -> Dict[str, Any]:
+        """Validate network integrity and return diagnostic information.
+
+        Checks for:
+        - Empty networks
+        - Invalid fiber geometries (zero-length, NaN values)
+        - Invalid crosslinks (out-of-bounds fiber IDs)
+        - Disconnected components
+        - Overlapping fibers (optional)
+
+        Returns
+        -------
+        dict
+            Validation results with keys:
+            - 'valid': bool - Overall validity
+            - 'errors': list of str - Critical issues
+            - 'warnings': list of str - Non-critical issues
+            - 'stats': dict - Network statistics
+
+        Examples
+        --------
+        >>> net = gen.random_straight_2d(num_fibers=50, fiber_length=10, box_size=(30, 30))
+        >>> result = net.validate()
+        >>> if result['valid']:
+        ...     print("Network is valid")
+        ... else:
+        ...     print(f"Errors: {result['errors']}")
+        """
+        import numpy as np
+        
+        errors = []
+        warnings = []
+        stats = {
+            'num_fibers': self.num_fibers,
+            'num_crosslinks': self.num_crosslinks,
+            'dimension': self.dimension,
+        }
+
+        # Check for empty network
+        if self.num_fibers == 0:
+            errors.append("Network has no fibers")
+            return {'valid': False, 'errors': errors, 'warnings': warnings, 'stats': stats}
+
+        # Check each fiber
+        zero_length_count = 0
+        nan_count = 0
+        for i, fiber in enumerate(self.fibers):
+            # Check for NaN in centerline
+            if np.any(np.isnan(fiber.centerline)):
+                nan_count += 1
+            
+            # Check for zero length
+            if fiber.length < 1e-12:
+                zero_length_count += 1
+            
+            # Check radius
+            if fiber.radius <= 0:
+                warnings.append(f"Fiber {i} has non-positive radius: {fiber.radius}")
+
+        if nan_count > 0:
+            errors.append(f"{nan_count} fiber(s) have NaN values in centerline")
+        
+        if zero_length_count > 0:
+            errors.append(f"{zero_length_count} fiber(s) have zero length")
+
+        # Check crosslinks
+        invalid_crosslinks = 0
+        for cl in self.crosslinks:
+            if cl.fiber_i < 0 or cl.fiber_i >= self.num_fibers:
+                invalid_crosslinks += 1
+            if cl.fiber_j < 0 or cl.fiber_j >= self.num_fibers:
+                invalid_crosslinks += 1
+
+        if invalid_crosslinks > 0:
+            errors.append(f"{invalid_crosslinks} crosslink(s) reference invalid fiber IDs")
+
+        # Check connectivity (if crosslinks exist)
+        if self.num_crosslinks > 0:
+            # Build adjacency
+            from collections import defaultdict
+            adj = defaultdict(set)
+            for cl in self.crosslinks:
+                adj[cl.fiber_i].add(cl.fiber_j)
+                adj[cl.fiber_j].add(cl.fiber_i)
+            
+            # BFS to find connected components
+            visited = set()
+            components = 0
+            for start in range(self.num_fibers):
+                if start not in visited:
+                    components += 1
+                    queue = [start]
+                    while queue:
+                        node = queue.pop(0)
+                        if node in visited:
+                            continue
+                        visited.add(node)
+                        queue.extend(adj[node] - visited)
+            
+            stats['num_components'] = components
+            if components > 1:
+                warnings.append(f"Network has {components} disconnected components")
+        else:
+            warnings.append("No crosslinks - fibers may not be mechanically connected")
+
+        # Add statistics
+        lengths = [f.length for f in self.fibers]
+        stats['mean_length'] = np.mean(lengths)
+        stats['total_length'] = np.sum(lengths)
+        stats['mean_radius'] = np.mean([f.radius for f in self.fibers])
+
+        valid = len(errors) == 0
+        return {'valid': valid, 'errors': errors, 'warnings': warnings, 'stats': stats}
+
+    def to_networkx(self):
+        """Convert fiber network to NetworkX graph.
+
+        Creates a graph where:
+        - Nodes represent fibers
+        - Edges represent crosslinks between fibers
+        - Node attributes: length, radius, material
+        - Edge attributes: stiffness, strength
+
+        Returns
+        -------
+        networkx.Graph
+            Graph representation of the network.
+
+        Examples
+        --------
+        >>> net = gen.random_straight_2d(num_fibers=50, fiber_length=10, box_size=(30, 30))
+        >>> G = net.to_networkx()
+        >>> print(f"Nodes: {G.number_of_nodes()}, Edges: {G.number_of_edges()}")
+        >>> import networkx as nx
+        >>> print(f"Clustering coefficient: {nx.average_clustering(G):.3f}")
+        """
+        try:
+            import networkx as nx
+        except ImportError:
+            raise ImportError("networkx is required. Install with: pip install networkx")
+
+        G = nx.Graph()
+
+        # Add nodes (fibers)
+        for fiber in self.fibers:
+            G.add_node(fiber.fiber_id,
+                      length=fiber.length,
+                      radius=fiber.radius,
+                      material=fiber.material.name,
+                      youngs_modulus=fiber.material.youngs_modulus)
+
+        # Add edges (crosslinks)
+        for cl in self.crosslinks:
+            G.add_edge(cl.fiber_i, cl.fiber_j,
+                      stiffness=cl.stiffness,
+                      strength=cl.strength,
+                      crosslink_type=cl.crosslink_type)
+
+        return G

@@ -119,3 +119,43 @@ def test_plot_method_3d():
     
     # 3D plot returns pyvista Plotter or None
     assert result is not None or result is None  # Either is acceptable
+
+
+def test_validate_method():
+    """Test FiberNetwork.validate() method."""
+    net = gen.random_straight_2d(num_fibers=20, fiber_length=10, box_size=(30, 30), seed=42)
+    result = net.validate()
+    
+    assert 'valid' in result
+    assert 'errors' in result
+    assert 'warnings' in result
+    assert 'stats' in result
+    assert result['stats']['num_fibers'] == 20
+
+
+def test_validate_empty_network():
+    """Test validate() on empty network."""
+    from fibernet.core.network import FiberNetwork
+    net = FiberNetwork()
+    result = net.validate()
+    
+    assert result['valid'] == False
+    assert len(result['errors']) > 0
+
+
+def test_to_networkx():
+    """Test FiberNetwork.to_networkx() method."""
+    import networkx as nx
+    
+    net = gen.random_straight_2d(num_fibers=25, fiber_length=10, box_size=(30, 30), seed=42)
+    G = net.to_networkx()
+    
+    assert G is not None
+    assert G.number_of_nodes() == 25
+    assert G.number_of_edges() == net.num_crosslinks
+    
+    # Check node attributes
+    node = list(G.nodes())[0]
+    assert 'length' in G.nodes[node]
+    assert 'radius' in G.nodes[node]
+    assert 'material' in G.nodes[node]
