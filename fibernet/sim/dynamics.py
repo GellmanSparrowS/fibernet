@@ -230,3 +230,248 @@ class FiberDynamics:
         
         self.damping = old_damping
         return result
+
+
+class TimeDependentLoading:
+    """
+    Time-dependent loading for dynamics simulations.
+    
+    Supports various loading protocols:
+    - Constant force/displacement
+    - Linear ramp
+    - Cyclic/sinusoidal loading
+    - Step loading
+    - Custom loading profiles
+    
+    Examples
+    --------
+    >>> # Sinusoidal loading
+    >>> loading = TimeDependentLoading.sinusoidal(
+    ...     amplitude=1.0, frequency=100.0, direction=np.array([1, 0, 0])
+    ... )
+    >>> 
+    >>> # Linear ramp
+    >>> loading = TimeDependentLoading.ramp(
+    ...     rate=0.1, direction=np.array([1, 0, 0])
+    ... )
+    """
+    
+    @staticmethod
+    def constant(
+        force: np.ndarray,
+        node_indices: Optional[List[int]] = None
+    ) -> Callable:
+        """
+        Create constant force loading.
+        
+        Parameters
+        ----------
+        force : np.ndarray
+            Force vector (3D)
+        node_indices : list, optional
+            Nodes to apply force to (all if None)
+        
+        Returns
+        -------
+        loading : callable
+            Loading function
+        """
+        def loading_func(step, positions):
+            forces = np.zeros_like(positions)
+            if node_indices is None:
+                for i in range(len(positions)):
+                    forces[i] += force
+            else:
+                for i in node_indices:
+                    forces[i] += force
+            return forces
+        
+        return loading_func
+    
+    @staticmethod
+    def ramp(
+        rate: float,
+        direction: np.ndarray,
+        node_indices: Optional[List[int]] = None,
+        start_time: float = 0.0,
+        dt: float = 1e-6
+    ) -> Callable:
+        """
+        Create linear ramp loading.
+        
+        Parameters
+        ----------
+        rate : float
+            Loading rate (force per time)
+        direction : np.ndarray
+            Loading direction (will be normalized)
+        node_indices : list, optional
+            Nodes to apply force to
+        start_time : float
+            Start time for loading
+        dt : float
+            Time step
+        
+        Returns
+        -------
+        loading : callable
+            Loading function
+        """
+        direction = np.asarray(direction, dtype=float)
+        direction = direction / np.linalg.norm(direction)
+        
+        def loading_func(step, positions):
+            t = step * dt
+            forces = np.zeros_like(positions)
+            if t >= start_time:
+                magnitude = rate * (t - start_time)
+                force = magnitude * direction
+                if node_indices is None:
+                    for i in range(len(positions)):
+                        forces[i] += force
+                else:
+                    for i in node_indices:
+                        forces[i] += force
+            return forces
+        
+        return loading_func
+    
+    @staticmethod
+    def sinusoidal(
+        amplitude: float,
+        frequency: float,
+        direction: np.ndarray,
+        phase: float = 0.0,
+        node_indices: Optional[List[int]] = None,
+        dt: float = 1e-6
+    ) -> Callable:
+        """
+        Create sinusoidal loading.
+        
+        Parameters
+        ----------
+        amplitude : float
+            Force amplitude
+        frequency : float
+            Frequency (Hz)
+        direction : np.ndarray
+            Loading direction
+        phase : float
+            Phase offset (radians)
+        node_indices : list, optional
+            Nodes to apply force to
+        dt : float
+            Time step
+        
+        Returns
+        -------
+        loading : callable
+            Loading function
+        """
+        direction = np.asarray(direction, dtype=float)
+        direction = direction / np.linalg.norm(direction)
+        
+        def loading_func(step, positions):
+            t = step * dt
+            magnitude = amplitude * np.sin(2 * np.pi * frequency * t + phase)
+            force = magnitude * direction
+            forces = np.zeros_like(positions)
+            if node_indices is None:
+                for i in range(len(positions)):
+                    forces[i] += force
+            else:
+                for i in node_indices:
+                    forces[i] += force
+            return forces
+        
+        return loading_func
+    
+    @staticmethod
+    def step_loading(
+        force: np.ndarray,
+        step_time: int,
+        node_indices: Optional[List[int]] = None
+    ) -> Callable:
+        """
+        Create step loading (applied after specified step).
+        
+        Parameters
+        ----------
+        force : np.ndarray
+            Force vector
+        step_time : int
+            Step at which to apply force
+        node_indices : list, optional
+            Nodes to apply force to
+        
+        Returns
+        -------
+        loading : callable
+            Loading function
+        """
+        def loading_func(step, positions):
+            forces = np.zeros_like(positions)
+            if step >= step_time:
+                if node_indices is None:
+                    for i in range(len(positions)):
+                        forces[i] += force
+                else:
+                    for i in node_indices:
+                        forces[i] += force
+            return forces
+        
+        return loading_func
+
+
+def compute_kinetic_energy(velocities: np.ndarray, masses: np.ndarray) -> float:
+    """
+    Compute kinetic energy.
+    
+    Parameters
+    ----------
+    velocities : np.ndarray
+        Velocity array (N, 3)
+    masses : np.ndarray
+        Mass array (N,)
+    
+    Returns
+    -------
+    ke : float
+        Total kinetic energy
+    """
+    return 0.5 * np.sum(masses[:, None] * velocities**2)
+
+
+def compute_temperature(
+    velocities: np.ndarray,
+    masses: np.ndarray,
+    degrees_of_freedom: int
+) -> float:
+    """
+    Compute instantaneous temperature.
+    
+    Parameters
+    ----------
+    velocities : np.ndarray
+        Velocity array (N, 3)
+    masses : np.ndarray
+        Mass array (N,)
+    degrees_of_freedom : int
+        Number of degrees of freedom
+    
+    Returns
+    -------
+    T : float
+        Temperature (Kelvin)
+    """
+    kb = 1.380649e-23
+    ke = compute_kinetic_energy(velocities, masses)
+    
+    if degrees_of_freedom > 0:
+        T = 2 * ke / (degrees_of_freedom * kb)
+    else:
+        T = 0.0
+    
+    return T
+
+
