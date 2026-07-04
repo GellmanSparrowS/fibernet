@@ -254,3 +254,32 @@ FiberNet has reached 1.0.0! This marks the first stable release of our comprehen
 ### Documentation
 - Added coupled multi-physics examples to README
 - Added fracture mechanics usage examples
+
+## [1.2.0] - 2026-07-05
+
+### Added
+- **Percolation Analysis Module** (`fibernet/analysis/percolation.py`)
+  - PercolationAnalyzer for connectivity analysis
+  - Cluster size distribution and statistics
+  - Percolation threshold detection
+  - Correlation length computation
+  - Backbone identification
+  - Effective conductivity estimation using percolation theory
+  - Percolating path finding algorithms
+  - `estimate_percolation_threshold()` utility function
+
+- **Jupyter Notebook Tutorials**
+  - `01_getting_started.ipynb` - Introduction to FiberNet basics
+  - `02_mechanical_simulation.ipynb` - FEM analysis and stress-strain curves
+  - Interactive examples for network generation, visualization, and analysis
+
+- **Tests**
+  - 8 new tests for percolation analysis
+  - Total: 389 tests (all passing)
+
+### Changed
+- Version bump to 1.2.0
+
+### Documentation
+- Added percolation analysis documentation
+- Enhanced README with percolation examples

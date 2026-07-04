@@ -40,3 +40,11 @@ except ImportError:
 __all__ += [
     "StatisticalAnalyzer",
 ]
+
+# Percolation analysis
+from fibernet.analysis.percolation import (
+    PercolationAnalyzer, PercolationResult, estimate_percolation_threshold,
+)
+__all__ += [
+    "PercolationAnalyzer", "PercolationResult", "estimate_percolation_threshold",
+]

@@ -11,7 +11,7 @@ Homepage: https://ml-biomat.com
 GitHub: https://github.com/GellmanSparrowS/fibernet
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __author__ = "ML-BioMat Lab"
 
 from fibernet.core.fiber import Fiber
