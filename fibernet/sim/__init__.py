@@ -155,3 +155,23 @@ __all__.extend([
     "HomogenizedProperties", "RVEResult",
     "compute_effective_properties", "estimate_rve_size"
 ])
+
+# Incremental nonlinear FEM for stress-strain curves
+from .incremental_fem import (
+    IncrementalFEM, IncrementalResult,
+    compute_stress_strain_curve
+)
+__all__.extend([
+    "IncrementalFEM", "IncrementalResult",
+    "compute_stress_strain_curve"
+])
+
+# Buckling analysis
+from .buckling_analysis import (
+    BucklingAnalyzer, FiberBucklingResult, NetworkBucklingResult,
+    analyze_buckling
+)
+__all__.extend([
+    "BucklingAnalyzer", "FiberBucklingResult", "NetworkBucklingResult",
+    "analyze_buckling"
+])
