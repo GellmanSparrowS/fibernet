@@ -11,7 +11,7 @@ Homepage: https://ml-biomat.com
 GitHub: https://github.com/GellmanSparrowS/fibernet
 """
 
-__version__ = "0.8.0"
+__version__ = "0.9.0"
 __author__ = "ML-BioMat Lab"
 
 from fibernet.core.fiber import Fiber
@@ -44,3 +44,6 @@ except ImportError:
 # Fluid and acoustic simulation
 from .sim.fluid import DarcySolver, PoreNetworkModel
 from .sim.acoustic import AcousticSolver
+
+# Visualization module
+from . import viz

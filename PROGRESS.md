@@ -294,3 +294,48 @@
 - Ensemble generation enables statistical rigor
 - Ready for GitHub release v0.8.0
 
+
+### ✅ Phase 9 (Complete): GPU Acceleration, Contact Mechanics & Visualization
+- [x] **Taichi-Accelerated FEM Solver** (`fibernet/sim/accelerated.py`)
+  - `TaichiFEMSolver` class for GPU/CPU-parallel FEM
+  - Parallel stiffness matrix assembly using Taichi kernels
+  - Beam element FEM with axial stiffness
+  - Sparse matrix solving via scipy.sparse
+  - 9 new tests
+
+- [x] **Fiber-Fiber Contact Detection** (`fibernet/sim/accelerated.py`)
+  - `parallel_contact_detection()` with spatial hashing
+  - Segment-segment distance computation
+  - Efficient grid-based neighbor search
+  - Returns contact pairs with overlap distances
+
+- [x] **Progressive Damage Simulation** (`fibernet/sim/accelerated.py`)
+  - `progressive_damage()` method with element failure
+  - Weibull strength distribution for fibers
+  - Damage evolution tracking (damage, stress, broken elements)
+  - Stiffness degradation analysis
+
+- [x] **Visualization Module** (`fibernet/viz/`)
+  - `visualize_3d_matplotlib()`: Static 3D plots with crosslinks
+  - `visualize_3d_pyvista()`: Interactive 3D rendering with tubes
+  - `visualize_network_stress()`: Stress-colored visualizations
+  - `animate_deformation()`: Deformation animations
+  - `visualize_damage_evolution()`: Damage evolution plots
+  - `plot_network_2d()` and `plot_network_3d()`: Convenience functions
+  - 7 new tests
+
+- [x] **Testing**
+  - 16 new tests added this phase
+  - All 344 tests passing (328 + 16)
+  - test_taichi_fem.py: 9 tests
+  - test_visualization.py: 7 tests
+
+- [x] **Version Update**: 0.8.0 → 0.9.0
+
+**Impact**:
+- Taichi acceleration enables large-scale simulations (1000s of fibers)
+- Contact detection enables realistic fiber-fiber interaction modeling
+- Progressive damage enables failure analysis and reliability studies
+- Visualization module provides publication-quality figures
+- Ready for GitHub release v0.9.0
+

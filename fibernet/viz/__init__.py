@@ -1,28 +1,25 @@
 """
-Visualization tools for fiber networks.
-
-Submodules:
-- plot2d: 2D matplotlib plots
-- render3d: 3D PyVista rendering
-- animate: Animation utilities
+Visualization module for fiber networks.
 """
 
-from fibernet.viz.plot2d import (
+from .visualization import (
+    visualize_3d_matplotlib,
+    visualize_3d_pyvista,
+    visualize_network_stress,
+    animate_deformation,
+    visualize_damage_evolution,
     plot_network_2d,
-    plot_orientation_distribution,
-    plot_stress_strain,
-    plot_length_distribution,
+    plot_network_3d,
+    render_network_3d,
 )
-from fibernet.viz.render3d import render_network_3d, render_deformation
 
 __all__ = [
-    "plot_network_2d", "plot_orientation_distribution",
-    "plot_stress_strain", "plot_length_distribution",
-    "render_network_3d", "render_deformation",
+    'visualize_3d_matplotlib',
+    'visualize_3d_pyvista',
+    'visualize_network_stress',
+    'animate_deformation',
+    'visualize_damage_evolution',
+    'plot_network_2d',
+    'plot_network_3d',
+    'render_network_3d',
 ]
-
-from fibernet.viz.advanced import (
-    plot_stress_field, plot_temperature_field,
-    plot_displacement_field, plot_cross_section,
-    create_animation,
-)

@@ -91,3 +91,9 @@ from .dma import (
 __all__.extend([
     "DMAResult", "frequency_sweep", "temperature_sweep", "master_curve"
 ])
+
+# Taichi-accelerated FEM solver
+from .accelerated import TaichiFEMSolver
+__all__.extend([
+    "TaichiFEMSolver"
+])
