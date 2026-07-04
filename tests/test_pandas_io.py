@@ -159,3 +159,38 @@ def test_to_networkx():
     assert 'length' in G.nodes[node]
     assert 'radius' in G.nodes[node]
     assert 'material' in G.nodes[node]
+
+
+def test_batch_simulate():
+    """Test batch_simulate function."""
+    from fibernet.utils.batch import batch_simulate
+    
+    networks = [
+        gen.random_straight_2d(num_fibers=n, fiber_length=8, box_size=(25, 25), seed=i)
+        for i, n in enumerate([15, 20, 25])
+    ]
+    
+    def simulate(net):
+        return {'num_fibers': net.num_fibers}
+    
+    result = batch_simulate(networks, simulate, parallel=False, show_progress=False)
+    
+    assert result.success_count == 3
+    assert result.error_count == 0
+    assert len(result.results) == 3
+
+
+def test_parameter_study():
+    """Test parameter_study function."""
+    from fibernet.utils.batch import parameter_study
+    
+    param_grid = {'num_fibers': [15, 20], 'fiber_length': [8, 10]}
+    
+    study = parameter_study(
+        param_grid,
+        lambda **kw: gen.random_straight_2d(**kw, box_size=(25, 25), seed=42),
+        lambda net: {'num_fibers': net.num_fibers}
+    )
+    
+    assert len(study['results']) == 4  # 2 x 2 combinations
+    assert len(study['params']) == 4

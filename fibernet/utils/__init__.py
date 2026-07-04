@@ -30,3 +30,6 @@ from .parametric import (
     monte_carlo_analysis,
     correlation_matrix
 )
+
+# Batch simulation utilities
+from .batch import batch_simulate, parameter_study, BatchResult
