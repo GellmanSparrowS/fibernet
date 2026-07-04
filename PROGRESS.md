@@ -180,3 +180,63 @@
 - Better 3D network generation capabilities
 - Professional developer experience for researchers
 
+
+### ✅ Phase 7 (Complete): Professional Documentation, Materials & Analysis Tools
+- [x] **Sphinx Documentation Build**
+  - Complete API reference (generators, simulation, analysis, I/O)
+  - Changelog with version history
+  - Real-world examples in examples/index.rst
+  - 51 HTML pages generated, 0 warnings
+  - Makefile for easy building
+
+- [x] **Materials Database** (`fibernet/materials.py`)
+  - 10 predefined material types:
+    * Carbon fiber (4 grades)
+    * Glass fiber (4 types)
+    * Aramid fiber (4 types)
+    * Biological fibers (collagen, cellulose, spider silk)
+    * Polymer fibers (nylon, polyester, polypropylene, UHMWPE)
+    * Metal fibers (steel, aluminum, titanium, copper)
+    * Basalt fiber, Silica fiber
+  - `get_material(name, **kwargs)` for easy access
+  - `list_materials()` to see available options
+  - Full property sets: mechanical, thermal, electrical, fracture
+  - Literature references in docstrings
+  - 12 new tests
+
+- [x] **Stress-Strain Curve Extraction** (`fibernet/analysis/stress_strain.py`)
+  - `extract_stress_strain()`: Incremental strain simulation
+  - `StressStrainCurve` dataclass with computed properties:
+    * youngs_modulus: Linear regression
+    * yield_strength: 0.2% offset method
+    * ultimate_strength: Maximum stress
+    * toughness: Area under curve
+    * resilience: Energy to yield
+  - `to_dataframe()`: Export to pandas
+  - `plot()`: Visualization with key properties
+  - `compare_curves()`: Compare multiple curves
+  - 8 new tests
+
+- [x] **Viscoelastic Material Models** (`fibernet/sim/viscoelastic.py`)
+  - MaxwellModel: Stress relaxation
+  - KelvinVoigtModel: Creep behavior
+  - StandardLinearSolid: Combined response
+  - GeneralizedMaxwell: Prony series
+  - `stress_relaxation()` and `creep()` methods
+  - 11 new tests
+
+- [x] **Version Update**: 0.6.0 → 0.7.0
+
+- [x] **Testing**
+  - 279 tests passing (31 new tests this phase)
+  - test_materials.py: 12 tests
+  - test_stress_strain.py: 8 tests
+  - test_viscoelastic.py: 11 tests
+
+**Impact**:
+- Professional Sphinx documentation ready for publication
+- Industry-standard materials for realistic simulations
+- Essential stress-strain analysis for research papers
+- Time-dependent behavior for biological/polymer fibers
+- Ready for GitHub Pages deployment
+
