@@ -1,103 +1,239 @@
 # Changelog
 
-All notable changes to FiberNet are documented in this file.
+All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.1] - 2026-07-05
+## [1.18.0] - 2026-07-05
 
 ### Added
-- **18 edge case tests** for robustness validation (448 total tests)
-- Comprehensive Sphinx documentation with autodoc
-- Full workflow example (`examples/full_workflow.py`)
-- ML integration example (`examples/ml_example.py`)
-- CONTRIBUTING.md with development guidelines
-- Read the Docs configuration for automated documentation hosting
-- GitHub Actions CI/CD workflow for multi-platform testing
+- **Mesh export module** (`fibernet/io/mesh_export.py`)
+  - Export to STL (ASCII and binary)
+  - Export to Wavefront OBJ
+  - Export to Stanford PLY
+  - Cylindrical mesh generation for fibers
+  - Configurable polygon approximation (n_sides)
 
-### Fixed
-- Made optional dependencies truly optional (networkx, tqdm, matplotlib, pyvista, etc.)
-- Fixed `api.analyze()` to gracefully handle missing topology analysis
-- Added proper error messages when optional dependencies are not installed
-- Fixed pyproject.toml license format to modern SPDX expression
-- Fixed comprehensive demo script API usage
+### Tests
+- 9 new tests in `tests/test_mesh_export.py`
+- Total: 752 passing, 6 skipped
 
+## [1.17.0] - 2026-07-05
 
 ### Added
-- Comprehensive demo script (`examples/comprehensive_demo.py`)
-- ML integration example (`examples/ml_example.py`)
-- Comprehensive Sphinx documentation with autodoc
-- 10 acoustic simulation tests
+- **Network comparison module** (`fibernet/analysis/comparison.py`)
+  - `NetworkFingerprint`: structural fingerprint computation
+  - `NetworkComparator`: pairwise distances, clustering, similarity search
+  - `compare_networks()`: compare multiple networks
+  - `network_similarity()`: pairwise similarity score
+- Example 14: advanced structural analysis workflow
 
-## [1.5.0] - 2026-07-04
+### Tests
+- 14 new tests in `tests/test_comparison.py`
+- Total: 743 passing, 6 skipped
 
-### Added
-- **Multi-scale modeling framework**: RVE-based homogenization
-- **Multi-scale RVE generator**: Create representative volume elements
-- **Homogenization solver**: Compute effective mechanical properties
-- Electromagnetic simulation tests
-- Comprehensive integration test suite
-- Improved README with high-level API examples
-
-## [1.4.0] - 2026-07-04
+## [1.16.0] - 2026-07-05
 
 ### Added
-- **Damage mechanics module**: Progressive damage under loading
-- **Fatigue simulation**: Cycle-by-cycle damage accumulation
-- **Residual stiffness tracking**: Monitor degradation
+- **Homogenization module** (`fibernet/analysis/homogenization.py`)
+  - `EffectiveElasticProperties`: E, nu, G computation (2D/3D)
+  - `EffectiveThermalProperties`: thermal conductivity, CTE
+  - `EffectiveElectricalProperties`: electrical conductivity
+  - `compute_effective_properties()`: comprehensive analysis
 
-## [1.3.0] - 2026-07-03
+### Tests
+- 13 new tests in `tests/test_homogenization.py`
+- Total: 729 passing, 6 skipped
 
-### Added
-- **Rheology module**: Fiber suspension rheology
-- **Jeffery orbit solver**: Single fiber dynamics in shear flow
-- **Folgar-Tucker model**: Orientation evolution
-- Plotly interactive visualization
-- ML integration tutorial
-
-## [1.2.0] - 2026-07-03
+## [1.15.0] - 2026-07-05
 
 ### Added
-- **Percolation analysis**: Cluster detection and connectivity
-- **Multi-point constraint (MPC)**: Advanced boundary conditions
-- Jupyter notebook tutorials
-- Enhanced documentation
+- **Spatial statistics module** (`fibernet/analysis/spatial.py`)
+  - `SpatialStatistics`: Ripley's K, pair correlation, nearest neighbor
+  - `OrientationAnalysis`: nematic order, orientation histograms
+  - `LengthAnalysis`: length distributions, statistics, fitting
+  - `ConnectivityAnalysis`: degree distribution, mean connectivity
+  - `AnisotropyAnalysis`: fabric tensor, anisotropy index
+  - `compute_spatial_statistics()`: comprehensive analysis
 
-## [1.1.0] - 2026-07-02
+### Tests
+- 22 new tests in `tests/test_advanced_statistics.py`
+- Total: 716 passing, 6 skipped
+
+## [1.14.0] - 2026-07-05
 
 ### Added
-- **Coupled multi-physics**: Thermo-mechanical coupling
-- **Fracture mechanics**: LEFM crack propagation
-- **CI/CD pipeline**: Automated testing on GitHub Actions
-- Expanded generator library
+- **Material database** (`fibernet/materials.py`)
+  - 29 pre-defined materials (polymers, metals, ceramics, biological, carbon)
+  - `get_material()`: quick material lookup
+  - `list_materials()`: list all available materials
+  - `compare_materials()`: material selection tool
+  - `m()`: shortcut for get_material
+- **Unit conversion utilities** (`fibernet/units.py`)
+  - Length: m, mm, um, nm, cm, km, in, ft
+  - Force: N, kN, mN, µN, nN, lbf, dyne
+  - Pressure: Pa, kPa, MPa, GPa, TPa, bar, atm, psi, ksi
+  - Temperature: K, C, F, R
+  - Energy: J, kJ, mJ, cal, kcal, eV, BTU, kWh
 
-## [1.0.0] - 2026-07-02
+### Tests
+- 33 new tests in `tests/test_materials.py` and `tests/test_units.py`
+- Total: 694 passing, 6 skipped
+
+## [1.13.0] - 2026-07-05
 
 ### Added
-- **First stable release**
-- Core fiber network data structures (Fiber, FiberNetwork, Material, Crosslinks)
-- 50+ network generators (random, ordered, chiral, woven, hierarchical, biomimetic)
-- FEM simulation (linear and nonlinear beam elements)
-- Dynamic simulation (explicit time integration)
-- Thermal and electromagnetic solvers
-- Acoustic wave propagation
-- Fluid flow (Darcy, pore network)
-- Morphology and topology analysis
-- Machine learning integration (feature extraction, GNN)
-- I/O support for JSON, LAMMPS, VTK, GMSH, PDB, XYZ, HDF5
-- Visualization with matplotlib and pyvista
-- GPU acceleration with Taichi
-- Reproducible experiment framework (YAML config, ensemble generation)
-- Unit system support (SI, CGS, micro, nano, molecular)
-- Comprehensive test suite (430+ tests)
-- Full API documentation with Sphinx
+- **Fractal network generators** (`fibernet/gen/fractal.py`)
+  - Sierpinski triangle
+  - Koch curve
+  - Fractal tree
+  - Hilbert curve
+- **Gradient network generators** (`fibernet/gen/gradient.py`)
+  - Density gradient (linear, exponential, sinusoidal)
+  - Property gradient (material properties varying spatially)
+  - Multi-zone networks (custom regions with different properties)
+- Example 13: publication-ready research workflow
 
-## [Unreleased]
+### Tests
+- 29 new tests in `tests/test_fractal.py` and `tests/test_gradient.py`
+- Total: 687 passing, 6 skipped
 
-### Planned
-- Advanced contact mechanics with friction
-- Multi-scale domain decomposition
-- Real-time visualization
-- Web-based interactive interface
-- Performance profiling and optimization
+## [1.12.0] - 2026-07-04
+
+### Added
+- Network topology analysis module
+- Comprehensive topology metrics
+
+### Tests
+- Total: 658 passing
+
+## [1.11.0] - 2026-07-04
+
+### Added
+- Visualization module (2D/3D plotting)
+- Design of Experiments (DOE) module
+  - Grid search
+  - Latin hypercube sampling
+  - Random sampling
+  - Sensitivity analysis
+
+### Tests
+- Total: 635 passing
+
+## [1.10.0] - 2026-07-04
+
+### Added
+- Fatigue analysis module
+- Creep analysis module
+- Diffusion/transport module
+
+### Tests
+- Total: 607 passing
+
+## [1.9.0] - 2026-07-03
+
+### Added
+- Benchmark suite for performance testing
+- Enhanced multiscale testing
+
+### Tests
+- Total: 585 passing
+
+## [1.8.0] - 2026-07-03
+
+### Added
+- Electromagnetic analysis
+- Molecular dynamics integration
+- Open-source tool integrations
+- Research case study examples
+
+### Tests
+- Total: 575 passing
+
+## [1.7.0] - 2026-07-02
+
+### Added
+- Graph neural network (GNN) module
+- Permeability analysis
+- Uncertainty quantification (UQ)
+- Coefficient of thermal expansion (CTE)
+
+### Tests
+- Total: 544 passing
+
+## [1.6.0] - 2026-07-02
+
+### Added
+- Incremental FEM solver
+- Buckling analysis module
+
+### Tests
+- Total: 477 passing
+
+## [1.5.0] - 2026-07-01
+
+### Added
+- Nonlinear mechanics module
+- Damage mechanics
+- Viscoelasticity
+
+### Tests
+- Total: 448 passing
+
+## [1.4.0] - 2026-07-01
+
+### Added
+- Periodic boundary conditions (PBC)
+- Transforms module
+- Advanced generators (chiral, woven, hierarchical)
+
+### Tests
+- Total: 410 passing
+
+## [1.3.0] - 2026-06-30
+
+### Added
+- Machine learning module
+  - Property prediction
+  - Feature engineering
+- Percolation analysis
+- Integration tests
+
+### Tests
+- Total: 370 passing
+
+## [1.2.0] - 2026-06-30
+
+### Added
+- Taichi-accelerated FEM solver
+- I/O modules (VTK, LAMMPS, GMSH, PDB, XYZ)
+- Pandas integration
+
+### Tests
+- Total: 320 passing
+
+## [1.1.0] - 2026-06-29
+
+### Added
+- Simulation modules (thermal, fracture, etc.)
+- Core data structures
+- Basic generators
+
+### Tests
+- Total: 250 passing
+
+## [1.0.0] - 2026-06-28
+
+### Added
+- Initial release
+- Core fiber network data structures
+- Basic random network generators
+- Simple FEM solver
+- Sphinx documentation framework
+- GitHub Actions CI/CD
+- pyproject.toml for pip installation
+
+### Tests
+- Total: 180 passing
+
