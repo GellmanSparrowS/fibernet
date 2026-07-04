@@ -73,3 +73,13 @@ from .coupled import (
     MultiPhysicsSolver,
     CoupledResult
 )
+
+# Viscoelastic models
+from .viscoelastic import (
+    ViscoelasticResult, MaxwellModel, KelvinVoigtModel,
+    StandardLinearSolid, GeneralizedMaxwell
+)
+__all__.extend([
+    "ViscoelasticResult", "MaxwellModel", "KelvinVoigtModel",
+    "StandardLinearSolid", "GeneralizedMaxwell"
+])
