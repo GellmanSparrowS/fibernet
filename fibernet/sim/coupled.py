@@ -1,316 +1,556 @@
 """
-Multi-physics coupled simulations.
+Coupled multi-physics simulations for fiber networks.
 
-Provides tools for coupling different physics simulations together,
-such as thermo-mechanical, electro-mechanical, and chemo-mechanical analysis.
+Implements thermo-mechanical, electro-mechanical, and chemo-mechanical coupling.
 """
 
 import numpy as np
-from typing import Dict, Optional, Tuple
-from dataclasses import dataclass, field
-from .mechanical import FiberFEM, MechanicalResult
-from .thermal import ThermalSolver, ThermalResult
-from .electromagnetic import EMSolver, EMResult
-from .nonlinear import NonlinearFEM
+from typing import Dict, Any, Optional, Tuple
+from dataclasses import dataclass
+from ..core import FiberNetwork
 
 
 @dataclass
-class CoupledResult:
-    """Container for coupled simulation results."""
-    mechanical: Optional[MechanicalResult] = None
-    thermal: Optional[ThermalResult] = None
-    electromagnetic: Optional[EMResult] = None
-    coupling_params: Dict = field(default_factory=dict)
-    converged: bool = True
-    iterations: int = 0
+class ThermoMechanicalResult:
+    """Result of a thermo-mechanical simulation."""
+    temperature_field: np.ndarray
+    displacement_field: np.ndarray
+    stress_field: np.ndarray
+    strain_field: np.ndarray
+    thermal_strain: np.ndarray
+    mechanical_strain: np.ndarray
+    total_energy: float
+    thermal_energy: float
+    mechanical_energy: float
+    time_steps: np.ndarray
+    
+    @property
+    def max_temperature(self) -> float:
+        return np.max(self.temperature_field)
+    
+    @property
+    def min_temperature(self) -> float:
+        return np.min(self.temperature_field)
+    
+    @property
+    def max_stress(self) -> float:
+        return np.max(np.abs(self.stress_field))
+    
+    @property
+    def max_displacement(self) -> float:
+        return np.max(np.linalg.norm(self.displacement_field, axis=-1))
+
+
+@dataclass
+class ElectroMechanicalResult:
+    """Result of an electro-mechanical simulation."""
+    electric_potential: np.ndarray
+    electric_field: np.ndarray
+    displacement_field: np.ndarray
+    stress_field: np.ndarray
+    piezoelectric_strain: np.ndarray
+    polarization: np.ndarray
+    time_steps: np.ndarray
 
 
 class ThermoMechanicalSolver:
     """
-    Coupled thermo-mechanical analysis.
+    Coupled thermo-mechanical solver for fiber networks.
     
-    Simulates thermal expansion effects on mechanical behavior.
+    Solves the coupled system:
+    - Mechanical equilibrium: div(σ) + f = 0
+    - Heat equation: ρc dT/dt = div(k∇T) + Q
+    
+    where:
+    - σ = C:(ε - αΔT)  (constitutive law with thermal strain)
+    - Q = β σ:ε̇       (mechanical heating from dissipation)
     
     Parameters
     ----------
     network : FiberNetwork
-        Fiber network to analyze.
-    alpha : float, optional
-        Thermal expansion coefficient (1/K). Default is 1e-5.
-    segments_per_fiber : int, optional
-        Number of segments per fiber for FEM discretization.
-    
-    Examples
-    --------
-    >>> solver = ThermoMechanicalSolver(net, alpha=1e-5)
-    >>> result = solver.coupled_analysis(
-    ...     T_hot=100, T_cold=0,
-    ...     mechanical_strain=0.01,
-    ...     axis=0
-    ... )
-    >>> print(f"Displacement: {result.mechanical.max_displacement():.4e} m")
+        Fiber network to simulate
+    youngs_modulus : float
+        Young's modulus (Pa)
+    poisson_ratio : float
+        Poisson's ratio
+    thermal_expansion : float
+        Coefficient of thermal expansion (1/K)
+    thermal_conductivity : float
+        Thermal conductivity (W/m·K)
+    specific_heat : float
+        Specific heat capacity (J/kg·K)
+    density : float
+        Mass density (kg/m³)
+    mechanical_to_thermal_fraction : float
+        Fraction of mechanical work converted to heat (0-1)
     """
     
-    def __init__(self, network, alpha: float = 1e-5, segments_per_fiber: int = 5):
-        self.network = network
-        self.alpha = alpha
-        self.mech = FiberFEM(network, segments_per_fiber=segments_per_fiber)
-        self.thermal = ThermalSolver(network)
-    
-    def coupled_analysis(
+    def __init__(
         self,
-        T_hot: float,
-        T_cold: float,
-        mechanical_strain: float = 0.0,
-        axis: int = 0,
-        max_iterations: int = 10,
-        tolerance: float = 1e-6
-    ) -> CoupledResult:
+        network: FiberNetwork,
+        youngs_modulus: float = 1e9,
+        poisson_ratio: float = 0.3,
+        thermal_expansion: float = 1e-5,
+        thermal_conductivity: float = 0.5,
+        specific_heat: float = 1000.0,
+        density: float = 1000.0,
+        mechanical_to_thermal_fraction: float = 0.9,
+    ):
+        self.network = network
+        self.youngs_modulus = youngs_modulus
+        self.poisson_ratio = poisson_ratio
+        self.thermal_expansion = thermal_expansion
+        self.thermal_conductivity = thermal_conductivity
+        self.specific_heat = specific_heat
+        self.density = density
+        self.beta = mechanical_to_thermal_fraction
+    
+    def solve_steady_state(
+        self,
+        mechanical_load: Dict[str, Any],
+        thermal_boundary: Dict[str, float],
+        reference_temperature: float = 293.15,
+    ) -> ThermoMechanicalResult:
         """
-        Perform coupled thermo-mechanical analysis.
+        Solve steady-state coupled problem.
         
         Parameters
         ----------
-        T_hot : float
-            Hot temperature (K or °C).
-        T_cold : float
-            Cold temperature (K or °C).
-        mechanical_strain : float, optional
-            Applied mechanical strain.
-        axis : int, optional
-            Axis for mechanical loading (0=x, 1=y, 2=z).
-        max_iterations : int, optional
-            Maximum coupling iterations.
-        tolerance : float, optional
-            Convergence tolerance.
+        mechanical_load : dict
+            Mechanical loading specification (e.g., {'strain': 0.01, 'axis': 0})
+        thermal_boundary : dict
+            Temperature boundary conditions (e.g., {'top': 400, 'bottom': 300})
+        reference_temperature : float
+            Reference temperature for thermal strain calculation (K)
         
         Returns
         -------
-        CoupledResult
-            Coupled simulation results.
+        ThermoMechanicalResult
+            Coupled simulation result
         """
-        # Step 1: Solve thermal problem
-        thermal_result = self.thermal.solve_steady_state(T_hot, T_cold, axis=axis)
+        # Step 1: Solve thermal problem first
+        num_fibers = self.network.num_fibers
+        temperature_field = self._solve_thermal_steady_state(thermal_boundary)
         
-        # Step 2: Compute thermal strains
-        thermal_strain = np.zeros(self.mech.num_elements)
-        if hasattr(thermal_result, 'temperatures') and thermal_result.temperatures is not None:
-            T_ref = (T_hot + T_cold) / 2
-            temps = thermal_result.temperatures
-            if len(temps) == self.mech.num_elements:
-                thermal_strain = self.alpha * (temps - T_ref)
+        # Step 2: Compute thermal strain (isotropic, same in all directions)
+        delta_T = temperature_field - reference_temperature
+        thermal_strain_scalar = self.thermal_expansion * delta_T
+        thermal_strain = np.zeros((num_fibers, 3))
+        for i in range(3):
+            thermal_strain[:, i] = thermal_strain_scalar
         
-        # Step 3: Apply combined mechanical + thermal loading
-        if mechanical_strain > 0:
-            mech_result = self.mech.apply_uniaxial_strain(
-                strain=mechanical_strain,
-                axis=axis
-            )
-        else:
-            # Thermal-only loading
-            mech_result = self._apply_thermal_strain(thermal_strain, axis)
+        # Step 3: Solve mechanical problem with thermal strain
+        displacement, stress, mechanical_strain = self._solve_mechanical_with_thermal(
+            mechanical_load, thermal_strain
+        )
         
-        return CoupledResult(
-            mechanical=mech_result,
-            thermal=thermal_result,
-            coupling_params={'alpha': self.alpha},
-            converged=True,
-            iterations=1
+        # Step 4: Compute total strain
+        total_strain = mechanical_strain + thermal_strain
+        
+        # Step 5: Compute energies
+        thermal_energy = self._compute_thermal_energy(temperature_field)
+        mechanical_energy = self._compute_mechanical_energy(stress, mechanical_strain)
+        total_energy = thermal_energy + mechanical_energy
+        
+        return ThermoMechanicalResult(
+            temperature_field=temperature_field,
+            displacement_field=displacement,
+            stress_field=stress,
+            strain_field=total_strain,
+            thermal_strain=thermal_strain,
+            mechanical_strain=mechanical_strain,
+            total_energy=total_energy,
+            thermal_energy=thermal_energy,
+            mechanical_energy=mechanical_energy,
+            time_steps=np.array([0.0]),
         )
     
-    def _apply_thermal_strain(self, thermal_strain, axis):
-        """Apply thermal strain as initial strain."""
-        # For now, approximate as mechanical strain
-        mean_thermal = np.mean(thermal_strain)
-        return self.mech.apply_uniaxial_strain(strain=mean_thermal, axis=axis)
+    def solve_transient(
+        self,
+        mechanical_load: Dict[str, Any],
+        thermal_boundary: Dict[str, float],
+        initial_temperature: float = 293.15,
+        total_time: float = 10.0,
+        num_steps: int = 100,
+        mechanical_load_rate: Optional[float] = None,
+    ) -> ThermoMechanicalResult:
+        """
+        Solve transient coupled problem.
+        
+        Parameters
+        ----------
+        mechanical_load : dict
+            Final mechanical loading specification
+        thermal_boundary : dict
+            Temperature boundary conditions
+        initial_temperature : float
+            Initial uniform temperature (K)
+        total_time : float
+            Total simulation time (s)
+        num_steps : int
+            Number of time steps
+        mechanical_load_rate : float, optional
+            Rate of mechanical loading application
+        
+        Returns
+        -------
+        ThermoMechanicalResult
+            Final state of coupled simulation
+        """
+        dt = total_time / num_steps
+        time_steps = np.linspace(0, total_time, num_steps + 1)
+        
+        # Initialize fields
+        num_fibers = self.network.num_fibers
+        temperature = np.ones(num_fibers) * initial_temperature
+        displacement = np.zeros((num_fibers, 3))
+        
+        # Storage for history
+        temp_history = [temperature.copy()]
+        disp_history = [displacement.copy()]
+        
+        for step in range(num_steps):
+            t = time_steps[step + 1]
+            
+            # Scale mechanical load
+            if mechanical_load_rate is not None:
+                load_factor = min(1.0, t * mechanical_load_rate)
+            else:
+                load_factor = t / total_time
+            
+            scaled_load = {k: v * load_factor if isinstance(v, (int, float)) and k != 'axis' else v 
+                          for k, v in mechanical_load.items()}
+            
+            # Compute thermal strain from current temperature (isotropic)
+            delta_T = temperature - initial_temperature
+            thermal_strain_scalar = self.thermal_expansion * delta_T
+            thermal_strain = np.zeros((num_fibers, 3))
+            for i in range(3):
+                thermal_strain[:, i] = thermal_strain_scalar
+            
+            # Solve mechanical problem
+            displacement, stress, mechanical_strain = self._solve_mechanical_with_thermal(
+                scaled_load, thermal_strain
+            )
+            
+            # Compute mechanical heating
+            strain_rate = mechanical_strain / dt if step > 0 else np.zeros_like(mechanical_strain)
+            mechanical_heating = self.beta * np.sum(stress * strain_rate, axis=-1) if stress.ndim > 1 else self.beta * stress * strain_rate
+            
+            # Update temperature (explicit Euler)
+            laplacian_T = self._compute_temperature_laplacian(temperature, thermal_boundary)
+            temperature += dt * (
+                self.thermal_conductivity / (self.density * self.specific_heat) * laplacian_T +
+                mechanical_heating / (self.density * self.specific_heat)
+            )
+            
+            # Apply boundary conditions
+            temperature = self._apply_thermal_bc(temperature, thermal_boundary)
+            
+            temp_history.append(temperature.copy())
+            disp_history.append(displacement.copy())
+        
+        # Final state
+        delta_T = temperature - initial_temperature
+        thermal_strain_scalar = self.thermal_expansion * delta_T
+        thermal_strain = np.zeros((num_fibers, 3))
+        for i in range(3):
+            thermal_strain[:, i] = thermal_strain_scalar
+        displacement, stress, mechanical_strain = self._solve_mechanical_with_thermal(
+            mechanical_load, thermal_strain
+        )
+        total_strain = mechanical_strain + thermal_strain
+        
+        thermal_energy = self._compute_thermal_energy(temperature)
+        mechanical_energy = self._compute_mechanical_energy(stress, mechanical_strain)
+        
+        return ThermoMechanicalResult(
+            temperature_field=temperature,
+            displacement_field=displacement,
+            stress_field=stress,
+            strain_field=total_strain,
+            thermal_strain=thermal_strain,
+            mechanical_strain=mechanical_strain,
+            total_energy=thermal_energy + mechanical_energy,
+            thermal_energy=thermal_energy,
+            mechanical_energy=mechanical_energy,
+            time_steps=time_steps,
+        )
+    
+    def _solve_thermal_steady_state(self, thermal_boundary: Dict[str, float]) -> np.ndarray:
+        """Solve steady-state heat equation."""
+        num_fibers = self.network.num_fibers
+        temperature = np.ones(num_fibers) * 293.15  # Initial guess
+        
+        # Simple iterative solver
+        for _ in range(100):
+            laplacian_T = self._compute_temperature_laplacian(temperature, thermal_boundary)
+            temperature += 0.01 * laplacian_T
+            temperature = self._apply_thermal_bc(temperature, thermal_boundary)
+        
+        return temperature
+    
+    def _compute_temperature_laplacian(
+        self, temperature: np.ndarray, thermal_boundary: Dict[str, float]
+    ) -> np.ndarray:
+        """Compute discrete Laplacian of temperature field."""
+        num_fibers = len(temperature)
+        laplacian = np.zeros(num_fibers)
+        
+        for i, fiber_i in enumerate(self.network.fibers):
+            center_i = (fiber_i.start_point + fiber_i.end_point) / 2
+            
+            neighbors = []
+            for j, fiber_j in enumerate(self.network.fibers):
+                if i == j:
+                    continue
+                center_j = (fiber_j.start_point + fiber_j.end_point) / 2
+                dist = np.linalg.norm(center_i - center_j)
+                if dist < 5.0:  # Neighbor cutoff
+                    neighbors.append((j, dist))
+            
+            if neighbors:
+                for j, dist in neighbors:
+                    laplacian[i] += (temperature[j] - temperature[i]) / (dist**2 + 0.1)
+                laplacian[i] /= len(neighbors)
+        
+        return laplacian
+    
+    def _apply_thermal_bc(
+        self, temperature: np.ndarray, thermal_boundary: Dict[str, float]
+    ) -> np.ndarray:
+        """Apply thermal boundary conditions."""
+        if not thermal_boundary:
+            return temperature
+        
+        for i, fiber in enumerate(self.network.fibers):
+            center = (fiber.start_point + fiber.end_point) / 2
+            for bc_name, bc_temp in thermal_boundary.items():
+                if bc_name == 'top' and center[1] > 0.9 * (np.max([f.start_point[1] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                    temperature[i] = bc_temp
+                elif bc_name == 'bottom' and center[1] < 0.1 * (np.max([f.start_point[1] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                    temperature[i] = bc_temp
+                elif bc_name == 'left' and center[0] < 0.1 * (np.max([f.start_point[0] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                    temperature[i] = bc_temp
+                elif bc_name == 'right' and center[0] > 0.9 * (np.max([f.start_point[0] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                    temperature[i] = bc_temp
+        
+        return temperature
+    
+    def _solve_mechanical_with_thermal(
+        self, mechanical_load: Dict[str, Any], thermal_strain: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Solve mechanical problem accounting for thermal strain."""
+        num_fibers = self.network.num_fibers
+        
+        # Compute effective strain from load
+        strain_val = mechanical_load.get('strain', 0.0)
+        axis = int(mechanical_load.get('axis', 0))
+        
+        # Mechanical strain = total strain - thermal strain
+        total_strain = np.zeros((num_fibers, 3) if num_fibers > 0 else (0, 3))
+        if num_fibers > 0:
+            total_strain[:, axis] = strain_val
+        
+        # Mechanical strain = total - thermal
+        if isinstance(thermal_strain, np.ndarray) and thermal_strain.shape == (num_fibers, 3):
+            mechanical_strain = total_strain - thermal_strain
+        elif isinstance(thermal_strain, np.ndarray) and thermal_strain.ndim == 1:
+            thermal_strain_3d = np.zeros((num_fibers, 3))
+            for i in range(3):
+                thermal_strain_3d[:, i] = thermal_strain
+            mechanical_strain = total_strain - thermal_strain_3d
+        else:
+            mechanical_strain = total_strain
+        
+        # Stress from mechanical strain only
+        stress = self.youngs_modulus * mechanical_strain
+        
+        # Simple displacement estimate
+        displacement = np.zeros((num_fibers, 3))
+        for i, fiber in enumerate(self.network.fibers):
+            length = fiber.length
+            displacement[i] = mechanical_strain[i] * length
+        
+        return displacement, stress, mechanical_strain
+    
+    def _compute_thermal_energy(self, temperature: np.ndarray) -> float:
+        """Compute thermal energy: integral of ρcT over volume."""
+        return np.sum(self.density * self.specific_heat * temperature) * 1e-18  # Scale factor
+    
+    def _compute_mechanical_energy(self, stress: np.ndarray, strain: np.ndarray) -> float:
+        """Compute mechanical strain energy: 0.5 * σ:ε integrated over volume."""
+        if stress.ndim > 1 and strain.ndim > 1:
+            energy_density = 0.5 * np.sum(stress * strain, axis=-1)
+        else:
+            energy_density = 0.5 * stress * strain
+        return np.sum(energy_density) * 1e-18  # Scale factor
 
 
 class ElectroMechanicalSolver:
     """
-    Coupled electro-mechanical analysis (piezoelectric effects).
+    Coupled electro-mechanical solver for piezoelectric fiber networks.
     
-    Simulates how electric fields affect mechanical behavior.
-    
-    Parameters
-    ----------
-    network : FiberNetwork
-        Fiber network to analyze.
-    piezo_coeff : float, optional
-        Piezoelectric coupling coefficient (m/V). Default is 1e-12.
-    segments_per_fiber : int, optional
-        Number of segments per fiber.
-    """
-    
-    def __init__(self, network, piezo_coeff: float = 1e-12, segments_per_fiber: int = 5):
-        self.network = network
-        self.piezo_coeff = piezo_coeff
-        self.mech = FiberFEM(network, segments_per_fiber=segments_per_fiber)
-        self.em = EMSolver(network)
-    
-    def coupled_analysis(
-        self,
-        voltage: float,
-        axis: int = 0,
-        mechanical_strain: float = 0.0
-    ) -> CoupledResult:
-        """
-        Perform coupled electro-mechanical analysis.
-        
-        Parameters
-        ----------
-        voltage : float
-            Applied voltage (V).
-        axis : int, optional
-            Axis for electric field.
-        mechanical_strain : float, optional
-            Additional mechanical strain.
-        
-        Returns
-        -------
-        CoupledResult
-            Coupled simulation results.
-        """
-        # Step 1: Solve electromagnetic problem
-        em_result = self.em.solve_conductivity(voltage=voltage, axis=axis)
-        
-        # Step 2: Compute piezoelectric strain from current density
-        if em_result.current_density is not None and len(em_result.current_density) > 0:
-            # Use current density as proxy for electric field effect
-            J_mean = np.mean(np.abs(em_result.current_density))
-            piezo_strain = self.piezo_coeff * J_mean * np.ones(self.mech.num_elements)
-        else:
-            piezo_strain = np.zeros(self.mech.num_elements)
-        
-        # Step 3: Apply combined loading
-        total_strain = mechanical_strain + np.mean(piezo_strain)
-        if total_strain > 0:
-            mech_result = self.mech.apply_uniaxial_strain(
-                strain=total_strain,
-                axis=axis
-            )
-        else:
-            mech_result = MechanicalResult()
-        
-        return CoupledResult(
-            mechanical=mech_result,
-            electromagnetic=em_result,
-            coupling_params={'piezo_coeff': self.piezo_coeff},
-            converged=True,
-            iterations=1
-        )
-
-
-class MultiPhysicsSolver:
-    """
-    General multi-physics coupling framework.
-    
-    Combines multiple physics solvers with iterative coupling.
+    Solves:
+    - Mechanical equilibrium with piezoelectric coupling
+    - Electric field equation: div(ε∇φ) = div(d:σ)
     
     Parameters
     ----------
     network : FiberNetwork
-        Fiber network to analyze.
-    solvers : dict
-        Dictionary of solver instances.
-    
-    Examples
-    --------
-    >>> multi = MultiPhysicsSolver(
-    ...     net,
-    ...     solvers={
-    ...         'mechanical': FiberFEM(net),
-    ...         'thermal': ThermalSolver(net),
-    ...         'em': EMSolver(net)
-    ...     }
-    ... )
-    >>> result = multi.solve_coupled(
-    ...     mechanical={'strain': 0.01, 'axis': 0},
-    ...     thermal={'T_hot': 100, 'T_cold': 0},
-    ...     max_iterations=10
-    ... )
+        Fiber network
+    youngs_modulus : float
+        Young's modulus (Pa)
+    piezoelectric_coefficient : float
+        Piezoelectric coefficient d33 (C/N)
+    dielectric_constant : float
+        Relative dielectric constant
     """
     
-    def __init__(self, network, solvers: Dict):
-        self.network = network
-        self.solvers = solvers
-        self.results = {}
-    
-    def solve_coupled(
+    def __init__(
         self,
-        max_iterations: int = 5,
-        tolerance: float = 1e-6,
-        **solver_params
-    ) -> CoupledResult:
+        network: FiberNetwork,
+        youngs_modulus: float = 1e9,
+        piezoelectric_coefficient: float = 1e-10,
+        dielectric_constant: float = 1000.0,
+    ):
+        self.network = network
+        self.youngs_modulus = youngs_modulus
+        self.d33 = piezoelectric_coefficient
+        self.dielectric = dielectric_constant
+    
+    def solve(
+        self,
+        mechanical_load: Dict[str, Any],
+        voltage_boundary: Dict[str, float] = None,
+    ) -> ElectroMechanicalResult:
         """
-        Solve coupled multi-physics problem.
+        Solve electro-mechanical coupled problem.
         
         Parameters
         ----------
-        max_iterations : int, optional
-            Maximum coupling iterations.
-        tolerance : float, optional
-            Convergence tolerance.
-        **solver_params : dict
-            Parameters for each solver.
+        mechanical_load : dict
+            Mechanical loading
+        voltage_boundary : dict
+            Voltage boundary conditions
         
         Returns
         -------
-        CoupledResult
-            Coupled results from all solvers.
+        ElectroMechanicalResult
         """
-        results = {}
-        converged = False
+        num_fibers = self.network.num_fibers
         
-        for iteration in range(max_iterations):
-            prev_results = results.copy()
-            results = {}
-            
-            # Solve each physics problem
-            for solver_name, solver in self.solvers.items():
-                if solver_name in solver_params:
-                    params = solver_params[solver_name]
-                    
-                    # Call appropriate solve method
-                    if solver_name == 'mechanical':
-                        results[solver_name] = solver.apply_uniaxial_strain(**params)
-                    elif solver_name == 'thermal':
-                        results[solver_name] = solver.solve_steady_state(**params)
-                    elif solver_name == 'em':
-                        results[solver_name] = solver.solve_conductivity(**params)
-            
-            # Check convergence
-            if iteration > 0 and self._check_convergence(prev_results, results, tolerance):
-                converged = True
-                break
+        # Solve mechanical problem
+        strain_val = mechanical_load.get('strain', 0.0)
+        axis = mechanical_load.get('axis', 0)
         
-        # Build coupled result
-        coupled = CoupledResult(
-            mechanical=results.get('mechanical'),
-            thermal=results.get('thermal'),
-            electromagnetic=results.get('em'),
-            converged=converged,
-            iterations=iteration + 1
+        strain = np.zeros((num_fibers, 3))
+        strain[:, axis] = strain_val
+        stress = self.youngs_modulus * strain
+        
+        # Compute piezoelectric polarization
+        polarization = self.d33 * np.sum(stress, axis=-1)
+        
+        # Compute electric potential from polarization
+        potential = self._compute_potential(polarization, voltage_boundary)
+        
+        # Compute electric field (negative gradient of potential)
+        electric_field = self._compute_electric_field(potential)
+        
+        # Piezoelectric strain contribution
+        piezo_strain = self.d33 * electric_field
+        
+        # Total displacement
+        displacement = np.zeros((num_fibers, 3))
+        for i, fiber in enumerate(self.network.fibers):
+            displacement[i] = strain[i] * fiber.length
+            displacement[i, axis] += np.sum(piezo_strain[i]) * fiber.length
+        
+        return ElectroMechanicalResult(
+            electric_potential=potential,
+            electric_field=electric_field,
+            displacement_field=displacement,
+            stress_field=stress,
+            piezoelectric_strain=piezo_strain,
+            polarization=polarization,
+            time_steps=np.array([0.0]),
         )
-        
-        return coupled
     
-    def _check_convergence(self, prev, current, tolerance):
-        """Check if results have converged."""
-        if not prev:
-            return False
+    def _compute_potential(
+        self, polarization: np.ndarray, voltage_boundary: Optional[Dict[str, float]]
+    ) -> np.ndarray:
+        """Compute electric potential from polarization."""
+        num_fibers = len(polarization)
+        potential = np.zeros(num_fibers)
         
-        # Compare key metrics
-        for key in current:
-            if key in prev:
-                curr_result = current[key]
-                prev_result = prev[key]
+        # Simple model: potential proportional to polarization
+        potential = polarization / (self.dielectric * 8.854e-12)  # ε0
+        
+        if voltage_boundary:
+            for i, fiber in enumerate(self.network.fibers):
+                center = (fiber.start_point + fiber.end_point) / 2
+                for bc_name, voltage in voltage_boundary.items():
+                    if bc_name == 'top' and center[1] > 0.9 * (np.max([f.start_point[1] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                        potential[i] = voltage
+                    elif bc_name == 'bottom' and center[1] < 0.1 * (np.max([f.start_point[1] for f in self.network.fibers]) if self.network.num_fibers > 0 else 10.0):
+                        potential[i] = voltage
+        
+        return potential
+    
+    def _compute_electric_field(self, potential: np.ndarray) -> np.ndarray:
+        """Compute electric field from potential gradient."""
+        num_fibers = len(potential)
+        electric_field = np.zeros((num_fibers, 3))
+        
+        for i, fiber_i in enumerate(self.network.fibers):
+            center_i = (fiber_i.start_point + fiber_i.end_point) / 2
+            
+            for j, fiber_j in enumerate(self.network.fibers):
+                if i == j:
+                    continue
+                center_j = (fiber_j.start_point + fiber_j.end_point) / 2
+                delta = center_j - center_i
+                dist = np.linalg.norm(delta)
                 
-                # Compare energy if available
-                if hasattr(curr_result, 'energy') and hasattr(prev_result, 'energy'):
-                    diff = abs(curr_result.energy - prev_result.energy)
-                    if prev_result.energy > 0:
-                        rel_diff = diff / prev_result.energy
-                        if rel_diff > tolerance:
-                            return False
+                if dist < 5.0 and dist > 0.1:
+                    electric_field[i] -= (potential[j] - potential[i]) / (dist**2 + 0.1) * delta / dist
         
-        return True
+        return electric_field
+
+
+def run_thermo_mechanical_analysis(
+    network: FiberNetwork,
+    strain: float = 0.01,
+    axis: int = 0,
+    temperature_diff: float = 100.0,
+    **solver_kwargs
+) -> ThermoMechanicalResult:
+    """
+    Convenience function for thermo-mechanical analysis.
+    
+    Parameters
+    ----------
+    network : FiberNetwork
+        Fiber network
+    strain : float
+        Applied strain
+    axis : int
+        Loading axis
+    temperature_diff : float
+        Temperature difference for thermal boundary
+    **solver_kwargs
+        Additional solver parameters
+    
+    Returns
+    -------
+    ThermoMechanicalResult
+    """
+    solver = ThermoMechanicalSolver(network, **solver_kwargs)
+    
+    mechanical_load = {'strain': strain, 'axis': axis}
+    thermal_boundary = {
+        'top': 293.15 + temperature_diff,
+        'bottom': 293.15,
+    }
+    
+    return solver.solve_steady_state(mechanical_load, thermal_boundary)

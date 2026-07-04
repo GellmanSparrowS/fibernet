@@ -4,24 +4,51 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fibernet"
-version = "1.0.0"
-description = "A comprehensive fiber network generation and simulation toolkit"
+version = "1.1.0"
+description = "A comprehensive fiber network generation and simulation toolkit for materials science research"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
+authors = [
+    {name = "FiberNet Contributors"}
+]
+keywords = [
+    "fiber networks",
+    "materials science",
+    "finite element method",
+    "simulation",
+    "mechanical properties",
+    "computational materials",
+    "polymer physics",
+    "biomechanics"
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "numpy>=1.21",
     "scipy>=1.7",
 ]
 
 [project.optional-dependencies]
-viz = ["pyvista>=0.37"]
+viz = ["pyvista>=0.37", "matplotlib>=3.5"]
 io = ["h5py>=3.7"]
 accel = ["taichi>=1.6"]
 ml = ["scikit-learn>=1.0", "tqdm>=4.60"]
 graph = ["networkx>=3.0"]
 full = [
     "pyvista>=0.37",
+    "matplotlib>=3.5",
     "h5py>=3.7",
     "taichi>=1.6",
     "scikit-learn>=1.0",
@@ -36,9 +63,23 @@ dev = [
     "black>=23.0",
     "flake8>=6.0",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "nbsphinx>=0.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/GellmanSparrowS/fibernet"
+Documentation = "https://fibernet.readthedocs.io"
+Repository = "https://github.com/GellmanSparrowS/fibernet"
+Issues = "https://github.com/GellmanSparrowS/fibernet/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+
+[tool.setuptools.packages.find]
+include = ["fibernet*"]

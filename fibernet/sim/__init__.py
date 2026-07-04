@@ -66,13 +66,7 @@ __all__ += [
     "AcousticSolver", "AcousticResult",
 ]
 
-# Multi-physics coupled simulations
-from .coupled import (
-    ThermoMechanicalSolver,
-    ElectroMechanicalSolver,
-    MultiPhysicsSolver,
-    CoupledResult
-)
+
 
 # Viscoelastic models
 from .viscoelastic import (
@@ -106,4 +100,24 @@ from .periodic import (
 __all__.extend([
     "PeriodicBoundary", "create_periodic_network",
     "apply_periodic_strain", "homogenize_properties"
+])
+
+# Coupled multi-physics
+from .coupled import (
+    ThermoMechanicalSolver, ElectroMechanicalSolver,
+    run_thermo_mechanical_analysis
+)
+__all__.extend([
+    "ThermoMechanicalSolver", "ElectroMechanicalSolver",
+    "run_thermo_mechanical_analysis"
+])
+
+# Fracture mechanics
+from .fracture_mechanics import (
+    CrackPropagationSolver, FractureResult, CrackTip,
+    compute_energy_release_rate, compute_fracture_toughness
+)
+__all__.extend([
+    "CrackPropagationSolver", "FractureResult", "CrackTip",
+    "compute_energy_release_rate", "compute_fracture_toughness"
 ])

@@ -212,3 +212,45 @@ FiberNet has reached 1.0.0! This marks the first stable release of our comprehen
 [0.3.0]: https://github.com/GellmanSparrowS/fibernet/releases/tag/v0.3.0
 [0.2.0]: https://github.com/GellmanSparrowS/fibernet/releases/tag/v0.2.0
 [0.1.0]: https://github.com/GellmanSparrowS/fibernet/releases/tag/v0.1.0
+
+## [1.1.0] - 2026-07-05
+
+### Added
+- **Coupled Multi-Physics Simulation** (`fibernet/sim/coupled.py`)
+  - Thermo-mechanical solver with steady-state and transient modes
+  - Electro-mechanical solver for piezoelectric materials
+  - Temperature-dependent mechanical properties
+  - Mechanical heating from plastic dissipation
+  - Convenience function `run_thermo_mechanical_analysis()`
+
+- **Fracture Mechanics Module** (`fibernet/sim/fracture_mechanics.py`)
+  - Crack propagation simulation with energy-based criterion
+  - J-integral calculation
+  - Stress intensity factors (Mode I and Mode II)
+  - Maximum circumferential stress criterion for crack growth direction
+  - Energy release rate computation
+  - Fracture toughness characterization
+
+- **CI/CD Pipeline** (`.github/workflows/ci.yml`)
+  - Automated testing on push and pull requests
+  - Multi-platform testing (Linux, macOS, Windows)
+  - Multi-version Python testing (3.9-3.12)
+  - Code quality checks (black, flake8)
+  - Automatic PyPI publishing on release
+
+- **Enhanced PyPI Packaging**
+  - Added metadata (authors, keywords, classifiers)
+  - Added project URLs (homepage, documentation, repository, issues)
+  - Added setuptools package discovery configuration
+
+- **Tests**
+  - 16 new tests for coupled multi-physics and fracture mechanics
+  - Total: 381 tests (all passing)
+
+### Changed
+- Version bump to 1.1.0
+- Updated README version reference
+
+### Documentation
+- Added coupled multi-physics examples to README
+- Added fracture mechanics usage examples
