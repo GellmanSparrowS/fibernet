@@ -10,3 +10,8 @@ recursive-include examples *.py
 recursive-include docs *.rst *.py
 global-exclude __pycache__
 global-exclude *.py[cod]
+global-exclude .DS_Store
+prune docs/_build
+prune build
+prune dist
+prune *.egg-info
