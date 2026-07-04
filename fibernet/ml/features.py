@@ -233,3 +233,293 @@ def extract_features(
         return extractor.extract_to_array(network)
     else:
         return extractor.extract(network)
+
+
+class GNNFeatureExtractor:
+    """
+    Extract graph neural network features from fiber networks.
+    
+    Converts fiber networks into graph representations suitable for GNN models.
+    Supports PyTorch Geometric and DGL formats.
+    
+    Parameters
+    ----------
+    node_features : list of str
+        Node feature names to extract. Options: 'position', 'degree', 'centrality'
+    edge_features : list of str
+        Edge feature names to extract. Options: 'length', 'angle', 'weight'
+    """
+    
+    def __init__(
+        self,
+        node_features: Optional[List[str]] = None,
+        edge_features: Optional[List[str]] = None,
+    ):
+        self.node_features = node_features or ['position', 'degree']
+        self.edge_features = edge_features or ['length', 'angle']
+    
+    def extract_graph(self, network: FiberNetwork) -> Dict[str, Any]:
+        """
+        Extract graph representation from fiber network.
+        
+        Parameters
+        ----------
+        network : FiberNetwork
+            Input fiber network
+            
+        Returns
+        -------
+        Dict[str, Any]
+            Graph data with node_features, edge_index, edge_features
+        """
+        import networkx as nx
+        
+        # Convert to NetworkX graph
+        G = self._to_networkx(network)
+        
+        # Extract node features
+        node_feat_matrix = self._extract_node_features(G, network)
+        
+        # Extract edge index and features
+        edge_index, edge_feat_matrix = self._extract_edge_features(G, network)
+        
+        return {
+            'node_features': node_feat_matrix,
+            'edge_index': edge_index,
+            'edge_features': edge_feat_matrix,
+            'num_nodes': node_feat_matrix.shape[0],
+            'num_edges': edge_index.shape[1],
+            'graph': G,
+        }
+    
+    def to_pytorch_geometric(self, network: FiberNetwork, label: Optional[float] = None):
+        """
+        Convert to PyTorch Geometric Data object.
+        
+        Parameters
+        ----------
+        network : FiberNetwork
+            Input fiber network
+        label : float, optional
+            Graph-level label for supervised learning
+            
+        Returns
+        -------
+        torch_geometric.data.Data
+            PyTorch Geometric data object
+        """
+        try:
+            import torch
+            from torch_geometric.data import Data
+        except ImportError:
+            raise ImportError("PyTorch Geometric required. Install with: pip install torch torch-geometric")
+        
+        graph_data = self.extract_graph(network)
+        
+        # Convert to tensors
+        x = torch.tensor(graph_data['node_features'], dtype=torch.float32)
+        edge_index = torch.tensor(graph_data['edge_index'], dtype=torch.long)
+        edge_attr = torch.tensor(graph_data['edge_features'], dtype=torch.float32)
+        
+        data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+        
+        if label is not None:
+            data.y = torch.tensor([label], dtype=torch.float32)
+        
+        return data
+    
+    def to_dgl(self, network: FiberNetwork, label: Optional[float] = None):
+        """
+        Convert to DGL graph object.
+        
+        Parameters
+        ----------
+        network : FiberNetwork
+            Input fiber network
+        label : float, optional
+            Graph-level label
+            
+        Returns
+        -------
+        dgl.DGLGraph
+            DGL graph object
+        """
+        try:
+            import torch
+            import dgl
+        except ImportError:
+            raise ImportError("DGL required. Install with: pip install dgl")
+        
+        graph_data = self.extract_graph(network)
+        
+        # Create DGL graph
+        edge_index = graph_data['edge_index']
+        src = edge_index[0]
+        dst = edge_index[1]
+        
+        g = dgl.graph((src, dst), num_nodes=graph_data['num_nodes'])
+        
+        # Add node features
+        g.ndata['feat'] = torch.tensor(graph_data['node_features'], dtype=torch.float32)
+        
+        # Add edge features
+        g.edata['feat'] = torch.tensor(graph_data['edge_features'], dtype=torch.float32)
+        
+        # Add label
+        if label is not None:
+            g.label = torch.tensor([label], dtype=torch.float32)
+        
+        return g
+    
+    def _to_networkx(self, network: FiberNetwork):
+        """Convert fiber network to NetworkX graph."""
+        import networkx as nx
+        
+        G = nx.Graph()
+        
+        # Add nodes (fibers)
+        for i, fiber in enumerate(network.fibers):
+            pos = (fiber.start_point + fiber.end_point) / 2  # Center position
+            G.add_node(i, pos=pos, length=fiber.length, radius=fiber.radius)
+        
+        # Add edges (crosslinks)
+        for crosslink in network.crosslinks:
+            i = crosslink.fiber_i
+            j = crosslink.fiber_j
+            G.add_edge(i, j, position=crosslink.position)
+        
+        return G
+    
+    def _extract_node_features(self, G, network: FiberNetwork) -> np.ndarray:
+        """Extract node feature matrix."""
+        import networkx as nx
+        
+        num_nodes = G.number_of_nodes()
+        features = []
+        
+        for node in G.nodes():
+            node_feat = []
+            
+            if 'position' in self.node_features:
+                pos = G.nodes[node]['pos']
+                node_feat.extend(pos)
+            
+            if 'degree' in self.node_features:
+                degree = G.degree(node)
+                node_feat.append(degree)
+            
+            if 'centrality' in self.node_features:
+                try:
+                    centrality = nx.betweenness_centrality(G)
+                    node_feat.append(centrality.get(node, 0.0))
+                except:
+                    node_feat.append(0.0)
+            
+            # Add fiber properties
+            fiber = network.fibers[node]
+            node_feat.extend([fiber.length, fiber.radius])
+            
+            features.append(node_feat)
+        
+        return np.array(features, dtype=np.float32)
+    
+    def _extract_edge_features(self, G, network: FiberNetwork) -> tuple:
+        """Extract edge index and edge feature matrix."""
+        edges = list(G.edges())
+        
+        if len(edges) == 0:
+            # No edges
+            return np.zeros((2, 0), dtype=np.int64), np.zeros((0, 3), dtype=np.float32)
+        
+        # Edge index (source, target)
+        edge_index = np.array(edges, dtype=np.int64).T
+        
+        # Edge features
+        edge_features = []
+        for u, v in edges:
+            edge_feat = []
+            
+            if 'length' in self.edge_features:
+                # Distance between fiber centers
+                pos_u = G.nodes[u]['pos']
+                pos_v = G.nodes[v]['pos']
+                dist = np.linalg.norm(np.array(pos_v) - np.array(pos_u))
+                edge_feat.append(dist)
+            
+            if 'angle' in self.edge_features:
+                # Angle between fibers
+                fiber_u = network.fibers[u]
+                fiber_v = network.fibers[v]
+                
+                dir_u = fiber_u.end_point - fiber_u.start_point
+                dir_v = fiber_v.end_point - fiber_v.start_point
+                
+                dir_u = dir_u / (np.linalg.norm(dir_u) + 1e-10)
+                dir_v = dir_v / (np.linalg.norm(dir_v) + 1e-10)
+                
+                cos_angle = np.clip(np.dot(dir_u, dir_v), -1, 1)
+                angle = np.arccos(cos_angle)
+                edge_feat.append(angle)
+            
+            if 'weight' in self.edge_features:
+                # Crosslink stiffness or strength
+                edge_feat.append(1.0)  # Default weight
+            
+            edge_features.append(edge_feat)
+        
+        edge_feat_matrix = np.array(edge_features, dtype=np.float32)
+        
+        return edge_index, edge_feat_matrix
+    
+    def create_dataset(
+        self,
+        networks: List[FiberNetwork],
+        labels: Optional[List[float]] = None,
+        format: str = 'pyg',
+    ) -> Any:
+        """
+        Create a dataset from multiple networks.
+        
+        Parameters
+        ----------
+        networks : list of FiberNetwork
+            List of fiber networks
+        labels : list of float, optional
+            Labels for each network
+        format : str
+            Output format: 'pyg' (PyTorch Geometric) or 'dgl'
+            
+        Returns
+        -------
+        Dataset object
+        """
+        if format == 'pyg':
+            try:
+                from torch_geometric.data import InMemoryDataset
+            except ImportError:
+                raise ImportError("PyTorch Geometric required")
+            
+            data_list = []
+            for i, network in enumerate(networks):
+                label = labels[i] if labels is not None else None
+                data = self.to_pytorch_geometric(network, label)
+                data_list.append(data)
+            
+            return data_list
+        
+        elif format == 'dgl':
+            try:
+                import dgl
+            except ImportError:
+                raise ImportError("DGL required")
+            
+            graph_list = []
+            for i, network in enumerate(networks):
+                label = labels[i] if labels is not None else None
+                g = self.to_dgl(network, label)
+                graph_list.append(g)
+            
+            return graph_list
+        
+        else:
+            raise ValueError(f"Unknown format: {format}. Use 'pyg' or 'dgl'")

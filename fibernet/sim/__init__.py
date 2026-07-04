@@ -97,3 +97,13 @@ from .accelerated import TaichiFEMSolver
 __all__.extend([
     "TaichiFEMSolver"
 ])
+
+# Periodic boundary conditions
+from .periodic import (
+    PeriodicBoundary, create_periodic_network, 
+    apply_periodic_strain, homogenize_properties
+)
+__all__.extend([
+    "PeriodicBoundary", "create_periodic_network",
+    "apply_periodic_strain", "homogenize_properties"
+])

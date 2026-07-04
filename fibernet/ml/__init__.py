@@ -20,3 +20,6 @@ __all__ = [
     'generate_dataset',
     'load_dataset',
 ]
+
+# GNN feature extraction
+from .features import GNNFeatureExtractor
