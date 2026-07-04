@@ -201,3 +201,13 @@ __all__.extend([
 # Coefficient of Thermal Expansion
 from .cte import CTEAnalyzer, CTEResult, compute_cte
 __all__.extend(["CTEAnalyzer", "CTEResult", "compute_cte"])
+
+# Molecular dynamics
+from .molecular_dynamics import (
+    FiberMDSolver, MDParameters, MDTrajectory,
+    run_fiber_md
+)
+__all__.extend([
+    "FiberMDSolver", "MDParameters", "MDTrajectory",
+    "run_fiber_md"
+])
