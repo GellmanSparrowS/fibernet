@@ -58,3 +58,13 @@ __all__.extend([
     "TopologyAnalyzer", "TopologyResult", "CentralityResult",
     "analyze_topology"
 ])
+
+# Spatial and structural statistics
+from .spatial import (
+    SpatialStatistics, OrientationAnalysis, LengthAnalysis,
+    ConnectivityAnalysis, AnisotropyAnalysis, compute_spatial_statistics
+)
+__all__.extend([
+    "SpatialStatistics", "OrientationAnalysis", "LengthAnalysis",
+    "ConnectivityAnalysis", "AnisotropyAnalysis", "compute_spatial_statistics"
+])
