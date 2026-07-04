@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.18.0"
+__version__ = "1.19.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
@@ -142,4 +142,20 @@ from .units import (
 __all__.extend([
     "convert_length", "convert_force", "convert_pressure", "convert_temperature",
     "convert_energy", "parse_unit_string", "scale_network_properties"
+])
+
+# PyVista visualization
+from .pyvista_viz import PyVistaVisualizer, visualize_network_3d, PYVISTA_AVAILABLE
+__all__.extend([
+    "PyVistaVisualizer", "visualize_network_3d", "PYVISTA_AVAILABLE"
+])
+
+# Trimesh integration
+from .trimesh_integration import (
+    TrimeshConverter, network_to_trimesh, analyze_mesh_properties,
+    boolean_operation, repair_mesh, simplify_mesh, TRIMESH_AVAILABLE
+)
+__all__.extend([
+    "TrimeshConverter", "network_to_trimesh", "analyze_mesh_properties",
+    "boolean_operation", "repair_mesh", "simplify_mesh", "TRIMESH_AVAILABLE"
 ])

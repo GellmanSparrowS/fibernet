@@ -112,3 +112,20 @@ __all__.extend([
     "property_gradient_2d",
     "multi_zone_2d",
 ])
+
+# Fiber bundles
+from .bundles import (
+    parallel_bundle_2d,
+    twisted_bundle_2d,
+    random_bundle_3d,
+    braided_bundle_3d,
+    tendon_like_bundle_3d,
+)
+
+__all__.extend([
+    "parallel_bundle_2d",
+    "twisted_bundle_2d",
+    "random_bundle_3d",
+    "braided_bundle_3d",
+    "tendon_like_bundle_3d",
+])
