@@ -1,96 +1,140 @@
-"""Tests for visualization module."""
+"""
+Tests for visualization module.
+"""
 
 import pytest
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')  # Non-interactive backend for testing
+from fibernet import gen
+from fibernet.visualization import (
+    NetworkVisualizer, PlotStyle, visualize_network
+)
 
-from fibernet import gen, viz
-
-
-class TestMatplotlibVisualization:
-    """Test matplotlib-based visualizations."""
-    
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.network = gen.random_straight_2d(
-            num_fibers=20,
-            fiber_length=10.0,
-            box_size=(30, 30),
-            seed=42
-        )
-    
-    def test_visualize_3d_basic(self):
-        """Test basic 3D visualization."""
-        fig, ax = viz.visualize_3d_matplotlib(self.network)
-        assert fig is not None
-        assert ax is not None
-    
-    def test_visualize_3d_with_options(self):
-        """Test 3D visualization with custom options."""
-        fig, ax = viz.visualize_3d_matplotlib(
-            self.network,
-            color='red',
-            linewidth=2.0,
-            alpha=0.8,
-            show_crosslinks=True,
-            crosslink_color='blue',
-            title='Test Network'
-        )
-        assert fig is not None
-    
-    def test_visualize_3d_without_crosslinks(self):
-        """Test 3D visualization without crosslinks."""
-        fig, ax = viz.visualize_3d_matplotlib(
-            self.network,
-            show_crosslinks=False
-        )
-        assert fig is not None
-    
-    def test_visualize_network_stress(self):
-        """Test stress visualization."""
-        stress_values = np.random.uniform(0, 1, self.network.num_fibers)
-        fig, ax = viz.visualize_network_stress(
-            self.network,
-            stress_values,
-            cmap='coolwarm'
-        )
-        assert fig is not None
-    
-    def test_visualize_network_stress_with_options(self):
-        """Test stress visualization with options."""
-        stress_values = np.random.uniform(0, 1, self.network.num_fibers)
-        fig, ax = viz.visualize_network_stress(
-            self.network,
-            stress_values,
-            linewidth=2.0,
-            colorbar=True,
-            title='Stress Test'
-        )
-        assert fig is not None
-    
-    def test_visualize_damage_evolution(self):
-        """Test damage evolution visualization."""
-        damage_result = {
-            'strain': np.linspace(0, 0.1, 20),
-            'stress': np.random.uniform(0, 100, 20),
-            'damage': np.linspace(0, 0.8, 20),
-            'broken_elements': np.linspace(0, 50, 20).astype(int),
-        }
-        fig = viz.visualize_damage_evolution(damage_result)
-        assert fig is not None
+# Skip tests if matplotlib not available
+matplotlib = pytest.importorskip("matplotlib")
+import matplotlib.pyplot as plt
 
 
-class TestVisualizationIntegration:
-    """Integration tests for visualization."""
+class TestPlotStyle:
+    """Test PlotStyle dataclass."""
     
-    def test_visualize_different_networks(self):
-        """Test visualization with different network types."""
-        networks = [
-            gen.random_straight_2d(num_fibers=10, fiber_length=10.0, box_size=(20, 20)),
-            gen.random_straight_3d(num_fibers=10, fiber_length=10.0, box_size=(20, 20, 20)),
-        ]
+    def test_default_style(self):
+        style = PlotStyle()
+        assert style.fiber_color == 'blue'
+        assert style.fiber_linewidth == 1.0
+        assert style.crosslink_color == 'red'
+    
+    def test_custom_style(self):
+        style = PlotStyle(
+            fiber_color='green',
+            fiber_linewidth=2.0,
+            crosslink_size=10.0,
+        )
+        assert style.fiber_color == 'green'
+        assert style.fiber_linewidth == 2.0
+        assert style.crosslink_size == 10.0
+    
+    def test_to_dict(self):
+        style = PlotStyle()
+        data = style.to_dict()
+        assert isinstance(data, dict)
+        assert 'fiber_color' in data
+        assert 'grid' in data
+
+
+class TestNetworkVisualizer:
+    """Test NetworkVisualizer."""
+    
+    def test_initialization(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        assert viz.network == net
+        assert viz.style is not None
+    
+    def test_initialization_with_style(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        style = PlotStyle(fiber_color='red')
+        viz = NetworkVisualizer(net, style=style)
+        assert viz.style.fiber_color == 'red'
+    
+    def test_plot_2d(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_2d(title="Test Network")
+        assert fig is not None
+        assert viz.fig is not None
+        assert viz.ax is not None
+        plt.close(fig)
+    
+    def test_plot_2d_color_by_length(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_2d(color_by='length')
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_plot_2d_color_by_orientation(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_2d(color_by='orientation')
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_plot_2d_no_crosslinks(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_2d(show_crosslinks=False)
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_plot_3d(self):
+        net = gen.random_straight_3d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_3d(title="3D Network")
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_plot_3d_color_by_length(self):
+        net = gen.random_straight_3d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        fig = viz.plot_3d(color_by='length')
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_plot_stress_field(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        stress = np.random.rand(net.num_fibers) * 1e6
+        fig = viz.plot_stress_field(stress, title="Stress Field")
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_save(self, tmp_path):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        viz = NetworkVisualizer(net)
+        viz.plot_2d()
         
-        for network in networks:
-            fig, ax = viz.visualize_3d_matplotlib(network)
-            assert fig is not None
+        filename = tmp_path / "test_plot.png"
+        viz.save(str(filename), dpi=100)
+        assert filename.exists()
+        plt.close(viz.fig)
+
+
+class TestVisualizeNetwork:
+    """Test convenience function."""
+    
+    def test_2d_visualization(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        fig = visualize_network(net, dimension=2, title="Test")
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_3d_visualization(self):
+        net = gen.random_straight_3d(num_fibers=30, seed=42)
+        fig = visualize_network(net, dimension=3, title="Test")
+        assert fig is not None
+        plt.close(fig)
+    
+    def test_invalid_dimension(self):
+        net = gen.random_straight_2d(num_fibers=30, seed=42)
+        with pytest.raises(ValueError):
+            visualize_network(net, dimension=4)

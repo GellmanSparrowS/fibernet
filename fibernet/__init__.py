@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.10.0"
+__version__ = "1.11.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
@@ -107,3 +107,21 @@ __all__ = [
     "__author__",
     "__license__",
 ]
+
+# Visualization
+from .visualization import (
+    NetworkVisualizer, PlotStyle, visualize_network
+)
+__all__.extend([
+    "NetworkVisualizer", "PlotStyle", "visualize_network"
+])
+
+# Design of Experiments
+from .doe import (
+    DesignOfExperiments, ExperimentDesign, ExperimentResult, SweepResult,
+    run_parameter_sweep
+)
+__all__.extend([
+    "DesignOfExperiments", "ExperimentDesign", "ExperimentResult", "SweepResult",
+    "run_parameter_sweep"
+])
