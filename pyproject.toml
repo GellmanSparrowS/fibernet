@@ -1,18 +1,15 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools.backends._legacy:_Backend"
 
 [project]
 name = "fibernet"
-version = "0.1.0"
-description = "FiberNet - A comprehensive toolkit for generation, simulation, and analysis of fiber network structures"
+version = "0.2.0"
+description = "A comprehensive toolkit for fiber network structure generation, simulation, and analysis"
 readme = "README.md"
 license = {text = "MIT"}
+authors = [{name = "FiberNet Contributors"}]
 requires-python = ">=3.9"
-authors = [
-    {name = "ML-BioMat Lab", email = "contact@ml-biomat.com"},
-]
-keywords = ["fiber", "network", "simulation", "materials", "mechanics", "topology"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -24,38 +21,52 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Physics",
-    "Topic :: Scientific/Engineering :: Chemistry",
 ]
+keywords = ["fiber", "network", "simulation", "mechanics", "materials"]
+
 dependencies = [
-    "numpy>=1.24",
-    "scipy>=1.10",
-    "networkx>=3.0",
-    "matplotlib>=3.7",
-    "h5py>=3.8",
-    "pyyaml>=6.0",
+    "numpy>=1.22",
+    "scipy>=1.9",
+    "networkx>=2.8",
+    "matplotlib>=3.5",
 ]
 
 [project.optional-dependencies]
-gpu = ["taichi>=1.6"]
-viz3d = ["pyvista>=0.40"]
-all = ["taichi>=1.6", "pyvista>=0.40", "scikit-learn>=1.2"]
-dev = ["pytest>=7.0", "pytest-cov>=4.0", "black>=23.0", "ruff>=0.1"]
+viz = [
+    "pyvista>=0.37",
+]
+io = [
+    "h5py>=3.7",
+]
+accel = [
+    "taichi>=1.6",
+]
+analysis = [
+    "scikit-learn>=1.0",
+]
+dev = [
+    "pytest>=7.0",
+    "pyvista>=0.37",
+    "h5py>=3.7",
+    "taichi>=1.6",
+    "scikit-learn>=1.0",
+]
+all = [
+    "pyvista>=0.37",
+    "h5py>=3.7",
+    "taichi>=1.6",
+    "scikit-learn>=1.0",
+]
 
 [project.urls]
-Homepage = "https://ml-biomat.com"
+Homepage = "https://github.com/GellmanSparrowS/fibernet"
 Repository = "https://github.com/GellmanSparrowS/fibernet"
-Documentation = "https://github.com/GellmanSparrowS/fibernet/wiki"
+Issues = "https://github.com/GellmanSparrowS/fibernet/issues"
 
 [tool.setuptools.packages.find]
+where = ["."]
 include = ["fibernet*"]
-
-[tool.black]
-line-length = 100
-target-version = ["py39"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py39"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-v --tb=short"

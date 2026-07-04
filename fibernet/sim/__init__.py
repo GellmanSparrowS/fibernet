@@ -8,6 +8,7 @@ Submodules:
 - thermal: Heat conduction
 - electromagnetic: Electrical conductivity and percolation
 - coupling: Multi-physics (thermo-mechanical, piezoresistive)
+- accelerated: Taichi-accelerated computations
 """
 
 from fibernet.sim.mechanical import FiberFEM, MechanicalResult, BeamElement, stress_strain_curve
@@ -17,6 +18,11 @@ from fibernet.sim.thermal import ThermalSolver, ThermalResult
 from fibernet.sim.electromagnetic import EMSolver, EMResult
 from fibernet.sim.coupling import ThermoMechanical, PiezoResistive, CoupledResult
 
+try:
+    from fibernet.sim.accelerated import TaichiEngine, AcceleratedResult
+except ImportError:
+    pass
+
 __all__ = [
     "FiberFEM", "MechanicalResult", "BeamElement", "stress_strain_curve",
     "FiberDynamics", "DynamicsResult",
@@ -24,4 +30,5 @@ __all__ = [
     "ThermalSolver", "ThermalResult",
     "EMSolver", "EMResult",
     "ThermoMechanical", "PiezoResistive", "CoupledResult",
+    "TaichiEngine", "AcceleratedResult",
 ]

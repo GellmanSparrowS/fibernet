@@ -396,6 +396,15 @@ class FiberFEM:
                 pass
             fixed_dofs.extend([n * 6 + d for d in range(6) if d != axis])
         
+        # For 2D networks, constrain out-of-plane DOFs for ALL nodes
+        if self.network.dimension == 2:
+            for n in range(self.num_nodes):
+                # Fix z-displacement (DOF 2)
+                fixed_dofs.append(n * 6 + 2)
+                # Fix x-rotation (DOF 3) and y-rotation (DOF 4)
+                fixed_dofs.append(n * 6 + 3)
+                fixed_dofs.append(n * 6 + 4)
+        
         return self.solve_static(fixed_dofs=fixed_dofs, prescribed_dofs=prescribed)
     
     def effective_modulus(
@@ -431,12 +440,21 @@ class FiberFEM:
         bb_min, bb_max = self.network.bounding_box()
         dims = bb_max - bb_min
         
-        if axis == 0:
-            area = dims[1] * dims[2] if len(dims) > 2 else dims[1]
-        elif axis == 1:
-            area = dims[0] * dims[2] if len(dims) > 2 else dims[0]
+        # For 2D networks, use unit thickness
+        if self.network.dimension == 2:
+            if axis == 0:
+                area = dims[1] * 1.0  # width * unit thickness
+            elif axis == 1:
+                area = dims[0] * 1.0  # width * unit thickness
+            else:
+                area = dims[0] * dims[1]
         else:
-            area = dims[0] * dims[1]
+            if axis == 0:
+                area = dims[1] * dims[2]
+            elif axis == 1:
+                area = dims[0] * dims[2]
+            else:
+                area = dims[0] * dims[1]
         
         if area < 1e-12:
             return 0.0
