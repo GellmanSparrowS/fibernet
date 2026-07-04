@@ -19,7 +19,7 @@ FiberNet enables researchers to generate, simulate, and analyze fiber network st
 
 | Category | Capabilities |
 |----------|-------------|
-| **Generation** | 50+ generators: random, ordered, chiral, woven, hierarchical, biomimetic, CNT, paper, textile, electrospun |
+| **Generation** | 57 generators: random, ordered, chiral, woven, hierarchical, biomimetic, CNT, paper, textile, electrospun |
 | **Simulation** | FEM, dynamics, fracture, damage/fatigue, thermal, electromagnetic, acoustic, fluid, rheology, DMA, multi-scale |
 | **Crosslinks** | Rigid, spring, breakable, friction, bonded, covalent, hydrogen bond, ionic, physical entanglement |
 | **Analysis** | Morphology, topology, spectral, pore structure, anisotropy, percolation, multi-scale homogenization |
@@ -409,7 +409,7 @@ python examples/full_workflow.py
 ```
 fibernet/
 ├── core/              # Core data structures (Fiber, FiberNetwork, Material, Crosslinks)
-├── gen/               # 50+ network generators
+├── gen/               # 57 network generators
 ├── sim/               # Simulation engines
 │   ├── mechanical.py  # FEM (linear/nonlinear)
 │   ├── accelerated.py # Taichi GPU-accelerated FEM
