@@ -148,3 +148,22 @@ __all__.extend([
     "random_curved_network_3d",
     "crimped_network_2d",
 ])
+
+# Composite laminates
+from .laminates import (
+    unidirectional_laminate,
+    crossply_laminate,
+    angle_ply_laminate,
+    quasi_isotropic_laminate,
+    custom_laminate,
+    sandwich_laminate,
+)
+
+__all__.extend([
+    "unidirectional_laminate",
+    "crossply_laminate",
+    "angle_ply_laminate",
+    "quasi_isotropic_laminate",
+    "custom_laminate",
+    "sandwich_laminate",
+])

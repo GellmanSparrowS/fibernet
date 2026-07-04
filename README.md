@@ -4,8 +4,8 @@
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-575%20passing-green.svg)]()
-[![Version](https://img.shields.io/badge/version-1.18.0-blue.svg)]()
+[![Tests](https://img.shields.io/badge/tests-860%20passing-green.svg)]()
+[![Version](https://img.shields.io/badge/version-1.23.0-blue.svg)]()
 [![CI/CD](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml/badge.svg)](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/fibernet/badge/?version=latest)](https://fibernet.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://img.shields.io/badge/DOI-pending-orange.svg)]()
@@ -19,14 +19,16 @@ FiberNet enables researchers to generate, simulate, and analyze fiber network st
 
 | Category | Capabilities |
 |----------|-------------|
-| **Generation** | 57 generators: random, ordered, chiral, woven, hierarchical, biomimetic, CNT, paper, textile, electrospun |
-| **Simulation** | FEM, dynamics, fracture, damage/fatigue, thermal, electromagnetic, acoustic, fluid, rheology, DMA, multi-scale |
+| **Generation** | 68 generators: random, ordered, chiral, woven, hierarchical, bundles, curved fibers, biomimetic, CNT, paper, textile, electrospun |
+| **Simulation** | FEM, dynamics, fracture, damage/fatigue, thermal, electromagnetic, acoustic, fluid, rheology, DMA, multi-scale, optimization |
 | **Crosslinks** | Rigid, spring, breakable, friction, bonded, covalent, hydrogen bond, ionic, physical entanglement |
 | **Analysis** | Morphology, topology, spectral, pore structure, anisotropy, percolation, multi-scale homogenization |
+| **Mesh Operations** | Trimesh integration, mesh conversion, boolean operations, mesh analysis, repair, simplification |
+| **Optimization** | Energy minimization (L-BFGS-B, CG, BFGS, Powell), parameter optimization, global optimization (differential evolution) |
 | **ML Integration** | Feature extraction, GNN models, property prediction, dataset generation |
 | **I/O** | JSON, YAML, LAMMPS, VTK, GMSH, PDB, XYZ, pandas, HDF5 formats |
 | **Acceleration** | Taichi CPU/GPU parallel FEM, parallel contact detection |
-| **Visualization** | matplotlib 3D, pyvista interactive, plotly web, stress coloring, damage evolution, animations |
+| **Visualization** | PyVista 3D interactive, matplotlib, plotly web, screenshots, animations, color coding, cross-sections |
 | **Reproducibility** | YAML config system, ensemble generation, convergence studies, config hashing |
 | **Units** | SI, CGS, micro, nano, molecular unit systems |
 
@@ -109,6 +111,145 @@ dna = gen.double_helix(radius=5.0, pitch=2.0, turns=3)
 collagen = gen.biomimetic_collagen(num_fibers=100, box_size=(50, 50), seed=42)
 fibrin = gen.biomimetic_fibrin(num_fibers=100, box_size=(50, 50), seed=42)
 electrospun = gen.electrospun(num_fibers=200, box_size=(50, 50), seed=42)
+```
+
+### Fiber Bundles
+
+```python
+from fibernet.gen.bundles import (
+    parallel_bundle_2d, twisted_bundle_2d, random_bundle_3d,
+    braided_bundle_3d, tendon_like_bundle_3d
+)
+
+# Parallel bundle (unidirectional composites)
+bundle = parallel_bundle_2d(
+    num_fibers=20, bundle_length=100.0, bundle_width=10.0,
+    fiber_radius=0.5, orientation=0.0
+)
+
+# Twisted bundle (ropes, cables)
+twisted = twisted_bundle_2d(
+    num_fibers=12, bundle_length=80.0, twist_pitch=30.0,
+    bundle_radius=5.0
+)
+
+# Braided bundle (interwoven composites)
+braided = braided_bundle_3d(
+    num_strands=8, bundle_length=100.0, braid_radius=6.0,
+    fibers_per_strand=4
+)
+
+# Tendon-like bundle (biological tissues with crimped fibers)
+tendon = tendon_like_bundle_3d(
+    num_fibers=40, bundle_length=120.0, bundle_radius=10.0,
+    crimp_amplitude=1.5, crimp_wavelength=15.0
+)
+```
+
+### Curved Fibers
+
+```python
+from fibernet.gen.curved import (
+    sinusoidal_fiber_2d, helical_fiber_3d, arc_fiber_2d,
+    bezier_fiber_3d, random_curved_network_3d, crimped_network_2d
+)
+
+# Sinusoidal/wavy fiber (crimped biological fibers)
+wavy = sinusoidal_fiber_2d(
+    length=50.0, amplitude=2.0, wavelength=10.0, num_segments=50
+)
+
+# Helical fiber (springs, coils)
+helix = helical_fiber_3d(
+    length=50.0, radius_helix=3.0, pitch=10.0, num_turns=5.0
+)
+
+# Bezier curve fiber (smooth arbitrary curves)
+control_points = [(0,0,0), (10,20,0), (20,-10,0), (30,0,0)]
+curve = bezier_fiber_3d(control_points=control_points)
+
+# Random curved network
+curved_net = random_curved_network_3d(
+    num_fibers=50, box_size=(50,50,50), curvature=0.3
+)
+
+# Crimped network (biological tissue-like)
+crimped = crimped_network_2d(
+    num_fibers=50, box_size=(100,100), crimp_amplitude=3.0
+)
+```
+
+### 3D Visualization with PyVista
+
+```python
+from fibernet.pyvista_viz import PyVistaVisualizer
+
+# Create visualizer
+viz = PyVistaVisualizer(net)
+
+# Interactive 3D display
+viz.show(color='lightblue', line_width=3.0)
+
+# Color by property
+viz.color_by_property('length', colormap='viridis')
+
+# Save screenshot
+viz.save_screenshot('network.png', window_size=(1920, 1080))
+
+# Export to VTK
+viz.export_vtk('network.vtk')
+
+# Create rotation animation
+viz.animate_rotation('rotation.gif', n_frames=36)
+```
+
+### Mesh Operations with Trimesh
+
+```python
+from fibernet.trimesh_integration import (
+    network_to_trimesh, analyze_mesh_properties,
+    boolean_operation, repair_mesh
+)
+
+# Convert network to mesh
+mesh = network_to_trimesh(net, radial_segments=8)
+
+# Analyze mesh properties
+props = analyze_mesh_properties(mesh)
+print(f"Volume: {props['volume']:.2f}")
+print(f"Surface area: {props['surface_area']:.2f}")
+
+# Boolean operations
+union = boolean_operation(mesh1, mesh2, 'union')
+
+# Repair mesh
+repaired = repair_mesh(mesh)
+```
+
+### SciPy Optimization
+
+```python
+from fibernet.sim.optimization import EnergyMinimizer, ParameterOptimizer
+
+# Minimize network energy
+minimizer = EnergyMinimizer(net)
+result = minimizer.minimize(method='L-BFGS-B', max_iterations=1000)
+minimizer.update_network(result)
+
+# Optimize parameters for target properties
+def objective(params):
+    num_fibers = int(params[0])
+    fiber_length = params[1]
+    net = gen.random_straight_2d(num_fibers=num_fibers, fiber_length=fiber_length)
+    return -len(net.fibers)  # maximize fiber count
+
+optimizer = ParameterOptimizer(objective)
+result = optimizer.optimize(bounds=[(10, 100), (5.0, 20.0)])
+
+# Global optimization
+result = optimizer.optimize_global(
+    bounds=[(10, 100), (5.0, 20.0)], max_iterations=1000
+)
 ```
 
 ### Mechanical Simulation (FEM)
