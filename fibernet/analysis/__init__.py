@@ -48,3 +48,13 @@ from fibernet.analysis.percolation import (
 __all__ += [
     "PercolationAnalyzer", "PercolationResult", "estimate_percolation_threshold",
 ]
+
+# Network topology analysis
+from .topology import (
+    TopologyAnalyzer, TopologyResult, CentralityResult,
+    analyze_topology
+)
+__all__.extend([
+    "TopologyAnalyzer", "TopologyResult", "CentralityResult",
+    "analyze_topology"
+])

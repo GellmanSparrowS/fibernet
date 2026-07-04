@@ -60,7 +60,15 @@ I/O Formats
 Visualization
 -------------
 
-.. automodule:: fibernet.viz
+.. automodule:: fibernet.visualization
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Design of Experiments
+---------------------
+
+.. automodule:: fibernet.doe
    :members:
    :undoc-members:
    :show-inheritance:
