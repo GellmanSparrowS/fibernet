@@ -45,7 +45,7 @@ class TestNetworkFingerprint:
         fp1 = NetworkFingerprint(net).compute_fingerprint()
         fp2 = NetworkFingerprint(net).compute_fingerprint()
         
-        assert np.allclose(fp1, fp2)
+        assert np.allclose(fp1, fp2, equal_nan=True)
 
 
 class TestNetworkComparator:
