@@ -144,8 +144,14 @@ __all__.extend([
     "convert_energy", "parse_unit_string", "scale_network_properties"
 ])
 
-# PyVista visualization
-from .pyvista_viz import PyVistaVisualizer, visualize_network_3d, PYVISTA_AVAILABLE
+# PyVista visualization (lazy import to avoid VTK segfaults in CI)
+import os as _os
+if _os.environ.get("CI") != "true":
+    from .pyvista_viz import PyVistaVisualizer, visualize_network_3d, PYVISTA_AVAILABLE
+else:
+    PYVISTA_AVAILABLE = False
+    PyVistaVisualizer = None
+    visualize_network_3d = None
 __all__.extend([
     "PyVistaVisualizer", "visualize_network_3d", "PYVISTA_AVAILABLE"
 ])
