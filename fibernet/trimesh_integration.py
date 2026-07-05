@@ -14,6 +14,8 @@ References:
 - Trimesh: https://trimesh.org/
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional, Tuple, List, Union
 from pathlib import Path

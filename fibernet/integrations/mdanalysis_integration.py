@@ -11,6 +11,8 @@ Provides integration with MDAnalysis for trajectory analysis:
 MDAnalysis is GPL v2 licensed: https://github.com/MDAnalysis/mdanalysis
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass

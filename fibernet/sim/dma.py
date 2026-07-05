@@ -11,6 +11,8 @@ Key outputs:
 - Complex modulus (|E*|): Overall stiffness
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Tuple, Optional, List, Dict
 from dataclasses import dataclass, field

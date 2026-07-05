@@ -11,6 +11,8 @@ Provides seamless integration with NetworkX for advanced graph analysis:
 NetworkX is BSD-licensed: https://github.com/networkx/networkx
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass, field

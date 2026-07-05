@@ -5,6 +5,9 @@ import numpy as np
 from fibernet import gen
 from fibernet.analysis import extract_stress_strain, StressStrainCurve, compare_curves
 
+pytest.importorskip("matplotlib")
+
+
 
 class TestStressStrainCurve:
     def test_extract_basic(self):

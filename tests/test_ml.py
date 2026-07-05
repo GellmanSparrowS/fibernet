@@ -6,6 +6,9 @@ from fibernet import gen
 from fibernet.ml.features import FeatureExtractor, extract_features
 from fibernet.ml.dataset import generate_dataset
 
+pytest.importorskip("sklearn")
+
+
 
 class TestFeatureExtraction:
     def test_extract_basic(self):

@@ -10,6 +10,9 @@ from fibernet.ml.graph_neural_network import (
     predict_property
 )
 
+pytest.importorskip("sklearn")
+
+
 
 class TestGraphData:
     """Test GraphData dataclass."""

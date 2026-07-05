@@ -5,6 +5,9 @@ import numpy as np
 from fibernet import gen
 from fibernet.ml import GNNFeatureExtractor
 
+pytest.importorskip("sklearn")
+
+
 
 class TestGNNFeatureExtractor:
     """Test GNNFeatureExtractor functionality."""

@@ -5,6 +5,8 @@ Provides web-based interactive 3D visualization of fiber networks
 with features like rotation, zoom, and hover information.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional, Dict, List
 from ..core import FiberNetwork

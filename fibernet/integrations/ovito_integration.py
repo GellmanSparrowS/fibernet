@@ -10,6 +10,8 @@ Provides integration with OVITO for advanced visualization and analysis:
 OVITO is GPL v3 licensed: https://github.com/ovito-org/ovito
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Optional
 from dataclasses import dataclass

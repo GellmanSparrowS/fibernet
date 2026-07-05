@@ -4,6 +4,8 @@ Provides DataFrame export/import for easy data analysis and visualization.
 Requires: pandas
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional, List, Dict, Any
 from ..core.network import FiberNetwork

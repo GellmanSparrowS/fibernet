@@ -5,6 +5,9 @@ import numpy as np
 from fibernet import gen
 from fibernet.io import to_dataframe, from_dataframe, network_summary, parametric_to_dataframe
 
+pytest.importorskip("pandas")
+
+
 
 def test_to_dataframe():
     """Test converting network to DataFrame."""

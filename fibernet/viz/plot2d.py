@@ -8,6 +8,8 @@ Provides:
 - Histograms and statistical plots
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional, List, Tuple, Dict
 try:

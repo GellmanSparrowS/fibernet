@@ -2,6 +2,9 @@
 import numpy as np
 import pytest
 import sys, os
+
+pytest.importorskip("taichi")
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 

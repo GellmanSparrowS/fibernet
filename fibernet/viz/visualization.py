@@ -4,6 +4,8 @@
 Provides interactive visualization using matplotlib and pyvista (optional).
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Optional, List, Tuple
 from ..core import FiberNetwork

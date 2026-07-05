@@ -40,6 +40,8 @@ output:
 ```
 """
 
+from __future__ import annotations
+
 try:
     import yaml
     HAS_YAML = True

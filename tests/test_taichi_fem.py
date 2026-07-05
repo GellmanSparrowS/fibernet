@@ -4,6 +4,9 @@ import pytest
 import numpy as np
 from fibernet.sim import TaichiFEMSolver
 
+pytest.importorskip("taichi")
+
+
 
 class TestTaichiFEMSolver:
     """Test TaichiFEMSolver functionality."""

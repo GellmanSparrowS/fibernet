@@ -5,6 +5,8 @@ Provides tools for generating stress-strain curves from mechanical simulations
 and analyzing key mechanical properties.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Tuple, Optional, Dict, List
 from dataclasses import dataclass, field

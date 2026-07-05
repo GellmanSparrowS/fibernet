@@ -5,6 +5,8 @@ Manages fiber collections, crosslinks, contacts, periodicity, and provides
 methods for I/O, querying, and basic analysis.
 """
 
+from __future__ import annotations
+
 import numpy as np
 from scipy.spatial import cKDTree
 from dataclasses import dataclass, field
