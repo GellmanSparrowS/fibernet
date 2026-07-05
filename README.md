@@ -1,104 +1,115 @@
 # FiberNet
 
 **A comprehensive Python toolkit for fiber network structure generation, simulation, and analysis.**
+**面向 Nature Materials 级别研究的开源纤维网络结构 Python 工具包。**
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-860%20passing-green.svg)]()
-[![Version](https://img.shields.io/badge/version-1.23.0-blue.svg)]()
+[![Tests](https://img.shields.io/badge/tests-889%20passing-green.svg)]()
+[![Version](https://img.shields.io/badge/version-1.24.0-blue.svg)]()
 [![CI/CD](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml/badge.svg)](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/fibernet/badge/?version=latest)](https://fibernet.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://img.shields.io/badge/DOI-pending-orange.svg)]()
 [![GitHub](https://img.shields.io/github/stars/GellmanSparrowS/fibernet?style=social)](https://github.com/GellmanSparrowS/fibernet)
 
-FiberNet enables researchers to generate, simulate, and analyze fiber network structures for applications in materials science, biomechanics, polymer physics, composites engineering, and more. Designed as a research-grade tool with emphasis on reproducibility and extensibility.
+---
 
-**Homepage**: [https://ml-biomat.com/](https://ml-biomat.com/)
+## 📖 Overview / 概述
 
-## Key Features
+**English**: FiberNet enables researchers to generate, simulate, and analyze fiber network structures for applications in materials science, biomechanics, polymer physics, composites engineering, and more. Designed as a research-grade tool with emphasis on reproducibility and extensibility.
 
-| Category | Capabilities |
+**中文**: FiberNet 使研究人员能够生成、模拟和分析纤维网络结构，适用于材料科学、生物力学、高分子物理、复合材料工程等领域。作为研究级工具，强调可重复性和可扩展性。
+
+**Homepage / 主页**: [https://ml-biomat.com/](https://ml-biomat.com/)
+
+---
+
+## ⚡ Key Features / 核心功能
+
+| Category / 类别 | Capabilities / 能力 |
 |----------|-------------|
-| **Generation** | 68 generators: random, ordered, chiral, woven, hierarchical, bundles, curved fibers, biomimetic, CNT, paper, textile, electrospun |
-| **Simulation** | FEM, dynamics, fracture, damage/fatigue, thermal, electromagnetic, acoustic, fluid, rheology, DMA, multi-scale, optimization |
-| **Crosslinks** | Rigid, spring, breakable, friction, bonded, covalent, hydrogen bond, ionic, physical entanglement |
-| **Analysis** | Morphology, topology, spectral, pore structure, anisotropy, percolation, multi-scale homogenization |
-| **Mesh Operations** | Trimesh integration, mesh conversion, boolean operations, mesh analysis, repair, simplification |
-| **Optimization** | Energy minimization (L-BFGS-B, CG, BFGS, Powell), parameter optimization, global optimization (differential evolution) |
-| **ML Integration** | Feature extraction, GNN models, property prediction, dataset generation |
-| **I/O** | JSON, YAML, LAMMPS, VTK, GMSH, PDB, XYZ, pandas, HDF5 formats |
-| **Acceleration** | Taichi CPU/GPU parallel FEM, parallel contact detection |
-| **Visualization** | PyVista 3D interactive, matplotlib, plotly web, screenshots, animations, color coding, cross-sections |
-| **Reproducibility** | YAML config system, ensemble generation, convergence studies, config hashing |
-| **Units** | SI, CGS, micro, nano, molecular unit systems |
+| **Generation / 生成** | 68 generators: random, ordered, chiral, woven, hierarchical, bundles, curved fibers, biomimetic, CNT, paper, textile, electrospun / 68种生成器：随机、有序、手性、编织、层次、束、弯曲纤维、仿生、碳纳米管、纸张、纺织、电纺 |
+| **Simulation / 模拟** | FEM, dynamics, fracture, damage/fatigue, thermal, electromagnetic, acoustic, fluid, rheology, DMA, multi-scale, optimization / 有限元、动力学、断裂、损伤/疲劳、热学、电磁、声学、流体、流变、DMA、多尺度、优化 |
+| **Crosslinks / 交联** | Rigid, spring, breakable, friction, bonded, covalent, hydrogen bond, ionic, physical entanglement / 刚性、弹簧、可断裂、摩擦、键合、共价、氢键、离子、物理缠结 |
+| **Analysis / 分析** | Morphology, topology, spectral, pore structure, anisotropy, percolation, multi-scale homogenization / 形态学、拓扑、谱分析、孔隙结构、各向异性、渗流、多尺度均匀化 |
+| **Mesh Operations / 网格** | Trimesh integration, mesh conversion, boolean operations, mesh analysis, repair, simplification / Trimesh集成、网格转换、布尔运算、网格分析、修复、简化 |
+| **Optimization / 优化** | Energy minimization (L-BFGS-B, CG, BFGS, Powell), parameter optimization, global optimization (differential evolution) / 能量最小化、参数优化、全局优化（差分进化） |
+| **ML Integration / 机器学习** | Feature extraction, GNN model, property prediction, dataset generation / 特征提取、图神经网络、性能预测、数据集生成 |
+| **I/O / 输入输出** | JSON, YAML, LAMMPS, VTK, GMSH, PDB, XYZ, pandas, HDF5 formats / JSON、YAML、LAMMPS、VTK、GMSH、PDB、XYZ、pandas、HDF5格式 |
+| **Acceleration / 加速** | Taichi CPU/GPU parallel FEM, parallel contact detection / Taichi CPU/GPU并行有限元、并行接触检测 |
+| **Visualization / 可视化** | PyVista 3D interactive, matplotlib, plotly web, screenshots, animations / PyVista 3D交互、matplotlib、plotly网页、截图、动画 |
 
-## Installation
+---
+
+## 📦 Installation / 安装
 
 ```bash
-# Basic installation
+# Basic installation / 基础安装
 pip install fibernet
 
-# With all optional dependencies (pyvista, sklearn, pandas, networkx, plotly)
+# With all optional dependencies / 安装所有可选依赖
 pip install fibernet[full]
 
-# Development install
+# Development install / 开发安装
 git clone https://github.com/GellmanSparrowS/fibernet.git
 cd fibernet && pip install -e ".[dev]"
 ```
 
-## Quick Start
+---
 
-### High-Level API
+## 🚀 Quick Start / 快速入门
+
+### High-Level API / 高级API
 
 ```python
 import fibernet as fn
 
-# Create a random 2D network
+# Create a random 2D network / 创建随机2D网络
 net = fn.create("random_2d", num_fibers=100, fiber_length=10.0, box_size=(30, 30), seed=42)
 
-# Analyze structure
+# Analyze structure / 分析结构
 stats = fn.analyze(net)
 print(f"Fibers: {stats['num_fibers']}, Order: {stats['nematic_order']:.3f}")
 
-# Run mechanical simulation
+# Run mechanical simulation / 运行力学模拟
 result = fn.simulate_mechanics(net, strain=0.01)
 
-# Transform
+# Transform / 变换
 net_scaled = fn.scale(net, factor=2.0)
 net_rotated = fn.rotate(net, angle=0.785, axis=[0, 0, 1])
 
-# Visualize
+# Visualize / 可视化
 fn.plot(net)
 
-# Export
+# Export / 导出
 fn.export(net, "network.json", format="json")
 fn.export(net, "network.vtk", format="vtk")
 ```
 
-### Network Generation
+### Network Generation / 网络生成
 
 ```python
 from fibernet import gen
 
-# Random 2D fiber network
+# Random 2D fiber network / 随机2D纤维网络
 net = gen.random_straight_2d(
     num_fibers=100, fiber_length=15.0, box_size=(50, 50),
     radius=0.1, seed=42
 )
 
-# 3D random network
+# 3D random network / 3D随机网络
 net_3d = gen.random_straight_3d(
     num_fibers=200, fiber_length=20.0, box_size=(50, 50, 50), seed=42
 )
 
-# Ordered lattices
+# Ordered lattices / 有序晶格
 square = gen.square_lattice_2d(spacing=5.0, grid_size=(10, 10))
 honeycomb = gen.honeycomb_lattice_2d(cell_size=5.0, grid_size=(10, 10))
 triangular = gen.triangular_lattice_2d(spacing=5.0, grid_size=(10, 10))
 cubic = gen.cubic_lattice_3d(spacing=5.0, grid_size=(5, 5, 5))
 octet = gen.octet_truss_3d(spacing=5.0, grid_size=(3, 3, 3))
 
-# Specialized structures
+# Specialized structures / 专用结构
 chiral = gen.chiral_network_2d(
     num_fibers=50, fiber_length=15.0, box_size=(50, 50),
     chirality=0.5, seed=42
@@ -107,373 +118,94 @@ woven = gen.woven_2d(warp_count=10, weft_count=10, spacing=5.0)
 helix = gen.single_helix(radius=5.0, pitch=2.0, turns=3, num_points=100)
 dna = gen.double_helix(radius=5.0, pitch=2.0, turns=3)
 
-# Biomimetic
+# Biomimetic / 仿生结构
 collagen = gen.biomimetic_collagen(num_fibers=100, box_size=(50, 50), seed=42)
 fibrin = gen.biomimetic_fibrin(num_fibers=100, box_size=(50, 50), seed=42)
 electrospun = gen.electrospun(num_fibers=200, box_size=(50, 50), seed=42)
 ```
 
-### Fiber Bundles
+### Fiber Bundles / 纤维束
 
 ```python
 from fibernet.gen.bundles import (
-    parallel_bundle_2d, twisted_bundle_2d, random_bundle_3d,
-    braided_bundle_3d, tendon_like_bundle_3d
+    parallel_bundle, twisted_bundle, random_bundle,
+    rope_bundle, braided_bundle,
 )
 
-# Parallel bundle (unidirectional composites)
-bundle = parallel_bundle_2d(
-    num_fibers=20, bundle_length=100.0, bundle_width=10.0,
-    fiber_radius=0.5, orientation=0.0
+# Parallel fiber bundle / 平行纤维束
+parallel = parallel_bundle(
+    num_fibers=20, fiber_length=50.0, bundle_radius=2.0,
+    centerline=np.array([[0, 0, 0], [50, 0, 0]])
 )
 
-# Twisted bundle (ropes, cables)
-twisted = twisted_bundle_2d(
-    num_fibers=12, bundle_length=80.0, twist_pitch=30.0,
-    bundle_radius=5.0
-)
-
-# Braided bundle (interwoven composites)
-braided = braided_bundle_3d(
-    num_strands=8, bundle_length=100.0, braid_radius=6.0,
-    fibers_per_strand=4
-)
-
-# Tendon-like bundle (biological tissues with crimped fibers)
-tendon = tendon_like_bundle_3d(
-    num_fibers=40, bundle_length=120.0, bundle_radius=10.0,
-    crimp_amplitude=1.5, crimp_wavelength=15.0
+# Twisted bundle / 扭转纤维束
+twisted = twisted_bundle(
+    num_fibers=20, fiber_length=50.0, bundle_radius=2.0,
+    twist_rate=0.1, centerline=np.array([[0, 0, 0], [50, 0, 0]])
 )
 ```
 
-### Curved Fibers
+### Mechanical Simulation / 力学模拟
 
 ```python
-from fibernet.gen.curved import (
-    sinusoidal_fiber_2d, helical_fiber_3d, arc_fiber_2d,
-    bezier_fiber_3d, random_curved_network_3d, crimped_network_2d
+from fibernet.sim import mechanical
+
+# Linear FEM / 线性有限元
+result = mechanical.MechanicalSimulator().simulate(
+    net, strain=0.01, method='fem'
 )
+print(f"Stress: {result.stress:.2e} Pa")
+print(f"Young's modulus: {result.youngs_modulus:.2e} Pa")
 
-# Sinusoidal/wavy fiber (crimped biological fibers)
-wavy = sinusoidal_fiber_2d(
-    length=50.0, amplitude=2.0, wavelength=10.0, num_segments=50
-)
-
-# Helical fiber (springs, coils)
-helix = helical_fiber_3d(
-    length=50.0, radius_helix=3.0, pitch=10.0, num_turns=5.0
-)
-
-# Bezier curve fiber (smooth arbitrary curves)
-control_points = [(0,0,0), (10,20,0), (20,-10,0), (30,0,0)]
-curve = bezier_fiber_3d(control_points=control_points)
-
-# Random curved network
-curved_net = random_curved_network_3d(
-    num_fibers=50, box_size=(50,50,50), curvature=0.3
-)
-
-# Crimped network (biological tissue-like)
-crimped = crimped_network_2d(
-    num_fibers=50, box_size=(100,100), crimp_amplitude=3.0
+# Nonlinear FEM with large deformation / 大变形的非线性有限元
+result_nl = mechanical.MechanicalSimulator().simulate(
+    net, strain=0.1, method='nonlinear_fem',
+    geometric_nonlinearity=True
 )
 ```
 
-### 3D Visualization with PyVista
+### Crosslinks / 交联
 
 ```python
-from fibernet.pyvista_viz import PyVistaVisualizer
-
-# Create visualizer
-viz = PyVistaVisualizer(net)
-
-# Interactive 3D display
-viz.show(color='lightblue', line_width=3.0)
-
-# Color by property
-viz.color_by_property('length', colormap='viridis')
-
-# Save screenshot
-viz.save_screenshot('network.png', window_size=(1920, 1080))
-
-# Export to VTK
-viz.export_vtk('network.vtk')
-
-# Create rotation animation
-viz.animate_rotation('rotation.gif', n_frames=36)
-```
-
-### Mesh Operations with Trimesh
-
-```python
-from fibernet.trimesh_integration import (
-    network_to_trimesh, analyze_mesh_properties,
-    boolean_operation, repair_mesh
+from fibernet.core.crosslinks import (
+    RigidCrosslink, SpringCrosslink, BreakableCrosslink,
 )
 
-# Convert network to mesh
-mesh = network_to_trimesh(net, radial_segments=8)
+# Add rigid crosslinks / 添加刚性交联
+net.add_crosslinks(RigidCrosslink(stiffness=1e9))
 
-# Analyze mesh properties
-props = analyze_mesh_properties(mesh)
-print(f"Volume: {props['volume']:.2f}")
-print(f"Surface area: {props['surface_area']:.2f}")
-
-# Boolean operations
-union = boolean_operation(mesh1, mesh2, 'union')
-
-# Repair mesh
-repaired = repair_mesh(mesh)
+# Add breakable crosslinks / 添加可断裂交联
+net.add_crosslinks(BreakableCrosslink(
+    stiffness=1e8, breaking_force=1e-6
+))
 ```
 
-### SciPy Optimization
+### Analysis / 分析
 
 ```python
-from fibernet.sim.optimization import EnergyMinimizer, ParameterOptimizer
+from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
 
-# Minimize network energy
-minimizer = EnergyMinimizer(net)
-result = minimizer.minimize(method='L-BFGS-B', max_iterations=1000)
-minimizer.update_network(result)
+# Morphological analysis / 形态分析
+morph = MorphologyAnalyzer(net)
+print(f"Nematic order: {morph.nematic_order_parameter():.3f}")
+print(f"Porosity: {morph.porosity():.3f}")
+print(f"Mean fiber length: {morph.mean_fiber_length():.2f}")
 
-# Optimize parameters for target properties
-def objective(params):
-    num_fibers = int(params[0])
-    fiber_length = params[1]
-    net = gen.random_straight_2d(num_fibers=num_fibers, fiber_length=fiber_length)
-    return -len(net.fibers)  # maximize fiber count
-
-optimizer = ParameterOptimizer(objective)
-result = optimizer.optimize(bounds=[(10, 100), (5.0, 20.0)])
-
-# Global optimization
-result = optimizer.optimize_global(
-    bounds=[(10, 100), (5.0, 20.0)], max_iterations=1000
-)
+# Topological analysis (requires networkx) / 拓扑分析（需要networkx）
+topo = TopologyAnalyzer(net)
+result = topo.analyze()
+print(f"Components: {result.num_components}")
+print(f"Clustering: {result.clustering_coefficient:.3f}")
 ```
 
-### Mechanical Simulation (FEM)
+### Ensemble Analysis / 集合分析
 
 ```python
-from fibernet.sim import FiberFEM
-
-# Create FEM solver
-fem = FiberFEM(net, segments_per_fiber=5)
-
-# Apply uniaxial strain
-result = fem.apply_uniaxial_strain(strain=0.01, axis=0)
-print(f"Energy: {result.energy:.4e} J")
-print(f"Max stress: {result.max_stress:.2e} Pa")
-
-# Compute effective modulus
-E_eff = fem.effective_modulus(strain=0.01, axis=0)
-print(f"Effective modulus: {E_eff:.2e} Pa")
-```
-
-### GPU-Accelerated FEM with Taichi
-
-```python
-from fibernet.sim import TaichiFEMSolver
-
-solver = TaichiFEMSolver(arch="cpu", num_threads=4)
-result = solver.solve_beam_network(
-    node_positions=node_positions, elements=elements,
-    youngs_modulus=1e9, radii=radii,
-    fixed_nodes=[0, 1], applied_forces=applied_forces,
-)
-
-# Progressive damage simulation
-damage = solver.progressive_damage(
-    node_positions=node_positions, elements=elements,
-    youngs_modulus=1e9, radii=radii,
-    fixed_nodes=[0], strain_range=(0, 0.1), num_steps=20,
-)
-```
-
-### Damage Mechanics and Fatigue
-
-```python
-from fibernet.sim import DamageMechanicsSolver, FatigueSolver
-
-# Progressive failure under monotonic loading
-damage_solver = DamageMechanicsSolver(
-    net, youngs_modulus=1e9, tensile_strength=1e8
-)
-result = damage_solver.progressive_failure(max_strain=0.1, num_steps=100)
-print(f"Peak load: {result.peak_load:.2e}")
-print(f"Energy absorbed: {result.energy_absorbed:.2e}")
-print(f"Residual stiffness: {damage_solver.residual_stiffness():.2e} Pa")
-
-# Fatigue life prediction
-fatigue = FatigueSolver(
-    net, youngs_modulus=1e9, tensile_strength=1e8, fatigue_limit=3e7
-)
-N_f = fatigue.compute_cycles_to_failure(stress_amplitude=5e7)
-sn_curve = fatigue.generate_sn_curve(stress_range=(0.3, 0.9))
-
-# Miner's rule for variable amplitude
-load_history = [(4e7, 1000), (6e7, 500), (8e7, 100)]
-cumulative_damage = fatigue.miners_rule(load_history)
-```
-
-### Fracture Mechanics
-
-```python
-from fibernet.sim import CrackPropagationSolver
-
-solver = CrackPropagationSolver(net, fracture_toughness=100.0)
-tip = solver.initialize_crack(
-    tip_position=np.array([15.0, 15.0, 0.0]),
-    tip_direction=np.array([1.0, 0.0, 0.0]),
-    initial_length=2.0,
-)
-```
-
-### Thermal Simulation
-
-```python
-from fibernet import simulate_thermal
-
-result = simulate_thermal(net, T_hot=100.0, T_cold=0.0)
-print(f"Temperature field shape: {result['temperatures'].shape}")
-print(f"Heat flux: {result['heat_flux']:.4e} W/m²")
-```
-
-### Rheology (Fiber Suspensions)
-
-```python
-from fibernet.sim import FiberSuspensionRheology
-
-rheo = FiberSuspensionRheology(
-    net, fluid_viscosity=1.0, aspect_ratio=20.0,
-    volume_fraction=0.01, interaction_parameter=0.01
-)
-
-# Effective viscosity
-eta = rheo.compute_effective_viscosity(shear_rate=10.0)
-print(f"Effective viscosity: {eta:.4f} Pa·s")
-
-# Jeffery orbit for single fiber
-orbit = rheo.jeffery_orbit(
-    initial_orientation=np.array([1.0, 0.0, 0.0]),
-    shear_rate=1.0, total_time=10.0, num_steps=500
-)
-print(f"Jeffery orbit period: {orbit.period:.4f} s")
-
-# Orientation evolution (Folgar-Tucker)
-a_history = rheo.orientation_evolution(
-    shear_rate=1.0, total_time=5.0, num_steps=50
-)
-```
-
-### Electromagnetic Simulation
-
-```python
-from fibernet.sim import EMSolver
-from fibernet.core import Material
-
-# Create conductive network
-mat = Material(name="carbon", electrical_conductivity=1e6)
-net_cond = gen.random_straight_2d(
-    num_fibers=100, fiber_length=12.0, box_size=(30, 30),
-    material=mat, seed=42
-)
-
-solver = EMSolver(net_cond)
-result = solver.solve_conductivity(voltage=1.0, axis=0)
-print(f"Effective conductivity: {result.effective_conductivity:.2e} S/m")
-print(f"Percolating: {result.is_percolating}")
-
-# Percolation analysis
-volumes, probs = solver.percolation_analysis(num_samples=20)
-```
-
-### Percolation Analysis
-
-```python
-from fibernet.analysis import PercolationAnalyzer
-
-analyzer = PercolationAnalyzer(net)
-result = analyzer.analyze()
-print(f"Percolates: {result.percolates}")
-print(f"Largest cluster: {result.largest_cluster_size}")
-print(f"Percolation probability: {result.percolation_probability:.3f}")
-print(f"Effective conductivity: {result.effective_conductivity:.4f}")
-
-# Cluster statistics
-clusters = analyzer.cluster_analysis()
-print(f"Number of clusters: {clusters['n_clusters']}")
-```
-
-### Multi-Scale Homogenization
-
-```python
-from fibernet.sim import HomogenizationSolver, compute_effective_properties
-
-# Full homogenization
-solver = HomogenizationSolver(
-    net, fiber_youngs_modulus=1e9, fiber_poissons_ratio=0.3,
-    fiber_thermal_conductivity=0.5, fiber_density=1000.0
-)
-props = solver.homogenize()
-print(f"Effective Young's modulus: {props.effective_youngs_modulus:.2e} Pa")
-print(f"Porosity: {props.porosity:.4f}")
-print(f"Is isotropic: {props.is_isotropic}")
-
-# Quick convenience function
-props = compute_effective_properties(net)
-```
-
-### Dynamic Mechanical Analysis (DMA)
-
-```python
-from fibernet.sim import GeneralizedMaxwell, frequency_sweep, temperature_sweep
-
-model = GeneralizedMaxwell(
-    E_inf=1e9, E_i=[5e8, 3e8, 2e8], tau_i=[0.01, 0.1, 1.0]
-)
-
-freq_result = frequency_sweep(model, freq_range=(0.01, 100), num_points=50)
-temp_result = temperature_sweep(model, temp_range=(250, 350), frequency=1.0)
-print(f"Glass transition Tg: {temp_result.glass_transition_temperature:.1f} K")
-```
-
-### Fluid Flow Through Porous Media
-
-```python
-from fibernet.sim import DarcySolver, PoreNetworkModel
-
-pore_model = PoreNetworkModel(net)
-solver = DarcySolver(net, fluid_viscosity=1e-3, pressure_gradient=1e4)
-result = solver.solve()
-print(f"Permeability: {result['permeability']:.4e} m²")
-```
-
-### Machine Learning Integration
-
-```python
-from fibernet.ml import FeatureExtractor, GNNFeatureExtractor
-
-# Extract structural features
-extractor = FeatureExtractor()
-features = extractor.extract_features(net)
-print(f"Feature vector: {features.shape}")
-
-# GNN-compatible graph data
-gnn = GNNFeatureExtractor(
-    node_features=['position', 'degree'],
-    edge_features=['length', 'angle']
-)
-graph_data = gnn.extract_graph(net)
-```
-
-### Statistical Ensemble Generation
-
-```python
-from fibernet.utils.ensemble import generate_ensemble, ensemble_analysis
+from fibernet.utils.ensemble import ensemble_analysis
 from fibernet.analysis import MorphologyAnalyzer
 
-ensemble = generate_ensemble(
+# Generate ensemble / 生成集合
+ensemble = fn.create_ensemble(
     gen.random_straight_2d, num_networks=50, base_seed=42,
     num_fibers=100, fiber_length=10.0, box_size=(50, 50)
 )
@@ -489,29 +221,24 @@ stats = ensemble_analysis(ensemble, analyze)
 print(f"Nematic order: {stats['nematic_order']['mean']:.3f} ± {stats['nematic_order']['std']:.3f}")
 ```
 
-### Visualization
+### Visualization / 可视化
 
 ```python
-# Matplotlib (static)
+# Matplotlib (static) / 静态图
 from fibernet.viz import visualize_3d_matplotlib
 fig, ax = visualize_3d_matplotlib(net, show_crosslinks=True)
 
-# Plotly (interactive web)
+# Plotly (interactive web) / 交互式网页
 from fibernet.viz import visualize_interactive, visualize_stress_field, export_html
 fig = visualize_interactive(net, color_by='orientation', title="My Network")
 export_html(fig, "network.html", auto_open=True)
 
-# PyVista (interactive 3D)
+# PyVista (interactive 3D) / 交互式3D
 from fibernet.viz import visualize_3d_pyvista
 plotter = visualize_3d_pyvista(net, fiber_radius=0.1)
-
-# Stress-colored visualization
-import numpy as np
-stress = np.random.uniform(0, 1e6, net.num_fibers)
-fig = visualize_stress_field(net, stress, title="Stress Distribution")
 ```
 
-### Export to Simulation Software
+### Export to Simulation Software / 导出到仿真软件
 
 ```python
 from fibernet.io import to_vtk, to_lammps, to_gmsh, to_pdb
@@ -522,84 +249,117 @@ to_gmsh(net, 'network.geo')        # GMSH meshing
 to_pdb(net, 'network.pdb')         # Protein Data Bank
 ```
 
-### Unit Systems
+### Unit Systems / 单位制
 
 ```python
 from fibernet.utils.units import convert_network
 
-# Convert to micrometers
+# Convert to micrometers / 转换为微米
 net_micro = convert_network(net, from_unit='si', to_unit='micro')
 ```
 
-## Examples
+---
 
-FiberNet includes several example scripts in the `examples/` directory:
-
-- **`basic_usage.py`** — Quick start with network generation and analysis
-- **`full_workflow.py`** — Complete pipeline: generate → analyze → simulate → export
-- **`ml_example.py`** — Machine learning integration with feature extraction and prediction
-- **`comprehensive_demo.py`** — Showcase of all major features
-
-Run any example:
-```bash
-python examples/full_workflow.py
-```
-
-## Project Structure
+## 📁 Project Structure / 项目结构
 
 ```
 fibernet/
-├── core/              # Core data structures (Fiber, FiberNetwork, Material, Crosslinks)
-├── gen/               # 57 network generators
-├── sim/               # Simulation engines
-│   ├── mechanical.py  # FEM (linear/nonlinear)
-│   ├── accelerated.py # Taichi GPU-accelerated FEM
-│   ├── thermal.py     # Heat conduction
-│   ├── electromagnetic.py # Electrical conductivity
-│   ├── acoustic.py    # Acoustic wave propagation
-│   ├── fracture.py    # Crack propagation
-│   ├── damage.py      # Damage mechanics, fatigue
-│   ├── rheology.py    # Fiber suspension rheology
-│   ├── fluid.py       # Darcy flow, pore network
-│   ├── multiscale.py  # Homogenization, RVE
-│   └── viscoelastic.py # DMA, Maxwell, Kelvin-Voigt
-├── analysis/          # Analysis tools
-│   ├── morphology.py  # Structure analysis
-│   └── percolation.py # Percolation analysis
-├── ml/                # Machine learning (features, GNN)
-├── io/                # I/O formats (VTK, LAMMPS, PDB, GMSH, XYZ, HDF5)
-├── viz/               # Visualization (matplotlib, pyvista, plotly)
-├── utils/             # Utilities (config, ensemble, units, parallel)
-├── api.py             # High-level convenience API
-└── transforms/        # Network transformations
+├── core/              # Core data structures / 核心数据结构
+│                      # (Fiber, FiberNetwork, Material, Crosslinks)
+├── gen/               # 68 network generators / 68种网络生成器
+├── sim/               # Simulation engines / 模拟引擎
+│   ├── mechanical.py  # FEM (linear/nonlinear) / 有限元（线性/非线性）
+│   ├── accelerated.py # Taichi GPU-accelerated FEM / GPU加速有限元
+│   ├── thermal.py     # Heat conduction / 热传导
+│   ├── electromagnetic.py # Electrical conductivity / 电导率
+│   ├── acoustic.py    # Acoustic wave propagation / 声波传播
+│   ├── fracture.py    # Crack propagation / 裂纹扩展
+│   ├── damage.py      # Damage mechanics, fatigue / 损伤力学、疲劳
+│   ├── rheology.py    # Fiber suspension rheology / 纤维悬浮流变
+│   ├── fluid.py       # Darcy flow, pore network / 达西流、孔隙网络
+│   ├── multiscale.py  # Homogenization, RVE / 均匀化、代表性体积元
+│   └── viscoelastic.py # DMA, Maxwell, Kelvin-Voigt / 粘弹性
+├── analysis/          # Analysis tools / 分析工具
+├── ml/                # Machine learning / 机器学习
+├── io/                # I/O formats / 输入输出格式
+├── viz/               # Visualization / 可视化
+├── utils/             # Utilities / 工具函数
+├── api.py             # High-level convenience API / 高级便捷API
+└── transforms/        # Network transformations / 网络变换
 ```
 
-## Tutorials
+---
 
-Jupyter notebook tutorials are available in the `tutorials/` directory:
+## 📊 Test Results / 测试结果
 
-1. **Getting Started** (`01_getting_started.ipynb`) - Basic network generation and analysis
-2. **Mechanical Simulation** (`02_mechanical_simulation.ipynb`) - FEM and stress-strain analysis
-3. **Machine Learning** (`03_machine_learning.ipynb`) - Feature extraction and property prediction
+**English**: 889 tests passing across 65+ test files covering all modules.
 
-## Testing
+**中文**: 889个测试全部通过，覆盖65+测试文件和所有模块。
 
 ```bash
-# Run all tests
+# Run all tests / 运行所有测试
 pytest tests/ -v
 
-# Run specific module tests
+# Run specific module tests / 运行特定模块测试
 pytest tests/test_core.py tests/test_generators.py
 pytest tests/test_integration.py -v
 ```
 
-## Documentation
+---
 
-Full documentation with API reference: [https://fibernet.readthedocs.io/](https://fibernet.readthedocs.io/)
+## 📚 Examples / 示例
 
-## Citation
+FiberNet includes example scripts in the `examples/` directory:
+FiberNet 在 `examples/` 目录中包含示例脚本：
+
+- **`basic_usage.py`** — Quick start with network generation and analysis / 网络生成与分析快速入门
+- **`full_workflow.py`** — Complete pipeline: generate → analyze → simulate → export / 完整流程
+- **`ml_example.py`** — Machine learning integration / 机器学习集成
+- **`comprehensive_demo.py`** — Showcase of all major features / 所有主要功能展示
+
+Run any example / 运行示例:
+```bash
+python examples/full_workflow.py
+```
+
+---
+
+## 📖 Documentation / 文档
+
+Full documentation with API reference / 包含API参考的完整文档:
+[https://fibernet.readthedocs.io/](https://fibernet.readthedocs.io/)
+
+Jupyter notebook tutorials are available in the `tutorials/` directory.
+Jupyter 笔记本教程可在 `tutorials/` 目录中找到。
+
+---
+
+## 🏗️ Architecture / 架构
+
+```
+┌─────────────────────────────────────────────────┐
+│                  High-Level API                  │
+│               高级API (api.py)                    │
+├──────┬──────┬──────┬──────┬──────┬──────┬───────┤
+│ gen  │ sim  │analysis│ viz │  ml  │  io  │transforms│
+│生成器 │模拟  │ 分析  │可视化│机器学习│输入输出│  变换  │
+├──────┴──────┴──────┴──────┴──────┴──────┴───────┤
+│              Core Data Structures                │
+│           核心数据结构 (core/)                     │
+│  Fiber │ FiberNetwork │ Material │ Crosslinks    │
+├──────────────────────────────────────────────────┤
+│              Utils / Integrations                │
+│           工具函数 / 集成                          │
+│  config │ units │ validation │ networkx │ lammps │
+└──────────────────────────────────────────────────┘
+```
+
+---
+
+## 📝 Citation / 引用
 
 If you use FiberNet in your research, please cite:
+如果在研究中使用了 FiberNet，请引用：
 
 ```bibtex
 @software{fibernet2025,
@@ -607,20 +367,31 @@ If you use FiberNet in your research, please cite:
   author = {FiberNet Contributors},
   year = {2025},
   url = {https://github.com/GellmanSparrowS/fibernet},
-  version = {1.8.0}
+  version = {1.24.0}
 }
 ```
 
-## Contributing
+---
+
+## 🤝 Contributing / 贡献
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解指南。
 
-## License
+---
+
+## 📄 License / 许可证
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+本项目基于 MIT 许可证 - 详情请查看 [LICENSE](LICENSE) 文件。
 
-## Acknowledgments
+---
+
+## 🙏 Acknowledgments / 致谢
 
 - Built with NumPy, SciPy, NetworkX, matplotlib, pyvista, plotly, and Taichi
+- 基于 NumPy、SciPy、NetworkX、matplotlib、pyvista、plotly 和 Taichi 构建
 - Inspired by research in computational materials science and biomechanics
+- 受计算材料科学和生物力学研究的启发
 - Supported by the [ML-BioMat](https://ml-biomat.com/) research group
+- 由 [ML-BioMat](https://ml-biomat.com/) 研究组支持

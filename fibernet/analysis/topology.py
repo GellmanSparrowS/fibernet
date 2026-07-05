@@ -14,6 +14,8 @@ References:
 - Barabási, A.L., "Network Science", Cambridge University Press, 2016
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass, field

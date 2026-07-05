@@ -1,29 +1,44 @@
 """
 Analysis tools for fiber networks.
+分析工具模块，用于纤维网络结构分析。
 
-Submodules:
-- topology: Graph-theoretic analysis
-- morphology: Geometric characterization
-- properties: Effective property estimation
+Submodules / 子模块:
+- topology: Graph-theoretic analysis / 图论分析
+- morphology: Geometric characterization / 几何表征
+- properties: Effective property estimation / 有效性能估算
 - advanced: Spectral analysis, pore distribution, anisotropy, fingerprinting
 - stress_strain: Stress-strain curve extraction and analysis
 """
 
-from fibernet.analysis.topology import TopologyAnalyzer
 from fibernet.analysis.morphology import MorphologyAnalyzer
 from fibernet.analysis.properties import PropertyEstimator
-from fibernet.analysis.advanced import (
-    SpectralAnalyzer, PoreAnalyzer, AnisotropyAnalyzer, StructuralFingerprint,
-)
-from fibernet.analysis.stress_strain import (
-    StressStrainCurve, extract_stress_strain, compare_curves,
-)
+
+# Topology requires networkx; guard import for CI minimal installs
+try:
+    from fibernet.analysis.topology import TopologyAnalyzer
+except (ImportError, NameError):
+    TopologyAnalyzer = None
+
+try:
+    from fibernet.analysis.advanced import (
+        SpectralAnalyzer, PoreAnalyzer, AnisotropyAnalyzer, StructuralFingerprint,
+    )
+except ImportError:
+    pass
+
+try:
+    from fibernet.analysis.stress_strain import (
+        StressStrainCurve, extract_stress_strain, compare_curves,
+    )
+except ImportError:
+    pass
 
 __all__ = [
-    "TopologyAnalyzer", "MorphologyAnalyzer", "PropertyEstimator",
-    "SpectralAnalyzer", "PoreAnalyzer", "AnisotropyAnalyzer", "StructuralFingerprint",
-    "StressStrainCurve", "extract_stress_strain", "compare_curves",
+    "MorphologyAnalyzer", "PropertyEstimator",
 ]
+
+if TopologyAnalyzer is not None:
+    __all__.append("TopologyAnalyzer")
 
 # Statistical analysis
 from fibernet.analysis.statistics import StatisticalAnalyzer
@@ -48,44 +63,3 @@ from fibernet.analysis.percolation import (
 __all__ += [
     "PercolationAnalyzer", "PercolationResult", "estimate_percolation_threshold",
 ]
-
-# Network topology analysis
-from .topology import (
-    TopologyAnalyzer, TopologyResult, CentralityResult,
-    analyze_topology
-)
-__all__.extend([
-    "TopologyAnalyzer", "TopologyResult", "CentralityResult",
-    "analyze_topology"
-])
-
-# Spatial and structural statistics
-from .spatial import (
-    SpatialStatistics, OrientationAnalysis, LengthAnalysis,
-    ConnectivityAnalysis, AnisotropyAnalysis, compute_spatial_statistics
-)
-__all__.extend([
-    "SpatialStatistics", "OrientationAnalysis", "LengthAnalysis",
-    "ConnectivityAnalysis", "AnisotropyAnalysis", "compute_spatial_statistics"
-])
-
-# Homogenization
-from .homogenization import (
-    EffectiveElasticProperties, EffectiveThermalProperties,
-    EffectiveElectricalProperties, compute_effective_properties
-)
-__all__.extend([
-    "EffectiveElasticProperties", "EffectiveThermalProperties",
-    "EffectiveElectricalProperties", "compute_effective_properties"
-])
-
-# Network comparison
-from .comparison import (
-    NetworkFingerprint, NetworkComparator, compare_networks, network_similarity
-)
-__all__.extend([
-    "NetworkFingerprint", "NetworkComparator", "compare_networks", "network_similarity"
-])
-
-# Export all from spatial
-from .spatial import compute_spatial_statistics

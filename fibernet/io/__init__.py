@@ -38,3 +38,17 @@ from .mesh_export import export_stl, export_obj, export_ply
 __all__.extend([
     "export_stl", "export_obj", "export_ply"
 ])
+
+# FEA export
+from .fea_export import (
+    export_to_abaqus,
+    export_to_ansys,
+    export_to_gmsh as export_to_gmsh_fea,
+    export_to_lammps as export_to_lammps_fea,
+)
+__all__.extend([
+    "export_to_abaqus",
+    "export_to_ansys",
+    "export_to_gmsh_fea",
+    "export_to_lammps_fea",
+])
