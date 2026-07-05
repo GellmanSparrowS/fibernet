@@ -211,7 +211,7 @@ class FiberNetwork:
         
         # Use cKDTree for large networks, brute force for small ones
         # (cKDTree can segfault on some platforms with small datasets)
-        if len(all_points) > 100:
+        if len(all_points) > 5000:
             try:
                 tree = cKDTree(all_points, leafsize=tree_leafsize)
                 pairs = tree.query_pairs(threshold)
