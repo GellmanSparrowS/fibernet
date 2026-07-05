@@ -34,6 +34,7 @@ class TestPyVistaVisualizer:
         assert viz.mesh is not None
         assert len(viz.mesh.cell_data['length']) == 10
     
+    @pytest.mark.skipif(os.environ.get("CI") == "true", reason="VTK segfault in CI")
     def test_save_screenshot(self):
         """Test saving screenshot."""
         net = gen.random_straight_3d(num_fibers=10, box_size=(20, 20, 20), seed=42)

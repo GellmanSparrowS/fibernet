@@ -13,6 +13,8 @@ References:
 - Mayavi (3D): https://docs.enthought.com/mayavi/mayavi/
 """
 
+from __future__ import annotations
+
 import numpy as np
 from typing import Dict, List, Tuple, Optional, Union
 from dataclasses import dataclass
