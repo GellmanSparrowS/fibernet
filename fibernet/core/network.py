@@ -8,7 +8,7 @@ methods for I/O, querying, and basic analysis.
 from __future__ import annotations
 
 import numpy as np
-from scipy.spatial import cKDTree
+# from scipy.spatial import cKDTree  # Lazy import to avoid C extension loading
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple, Any, Union
 import json
@@ -216,6 +216,7 @@ class FiberNetwork:
             pairs = tree.query_pairs(threshold)
         except Exception:
             try:
+                from scipy.spatial import cKDTree
                 tree = cKDTree(all_points, leafsize=tree_leafsize)
                 pairs = tree.query_pairs(threshold)
             except Exception:
