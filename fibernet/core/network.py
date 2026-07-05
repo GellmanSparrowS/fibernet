@@ -209,23 +209,17 @@ class FiberNetwork:
         if not np.all(np.isfinite(all_points)):
             return []
         
-        # Use cKDTree for large networks, brute force for small ones
-        # (cKDTree can segfault on some platforms with small datasets)
-        if len(all_points) > 5000:
+        # Use KDTree (pure Python) to avoid cKDTree segfaults on some platforms
+        try:
+            from scipy.spatial import KDTree as _PureKDTree
+            tree = _PureKDTree(all_points, leafsize=tree_leafsize)
+            pairs = tree.query_pairs(threshold)
+        except Exception:
             try:
                 tree = cKDTree(all_points, leafsize=tree_leafsize)
                 pairs = tree.query_pairs(threshold)
             except Exception:
                 pairs = set()
-        else:
-            # Brute force O(n²) for small networks
-            pairs = set()
-            thresh_sq = threshold * threshold
-            for pi in range(len(all_points)):
-                for pj in range(pi + 1, len(all_points)):
-                    dist_sq = np.sum((all_points[pi] - all_points[pj]) ** 2)
-                    if dist_sq <= thresh_sq:
-                        pairs.add((pi, pj))
         
         contacts = []
         seen = set()
