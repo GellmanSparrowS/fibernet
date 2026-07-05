@@ -209,18 +209,32 @@ class FiberNetwork:
         if not np.all(np.isfinite(all_points)):
             return []
         
-        # Use KDTree (pure Python) to avoid cKDTree segfaults on some platforms
-        try:
-            from scipy.spatial import KDTree as _PureKDTree
-            tree = _PureKDTree(all_points, leafsize=tree_leafsize)
+        # Use cKDTree on Linux, pure numpy on macOS/Windows (scipy KDTree segfaults)
+        import sys as _sys
+        _use_kdtree = _sys.platform == 'linux'
+        
+        if _use_kdtree:
+            from scipy.spatial import cKDTree as _SciKDTree
+            tree = _SciKDTree(all_points, leafsize=tree_leafsize)
             pairs = tree.query_pairs(threshold)
-        except Exception:
+        else:
+            # Fallback: use scipy.spatial.distance.cdist (no KDTree, safe on all platforms)
+            pairs = set()
             try:
-                from scipy.spatial import cKDTree
-                tree = cKDTree(all_points, leafsize=tree_leafsize)
-                pairs = tree.query_pairs(threshold)
+                from scipy.spatial.distance import cdist
+                # Process in chunks to manage memory
+                chunk_size = 2000
+                n = len(all_points)
+                for start in range(0, n, chunk_size):
+                    end = min(start + chunk_size, n)
+                    dists = cdist(all_points[start:end], all_points, metric='euclidean')
+                    for local_i in range(end - start):
+                        pi = start + local_i
+                        for pj in range(pi + 1, n):
+                            if dists[local_i, pj] <= threshold:
+                                pairs.add((pi, pj))
             except Exception:
-                pairs = set()
+                pass  # If cdist also fails, return empty contacts
         
         contacts = []
         seen = set()
