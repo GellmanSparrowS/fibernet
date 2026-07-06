@@ -530,13 +530,20 @@ def stress_strain_curve(
     
     bb_min, bb_max = network.bounding_box()
     dims = bb_max - bb_min
-    
-    if axis == 0:
-        area = dims[1] * dims[2] if len(dims) > 2 else dims[1]
-    elif axis == 1:
-        area = dims[0] * dims[2] if len(dims) > 2 else dims[0]
+    if network.dimension == 2:
+        if axis == 0:
+            area = dims[1] * 1.0  # width * unit thickness
+        elif axis == 1:
+            area = dims[0] * 1.0  # length * unit thickness
+        else:
+            area = dims[0] * dims[1]
     else:
-        area = dims[0] * dims[1]
+        if axis == 0:
+            area = dims[1] * dims[2]
+        elif axis == 1:
+            area = dims[0] * dims[2]
+        else:
+            area = dims[0] * dims[1]
     
     if area < 1e-12:
         return strains, stresses
