@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 import sys
 import os
+import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -124,11 +125,13 @@ class TestFiberNetwork:
         assert net2.num_fibers == 2
     
     def test_json_io(self):
-        net = FiberNetwork(dimension=3, box_size=np.array([10, 10, 10]))
-        net.add_fiber(Fiber.straight([0, 0, 0], [10, 0, 0], fiber_id=0))
-        net.save_json("/tmp/test_fibernet.json")
-        net2 = FiberNetwork.load_json("/tmp/test_fibernet.json")
-        assert net2.num_fibers == 1
+        with tempfile.TemporaryDirectory() as tmpdir:
+            json_path = os.path.join(tmpdir, "test_fibernet.json")
+            net = FiberNetwork(dimension=3, box_size=np.array([10, 10, 10]))
+            net.add_fiber(Fiber.straight([0, 0, 0], [10, 0, 0], fiber_id=0))
+            net.save_json(json_path)
+            net2 = FiberNetwork.load_json(json_path)
+            assert net2.num_fibers == 1
     
     def test_connectivity(self):
         net = FiberNetwork()

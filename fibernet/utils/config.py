@@ -147,6 +147,8 @@ class ExperimentConfig:
         if include_metadata:
             data['metadata']['saved_at'] = datetime.now().isoformat()
         
+        if yaml is None:
+            raise ImportError("PyYAML is required for YAML support. Install with: pip install pyyaml")
         with open(filepath, 'w') as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
     
