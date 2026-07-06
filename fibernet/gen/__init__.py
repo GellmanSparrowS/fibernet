@@ -167,3 +167,32 @@ __all__.extend([
     "custom_laminate",
     "sandwich_laminate",
 ])
+
+# Metamaterial structures (mechanics design)
+from .metamaterials import (
+    reentrant_honeycomb_2d,
+    reentrant_honeycomb_3d,
+    chiral_honeycomb_2d,
+    star_honeycomb_2d,
+    arrowhead_auxetic_2d,
+    hierarchical_lattice_2d,
+    proper_octet_truss_3d,
+    diamond_lattice_3d,
+    gyroid_lattice_3d,
+    missing_rib_auxetic_2d,
+    plate_lattice_3d,
+)
+
+__all__.extend([
+    "reentrant_honeycomb_2d",
+    "reentrant_honeycomb_3d",
+    "chiral_honeycomb_2d",
+    "star_honeycomb_2d",
+    "arrowhead_auxetic_2d",
+    "hierarchical_lattice_2d",
+    "proper_octet_truss_3d",
+    "diamond_lattice_3d",
+    "gyroid_lattice_3d",
+    "missing_rib_auxetic_2d",
+    "plate_lattice_3d",
+])

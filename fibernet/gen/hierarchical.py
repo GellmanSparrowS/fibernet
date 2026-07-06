@@ -65,14 +65,17 @@ def hierarchical_bundle(
     base_radius = radii_per_level[-1] / max(fibers_per_level[-1], 1)
     z_vals = np.linspace(0, total_length, num_points)
     
-    def _generate_level(center_x, center_y, level):
+    def _generate_level(center_x, center_y, level, cumulative_twist=0.0):
         if level >= levels:
             points = np.zeros((num_points, 3))
+            total_twist = cumulative_twist
             for k, z in enumerate(z_vals):
-                twist = sum(twist_per_level[:levels]) * z / total_length
-                x = center_x
-                y = center_y
-                points[k] = [x, y, z]
+                angle = total_twist * z / total_length
+                cos_a = np.cos(angle)
+                sin_a = np.sin(angle)
+                rx = center_x * cos_a - center_y * sin_a
+                ry = center_x * sin_a + center_y * cos_a
+                points[k] = [rx, ry, z]
             fiber = Fiber(centerline=points, radius=base_radius, material=mat, fiber_id=net.num_fibers)
             net.add_fiber(fiber)
             return
@@ -85,20 +88,12 @@ def hierarchical_bundle(
             sub_cx = center_x + ox
             sub_cy = center_y + oy
             
-            if level < levels:
-                twist = twist_per_level[level]
-                for k, z in enumerate(z_vals):
-                    angle = twist * z / total_length
-                    cos_a = np.cos(angle)
-                    sin_a = np.sin(angle)
-                    rx = sub_cx * cos_a - sub_cy * sin_a
-                    ry = sub_cx * sin_a + sub_cy * cos_a
-                    sub_cx = rx
-                    sub_cy = ry
+            # Twist is applied during fiber generation (see _generate_level base case)
             
-            _generate_level(sub_cx, sub_cy, level + 1)
+            next_twist = cumulative_twist + (twist_per_level[level] if level < levels else 0)
+            _generate_level(sub_cx, sub_cy, level + 1, next_twist)
     
-    _generate_level(0.0, 0.0, 0)
+    _generate_level(0.0, 0.0, 0, 0.0)
     return net
 
 
