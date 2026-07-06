@@ -547,3 +547,234 @@ def stress_strain_curve(
         stresses[i] = stress
     
     return strains, stresses
+
+
+class EffectiveProperties:
+    """Container for effective (homogenized) mechanical properties.
+    
+    Stores the full effective stiffness tensor and derived engineering
+    constants for a fiber network representative volume element (RVE).
+    """
+    
+    def __init__(self):
+        self.stiffness_tensor = None  # 6x6 Voigt notation
+        self.E_x = 0.0
+        self.E_y = 0.0
+        self.E_z = 0.0
+        self.nu_xy = 0.0
+        self.nu_xz = 0.0
+        self.nu_yz = 0.0
+        self.G_xy = 0.0
+        self.G_xz = 0.0
+        self.G_yz = 0.0
+        self.relative_density = 0.0
+    
+    def summary(self) -> str:
+        """Return a formatted summary of effective properties."""
+        lines = [
+            "=== Effective Mechanical Properties ===",
+            f"E_x  = {self.E_x:.4e} Pa",
+            f"E_y  = {self.E_y:.4e} Pa",
+            f"E_z  = {self.E_z:.4e} Pa",
+            f"ν_xy = {self.nu_xy:.4f}",
+            f"ν_xz = {self.nu_xz:.4f}",
+            f"ν_yz = {self.nu_yz:.4f}",
+            f"G_xy = {self.G_xy:.4e} Pa",
+            f"G_xz = {self.G_xz:.4e} Pa",
+            f"G_yz = {self.G_yz:.4e} Pa",
+            f"ρ*   = {self.relative_density:.4f}",
+        ]
+        if self.E_x > 0 and self.E_y > 0:
+            aniso = max(self.E_x, self.E_y, self.E_z) / max(min(self.E_x, self.E_y, self.E_z), 1e-30)
+            lines.append(f"Anisotropy ratio = {aniso:.2f}")
+        return "\n".join(lines)
+    
+    def to_dict(self) -> dict:
+        """Export to dictionary."""
+        return {
+            "E_x": self.E_x, "E_y": self.E_y, "E_z": self.E_z,
+            "nu_xy": self.nu_xy, "nu_xz": self.nu_xz, "nu_yz": self.nu_yz,
+            "G_xy": self.G_xy, "G_xz": self.G_xz, "G_yz": self.G_yz,
+            "relative_density": self.relative_density,
+        }
+
+
+def compute_effective_properties(
+    network: FiberNetwork,
+    strain: float = 0.001,
+    segments_per_fiber: int = 5,
+) -> EffectiveProperties:
+    """Compute effective engineering constants for a fiber network.
+    
+    Performs uniaxial strain tests along each axis to extract
+    Young's moduli, Poisson's ratios, and shear moduli.
+    
+    Parameters
+    ----------
+    network : FiberNetwork
+        The fiber network (should be a representative volume element).
+    strain : float
+        Small test strain (linear regime).
+    segments_per_fiber : int
+        FEM discretization per fiber.
+    
+    Returns
+    -------
+    EffectiveProperties with engineering constants.
+    """
+    fem = FiberFEM(network, segments_per_fiber)
+    props = EffectiveProperties()
+    
+    bb_min, bb_max = network.bounding_box()
+    dims = bb_max - bb_min
+    volume = float(np.prod(dims[dims > 1e-12])) if np.any(dims > 1e-12) else 1.0
+    fiber_volume = network.total_volume
+    
+    props.relative_density = fiber_volume / volume if volume > 1e-12 else 0.0
+    
+    moduli = {}
+    for axis in range(min(3, network.dimension + 1)):
+        if dims[axis] < 1e-12:
+            continue
+        
+        result = fem.apply_uniaxial_strain(strain, axis)
+        
+        if network.dimension == 2:
+            if axis == 0:
+                area = dims[1] * 1.0
+            elif axis == 1:
+                area = dims[0] * 1.0
+            else:
+                area = dims[0] * dims[1]
+        else:
+            other_axes = [a for a in range(3) if a != axis]
+            area = dims[other_axes[0]] * dims[other_axes[1]]
+        
+        if area < 1e-12 or volume < 1e-12:
+            moduli[axis] = (0.0, 0.0, 0.0)
+            continue
+        
+        E = result.energy * 2 / (volume * strain**2) if strain > 0 else 0.0
+        
+        transverse_strains = []
+        for other_axis in range(min(3, network.dimension + 1)):
+            if other_axis == axis:
+                continue
+            if dims[other_axis] < 1e-12:
+                transverse_strains.append(0.0)
+                continue
+            
+            positions = fem.node_positions[:, other_axis]
+            L_other = positions.max() - positions.min()
+            if L_other < 1e-12:
+                transverse_strains.append(0.0)
+                continue
+            
+            if result.displacements is not None and len(result.displacements) > 0:
+                n_nodes = fem.num_nodes
+                disp_other = np.zeros(n_nodes)
+                for n in range(n_nodes):
+                    dof_idx = n * 6 + other_axis
+                    if dof_idx < len(result.displacements):
+                        disp_other[n] = result.displacements[dof_idx]
+                
+                fixed_mask = positions <= positions.min() + dims[other_axis] * 0.01
+                free_mask = positions >= positions.max() - dims[other_axis] * 0.01
+                
+                if np.any(free_mask) and np.any(fixed_mask):
+                    avg_disp_free = np.mean(disp_other[free_mask])
+                    eps_transverse = avg_disp_free / L_other
+                    transverse_strains.append(eps_transverse)
+                else:
+                    transverse_strains.append(0.0)
+            else:
+                transverse_strains.append(0.0)
+        
+        moduli[axis] = (E, transverse_strains, strain)
+    
+    if 0 in moduli:
+        props.E_x = moduli[0][0]
+        if isinstance(moduli[0][1], list) and len(moduli[0][1]) > 0:
+            eps_app = moduli[0][2] if len(moduli[0]) > 2 else strain
+            if eps_app > 0:
+                props.nu_xy = -moduli[0][1][0] / eps_app if len(moduli[0][1]) > 0 else 0.0
+                props.nu_xz = -moduli[0][1][1] / eps_app if len(moduli[0][1]) > 1 else 0.0
+    
+    if 1 in moduli:
+        props.E_y = moduli[1][0]
+        if isinstance(moduli[1][1], list) and len(moduli[1][1]) > 0:
+            eps_app = moduli[1][2] if len(moduli[1]) > 2 else strain
+            if eps_app > 0:
+                props.nu_yz = -moduli[1][1][0] / eps_app if len(moduli[1][1]) > 0 else 0.0
+    
+    if 2 in moduli:
+        props.E_z = moduli[2][0]
+    
+    for a in range(3):
+        if a in moduli and moduli[a][0] > 0:
+            nu = getattr(props, f'nu_{"xy" if a == 0 else "xz" if a == 1 else "yz"}')
+            E = moduli[a][0]
+            G = E / (2 * (1 + nu)) if abs(nu) < 0.499 else E / 3
+            if a == 0:
+                props.G_xy = G
+            elif a == 1:
+                props.G_xz = G
+            else:
+                props.G_yz = G
+    
+    return props
+
+
+def poisson_ratio(
+    network: FiberNetwork,
+    strain: float = 0.001,
+    loading_axis: int = 0,
+    transverse_axis: int = 1,
+    segments_per_fiber: int = 5,
+) -> float:
+    """Compute Poisson's ratio ν = -ε_transverse / ε_axial.
+    
+    Parameters
+    ----------
+    loading_axis : int
+        Direction of applied uniaxial strain (0=x, 1=y, 2=z).
+    transverse_axis : int
+        Direction of measured transverse strain.
+    
+    Returns
+    -------
+    float
+        Poisson's ratio (negative for auxetic structures).
+    """
+    fem = FiberFEM(network, segments_per_fiber)
+    result = fem.apply_uniaxial_strain(strain, loading_axis)
+    
+    if result.displacements is None or fem.num_nodes == 0:
+        return 0.0
+    
+    bb_min, bb_max = network.bounding_box()
+    dims = bb_max - bb_min
+    
+    positions = fem.node_positions[:, transverse_axis]
+    L_trans = positions.max() - positions.min()
+    
+    if L_trans < 1e-12:
+        return 0.0
+    
+    tol = dims[transverse_axis] * 0.01
+    free_mask = positions >= positions.max() - tol
+    
+    if not np.any(free_mask):
+        return 0.0
+    
+    n_nodes = fem.num_nodes
+    disp_trans = np.zeros(n_nodes)
+    for n in range(n_nodes):
+        dof_idx = n * 6 + transverse_axis
+        if dof_idx < len(result.displacements):
+            disp_trans[n] = result.displacements[dof_idx]
+    
+    avg_disp = np.mean(disp_trans[free_mask])
+    eps_trans = avg_disp / L_trans
+    
+    return -eps_trans / strain if abs(strain) > 1e-15 else 0.0
