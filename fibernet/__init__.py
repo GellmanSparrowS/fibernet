@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.24.0"
+__version__ = "1.25.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
@@ -38,7 +38,11 @@ from fibernet.core.copy_utils import copy_fiber, copy_material, copy_network
 # High-level convenience API
 from .api import (
     create, mirror, rotate, scale, translate, merge, tile,
-    simulate_mechanics, simulate_thermal, analyze, export, load, plot,
+    simulate_mechanics, simulate_dynamics, simulate_thermal, analyze, export, load, plot,
+    plot_dynamics, plot_metamaterial, plot_stress_strain,
+    list_generators, list_backends,
+    register_generator, register_backend,
+    create_metamaterial, print_metamaterial_info,
 )
 
 # Version information
@@ -82,11 +86,21 @@ __all__ = [
     "merge",
     "tile",
     "simulate_mechanics",
+    "simulate_dynamics",
     "simulate_thermal",
     "analyze",
     "export",
     "load",
     "plot",
+    "plot_dynamics",
+    "plot_metamaterial",
+    "plot_stress_strain",
+    "list_generators",
+    "list_backends",
+    "register_generator",
+    "register_backend",
+    "create_metamaterial",
+    "print_metamaterial_info",
     
     # Simulators
     "DarcySolver",

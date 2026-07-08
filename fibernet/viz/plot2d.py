@@ -186,3 +186,269 @@ def plot_length_distribution(
         fig.savefig(save_path, dpi=150, bbox_inches='tight')
     
     return fig
+
+
+def plot_dynamics_result(
+    result: Dict,
+    show_forces: bool = False,
+    colormap: str = "viridis",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Visualize mass-spring dynamics results.
+    
+    Parameters
+    ----------
+    result : dict
+        Output from ``fn.simulate_dynamics()``.
+    show_forces : bool
+        If True, overlay force vectors on nodes.
+    colormap : str
+        Colormap for spring strain visualization.
+    save_path : str, optional
+        Path to save figure.
+    
+    Returns
+    -------
+    plt.Figure
+        Matplotlib figure with trajectory visualization.
+    """
+    if not HAS_MATPLOTLIB:
+        raise ImportError("matplotlib required for visualization")
+    
+    trajectory = result.get('trajectory', [])
+    edges = result.get('edges', [])
+    rest_lengths = result.get('rest_lengths', [])
+    initial_positions = result.get('initial_positions', [])
+    
+    if len(trajectory) == 0:
+        fig, ax = plt.subplots(1, 1, figsize=(10, 8))
+        ax.text(0.5, 0.5, "No trajectory data", ha='center', va='center')
+        return fig
+    
+    # Select frames to show
+    n_frames = min(6, len(trajectory))
+    frame_indices = np.linspace(0, len(trajectory) - 1, n_frames, dtype=int)
+    
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    axes = axes.flatten()
+    
+    for i, frame_idx in enumerate(frame_indices):
+        ax = axes[i]
+        positions = trajectory[frame_idx]
+        
+        # Compute spring strains
+        strains = []
+        for e_idx, (node_i, node_j) in enumerate(edges):
+            pos_i = positions[node_i]
+            pos_j = positions[node_j]
+            L = np.linalg.norm(pos_j - pos_i)
+            strain = (L - rest_lengths[e_idx]) / rest_lengths[e_idx]
+            strains.append(strain)
+        
+        strains = np.array(strains)
+        
+        # Draw springs with strain colormap
+        lines = []
+        for node_i, node_j in edges:
+            lines.append([positions[node_i][:2], positions[node_j][:2]])
+        
+        cmap = matplotlib.colormaps.get_cmap(colormap)
+        norm = Normalize(vmin=strains.min(), vmax=strains.max())
+        lc = LineCollection(
+            lines, linewidths=1.5, cmap=cmap, norm=norm,
+            array=strains, alpha=0.8
+        )
+        ax.add_collection(lc)
+        
+        # Draw nodes
+        ax.scatter(positions[:, 0], positions[:, 1], c='black', s=20, zorder=5)
+        
+        # Show forces if requested
+        if show_forces and 'forces' in result and frame_idx == len(trajectory) - 1:
+            forces = result['forces']
+            force_scale = 0.1
+            ax.quiver(
+                positions[:, 0], positions[:, 1],
+                forces[:, 0] * force_scale, forces[:, 1] * force_scale,
+                alpha=0.5, color='red'
+            )
+        
+        ax.autoscale()
+        ax.set_aspect('equal')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_title(f"Frame {frame_idx} (t = {frame_idx * result.get('dt', 1e-7):.2e} s)")
+        ax.grid(True, alpha=0.2)
+    
+    # Add colorbar
+    cbar = plt.colorbar(lc, ax=axes[-1], label='Spring Strain')
+    
+    plt.suptitle('Mass-Spring Dynamics Trajectory', fontsize=16, fontweight='bold')
+    plt.tight_layout()
+    
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
+    
+    return fig
+
+
+def plot_metamaterial(
+    network: FiberNetwork,
+    show_unit_cells: bool = True,
+    show_crosslinks: bool = True,
+    colormap: str = "viridis",
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Professional visualization for metamaterial structures.
+    
+    Parameters
+    ----------
+    network : FiberNetwork
+        Metamaterial network (from create_metamaterial).
+    show_unit_cells : bool
+        If True, draw unit cell boundaries.
+    show_crosslinks : bool
+        If True, show crosslink points.
+    colormap : str
+        Colormap for fiber coloring.
+    save_path : str, optional
+        Path to save figure.
+    
+    Returns
+    -------
+    plt.Figure
+        Matplotlib figure.
+    """
+    if not HAS_MATPLOTLIB:
+        raise ImportError("matplotlib required for visualization")
+    
+    fig, ax = plt.subplots(1, 1, figsize=(14, 10))
+    
+    # Draw fibers with orientation-based coloring
+    lines = []
+    orientations = []
+    
+    for fiber in network.fibers:
+        pts = fiber.centerline[:, :2]
+        lines.append(pts)
+        
+        # Compute orientation angle
+        direction = fiber.direction
+        angle = np.arctan2(direction[1], direction[0])
+        orientations.append(angle)
+    
+    orientations = np.array(orientations)
+    cmap = matplotlib.colormaps.get_cmap(colormap)
+    norm = Normalize(vmin=-np.pi, vmax=np.pi)
+    
+    lc = LineCollection(
+        lines, linewidths=2.0, cmap=cmap, norm=norm,
+        array=orientations, alpha=0.9
+    )
+    ax.add_collection(lc)
+    
+    # Draw crosslinks
+    if show_crosslinks and network.crosslinks:
+        cl_positions = np.array([cl.position[:2] for cl in network.crosslinks])
+        ax.scatter(
+            cl_positions[:, 0], cl_positions[:, 1],
+            c='red', s=30, marker='o', zorder=5, alpha=0.6,
+            label=f'Crosslinks ({len(network.crosslinks)})'
+        )
+    
+    # Draw unit cell boundaries if available
+    if show_unit_cells and hasattr(network, 'metadata'):
+        meta = network.metadata
+        if 'array_size' in meta:
+            bb_min, bb_max = network.bounding_box()
+            cell_size = (bb_max - bb_min)[:2] / np.array(meta['array_size'])
+            
+            for i in range(meta['array_size'][0] + 1):
+                x = bb_min[0] + i * cell_size[0]
+                ax.axvline(x, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+            
+            for j in range(meta['array_size'][1] + 1):
+                y = bb_min[1] + j * cell_size[1]
+                ax.axhline(y, color='gray', linestyle='--', alpha=0.3, linewidth=0.5)
+    
+    # Add colorbar
+    cbar = plt.colorbar(lc, ax=ax, label='Fiber Orientation (rad)')
+    
+    ax.autoscale()
+    ax.set_aspect('equal')
+    ax.set_xlabel('x (mm)')
+    ax.set_ylabel('y (mm)')
+    
+    # Title with metadata
+    title = f"Metamaterial Structure\n"
+    if hasattr(network, 'metadata'):
+        meta = network.metadata
+        title += f"Unit Cell: {meta.get('unit_cell', 'unknown')} | "
+        title += f"Array: {meta.get('array_size', 'unknown')}\n"
+    title += f"Fibers: {network.num_fibers} | Crosslinks: {network.num_crosslinks}"
+    
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.legend(loc='upper right')
+    ax.grid(True, alpha=0.2)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
+    
+    return fig
+
+
+def plot_stress_strain(
+    result: Dict,
+    show_modulus: bool = True,
+    save_path: Optional[str] = None,
+) -> plt.Figure:
+    """Plot stress-strain curve from mechanics simulation.
+    
+    Parameters
+    ----------
+    result : dict
+        Output from ``fn.simulate_mechanics()``.
+    show_modulus : bool
+        If True, annotate Young's modulus.
+    save_path : str, optional
+        Path to save figure.
+    
+    Returns
+    -------
+    plt.Figure
+        Matplotlib figure.
+    """
+    if not HAS_MATPLOTLIB:
+        raise ImportError("matplotlib required for visualization")
+    
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+    
+    if 'stress_strain' in result:
+        strains, stresses = result['stress_strain']
+        ax.plot(strains, stresses, 'b-', linewidth=2, label='Stress-Strain')
+        ax.set_xlabel('Strain (ε)')
+        ax.set_ylabel('Stress (σ) [Pa]')
+        ax.set_title('Stress-Strain Curve')
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        if show_modulus and 'modulus' in result:
+            E = result['modulus']
+            ax.annotate(
+                f'E = {E:.2e} Pa',
+                xy=(0.05, 0.95), xycoords='axes fraction',
+                fontsize=12, fontweight='bold',
+                bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5)
+            )
+    else:
+        ax.text(0.5, 0.5, "No stress-strain data available",
+                ha='center', va='center', fontsize=14)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight', facecolor='white')
+    
+    return fig

@@ -143,6 +143,7 @@ class TaichiEngine:
         num_steps: int = 1000,
         save_interval: int = 100,
         fixed_nodes: Optional[List[int]] = None,
+        external_force: Optional[np.ndarray] = None,
     ) -> AcceleratedResult:
         """Run parallel mass-spring dynamics using Taichi.
         
@@ -190,10 +191,17 @@ class TaichiEngine:
             fixed_arr[n] = 1
         is_fixed.from_numpy(fixed_arr)
         
+        # External force field
+        ext_frc = ti.Vector.field(3, dtype=ti.f64, shape=num_nodes)
+        if external_force is not None:
+            ext_frc.from_numpy(external_force.astype(np.float64))
+        else:
+            ext_frc.fill(ti.Vector([0.0, 0.0, 0.0]))
+        
         @ti.kernel
         def compute_forces():
             for n in range(num_nodes):
-                frc[n] = ti.Vector([0.0, 0.0, 0.0])
+                frc[n] = ext_frc[n]  # Start with external force
             
             for e in range(num_edges):
                 i = edge_arr[e][0]
