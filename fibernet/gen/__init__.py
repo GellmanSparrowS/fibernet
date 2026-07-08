@@ -196,3 +196,30 @@ __all__.extend([
     "missing_rib_auxetic_2d",
     "plate_lattice_3d",
 ])
+
+# TPMS (Triply Periodic Minimal Surface) structures
+from .tpms import (
+    tpms_sheet,
+    tpms_lattice,
+    tpms_gradient,
+)
+
+__all__.extend([
+    "tpms_sheet",
+    "tpms_lattice",
+    "tpms_gradient",
+])
+
+# Field-guid network generation
+from .field_guided import (
+    FieldGuidedConfig,
+    OrientationField,
+    field_guided_network,
+    multi_scale_orientation_analysis,
+)
+__all__.extend([
+    "FieldGuidedConfig",
+    "OrientationField",
+    "field_guided_network",
+    "multi_scale_orientation_analysis",
+])

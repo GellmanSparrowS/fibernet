@@ -242,3 +242,43 @@ __all__.extend([
     "DiffusionAnalyzer", "DiffusionResult", "FiltrationResult",
     "analyze_diffusion"
 ])
+
+# Validation and benchmarks
+from .validation import (
+    ValidationResult,
+    gibson_ashby_honeycomb,
+    gibson_ashby_foam_3d,
+    gibson_ashby_closed_cell,
+    euler_beam_cantilever,
+    validate_cantilever_beam,
+    validate_honeycomb_scaling,
+    validate_convergence,
+    validate_patch_test,
+    run_all_validations,
+    print_validation_report,
+)
+__all__.extend([
+    "ValidationResult",
+    "gibson_ashby_honeycomb",
+    "gibson_ashby_foam_3d",
+    "gibson_ashby_closed_cell",
+    "euler_beam_cantilever",
+    "validate_cantilever_beam",
+    "validate_honeycomb_scaling",
+    "validate_convergence",
+    "validate_patch_test",
+    "run_all_validations",
+    "print_validation_report",
+])
+
+# Reinforcement learning environments
+from .rl_environment import (
+    RLEnvConfig,
+    FiberNetworkEnv,
+    run_rl_optimization,
+)
+__all__.extend([
+    "RLEnvConfig",
+    "FiberNetworkEnv",
+    "run_rl_optimization",
+])
