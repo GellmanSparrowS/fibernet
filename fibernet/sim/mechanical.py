@@ -374,6 +374,11 @@ class FiberFEM:
     ) -> MechanicalResult:
         """Apply uniaxial strain along a given axis.
         
+        Uses correct boundary conditions for Poisson's ratio measurement:
+        - Fixed face: only constrain loading direction (allows transverse deformation)
+        - Prescribed face: prescribe loading direction displacement
+        - Reference node: constrain transverse + rotation to prevent rigid body motion
+        
         Parameters
         ----------
         strain : float
@@ -413,17 +418,29 @@ class FiberFEM:
                     prescribed_nodes.append(n_idx)
         
         fixed_dofs = []
-        for n in fixed_nodes:
-            fixed_dofs.extend([n * 6 + d for d in range(6)])
-        
         prescribed = {}
+        
+        # Fixed face: only constrain the loading direction DOF
+        # This allows transverse deformation (needed for Poisson's ratio)
+        for n in fixed_nodes:
+            fixed_dofs.append(n * 6 + axis)
+        
+        # Prescribed face: prescribe the loading direction displacement
         for n in prescribed_nodes:
             dof = n * 6 + axis
             if dof not in set(fixed_dofs):
                 prescribed[dof] = delta
-            if dof not in prescribed:
-                pass
-            fixed_dofs.extend([n * 6 + d for d in range(6) if d != axis])
+        
+        # Prevent rigid body motion: fix transverse DOFs at one reference node
+        # Pick the first fixed node as reference
+        if fixed_nodes:
+            ref_node = fixed_nodes[0]
+            for d in range(3):
+                if d != axis:  # Don't re-constrain loading direction
+                    fixed_dofs.append(ref_node * 6 + d)
+            # Also fix in-plane rotation to prevent rigid body rotation
+            if self.network.dimension == 2:
+                fixed_dofs.append(ref_node * 6 + 5)  # rz
         
         # For 2D networks, constrain out-of-plane DOFs for ALL nodes
         if self.network.dimension == 2:
