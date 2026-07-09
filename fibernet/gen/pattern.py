@@ -79,11 +79,25 @@ def _unit_square(box: Tuple[float, float], n_internal: int = 0,
 
 def _unit_triangle(box: Tuple[float, float], n_internal: int = 0,
                    radius: float = 0.1, material: Material = None) -> StructureGraph:
-    """Equilateral triangle unit cell. Fits inside box."""
+    """Triangular lattice unit cell — two triangles forming a rhombus.
+
+    The unit cell contains two triangles sharing a diagonal edge,
+    creating a rhombus that tiles into the triangular lattice.
+    """
     w, h = box
     g = StructureGraph(dimension=2, box_size=[w, h])
-    g.add_polyline([(w / 2, h), (0, 0), (w, 0)], closed=True,
-                   radius=radius, material=material, n_internal=n_internal)
+    # Four corners + center diagonal
+    n00 = g.add_node([0, 0])
+    n10 = g.add_node([w, 0])
+    n01 = g.add_node([0, h])
+    n11 = g.add_node([w, h])
+    # Bottom triangle
+    g.add_edge(n00, n10, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n10, n01, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n01, n00, radius=radius, material=material, n_internal=n_internal)
+    # Top triangle (sharing the diagonal n10-n01)
+    g.add_edge(n10, n11, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n11, n01, radius=radius, material=material, n_internal=n_internal)
     g._metadata["unit_type"] = "triangle"
     return g
 
@@ -144,32 +158,41 @@ def _unit_honeycomb(box: Tuple[float, float], n_internal: int = 0,
 
 def _unit_kagome(box: Tuple[float, float], n_internal: int = 0,
                  radius: float = 0.1, material: Material = None) -> StructureGraph:
-    """Kagome lattice — triangles + hexagons.
+    """Kagome lattice — triangles + hexagons with proper tiling connectivity.
 
-    Unit cell contains the edges that, when tiled, produce the kagome pattern.
+    The unit cell contains midpoints on all edges connected in a star pattern
+    through the center, plus corner-to-midpoint connections.
     """
     w, h = box
     g = StructureGraph(dimension=2, box_size=[w, h])
-    # Kagome: triangular lattice with midpoints connected
-    # Nodes at triangle vertices and edge midpoints
-    # Triangle vertices
+    # Corner nodes (shared with adjacent cells)
     n00 = g.add_node([0, 0])
     n10 = g.add_node([w, 0])
     n01 = g.add_node([0, h])
     n11 = g.add_node([w, h])
+    # Edge midpoints (shared with adjacent cells)
+    nm_b = g.add_node([w / 2, 0])
+    nm_t = g.add_node([w / 2, h])
+    nm_l = g.add_node([0, h / 2])
+    nm_r = g.add_node([w, h / 2])
+    # Center node
     nc = g.add_node([w / 2, h / 2])
-    # Edge midpoints
-    nm_b = g.add_node([w / 2, 0])      # bottom midpoint
-    nm_t = g.add_node([w / 2, h])      # top midpoint
-    nm_l = g.add_node([0, h / 2])      # left midpoint
-    nm_r = g.add_node([w, h / 2])      # right midpoint
 
-    # Inner triangle connections (forming kagome hexagons)
-    for ni, nj in [
-        (nm_b, nm_r), (nm_r, nm_t), (nm_t, nm_l), (nm_l, nm_b),
-        (nm_b, nc), (nm_r, nc), (nm_t, nc), (nm_l, nc),
-    ]:
-        g.add_edge(ni, nj, radius=radius, material=material, n_internal=n_internal)
+    # Kagome connectivity:
+    # 1. Corner-to-midpoint edges (boundary edges that tile properly)
+    g.add_edge(n00, nm_b, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n10, nm_b, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n00, nm_l, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n01, nm_l, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n10, nm_r, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n11, nm_r, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n01, nm_t, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n11, nm_t, radius=radius, material=material, n_internal=n_internal)
+    # 2. Midpoint-to-center (inner star)
+    g.add_edge(nm_b, nc, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(nm_t, nc, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(nm_l, nc, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(nm_r, nc, radius=radius, material=material, n_internal=n_internal)
     g._metadata["unit_type"] = "kagome"
     return g
 
@@ -179,30 +202,30 @@ def _unit_reentrant(box: Tuple[float, float], n_internal: int = 0,
                     angle: float = 15.0) -> StructureGraph:
     """Reentrant honeycomb (auxetic).
 
-    The reentrant angle controls the inward tilt of the diagonal struts.
-    Positive angle → auxetic (negative Poisson's ratio).
+    Both diagonal pairs meet at shared center nodes for proper connectivity.
+    Positive angle produces auxetic behavior (negative Poisson ratio).
     """
     w, h = box
     g = StructureGraph(dimension=2, box_size=[w, h])
 
-    a = w / 2
     b = h / 4
-    dx = a * np.tan(np.radians(angle))
 
-    # Vertical walls (same as honeycomb)
-    g.add_polyline([(0, b), (0, 3 * b)], radius=radius, material=material,
-                   n_internal=n_internal)
-    g.add_polyline([(w, b), (w, 3 * b)], radius=radius, material=material,
-                   n_internal=n_internal)
-    # Reentrant diagonals (inward-pointing)
-    g.add_polyline([(0, b), (a + dx, 0)], radius=radius, material=material,
-                   n_internal=n_internal)
-    g.add_polyline([(w, b), (a - dx, 0)], radius=radius, material=material,
-                   n_internal=n_internal)
-    g.add_polyline([(0, 3 * b), (a + dx, h)], radius=radius, material=material,
-                   n_internal=n_internal)
-    g.add_polyline([(w, 3 * b), (a - dx, h)], radius=radius, material=material,
-                   n_internal=n_internal)
+    # Nodes
+    n_l_lo = g.add_node([0, b])
+    n_l_hi = g.add_node([0, 3 * b])
+    n_r_lo = g.add_node([w, b])
+    n_r_hi = g.add_node([w, 3 * b])
+    n_b = g.add_node([w / 2, 0])
+    n_t = g.add_node([w / 2, h])
+
+    # Vertical walls
+    g.add_edge(n_l_lo, n_l_hi, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_r_lo, n_r_hi, radius=radius, material=material, n_internal=n_internal)
+    # Diagonals: both walls connect to SAME center points
+    g.add_edge(n_l_lo, n_b, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_r_lo, n_b, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_l_hi, n_t, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_r_hi, n_t, radius=radius, material=material, n_internal=n_internal)
     g._metadata["unit_type"] = "reentrant"
     g._metadata["reentrant_angle"] = angle
     return g
