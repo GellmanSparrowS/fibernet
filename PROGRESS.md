@@ -1,103 +1,91 @@
-# FiberNet — 项目进度报告
+# FiberNet Refactoring Progress
 
-**最后更新**: 2026-07-09
+## Architecture
 
----
+```
+StructureGraph (core)
+  ├── pattern_2d/3d (gen)  ← Base Unit + Transform + Tiling + Welding
+  ├── transforms (core)    ← translate, rotate, mirror, scale
+  ├── tiling (core)        ← tile_2d, tile_3d with node welding
+  ├── fem (sim)            ← Taichi beam FEM solver
+  ├── render (viz)         ← Publication-quality 2D/3D visualization
+  ├── ml/dataset (ml)      ← Dataset generation pipeline
+  └── rl_env (sim)         ← Reinforcement learning environment
+```
 
-## 当前 API 清单
+## Completed
 
-### 1. Pattern Engine v7 (analysis_scripts/pattern_engine_unified.py)
-- **`pattern_2d()`** — 统一polyline基元生成器
-- 核心: 自定义点/polygon presets → Cn对称扰动 → mirror_x/mirror_y/rotation → tiling → intersection welding
-- 参数: box, points, fit_to_box, polygon_type, n_pts_per_side, perturbation, grid, mirror_x/y, rotation, boundary_mode, stagger
-- ⚠️ **未集成到 fibernet/gen/ 正式包**
+### Phase 1a: StructureGraph Core ✅
+- File: `fibernet/core/structure_graph.py`
+- NumPy-native node/edge storage
+- Spatial hashing for node merging
+- Edge deduplication (shared edges between cells)
+- Edge discretization (n_internal points per edge)
+- Boundary flags for periodic structures
+- Conversions: networkx, numpy, FiberNetwork, JSON
+- Connectivity checks, fingerprinting
 
-### 2. Unified Generators (fibernet/gen/unified.py)
-- **`lattice_2d(topology)`** — square/triangular/honeycomb/kagome
-- **`metamaterial_2d(mode)`** — reentrant/star/arrowhead/chiral/missing_rib
-- **`lattice_3d(topology)`** — cubic/octet/diamond
-- **`curved_random_2d()`** — 随机曲线纤维
-- **`entangled_3d()`** — 3D缠结纤维
-- **`biomimetic_network()`** — 仿生网络
-- **`hierarchical_lattice()`** — ⚠️ 不是真自相似层级(递归细分+cross-brace)
+### Phase 1b: Geometric Transforms ✅
+- File: `fibernet/core/transforms.py`
+- translate, rotate (2D/3D), mirror (x/y/z), scale
+- compose() for chaining
+- Correct boundary flag flipping on mirror
+- Internal points transform support
 
-### 3. Stochastic (fibernet/gen/disordered.py)
-- `random_straight_2d/3d`, `oriented_random_2d/3d`, `poisson_line_network_2d`, `random_walk_fibers`, `random_curved_fibers_3d`
+### Phase 1c: Tiling + Welding ✅
+- File: `fibernet/core/tiling.py`
+- tile_2d/tile_3d with automatic node welding
+- tile_with_transforms for per-cell transforms
+- fit_unit_to_box for normalizing arbitrary units
+- Boundary flag detection on outer perimeter
 
-### 4. Advanced (fibernet/gen/advanced.py)
-- `voronoi_network_2d/3d`, `electrospun_network`, `meltblown_network`
-- `biomimetic_collagen/fibrin`, `defected_lattice`, `composite_network`, `graded_network`
-- `auxetic_structure`, `kirigami_structure`
+### Phase 2a: Pattern Engine ✅
+- File: `fibernet/gen/pattern.py`
+- Unified API: pattern_2d(unit, box, grid, ...)
+- 11 built-in units, all produce connected structures
+- Custom points with fit_to_box and boundary_mode
+- Deterministic: no randomness unless seed+perturbation set
+- 3D units: cubic, octet, diamond_3d
 
-### 5. Fractal (fibernet/gen/fractal.py)
-- `sierpinski_triangle`, `koch_curve`, `fractal_tree`, `hilbert_curve`
+### Phase 2b: Unit Connectivity Fixes ✅
+- All 11 built-in units now properly connected when tiled
+- Kagome: star pattern through center
+- Reentrant: shared center nodes
+- Triangle: rhombus cell for triangular lattice
 
-### 6. TPMS (fibernet/gen/tpms.py)
-- `tpms_sheet`, `tpms_lattice`, `tpms_gradient`
+## In Progress
 
-### 7. Bundles (fibernet/gen/bundles.py)
-- `parallel_bundle_2d`, `twisted_bundle_2d`, `random_bundle_3d`, `braided_bundle_3d`, `tendon_like_bundle_3d`
+### Phase 2c: Edge Discretization ✅ (built into pattern engine)
+- Every edge supports n_internal points for deformation
+- discretize_edges() method for post-hoc discretization
 
-### 8. Curved (fibernet/gen/curved.py)
-- `sinusoidal_fiber_2d`(返回Fiber非Network), `helical_fiber_3d`, `arc_fiber_2d`, `bezier_fiber_3d`, `random_curved_network_3d`, `crimped_network_2d`
+## Next Steps
 
-### 9. Laminates (fibernet/gen/laminates.py)
-- `unidirectional_laminate`, `crossply_laminate`, `angle_ply_laminate`, `quasi_isotropic_laminate`, `custom_laminate`, `sandwich_laminate`
+### Phase 3a: Taichi Beam FEM Solver
+- Beam element FEM with Taichi acceleration
+- Mechanical property extraction (E, ν, σ-ε curve)
+- Deformation output for visualization
+- Uniaxial tension/compression tests
 
-### 10. Metamaterials — 旧独立版 (fibernet/gen/metamaterials.py)
-- `reentrant_honeycomb_2d/3d`, `chiral_honeycomb_2d`, `star_honeycomb_2d`, `arrowhead_auxetic_2d`
-- `hierarchical_lattice_2d`, `missing_rib_auxetic_2d`, `kagome_lattice_2d`
-- `proper_octet_truss_3d`, `diamond_lattice_3d`, `gyroid_lattice_3d`, `plate_lattice_3d`
+### Phase 3b: Checkpoint/Resume
+- Save/load simulation state
+- Memory-safe batch processing
 
-### 11. Woven (fibernet/gen/woven.py)
-- `plain_weave_2d`, `twill_weave_2d`, `satin_weave_2d`, `woven_3d_orthogonal`
+### Phase 4: Visualization
+- Publication-quality renderer
+- Deformed structure visualization
+- Showcase generation
 
-### 12. Gradient (fibernet/gen/gradient.py)
-- `density_gradient_2d`, `property_gradient_2d`, `multi_zone_2d`
+### Phase 5: ML/RL
+- Dataset pipeline
+- GNN features
+- RL environment
 
-### 13. Field-Guided (fibernet/gen/field_guided.py)
-- `field_guided_network`, `OrientationField`, `FieldGuidedConfig`
-
-### 14. Specialized (fibernet/gen/specialized.py)
-- `cnt_network_2d/3d`, `paper_network`, `textile_weave`, `electrospun_mat`, `fiber_reinforced_composite`
-
-### 15. Variants (fibernet/gen/variants.py)
-- `lattice_2d_to_3d`, `curved_lattice`, `multi_radius_network`, `variable_stiffness_network`, `gyroid_infill`, `diamond_lattice_3d`, `foam_like_3d`
-
-### 16. Regular/ZigZag (fibernet/gen/regular.py, zigzag.py)
-- `RegularNetworkGenerator` — 仅square(被Pattern Engine取代)
-- `ZigZagGenerator` — zigzag折线(被Pattern Engine取代)
-
----
-
-## 可视化输出 (output_viz/)
-
-| 文件 | 内容 | 有效结构数 |
-|---|---|---|
-| `01_pattern_engine.png` | Pattern Engine: 自定义形状、polygon、变换、open+extend、grid多样性 | 25 |
-| `02_unified_generators.png` | lattice_2d + metamaterial_2d + 旧metamaterials | 25 |
-| `03_stochastic_fractal_2d.png` | random/oriented/poisson/walk + voronoi/electrospun/collagen + fractal + gradient | 15 |
-| `04_bundles_curved_laminates.png` | bundles + curved + laminates + woven + hierarchical | 20 |
-| `05_3d_tpms_field_specialized.png` | 3D lattice/metamaterials/random/entangled + TPMS + field-guided + specialized | 25 |
-
----
-
-## 已知Bug/问题
-
-1. **Pattern Engine未集成** — 在analysis_scripts/，不在fibernet/gen/
-2. **hierarchical_lattice不是真层级** — 当前是"中点细分+cross-brace"，应为"beam→lattice替换"
-3. **curved单纤维返回Fiber而非FiberNetwork** — sinusoidal/helical/arc/bezier
-4. **voronoi_2d/electrospun/meltblown有解包错误** — `cannot unpack non-iterable int object`
-5. **field_guided不支持spiral** — 仅radial/uniform
-6. **diamond_lattice_3d crosslinks=0** — 焊接问题
-7. **大量冗余API** — 90+导出函数，很多重复
+## Git History
+```
+pre-refactor → 1a (StructureGraph) → 1b (transforms) → 1c (tiling) → 2a (pattern engine) → 2b (unit fixes)
+```
 
 ---
-
-## 下一步
-
-1. 用户review可视化 → 决定保留/删除哪些API
-2. 集成Pattern Engine到fibernet/gen/pattern.py
-3. 重写hierarchical_lattice为真自相似层级
-4. 精简冗余API
-5. 修复已知bug
+**Last updated**: 2026-07-09
+**Status**: Phase 2 complete, starting Phase 3 (Taichi FEM)

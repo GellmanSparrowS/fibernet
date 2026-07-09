@@ -200,17 +200,20 @@ def _unit_kagome(box: Tuple[float, float], n_internal: int = 0,
 def _unit_reentrant(box: Tuple[float, float], n_internal: int = 0,
                     radius: float = 0.1, material: Material = None,
                     angle: float = 15.0) -> StructureGraph:
-    """Reentrant honeycomb (auxetic).
+    """Reentrant (arrowhead) honeycomb — auxetic structure.
 
-    Both diagonal pairs meet at shared center nodes for proper connectivity.
-    Positive angle produces auxetic behavior (negative Poisson ratio).
+    The diagonals bend inward through an indentation point at the cell center,
+    creating the concave cell shape that produces negative Poisson ratio.
+    Angle parameter controls indentation depth.
     """
     w, h = box
     g = StructureGraph(dimension=2, box_size=[w, h])
 
     b = h / 4
+    # Indentation depth: larger angle = more reentrant = more auxetic
+    indent = (w / 2) * np.tan(np.radians(min(angle, 40)))
 
-    # Nodes
+    # Boundary nodes (for tiling connectivity)
     n_l_lo = g.add_node([0, b])
     n_l_hi = g.add_node([0, 3 * b])
     n_r_lo = g.add_node([w, b])
@@ -218,14 +221,24 @@ def _unit_reentrant(box: Tuple[float, float], n_internal: int = 0,
     n_b = g.add_node([w / 2, 0])
     n_t = g.add_node([w / 2, h])
 
+    # Internal indentation nodes
+    n_indent_lo = g.add_node([w / 2, b + indent])
+    n_indent_hi = g.add_node([w / 2, 3 * b - indent])
+
     # Vertical walls
     g.add_edge(n_l_lo, n_l_hi, radius=radius, material=material, n_internal=n_internal)
     g.add_edge(n_r_lo, n_r_hi, radius=radius, material=material, n_internal=n_internal)
-    # Diagonals: both walls connect to SAME center points
-    g.add_edge(n_l_lo, n_b, radius=radius, material=material, n_internal=n_internal)
-    g.add_edge(n_r_lo, n_b, radius=radius, material=material, n_internal=n_internal)
-    g.add_edge(n_l_hi, n_t, radius=radius, material=material, n_internal=n_internal)
-    g.add_edge(n_r_hi, n_t, radius=radius, material=material, n_internal=n_internal)
+
+    # Lower diagonals: wall → indent → bottom (V-shape bending inward)
+    g.add_edge(n_l_lo, n_indent_lo, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_r_lo, n_indent_lo, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_indent_lo, n_b, radius=radius, material=material, n_internal=n_internal)
+
+    # Upper diagonals: wall → indent → top (V-shape bending inward)
+    g.add_edge(n_l_hi, n_indent_hi, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_r_hi, n_indent_hi, radius=radius, material=material, n_internal=n_internal)
+    g.add_edge(n_indent_hi, n_t, radius=radius, material=material, n_internal=n_internal)
+
     g._metadata["unit_type"] = "reentrant"
     g._metadata["reentrant_angle"] = angle
     return g
