@@ -23,6 +23,7 @@ def voronoi_network_2d(
     num_seeds: int = 50,
     box_size: Tuple[float, float] = (50.0, 50.0),
     radius: float = 0.1,
+    regularity: float = 0.0,
     material: Optional[Material] = None,
     seed: Optional[int] = None,
     remove_short_edges: bool = True,
@@ -48,7 +49,17 @@ def voronoi_network_2d(
     mat = material or Material(name="voronoi_fiber")
     Lx, Ly = box_size
     
-    seeds = rng.uniform([0, 0], [Lx, Ly], (num_seeds, 2))
+    if regularity < 0.01:
+        seeds = rng.uniform([0, 0], [Lx, Ly], (num_seeds, 2))
+    else:
+        nx = max(2, int(round(num_seeds ** 0.5)))
+        ny = max(2, num_seeds // nx)
+        gx = np.linspace(0, Lx, nx + 1)[:-1] + Lx / (2 * nx)
+        gy = np.linspace(0, Ly, ny + 1)[:-1] + Ly / (2 * ny)
+        grid = np.array(np.meshgrid(gx, gy)).reshape(2, -1).T
+        noise = rng.uniform(-0.5, 0.5, grid.shape) * np.array([Lx/nx, Ly/ny]) * regularity
+        seeds = grid + noise
+        num_seeds = len(seeds)
     
     # Mirror seeds for bounded Voronoi
     all_seeds = np.vstack([
@@ -97,16 +108,47 @@ def voronoi_network_3d(
     num_seeds: int = 100,
     box_size: Tuple[float, float, float] = (30.0, 30.0, 30.0),
     radius: float = 0.1,
+    regularity: float = 0.0,
     material: Optional[Material] = None,
     seed: Optional[int] = None,
 ) -> FiberNetwork:
-    """Generate a 3D fiber network from Voronoi tessellation edges."""
+    """Generate a 3D fiber network from Voronoi tessellation edges.
+    
+    Parameters
+    ----------
+    num_seeds : int
+        Number of Voronoi seed points.
+    box_size : tuple
+        (Lx, Ly, Lz) domain size.
+    radius : float
+        Fiber radius.
+    regularity : float
+        0.0 = random seeds, 1.0 = regular grid with small perturbation.
+    material : Material, optional
+        Fiber material.
+    seed : int, optional
+        Random seed.
+    """
     rng = np.random.default_rng(seed)
     mat = material or Material(name="voronoi_fiber")
     Lx, Ly, Lz = box_size
     
-    seeds = rng.uniform([0, 0, 0], [Lx, Ly, Lz], (num_seeds, 3))
+    if regularity < 0.01:
+        seeds = rng.uniform([0, 0, 0], [Lx, Ly, Lz], (num_seeds, 3))
+    else:
+        # Regular grid with perturbation
+        nx = max(2, int(round(num_seeds ** (1/3))))
+        ny = nx
+        nz = max(2, num_seeds // (nx * ny))
+        gx = np.linspace(0, Lx, nx + 1)[:-1] + Lx / (2 * nx)
+        gy = np.linspace(0, Ly, ny + 1)[:-1] + Ly / (2 * ny)
+        gz = np.linspace(0, Lz, nz + 1)[:-1] + Lz / (2 * nz)
+        grid = np.array(np.meshgrid(gx, gy, gz)).reshape(3, -1).T
+        noise = rng.uniform(-0.5, 0.5, grid.shape) * np.array([Lx/nx, Ly/ny, Lz/nz]) * regularity
+        seeds = grid + noise
+        num_seeds = len(seeds)
     
+    # Mirror seeds for bounded Voronoi
     all_seeds = []
     for dx in [-Lx, 0, Lx]:
         for dy in [-Ly, 0, Ly]:
@@ -122,20 +164,35 @@ def voronoi_network_3d(
         metadata={"generator": "voronoi_network_3d", "num_seeds": num_seeds},
     )
     
+    bounds = np.array([Lx + 0.1, Ly + 0.1, Lz + 0.1])
+    edge_set = set()
     fid = 0
+    
     for ridge in vor.ridge_vertices:
         if -1 in ridge or len(ridge) < 2:
             continue
         
-        p1 = vor.vertices[ridge[0]]
-        p2 = vor.vertices[ridge[1]]
-        
-        inside1 = np.all(p1 >= -0.1) and np.all(p1 <= np.array([Lx + 0.1, Ly + 0.1, Lz + 0.1]))
-        inside2 = np.all(p2 >= -0.1) and np.all(p2 <= np.array([Lx + 0.1, Ly + 0.1, Lz + 0.1]))
-        
-        if inside1 and inside2:
-            net.add_fiber(Fiber.straight(p1, p2, radius=radius, material=mat, fiber_id=fid))
-            fid += 1
+        # Extract all edges from the polygonal face
+        n_verts = len(ridge)
+        for k in range(n_verts):
+            v1_idx = ridge[k]
+            v2_idx = ridge[(k + 1) % n_verts]
+            
+            # Avoid duplicate edges
+            edge_key = (min(v1_idx, v2_idx), max(v1_idx, v2_idx))
+            if edge_key in edge_set:
+                continue
+            edge_set.add(edge_key)
+            
+            p1 = vor.vertices[v1_idx]
+            p2 = vor.vertices[v2_idx]
+            
+            inside1 = np.all(p1 >= -0.1) and np.all(p1 <= bounds)
+            inside2 = np.all(p2 >= -0.1) and np.all(p2 <= bounds)
+            
+            if inside1 and inside2:
+                net.add_fiber(Fiber.straight(p1, p2, radius=radius, material=mat, fiber_id=fid))
+                fid += 1
     
     net.auto_crosslink(threshold=2.5 * radius)
     return net
@@ -290,6 +347,10 @@ def meltblown_network(
         net.add_fiber(fiber)
     
     net.auto_crosslink(threshold=3.0 * radius_mean)
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 
@@ -376,6 +437,24 @@ def biomimetic_collagen(
         net.add_fiber(fiber)
     
     net.auto_crosslink(threshold=3.0 * radius_mean)
+    # Bridge if still disconnected
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for cl in net.crosslinks:
+        adj[cl.fiber_i].add(cl.fiber_j)
+        adj[cl.fiber_j].add(cl.fiber_i)
+    visited = set()
+    n_comp = 0
+    for s in range(net.num_fibers):
+        if s not in visited:
+            n_comp += 1
+            q = [s]
+            while q:
+                n = q.pop(0)
+                if n in visited: continue
+                visited.add(n); q.extend(adj[n] - visited)
+    if n_comp > 1:
+        net.connect_components(max_gap=10.0)
     return net
 
 
@@ -471,6 +550,28 @@ def biomimetic_fibrin(
             fid += 1
     
     net.auto_crosslink(threshold=3.0 * radius_mean)
+    # Bridge if still disconnected
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for cl in net.crosslinks:
+        adj[cl.fiber_i].add(cl.fiber_j)
+        adj[cl.fiber_j].add(cl.fiber_i)
+    visited = set()
+    n_comp = 0
+    for s in range(net.num_fibers):
+        if s not in visited:
+            n_comp += 1
+            q = [s]
+            while q:
+                n = q.pop(0)
+                if n in visited: continue
+                visited.add(n); q.extend(adj[n] - visited)
+    if n_comp > 1:
+        net.connect_components(max_gap=10.0)
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 

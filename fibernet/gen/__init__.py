@@ -223,3 +223,33 @@ __all__.extend([
     "field_guided_network",
     "multi_scale_orientation_analysis",
 ])
+
+# Regular fiber network generators (weld graph workflow)
+from .regular import RegularNetworkGenerator
+from .zigzag import ZigZagGenerator
+
+__all__.extend([
+    "RegularNetworkGenerator",
+    "ZigZagGenerator",
+])
+
+# Unified generators (consolidate many specific ones)
+from .unified import (
+    lattice_2d,
+    lattice_3d,
+    metamaterial_2d,
+    curved_random_2d,
+    entangled_3d,
+    biomimetic_network,
+    hierarchical_lattice,
+)
+
+__all__.extend([
+    "lattice_2d",
+    "lattice_3d",
+    "metamaterial_2d",
+    "curved_random_2d",
+    "entangled_3d",
+    "biomimetic_network",
+    "hierarchical_lattice",
+])

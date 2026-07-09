@@ -1,6 +1,6 @@
 # FiberNet API Reference
 
-**Version**: 1.25.0  
+**Version**: 2.1.0  
 **Last Updated**: 2026-07-08
 
 ## Quick Start
@@ -8,23 +8,20 @@
 ```python
 import fibernet as fn
 
-# 1. Create a metamaterial (unit cell → tile → weld)
-meta = fn.create_metamaterial(
-    unit_cell="reentrant_honeycomb_2d",
-    array_size=(3, 3),
-    reentrant_angle=150,
-)
+# 1. Create a structure
+net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
 
-# 2. Run mechanics (beam FEM)
-result = fn.simulate_mechanics(meta, strain=0.001)
+# 2. Check connectivity (all generators now produce fully connected networks)
+print(f"Fibers: {net.num_fibers}, Crosslinks: {net.num_crosslinks}")
+print(f"Density: {net.density():.4f}")
+
+# 3. Run mechanics (beam FEM)
+result = fn.simulate_mechanics(net, strain=0.001)
 print(f"E = {result['modulus']:.2e} Pa")
 
-# 3. Run dynamics (mass-spring, Taichi-accelerated)
-traj = fn.simulate_dynamics(meta, dt=1e-7, steps=5000, backend="taichi")
-
-# 4. Visualize
-fn.plot_metamaterial(meta, save_path="structure.png")
-fn.plot_dynamics(traj, save_path="dynamics.png")
+# 4. Visualize (publication-quality, no nodes)
+fig, ax = fn.viz.plot(net, color_by="orientation", theme="dark")
+fn.viz.save_figure(fig, "structure.png", dpi=300)
 ```
 
 ---
@@ -51,10 +48,15 @@ net = fn.create("octet_3d", cell_size=5.0)
 net = fn.create("random_2d", num_fibers=200, fiber_length=10.0)
 net = fn.create("random_walk", num_steps=1000)
 
-# Metamaterials
+# Metamaterials (fully connected via node-based construction)
 net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
 net = fn.create("chiral_honeycomb_2d", node_radius=3.0)
 net = fn.create("star_honeycomb_2d", star_angle=60)
+
+# Fractals (fully connected via shared nodes)
+net = fn.create("sierpinski", iterations=4)
+net = fn.create("fractal_tree", iterations=6)
+net = fn.create("hilbert", order=4)
 ```
 
 **Available generators**: Use `fn.list_generators()` to see all 40+ registered generators.
@@ -87,13 +89,6 @@ meta = fn.create_metamaterial(
     array_size=(4, 4),
     node_radius=3.0,
     ligament_length=8.0,
-)
-
-# Star-shaped
-meta = fn.create_metamaterial(
-    unit_cell="star_honeycomb_2d",
-    array_size=(3, 3),
-    star_angle=60,
 )
 ```
 
@@ -136,6 +131,26 @@ merged = fn.merge([net1, net2, net3])
 # Tile periodically
 tiled = fn.tile(net, repeats=(3, 3, 1), spacing=[20, 20, 0])
 ```
+
+---
+
+### Network Utilities
+
+#### `connect_components(max_gap=None, strategy="nearest")`
+
+Bridge disconnected components by adding short fibers between nearest points.
+
+```python
+net = fn.create("some_generator")
+n_bridges = net.connect_components(max_gap=50.0)
+print(f"Added {n_bridges} bridging fibers")
+```
+
+**Parameters**:
+- `max_gap` (float): Maximum gap distance to bridge (default: 10 × mean fiber length)
+- `strategy` (str): "nearest" bridges nearest points, "centroid" bridges component centroids
+
+**Returns**: Number of bridges added
 
 ---
 
@@ -191,483 +206,223 @@ traj = fn.simulate_dynamics(
     save_interval=100,    # Save trajectory every N steps
 )
 
-# Access results
-positions = traj['positions']      # Final positions [m]
-trajectory = traj['trajectory']    # List of position snapshots
-energy = traj['energy']            # Final energy [J]
-edges = traj['edges']              # Spring connectivity
-rest_lengths = traj['rest_lengths']  # Spring rest lengths [m]
-stiffness = traj['stiffness']      # Spring stiffness [N/m]
+# Access trajectory
+positions = traj['positions']      # (n_steps, n_nodes, 3)
+velocities = traj['velocities']    # (n_steps, n_nodes, 3)
+energies = traj['energies']        # (n_steps,) total energy
 ```
 
 **Returns**: dict with keys:
-- `positions`: Final node positions (N, 3)
-- `trajectory`: List of position snapshots for animation
-- `velocities`: Final node velocities (N, 3)
-- `forces`: Final node forces (N, 3)
-- `energy`: Final strain energy [J]
-- `time_seconds`: Simulation time [s]
-- `edges`: Spring connectivity (M, 2)
-- `rest_lengths`: Spring rest lengths (M,)
-- `stiffness`: Spring stiffness (M,)
-- `initial_positions`: Initial node positions (N, 3)
+- `positions`: Node position history
+- `velocities`: Node velocity history
+- `energies`: Total energy history
+- `n_steps`: Number of steps completed
 
 ---
 
-#### `simulate_thermal(network, T_hot, T_cold, axis)`
+## Visualization (Publication-Quality)
 
-Run thermal conduction simulation.
+### Quick Plot
 
 ```python
-result = fn.simulate_thermal(
-    network=meta,
-    T_hot=100,      # Hot side temperature [°C]
-    T_cold=0,       # Cold side temperature [°C]
-    axis=0,         # Heat flow direction
-)
+import fibernet as fn
+from fibernet.viz import plot, plot_3d, save_figure
 
-k = result['conductivity']  # Thermal conductivity [W/(m·K)]
-temps = result['temperatures']  # Node temperatures [°C]
+net = fn.create("reentrant_honeycomb_2d")
+
+# 2D plot with orientation coloring
+fig, ax = plot(net, color_by="orientation", theme="dark", title="Re-entrant")
+save_figure(fig, "reentrant.png", dpi=300)
+
+# 3D plot
+net3d = fn.create("diamond_lattice_3d")
+fig, ax = plot_3d(net3d, theme="dark", elevation=25, azimuth=-60)
+save_figure(fig, "diamond_3d.png", dpi=300)
 ```
 
----
-
-### Analysis
-
-#### `analyze(network)`
-
-Analyze network structure.
+### Color Modes
 
 ```python
-stats = fn.analyze(meta)
+# Uniform color
+plot(net, color_by="uniform")
 
-print(f"Fibers: {stats['num_fibers']}")
-print(f"Crosslinks: {stats['num_crosslinks']}")
-print(f"Nematic order: {stats['nematic_order']:.3f}")
-print(f"Mean length: {stats['mean_length']:.2f} mm")
-print(f"Connected: {stats['is_connected']}")
+# By orientation (angle)
+plot(net, color_by="orientation", colormap="hsv")
+
+# By fiber length
+plot(net, color_by="length", colormap="viridis")
+
+# By fiber radius
+plot(net, color_by="radius", colormap="plasma")
+
+# Custom scalar data
+custom_data = np.random.rand(net.num_fibers)
+plot(net, color_by="custom", color_data=custom_data)
 ```
 
-**Returns**: dict with keys:
-- `num_fibers`: Number of fibers
-- `num_crosslinks`: Number of crosslinks
-- `dimension`: Network dimension (2 or 3)
-- `nematic_order`: Nematic order parameter [0, 1]
-- `mean_length`: Mean fiber length [mm]
-- `total_length`: Total fiber length [mm]
-- `mean_tortuosity`: Mean tortuosity
-- `num_nodes`: Number of graph nodes
-- `num_edges`: Number of graph edges
-- `mean_degree`: Mean node degree
-- `is_connected`: Is graph connected?
-- `num_components`: Number of connected components
-
----
-
-### Visualization
-
-#### `plot_metamaterial(network, show_unit_cells, show_crosslinks, colormap, save_path)`
-
-Professional visualization for metamaterial structures.
+### Themes
 
 ```python
-fn.plot_metamaterial(
-    meta,
-    show_unit_cells=True,
-    show_crosslinks=True,
-    colormap="viridis",
-    save_path="metamaterial.png",
-)
+# Light theme (default)
+plot(net, theme="light")
+
+# Dark theme
+plot(net, theme="dark")
+
+# Publication theme (white background, minimal)
+plot(net, theme="publication")
+
+# Blueprint theme (blue on dark)
+plot(net, theme="blueprint")
 ```
 
-**Features**:
-- Fibers colored by orientation angle
-- Crosslink points highlighted
-- Unit cell boundaries (if metadata available)
-- Professional styling with legends
-
----
-
-#### `plot_dynamics(result, show_forces, colormap, save_path)`
-
-Visualize mass-spring dynamics trajectory.
+### Comparison Plots
 
 ```python
-fn.plot_dynamics(
-    traj,
-    show_forces=False,
-    colormap="viridis",
-    save_path="dynamics.png",
-)
+from fibernet.viz import plot_comparison
+
+nets = [fn.create(name) for name in ["square_2d", "honeycomb_2d", "kagome_2d"]]
+labels = ["Square", "Honeycomb", "Kagome"]
+
+fig, axes = plot_comparison(nets, labels=labels, color_by="orientation", ncols=3)
+save_figure(fig, "comparison.png", dpi=300)
 ```
 
-**Features**:
-- Multi-frame trajectory visualization
-- Springs colored by strain
-- Optional force vector overlay
-- Time annotations
-
----
-
-#### `plot_stress_strain(result, show_modulus, save_path)`
-
-Plot stress-strain curve from mechanics simulation.
+### Statistics Panels
 
 ```python
-fn.plot_stress_strain(
-    result,
-    show_modulus=True,
-    save_path="stress_strain.png",
-)
+from fibernet.viz import plot_statistics
+
+fig = plot_statistics(net, theme="dark")
+save_figure(fig, "statistics.png", dpi=250)
 ```
 
 ---
 
-#### `plot(network, **kwargs)`
+## Data Model
 
-Quick plot of any network.
+### FiberNetwork Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `num_fibers` | int | Number of fibers |
+| `num_crosslinks` | int | Number of crosslinks |
+| `dimension` | int | 2 or 3 |
+| `total_length` | float | Sum of all fiber lengths |
+| `total_volume` | float | Sum of all fiber volumes |
+| `density()` | float | Volume/area fraction (handles 2D correctly) |
+| `mean_fiber_length` | float | Average fiber length |
+| `mean_radius` | float | Average fiber radius |
+
+### Graph Model
+
+| Model | Use Case | Key Object |
+|-------|----------|------------|
+| **Graph** (`nx.Graph`) | Welding, tiling, feature extraction | Nodes have `pos`, edges = fiber segments |
+| **FiberNetwork** | FEM simulation, dynamics | `Fiber` + `Material` objects |
+
+Both models interoperate via `to_networkx()` / `from_networkx()`.
+
+---
+
+## Graph Operations (`fibernet.graph`)
+
+### `weld_graph(G, tolerance=1e-6)`
+
+Detect all edge crossings and insert junction nodes at intersection points.
 
 ```python
-fn.plot(meta, color_by="orientation")
+import fibernet as fn
+
+gen = fn.RegularNetworkGenerator(side_length=10, num_points_per_side=2, tiling=3)
+G = gen.generate()
+G_welded = fn.weld_graph(G)  # crossings become nodes
+```
+
+### `find_intersections(G)`
+
+Return crossing points without modifying the graph.
+
+```python
+ix = fn.find_intersections(G)
+print(f"{len(ix)} crossing points detected")
+```
+
+### `merge_coincident_nodes(G, tolerance=0.5)`
+
+Merge nodes closer than `tolerance`.
+
+```python
+G_clean = fn.merge_coincident_nodes(G, tolerance=0.1)
 ```
 
 ---
 
-### Export / Import
+## I/O Functions
+
+### `save_graph_json(G, path)` / `load_graph_json(path)`
+
+Save/load graphs in JSON format (D3.js compatible).
+
+### `to_networkx(net)` / `from_networkx(G)`
+
+Convert between `FiberNetwork` ↔ `nx.Graph`.
 
 ```python
-# Export to various formats
-fn.export(meta, "structure.json")
-fn.export(meta, "structure.vtk")
-fn.export(meta, "structure.lammps")
-
-# Load from file
-meta = fn.load("structure.json")
-```
-
-**Supported formats**: json, lammps, vtk, vtp, xyz, pdb, msh
-
----
-
-## Registry Pattern
-
-FiberNet uses a **registry pattern** for extensibility:
-
-### List Available Generators
-
-```python
-generators = fn.list_generators()
-print(f"Available: {len(generators)}")
-for g in generators[:10]:
-    print(f"  - {g}")
-```
-
-### Register Custom Generator
-
-```python
-@fn.register_generator("my_custom_lattice")
-def make_my_lattice(cell_size=10.0, **kwargs):
-    net = fn.FiberNetwork()
-    # Build your custom structure
-    return net
-
-# Use it
-net = fn.create("my_custom_lattice", cell_size=15.0)
-```
-
-### Register Custom Backend
-
-```python
-@fn.register_backend("my_fem_solver")
-def run_my_fem(network, strain=0.01, **kwargs):
-    # Your custom simulation
-    return {"modulus": 1e9, "energy": 100.0}
-
-# Use it
-result = fn.simulate(network, backend="my_fem_solver", strain=0.001)
+G = fn.to_networkx(net)          # FiberNetwork → Graph
+net = fn.from_networkx(G)         # Graph → FiberNetwork
 ```
 
 ---
 
-## Data Structures
+## Feature Extraction (94 Dimensions)
 
-### `FiberNetwork`
+### `fn.extract_features(G_or_net, canvas_size=512)`
 
-```python
-net = fn.create_metamaterial(...)
+Extract a comprehensive 94-dimensional feature vector.
 
-# Access fibers
-for fiber in net.fibers:
-    print(f"Fiber {fiber.fiber_id}: length={fiber.length:.2f}")
-    print(f"  Centerline: {fiber.centerline.shape}")  # (N, 3)
-    print(f"  Radius: {fiber.radius:.3f}")
-    print(f"  Material: {fiber.material.name}")
-
-# Access crosslinks
-for cl in net.crosslinks:
-    print(f"Crosslink: fibers {cl.fiber_i}-{cl.fiber_j}")
-    print(f"  Position: {cl.position}")
-    print(f"  Type: {cl.crosslink_type}")
-
-# Bounding box
-bb_min, bb_max = net.bounding_box()
-print(f"Size: {bb_max - bb_min}")
-
-# Metadata (for metamaterials)
-if hasattr(net, 'metadata'):
-    print(f"Unit cell: {net.metadata['unit_cell']}")
-    print(f"Array size: {net.metadata['array_size']}")
-```
-
-### `Material`
+| Feature Group | Count | Examples |
+|---------------|-------|---------|
+| Structural | 34 | `n_node`, `n_edge`, `mean_degree`, `density`, `n_components` |
+| Pore | 18 | `porosity`, `mean_pore_area`, `max_pore_area`, `specific_surface` |
+| Contact | 42 | `n_weld`, `weld_density`, `mean_coordination`, `anisotropy` |
 
 ```python
-from fibernet import Material
-
-mat = Material(
-    name="steel",
-    density=7800,           # kg/m^3
-    youngs_modulus=200e9,   # Pa
-    poissons_ratio=0.3,
-    yield_strength=250e6,   # Pa
-)
-
-# Compute derived properties
-K = mat.bulk_modulus()
-mu, lam = mat.get_lame_parameters()
+features = fn.extract_features(G_welded, canvas_size=256)
+print(f"Weld count: {features['n_weld']}")
+print(f"Porosity: {features['porosity']:.4f}")
 ```
 
-### `Fiber`
+---
+
+## Complete Workflow Example
 
 ```python
-from fibernet import Fiber
+import fibernet as fn
+from fibernet.viz import plot, save_figure
 
-fiber = Fiber(
-    centerline=np.array([[0, 0, 0], [10, 0, 0]]),
-    radius=0.2,
-    material=mat,
-)
+# 1. Generate metamaterial
+net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150, grid_size=(5, 5))
 
-print(f"Length: {fiber.length:.2f}")
-print(f"Direction: {fiber.direction}")
-print(f"Curvature: {fiber.curvature()}")
+# 2. Verify connectivity
+print(f"Fibers: {net.num_fibers}, Crosslinks: {net.num_crosslinks}")
+print(f"Connected: {net.num_components == 1}")
+
+# 3. Visualize
+fig, ax = plot(net, color_by="orientation", theme="dark")
+save_figure(fig, "structure.png", dpi=300)
+
+# 4. Extract features
+features = fn.extract_features(net)
+print(f"Density: {features['density']:.4f}")
+
+# 5. Run mechanics
+result = fn.simulate_mechanics(net, strain=0.001)
+print(f"Young's modulus: {result['modulus']:.2e} Pa")
+
+# 6. Save
+fn.save_graph_json(fn.to_networkx(net), "network.json")
 ```
-
----
-
-## Common Workflows
-
-### 1. Parametric Study
-
-```python
-import numpy as np
-
-angles = np.linspace(100, 170, 15)
-results = []
-
-for angle in angles:
-    meta = fn.create_metamaterial(
-        unit_cell="reentrant_honeycomb_2d",
-        array_size=(3, 3),
-        reentrant_angle=angle,
-    )
-    
-    result = fn.simulate_mechanics(meta, strain=0.001)
-    results.append({
-        'angle': angle,
-        'modulus': result['modulus'],
-        'energy': result['energy'],
-    })
-
-# Analyze results
-import pandas as pd
-df = pd.DataFrame(results)
-print(df)
-```
-
----
-
-### 2. ML Surrogate Model
-
-```python
-from sklearn.ensemble import RandomForestRegressor
-
-# Generate dataset
-X = []  # Features: [angle, cell_height, cell_width, radius]
-y = []  # Target: log10(E)
-
-for angle in np.linspace(100, 170, 10):
-    for height in [8, 10, 12]:
-        meta = fn.create_metamaterial(
-            unit_cell="reentrant_honeycomb_2d",
-            array_size=(3, 3),
-            reentrant_angle=angle,
-            cell_height=height,
-            cell_width=10,
-        )
-        
-        result = fn.simulate_mechanics(meta, strain=0.001)
-        X.append([angle, height, 10, 0.2])
-        y.append(np.log10(result['modulus']))
-
-# Train model
-X = np.array(X)
-y = np.array(y)
-
-model = RandomForestRegressor(n_estimators=100)
-model.fit(X, y)
-
-# Predict
-E_pred = 10 ** model.predict([[150, 10, 10, 0.2]])[0]
-print(f"Predicted E: {E_pred:.2e} Pa")
-```
-
----
-
-### 3. Reinforcement Learning
-
-```python
-# Use trained ML model as reward
-def reward(params):
-    X = np.array([[params['angle'], params['cell_height'], 
-                   params['cell_width'], params['radius']]])
-    log_E = model.predict(X)[0]
-    return log_E  # Maximize stiffness
-
-# Simple RL loop
-best_reward = -np.inf
-best_params = None
-
-for episode in range(100):
-    # Sample parameters
-    params = {
-        'angle': np.random.uniform(100, 170),
-        'cell_height': np.random.uniform(8, 12),
-        'cell_width': 10,
-        'radius': 0.2,
-    }
-    
-    r = reward(params)
-    if r > best_reward:
-        best_reward = r
-        best_params = params
-
-print(f"Best angle: {best_params['angle']:.1f}°")
-print(f"Best E: {10**best_reward:.2e} Pa")
-```
-
----
-
-## Testing
-
-Run the full test suite:
-
-```bash
-pytest tests/ -v
-```
-
-Run specific test modules:
-
-```bash
-pytest tests/test_api.py -v
-pytest tests/test_metamaterial.py -v
-pytest tests/test_dynamics.py -v
-```
-
----
-
-## Performance Tips
-
-1. **Use Taichi backend for dynamics**: 10-100× faster than numpy
-   ```python
-   traj = fn.simulate_dynamics(meta, backend="taichi")
-   ```
-
-2. **Smaller array sizes for quick tests**:
-   ```python
-   meta = fn.create_metamaterial(array_size=(2, 2))  # Fast
-   ```
-
-3. **Reduce trajectory save frequency**:
-   ```python
-   traj = fn.simulate_dynamics(meta, save_interval=500)  # Save less often
-   ```
-
-4. **Use linear mechanics for quick estimates**:
-   ```python
-   result = fn.simulate_mechanics(meta, model="linear")  # Fast
-   ```
-
----
-
-## Troubleshooting
-
-### "Network has no crosslinks"
-
-**Problem**: `simulate_dynamics()` requires crosslinks.
-
-**Solution**: Use `create_metamaterial()` which automatically welds intersections:
-```python
-meta = fn.create_metamaterial(...)  # Has crosslinks
-```
-
-Or manually add crosslinks:
-```python
-net.auto_crosslink(threshold=0.5)
-```
-
----
-
-### "Unknown generator"
-
-**Problem**: Generator name not recognized.
-
-**Solution**: Check available generators:
-```python
-print(fn.list_generators())
-```
-
----
-
-### Taichi initialization error
-
-**Problem**: Taichi already initialized or GPU not available.
-
-**Solution**: Use CPU backend:
-```python
-traj = fn.simulate_dynamics(meta, backend="numpy")  # Pure Python fallback
-```
-
----
-
-## Version History
-
-### 1.25.0 (2026-07-08)
-- Added `create_metamaterial()` workflow
-- Added `simulate_dynamics()` with Taichi acceleration
-- Added `plot_metamaterial()`, `plot_dynamics()`, `plot_stress_strain()`
-- Registry pattern for extensibility
-- Fixed mass-spring system builder
-
-### 1.24.0 (previous)
-- Basic API: `create()`, `simulate_mechanics()`, `analyze()`, `plot()`
-- Beam FEM solver
-- 40+ structure generators
-
----
-
-## API Design Philosophy
-
-FiberNet is designed for **extensibility**:
-
-1. **Registry pattern**: Easy to add new generators and backends
-2. **Modular architecture**: Separate gen/, sim/, viz/, analysis/ modules
-3. **Third-party integration**: LAMMPS, GROMACS, NetworkX, PyVista
-4. **Multiple simulation backends**: Beam FEM, mass-spring, Taichi, future truss FEM
-5. **Professional visualization**: Publication-ready plots
-6. **ML/RL ready**: Structured data for machine learning workflows
-
----
 
 ## Contact & Support
 

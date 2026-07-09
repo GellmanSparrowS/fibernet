@@ -367,6 +367,14 @@ def random_curved_network_3d(
         
         net.add_fiber(fiber)
     
+    # Auto-detect and add crosslinks with larger threshold
+    net.auto_crosslink(threshold=2.0)
+
+    # Auto-detect crosslinks and ensure connected
+    net.auto_crosslink(threshold=1.0)
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 
@@ -438,6 +446,13 @@ def crimped_network_2d(
         fiber.fiber_id = i
         
         net.add_fiber(fiber)
+    
+    # Auto-detect and add crosslinks with larger threshold
+    net.auto_crosslink(threshold=2.0)
+
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
     
     return net
 

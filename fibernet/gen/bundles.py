@@ -19,7 +19,51 @@ import numpy as np
 from typing import Tuple, Optional
 from fibernet.core.network import FiberNetwork
 from fibernet.core.fiber import Fiber
+from fibernet.core.network import FiberNetwork, Crosslink
+from fibernet.core.fiber import Fiber
 from fibernet.core.material import Material
+from fibernet.gen.disordered import _detect_intersections_3d
+
+
+
+
+def _detect_intersections_2d(fibers):
+    """Detect 2D line segment intersections between fibers."""
+    crosslinks = []
+    for i in range(len(fibers)):
+        fi = fibers[i]
+        p1, p2 = fi.centerline[0], fi.centerline[-1]
+        for j in range(i + 1, len(fibers)):
+            fj = fibers[j]
+            p3, p4 = fj.centerline[0], fj.centerline[-1]
+            d1 = p2 - p1
+            d2 = p4 - p3
+            cross_val = d1[0] * d2[1] - d1[1] * d2[0]
+            if abs(cross_val) < 1e-10:
+                continue
+            dp = p3 - p1
+            t = (dp[0] * d2[1] - dp[1] * d2[0]) / cross_val
+            u = (dp[0] * d1[1] - dp[1] * d1[0]) / cross_val
+            if 0 <= t <= 1 and 0 <= u <= 1:
+                pos = p1 + t * d1
+                crosslinks.append((i, j, t, u, pos))
+    return crosslinks
+
+
+def _add_bundle_crosslinks(net, is_3d=False, threshold_factor=2.0):
+    """Add crosslinks to bundle by detecting fiber intersections."""
+    fibers_list = [net.fibers[i] for i in range(net.num_fibers)]
+    if is_3d:
+        intersections = _detect_intersections_3d(fibers_list, threshold_factor)
+    else:
+        intersections = _detect_intersections_2d(fibers_list)
+    for (fi, fj, pi, pj, pos) in intersections:
+        net.add_crosslink(Crosslink(
+            fiber_i=fi, fiber_j=fj,
+            param_i=pi, param_j=pj,
+            position=pos,
+            crosslink_type="welded",
+        ))
 
 
 def parallel_bundle_2d(
@@ -92,6 +136,22 @@ def parallel_bundle_2d(
         fiber = Fiber.straight(start, end, radius=fiber_radius, material=material, fiber_id=fiber_id)
         net.add_fiber(fiber)
         fiber_id += 1
+    
+    # Add transverse cross-ties to connect parallel fibers
+    n_ties = max(2, num_fibers // 3)
+    tie_spacing = bundle_length / (n_ties + 1)
+    for t in range(n_ties):
+        along = (t + 1) * tie_spacing - bundle_length / 2
+        tie_center = np.array([center[0], center[1], 0.0]) + along * direction
+        tie_start = tie_center - 0.6 * bundle_width * perpendicular
+        tie_end = tie_center + 0.6 * bundle_width * perpendicular
+        tie_fiber = Fiber.straight(tie_start, tie_end, radius=fiber_radius * 0.5,
+                                   material=material, fiber_id=fiber_id)
+        net.add_fiber(tie_fiber)
+        fiber_id += 1
+    
+    # Add crosslinks from intersections
+    _add_bundle_crosslinks(net, is_3d=False)
     
     return net
 
@@ -170,6 +230,8 @@ def twisted_bundle_2d(
         fiber = Fiber.straight(start, end, radius=fiber_radius, material=material, fiber_id=fiber_id)
         net.add_fiber(fiber)
         fiber_id += 1
+    
+    _add_bundle_crosslinks(net, is_3d=False)
     
     return net
 
@@ -270,6 +332,8 @@ def random_bundle_3d(
         fiber = Fiber.straight(start, end, radius=fiber_radius, material=material, fiber_id=fiber_id)
         net.add_fiber(fiber)
         fiber_id += 1
+    
+    _add_bundle_crosslinks(net, is_3d=True)
     
     return net
 
@@ -380,6 +444,10 @@ def braided_bundle_3d(
             net.add_fiber(fiber)
             fiber_id += 1
     
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 
@@ -472,6 +540,10 @@ def tendon_like_bundle_3d(
         net.add_fiber(fiber)
         fiber_id += 1
     
+    _add_bundle_crosslinks(net, is_3d=True)
+    
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
-
-

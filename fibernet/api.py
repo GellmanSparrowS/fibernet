@@ -146,84 +146,86 @@ def register_backend(name: str) -> Callable:
 # ============================================================
 
 def _register_builtin_generators():
-    """Register all built-in generators."""
+    """Register all built-in generators (consolidated).
     
-    # Disordered networks
-    _registry.register_generator("random_2d", gen.random_straight_2d)
-    _registry.register_generator("random_3d", gen.random_straight_3d)
-    _registry.register_generator("random_walk", gen.random_walk_fibers)
-    _registry.register_generator("oriented_2d", gen.oriented_random_2d)
-    _registry.register_generator("oriented_3d", gen.oriented_random_3d)
+    Removed: laminates, woven 2D, helix/braided, category 16, specific lattices/metamaterials
+    Added: unified lattice_2d, lattice_3d, metamaterial_2d, curved_random_2d,
+           entangled_3d, biomimetic_network, hierarchical_lattice
+    """
     
-    # Ordered lattices
-    _registry.register_generator("square_2d", gen.square_lattice_2d)
-    _registry.register_generator("honeycomb_2d", gen.honeycomb_lattice_2d)
-    _registry.register_generator("triangular_2d", gen.triangular_lattice_2d)
-    _registry.register_generator("cubic_3d", gen.cubic_lattice_3d)
-    _registry.register_generator("octet_3d", gen.octet_truss_3d)
-    _registry.register_generator("kagome_2d", gen.kagome_lattice_2d)
+    def _safe_register(name, func):
+        try:
+            _registry.register_generator(name, func)
+        except (AttributeError, ValueError):
+            pass
     
-    # Chiral / helical
-    _registry.register_generator("helix", gen.single_helix)
-    _registry.register_generator("double_helix", gen.double_helix)
-    _registry.register_generator("braided_rope", gen.braided_rope)
-    _registry.register_generator("twisted_bundle", gen.twisted_bundle)
+    # Core random
+    _safe_register("random_2d", gen.random_straight_2d)
+    _safe_register("random_3d", gen.random_straight_3d)
+    _safe_register("random_walk", gen.random_walk_fibers)
     
-    # Woven
-    _registry.register_generator("plain_weave", gen.plain_weave_2d)
-    _registry.register_generator("twill_weave", gen.twill_weave_2d)
+    # Unified lattices
+    _safe_register("lattice_2d", gen.lattice_2d)
+    _safe_register("lattice_3d", gen.lattice_3d)
     
-    # Metamaterials
-    _registry.register_generator("reentrant_honeycomb_2d", gen.reentrant_honeycomb_2d)
-    _registry.register_generator("reentrant_honeycomb_3d", gen.reentrant_honeycomb_3d)
-    _registry.register_generator("chiral_honeycomb_2d", gen.chiral_honeycomb_2d)
-    _registry.register_generator("star_honeycomb_2d", gen.star_honeycomb_2d)
-    _registry.register_generator("arrowhead_auxetic_2d", gen.arrowhead_auxetic_2d)
-    _registry.register_generator("hierarchical_lattice_2d", gen.hierarchical_lattice_2d)
-    _registry.register_generator("proper_octet_truss_3d", gen.proper_octet_truss_3d)
-    _registry.register_generator("diamond_lattice_3d", gen.diamond_lattice_3d)
-    _registry.register_generator("gyroid_lattice_3d", gen.gyroid_lattice_3d)
-    _registry.register_generator("missing_rib_auxetic_2d", gen.missing_rib_auxetic_2d)
-    _registry.register_generator("plate_lattice_3d", gen.plate_lattice_3d)
+    # Unified metamaterials
+    _safe_register("metamaterial_2d", gen.metamaterial_2d)
+    
+    # Curved fibers
+    _safe_register("curved_random_2d", gen.curved_random_2d)
+    
+    # Entangled 3D
+    _safe_register("entangled_3d", gen.entangled_3d)
+    
+    # Biomimetic (merged)
+    _safe_register("biomimetic_network", gen.biomimetic_network)
+    
+    # Hierarchical
+    _safe_register("hierarchical_lattice", gen.hierarchical_lattice)
     
     # Fractals
-    try:
-        _registry.register_generator("sierpinski", gen.sierpinski_triangle)
-        _registry.register_generator("fractal_tree", gen.fractal_tree)
-        _registry.register_generator("hilbert", gen.hilbert_curve)
-    except AttributeError:
-        pass
-    
-    # Biomimetic
-    try:
-        _registry.register_generator("biomimetic_collagen", gen.biomimetic_collagen)
-        _registry.register_generator("biomimetic_fibrin", gen.biomimetic_fibrin)
-    except AttributeError:
-        pass
+    _safe_register("sierpinski", gen.sierpinski_triangle)
+    _safe_register("koch_curve", gen.koch_curve)
+    _safe_register("fractal_tree", gen.fractal_tree)
+    _safe_register("hilbert", gen.hilbert_curve)
+    _safe_register("fractal_network", gen.fractal_network)
     
     # Advanced
-    try:
-        _registry.register_generator("voronoi_2d", gen.voronoi_network_2d)
-        _registry.register_generator("voronoi_3d", gen.voronoi_network_3d)
-        _registry.register_generator("electrospun", gen.electrospun_network)
-    except AttributeError:
-        pass
+    _safe_register("voronoi_2d", gen.voronoi_network_2d)
+    _safe_register("voronoi_3d", gen.voronoi_network_3d)
+    _safe_register("electrospun", gen.electrospun_network)
+    _safe_register("meltblown", gen.meltblown_network)
+    _safe_register("paper_network", gen.paper_network)
+    _safe_register("foam_like_3d", gen.foam_like_3d)
     
     # TPMS
     try:
+        from functools import partial
         from fibernet.gen.tpms import tpms_sheet, tpms_lattice, tpms_gradient
-        _registry.register_generator("tpms_sheet", tpms_sheet)
-        _registry.register_generator("tpms_lattice", tpms_lattice)
-        _registry.register_generator("tpms_gradient", tpms_gradient)
+        _safe_register("tpms_sheet", partial(tpms_sheet, resolution=15))
+        _safe_register("tpms_lattice", partial(tpms_lattice, resolution=15))
+        _safe_register("tpms_gradient", partial(tpms_gradient, resolution=12))
     except ImportError:
         pass
     
     # Field-guided
     try:
-        from fibernet.gen.field_guided import field_guided_network
-        _registry.register_generator("field_guided", field_guided_network)
-    except ImportError:
-        pass
+        from functools import partial
+        from fibernet.gen.field_guided import field_guided_network, FieldGuidedConfig
+        _safe_register("field_guided", partial(
+            field_guided_network,
+            config=FieldGuidedConfig(
+                fiber_count=200, canvas_size=256,
+                fiber_length_mean=30.0, fiber_length_std=8.0,
+                fiber_length_min=10.0, fiber_length_max=60.0,
+                seed=42,
+            )
+        ))
+    except (ImportError, TypeError):
+        try:
+            _safe_register("field_guided", gen.field_guided_network)
+        except AttributeError:
+            pass
 
 
 _register_builtin_generators()
@@ -517,24 +519,24 @@ def _build_mass_spring_system(network: FiberNetwork):
     """Convert a FiberNetwork to a mass-spring system.
     
     The conversion maps:
-    - Crosslinks → nodes (point masses)
-    - Fiber segments between crosslinks → springs
+    - Crosslinks -> nodes (point masses)
+    - Fiber segments between crosslinks -> springs
     
     Spring stiffness: k = E * A / L (axial rigidity)
-    Node mass: distributed fiber mass based on connectivity
+    Node mass: fiber mass distributed proportionally to crosslink nodes
     
     Returns
     -------
     edges : ndarray (M, 2)
         Edge connectivity (node indices).
     rest_lengths : ndarray (M,)
-        Rest length of each spring.
+        Rest length of each spring (mm).
     stiffness : ndarray (M,)
-        Spring stiffness k = E * A / L.
+        Spring stiffness k = E * A / L (N/m).
     masses : ndarray (N,)
-        Node masses.
+        Node masses (kg).
     positions : ndarray (N, 3)
-        Node positions.
+        Node positions (mm).
     """
     if len(network.crosslinks) == 0:
         raise ValueError("Network has no crosslinks. Cannot build mass-spring system.")
@@ -544,8 +546,6 @@ def _build_mass_spring_system(network: FiberNetwork):
     n_nodes = len(node_positions)
     
     # Step 2: Group crosslinks by fiber
-    # Each crosslink has fiber_i and fiber_j, so it connects two fibers
-    # We need to find all crosslinks on each fiber
     fiber_crosslinks = {}  # fiber_idx -> [(cl_idx, param), ...]
     
     for cl_idx, cl in enumerate(network.crosslinks):
@@ -561,6 +561,10 @@ def _build_mass_spring_system(network: FiberNetwork):
     edges_list = []
     rest_lengths_list = []
     stiffness_list = []
+    spring_fiber_map = {}  # edge_idx -> fiber_idx (for diagnostics)
+    
+    # Track unique edges to avoid duplicates
+    seen_edges = set()
     
     for fiber_idx, cl_list in fiber_crosslinks.items():
         if len(cl_list) < 2:
@@ -571,30 +575,41 @@ def _build_mass_spring_system(network: FiberNetwork):
         
         # Get fiber properties
         fiber = network.fibers[fiber_idx]
-        A = np.pi * fiber.radius**2
-        E = fiber.material.youngs_modulus if fiber.material else 200e9
+        radius_m = fiber.radius * 1e-3  # mm -> m
+        A = np.pi * radius_m**2          # m^2
+        E = fiber.material.youngs_modulus if fiber.material else 200e9  # Pa
         
         # Create springs between consecutive crosslinks
-        for i in range(len(cl_list) - 1):
-            node_i = cl_list[i][0]
-            node_j = cl_list[i+1][0]
+        for k in range(len(cl_list) - 1):
+            node_i = cl_list[k][0]
+            node_j = cl_list[k+1][0]
             
             if node_i == node_j:
                 continue
             
+            # Canonical edge key for dedup
+            edge_key = (min(node_i, node_j), max(node_i, node_j))
+            if edge_key in seen_edges:
+                continue
+            seen_edges.add(edge_key)
+            
             pos_i = node_positions[node_i]
             pos_j = node_positions[node_j]
             
-            L_spring = np.linalg.norm(pos_j - pos_i)
-            if L_spring < 1e-12:
+            L_mm = np.linalg.norm(pos_j - pos_i)  # mm
+            if L_mm < 1e-12:
                 continue
             
-            # Spring stiffness: k = E * A / L
-            k_spring = E * A / L_spring
+            L_m = L_mm * 1e-3  # mm -> m
             
+            # Spring stiffness: k = E * A / L (N/m)
+            k_spring = E * A / L_m
+            
+            edge_idx = len(edges_list)
             edges_list.append([node_i, node_j])
-            rest_lengths_list.append(L_spring)
-            stiffness_list.append(k_spring)
+            rest_lengths_list.append(L_mm)  # stored in mm
+            stiffness_list.append(k_spring)  # stored in N/m
+            spring_fiber_map[edge_idx] = fiber_idx
     
     if not edges_list:
         raise ValueError("No valid springs could be built. Check network connectivity.")
@@ -604,38 +619,31 @@ def _build_mass_spring_system(network: FiberNetwork):
     stiffness = np.array(stiffness_list, dtype=np.float64)
     positions = node_positions
     
-    # Step 4: Assign masses (proportional to number of connected springs)
-    # Each spring contributes its mass equally to its two endpoints
+    # Step 4: Assign masses from fiber geometry
+    # Each fiber's mass is distributed equally to its crosslink nodes.
+    # This guarantees total mass = sum of all fiber masses.
     masses = np.zeros(n_nodes, dtype=np.float64)
     
-    for e_idx, (i, j) in enumerate(edges):
-        L = rest_lengths[e_idx]
-        fiber_idx = None
+    for fiber_idx, cl_list in fiber_crosslinks.items():
+        fiber = network.fibers[fiber_idx]
+        radius_m = fiber.radius * 1e-3
+        length_m = fiber.length * 1e-3
+        A = np.pi * radius_m**2
+        rho = fiber.material.density if fiber.material and hasattr(fiber.material, 'density') else 1000.0
+        fiber_mass = rho * A * length_m  # kg
         
-        # Find which fiber this spring belongs to
-        for f_idx, cl_list in fiber_crosslinks.items():
-            cl_indices = [c[0] for c in cl_list]
-            if i in cl_indices and j in cl_indices:
-                fiber_idx = f_idx
-                break
+        # Get unique node indices for this fiber
+        node_indices = list(set(cl_idx for cl_idx, _ in cl_list))
+        n_fiber_nodes = len(node_indices)
         
-        if fiber_idx is not None:
-            fiber = network.fibers[fiber_idx]
-            # Convert mm to m for volume calculation
-            radius_m = fiber.radius * 1e-3
-            length_m = L * 1e-3
-            A = np.pi * radius_m**2
-            rho = fiber.material.density if fiber.material and hasattr(fiber.material, 'density') else 1000
-            spring_mass = rho * A * length_m
-            masses[i] += spring_mass / 2
-            masses[j] += spring_mass / 2
-        else:
-            # Fallback: small default mass
-            masses[i] += 0.0005
-            masses[j] += 0.0005
+        if n_fiber_nodes > 0:
+            mass_per_node = fiber_mass / n_fiber_nodes
+            for ni in node_indices:
+                masses[ni] += mass_per_node
     
     # Ensure minimum mass to avoid numerical issues
-    masses = np.maximum(masses, 1e-6)
+    min_mass = max(masses[masses > 0].min() * 0.01, 1e-12) if np.any(masses > 0) else 1e-12
+    masses = np.maximum(masses, min_mass)
     
     return edges, rest_lengths, stiffness, masses, positions
 

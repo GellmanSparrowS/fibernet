@@ -253,6 +253,30 @@ def field_guided_network(
         'canvas_size': config.canvas_size,
     })
     
+    # Auto-crosslink at fiber intersections
+    network.auto_crosslink()
+    # Auto-crosslink at fiber intersections
+    network.auto_crosslink(threshold=2.0)
+    
+    # Bridge if still disconnected
+    from collections import defaultdict
+    adj = defaultdict(set)
+    for cl in network.crosslinks:
+        adj[cl.fiber_i].add(cl.fiber_j)
+        adj[cl.fiber_j].add(cl.fiber_i)
+    visited = set()
+    n_comp = 0
+    for s in range(network.num_fibers):
+        if s not in visited:
+            n_comp += 1
+            q = [s]
+            while q:
+                n = q.pop(0)
+                if n in visited: continue
+                visited.add(n); q.extend(adj[n] - visited)
+    if n_comp > 1:
+        network.connect_components(max_gap=5.0)
+    
     return network
 
 

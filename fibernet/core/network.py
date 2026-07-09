@@ -108,15 +108,31 @@ class FiberNetwork:
         return np.mean([f.radius for f in self.fibers])
 
     def density(self) -> float:
-        """Volume fraction (solid volume / bounding box volume)."""
+        """Volume fraction (solid volume / bounding box volume).
+        
+        For 2D networks, returns area fraction.
+        For 3D networks, returns volume fraction.
+        """
         vol = self.total_volume
         if self.box_size is not None:
-            box_vol = float(np.prod(self.box_size))
+            dims = np.array(self.box_size, dtype=float)
         else:
             bb_min, bb_max = self.bounding_box()
-            bb_max = np.maximum(bb_max, bb_min + 1e-12)
-            box_vol = float(np.prod(bb_max - bb_min))
-        return vol / box_vol if box_vol > 0 else 0.0
+            dims = bb_max - bb_min
+        
+        # Handle 2D networks (z-dimension is 0)
+        if self.dimension == 2 or (len(dims) >= 3 and dims[2] < 1e-10):
+            # 2D: area fraction
+            area = dims[0] * dims[1] if dims[0] > 0 and dims[1] > 0 else 0.0
+            if area <= 0:
+                return 0.0
+            # Approximate fiber area as total_length * 2 * mean_radius
+            fiber_area = self.total_length * 2 * self.mean_radius
+            return fiber_area / area
+        else:
+            # 3D: volume fraction
+            box_vol = float(np.prod(np.maximum(dims, 1e-12)))
+            return vol / box_vol if box_vol > 0 else 0.0
 
     def bounding_box(self) -> Tuple[np.ndarray, np.ndarray]:
         """Overall bounding box (min_corner, max_corner)."""
@@ -262,6 +278,128 @@ class FiberNetwork:
         for c in contacts:
             c.crosslink_type = crosslink_type
             self.add_crosslink(c)
+
+
+    def connect_components(self, max_gap: float = None, strategy: str = "nearest") -> int:
+        """Connect disconnected components by adding bridging fibers.
+        
+        Finds the nearest points between disconnected components and adds
+        short bridging fibers with crosslinks to merge them.
+        
+        Parameters
+        ----------
+        max_gap : float, optional
+            Maximum gap distance to bridge. Defaults to 10 * mean_fiber_length.
+        strategy : str
+            "nearest" bridges nearest points, "centroid" bridges component centroids.
+            
+        Returns
+        -------
+        int : Number of bridges added.
+        """
+        from collections import defaultdict
+        
+        # Build adjacency from crosslinks
+        adj = defaultdict(set)
+        for cl in self.crosslinks:
+            adj[cl.fiber_i].add(cl.fiber_j)
+            adj[cl.fiber_j].add(cl.fiber_i)
+        
+        # Find components
+        visited = set()
+        components = []
+        for start in range(self.num_fibers):
+            if start not in visited:
+                comp = set()
+                queue = [start]
+                while queue:
+                    node = queue.pop(0)
+                    if node in visited:
+                        continue
+                    visited.add(node)
+                    comp.add(node)
+                    queue.extend(adj[node] - visited)
+                components.append(comp)
+        
+        if len(components) <= 1:
+            return 0
+        
+        if max_gap is None:
+            max_gap = 10 * self.mean_fiber_length if self.mean_fiber_length > 0 else 50.0
+        
+        mat = self.fibers[0].material if self.fibers else Material()
+        bridges_added = 0
+        
+        # Sort components by size (largest first)
+        components.sort(key=len, reverse=True)
+        
+        # Bridge each component to the largest component
+        main_comp = components[0]
+        
+        for comp in components[1:]:
+            best_dist = float('inf')
+            best_pts = None
+            best_fibers = None
+            
+            # Find nearest pair of fibers between main and this component
+            main_fibers = list(main_comp)
+            other_fibers = list(comp)
+            
+            # Sample to keep computation reasonable
+            if len(main_fibers) > 50:
+                main_sample = np.random.choice(main_fibers, 50, replace=False)
+            else:
+                main_sample = main_fibers
+            if len(other_fibers) > 50:
+                other_sample = np.random.choice(other_fibers, 50, replace=False)
+            else:
+                other_sample = other_fibers
+            
+            for fi in main_sample:
+                for fj in other_sample:
+                    ci = self.fibers[fi].centerline
+                    cj = self.fibers[fj].centerline
+                    # Find nearest points
+                    from scipy.spatial.distance import cdist
+                    dists = cdist(ci, cj)
+                    idx = np.unravel_index(np.argmin(dists), dists.shape)
+                    d = dists[idx]
+                    if d < best_dist:
+                        best_dist = d
+                        best_pts = (ci[idx[0]], cj[idx[1]])
+                        best_fibers = (fi, fj)
+            
+            if best_dist <= max_gap and best_pts is not None:
+                p1, p2 = best_pts
+                fi, fj = best_fibers
+                
+                # Add bridging fiber
+                bridge = Fiber.straight(
+                    p1, p2,
+                    radius=self.fibers[fi].radius,
+                    material=mat,
+                    fiber_id=self.num_fibers,
+                    segments=4,
+                )
+                self.add_fiber(bridge)
+                
+                # Add crosslinks at both ends
+                self.add_crosslink(Crosslink(
+                    fiber_i=fi, fiber_j=self.num_fibers - 1,
+                    param_i=0.5, param_j=0.0,
+                    position=p1.copy(), crosslink_type="welded",
+                ))
+                self.add_crosslink(Crosslink(
+                    fiber_i=fj, fiber_j=self.num_fibers - 1,
+                    param_i=0.5, param_j=1.0,
+                    position=p2.copy(), crosslink_type="welded",
+                ))
+                
+                # Merge this component into main
+                main_comp.update(comp)
+                bridges_added += 1
+        
+        return bridges_added
 
     def to_networkx(self):
         """Convert to a NetworkX graph for topology analysis."""
@@ -700,6 +838,128 @@ class FiberNetwork:
 
         valid = len(errors) == 0
         return {'valid': valid, 'errors': errors, 'warnings': warnings, 'stats': stats}
+
+
+    def connect_components(self, max_gap: float = None, strategy: str = "nearest") -> int:
+        """Connect disconnected components by adding bridging fibers.
+        
+        Finds the nearest points between disconnected components and adds
+        short bridging fibers with crosslinks to merge them.
+        
+        Parameters
+        ----------
+        max_gap : float, optional
+            Maximum gap distance to bridge. Defaults to 10 * mean_fiber_length.
+        strategy : str
+            "nearest" bridges nearest points, "centroid" bridges component centroids.
+            
+        Returns
+        -------
+        int : Number of bridges added.
+        """
+        from collections import defaultdict
+        
+        # Build adjacency from crosslinks
+        adj = defaultdict(set)
+        for cl in self.crosslinks:
+            adj[cl.fiber_i].add(cl.fiber_j)
+            adj[cl.fiber_j].add(cl.fiber_i)
+        
+        # Find components
+        visited = set()
+        components = []
+        for start in range(self.num_fibers):
+            if start not in visited:
+                comp = set()
+                queue = [start]
+                while queue:
+                    node = queue.pop(0)
+                    if node in visited:
+                        continue
+                    visited.add(node)
+                    comp.add(node)
+                    queue.extend(adj[node] - visited)
+                components.append(comp)
+        
+        if len(components) <= 1:
+            return 0
+        
+        if max_gap is None:
+            max_gap = 10 * self.mean_fiber_length if self.mean_fiber_length > 0 else 50.0
+        
+        mat = self.fibers[0].material if self.fibers else Material()
+        bridges_added = 0
+        
+        # Sort components by size (largest first)
+        components.sort(key=len, reverse=True)
+        
+        # Bridge each component to the largest component
+        main_comp = components[0]
+        
+        for comp in components[1:]:
+            best_dist = float('inf')
+            best_pts = None
+            best_fibers = None
+            
+            # Find nearest pair of fibers between main and this component
+            main_fibers = list(main_comp)
+            other_fibers = list(comp)
+            
+            # Sample to keep computation reasonable
+            if len(main_fibers) > 50:
+                main_sample = np.random.choice(main_fibers, 50, replace=False)
+            else:
+                main_sample = main_fibers
+            if len(other_fibers) > 50:
+                other_sample = np.random.choice(other_fibers, 50, replace=False)
+            else:
+                other_sample = other_fibers
+            
+            for fi in main_sample:
+                for fj in other_sample:
+                    ci = self.fibers[fi].centerline
+                    cj = self.fibers[fj].centerline
+                    # Find nearest points
+                    from scipy.spatial.distance import cdist
+                    dists = cdist(ci, cj)
+                    idx = np.unravel_index(np.argmin(dists), dists.shape)
+                    d = dists[idx]
+                    if d < best_dist:
+                        best_dist = d
+                        best_pts = (ci[idx[0]], cj[idx[1]])
+                        best_fibers = (fi, fj)
+            
+            if best_dist <= max_gap and best_pts is not None:
+                p1, p2 = best_pts
+                fi, fj = best_fibers
+                
+                # Add bridging fiber
+                bridge = Fiber.straight(
+                    p1, p2,
+                    radius=self.fibers[fi].radius,
+                    material=mat,
+                    fiber_id=self.num_fibers,
+                    segments=4,
+                )
+                self.add_fiber(bridge)
+                
+                # Add crosslinks at both ends
+                self.add_crosslink(Crosslink(
+                    fiber_i=fi, fiber_j=self.num_fibers - 1,
+                    param_i=0.5, param_j=0.0,
+                    position=p1.copy(), crosslink_type="welded",
+                ))
+                self.add_crosslink(Crosslink(
+                    fiber_i=fj, fiber_j=self.num_fibers - 1,
+                    param_i=0.5, param_j=1.0,
+                    position=p2.copy(), crosslink_type="welded",
+                ))
+                
+                # Merge this component into main
+                main_comp.update(comp)
+                bridges_added += 1
+        
+        return bridges_added
 
     def to_networkx(self):
         """Convert fiber network to NetworkX graph.

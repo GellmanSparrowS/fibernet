@@ -419,4 +419,8 @@ def foam_like_3d(
     
     net.metadata["generator"] = "foam_like_3d"
     net.metadata["strut_curvature"] = strut_curvature
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net

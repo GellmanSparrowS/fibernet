@@ -1,454 +1,454 @@
 """
-3D visualization module for fiber networks.
+Advanced visualization module for FiberNet.
 
-Provides interactive visualization using matplotlib and pyvista (optional).
+Provides publication-quality rendering of fiber networks with:
+- No node markers (clean fiber-only display)
+- Variable line width based on fiber radius
+- Color mapping by orientation, length, stress, or custom data
+- Dark/light themes with minimal axis styling
+- 3D rendering with depth-based alpha
+- Structure comparison and statistics panels
+
+All functions follow a consistent API:
+    fig, ax = fn.plot(net, color_by="orientation", theme="dark")
+    fn.save_figure(fig, "output.png", dpi=300)
 """
 
 from __future__ import annotations
 
 import numpy as np
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any, Union
+from pathlib import Path
+
 from ..core import FiberNetwork
 
 
-def visualize_3d_matplotlib(
-    network: FiberNetwork,
-    ax=None,
-    color: str = 'blue',
-    linewidth: float = 1.0,
-    alpha: float = 1.0,
-    show_crosslinks: bool = True,
-    crosslink_color: str = 'red',
-    crosslink_size: float = 5,
-    title: Optional[str] = None,
-    save_path: Optional[str] = None,
-):
-    """
-    Visualize fiber network in 3D using matplotlib.
-    
-    Parameters
-    ----------
-    network : FiberNetwork
-        Fiber network to visualize
-    ax : matplotlib Axes3D, optional
-        3D axes to plot on
-    color : str
-        Color for fibers
-    linewidth : float
-        Line width for fibers
-    alpha : float
-        Transparency
-    show_crosslinks : bool
-        Whether to show crosslinks
-    crosslink_color : str
-        Color for crosslinks
-    crosslink_size : float
-        Size of crosslink markers
-    title : str, optional
-        Plot title
-    save_path : str, optional
-        Path to save figure
-    
-    Returns
-    -------
-    fig : matplotlib Figure
-    ax : matplotlib Axes3D
-    """
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    
-    if ax is None:
-        fig = plt.figure(figsize=(10, 8))
-        ax = fig.add_subplot(111, projection='3d')
-    else:
-        fig = ax.figure
-    
-    # Plot fibers using centerline
-    for fiber in network.fibers:
-        centerline = fiber.centerline
-        ax.plot(centerline[:, 0], centerline[:, 1], centerline[:, 2],
-                color=color, linewidth=linewidth, alpha=alpha)
-    
-    # Plot crosslinks
-    if show_crosslinks and hasattr(network, 'crosslinks'):
-        crosslink_positions = []
-        for crosslink in network.crosslinks:
-            crosslink_positions.append(crosslink.position)
-        
-        if len(crosslink_positions) > 0:
-            crosslink_positions = np.array(crosslink_positions)
-            ax.scatter(crosslink_positions[:, 0],
-                      crosslink_positions[:, 1],
-                      crosslink_positions[:, 2],
-                      c=crosslink_color, s=crosslink_size, alpha=alpha)
-    
-    # Set labels
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    
-    if title:
-        ax.set_title(title)
-    else:
-        ax.set_title(f'Fiber Network ({network.num_fibers} fibers, {network.num_crosslinks} crosslinks)')
-    
-    if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches='tight')
-    
-    return fig, ax
+# ============================================================================
+# Theme Presets
+# ============================================================================
+
+_THEMES = {
+    "light": {
+        "bg_color": "#FAFAFA",
+        "fiber_color": "#2C3E50",
+        "crosslink_color": "#E74C3C",
+        "axis_color": "#BDC3C7",
+        "text_color": "#2C3E50",
+        "grid_alpha": 0.0,
+    },
+    "dark": {
+        "bg_color": "#1A1A2E",
+        "fiber_color": "#E0E0E0",
+        "crosslink_color": "#FF6B6B",
+        "axis_color": "#444444",
+        "text_color": "#E0E0E0",
+        "grid_alpha": 0.0,
+    },
+    "publication": {
+        "bg_color": "#FFFFFF",
+        "fiber_color": "#333333",
+        "crosslink_color": "#CC0000",
+        "axis_color": "#CCCCCC",
+        "text_color": "#333333",
+        "grid_alpha": 0.0,
+    },
+    "blueprint": {
+        "bg_color": "#0A1628",
+        "fiber_color": "#4A9EFF",
+        "crosslink_color": "#FF8844",
+        "axis_color": "#1A3050",
+        "text_color": "#6AB0FF",
+        "grid_alpha": 0.15,
+    },
+}
 
 
-def visualize_3d_pyvista(
-    network: FiberNetwork,
-    color: str = 'blue',
-    fiber_radius: Optional[float] = None,
-    show_crosslinks: bool = True,
-    crosslink_color: str = 'red',
-    crosslink_radius: float = 0.1,
-    background: str = 'white',
-    window_size: Tuple[int, int] = (1024, 768),
-    save_path: Optional[str] = None,
-    off_screen: bool = False,
-):
-    """
-    Visualize fiber network in 3D using pyvista (interactive).
-    
-    Parameters
-    ----------
-    network : FiberNetwork
-        Fiber network to visualize
-    color : str
-        Color for fibers
-    fiber_radius : float, optional
-        Radius for fiber tubes (auto if None)
-    show_crosslinks : bool
-        Whether to show crosslinks
-    crosslink_color : str
-        Color for crosslinks
-    crosslink_radius : float
-        Radius for crosslink spheres
-    background : str
-        Background color
-    window_size : tuple
-        Window size (width, height)
-    save_path : str, optional
-        Path to save screenshot
-    off_screen : bool
-        Render off-screen (for headless environments)
-    
-    Returns
-    -------
-    plotter : pyvista.Plotter
-    """
+def _get_colormap(name: str = "viridis"):
+    """Get a matplotlib colormap, falling back gracefully."""
     try:
-        import pyvista as pv
-    except ImportError:
-        raise ImportError("pyvista is required for interactive 3D visualization. "
-                         "Install with: pip install pyvista")
-    
-    # Create plotter
-    plotter = pv.Plotter(window_size=window_size, off_screen=off_screen)
-    plotter.set_background(background)
-    
-    # Auto-detect fiber radius
-    if fiber_radius is None:
-        if hasattr(network, 'fibers') and len(network.fibers) > 0:
-            fiber_radius = getattr(network.fibers[0], 'radius', 0.05)
-        else:
-            fiber_radius = 0.05
-    
-    # Plot fibers as tubes using centerline
-    for fiber in network.fibers:
-        centerline = fiber.centerline
-        if len(centerline) >= 2:
-            # Create line
-            line = pv.Spline(centerline, n_points=len(centerline))
-            # Extrude to tube
-            tube = line.tube(radius=fiber_radius)
-            plotter.add_mesh(tube, color=color, smooth_shading=True)
-    
-    # Plot crosslinks as spheres
-    if show_crosslinks and hasattr(network, 'crosslinks'):
-        crosslink_positions = []
-        for crosslink in network.crosslinks:
-            crosslink_positions.append(crosslink.position)
-        
-        if len(crosslink_positions) > 0:
-            crosslink_positions = np.array(crosslink_positions)
-            # Create spheres
-            spheres = pv.Sphere(radius=crosslink_radius, center=crosslink_positions[0])
-            for pos in crosslink_positions[1:]:
-                spheres = spheres + pv.Sphere(radius=crosslink_radius, center=pos)
-            plotter.add_mesh(spheres, color=crosslink_color, smooth_shading=True)
-    
-    # Add coordinate axes
-    plotter.add_axes()
-    
-    # Add title
-    plotter.add_title(f'Fiber Network ({network.num_fibers} fibers, {network.num_crosslinks} crosslinks)')
-    
-    if save_path:
-        plotter.screenshot(save_path)
-    
-    if not off_screen:
-        plotter.show()
-    
-    return plotter
+        import matplotlib.pyplot as plt
+        return plt.get_cmap(name)
+    except Exception:
+        import matplotlib.cm as cm
+        return cm.get_cmap(name)
 
 
-def visualize_network_stress(
+# ============================================================================
+# Core 2D Plotting
+# ============================================================================
+
+def plot(
     network: FiberNetwork,
-    stress_values: np.ndarray,
     ax=None,
-    cmap: str = 'coolwarm',
-    linewidth: float = 2.0,
-    colorbar: bool = True,
+    color_by: str = "uniform",
+    color_data: Optional[np.ndarray] = None,
+    colormap: str = "viridis",
+    theme: str = "light",
+    show_crosslinks: bool = False,
+    linewidth_scale: float = 1.0,
+    linewidth_base: float = 0.8,
     title: Optional[str] = None,
+    figsize: Tuple[float, float] = (10, 10),
     save_path: Optional[str] = None,
+    dpi: int = 200,
+    **kwargs,
 ):
-    """
-    Visualize fiber network with stress coloring.
+    """Plot a 2D or 3D fiber network (projected to 2D) with publication quality.
     
     Parameters
     ----------
     network : FiberNetwork
-        Fiber network to visualize
-    stress_values : np.ndarray
-        Stress values for each fiber
-    ax : matplotlib Axes3D, optional
-        3D axes to plot on
-    cmap : str
-        Colormap name
-    linewidth : float
-        Line width for fibers
-    colorbar : bool
-        Whether to show colorbar
+        The fiber network to plot.
+    ax : matplotlib Axes, optional
+        Axes to plot on. If None, creates new figure.
+    color_by : str
+        How to color fibers. Options:
+        - "uniform" : single color for all fibers
+        - "orientation" : color by fiber angle
+        - "length" : color by fiber length
+        - "radius" : color by fiber radius
+        - "material" : color by material type
+        - "custom" : use color_data array
+    color_data : array-like, optional
+        Per-fiber scalar values (used when color_by="custom").
+    colormap : str
+        Matplotlib colormap name for non-uniform coloring.
+    theme : str
+        Visual theme: "light", "dark", "publication", "blueprint".
+    show_crosslinks : bool
+        Whether to show crosslink positions (as subtle dots).
+    linewidth_scale : float
+        Multiplier for line widths.
+    linewidth_base : float
+        Base line width in points.
     title : str, optional
-        Plot title
+        Plot title.
+    figsize : tuple
+        Figure size in inches.
     save_path : str, optional
-        Path to save figure
+        Path to save figure.
+    dpi : int
+        Resolution for saved figure.
     
     Returns
     -------
     fig : matplotlib Figure
-    ax : matplotlib Axes3D
+    ax : matplotlib Axes
     """
     import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib import cm
-    from matplotlib.colors import Normalize
+    import matplotlib.colors as mcolors
+        
+    t = _THEMES.get(theme, _THEMES["light"])
     
+    # Create figure if needed
     if ax is None:
-        fig = plt.figure(figsize=(12, 8))
-        ax = fig.add_subplot(111, projection='3d')
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+        fig.patch.set_facecolor(t["bg_color"])
     else:
         fig = ax.figure
     
-    # Normalize stress for coloring
-    norm = Normalize(vmin=stress_values.min(), vmax=stress_values.max())
-    colors = cm.get_cmap(cmap) if hasattr(cm, "get_cmap") else plt.get_cmap(cmap)(norm(stress_values))
+    ax.set_facecolor(t["bg_color"])
     
-    # Plot fibers with stress coloring using centerline
-    for i, fiber in enumerate(network.fibers):
-        centerline = fiber.centerline
-        if i < len(colors):
-            color = colors[i]
+    # Determine if 2D or 3D projection
+    is_2d = network.dimension == 2
+    is_3d_fallback = not is_2d and kwargs.get("project_3d", True)
+    
+    # Compute per-fiber colors
+    n_fibers = network.num_fibers
+    if n_fibers == 0:
+        ax.text(0.5, 0.5, "Empty Network", transform=ax.transAxes,
+                ha="center", va="center", fontsize=14, color=t["text_color"])
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight",
+                       facecolor=t["bg_color"])
+        return fig, ax
+    
+    # Compute colors
+    if color_by == "uniform":
+        colors = [mcolors.to_rgba(t["fiber_color"])] * n_fibers
+    elif color_by == "orientation":
+        dirs = network.fiber_orientations()
+        if len(dirs) > 0 and is_2d:
+            angles = np.arctan2(dirs[:, 1], dirs[:, 0])
+            # Normalize to [0, pi] (undirected)
+            angles = np.mod(angles, np.pi)
+            cmap = _get_colormap(colormap)
+            norm = plt.Normalize(0, np.pi)
+            colors = [cmap(norm(a)) for a in angles]
         else:
-            color = 'gray'
-        
-        ax.plot(centerline[:, 0], centerline[:, 1], centerline[:, 2],
-                color=color, linewidth=linewidth)
-    
-    # Add colorbar
-    if colorbar:
-        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-        sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, shrink=0.6, aspect=10)
-        cbar.set_label('Stress')
-    
-    # Set labels
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-    
-    if title:
-        ax.set_title(title)
+            colors = [mcolors.to_rgba(t["fiber_color"])] * n_fibers
+    elif color_by == "length":
+        lengths = np.array([f.length for f in network.fibers])
+        cmap = _get_colormap(colormap)
+        norm = plt.Normalize(lengths.min(), lengths.max())
+        colors = [cmap(norm(f.length)) for f in network.fibers]
+    elif color_by == "radius":
+        radii = np.array([f.radius for f in network.fibers])
+        cmap = _get_colormap(colormap)
+        norm = plt.Normalize(radii.min(), radii.max())
+        colors = [cmap(norm(f.radius)) for f in network.fibers]
+    elif color_by == "custom" and color_data is not None:
+        cmap = _get_colormap(colormap)
+        norm = plt.Normalize(np.min(color_data), np.max(color_data))
+        colors = [cmap(norm(v)) for v in color_data]
     else:
-        ax.set_title('Fiber Network Stress Distribution')
+        colors = [mcolors.to_rgba(t["fiber_color"])] * n_fibers
+    
+    # Draw fibers
+    for i, fiber in enumerate(network.fibers):
+            cl = fiber.centerline
+            c = colors[i] if i < len(colors) else mcolors.to_rgba(t["fiber_color"])
+            lw = linewidth_base * linewidth_scale * max(fiber.radius * 5, 0.3)
+            
+            if is_2d:
+                ax.plot(cl[:, 0], cl[:, 1], color=c, linewidth=lw,
+                       solid_capstyle="round", zorder=2)
+            else:
+                ax.plot(cl[:, 0], cl[:, 1], color=c, linewidth=lw,
+                       solid_capstyle="round", zorder=2, alpha=0.85)
+    
+    # Show crosslinks (subtle)
+    if show_crosslinks and network.crosslinks:
+        cl_pos = np.array([cl.position for cl in network.crosslinks])
+        if is_2d:
+            ax.scatter(cl_pos[:, 0], cl_pos[:, 1], s=2,
+                      c=t["crosslink_color"], alpha=0.4, zorder=3,
+                      edgecolors="none")
+        else:
+            ax.scatter(cl_pos[:, 0], cl_pos[:, 1], s=2,
+                      c=t["crosslink_color"], alpha=0.3, zorder=3,
+                      edgecolors="none")
+    
+    # Style axes
+    _style_axes(ax, t, is_2d, title)
     
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches='tight')
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight",
+                   facecolor=t["bg_color"])
     
     return fig, ax
 
 
-def animate_deformation(
+def _style_axes(ax, theme, is_2d, title=None):
+    """Apply minimal axis styling."""
+    ax.set_aspect("equal" if is_2d else "auto")
+    ax.tick_params(colors=theme["axis_color"], labelsize=8, width=0.5)
+    
+    for spine in ax.spines.values():
+        spine.set_color(theme["axis_color"])
+        spine.set_linewidth(0.5)
+    
+    if title:
+        ax.set_title(title, color=theme["text_color"], fontsize=12, pad=10)
+    
+    if theme["grid_alpha"] > 0:
+        ax.grid(True, alpha=theme["grid_alpha"], color=theme["axis_color"])
+    else:
+        ax.grid(False)
+    
+    # Minimal labels
+    ax.set_xlabel("x", color=theme["text_color"], fontsize=9)
+    ax.set_ylabel("y", color=theme["text_color"], fontsize=9)
+
+
+# ============================================================================
+# 3D Visualization
+# ============================================================================
+
+def plot_3d(
     network: FiberNetwork,
-    displacement_history: List[np.ndarray],
-    interval: int = 100,
+    color: str = "#4A90D9",
+    linewidth_scale: float = 1.0,
+    alpha: float = 0.9,
+    show_crosslinks: bool = False,
+    title: Optional[str] = None,
+    figsize: Tuple[float, float] = (10, 8),
     save_path: Optional[str] = None,
+    dpi: int = 200,
+    theme: str = "light",
+    elevation: float = 25,
+    azimuth: float = -60,
+    **kwargs,
 ):
-    """
-    Create animation of network deformation.
+    """Plot 3D fiber network with matplotlib 3D projection.
     
     Parameters
     ----------
     network : FiberNetwork
-        Fiber network to visualize
-    displacement_history : list of np.ndarray
-        List of displacement arrays for each timestep
-    interval : int
-        Interval between frames in milliseconds
+        3D fiber network to visualize.
+    color : str
+        Base color for fibers (hex or named).
+    linewidth_scale : float
+        Width multiplier.
+    alpha : float
+        Transparency (0-1).
+    show_crosslinks : bool
+        Show crosslink positions.
+    title : str, optional
+        Plot title.
+    figsize : tuple
+        Figure size.
     save_path : str, optional
-        Path to save animation (mp4 or gif)
-    
-    Returns
-    -------
-    anim : matplotlib.animation.FuncAnimation
-    """
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    from matplotlib.animation import FuncAnimation
-    
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    
-    # Get original centerlines
-    original_centerlines = []
-    for fiber in network.fibers:
-        original_centerlines.append(fiber.centerline.copy())
-    
-    # Initialize lines
-    lines = []
-    for fiber in network.fibers:
-        line, = ax.plot([], [], [], 'b-', linewidth=1)
-        lines.append(line)
-    
-    def init():
-        for i, fiber in enumerate(network.fibers):
-            centerline = fiber.centerline
-            lines[i].set_data_3d(centerline[:, 0], centerline[:, 1], centerline[:, 2])
-        return lines
-    
-    def update(frame):
-        # Apply displacement
-        displacement = displacement_history[frame]
-        
-        # Update fiber positions
-        node_idx = 0
-        for i, fiber in enumerate(network.fibers):
-            centerline = original_centerlines[i]
-            # Apply displacement to centerline points
-            displaced_centerline = centerline + displacement[node_idx:node_idx+len(centerline)]
-            lines[i].set_data_3d(displaced_centerline[:, 0], 
-                                displaced_centerline[:, 1], 
-                                displaced_centerline[:, 2])
-            node_idx += len(centerline)
-        
-        return lines
-    
-    anim = FuncAnimation(fig, update, frames=len(displacement_history),
-                        init_func=init, blit=False, interval=interval)
-    
-    if save_path:
-        if save_path.endswith('.mp4'):
-            anim.save(save_path, writer='ffmpeg', fps=1000//interval)
-        elif save_path.endswith('.gif'):
-            anim.save(save_path, writer='pillow', fps=1000//interval)
-    
-    return anim
-
-
-def visualize_damage_evolution(
-    damage_result: dict,
-    save_path: Optional[str] = None,
-):
-    """
-    Visualize damage evolution from progressive damage simulation.
-    
-    Parameters
-    ----------
-    damage_result : dict
-        Result from progressive_damage() simulation
-    save_path : str, optional
-        Path to save figure
+        Path to save figure.
+    dpi : int
+        Output resolution.
+    theme : str
+        Visual theme.
+    elevation : float
+        Camera elevation angle.
+    azimuth : float
+        Camera azimuth angle.
     
     Returns
     -------
     fig : matplotlib Figure
+    ax : Axes3D
+    """
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D  # noqa
+    
+    t = _THEMES.get(theme, _THEMES["light"])
+    
+    fig = plt.figure(figsize=figsize)
+    fig.patch.set_facecolor(t["bg_color"])
+    ax = fig.add_subplot(111, projection="3d")
+    
+    ax.set_facecolor(t["bg_color"])
+    ax.view_init(elev=elevation, azim=azimuth)
+    
+    # Plot fibers
+    for fiber in network.fibers:
+        cl = fiber.centerline
+        lw = max(linewidth_scale * fiber.radius * 3, 0.2)
+        ax.plot(cl[:, 0], cl[:, 1], cl[:, 2],
+               color=color, linewidth=lw, alpha=alpha,
+               solid_capstyle="round")
+    
+    # Crosslinks
+    if show_crosslinks and network.crosslinks:
+        cl_pos = np.array([cl.position for cl in network.crosslinks])
+        ax.scatter(cl_pos[:, 0], cl_pos[:, 1], cl_pos[:, 2],
+                  c=t["crosslink_color"], s=3, alpha=0.4)
+    
+    # Style
+    ax.set_xlabel("X", color=t["text_color"], fontsize=9)
+    ax.set_ylabel("Y", color=t["text_color"], fontsize=9)
+    ax.set_zlabel("Z", color=t["text_color"], fontsize=9)
+    ax.tick_params(colors=theme_axis_color(t), labelsize=7)
+    
+    if title:
+        ax.set_title(title, color=t["text_color"], fontsize=12)
+    
+    # Remove panes for cleaner look
+    ax.xaxis.pane.fill = False
+    ax.yaxis.pane.fill = False
+    ax.zaxis.pane.fill = False
+    ax.xaxis.pane.set_edgecolor(t["axis_color"])
+    ax.yaxis.pane.set_edgecolor(t["axis_color"])
+    ax.zaxis.pane.set_edgecolor(t["axis_color"])
+    
+    if save_path:
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight",
+                   facecolor=t["bg_color"])
+    
+    return fig, ax
+
+
+def theme_axis_color(t):
+    return t.get("axis_color", "#CCCCCC")
+
+
+# ============================================================================
+# Comparison and Statistics
+# ============================================================================
+
+def plot_comparison(
+    networks: List[FiberNetwork],
+    labels: Optional[List[str]] = None,
+    color_by: str = "uniform",
+    theme: str = "light",
+    ncols: int = 2,
+    figsize_per: Tuple[float, float] = (6, 6),
+    save_path: Optional[str] = None,
+    dpi: int = 200,
+    **kwargs,
+):
+    """Side-by-side comparison of multiple fiber networks.
+    
+    Parameters
+    ----------
+    networks : list of FiberNetwork
+        Networks to compare.
+    labels : list of str, optional
+        Labels for each network.
+    color_by : str
+        Color mode for all subplots.
+    theme : str
+        Visual theme.
+    ncols : int
+        Number of columns in grid.
+    figsize_per : tuple
+        Size per subplot.
+    save_path : str, optional
+        Path to save figure.
+    
+    Returns
+    -------
+    fig : matplotlib Figure
+    axes : list of Axes
     """
     import matplotlib.pyplot as plt
     
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    n = len(networks)
+    nrows = (n + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols,
+                             figsize=(figsize_per[0] * ncols, figsize_per[1] * nrows))
     
-    # Stress-strain curve
-    ax = axes[0, 0]
-    ax.plot(damage_result['strain'], damage_result['stress'], 'b-', linewidth=2)
-    ax.set_xlabel('Strain')
-    ax.set_ylabel('Stress')
-    ax.set_title('Stress-Strain Curve')
-    ax.grid(True, alpha=0.3)
+    t = _THEMES.get(theme, _THEMES["light"])
+    fig.patch.set_facecolor(t["bg_color"])
     
-    # Damage evolution
-    ax = axes[0, 1]
-    ax.plot(damage_result['strain'], damage_result['damage'], 'r-', linewidth=2)
-    ax.set_xlabel('Strain')
-    ax.set_ylabel('Damage (D)')
-    ax.set_title('Damage Evolution')
-    ax.set_ylim([0, 1])
-    ax.grid(True, alpha=0.3)
+    if nrows == 1 and ncols == 1:
+        axes = np.array([axes])
+    axes_flat = axes.flatten() if hasattr(axes, "flatten") else [axes]
     
-    # Broken elements
-    ax = axes[1, 0]
-    ax.plot(damage_result['strain'], damage_result['broken_elements'], 'k-', linewidth=2)
-    ax.set_xlabel('Strain')
-    ax.set_ylabel('Broken Elements')
-    ax.set_title('Element Failure')
-    ax.grid(True, alpha=0.3)
+    for i, net in enumerate(networks):
+        label = labels[i] if labels and i < len(labels) else f"Network {i}"
+        ax = axes_flat[i]
+        ax.set_facecolor(t["bg_color"])
+        plot(net, ax=ax, color_by=color_by, theme=theme, title=label, **kwargs)
     
-    # Stiffness degradation
-    ax = axes[1, 1]
-    strain = damage_result['strain']
-    stress = damage_result['stress']
-    if len(strain) > 1:
-        stiffness = np.diff(stress) / np.diff(strain)
-        stiffness = np.abs(stiffness)
-        ax.plot(strain[1:], stiffness, 'g-', linewidth=2)
-    ax.set_xlabel('Strain')
-    ax.set_ylabel('Tangent Stiffness')
-    ax.set_title('Stiffness Degradation')
-    ax.grid(True, alpha=0.3)
+    # Hide empty subplots
+    for j in range(n, len(axes_flat)):
+        axes_flat[j].set_visible(False)
     
     plt.tight_layout()
     
     if save_path:
-        fig.savefig(save_path, dpi=300, bbox_inches='tight')
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight",
+                   facecolor=t["bg_color"])
     
-    return fig
+    return fig, axes_flat[:n]
 
 
-def plot_network_2d(
-    network,
-    color_by: str = 'fiber_id',
-    show_crosslinks: bool = True,
-    ax=None,
-    **kwargs
+def plot_statistics(
+    network: FiberNetwork,
+    theme: str = "light",
+    figsize: Tuple[float, float] = (14, 5),
+    save_path: Optional[str] = None,
+    dpi: int = 200,
 ):
-    """
-    Plot 2D fiber network.
+    """Plot network statistics: degree distribution, edge lengths, orientations.
     
     Parameters
     ----------
     network : FiberNetwork
-        2D fiber network
-    color_by : str
-        Color fibers by 'fiber_id', 'material', 'stress', or 'uniform'
-    show_crosslinks : bool
-        Whether to show crosslinks
-    ax : matplotlib Axes, optional
-        Axes to plot on
-    **kwargs
-        Additional plotting options
+        Network to analyze and plot.
+    theme : str
+        Visual theme.
+    figsize : tuple
+        Figure size.
+    save_path : str, optional
+        Path to save figure.
     
     Returns
     -------
@@ -456,72 +456,267 @@ def plot_network_2d(
     """
     import matplotlib.pyplot as plt
     
-    if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 8))
-    else:
-        fig = ax.figure
+    t = _THEMES.get(theme, _THEMES["light"])
+    fig, axes = plt.subplots(1, 3, figsize=figsize)
+    fig.patch.set_facecolor(t["bg_color"])
     
-    # Plot fibers
-    for i, fiber in enumerate(network.fibers):
-        centerline = fiber.centerline
-        ax.plot(centerline[:, 0], centerline[:, 1], linewidth=kwargs.get('linewidth', 1.0))
+    # 1. Degree distribution (from crosslinks)
+    ax = axes[0]
+    degrees = {}
+    for cl in network.crosslinks:
+        degrees[cl.fiber_i] = degrees.get(cl.fiber_i, 0) + 1
+        degrees[cl.fiber_j] = degrees.get(cl.fiber_j, 0) + 1
     
-    # Plot crosslinks
-    if show_crosslinks and hasattr(network, 'crosslinks'):
-        crosslink_positions = []
-        for crosslink in network.crosslinks:
-            crosslink_positions.append(crosslink.position)
-        
-        if len(crosslink_positions) > 0:
-            crosslink_positions = np.array(crosslink_positions)
-            ax.scatter(crosslink_positions[:, 0], crosslink_positions[:, 1],
-                      c='red', s=20, zorder=5, label='Crosslinks')
-            ax.legend()
+    if degrees:
+        deg_vals = list(degrees.values())
+        ax.hist(deg_vals, bins=max(5, max(deg_vals) - min(deg_vals) + 1),
+               color=t["fiber_color"], alpha=0.7, edgecolor="none")
+    ax.set_xlabel("Degree", color=t["text_color"], fontsize=9)
+    ax.set_ylabel("Count", color=t["text_color"], fontsize=9)
+    ax.set_title("Degree Distribution", color=t["text_color"], fontsize=11)
+    ax.tick_params(colors=t["axis_color"], labelsize=8)
+    ax.set_facecolor(t["bg_color"])
+    for s in ax.spines.values():
+        s.set_color(t["axis_color"])
     
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_aspect('equal')
-    ax.grid(True, alpha=0.3)
+    # 2. Edge length histogram
+    ax = axes[1]
+    lengths = [f.length for f in network.fibers]
+    n_bins = min(30, max(5, int(np.ptp(lengths) * 10))) if np.ptp(lengths) > 1e-10 else 1
+    ax.hist(lengths, bins=n_bins, color=t["fiber_color"], alpha=0.7, edgecolor="none")
+    ax.set_xlabel("Fiber Length", color=t["text_color"], fontsize=9)
+    ax.set_ylabel("Count", color=t["text_color"], fontsize=9)
+    ax.set_title("Length Distribution", color=t["text_color"], fontsize=11)
+    ax.tick_params(colors=t["axis_color"], labelsize=8)
+    ax.set_facecolor(t["bg_color"])
+    for s in ax.spines.values():
+        s.set_color(t["axis_color"])
+    
+    # 3. Orientation histogram (rose diagram)
+    ax = axes[2]
+    if network.dimension == 2:
+        dirs = network.fiber_orientations()
+        if len(dirs) > 0:
+            angles = np.arctan2(dirs[:, 1], dirs[:, 0])
+            ax.hist(angles, bins=36, color=t["fiber_color"], alpha=0.7,
+                   edgecolor="none", range=(-np.pi, np.pi))
+    ax.set_xlabel("Angle (rad)", color=t["text_color"], fontsize=9)
+    ax.set_ylabel("Count", color=t["text_color"], fontsize=9)
+    ax.set_title("Orientation Distribution", color=t["text_color"], fontsize=11)
+    ax.tick_params(colors=t["axis_color"], labelsize=8)
+    ax.set_facecolor(t["bg_color"])
+    for s in ax.spines.values():
+        s.set_color(t["axis_color"])
+    
+    plt.tight_layout()
+    
+    if save_path:
+        fig.savefig(save_path, dpi=dpi, bbox_inches="tight",
+                   facecolor=t["bg_color"])
     
     return fig
 
 
-def plot_network_3d(
-    network,
-    background: str = 'white',
-    window_size: tuple = (1024, 768),
-    save_path: str = None,
-    **kwargs
-):
+# ============================================================================
+# Convenience Wrappers (backward compatibility)
+# ============================================================================
+
+def visualize_3d_matplotlib(network, **kwargs):
+    """Alias for plot_3d."""
+    return plot_3d(network, **kwargs)
+
+
+def visualize_3d_pyvista(network, **kwargs):
+    """Interactive 3D using pyvista (if available)."""
+    try:
+        import pyvista as pv
+    except ImportError:
+        raise ImportError("pyvista required: pip install pyvista")
+    
+    plotter = pv.Plotter(window_size=kwargs.get("window_size", (1024, 768)),
+                        off_screen=kwargs.get("off_screen", False))
+    plotter.set_background(kwargs.get("background", "white"))
+    
+    for fiber in network.fibers:
+        cl = fiber.centerline
+        if len(cl) >= 2:
+            line = pv.Spline(cl, n_points=len(cl))
+            tube = line.tube(radius=kwargs.get("fiber_radius", fiber.radius))
+            plotter.add_mesh(tube, color=kwargs.get("color", "blue"),
+                           smooth_shading=True)
+    
+    if not plotter.off_screen:
+        plotter.show()
+    elif kwargs.get("save_path"):
+        plotter.screenshot(kwargs["save_path"])
+    
+    return plotter
+
+
+def plot_network_2d(network, **kwargs):
+    """Alias for plot() for backward compatibility."""
+    return plot(network, **kwargs)
+
+
+def plot_network_3d(network, **kwargs):
+    """Alias for plot_3d() for backward compatibility."""
+    return plot_3d(network, **kwargs)
+
+
+def plot_graph(G, **kwargs):
+    """Plot a NetworkX graph as fiber network."""
+    net = FiberNetwork.from_networkx(G) if hasattr(FiberNetwork, "from_networkx") else None
+    if net is not None:
+        return plot(net, **kwargs)
+    raise TypeError("Cannot plot NetworkX graph directly. Convert to FiberNetwork first.")
+
+
+def plot_graph_comparison(graphs, labels=None, **kwargs):
+    """Compare multiple NetworkX graphs."""
+    nets = []
+    for G in graphs:
+        if hasattr(FiberNetwork, "from_networkx"):
+            nets.append(FiberNetwork.from_networkx(G))
+    return plot_comparison(nets, labels=labels, **kwargs)
+
+
+# Aliases
+render_network_3d = plot_network_3d
+
+
+def save_figure(fig, path: str, dpi: int = 300, transparent: bool = False):
+    """Save a matplotlib figure with high quality settings.
+    
+    Parameters
+    ----------
+    fig : matplotlib Figure
+        Figure to save.
+    path : str
+        Output file path.
+    dpi : int
+        Resolution.
+    transparent : bool
+        Transparent background.
     """
-    Plot 3D fiber network.
+    fig.savefig(path, dpi=dpi, bbox_inches="tight",
+               transparent=transparent, pad_inches=0.1)
+
+
+# ============================================================================
+# Dynamics and Damage Visualization
+# ============================================================================
+
+def visualize_deformation(
+    network: FiberNetwork,
+    displacement_history: List[np.ndarray],
+    interval: int = 50,
+    save_path: Optional[str] = None,
+    theme: str = "light",
+    **kwargs,
+):
+    """Animate deformation of a fiber network over time.
     
     Parameters
     ----------
     network : FiberNetwork
-        3D fiber network
-    background : str
-        Background color
-    window_size : tuple
-        Window size (width, height)
+        Original (undeformed) network.
+    displacement_history : list of ndarray
+        List of Nx3 displacement arrays (one per timestep).
+    interval : int
+        Animation interval in ms.
     save_path : str, optional
-        Path to save screenshot
-    **kwargs
-        Additional plotting options
+        Path to save animation (.mp4 or .gif).
+    
+    Returns
+    -------
+    anim : FuncAnimation
     """
-    # Use pyvista if available, otherwise matplotlib
-    try:
-        return visualize_3d_pyvista(
-            network,
-            background=background,
-            window_size=window_size,
-            save_path=save_path,
-            off_screen=kwargs.get('off_screen', True)
-        )
-    except ImportError:
-        # Fall back to matplotlib
-        return visualize_3d_matplotlib(network, **kwargs)
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+    
+    t = _THEMES.get(theme, _THEMES["light"])
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor(t["bg_color"])
+    ax.set_facecolor(t["bg_color"])
+    
+    lines = []
+    for fiber in network.fibers:
+        cl = fiber.centerline
+        line, = ax.plot(cl[:, 0], cl[:, 1], color=t["fiber_color"],
+                       linewidth=max(fiber.radius * 5, 0.3),
+                       solid_capstyle="round")
+        lines.append(line)
+    
+    def update(frame):
+        disp = displacement_history[frame]
+        for i, (fiber, line) in enumerate(zip(network.fibers, lines)):
+            cl = fiber.centerline
+            # Displaced positions
+            if len(cl) == len(disp):
+                displaced = cl + disp
+            else:
+                # Fallback
+                displaced = cl + disp[:len(cl)] if len(disp) > len(cl) else cl
+            line.set_data(displaced[:, 0], displaced[:, 1])
+        return lines
+    
+    anim = FuncAnimation(fig, update, frames=len(displacement_history),
+                        interval=interval, blit=True)
+    
+    if save_path:
+        if save_path.endswith(".mp4"):
+            anim.save(save_path, writer="ffmpeg", fps=1000 // interval)
+        elif save_path.endswith(".gif"):
+            anim.save(save_path, writer="pillow", fps=1000 // interval)
+    
+    return anim
 
 
-# Alias for compatibility
-render_network_3d = plot_network_3d
+def visualize_damage_evolution(damage_result: dict, save_path=None, theme="light"):
+    """Visualize progressive damage: stress-strain, damage, broken elements."""
+    import matplotlib.pyplot as plt
+    
+    t = _THEMES.get(theme, _THEMES["light"])
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.patch.set_facecolor(t["bg_color"])
+    
+    plots = [
+        (axes[0, 0], "strain", "stress", "Stress-Strain"),
+        (axes[0, 1], "strain", "damage", "Damage Evolution"),
+        (axes[1, 0], "strain", "broken_elements", "Element Failure"),
+    ]
+    
+    for ax, xkey, ykey, title in plots:
+        ax.set_facecolor(t["bg_color"])
+        ax.plot(damage_result[xkey], damage_result[ykey],
+               color=t["fiber_color"], linewidth=2)
+        ax.set_xlabel(xkey.capitalize(), color=t["text_color"], fontsize=9)
+        ax.set_ylabel(ykey.replace("_", " ").capitalize(),
+                     color=t["text_color"], fontsize=9)
+        ax.set_title(title, color=t["text_color"], fontsize=11)
+        ax.tick_params(colors=t["axis_color"], labelsize=8)
+        ax.grid(True, alpha=0.2)
+        for s in ax.spines.values():
+            s.set_color(t["axis_color"])
+    
+    # Stiffness degradation
+    ax = axes[1, 1]
+    ax.set_facecolor(t["bg_color"])
+    strain = damage_result["strain"]
+    stress = damage_result["stress"]
+    if len(strain) > 1:
+        stiffness = np.abs(np.diff(stress) / np.diff(strain))
+        ax.plot(strain[1:], stiffness, color=t["fiber_color"], linewidth=2)
+    ax.set_xlabel("Strain", color=t["text_color"], fontsize=9)
+    ax.set_ylabel("Tangent Stiffness", color=t["text_color"], fontsize=9)
+    ax.set_title("Stiffness Degradation", color=t["text_color"], fontsize=11)
+    ax.tick_params(colors=t["axis_color"], labelsize=8)
+    ax.grid(True, alpha=0.2)
+    for s in ax.spines.values():
+        s.set_color(t["axis_color"])
+    
+    plt.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=200, bbox_inches="tight",
+                   facecolor=t["bg_color"])
+    return fig

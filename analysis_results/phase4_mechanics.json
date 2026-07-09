@@ -1,0 +1,142 @@
+{
+  "disordered_oriented": {
+    "n_fibers": 111,
+    "n_elements": 333,
+    "n_dof": 1770,
+    "max_displacement_m": 1.0576e-06,
+    "max_stress_Pa": 65.64,
+    "strain_energy_J": 2.4e-07,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 105.6
+  },
+  "disordered_random": {
+    "n_fibers": 116,
+    "n_elements": 348,
+    "n_dof": 1848,
+    "max_displacement_m": 0.0014168017,
+    "max_stress_Pa": 955.99,
+    "strain_energy_J": 0.00138847,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 137.5
+  },
+  "meta_arrowhead": {
+    "n_fibers": 256,
+    "n_elements": 630,
+    "n_dof": 2766,
+    "max_displacement_m": 1.0548e-06,
+    "max_stress_Pa": 11.13,
+    "strain_energy_J": 1.01e-06,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 205.8
+  },
+  "meta_star": {
+    "n_fibers": 216,
+    "n_elements": 633,
+    "n_dof": 3366,
+    "max_displacement_m": 2.06662e-05,
+    "max_stress_Pa": 28.53,
+    "strain_energy_J": 5.97e-06,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 195.5
+  },
+  "ordered_square": {
+    "n_fibers": 84,
+    "n_elements": 252,
+    "n_dof": 1302,
+    "max_displacement_m": 2.81266e-05,
+    "max_stress_Pa": 426.38,
+    "strain_energy_J": 6.103e-05,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 87.2
+  },
+  "ordered_triangular": {
+    "n_fibers": 449,
+    "n_elements": 1317,
+    "n_dof": 6684,
+    "max_displacement_m": 1.511e-07,
+    "max_stress_Pa": 49.56,
+    "strain_energy_J": 1.1e-07,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 441.2
+  },
+  "regular_p0.0": {
+    "n_fibers": 144,
+    "n_elements": 432,
+    "n_dof": 1248,
+    "max_displacement_m": 7.38e-08,
+    "max_stress_Pa": 10.23,
+    "strain_energy_J": 2e-08,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 133.4
+  },
+  "regular_p0.1": {
+    "n_fibers": 108,
+    "n_elements": 324,
+    "n_dof": 1824,
+    "max_displacement_m": 3.02e-08,
+    "max_stress_Pa": 55.49,
+    "strain_energy_J": 1e-08,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 101.7
+  },
+  "regular_p0.3": {
+    "n_fibers": 108,
+    "n_elements": 324,
+    "n_dof": 1824,
+    "max_displacement_m": 5.86e-08,
+    "max_stress_Pa": 42.71,
+    "strain_energy_J": 1e-08,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 95.8
+  },
+  "regular_p0.5": {
+    "n_fibers": 108,
+    "n_elements": 324,
+    "n_dof": 1416,
+    "max_displacement_m": 4.09e-08,
+    "max_stress_Pa": 26.32,
+    "strain_energy_J": 1e-08,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 99.0
+  },
+  "woven_plain": {
+    "n_fibers": 112,
+    "n_elements": 336,
+    "n_dof": 1728,
+    "max_displacement_m": 1.01e-06,
+    "max_stress_Pa": 90.08,
+    "strain_energy_J": 9.3e-07,
+    "effective_modulus_Pa": 9152157210.11,
+    "solve_time_ms": 107.0
+  },
+  "woven_twill": {
+    "n_fibers": 112,
+    "n_elements": 336,
+    "n_dof": 1728,
+    "max_displacement_m": 2.0427e-06,
+    "max_stress_Pa": 70.76,
+    "strain_energy_J": 5.7e-07,
+    "effective_modulus_Pa": 9370525243.27,
+    "solve_time_ms": 104.7
+  },
+  "zigzag_mxFalse_myTrue": {
+    "n_fibers": 75,
+    "n_elements": 225,
+    "n_dof": 1296,
+    "max_displacement_m": 0.0130984254,
+    "max_stress_Pa": 18.38,
+    "strain_energy_J": 0.00378138,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 70.8
+  },
+  "zigzag_mxTrue_myTrue": {
+    "n_fibers": 75,
+    "n_elements": 225,
+    "n_dof": 1236,
+    "max_displacement_m": 1.3214939917,
+    "max_stress_Pa": 47.16,
+    "strain_energy_J": 0.38147024,
+    "effective_modulus_Pa": 0,
+    "solve_time_ms": 85.7
+  }
+}

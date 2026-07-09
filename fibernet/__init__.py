@@ -26,7 +26,7 @@ Quick Start
 For more examples, see the tutorials/ directory.
 """
 
-__version__ = "1.25.0"
+__version__ = "2.0.0"
 __author__ = "ML-BioMat Lab"
 
 # Core data structures
@@ -54,6 +54,50 @@ from .sim.acoustic import AcousticSolver
 
 # Visualization module
 from . import viz
+from . import graph  # Graph I/O and weld operations
+from .graph import (
+    to_networkx, from_networkx,
+    load_graph_json, save_graph_json,
+    weld_graph, find_intersections, merge_coincident_nodes,
+)
+from .gen.regular import RegularNetworkGenerator
+from .gen.zigzag import ZigZagGenerator
+from .analysis.graph_features import GraphFeatureExtractor
+
+# Graph visualization
+from .viz.graph_plot import plot_graph, plot_graph_comparison, plot_structure_stats
+
+
+def extract_features(network_or_graph, canvas_size=512, thick=5, **kwargs):
+    """Convenience function to extract 94-dimensional features.
+
+    Parameters
+    ----------
+    network_or_graph : nx.Graph or FiberNetwork
+        The network to analyze.
+    canvas_size : int
+        Resolution for image-based analysis.
+    thick : int
+        Line thickness for rendering.
+    **kwargs
+        Additional arguments passed to GraphFeatureExtractor.
+
+    Returns
+    -------
+    dict
+        94-dimensional feature dictionary.
+
+    Examples
+    --------
+    >>> import fibernet as fn
+    >>> gen = fn.RegularNetworkGenerator(side_length=10, tiling=3)
+    >>> G = gen.generate()
+    >>> features = fn.extract_features(G)
+    >>> print(f"Nodes: {features['n_node']}, Edges: {features['n_edge']}")
+    """
+    extractor = GraphFeatureExtractor(canvas_size=canvas_size, thick=thick, **kwargs)
+    return extractor.extract(network_or_graph)
+
 
 # ML module (optional)
 try:
@@ -116,6 +160,23 @@ __all__ = [
     "ml",
     "utils",
     
+    # Graph operations
+    "graph",
+    "to_networkx",
+    "from_networkx",
+    "load_graph_json",
+    "save_graph_json",
+    "weld_graph",
+    "find_intersections",
+    "merge_coincident_nodes",
+    "plot_graph",
+    "plot_graph_comparison",
+    "plot_structure_stats",
+    "extract_features",
+    # Generators
+    "RegularNetworkGenerator",
+    "ZigZagGenerator",
+    "GraphFeatureExtractor",
     # Metadata
     "__version__",
     "__author__",

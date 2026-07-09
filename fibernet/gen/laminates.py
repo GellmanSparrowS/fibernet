@@ -23,6 +23,50 @@ from fibernet.core.fiber import Fiber
 from fibernet.core.material import Material
 
 
+
+def _add_laminate_crosslinks(net, tie_spacing=8.0, tie_radius=0.05):
+    """Add transverse cross-tie fibers to connect laminate layers."""
+    import numpy as np
+    from fibernet.core.fiber import Fiber
+    from fibernet.core.material import Material
+    
+    if net.num_fibers == 0:
+        return
+    
+    all_pts = np.vstack([f.centerline for f in net.fibers])
+    pmin = all_pts.min(axis=0)
+    pmax = all_pts.max(axis=0)
+    
+    mat = net.fibers[0].material or Material(name="cross_tie")
+    fiber_id = net.num_fibers
+    
+    if net.dimension == 2:
+        # Add vertical ties
+        for x in np.arange(pmin[0] + tie_spacing, pmax[0], tie_spacing):
+            fiber = Fiber.straight(
+                np.array([x, pmin[1] - 0.5, 0.0]),
+                np.array([x, pmax[1] + 0.5, 0.0]),
+                radius=tie_radius, material=mat, fiber_id=fiber_id
+            )
+            net.add_fiber(fiber)
+            fiber_id += 1
+    else:
+        # Add z-direction ties
+        z_range = pmax[2] - pmin[2]
+        if z_range > 0.1:
+            for x in np.arange(pmin[0] + tie_spacing, pmax[0], tie_spacing):
+                for y in np.arange(pmin[1] + tie_spacing, pmax[1], tie_spacing):
+                    fiber = Fiber.straight(
+                        np.array([x, y, pmin[2] - 0.5]),
+                        np.array([x, y, pmax[2] + 0.5]),
+                        radius=tie_radius, material=mat, fiber_id=fiber_id
+                    )
+                    net.add_fiber(fiber)
+                    fiber_id += 1
+    
+    net.auto_crosslink(threshold=tie_spacing * 0.3)
+
+
 def unidirectional_laminate(
     num_layers: int = 4,
     fibers_per_layer: int = 20,
@@ -107,6 +151,13 @@ def unidirectional_laminate(
             net.add_fiber(fiber)
             fiber_id += 1
     
+    # Add cross-ties and crosslinks
+    _add_laminate_crosslinks(net)
+
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 
@@ -187,6 +238,9 @@ def crossply_laminate(
             net.add_fiber(fiber)
             fiber_id += 1
     
+    # Add cross-ties and crosslinks
+    _add_laminate_crosslinks(net)
+
     return net
 
 
@@ -270,6 +324,13 @@ def angle_ply_laminate(
             net.add_fiber(fiber)
             fiber_id += 1
     
+    # Add cross-ties and crosslinks
+    _add_laminate_crosslinks(net)
+
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+    
     return net
 
 
@@ -351,6 +412,13 @@ def quasi_isotropic_laminate(
             )
             net.add_fiber(fiber)
             fiber_id += 1
+    
+    # Add cross-ties and crosslinks
+    _add_laminate_crosslinks(net)
+
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
     
     return net
 
@@ -546,6 +614,9 @@ def sandwich_laminate(
             net.add_fiber(fiber)
             fiber_id += 1
     
+    # Add cross-ties and crosslinks
+    _add_laminate_crosslinks(net)
+
     return net
 
 

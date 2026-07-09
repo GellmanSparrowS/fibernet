@@ -25,13 +25,13 @@ from fibernet.core.material import Material
 
 
 def density_gradient_2d(
-    num_fibers: int = 100,
-    fiber_length: float = 10.0,
-    box_size: Tuple[float, float] = (50.0, 50.0),
+    num_fibers: int = 200,
+    fiber_length: float = 8.0,
+    box_size: Tuple[float, float] = (60.0, 60.0),
     gradient_direction: str = 'x',
     gradient_profile: str = 'linear',
-    min_density: float = 0.5,
-    max_density: float = 2.0,
+    min_density: float = 0.2,
+    max_density: float = 5.0,
     radius: float = 0.1,
     material: Optional[Material] = None,
     seed: Optional[int] = None,
@@ -141,6 +141,12 @@ def density_gradient_2d(
         net.add_fiber(Fiber.straight(start, end, radius=radius, material=material, fiber_id=fiber_id))
         fiber_id += 1
     
+    # Auto-detect and add crosslinks
+    net.auto_crosslink(threshold=3.0)
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net)
+
     return net
 
 
@@ -256,6 +262,12 @@ def property_gradient_2d(
         # Add fiber
         net.add_fiber(Fiber.straight(start, end, radius=radius, material=mat, fiber_id=fiber_id))
     
+    # Auto-detect and add crosslinks
+    net.auto_crosslink(threshold=3.0)
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net)
+
     return net
 
 

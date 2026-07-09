@@ -14,6 +14,7 @@ from typing import Optional, Tuple, List
 from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.material import Material
+from fibernet.gen.disordered import _detect_intersections_3d, _bridge_if_needed
 
 
 def single_helix(
@@ -164,6 +165,16 @@ def braided_rope(
         fiber = Fiber(centerline=points, radius=fiber_radius, material=mat, fiber_id=s)
         net.add_fiber(fiber)
     
+    # Detect intersections between strands
+    intersections = _detect_intersections_3d(net.fibers, threshold_factor=3.0)
+    for (fi, fj, pi, pj, pos) in intersections:
+        net.add_crosslink(Crosslink(
+            fiber_i=fi, fiber_j=fj,
+            param_i=pi, param_j=pj,
+            position=pos,
+            crosslink_type="welded",
+        ))
+    
     return net
 
 
@@ -175,7 +186,7 @@ def twisted_bundle(
     total_length: float = 50.0,
     packing: str = "hexagonal",
     material: Optional[Material] = None,
-    num_points: int = 200,
+    num_points: int = 100,
     seed: Optional[int] = None,
 ) -> FiberNetwork:
     """Generate a twisted fiber bundle.
@@ -221,6 +232,18 @@ def twisted_bundle(
         fiber = Fiber(centerline=points, radius=fiber_radius, material=mat, fiber_id=idx)
         net.add_fiber(fiber)
     
+    # Detect intersections between twisted fibers
+    intersections = _detect_intersections_3d(net.fibers, threshold_factor=1.0)
+    for (fi, fj, pi, pj, pos) in intersections:
+        net.add_crosslink(Crosslink(
+            fiber_i=fi, fiber_j=fj,
+            param_i=pi, param_j=pj,
+            position=pos,
+            crosslink_type="welded",
+        ))
+    
+    net.auto_crosslink(threshold=1.0)
+
     return net
 
 
@@ -268,6 +291,16 @@ def chiral_metamaterial(
                 )
                 net.add_fiber(fiber)
                 fid += 1
+    
+    # Detect intersections between helices in different cells
+    intersections = _detect_intersections_3d(net.fibers, threshold_factor=2.0)
+    for (fi, fj, pi, pj, pos) in intersections:
+        net.add_crosslink(Crosslink(
+            fiber_i=fi, fiber_j=fj,
+            param_i=pi, param_j=pj,
+            position=pos,
+            crosslink_type="welded",
+        ))
     
     return net
 

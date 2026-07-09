@@ -63,3 +63,9 @@ from fibernet.analysis.percolation import (
 __all__ += [
     "PercolationAnalyzer", "PercolationResult", "estimate_percolation_threshold",
 ]
+
+# Graph feature extraction (94-dim)
+from fibernet.analysis.graph_features import GraphFeatureExtractor
+__all__ += [
+    "GraphFeatureExtractor",
+]

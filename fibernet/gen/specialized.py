@@ -95,7 +95,9 @@ def cnt_network_2d(
             )
             net.add_fiber(tube)
     
-    net.auto_crosslink(threshold=diameter * 3)
+    net.auto_crosslink(threshold=max(diameter * 50, 2.0))
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
     return net
 
 
@@ -171,7 +173,9 @@ def cnt_network_3d(
             )
             net.add_fiber(tube)
     
-    net.auto_crosslink(threshold=diameter * 3)
+    net.auto_crosslink(threshold=max(diameter * 50, 2.0))
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
     return net
 
 
@@ -369,6 +373,9 @@ def textile_weave(
         )
         net.add_fiber(fiber)
     
+    # Auto-detect and add crosslinks with larger threshold
+    net.auto_crosslink(threshold=2.0)
+
     return net
 
 
@@ -459,7 +466,7 @@ def electrospun_mat(
         )
         net.add_fiber(fiber)
     
-    net.auto_crosslink(threshold=fiber_diameter * 3)
+    net.auto_crosslink(threshold=max(fiber_diameter * 50, 1.0))
     return net
 
 
@@ -565,5 +572,12 @@ def fiber_reinforced_composite(
             fiber_id=len(net.fibers),
         )
         net.add_fiber(fiber)
+    
+    # Auto-detect crosslinks
+    net.auto_crosslink(threshold=1.0)
+    
+    # Ensure connected
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
     
     return net

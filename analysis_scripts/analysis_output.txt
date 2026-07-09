@@ -1,0 +1,284 @@
+
+
+╔==============================================================================╗
+║                    FIBERNET GENERATOR ANALYSIS REPORT                       ║
+║               Comparing Current Implementation vs References                ║
+╚==============================================================================╝
+[Taichi] version 1.7.4, llvm 15.0.4, commit b4b956fd, linux, python 3.12.3
+================================================================================
+2D LATTICE GENERATORS (unified.lattice_2d)
+================================================================================
+
+  square:
+    Fibers: 144
+    Crosslinks: 382
+    Connected: True
+    Components: 1
+    Mean degree: 5.31
+    Degree range: [3, 6]
+
+  honeycomb:
+    Fibers: 225
+    Crosslinks: 416
+    Connected: True
+    Components: 1
+    Mean degree: 3.70
+    Degree range: [2, 4]
+
+  triangular:
+    Fibers: 208
+    Crosslinks: 911
+    Connected: True
+    Components: 1
+    Mean degree: 8.76
+    Degree range: [4, 10]
+
+  kagome:
+    Fibers: 768
+    Crosslinks: 1692
+    Connected: True
+    Components: 1
+    Mean degree: 4.24
+    Degree range: [2, 8]
+
+================================================================================
+2D METAMATERIAL GENERATORS (unified.metamaterial_2d)
+================================================================================
+
+  reentrant:
+    Fibers: 216
+    Crosslinks: 456
+    Connected: True
+    Components: 1
+    Mean degree: 4.22
+
+  star:
+    Fibers: 288
+    Crosslinks: 528
+    Connected: True
+    Components: 1
+    Mean degree: 3.67
+
+  arrowhead:
+    Fibers: 144
+    Crosslinks: 384
+    Connected: True
+    Components: 1
+    Mean degree: 5.33
+
+  chiral:
+    Fibers: 372
+    Crosslinks: 606
+    Connected: True
+    Components: 1
+    Mean degree: 3.26
+
+  missing_rib:
+    Fibers: 216
+    Crosslinks: 844
+    Connected: True
+    Components: 1
+    Mean degree: 7.72
+
+================================================================================
+3D LATTICE GENERATORS (unified.lattice_3d)
+================================================================================
+
+  cubic:
+    Fibers: 300
+    Crosslinks: 1185
+    Connected: True
+    Components: 1
+    Mean degree: 7.90
+
+  octet:
+    Fibers: 780
+    Crosslinks: 9759
+    Connected: True
+    Components: 1
+    Mean degree: 25.02
+
+  diamond:
+    Fibers: 840
+    Crosslinks: 5040
+    Connected: False
+    Components: 4
+    Mean degree: 12.00
+
+================================================================================
+FRACTAL GENERATORS
+================================================================================
+
+  sierpinski(iter=4):
+    Fibers: 243
+    Crosslinks: 723
+    Connected: True
+    Mean degree: 5.95
+
+  koch(iter=3):
+    Fibers: 64
+    Crosslinks: 63
+    Connected: True
+    Mean degree: 1.97
+
+  fractal_tree(iter=5):
+    Fibers: 31
+    Crosslinks: 45
+    Connected: True
+    Mean degree: 2.90
+
+  hilbert(order=3):
+    Fibers: 63
+    Crosslinks: 62
+    Connected: True
+    Mean degree: 1.97
+
+================================================================================
+HIERARCHICAL LATTICE GENERATOR
+================================================================================
+
+  CURRENT IMPLEMENTATION: Edge subdivision + cross-brace
+  TRUE HIERARCHICAL: Replace each edge with scaled copy of base lattice
+
+  triangular (levels=1):
+    Fibers: 15
+    Crosslinks: 27
+    Connected: True
+    Mean degree: 3.60
+
+  triangular (levels=2):
+    Fibers: 39
+    Crosslinks: 75
+    Connected: True
+    Mean degree: 3.85
+
+  triangular (levels=3):
+    Fibers: 87
+    Crosslinks: 171
+    Connected: True
+    Mean degree: 3.93
+
+  square (levels=1):
+    Fibers: 20
+    Crosslinks: 36
+    Connected: True
+    Mean degree: 3.60
+
+  square (levels=2):
+    Fibers: 52
+    Crosslinks: 100
+    Connected: True
+    Mean degree: 3.85
+
+  square (levels=3):
+    Fibers: 116
+    Crosslinks: 228
+    Connected: True
+    Mean degree: 3.93
+
+  honeycomb (levels=1):
+    Fibers: 30
+    Crosslinks: 54
+    Connected: True
+    Mean degree: 3.60
+
+  honeycomb (levels=2):
+    Fibers: 78
+    Crosslinks: 150
+    Connected: True
+    Mean degree: 3.85
+
+  honeycomb (levels=3):
+    Fibers: 174
+    Crosslinks: 342
+    Connected: True
+    Mean degree: 3.93
+
+================================================================================
+REGULAR NETWORK GENERATOR (P1_Gen_dataset_regular_net reference)
+================================================================================
+
+  KEY MISSING FEATURE: Edge intersection detection + welding
+  P1_Gen uses Shapely to find crossing edges and adds intersection nodes
+
+  nx.Graph: 192 nodes, 192 edges
+  FiberNetwork: 192 fibers, 456 crosslinks
+  Connected: True
+
+  NOTE: With perturbation, edges may cross without proper junction nodes
+  P1_Gen's intersection_graph() would add these junctions
+
+================================================================================
+ZIGZAG GENERATOR (pattern.ipynb reference)
+================================================================================
+
+  nx.Graph: 138 nodes, 200 edges
+  FiberNetwork: 200 fibers, 478 crosslinks
+  Connected: True
+  Components: 1
+
+================================================================================
+CAPABILITY COMPARISON: Current vs Reference
+================================================================================
+
+P1_Gen_dataset_regular_net:
+  ✅ Base unit:
+     Reference: Square + N midpoints per edge
+     Current:   Square + N midpoints per edge
+  ✅ Perturbation:
+     Reference: 4-fold symmetric (move_AB)
+     Current:   4-fold symmetric (move_AB)
+  ✅ Tiling:
+     Reference: N×N grid + scale
+     Current:   N×N grid + scale
+  ❌ Edge intersection:
+     Reference: Shapely-based detection
+     Current:   ❌ MISSING
+  ❌ Welding:
+     Reference: Intersection nodes + Remove_self_join
+     Current:   ❌ MISSING
+
+pattern.ipynb (ZigZag):
+  ✅ Base unit:
+     Reference: Arbitrary polyline
+     Current:   Arbitrary polyline
+  ✅ Mirror:
+     Reference: mirror_x, mirror_y
+     Current:   mirror_x, mirror_y
+  ✅ Tiling:
+     Reference: n_cols × n_rows
+     Current:   n_cols × n_rows
+  ✅ Welding:
+     Reference: Hash-key deduplication
+     Current:   Hash-key deduplication
+
+HierarchicalDesign (lamm-mit):
+  ⚠️ Approach:
+     Reference: True self-similar (edge replacement)
+     Current:   Edge subdivision + cross-brace
+  ⚠️ Base topologies:
+     Reference: Honeycomb variants (H1-H4)
+     Current:   triangular/square/honeycomb
+  ❌ Self-similarity:
+     Reference: ✅ Each edge → scaled base lattice
+     Current:   ❌ Only midpoint subdivision
+  ⚠️ Levels:
+     Reference: 4+ levels demonstrated
+     Current:   Arbitrary levels (but not true hierarchy)
+
+================================================================================
+ANALYSIS COMPLETE
+================================================================================
+
+Key findings:
+  1. All basic 2D lattices/metamaterials work and are connected ✅
+  2. RegularNetworkGenerator missing edge intersection welding ❌
+  3. Hierarchical lattice is NOT true self-similar ❌
+  4. 3D diamond lattice has connectivity issues ❌
+  5. Base unit system is not flexible enough ⚠️
+
+Recommendations:
+  - Add edge intersection detection to RegularNetworkGenerator
+  - Implement true hierarchical (edge replacement) algorithm
+  - Design flexible base unit API for pattern_2d/pattern_3d
+  - Fix diamond lattice 3D connectivity

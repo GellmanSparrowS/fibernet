@@ -94,6 +94,9 @@ def hierarchical_bundle(
             _generate_level(sub_cx, sub_cy, level + 1, next_twist)
     
     _generate_level(0.0, 0.0, 0, 0.0)
+    # Auto-detect and add crosslinks
+    net.auto_crosslink(threshold=0.5)
+
     return net
 
 
@@ -156,6 +159,9 @@ def gradient_density_network(
         net.add_fiber(Fiber.straight(start, end, radius=radius, material=mat, fiber_id=net.num_fibers))
     
     net.auto_crosslink(threshold=2.5 * radius)
+    from fibernet.gen.disordered import _ensure_connected
+    _ensure_connected(net, max_gap_factor=5.0)
+
     return net
 
 
@@ -196,6 +202,9 @@ def core_shell_fiber(
             material=mat_shell, fiber_id=i + 1,
         ))
     
+    # Auto-detect and add crosslinks
+    net.auto_crosslink(threshold=0.5)
+
     return net
 
 
@@ -266,4 +275,7 @@ def fractal_network(
     
     bb_min, bb_max = net.bounding_box()
     net.box_size = bb_max - bb_min + 1e-6
+    # Auto-detect and add crosslinks
+    net.auto_crosslink(threshold=0.5)
+
     return net
