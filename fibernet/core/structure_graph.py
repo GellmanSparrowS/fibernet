@@ -166,6 +166,8 @@ class StructureGraph:
 
         # Spatial hash for fast node merging
         self._spatial_hash: Dict[Tuple[int, int, int], List[int]] = {}
+        # Edge set for deduplication: frozenset({node_i, node_j}) → edge_id
+        self._edge_set: Dict[frozenset, int] = {}
 
     # ------------------------------------------------------------------
     # Properties
@@ -338,6 +340,11 @@ class StructureGraph:
         if node_i not in self._nodes or node_j not in self._nodes:
             raise ValueError(f"Node {node_i} or {node_j} not in graph")
 
+        # Deduplicate: if edge between these nodes already exists, return existing
+        edge_key = frozenset({node_i, node_j})
+        if edge_key in self._edge_set:
+            return self._edge_set[edge_key]
+
         if internal_points is None and n_internal > 0:
             pi = self._nodes[node_i].position
             pj = self._nodes[node_j].position
@@ -356,12 +363,15 @@ class StructureGraph:
             metadata=dict(metadata),
         )
         self._edges[eid] = edge
+        self._edge_set[frozenset({node_i, node_j})] = eid
         self._next_edge_id += 1
         return eid
 
     def remove_edge(self, edge_id: int):
         """Remove an edge by ID."""
-        self._edges.pop(edge_id, None)
+        edge = self._edges.pop(edge_id, None)
+        if edge is not None:
+            self._edge_set.pop(frozenset({edge.node_i, edge.node_j}), None)
 
     # ------------------------------------------------------------------
     # Bulk operations
@@ -550,6 +560,7 @@ class StructureGraph:
             key = g._pos_key(node.position)
             g._spatial_hash.setdefault(key, []).append(nid)
         g._next_node_id = self._next_node_id
+        g._edge_set = dict(self._edge_set)
         for eid, edge in self._edges.items():
             new_edge = SEdge(
                 node_i=edge.node_i,
