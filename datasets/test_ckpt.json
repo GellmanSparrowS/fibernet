@@ -1,0 +1,713 @@
+{
+ "features": [
+  {
+   "n_nodes": 36,
+   "n_edges": 48,
+   "density": 1.3333333333333333,
+   "n_components": 1,
+   "mean_degree": 2.6666666666666665,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7453559924999298,
+   "total_length": 261.2461179749811,
+   "mean_edge_length": 5.442627457812105,
+   "std_edge_length": 0.25555108191853904,
+   "min_edge_length": 5.0,
+   "max_edge_length": 5.5901699437494745,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.29027346441664564,
+   "mean_radius": 0.049999999999999996,
+   "std_radius": 6.938893903907228e-18,
+   "unit_type": "honeycomb"
+  },
+  {
+   "n_nodes": 36,
+   "n_edges": 48,
+   "density": 1.3333333333333333,
+   "n_components": 1,
+   "mean_degree": 2.6666666666666665,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7453559924999298,
+   "total_length": 261.2461179749811,
+   "mean_edge_length": 5.442627457812105,
+   "std_edge_length": 0.25555108191853904,
+   "min_edge_length": 5.0,
+   "max_edge_length": 5.5901699437494745,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.29027346441664564,
+   "mean_radius": 0.09999999999999999,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "honeycomb"
+  },
+  {
+   "n_nodes": 90,
+   "n_edges": 130,
+   "density": 1.4444444444444444,
+   "n_components": 1,
+   "mean_degree": 2.888888888888889,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7370277311900889,
+   "total_length": 709.0169943749474,
+   "mean_edge_length": 5.453976879807288,
+   "std_edge_length": 0.24865337765626325,
+   "min_edge_length": 5.0,
+   "max_edge_length": 5.5901699437494745,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.283606797749979,
+   "mean_radius": 0.049999999999999996,
+   "std_radius": 6.938893903907228e-18,
+   "unit_type": "honeycomb"
+  },
+  {
+   "n_nodes": 90,
+   "n_edges": 130,
+   "density": 1.4444444444444444,
+   "n_components": 1,
+   "mean_degree": 2.888888888888889,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7370277311900889,
+   "total_length": 709.0169943749474,
+   "mean_edge_length": 5.453976879807288,
+   "std_edge_length": 0.24865337765626325,
+   "min_edge_length": 5.0,
+   "max_edge_length": 5.5901699437494745,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.283606797749979,
+   "mean_radius": 0.09999999999999999,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "honeycomb"
+  },
+  {
+   "n_nodes": 16,
+   "n_edges": 24,
+   "density": 1.5,
+   "n_components": 1,
+   "mean_degree": 3.0,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7071067811865476,
+   "total_length": 240.0,
+   "mean_edge_length": 10.0,
+   "std_edge_length": 0.0,
+   "min_edge_length": 10.0,
+   "max_edge_length": 10.0,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.26666666666666666,
+   "mean_radius": 0.05000000000000001,
+   "std_radius": 6.938893903907228e-18,
+   "unit_type": "square"
+  },
+  {
+   "n_nodes": 16,
+   "n_edges": 24,
+   "density": 1.5,
+   "n_components": 1,
+   "mean_degree": 3.0,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.7071067811865476,
+   "total_length": 240.0,
+   "mean_edge_length": 10.0,
+   "std_edge_length": 0.0,
+   "min_edge_length": 10.0,
+   "max_edge_length": 10.0,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.26666666666666666,
+   "mean_radius": 0.10000000000000002,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "square"
+  },
+  {
+   "n_nodes": 36,
+   "n_edges": 60,
+   "density": 1.6666666666666667,
+   "n_components": 1,
+   "mean_degree": 3.3333333333333335,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.6666666666666666,
+   "total_length": 600.0,
+   "mean_edge_length": 10.0,
+   "std_edge_length": 0.0,
+   "min_edge_length": 10.0,
+   "max_edge_length": 10.0,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.24,
+   "mean_radius": 0.04999999999999998,
+   "std_radius": 2.0816681711721685e-17,
+   "unit_type": "square"
+  },
+  {
+   "n_nodes": 36,
+   "n_edges": 60,
+   "density": 1.6666666666666667,
+   "n_components": 1,
+   "mean_degree": 3.3333333333333335,
+   "max_degree": 4.0,
+   "min_degree": 2.0,
+   "std_degree": 0.6666666666666666,
+   "total_length": 600.0,
+   "mean_edge_length": 10.0,
+   "std_edge_length": 0.0,
+   "min_edge_length": 10.0,
+   "max_edge_length": 10.0,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.24,
+   "mean_radius": 0.09999999999999996,
+   "std_radius": 4.163336342344337e-17,
+   "unit_type": "square"
+  },
+  {
+   "n_nodes": 54,
+   "n_edges": 66,
+   "density": 1.2222222222222223,
+   "n_components": 1,
+   "mean_degree": 2.4444444444444446,
+   "max_degree": 3.0,
+   "min_degree": 1.0,
+   "std_degree": 0.6849348892187752,
+   "total_length": 315.46513979261607,
+   "mean_edge_length": 4.779774845342668,
+   "std_edge_length": 0.579320866224096,
+   "min_edge_length": 3.8397459621556136,
+   "max_edge_length": 5.176380902050416,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.3505168219917956,
+   "mean_radius": 0.04999999999999999,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "reentrant"
+  },
+  {
+   "n_nodes": 54,
+   "n_edges": 66,
+   "density": 1.2222222222222223,
+   "n_components": 1,
+   "mean_degree": 2.4444444444444446,
+   "max_degree": 3.0,
+   "min_degree": 1.0,
+   "std_degree": 0.6849348892187752,
+   "total_length": 315.46513979261607,
+   "mean_edge_length": 4.779774845342668,
+   "std_edge_length": 0.579320866224096,
+   "min_edge_length": 3.8397459621556136,
+   "max_edge_length": 5.176380902050416,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.3505168219917956,
+   "mean_radius": 0.09999999999999998,
+   "std_radius": 2.7755575615628914e-17,
+   "unit_type": "reentrant"
+  },
+  {
+   "n_nodes": 140,
+   "n_edges": 180,
+   "density": 1.2857142857142858,
+   "n_components": 1,
+   "mean_degree": 2.5714285714285716,
+   "max_degree": 3.0,
+   "min_degree": 1.0,
+   "std_degree": 0.6226998490772391,
+   "total_length": 859.6253883128223,
+   "mean_edge_length": 4.775696601737902,
+   "std_edge_length": 0.5838775141365762,
+   "min_edge_length": 3.839745962155611,
+   "max_edge_length": 5.176380902050416,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.3438501553251289,
+   "mean_radius": 0.04999999999999999,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "reentrant"
+  },
+  {
+   "n_nodes": 140,
+   "n_edges": 180,
+   "density": 1.2857142857142858,
+   "n_components": 1,
+   "mean_degree": 2.5714285714285716,
+   "max_degree": 3.0,
+   "min_degree": 1.0,
+   "std_degree": 0.6226998490772391,
+   "total_length": 859.6253883128223,
+   "mean_edge_length": 4.775696601737902,
+   "std_edge_length": 0.5838775141365762,
+   "min_edge_length": 3.839745962155611,
+   "max_edge_length": 5.176380902050416,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.3438501553251289,
+   "mean_radius": 0.09999999999999998,
+   "std_radius": 2.7755575615628914e-17,
+   "unit_type": "reentrant"
+  },
+  {
+   "n_nodes": 16,
+   "n_edges": 33,
+   "density": 2.0625,
+   "n_components": 1,
+   "mean_degree": 4.125,
+   "max_degree": 6.0,
+   "min_degree": 2.0,
+   "std_degree": 1.2686114456365274,
+   "total_length": 367.27922061357856,
+   "mean_edge_length": 11.129673351926623,
+   "std_edge_length": 1.844748858826503,
+   "min_edge_length": 10.0,
+   "max_edge_length": 14.142135623730951,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.40808802290397617,
+   "mean_radius": 0.05,
+   "std_radius": 0.0,
+   "unit_type": "triangle"
+  },
+  {
+   "n_nodes": 16,
+   "n_edges": 33,
+   "density": 2.0625,
+   "n_components": 1,
+   "mean_degree": 4.125,
+   "max_degree": 6.0,
+   "min_degree": 2.0,
+   "std_degree": 1.2686114456365274,
+   "total_length": 367.27922061357856,
+   "mean_edge_length": 11.129673351926623,
+   "std_edge_length": 1.844748858826503,
+   "min_edge_length": 10.0,
+   "max_edge_length": 14.142135623730951,
+   "bbox_width": 30.0,
+   "bbox_height": 30.0,
+   "length_density": 0.40808802290397617,
+   "mean_radius": 0.1,
+   "std_radius": 0.0,
+   "unit_type": "triangle"
+  },
+  {
+   "n_nodes": 36,
+   "n_edges": 85,
+   "density": 2.361111111111111,
+   "n_components": 1,
+   "mean_degree": 4.722222222222222,
+   "max_degree": 6.0,
+   "min_degree": 2.0,
+   "std_degree": 1.2385276005337753,
+   "total_length": 953.5533905932738,
+   "mean_edge_length": 11.21827518345028,
+   "std_edge_length": 1.8873437986402877,
+   "min_edge_length": 10.0,
+   "max_edge_length": 14.142135623730951,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.3814213562373095,
+   "mean_radius": 0.04999999999999999,
+   "std_radius": 1.3877787807814457e-17,
+   "unit_type": "triangle"
+  },
+  {
+   "n_nodes": 36,
+   "n_edges": 85,
+   "density": 2.361111111111111,
+   "n_components": 1,
+   "mean_degree": 4.722222222222222,
+   "max_degree": 6.0,
+   "min_degree": 2.0,
+   "std_degree": 1.2385276005337753,
+   "total_length": 953.5533905932738,
+   "mean_edge_length": 11.21827518345028,
+   "std_edge_length": 1.8873437986402877,
+   "min_edge_length": 10.0,
+   "max_edge_length": 14.142135623730951,
+   "bbox_width": 50.0,
+   "bbox_height": 50.0,
+   "length_density": 0.3814213562373095,
+   "mean_radius": 0.09999999999999998,
+   "std_radius": 2.7755575615628914e-17,
+   "unit_type": "triangle"
+  }
+ ],
+ "labels": [
+  {
+   "E_star": 1393.0625221825267,
+   "nu_star": 1.7086881759615893,
+   "strain_energy": 62.68781349811175,
+   "max_stress": 10620.591895521147,
+   "max_strain": 1.0620591895521147e-05
+  },
+  {
+   "E_star": 22234.24099859613,
+   "nu_star": 1.7040047211830451,
+   "strain_energy": 1000.5408449366972,
+   "max_stress": 42333.62535509749,
+   "max_strain": 4.233362535509749e-05
+  },
+  {
+   "E_star": 1507.7304652466987,
+   "nu_star": 1.8589937776574164,
+   "strain_energy": 188.46630815586613,
+   "max_stress": 11340.337560597214,
+   "max_strain": 1.1340337560597215e-05
+  },
+  {
+   "E_star": 24060.617107876893,
+   "nu_star": 1.8533613281141184,
+   "strain_energy": 3007.5771384851305,
+   "max_stress": 45197.52233067872,
+   "max_strain": 4.5197522330678724e-05
+  },
+  {
+   "E_star": 1047197.5511962494,
+   "nu_star": -1.327342486321615e-12,
+   "strain_energy": 47123.88980381552,
+   "max_stress": 9999999.999996673,
+   "max_strain": 0.009999999999996673
+  },
+  {
+   "E_star": 4188790.2047849945,
+   "nu_star": -3.3186641172872726e-13,
+   "strain_energy": 188495.5592152619,
+   "max_stress": 9999999.99999667,
+   "max_strain": 0.00999999999999667
+  },
+  {
+   "E_star": 942477.7960767504,
+   "nu_star": -1.4472444752999454e-12,
+   "strain_energy": 117809.72450957031,
+   "max_stress": 9999999.99999801,
+   "max_strain": 0.00999999999999801
+  },
+  {
+   "E_star": 3769911.184306994,
+   "nu_star": -3.6179663973259174e-13,
+   "strain_energy": 471238.8980382803,
+   "max_stress": 9999999.99999801,
+   "max_strain": 0.00999999999999801
+  },
+  {
+   "E_star": 7421.378899285052,
+   "nu_star": -2.9960625344675926,
+   "strain_energy": 379.5037219892276,
+   "max_stress": 93052.13623168036,
+   "max_strain": 9.305213623168036e-05
+  },
+  {
+   "E_star": 93556.08888415965,
+   "nu_star": -0.7159385241927009,
+   "strain_energy": 4422.510213001648,
+   "max_stress": 191069.62761223456,
+   "max_strain": 0.00019106962761223455
+  },
+  {
+   "E_star": 7465.104659828741,
+   "nu_star": 4.041062296531629,
+   "strain_energy": 1742.6866847530016,
+   "max_stress": 96636.52828046592,
+   "max_strain": 9.663652828046592e-05
+  },
+  {
+   "E_star": 84505.86934583976,
+   "nu_star": -7.042666907613946,
+   "strain_energy": 14364.046181475267,
+   "max_stress": 215505.0477764792,
+   "max_strain": 0.00021550504777647917
+  },
+  {
+   "E_star": 1047242.2908677044,
+   "nu_star": -0.49989263924207544,
+   "strain_energy": 47125.9030890351,
+   "max_stress": 10000118.774585526,
+   "max_strain": 0.010000118774585526
+  },
+  {
+   "E_star": 4189505.758804185,
+   "nu_star": -0.4995707917832394,
+   "strain_energy": 188527.75914614202,
+   "max_stress": 10000474.455006463,
+   "max_strain": 0.010000474455006464
+  },
+  {
+   "E_star": 942519.3629382612,
+   "nu_star": -0.49989951035813474,
+   "strain_energy": 117814.92036726561,
+   "max_stress": 10000086.480939066,
+   "max_strain": 0.010000086480939066
+  },
+  {
+   "E_star": 3770576.0184269305,
+   "nu_star": -0.49959824811405545,
+   "strain_energy": 471322.00230329734,
+   "max_stress": 10000345.464231841,
+   "max_strain": 0.010000345464231841
+  }
+ ],
+ "metadata": [
+  {
+   "unit": "honeycomb",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 48,
+   "connected": true,
+   "fem_solve_time": 0.005825996398925781
+  },
+  {
+   "unit": "honeycomb",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 48,
+   "connected": true,
+   "fem_solve_time": 0.005243778228759766
+  },
+  {
+   "unit": "honeycomb",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 90,
+   "n_edges": 130,
+   "connected": true,
+   "fem_solve_time": 0.011791229248046875
+  },
+  {
+   "unit": "honeycomb",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 90,
+   "n_edges": 130,
+   "connected": true,
+   "fem_solve_time": 0.01274561882019043
+  },
+  {
+   "unit": "square",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 16,
+   "n_edges": 24,
+   "connected": true,
+   "fem_solve_time": 0.0025298595428466797
+  },
+  {
+   "unit": "square",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 16,
+   "n_edges": 24,
+   "connected": true,
+   "fem_solve_time": 0.002549886703491211
+  },
+  {
+   "unit": "square",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 60,
+   "connected": true,
+   "fem_solve_time": 0.0058498382568359375
+  },
+  {
+   "unit": "square",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 60,
+   "connected": true,
+   "fem_solve_time": 0.005415439605712891
+  },
+  {
+   "unit": "reentrant",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 54,
+   "n_edges": 66,
+   "connected": true,
+   "fem_solve_time": 0.0056760311126708984
+  },
+  {
+   "unit": "reentrant",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 54,
+   "n_edges": 66,
+   "connected": true,
+   "fem_solve_time": 0.005785703659057617
+  },
+  {
+   "unit": "reentrant",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 140,
+   "n_edges": 180,
+   "connected": true,
+   "fem_solve_time": 0.019246578216552734
+  },
+  {
+   "unit": "reentrant",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 140,
+   "n_edges": 180,
+   "connected": true,
+   "fem_solve_time": 0.022601604461669922
+  },
+  {
+   "unit": "triangle",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 16,
+   "n_edges": 33,
+   "connected": true,
+   "fem_solve_time": 0.00581812858581543
+  },
+  {
+   "unit": "triangle",
+   "grid": [
+    3,
+    3
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 16,
+   "n_edges": 33,
+   "connected": true,
+   "fem_solve_time": 0.0031092166900634766
+  },
+  {
+   "unit": "triangle",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.05,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 85,
+   "connected": true,
+   "fem_solve_time": 0.006842136383056641
+  },
+  {
+   "unit": "triangle",
+   "grid": [
+    5,
+    5
+   ],
+   "radius": 0.1,
+   "box": [
+    10.0,
+    10.0
+   ],
+   "n_nodes": 36,
+   "n_edges": 85,
+   "connected": true,
+   "fem_solve_time": 0.006623744964599609
+  }
+ ],
+ "errors": []
+}
