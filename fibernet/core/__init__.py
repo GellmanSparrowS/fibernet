@@ -1,22 +1,25 @@
-"""Core data structures and transformations for FiberNet."""
-from fibernet.core.material import Material, get_material, list_materials
-from fibernet.core.fiber import Fiber, CrossSection
+"""
+Core data structures for FiberNet.
+
+The central class is StructureGraph — the unified representation for
+all fiber networks, lattices, and metamaterials.
+
+Quick Start:
+    >>> from fibernet.core import StructureGraph
+    >>> g = StructureGraph(dimension=2, box_size=[10, 10])
+    >>> n0 = g.add_node([0, 0])
+    >>> n1 = g.add_node([10, 0])
+    >>> g.add_edge(n0, n1, radius=0.5, n_internal=4)
+"""
+
+from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
+from fibernet.core.material import Material
+from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork, Crosslink
-from fibernet.core.transform import (
-    mirror, rotate, scale, translate, merge, tile,
-    trim_to_box, duplicate_and_transform, align_by_anchor, create_pattern,
-)
 
 __all__ = [
-    "Material", "get_material", "list_materials",
-    "Fiber", "CrossSection",
+    "StructureGraph", "SNode", "SEdge",
+    "Material",
+    "Fiber",
     "FiberNetwork", "Crosslink",
-    "mirror", "rotate", "scale", "translate", "merge", "tile",
-    "trim_to_box", "duplicate_and_transform", "align_by_anchor", "create_pattern",
 ]
-from .pbc import PeriodicBox, apply_pbc, compute_rdf
-from .crosslinks import (
-    CrosslinkModel, CrosslinkState,
-    RigidCrosslink, SpringCrosslink, BreakableCrosslink,
-    FrictionCrosslink, BondedCrosslink,
-)
