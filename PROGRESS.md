@@ -1,7 +1,7 @@
 # FiberNet v3 重构进度
 
-**最后更新**: 2026-07-09  
-**当前状态**: Phase 1-6 完成，待优化中间点可编程性
+**最后更新**: 2026-07-10  
+**当前状态**: 所有核心功能完成，中间点可编程性已实现
 
 ---
 
@@ -15,13 +15,13 @@ fibernet/
 │   ├── tiling.py             ← 平铺焊接: tile_2d, tile_3d
 │   └── material.py           ← 材料属性
 ├── gen/
-│   ├── pattern.py            ← 图案引擎: pattern_2d, pattern_3d (主入口)
+│   ├── pattern.py            ← 图案引擎: pattern_2d, pattern_3d (1512行，核心)
 │   └── (其他生成器保留)
 ├── sim/
 │   ├── fem.py                ← 梁单元 FEM: BeamFEM
 │   └── rl_env.py             ← RL 环境: FiberNetworkEnv
 ├── viz/
-│   └── render.py             ← 可视化: render_graph, render_gallery
+│   └── render.py             ← 可视化: render_graph, render_gallery, render_graph_3d
 ├── ml/
 │   └── dataset_v2.py         ← ML 数据集: generate_dataset
 └── __init__.py               ← 统一 API 导出
@@ -37,10 +37,10 @@ fibernet/
 - **Tiling**: tile_2d/tile_3d 自动节点焊接，tile_with_transforms, fit_unit_to_box
 
 ### Phase 2: 图案引擎 ✅
-- **Pattern Engine**: `pattern_2d()` / `pattern_3d()` 统一 API
+- **Pattern Engine**: `pattern_2d()` / `pattern_3d()` 统一 API (1512行)
 - **11 个 2D 基元**: square, triangle, hexagon, honeycomb, kagome, reentrant (拉胀), chiral, star, cross, missing_rib, diamond
 - **3 个 3D 基元**: cubic, octet, diamond_3d
-- 所有 11 个 2D 基元平铺后连通
+- 所有 11 个 2D 基元平铺后连通 ✅
 - 确定性生成（除非显式设置 seed）
 - 边离散化：每条边 N 个内部点用于变形可视化
 
@@ -52,7 +52,7 @@ fibernet/
 - Reentrant 验证拉胀（负泊松比）
 
 ### Phase 4: 可视化 ✅
-- **render.py**: render_graph, render_graph_3d, render_deformation, render_gallery
+- **render.py**: render_graph, render_graph_3d, render_deformation, render_gallery, render_with_stats
 - 4 个主题（dark, light, blueprint, publication），发光效果
 - 颜色模式：uniform, orientation, length, stress, strain, custom
 - 9 张展示图在 `output_viz/`
@@ -71,6 +71,58 @@ fibernet/
 
 ---
 
+## 中间点可编程性（新增核心功能）✅
+
+### 功能描述
+每条多边形边可以插入 `n_pts_per_side` 个中间图节点，每个节点可独立编程控制位移。
+
+### API 参数
+
+```python
+pattern_2d(
+    unit="honeycomb",
+    box=(10, 10),
+    grid=(5, 5),
+    n_pts_per_side=5,              # 每条边上 5 个中间节点（影响结构拓扑）
+    point_displacements=[...],     # 显式位移列表 [(dx,dy), ...]
+    perturbation=0.1,              # Cn 对称扰动幅度
+    seed=42,                       # 确定性随机种子
+    n_internal=10,                 # FEM 变形用的内部点（独立于 n_pts_per_side）
+)
+```
+
+### 实现细节
+
+1. **`_generate_polygon_perimeter()`**: 生成多边形周边点（角点 + 中间点）
+2. **`_cn_symmetric_displacements()`**: Cn 对称位移（保持旋转对称）
+3. **`_add_edge_with_intermediates()`**: 添加带中间节点的边
+4. **`_auto_displacements()`**: 确定性非零位移生成
+
+### 测试结果
+- 8/8 单元测试通过 ✅
+- 所有 11 个 2D 基元支持中间点 ✅
+- 所有 3 个 3D 基元支持中间点 ✅
+- 确定性种子验证通过 ✅
+
+### 示例
+
+```python
+# 蜂巢细节（每条边 5 个中间点）
+g = pattern_2d(unit="honeycomb", box=(10,10), grid=(5,5), n_pts_per_side=5, seed=42)
+# 结果: 840 nodes, 900 edges
+
+# Kagome 蓝图（每条边 4 个中间点）
+g = pattern_2d(unit="kagome", box=(10,10), grid=(4,4), n_pts_per_side=4, seed=42)
+# 结果: 849 nodes, 960 edges
+
+# 显式位移控制
+displacements = [(0.5, 0.3), (0.2, -0.4), ...]  # 每个中间点的位移
+g = pattern_2d(unit="square", box=(10,10), grid=(2,2), 
+               n_pts_per_side=2, point_displacements=displacements)
+```
+
+---
+
 ## 当前 API 文档
 
 ### 主入口: pattern_2d()
@@ -83,6 +135,10 @@ g = pattern_2d(
     box=(10, 10),               # 单元尺寸 (w, h)
     grid=(5, 5),                # 平铺网格 (nx, ny)
     n_internal=8,               # 每条边的内部点数（用于变形可视化）
+    n_pts_per_side=3,           # 每条边的中间图节点数（影响结构拓扑）
+    point_displacements=None,   # 显式位移列表
+    perturbation=0.0,           # Cn 对称扰动幅度
+    seed=42,                    # 确定性随机种子
     radius=0.1,                 # 梁半径
     
     # 变换（可选）
@@ -97,10 +153,6 @@ g = pattern_2d(
     
     # 边界处理
     boundary_mode="none",       # "none" | "error" | "extend"
-    
-    # 扰动（仅当 seed 设置时生效）
-    perturbation=0.0,           # 扰动幅度（边长的比例）
-    seed=None,                  # 随机种子（确定性）
     
     # 单位工厂参数（传递给特定基元）
     unit_kwargs={},             # 如 reentrant: {"angle": 20}
@@ -117,6 +169,9 @@ g = pattern_3d(
     box=(10, 10, 10),           # 单元尺寸 (w, h, d)
     grid=(3, 3, 3),             # 平铺网格 (nx, ny, nz)
     n_internal=4,               # 每条边的内部点数
+    n_pts_per_side=3,           # 每条边的中间图节点数
+    point_displacements=None,   # 显式位移列表
+    seed=42,                    # 确定性随机种子
     radius=0.1,                 # 梁半径
 )
 ```
@@ -143,14 +198,14 @@ strains, stresses = fem.stress_strain_curve(max_strain=0.05, n_steps=10)
 ### 可视化: render_graph()
 
 ```python
-from fibernet import render_graph, render_gallery
+from fibernet import render_graph, render_gallery, render_graph_3d
 
 fig = render_graph(
     g,
     theme="dark",               # "dark" | "light" | "blueprint" | "publication"
     color_by="orientation",     # "uniform" | "orientation" | "length" | "stress" | "strain" | "custom"
     line_width=1.5,
-    show_nodes=False,           # 是否显示节点锚点
+    show_nodes=False,           # 是否显示节点锚点（默认关闭）
     title="Honeycomb",
     save_path="output.png",
 )
@@ -172,55 +227,6 @@ ds = generate_dataset(
 
 ---
 
-## 待优化：中间点可编程性
-
-### 问题
-当前 `pattern_2d()` 的内置基元（如 honeycomb）只在多边形顶点处有节点，每条边是直线。缺少：
-1. **n_pts_per_side**: 每条多边形边上的中间点数量（可调）
-2. **per-point displacement**: 每个中间点的 (dx, dy) 独立可调
-3. **默认行为**: 每个中间点应有非零随机位移
-
-### 目标
-让用户能精确控制每条边的形状，生成复杂的超材料结构。
-
-### 设计方案
-
-```python
-pattern_2d(
-    unit="honeycomb",
-    box=(10, 10),
-    grid=(5, 5),
-    n_pts_per_side=5,           # 每条多边形边上 5 个中间点
-    
-    # 方式1: 显式逐点位移（完全控制）
-    point_displacements={
-        "side_0": [(0.1, 0.2), (0.05, -0.1), ...],  # 5 个位移对应 5 个中间点
-        "side_1": [...],
-        ...
-    },
-    
-    # 方式2: Cn 对称扰动（保持旋转对称）
-    perturbation=0.1,           # 扰动幅度
-    seed=42,                    # 确定性随机
-    
-    # 方式3: 默认 = 自动生成（seed=0, perturbation=0.05）
-    # 如果都没设置，使用默认随机位移
-    
-    n_internal=8,               # FEM 变形用的内部点（独立于 n_pts_per_side）
-)
-```
-
-### 实现步骤
-1. 在 `_unit_honeycomb()` 等工厂函数中添加 `n_pts_per_side` 参数
-2. 生成多边形时插入中间点（参考 v7 的 `_generate_polygon()`）
-3. 添加 `point_displacements` 参数支持显式位移
-4. 默认行为：seed=0 时生成确定性随机位移
-5. 更新所有 11 个 2D 基元支持此特性
-6. 更新 3D 基元支持（如果适用）
-7. 重新生成 showcase 图（确保可见中间点）
-
----
-
 ## Git 历史
 
 ```
@@ -234,16 +240,25 @@ efc6b0d Phase 2b: unit connectivity fixes
 6b4d800 Phase 4: Visualization
 1a5670c Phase 5: ML + RL
 1cc040e Phase 6: Integration
+abbe1b3 Checkpoint: Save comprehensive API documentation to PROGRESS.md
+16b6583 Add intermediate point programmability to pattern engine
 ```
 
 ---
 
-## 下一步行动
+## 展示图说明
 
-1. **立即**: 实现 `n_pts_per_side` + `point_displacements` API
-2. **测试**: 生成带中间点的 honeycomb，验证连通性
-3. **可视化**: 重新生成 showcase 图，确保可见边上的变化
-4. **提交**: git commit "Add intermediate point programmability"
+所有展示图使用 `n_pts_per_side > 0` 生成，展示中间点可编程性：
+
+1. **01_2d_gallery.png**: 11 个 2D 基元，n_pts_per_side=3
+2. **02_honeycomb_detail.png**: 蜂巢，n_pts_per_side=5，840 节点
+3. **03_kagome_blueprint.png**: Kagome，n_pts_per_side=4，849 节点
+4. **04_auxetic_comparison.png**: 蜂巢 vs 拉胀，n_pts_per_side=4
+5. **05_3d_cubic.png**: 3D 立方，n_pts_per_side=3，1036 节点
+6. **06_3d_octet.png**: 3D 八面体，n_pts_per_side=3，515 节点
+7. **07_chiral_stats.png**: 手性蜂巢带统计，n_pts_per_side=4
+8. **08_star_pattern.png**: 星形，n_pts_per_side=5，420 节点
+9. **09_cross_pattern.png**: 十字形，n_pts_per_side=4，516 节点
 
 ---
 
