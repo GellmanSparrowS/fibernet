@@ -105,7 +105,7 @@ def render_graph(
     figsize: Tuple[float, float] = (10, 10),
     theme: str = "dark",
     color_by: str = "uniform",
-    colormap: str = "viridis",
+    colormap: str = "coolwarm",
     color_data: Optional[np.ndarray] = None,
     line_width: float = 1.5,
     show_nodes: bool = False,
@@ -196,6 +196,11 @@ def render_graph(
     elif color_by == "length":
         cdata = graph.edge_lengths()
         cdata = (cdata - cdata.min()) / (cdata.max() - cdata.min() + 1e-12)
+    elif color_by == "fiber":
+        # Group edges into fibers (connected chains) and assign colors per fiber
+        # Simple approach: use edge index modulo palette size
+        palette_size = 5
+        cdata = np.array([i % palette_size / palette_size for i in range(n_edges)])
     elif color_by in ("stress", "strain", "custom") and color_data is not None:
         cdata = color_data
         vmin, vmax = cdata.min(), cdata.max()

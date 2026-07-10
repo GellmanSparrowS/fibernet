@@ -122,7 +122,7 @@ def _generate_polygon_perimeter(
     seed : int, optional
         Random seed for auto-generated displacements.
         If n_pts_per_side > 0 and no displacements given,
-        defaults to seed=0 with magnitude=0.05*edge_length.
+        defaults to seed=0 with magnitude=0.3*edge_length.
 
     Returns
     -------
@@ -184,7 +184,7 @@ def _generate_polygon_perimeter(
             # Auto-generate deterministic displacements
             edge_len = np.sqrt((corners[1][0] - corners[0][0])**2 +
                              (corners[1][1] - corners[0][1])**2)
-            magnitude = 0.05 * edge_len  # 5% of edge length
+            magnitude = 0.3 * edge_len  # 5% of edge length
             disp = _cn_symmetric_displacements(
                 perimeter, polygon_type, n_pts_per_side, magnitude, seed,
             )
@@ -192,7 +192,7 @@ def _generate_polygon_perimeter(
             # Default: seed=0, 5% edge length
             edge_len = np.sqrt((corners[1][0] - corners[0][0])**2 +
                              (corners[1][1] - corners[0][1])**2)
-            magnitude = 0.05 * edge_len
+            magnitude = 0.3 * edge_len
             disp = _cn_symmetric_displacements(
                 perimeter, polygon_type, n_pts_per_side, magnitude, 0,
             )
@@ -511,7 +511,7 @@ def _unit_triangle(
             all_disp = list(point_displacements)
         else:
             edge_len = w  # approximate
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -592,7 +592,7 @@ def _unit_honeycomb(
             all_disp = list(point_displacements)
         else:
             edge_len = np.sqrt((a)**2 + b**2)  # diagonal length
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -654,7 +654,7 @@ def _unit_kagome(
             all_disp = list(point_displacements)
         else:
             edge_len = w / 2
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -724,7 +724,7 @@ def _unit_reentrant(
             all_disp = list(point_displacements)
         else:
             edge_len = h / 2
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -799,7 +799,7 @@ def _unit_chiral(
             all_disp = list(point_displacements)
         else:
             edge_len = node_radius
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -867,7 +867,7 @@ def _unit_star(
             all_disp = list(point_displacements)
         else:
             edge_len = r_outer - r_inner
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_intermediate, mag, effective_seed)
 
@@ -938,7 +938,7 @@ def _unit_cross(
             all_disp = list(point_displacements)
         else:
             edge_len = aw
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_intermediate, mag, effective_seed)
 
@@ -994,7 +994,7 @@ def _unit_missing_rib(
             all_disp = list(point_displacements)
         else:
             edge_len = np.sqrt(a**2 + b**2)
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
@@ -1046,7 +1046,7 @@ def _unit_diamond(
             all_disp = list(point_displacements)
         else:
             edge_len = np.sqrt((w/2)**2 + (h/2)**2)
-            mag = perturbation * edge_len if perturbation > 0 else 0.05 * edge_len
+            mag = perturbation * edge_len if perturbation > 0 else 0.3 * edge_len
             effective_seed = seed if seed is not None else 0
             all_disp = _auto_displacements(n_intermediate, mag, effective_seed)
 
@@ -1387,7 +1387,7 @@ def _add_3d_edges(
             # Auto-generate 3D displacements
             effective_seed = seed if seed is not None else 0
             rng = np.random.default_rng(effective_seed)
-            mag = 0.05  # 5% default
+            mag = 0.3  # 30% default
             all_disp = []
             for _ in range(n_total_pts):
                 dx = rng.uniform(-mag, mag)
@@ -1510,3 +1510,82 @@ def _extend_to_boundary(
 
     g.box_size = np.array([w, h, 0.0])
     return g
+
+
+def _unit_voronoi(
+    box: Tuple[float, float],
+    n_internal: int = 0,
+    radius: float = 0.1,
+    material: Material = None,
+    n_seeds: int = 20,
+    seed: int = 42,
+    n_pts_per_side: int = 0,
+    point_displacements: Optional[Sequence[Tuple[float, float]]] = None,
+    perturbation: float = 0.0,
+) -> StructureGraph:
+    """Voronoi tessellation unit cell with programmable intermediate points.
+    
+    Parameters
+    ----------
+    n_seeds : int
+        Number of Voronoi seed points
+    seed : int
+        Random seed for seed point generation
+    """
+    w, h = box
+    g = StructureGraph(dimension=2, box_size=[w, h])
+    
+    # Generate seed points
+    rng = np.random.default_rng(seed)
+    seeds = rng.uniform(low=[0, 0], high=[w, h], size=(n_seeds, 2))
+    
+    # Try to import scipy for Voronoi
+    try:
+        from scipy.spatial import Voronoi
+        vor = Voronoi(seeds)
+    except ImportError:
+        raise ImportError("Voronoi requires scipy: pip install scipy")
+    
+    # Extract Voronoi edges within bounds
+    edge_pairs = []
+    for ridge in vor.ridge_vertices:
+        if -1 not in ridge:  # Skip infinite ridges
+            v0, v1 = vor.vertices[ridge[0]], vor.vertices[ridge[1]]
+            # Check if both vertices are within box
+            if (0 <= v0[0] <= w and 0 <= v0[1] <= h and
+                0 <= v1[0] <= w and 0 <= v1[1] <= h):
+                edge_pairs.append((v0, v1))
+    
+    # Generate displacements for all edges
+    n_total_pts = len(edge_pairs) * n_pts_per_side
+    if n_pts_per_side > 0:
+        if point_displacements is not None:
+            all_disp = list(point_displacements)
+        else:
+            # Estimate edge length
+            edge_lens = [np.linalg.norm(p2 - p1) for p1, p2 in edge_pairs]
+            mean_len = np.mean(edge_lens) if edge_lens else min(w, h) / 5
+            mag = perturbation * mean_len if perturbation > 0 else 0.3 * mean_len
+            effective_seed = seed if seed is not None else 0
+            all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
+    else:
+        all_disp = []
+    
+    # Add edges with intermediates
+    for idx, (p1, p2) in enumerate(edge_pairs):
+        start = idx * n_pts_per_side
+        end = start + n_pts_per_side
+        edge_disp = all_disp[start:end] if n_pts_per_side > 0 else None
+        _add_edge_with_intermediates(
+            g, tuple(p1), tuple(p2), n_pts_per_side, edge_disp,
+            radius, material, n_internal,
+        )
+    
+    g._metadata["unit_type"] = "voronoi"
+    g._metadata["n_seeds"] = n_seeds
+    g._metadata["n_pts_per_side"] = n_pts_per_side
+    return g
+
+
+# Register Voronoi
+_UNIT_FACTORIES["voronoi"] = _unit_voronoi
