@@ -1,7 +1,85 @@
 # FiberNet v3 重构进度
 
-**最后更新**: 2026-07-10  
-**当前状态**: 所有核心功能完成，可视化优化完成
+**最后更新**: 2026-07-11
+**当前状态**: 所有核心功能完成，连通性问题已修复
+
+---
+
+## 本轮工作 (2026-07-11)
+
+### Task 1: 生成 API 代码完整性验证 ✅
+
+所有核心 API 经过端到端测试验证：
+- 12 个 2D 基元 + 3 个 3D 基元全部正常生成
+- FEM 仿真 (`BeamFEM`) 正常
+- 变换 (`rotate`, `mirror`, `scale`, `translate`) 正常
+- 平铺 (`tile_2d`, `tile_3d`) 正常
+- `__init__.py` 导出完整 (87 行)
+
+### Task 2: 生成范式分析 ✅
+
+详细文档: `analysis_scripts/GENERATION_PARADIGM_v2.md`
+可运行 Demo: `analysis_scripts/paradigm_v2_demo.py`
+
+四级流水线:
+1. **折线基元** → 单条线段/折线，两端定义虚拟盒子
+2. **形状组装** → 12 种内置形状 + 自定义 `register_unit`
+3. **变换** → 镜像 + 旋转 (旋转在平铺后施加)
+4. **多层级组合** → 把结构当新基元，像 PyTorch `nn.Sequential` 嵌套
+
+### Task 3: 可视化分析 ✅
+
+详细文档: `analysis_scripts/VISUALIZATION_ANALYSIS_v2.md`
+
+定量分析发现"花"的原因:
+- 平均饱和度 0.785 (深黑背景上视觉效果更高)
+- 平均 135 种量化颜色 (`orientation` 着色导致)
+- 11/12 张图使用深黑背景
+
+建议: 使用 `blueprint` 或 `publication` 主题 + `color_by="uniform"` 降低视觉复杂度
+
+### Task 4: FEniCS 可行性分析 ✅
+
+详细文档: `analysis_scripts/FENICS_ANALYSIS_v2.md`
+
+结论: **不建议添加 FEniCS**
+- FEniCS 不支持原生 Windows (需 WSL2/Docker)
+- 对梁系结构无性能/精度优势
+- 现有 BeamFEM + Taichi 已足够
+- 备选方案: scikit-fem (轻量, 全平台兼容)
+
+### Task 5: 连通性修复 ✅
+
+修复了 3 类不连通问题:
+
+**问题 1: 旋转后不连通** (20 个测试全部失败 → 全部通过)
+- 原因: 旋转移动了边界节点位置，焊接无法匹配
+- 修复: 旋转改为在平铺**之后**施加，保持边界对齐
+
+**问题 2: Voronoi 不连通** (9 个分离组件 → 1 个完整组件)
+- 原因: Voronoi 边不接触 cell 边界
+- 修复: 周期种子 (3×3 镜像) + 边裁剪到盒子 + 小分量桥接
+
+**问题 3: 自定义点 + n_pts_per_side 不生效** (4 个测试失败 → 全部通过)
+- 原因: `add_polyline` 不支持中间节点
+- 修复: 自定义点路径使用 `_add_edge_with_intermediates`
+
+**测试结果**: 49/49 连通性测试全部通过
+
+### 新增工具函数
+
+| 函数 | 文件 | 用途 |
+|------|------|------|
+| `_weld_nearby_nodes()` | `gen/pattern.py` | 合并接近但未焊接的节点 |
+| `_clip_segment_to_box()` | `gen/pattern.py` | 裁剪线段到盒子边界 |
+| `_bridge_small_components()` | `gen/pattern.py` | 桥接小的不连通分量 |
+
+### 新增测试脚本
+
+| 脚本 | 用途 |
+|------|------|
+| `analysis_scripts/test_connectivity.py` | 49 项连通性测试 |
+| `analysis_scripts/paradigm_v2_demo.py` | 四级流水线 + 多层级演示 (带 checkpoint) |
 
 ---
 
@@ -15,190 +93,42 @@ fibernet/
 │   ├── tiling.py             ← 平铺焊接: tile_2d, tile_3d
 │   └── material.py           ← 材料属性
 ├── gen/
-│   ├── pattern.py            ← 图案引擎: pattern_2d, pattern_3d (1600+行，核心)
-│   └── (其他生成器保留)
+│   ├── pattern.py            ← 图案引擎 (1846行，核心)
+│   └── (其他生成器)
 ├── sim/
 │   ├── fem.py                ← 梁单元 FEM: BeamFEM
-│   └── rl_env.py             ← RL 环境: FiberNetworkEnv
+│   ├── accelerated.py        ← Taichi 加速 FEM
+│   └── rl_env.py             ← RL 环境
 ├── viz/
-│   └── render.py             ← 可视化: render_graph, render_gallery, render_graph_3d
+│   └── render.py             ← 可视化: render_graph, render_gallery
 ├── ml/
-│   └── dataset_v2.py         ← ML 数据集: generate_dataset
+│   └── dataset_v2.py         ← ML 数据集
 └── __init__.py               ← 统一 API 导出
 ```
 
 ---
 
-## 已完成阶段
+## Git 历史 (本轮)
 
-### Phase 1-6: 核心功能 ✅
-- StructureGraph, transforms, tiling, pattern engine, FEM, visualization, ML/RL
-- 详见 git log
+```
+f24fd91 Fix connectivity: rotation after tiling, Voronoi periodic+clipping
+01394ff Task 2: Generation paradigm v2 analysis + demo script
+e3fb2b1 Task 3: Visualization analysis v2 with quantitative data
+71f105f Task 4: FEniCS analysis v2 - updated with current backend state
+```
 
-### Phase 7: 中间点可编程性 ✅
-- `n_pts_per_side`: 每条边上 N 个中间图节点
-- `point_displacements`: 显式位移列表
-- Cn 对称扰动
-- 默认位移幅度: 0.3 * edge_length
-- 11 个 2D 基元 + 3 个 3D 基元全部支持
+## 上下文恢复
 
-### Phase 8: 可视化优化 ✅
-- 位移幅度从 0.05 → 0.3 (更明显的变形)
-- 统一颜色方案 (coolwarm colormap)
-- 新增 "fiber" 颜色模式 (每条纤维统一颜色)
-- 清晰的纤维渲染 (无散射)
-- 新增 Voronoi 生成器 (支持 n_pts_per_side)
-- 新增 FEM 变形和应力场可视化
-- 新增 ML 数据集可视化
-- 新增 RL 环境可视化
+如果断联，读取此文件继续工作，无需依赖聊天历史。
+
+### 待做事项
+
+1. **可选**: 实现 `theme="soft"` 柔和主题 (浅灰底)
+2. **可选**: 实现 `color_by="fiber"` 着色模式
+3. **可选**: 添加 scikit-fem 后端 (如需实体单元)
+4. **清理**: `analysis_scripts/` 中的旧分析文件可归档到 `_archive/`
 
 ---
 
-## 展示图说明 (output_viz/)
-
-1. **01_2d_gallery.png** — 12 个 2D 基元画廊 (n_pts_per_side=3)
-2. **02_honeycomb_detail.png** — 蜂巢细节 (n_pts_per_side=5, 840 nodes)
-3. **03_kagome_blueprint.png** — Kagome 蓝图 (n_pts_per_side=4, 849 nodes)
-4. **04_voronoi.png** — Voronoi 镶嵌 (n_pts_per_side=3, 25 seeds)
-5. **05_auxetic_comparison.png** — 拉胀对比 (honeycomb vs reentrant)
-6. **06_3d_cubic.png** — 3D 立方 (n_pts_per_side=3, 1036 nodes)
-7. **07_3d_octet.png** — 3D 八面体 (n_pts_per_side=3, 515 nodes)
-8. **08_fem_deformation.png** — FEM 变形可视化 (应力场着色)
-9. **09_fem_stress.png** — FEM 应力场 (reentrant auxetic)
-10. **10_ml_dataset.png** — ML 训练数据集 (6 个结构 + FEM 属性)
-11. **11_rl_environment.png** — RL 环境动作空间探索
-12. **12_chiral_stats.png** — 手性蜂巢统计信息
-
----
-
-## 当前 API 文档
-
-### 主入口: pattern_2d()
-
-```python
-from fibernet import pattern_2d
-
-g = pattern_2d(
-    unit="honeycomb",           # 内置基元名称 (见 list_units())
-    box=(10, 10),               # 单元尺寸 (w, h)
-    grid=(5, 5),                # 平铺网格 (nx, ny)
-    n_internal=8,               # 每条边的内部点数（用于变形可视化）
-    n_pts_per_side=3,           # 每条边的中间图节点数（影响结构拓扑）
-    point_displacements=None,   # 显式位移列表
-    perturbation=0.0,           # Cn 对称扰动幅度
-    seed=42,                    # 确定性随机种子
-    radius=0.1,                 # 梁半径
-    mirror_x=False,
-    mirror_y=False,
-    rotation=0.0,
-    boundary_mode="none",
-    fit_to_box=False,
-    unit_kwargs={},
-)
-```
-
-### 主入口: pattern_3d()
-
-```python
-from fibernet import pattern_3d
-
-g = pattern_3d(
-    unit="cubic",               # "cubic" | "octet" | "diamond_3d"
-    box=(10, 10, 10),           # 单元尺寸 (w, h, d)
-    grid=(3, 3, 3),             # 平铺网格 (nx, ny, nz)
-    n_internal=4,
-    n_pts_per_side=3,
-    point_displacements=None,
-    seed=42,
-    radius=0.1,
-)
-```
-
-### FEM 仿真: BeamFEM
-
-```python
-from fibernet import BeamFEM
-
-fem = BeamFEM(g, default_E=1e9, default_nu=0.3)
-result = fem.uniaxial_tension(strain=0.02, deformation_scale=20)
-
-print(f"E* = {result.effective_youngs_modulus:.2e} Pa")
-print(f"ν* = {result.effective_poissons_ratio:.3f}")
-
-deformed = result.deformed_graph
-stresses = result.stresses
-```
-
-### 可视化: render_graph()
-
-```python
-from fibernet import render_graph, render_gallery, render_graph_3d
-
-fig = render_graph(
-    g,
-    theme="dark",               # "dark" | "light" | "blueprint" | "publication"
-    color_by="orientation",     # "uniform" | "orientation" | "length" | "stress" | "strain" | "fiber" | "custom"
-    colormap="coolwarm",        # 统一颜色方案
-    line_width=1.5,
-    show_nodes=False,
-    title="Honeycomb",
-    save_path="output.png",
-)
-```
-
-### ML 数据集: generate_dataset()
-
-```python
-from fibernet import generate_dataset
-
-ds = generate_dataset(
-    units=["honeycomb", "square"],
-    grid_range=[(3,3), (5,5)],
-    radius_range=[0.05, 0.1, 0.2],
-    save_dir="datasets/",
-    checkpoint_file="ckpt.json",
-)
-```
-
-### RL 环境: FiberNetworkEnv
-
-```python
-from fibernet import FiberNetworkEnv
-
-env = FiberNetworkEnv(target_E=1e6, target_nu=-0.3)
-obs, info = env.reset()
-
-action = {
-    "unit_idx": 0,  # honeycomb
-    "grid_x": 3,    # grid size - 2
-    "grid_y": 3,
-    "radius": np.array([0.1]),
-}
-obs, reward, terminated, truncated, info = env.step(action)
-# info["graph"], info["E_star"], info["nu_star"]
-env.close()
-```
-
----
-
-## Git 历史
-
-```
-9f62146 Pre-refactor snapshot
-687688e Phase 1a: StructureGraph
-102ee5f Phase 1b: transforms
-2fd2daf Phase 1c: tiling
-49d976d Phase 2a: Pattern Engine
-efc6b0d Phase 2b: unit connectivity fixes
-14f1be5 Phase 3a: BeamFEM
-6b4d800 Phase 4: Visualization
-1a5670c Phase 5: ML + RL
-1cc040e Phase 6: Integration
-abbe1b3 Checkpoint: Save comprehensive API documentation
-16b6583 Add intermediate point programmability
-22544ad Phase 7: Regenerate showcase images
-```
-
----
-
-**上下文恢复**: 如果断联，读取此文件继续工作，无需依赖聊天历史。
+**上次更新**: 2026-07-11
+**状态**: 所有任务完成，连通性修复，49/49 测试通过
