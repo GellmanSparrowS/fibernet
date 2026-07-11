@@ -1202,7 +1202,7 @@ def pattern_2d(
         factory_kwargs.update(ukw)
         unit_cell = _UNIT_FACTORIES[unit_name](**factory_kwargs)
     else:
-        # Custom points
+        # Custom points with intermediate node support
         pts = [tuple(p) for p in points]
         if fit_to_box:
             raw = StructureGraph(dimension=2, box_size=list(box) + [0.0])
@@ -1211,17 +1211,40 @@ def pattern_2d(
             unit_cell = fit_unit_to_box(raw, target_box=list(box) + [0.0])
         else:
             unit_cell = StructureGraph(dimension=2, box_size=list(box) + [0.0])
-            unit_cell.add_polyline(pts, closed=closed, radius=radius, material=mat,
-                                   n_internal=n_internal)
+            if n_pts_per_side > 0:
+                # Build polyline with intermediate nodes on each segment
+                pairs = list(zip(pts[:-1], pts[1:]))
+                if closed and len(pts) > 2:
+                    pairs.append((pts[-1], pts[0]))
+                n_total_pts = len(pairs) * n_pts_per_side
+                if point_displacements is not None:
+                    all_disp = list(point_displacements)
+                else:
+                    edge_lens = [np.linalg.norm(np.array(p2) - np.array(p1)) for p1, p2 in pairs]
+                    mean_len = np.mean(edge_lens) if edge_lens else min(box) / 5
+                    mag = perturbation * mean_len if perturbation > 0 else 0.3 * mean_len
+                    effective_seed = seed if seed is not None else 0
+                    all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
+                for idx, (p1, p2) in enumerate(pairs):
+                    start = idx * n_pts_per_side
+                    end = start + n_pts_per_side
+                    edge_disp = all_disp[start:end]
+                    _add_edge_with_intermediates(
+                        unit_cell, p1, p2, n_pts_per_side, edge_disp,
+                        radius, mat, n_internal,
+                    )
+            else:
+                unit_cell.add_polyline(pts, closed=closed, radius=radius, material=mat,
+                                       n_internal=n_internal)
 
-    # Step 2: Apply transforms
-    if rotation != 0.0:
-        center = np.array([box[0] / 2, box[1] / 2, 0.0])
-        unit_cell = rotate(unit_cell, rotation, center=center)
+    # Step 2: Apply mirror transforms (applied before tiling, preserves boundary alignment)
     if mirror_x:
         unit_cell = _mirror_x(unit_cell, origin=box[0] / 2)
     if mirror_y:
         unit_cell = _mirror_y(unit_cell, origin=box[1] / 2)
+
+    # Note: rotation is applied AFTER tiling to preserve boundary welding.
+    # Rotating the unit cell before tiling breaks periodic boundary alignment.
 
     # Step 3: Boundary mode check
     if boundary_mode == "error":
@@ -1231,6 +1254,18 @@ def pattern_2d(
 
     # Step 4: Tile
     result = tile_2d(unit_cell, grid=grid, box_size=list(box) + [0.0])
+
+    # Step 5: Apply rotation to the tiled result (preserves connectivity)
+    if rotation != 0.0:
+        grid_tuple = grid if isinstance(grid, (list, tuple)) else (grid, grid)
+        center = np.array([box[0] * grid_tuple[0] / 2, box[1] * grid_tuple[1] / 2, 0.0])
+        result = rotate(result, rotation, center=center)
+
+    # Step 6: Bridge small disconnected components (Voronoi artifacts)
+    if unit == "voronoi":
+        result = _bridge_small_components(result, min_component_size=5,
+                                         radius=radius, material=mat)
+
     result._metadata["pattern"] = {
         "unit": unit or "custom",
         "box": list(box),
@@ -1435,6 +1470,101 @@ def _add_3d_edges(
                       n_internal=n_internal)
 
 
+
+# ======================================================================
+# Post-tiling connectivity repair
+# ======================================================================
+
+def _weld_nearby_nodes(graph: StructureGraph, tolerance: float = 1e-4) -> StructureGraph:
+    """Merge nodes that are close but not merged (e.g., after rotation + tiling).
+
+    This handles cases where the standard spatial-hash merge misses nodes
+    because rotation moved boundary nodes slightly off expected positions.
+    """
+    g = graph.copy()
+    pos = g.node_positions()
+    nids = sorted(g.nodes.keys())
+
+    if len(nids) < 2:
+        return g
+
+    # Use scipy cKDTree for efficient proximity search, fall back to brute force
+    try:
+        from scipy.spatial import cKDTree
+        tree = cKDTree(pos)
+        pairs = tree.query_pairs(tolerance)
+    except ImportError:
+        pairs = set()
+        for i in range(len(nids)):
+            for j in range(i + 1, len(nids)):
+                if np.linalg.norm(pos[i] - pos[j]) < tolerance:
+                    pairs.add((i, j))
+
+    # Build union-find for node merging
+    parent = {nid: nid for nid in nids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            # Keep the smaller ID as representative
+            if ra < rb:
+                parent[rb] = ra
+            else:
+                parent[ra] = rb
+
+    # Convert pair indices to node IDs and union them
+    idx_to_nid = {i: nids[i] for i in range(len(nids))}
+    for i, j in pairs:
+        union(idx_to_nid[i], idx_to_nid[j])
+
+    # Build mapping from old node ID to merged node ID
+    id_map = {nid: find(nid) for nid in nids}
+
+    # Check if any merges happened
+    if all(k == v for k, v in id_map.items()):
+        return g  # No merges needed
+
+    # Rebuild graph with merged nodes
+    merged = StructureGraph(dimension=g.dimension, tolerance=g.tolerance,
+                           box_size=g.box_size)
+    merged._metadata = copy.deepcopy(g.metadata)
+
+    # Add unique nodes (using representative positions)
+    new_id_map = {}
+    for nid in nids:
+        rep = id_map[nid]
+        if rep not in new_id_map:
+            new_nid = merged.add_node(g.nodes[rep].position, merge=False,
+                                      **g.nodes[rep].metadata)
+            new_id_map[rep] = new_nid
+        new_id_map[nid] = new_id_map[rep]
+
+    # Add edges (skip self-loops from merged nodes)
+    seen_edges = set()
+    for eid in sorted(g.edges.keys()):
+        edge = g.edges[eid]
+        new_i = new_id_map[edge.node_i]
+        new_j = new_id_map[edge.node_j]
+        if new_i == new_j:
+            continue  # Skip self-loops
+        edge_key = (min(new_i, new_j), max(new_i, new_j))
+        if edge_key in seen_edges:
+            continue  # Skip duplicate edges
+        seen_edges.add(edge_key)
+        merged.add_edge(new_i, new_j, radius=edge.radius,
+                       material=copy.deepcopy(edge.material),
+                       internal_points=edge.internal_points,
+                       segments=edge.segments, **edge.metadata)
+
+    return merged
+
+
 # ======================================================================
 # Boundary helpers
 # ======================================================================
@@ -1512,6 +1642,118 @@ def _extend_to_boundary(
     return g
 
 
+
+
+def _bridge_small_components(
+    graph: StructureGraph,
+    min_component_size: int = 5,
+    radius: float = 0.1,
+    material: Optional[Material] = None,
+) -> StructureGraph:
+    """Connect small isolated components to the largest component via bridge edges.
+
+    After Voronoi clipping, a few edges may end up disconnected at tile
+    boundaries. This finds components smaller than ``min_component_size``
+    and adds a bridge edge from their nearest node to the main component.
+    """
+    g = graph.copy()
+    if not g.nodes:
+        return g
+
+    # Build adjacency
+    adj = {nid: set() for nid in g.nodes}
+    for e in g.edges.values():
+        adj[e.node_i].add(e.node_j)
+        adj[e.node_j].add(e.node_i)
+
+    # Find connected components via BFS
+    visited = set()
+    components = []
+    for nid in g.nodes:
+        if nid in visited:
+            continue
+        comp = set()
+        queue = [nid]
+        visited.add(nid)
+        while queue:
+            n = queue.pop(0)
+            comp.add(n)
+            for nb in adj.get(n, set()):
+                if nb not in visited:
+                    visited.add(nb)
+                    queue.append(nb)
+        components.append(comp)
+
+    if len(components) <= 1:
+        return g  # Already connected
+
+    # Find the main (largest) component
+    components.sort(key=len, reverse=True)
+    main_comp = components[0]
+    main_positions = np.array([g.nodes[nid].position for nid in main_comp])
+
+    for small_comp in components[1:]:
+        if len(small_comp) >= min_component_size:
+            continue  # Skip large disconnected components (might be intentional)
+
+        # Find the closest pair between small comp and main comp
+        best_dist = float("inf")
+        best_small_nid = None
+        best_main_nid = None
+
+        for snid in small_comp:
+            spos = g.nodes[snid].position
+            for mnid in main_comp:
+                mpos = g.nodes[mnid].position
+                d = np.linalg.norm(spos - mpos)
+                if d < best_dist:
+                    best_dist = d
+                    best_small_nid = snid
+                    best_main_nid = mnid
+
+        if best_small_nid is not None and best_main_nid is not None:
+            g.add_edge(best_small_nid, best_main_nid, radius=radius,
+                       material=material or Material())
+
+    return g
+
+
+def _clip_segment_to_box(
+    p0: np.ndarray,
+    p1: np.ndarray,
+    w: float,
+    h: float,
+) -> Optional[Tuple[np.ndarray, np.ndarray]]:
+    """Clip a line segment to the box [0, w] x [0, h].
+
+    Returns clipped (p0, p1) clamped to exact boundary, or None if
+    the segment is entirely outside the box.
+    """
+    p0 = np.asarray(p0, dtype=float)[:2]
+    p1 = np.asarray(p1, dtype=float)[:2]
+    d = p1 - p0
+    t_min, t_max = 0.0, 1.0
+
+    for axis, lo, hi in [(0, 0.0, w), (1, 0.0, h)]:
+        if abs(d[axis]) < 1e-14:
+            if p0[axis] < lo or p0[axis] > hi:
+                return None
+        else:
+            t1 = (lo - p0[axis]) / d[axis]
+            t2 = (hi - p0[axis]) / d[axis]
+            if t1 > t2:
+                t1, t2 = t2, t1
+            t_min = max(t_min, t1)
+            t_max = min(t_max, t2)
+
+    if t_min > t_max + 1e-14:
+        return None
+
+    cp0 = np.clip(p0 + t_min * d, [0, 0], [w, h])
+    cp1 = np.clip(p0 + t_max * d, [0, 0], [w, h])
+    return cp0, cp1
+
+
 def _unit_voronoi(
     box: Tuple[float, float],
     n_internal: int = 0,
@@ -1523,46 +1765,59 @@ def _unit_voronoi(
     point_displacements: Optional[Sequence[Tuple[float, float]]] = None,
     perturbation: float = 0.0,
 ) -> StructureGraph:
-    """Voronoi tessellation unit cell with programmable intermediate points.
-    
+    """Voronoi tessellation unit cell with periodic seeding for tiled connectivity.
+
+    Uses periodic (mirror) seeding to ensure Voronoi edges match at cell
+    boundaries when tiled, producing connected structures.
+
     Parameters
     ----------
     n_seeds : int
-        Number of Voronoi seed points
+        Number of Voronoi seed points (before periodic replication)
     seed : int
         Random seed for seed point generation
     """
     w, h = box
     g = StructureGraph(dimension=2, box_size=[w, h])
-    
+
     # Generate seed points
     rng = np.random.default_rng(seed)
     seeds = rng.uniform(low=[0, 0], high=[w, h], size=(n_seeds, 2))
-    
-    # Try to import scipy for Voronoi
+
+    # Periodic replication: mirror seeds across all 8 neighbors
+    # This ensures Voronoi edges at boundaries match when tiled
+    periodic_seeds = []
+    for dx in [-w, 0, w]:
+        for dy in [-h, 0, h]:
+            shifted = seeds + np.array([dx, dy])
+            periodic_seeds.append(shifted)
+    periodic_seeds = np.vstack(periodic_seeds)
+
+    # Compute Voronoi on periodic seeds
     try:
         from scipy.spatial import Voronoi
-        vor = Voronoi(seeds)
+        vor = Voronoi(periodic_seeds)
     except ImportError:
         raise ImportError("Voronoi requires scipy: pip install scipy")
-    
-    # Extract Voronoi edges within bounds
+
+    # Clip all Voronoi ridges to the primary cell [0, w] x [0, h]
+    edge_tol = 1e-8
     edge_pairs = []
     for ridge in vor.ridge_vertices:
         if -1 not in ridge:  # Skip infinite ridges
-            v0, v1 = vor.vertices[ridge[0]], vor.vertices[ridge[1]]
-            # Check if both vertices are within box
-            if (0 <= v0[0] <= w and 0 <= v0[1] <= h and
-                0 <= v1[0] <= w and 0 <= v1[1] <= h):
-                edge_pairs.append((v0, v1))
-    
+            v0, v1 = vor.vertices[ridge[0]][:2], vor.vertices[ridge[1]][:2]
+            clipped = _clip_segment_to_box(v0, v1, w, h)
+            if clipped is not None:
+                p0, p1 = clipped
+                if np.linalg.norm(p1 - p0) > edge_tol:
+                    edge_pairs.append((p0, p1))
+
     # Generate displacements for all edges
     n_total_pts = len(edge_pairs) * n_pts_per_side
     if n_pts_per_side > 0:
         if point_displacements is not None:
             all_disp = list(point_displacements)
         else:
-            # Estimate edge length
             edge_lens = [np.linalg.norm(p2 - p1) for p1, p2 in edge_pairs]
             mean_len = np.mean(edge_lens) if edge_lens else min(w, h) / 5
             mag = perturbation * mean_len if perturbation > 0 else 0.3 * mean_len
@@ -1570,7 +1825,7 @@ def _unit_voronoi(
             all_disp = _auto_displacements(n_total_pts, mag, effective_seed)
     else:
         all_disp = []
-    
+
     # Add edges with intermediates
     for idx, (p1, p2) in enumerate(edge_pairs):
         start = idx * n_pts_per_side
@@ -1580,7 +1835,7 @@ def _unit_voronoi(
             g, tuple(p1), tuple(p2), n_pts_per_side, edge_disp,
             radius, material, n_internal,
         )
-    
+
     g._metadata["unit_type"] = "voronoi"
     g._metadata["n_seeds"] = n_seeds
     g._metadata["n_pts_per_side"] = n_pts_per_side
