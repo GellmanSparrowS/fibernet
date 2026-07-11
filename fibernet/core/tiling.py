@@ -385,7 +385,9 @@ def fit_unit_to_box(
             span[i] = 1.0
 
     usable = tb - 2 * padding
-    factors = usable / span
+    # Only consider active dimensions for scale factor (2D ignores z)
+    ndim = graph.dimension if hasattr(graph, 'dimension') else (3 if tb[2] > 0 else 2)
+    factors = usable[:ndim] / span[:ndim]
     f = float(min(factors))
 
     # Center
