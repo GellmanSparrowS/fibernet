@@ -297,6 +297,103 @@ class StructureGraph:
         del self._nodes[node_id]
 
     # ------------------------------------------------------------------
+    # Node position manipulation (for RL / parametric design)
+    # ------------------------------------------------------------------
+
+    def displace_node(self, node_id: int, displacement: Sequence[float]):
+        """Move a node by a displacement vector (dx, dy[, dz]).
+
+        Parameters
+        ----------
+        node_id : int
+            Node to move.
+        displacement : array-like
+            Displacement vector (dx, dy) or (dx, dy, dz).
+
+        Raises
+        ------
+        KeyError
+            If node_id not found.
+
+        Examples
+        --------
+        >>> g.displace_node(5, [0.1, 0.2])  # move node 5 by (0.1, 0.2)
+        """
+        if node_id not in self._nodes:
+            raise KeyError(f"Node {node_id} not found")
+        disp = np.asarray(displacement, dtype=float)
+        if len(disp) == 2:
+            disp = np.append(disp, 0.0)
+        # Update spatial hash
+        old_pos = self._nodes[node_id].position
+        old_key = self._pos_key(old_pos)
+        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
+            self._spatial_hash[old_key].remove(node_id)
+        # Apply displacement
+        self._nodes[node_id].position = old_pos + disp
+        # Update spatial hash
+        new_key = self._pos_key(self._nodes[node_id].position)
+        self._spatial_hash.setdefault(new_key, []).append(node_id)
+
+    def set_node_position(self, node_id: int, position: Sequence[float]):
+        """Set the absolute position of a node.
+
+        Parameters
+        ----------
+        node_id : int
+            Node to reposition.
+        position : array-like
+            New position (x, y) or (x, y, z).
+        """
+        if node_id not in self._nodes:
+            raise KeyError(f"Node {node_id} not found")
+        pos = np.asarray(position, dtype=float)
+        if len(pos) == 2:
+            pos = np.append(pos, 0.0)
+        # Update spatial hash
+        old_key = self._pos_key(self._nodes[node_id].position)
+        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
+            self._spatial_hash[old_key].remove(node_id)
+        self._nodes[node_id].position = pos.copy()
+        new_key = self._pos_key(pos)
+        self._spatial_hash.setdefault(new_key, []).append(node_id)
+
+    def set_node_positions(self, positions: Dict[int, Sequence[float]]):
+        """Batch-set positions of multiple nodes.
+
+        Parameters
+        ----------
+        positions : dict
+            Mapping {node_id: (x, y[, z])}.
+
+        Examples
+        --------
+        >>> g.set_node_positions({1: [0.5, 0.0], 3: [1.0, 2.0]})
+        """
+        for nid, pos in positions.items():
+            self.set_node_position(nid, pos)
+
+    def get_internal_nodes(self) -> List[int]:
+        """Return node IDs of non-boundary (internal) nodes.
+
+        Useful for RL: these are the nodes whose positions can be
+        parameterized as continuous actions.
+        """
+        result = []
+        for nid, node in self._nodes.items():
+            if not any(node.boundary):
+                result.append(nid)
+        return sorted(result)
+
+    def get_boundary_nodes(self) -> List[int]:
+        """Return node IDs of boundary nodes."""
+        result = []
+        for nid, node in self._nodes.items():
+            if any(node.boundary):
+                result.append(nid)
+        return sorted(result)
+
+    # ------------------------------------------------------------------
     # Edge operations
     # ------------------------------------------------------------------
 
