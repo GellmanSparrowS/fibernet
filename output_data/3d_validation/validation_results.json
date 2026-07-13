@@ -1,0 +1,534 @@
+[
+  {
+    "unit": "bcc",
+    "generation": {
+      "nodes": 9,
+      "edges": 20,
+      "dimension": 3,
+      "time_s": 0.001
+    },
+    "tiling": {
+      "nodes": 35,
+      "edges": 118,
+      "time_s": 0.002,
+      "ratio_nodes": 3.89
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.345,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 35,
+      "n_edge": 118,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.4141,
+      "time_s": 0.146
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/bcc_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 49,
+      "pts_edges": 60
+    }
+  },
+  {
+    "unit": "chiral_3d",
+    "generation": {
+      "nodes": 40,
+      "edges": 60,
+      "dimension": 3,
+      "time_s": 0.004
+    },
+    "tiling": {
+      "nodes": 283,
+      "edges": 480,
+      "time_s": 0.009,
+      "ratio_nodes": 7.08
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.667,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 283,
+      "n_edge": 480,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.0,
+      "time_s": 12.446
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/chiral_3d_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 160,
+      "pts_edges": 180
+    }
+  },
+  {
+    "unit": "cubic",
+    "generation": {
+      "nodes": 8,
+      "edges": 12,
+      "dimension": 3,
+      "time_s": 0.001
+    },
+    "tiling": {
+      "nodes": 27,
+      "edges": 54,
+      "time_s": 0.002,
+      "ratio_nodes": 3.38
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.294,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 27,
+      "n_edge": 54,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.0,
+      "time_s": 0.039
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/cubic_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 32,
+      "pts_edges": 36
+    }
+  },
+  {
+    "unit": "diamond_3d",
+    "generation": {
+      "nodes": 14,
+      "edges": 24,
+      "dimension": 3,
+      "time_s": 0.003
+    },
+    "tiling": {
+      "nodes": 63,
+      "edges": 144,
+      "time_s": 0.003,
+      "ratio_nodes": 4.5
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.379,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 63,
+      "n_edge": 144,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.0,
+      "time_s": 0.103
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/diamond_3d_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 62,
+      "pts_edges": 72
+    }
+  },
+  {
+    "unit": "fcc",
+    "generation": {
+      "nodes": 14,
+      "edges": 36,
+      "dimension": 3,
+      "time_s": 0.001
+    },
+    "tiling": {
+      "nodes": 63,
+      "edges": 240,
+      "time_s": 0.007,
+      "ratio_nodes": 4.5
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.346,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 63,
+      "n_edge": 240,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.5204,
+      "time_s": 0.226
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/fcc_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 86,
+      "pts_edges": 108
+    }
+  },
+  {
+    "unit": "gyroid",
+    "generation": {
+      "nodes": 60,
+      "edges": 147,
+      "dimension": 3,
+      "time_s": 0.012
+    },
+    "tiling": {
+      "nodes": 480,
+      "edges": 1176,
+      "time_s": 0.021,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 8.175513,
+      "time_s": 0.291,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 480,
+      "n_edge": 1176,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.5031,
+      "time_s": 1.373
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/gyroid_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 60,
+      "pts_edges": 147
+    }
+  },
+  {
+    "unit": "hcp",
+    "generation": {
+      "nodes": 17,
+      "edges": 43,
+      "dimension": 3,
+      "time_s": 0.002
+    },
+    "tiling": {
+      "nodes": 102,
+      "edges": 296,
+      "time_s": 0.006,
+      "ratio_nodes": 6.0
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.281,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 102,
+      "n_edge": 296,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.5418,
+      "time_s": 0.272
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/hcp_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 103,
+      "pts_edges": 129
+    }
+  },
+  {
+    "unit": "iwp",
+    "generation": {
+      "nodes": 59,
+      "edges": 147,
+      "dimension": 3,
+      "time_s": 0.008
+    },
+    "tiling": {
+      "nodes": 472,
+      "edges": 1176,
+      "time_s": 0.02,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 7.771517,
+      "time_s": 0.322,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 472,
+      "n_edge": 1176,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.493,
+      "time_s": 1.563
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/iwp_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 59,
+      "pts_edges": 147
+    }
+  },
+  {
+    "unit": "lidinoid",
+    "generation": {
+      "nodes": 63,
+      "edges": 218,
+      "dimension": 3,
+      "time_s": 0.012
+    },
+    "tiling": {
+      "nodes": 504,
+      "edges": 1744,
+      "time_s": 0.026,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 7.649952,
+      "time_s": 0.325,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 504,
+      "n_edge": 1744,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.4292,
+      "time_s": 4.018
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/lidinoid_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 63,
+      "pts_edges": 218
+    }
+  },
+  {
+    "unit": "neovius",
+    "generation": {
+      "nodes": 53,
+      "edges": 150,
+      "dimension": 3,
+      "time_s": 0.01
+    },
+    "tiling": {
+      "nodes": 424,
+      "edges": 1200,
+      "time_s": 0.019,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 7.610172,
+      "time_s": 0.311,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 424,
+      "n_edge": 1200,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.4684,
+      "time_s": 1.413
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/neovius_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 53,
+      "pts_edges": 150
+    }
+  },
+  {
+    "unit": "octet",
+    "generation": {
+      "nodes": 9,
+      "edges": 20,
+      "dimension": 3,
+      "time_s": 0.002
+    },
+    "tiling": {
+      "nodes": 35,
+      "edges": 118,
+      "time_s": 0.003,
+      "ratio_nodes": 3.89
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.276,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 35,
+      "n_edge": 118,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.4141,
+      "time_s": 0.083
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/octet_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 49,
+      "pts_edges": 60
+    }
+  },
+  {
+    "unit": "reentrant_3d",
+    "generation": {
+      "nodes": 16,
+      "edges": 49,
+      "dimension": 3,
+      "time_s": 0.001
+    },
+    "tiling": {
+      "nodes": 79,
+      "edges": 302,
+      "time_s": 0.007,
+      "ratio_nodes": 4.94
+    },
+    "simulation": {
+      "max_displacement": 6.0,
+      "time_s": 0.791,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 79,
+      "n_edge": 302,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.2919,
+      "time_s": 0.335
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/reentrant_3d_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 114,
+      "pts_edges": 147
+    }
+  },
+  {
+    "unit": "schwarz_d",
+    "generation": {
+      "nodes": 63,
+      "edges": 174,
+      "dimension": 3,
+      "time_s": 0.009
+    },
+    "tiling": {
+      "nodes": 504,
+      "edges": 1392,
+      "time_s": 0.027,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 7.751018,
+      "time_s": 0.328,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 504,
+      "n_edge": 1392,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.4454,
+      "time_s": 2.43
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/schwarz_d_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 63,
+      "pts_edges": 174
+    }
+  },
+  {
+    "unit": "schwarz_p",
+    "generation": {
+      "nodes": 47,
+      "edges": 105,
+      "dimension": 3,
+      "time_s": 0.009
+    },
+    "tiling": {
+      "nodes": 376,
+      "edges": 840,
+      "time_s": 0.015,
+      "ratio_nodes": 8.0
+    },
+    "simulation": {
+      "max_displacement": 8.252113,
+      "time_s": 0.332,
+      "energy": 0.0
+    },
+    "features": {
+      "n_features": 94,
+      "n_node": 376,
+      "n_edge": 840,
+      "mean_degree": 0,
+      "is_connected": 0,
+      "clustering_coef": 0.5101,
+      "time_s": 0.647
+    },
+    "visualization": {
+      "saved": true,
+      "path": "/home/codex/projects/codex_test/fibernet/fibernet/scripts/../../output_data/3d_validation/viz/schwarz_p_3d.png"
+    },
+    "errors": [],
+    "rl_feature": {
+      "pts_nodes": 47,
+      "pts_edges": 105
+    }
+  }
+]
