@@ -222,14 +222,20 @@ class GraphFeatureExtractor:
         if isinstance(obj, nx.Graph):
             return obj
 
-        # Try FiberNetwork
+        # Try StructureGraph
         try:
-            from fibernet.graph.io import to_networkx
-            return to_networkx(obj)
+            from fibernet.core.structure_graph import StructureGraph
+            if isinstance(obj, StructureGraph):
+                G = nx.Graph()
+                for nid, node in obj.nodes.items():
+                    G.add_node(nid, pos=tuple(node.position[:2]))
+                for edge in obj.edges.values():
+                    G.add_edge(edge.node_i, edge.node_j)
+                return G
         except (ImportError, TypeError, AttributeError):
             pass
 
-        raise TypeError(f"Expected nx.Graph or FiberNetwork, got {type(obj).__name__}")
+        raise TypeError(f"Expected nx.Graph or StructureGraph, got {type(obj).__name__}")
 
     def _render_image(self, G):
         """Render graph edges to a binary image for pore analysis."""
