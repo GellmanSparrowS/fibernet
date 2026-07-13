@@ -2,7 +2,7 @@
 FiberNet Version Information
 """
 
-__version__ = "2.0.0"
+__version__ = "4.1.0"
 __author__ = "FiberNet Contributors"
 __email__ = "fibernet@example.com"
 __license__ = "MIT"
