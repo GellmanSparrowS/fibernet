@@ -131,6 +131,8 @@ class SimResult:
             if self.deformed_positions is not None:
                 d["deformed_positions"] = self.deformed_positions.tolist()
             d["history"] = self.history
+            if self.positions_trajectory:
+                d["positions_trajectory"] = [frame.tolist() for frame in self.positions_trajectory]
         return d
 
     def save(self, path: str, detailed: bool = False):
@@ -166,6 +168,8 @@ class SimResult:
         for key in ("edge_forces", "edge_stretches", "displacements", "deformed_positions"):
             if data.get(key) is not None:
                 setattr(r, key, np.array(data[key]))
+        if data.get("positions_trajectory"):
+            r.positions_trajectory = [np.array(frame) for frame in data["positions_trajectory"]]
         return r
 
 

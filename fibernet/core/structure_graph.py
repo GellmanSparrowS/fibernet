@@ -851,7 +851,7 @@ class StructureGraph:
                 {
                     "id": nid,
                     "position": node.position.tolist(),
-                    "boundary": list(node.boundary),
+                    "boundary": [bool(b) for b in node.boundary],
                     "metadata": node.metadata,
                 }
                 for nid, node in sorted(self._nodes.items())

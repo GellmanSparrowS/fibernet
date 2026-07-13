@@ -1,0 +1,42 @@
+[
+  {
+    "id": 0,
+    "seed": 0,
+    "name": "square_3x3_pts5_disp20_seed0",
+    "is_base": true,
+    "n_nodes": 136,
+    "n_edges": 144
+  },
+  {
+    "id": 1,
+    "seed": 1001,
+    "name": "square_3x3_pts5_disp20_seed1001",
+    "is_base": false,
+    "n_nodes": 196,
+    "n_edges": 216
+  },
+  {
+    "id": 2,
+    "seed": 1002,
+    "name": "square_3x3_pts5_disp20_seed1002",
+    "is_base": false,
+    "n_nodes": 196,
+    "n_edges": 216
+  },
+  {
+    "id": 3,
+    "seed": 1003,
+    "name": "square_3x3_pts5_disp20_seed1003",
+    "is_base": false,
+    "n_nodes": 196,
+    "n_edges": 216
+  },
+  {
+    "id": 4,
+    "seed": 1004,
+    "name": "square_3x3_pts5_disp20_seed1004",
+    "is_base": false,
+    "n_nodes": 196,
+    "n_edges": 216
+  }
+]
