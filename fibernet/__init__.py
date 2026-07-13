@@ -74,6 +74,7 @@ from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_js
 
 # --- Analysis ---
 from fibernet.analysis.graph_features import GraphFeatureExtractor
+from fibernet.analysis.graph_features_3d import GraphFeatureExtractor3D
 
 # --- ML Utilities (lazy import to avoid hard sklearn dependency) ---
 try:
@@ -127,6 +128,7 @@ __all__ = [
     "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",
     # Analysis
     "GraphFeatureExtractor",
+    "GraphFeatureExtractor3D",
     # ML (if available)
     "train_predictor", "cross_validate", "compare_models",
     "predict_from_csv", "plot_predictions", "plot_feature_importance",
