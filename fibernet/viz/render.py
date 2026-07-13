@@ -361,6 +361,133 @@ def render_deformation(
 # Gallery / comparison
 # ======================================================================
 
+
+def render_trajectory(
+    original: 'StructureGraph',
+    positions_trajectory: List[np.ndarray],
+    edge_stretches: np.ndarray,
+    *,
+    n_frames: int = 6,
+    figsize: Tuple[float, float] = (18, 4),
+    theme: str = "dark",
+    title: str = "",
+    line_width: float = 1.2,
+    save_path: Optional[str] = None,
+) -> 'plt.Figure':
+    """Render multi-frame trajectory visualization with stress distribution.
+
+    Creates a grid of subplots showing the structure at different time steps,
+    colored by edge stretch (stress proxy).
+
+    Parameters
+    ----------
+    original : StructureGraph
+        Reference undeformed structure (for node/edge topology).
+    positions_trajectory : list of np.ndarray
+        List of (N, 3) position arrays per frame.
+    edge_stretches : np.ndarray
+        Edge stretch ratio for coloring (len = num_edges).
+    n_frames : int
+        Number of frames to display.
+    theme : str
+        Color theme name.
+    title : str
+        Plot title.
+    save_path : str, optional
+        Path to save figure.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import Normalize
+
+    th = _get_theme(theme)
+    n_traj = len(positions_trajectory)
+    n_display = min(n_frames, n_traj)
+
+    # Select frame indices
+    if n_traj > n_display:
+        frame_idx = np.linspace(0, n_traj - 1, n_display, dtype=int)
+    else:
+        frame_idx = np.arange(n_traj)
+
+    ncols = min(n_display, 3)
+    nrows = (n_display + ncols - 1) // ncols
+    fig, axes = plt.subplots(nrows, ncols, figsize=(figsize[0] * ncols / 3, figsize[1] * nrows),
+                              squeeze=False)
+    fig.patch.set_facecolor(th['bg'])
+
+    # Get edge topology from original
+    edge_pairs = [(e.node_i, e.node_j) for e in original.edges.values()]
+
+    # Compute stress colors from edge_stretches
+    min_stretch = float(np.percentile(edge_stretches, 1))
+    max_stretch = float(np.percentile(edge_stretches, 99))
+    norm = Normalize(vmin=min_stretch, vmax=max_stretch)
+
+    # Use a colormap that looks good on dark bg
+    cmap = plt.cm.viridis
+
+    all_x, all_y = [], []
+    for idx in frame_idx:
+        pos = positions_trajectory[idx]
+        for u, v in edge_pairs:
+            all_x.extend([pos[u, 0], pos[v, 0]])
+            all_y.extend([pos[u, 1], pos[v, 1]])
+
+    x_all = np.array(all_x)
+    y_all = np.array(all_y)
+    pad = max((np.max(x_all) - np.min(x_all)), (np.max(y_all) - np.min(y_all))) * 0.05
+    x_min, x_max = np.min(x_all) - pad, np.max(x_all) + pad
+    y_min, y_max = np.min(y_all) - pad, np.max(y_all) + pad
+
+    for plot_idx, frame_i in enumerate(frame_idx):
+        ax = axes[plot_idx // ncols][plot_idx % ncols]
+        ax.set_facecolor(th['bg'])
+
+        pos = positions_trajectory[frame_i]
+        segments = []
+        stretch_vals = []
+        for ei, (u, v) in enumerate(edge_pairs):
+            segments.append([[pos[u, 0], pos[u, 1]], [pos[v, 0], pos[v, 1]]])
+            stretch_vals.append(edge_stretches[ei])
+
+        lc = LineCollection(segments, cmap=cmap, norm=norm,
+                           linewidths=line_width, edgecolors='none')
+        lc.set_array(np.array(stretch_vals))
+        ax.add_collection(lc)
+
+        # Draw nodes as small dots
+        ax.scatter(pos[:, 0], pos[:, 1], c=th['node'], s=2, zorder=2, edgecolors='none')
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+        ax.set_aspect('equal')
+        ax.set_title(f"Frame {frame_i + 1}/{n_traj}", color=th['text'], fontsize=10)
+        ax.tick_params(colors='#888', labelsize=8)
+        for spine in ax.spines.values():
+            spine.set_color('#333')
+
+    # Add colorbar
+    cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, cax=cbar_ax)
+    cbar.set_label("Edge Stretch", color=th['text'], fontsize=10)
+    cbar.ax.tick_params(colors='#888')
+
+    if title:
+        fig.suptitle(title, color=th['text'], fontsize=14, y=1.01)
+
+    plt.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight', facecolor=th['bg'])
+    return fig
+
+
 def render_gallery(
     graphs: List[StructureGraph],
     titles: Optional[List[str]] = None,

@@ -61,6 +61,7 @@ from fibernet.sim.accelerated import TaichiEngine, SimResult
 
 # --- Visualization ---
 from fibernet.viz.render import (
+    render_trajectory,
     render_graph, render_graph_3d,
     render_deformation, render_gallery,
     render_with_stats,
@@ -119,7 +120,7 @@ __all__ = [
     "TaichiEngine", "SimResult",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
-    "render_gallery", "render_with_stats", "THEMES",
+    "render_gallery", "render_with_stats", "render_trajectory", "THEMES",
     # Easy API
     "show", "simulate", "batch_simulate", "train_model", "train_rl",
     # Analysis
