@@ -26,7 +26,7 @@ from fibernet.sim.nonlinear import (
 )
 
 try:
-    from fibernet.sim.accelerated import TaichiEngine, AcceleratedResult
+    from fibernet.sim.accelerated import TaichiEngine, SimResult
 except ImportError:
     pass
 
@@ -49,7 +49,7 @@ __all__ = [
     "HyperelasticNeoHookean", "HyperelasticMooneyRivlin", "ArrudaBoyce",
     "ViscoelasticModel", "MaxwellModel", "KelvinVoigtModel", "StandardLinearSolid",
     # Acceleration
-    "TaichiEngine", "AcceleratedResult",
+    "TaichiEngine", "SimResult",
 ]
 
 # Fluid flow simulation
@@ -87,9 +87,8 @@ __all__.extend([
 ])
 
 # Taichi-accelerated FEM solver
-from .accelerated import TaichiFEMSolver
+
 __all__.extend([
-    "TaichiFEMSolver"
 ])
 
 # Periodic boundary conditions

@@ -40,7 +40,7 @@ except ImportError:
         HAS_GYM = False
 
 from fibernet.gen.pattern import pattern_2d, list_units
-from fibernet.sim.accelerated import TaichiFEMSolver, SimResult
+from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.ml.dataset_v2 import extract_features
 
 
@@ -156,8 +156,10 @@ class FiberNetworkEnv:
             )
 
             # Run FEM
-            fem = TaichiFEMSolver()
-            result = fem.uniaxial_tension(strain=self.applied_strain)
+            engine = TaichiEngine()
+            r = engine.stretch_test(g, target_stretch=1.01, stiffness=1e5, damping=0.3,
+                                    num_steps=500, save_interval=500)
+            result = r
 
             # Extract features
             feat = extract_features(g)

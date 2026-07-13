@@ -1,6 +1,5 @@
-"""BeamFEM has been replaced by TaichiFEMSolver.
+"""BeamFEM has been removed. All simulation now uses TaichiEngine (mass-spring dynamics).
 
-Use: from fibernet.sim.accelerated import TaichiFEMSolver
+Use: from fibernet.sim.accelerated import TaichiEngine, SimResult
+Or: from fibernet import simulate
 """
-from fibernet.sim.accelerated import TaichiFEMSolver, SimResult as FEMResult
-BeamFEM = None  # removed

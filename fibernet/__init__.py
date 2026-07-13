@@ -13,7 +13,7 @@ Quick Start
 StructureGraph(dim=2, nodes=90, edges=130, box=[50.0, 50.0])
 
 >>> # Run mechanical analysis
->>> solver = fn.TaichiFEMSolver()
+>>> engine = fn.TaichiEngine()
 >>> result = fem.uniaxial_tension(strain=0.01)
 >>> print(f"E* = {result.effective_youngs_modulus:.2e} Pa")
 
@@ -66,7 +66,7 @@ from fibernet.ml.dataset_v2 import generate_dataset, extract_features
 from fibernet.sim.rl_env import FiberNetworkEnv
 
 # Easy API (一行代码)
-from fibernet.sim.accelerated import TaichiFEMSolver, TaichiEngine, SimResult
+from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.easy import show, simulate, batch_simulate, train_model, train_rl
 
 __all__ = [
@@ -89,5 +89,5 @@ __all__ = [
     # Easy API
     "show", "simulate", "batch_simulate", "train_model", "train_rl",
     # Simulation backends
-    "TaichiFEMSolver", "TaichiEngine", "SimResult",
+    "TaichiEngine", "SimResult",
 ]

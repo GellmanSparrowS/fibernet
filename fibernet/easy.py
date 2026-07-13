@@ -28,7 +28,7 @@ import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.accelerated import TaichiFEMSolver, TaichiEngine, SimResult
+from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.viz.render import render_graph, render_deformation
 
 
@@ -72,7 +72,7 @@ def simulate(
     graph: StructureGraph,
     mode: str = "tension",
     strain: float = 0.01,
-    backend: str = "fem",
+    backend: str = "spring",
     save_path: Optional[str] = None,
     **kwargs,
 ) -> SimResult:
@@ -84,13 +84,13 @@ def simulate(
         要模拟的结构。
     mode : str
         模拟模式:
-        FEM 后端: "tension", "compression", "biaxial", "shear"
+        弹簧后端: "stretch", "dynamics"
         弹簧后端: "stretch" (位移控制拉伸)
     strain : float
         FEM: 施加应变 (无量纲)
         弹簧: target_stretch 倍数 (如 2.0 = 拉到两倍)
     backend : str
-        "fem" (TaichiFEMSolver 静态杆单元) 或 "spring" (TaichiEngine 质点弹簧)
+        "spring" (TaichiEngine 质点弹簧动力学)
     save_path : str, optional
         JSON 保存路径。
 
@@ -106,19 +106,7 @@ def simulate(
     >>> r = simulate(g, mode="tension", strain=0.02)  # FEM
     >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
-    if backend == "fem":
-        solver = TaichiFEMSolver()
-        if mode == "tension":
-            result = solver.uniaxial_tension(graph, strain=strain, **kwargs)
-        elif mode == "compression":
-            result = solver.compression(graph, strain=strain, **kwargs)
-        elif mode == "biaxial":
-            result = solver.biaxial_tension(graph, strain_x=strain, strain_y=strain, **kwargs)
-        elif mode == "shear":
-            result = solver.shear_test(graph, strain=strain, **kwargs)
-        else:
-            raise ValueError(f"Unknown FEM mode '{mode}'. Use: tension, compression, biaxial, shear")
-    elif backend == "spring":
+    if backend == "spring":
         engine = TaichiEngine()
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
@@ -126,8 +114,7 @@ def simulate(
             result = engine.dynamics(graph, **kwargs)
         else:
             raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
-    else:
-        raise ValueError(f"Unknown backend '{backend}'. Use: fem, spring")
+
 
     if save_path:
         result.save(save_path)

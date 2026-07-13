@@ -2,7 +2,7 @@
 Taichi-accelerated simulations for fiber networks.
 
 Two backends:
-1. **TaichiFEMSolver** — Static truss FEM (axial bar elements, Taichi parallel assembly)
+TaichiEngine is the primary simulation backend (mass-spring dynamics).
 2. **TaichiEngine** — Mass-spring dynamics (explicit Verlet integration, Taichi parallel forces)
 
 Both accept StructureGraph directly via high-level test methods.
@@ -134,333 +134,8 @@ def _element_data(pos, elements):
 
 
 # ======================================================================
-# Backend 1: TaichiFEMSolver (Static Truss FEM)
 # ======================================================================
 
-class TaichiFEMSolver:
-    """Static truss FEM with Taichi parallel assembly.
-
-    Truss/bar elements: axial force only (no bending).
-    Uses 2 DOF/node for 2D, 3 DOF/node for 3D.
-    """
-
-    def __init__(self, arch: str = "cpu", num_threads: int = 4):
-        _ensure_taichi(arch, num_threads)
-
-    def _solve_truss(
-        self,
-        pos: np.ndarray,
-        elements: np.ndarray,
-        youngs_modulus: float,
-        radii: np.ndarray,
-        fixed_dofs: List[int],
-        applied_displacements: Dict[int, float] = None,
-        applied_forces: np.ndarray = None,
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """Core truss solver with displacement or force BCs."""
-        import scipy.sparse as sp
-        import scipy.sparse.linalg as spla
-
-        num_nodes = pos.shape[0]
-        num_elements = elements.shape[0]
-        dim = 2 if np.allclose(pos[:, 2], pos[0, 2]) else 3
-        ndof = num_nodes * dim
-
-        lengths, directions = _element_data(pos, elements)
-        areas = np.pi * radii[:num_elements] ** 2
-        axial_k = youngs_modulus * areas / lengths
-
-        # Taichi parallel element stiffness
-        ti_ke = ti.field(dtype=ti.f64, shape=(num_elements, dim, dim))
-        ti_dir = ti.Vector.field(dim, dtype=ti.f64, shape=num_elements)
-        ti_k = ti.field(dtype=ti.f64, shape=num_elements)
-
-        ti_dir.from_numpy(directions[:, :dim].astype(np.float64))
-        ti_k.from_numpy(axial_k.astype(np.float64))
-
-        @ti.kernel
-        def assemble_ke():
-            for e in range(num_elements):
-                k = ti_k[e]
-                d = ti_dir[e]
-                for i in ti.static(range(dim)):
-                    for j in ti.static(range(dim)):
-                        ti_ke[e, i, j] = k * d[i] * d[j]
-
-        assemble_ke()
-        ke_all = ti_ke.to_numpy()
-
-        # Global assembly
-        rows, cols, vals = [], [], []
-        for e in range(num_elements):
-            ni, nj = elements[e]
-            for a in range(dim):
-                for b in range(dim):
-                    v = ke_all[e, a, b]
-                    if abs(v) > 1e-15:
-                        rows.extend([ni * dim + a, ni * dim + a, nj * dim + a, nj * dim + a])
-                        cols.extend([ni * dim + b, nj * dim + b, ni * dim + b, nj * dim + b])
-                        vals.extend([v, -v, -v, v])
-
-        K = sp.csr_matrix((vals, (rows, cols)), shape=(ndof, ndof))
-
-        # Boundary conditions
-        all_dofs = set(range(ndof))
-        fixed_set = set(fixed_dofs)
-        # Also fix applied displacement DOFs
-        if applied_displacements:
-            fixed_set.update(applied_displacements.keys())
-        free_dofs = sorted(all_dofs - fixed_set)
-
-        K_ff = K[free_dofs, :][:, free_dofs]
-
-        # Regularization: small ground springs to stabilize mechanisms
-        # Scale relative to matrix diagonal for robustness
-        diag_max = abs(K_ff.diagonal()).max() if len(free_dofs) > 0 else 1.0
-        reg = max(diag_max * 1e-8, 1e-6)
-        K_ff = K_ff + sp.eye(len(free_dofs), format="csr") * reg
-
-        # Right-hand side
-        F = np.zeros(ndof)
-        if applied_forces is not None:
-            F = applied_forces.flatten()[:ndof]
-
-        # Handle prescribed displacements
-        u = np.zeros(ndof)
-        if applied_displacements:
-            for dof, val in applied_displacements.items():
-                u[dof] = val
-            # Modify RHS for prescribed displacements
-            u_prescribed = np.zeros(ndof)
-            for dof, val in applied_displacements.items():
-                u_prescribed[dof] = val
-            F_mod = F - K @ u_prescribed
-            F_free = F_mod[free_dofs]
-        else:
-            F_free = F[free_dofs]
-
-        u_free = spla.spsolve(K_ff, F_free)
-        u[free_dofs] = u_free
-
-        displacements = u.reshape(num_nodes, dim)
-        if dim == 2:
-            displacements = np.hstack([displacements, np.zeros((num_nodes, 1))])
-
-        # Element results
-        strains = np.zeros(num_elements)
-        stresses = np.zeros(num_elements)
-        for e in range(num_elements):
-            ni, nj = elements[e]
-            delta = displacements[nj, :dim] - displacements[ni, :dim]
-            strains[e] = np.dot(delta, directions[e, :dim]) / lengths[e]
-            stresses[e] = youngs_modulus * strains[e]
-
-        return displacements, strains, stresses
-
-    def uniaxial_tension(
-        self,
-        graph: StructureGraph,
-        strain: float = 0.01,
-        youngs_modulus: float = 1e9,
-        radius: float = 0.05,
-    ) -> SimResult:
-        """Uniaxial tension in x-direction."""
-        t0 = time.time()
-        pos, elements, _, _ = _graph_to_arrays(graph)
-        radii = np.full(len(elements), radius)
-        bnd = _get_boundary_indices(pos)
-
-        dim = 2 if np.allclose(pos[:, 2], pos[0, 2]) else 3
-        L_x = pos[:, 0].max() - pos[:, 0].min()
-        L_y = pos[:, 1].max() - pos[:, 1].min()
-        delta_x = strain * L_x
-
-        # Fix left boundary (x), pin one y
-        fixed_dofs = []
-        for ni in bnd["left"]:
-            fixed_dofs.append(ni * dim)
-        if bnd["bottom"]:
-            fixed_dofs.append(bnd["bottom"][0] * dim + 1)
-
-        # Prescribe right boundary displacement
-        applied = {}
-        for ni in bnd["right"]:
-            applied[ni * dim] = delta_x
-
-        displacements, strains, stresses = self._solve_truss(
-            pos, elements, youngs_modulus, radii, fixed_dofs,
-            applied_displacements=applied,
-        )
-
-        # Effective properties
-        K = self._build_stiffness(pos, elements, youngs_modulus, radii, dim)
-        u_flat = displacements[:, :dim].flatten()
-        f_react = K @ u_flat
-
-        F_total = sum(f_react[ni * dim] for ni in bnd["right"])
-        H = L_y if dim >= 2 else 1
-        E_eff = abs(F_total) / (abs(strain) * H) if abs(strain) > 1e-12 else 0
-
-        # Poisson's ratio
-        top_nodes = bnd.get("top", [])
-        if top_nodes and abs(strain) > 1e-12:
-            avg_uy = np.mean([displacements[ni, 1] for ni in top_nodes])
-            eps_y = avg_uy / L_y
-            nu_eff = -eps_y / strain
-        else:
-            nu_eff = 0.0
-
-        energy = 0.5 * u_flat @ (K @ u_flat)
-        deformed_pos = pos + displacements
-
-        forces = np.array([
-            stresses[e] * np.pi * radii[e] ** 2 for e in range(len(elements))
-        ])
-
-        return SimResult(
-            displacements=displacements,
-            forces=forces,
-            stresses=stresses,
-            strains=strains,
-            energy=energy,
-            effective_youngs_modulus=E_eff,
-            effective_poissons_ratio=nu_eff,
-            time_seconds=time.time() - t0,
-            mode="uniaxial_tension",
-            deformed_positions=deformed_pos,
-        )
-
-    def biaxial_tension(
-        self,
-        graph: StructureGraph,
-        strain_x: float = 0.01,
-        strain_y: float = 0.01,
-        youngs_modulus: float = 1e9,
-        radius: float = 0.05,
-    ) -> SimResult:
-        """Biaxial tension in x and y."""
-        t0 = time.time()
-        pos, elements, _, _ = _graph_to_arrays(graph)
-        radii = np.full(len(elements), radius)
-        bnd = _get_boundary_indices(pos)
-        dim = 2 if np.allclose(pos[:, 2], pos[0, 2]) else 3
-        L_x = pos[:, 0].max() - pos[:, 0].min()
-        L_y = pos[:, 1].max() - pos[:, 1].min()
-
-        fixed_dofs = []
-        applied = {}
-
-        for ni in bnd["left"]:
-            fixed_dofs.append(ni * dim)
-        for ni in bnd["right"]:
-            applied[ni * dim] = strain_x * L_x
-        for ni in bnd["bottom"]:
-            fixed_dofs.append(ni * dim + 1)
-        for ni in bnd["top"]:
-            applied[ni * dim + 1] = strain_y * L_y
-
-        displacements, strains, stresses = self._solve_truss(
-            pos, elements, youngs_modulus, radii, fixed_dofs,
-            applied_displacements=applied,
-        )
-
-        K = self._build_stiffness(pos, elements, youngs_modulus, radii, dim)
-        u_flat = displacements[:, :dim].flatten()
-        energy = 0.5 * u_flat @ (K @ u_flat)
-
-        return SimResult(
-            displacements=displacements, forces=None,
-            stresses=stresses, strains=strains,
-            energy=energy,
-            effective_youngs_modulus=(abs(strain_x) + abs(strain_y)) / 2 * youngs_modulus,
-            time_seconds=time.time() - t0,
-            mode="biaxial_tension",
-            deformed_positions=pos + displacements,
-        )
-
-    def compression(
-        self,
-        graph: StructureGraph,
-        strain: float = 0.01,
-        youngs_modulus: float = 1e9,
-        radius: float = 0.05,
-    ) -> SimResult:
-        """Uniaxial compression."""
-        result = self.uniaxial_tension(graph, strain=-abs(strain),
-                                       youngs_modulus=youngs_modulus, radius=radius)
-        result.mode = "compression"
-        return result
-
-    def shear_test(
-        self,
-        graph: StructureGraph,
-        strain: float = 0.01,
-        youngs_modulus: float = 1e9,
-        radius: float = 0.05,
-    ) -> SimResult:
-        """Simple shear test."""
-        t0 = time.time()
-        pos, elements, _, _ = _graph_to_arrays(graph)
-        radii = np.full(len(elements), radius)
-        bnd = _get_boundary_indices(pos)
-        dim = 2
-        L_y = pos[:, 1].max() - pos[:, 1].min()
-
-        fixed_dofs = []
-        applied = {}
-        for ni in bnd["bottom"]:
-            fixed_dofs.extend([ni * dim, ni * dim + 1])
-        for ni in bnd["top"]:
-            applied[ni * dim] = strain * L_y
-            fixed_dofs.append(ni * dim + 1)
-
-        displacements, strains, stresses = self._solve_truss(
-            pos, elements, youngs_modulus, radii, fixed_dofs,
-            applied_displacements=applied,
-        )
-
-        K = self._build_stiffness(pos, elements, youngs_modulus, radii, dim)
-        u_flat = displacements[:, :dim].flatten()
-        f_react = K @ u_flat
-        F_total = sum(f_react[ni * dim] for ni in bnd["top"])
-        L_x = pos[:, 0].max() - pos[:, 0].min()
-        G_eff = abs(F_total) / (abs(strain) * L_x) if abs(strain) > 1e-12 else 0
-
-        energy = 0.5 * u_flat @ (K @ u_flat)
-
-        return SimResult(
-            displacements=displacements, forces=None,
-            stresses=stresses, strains=strains,
-            energy=energy,
-            effective_shear_modulus=G_eff,
-            time_seconds=time.time() - t0,
-            mode="shear",
-            deformed_positions=pos + displacements,
-        )
-
-    def _build_stiffness(self, pos, elements, E, radii, dim):
-        import scipy.sparse as sp
-        num_nodes, num_elements = pos.shape[0], elements.shape[0]
-        ndof = num_nodes * dim
-        lengths, directions = _element_data(pos, elements)
-        areas = np.pi * radii[:num_elements] ** 2
-        axial_k = E * areas / lengths
-        rows, cols, vals = [], [], []
-        for e in range(num_elements):
-            ni, nj = elements[e]
-            for a in range(dim):
-                for b in range(dim):
-                    v = axial_k[e] * directions[e, a] * directions[e, b]
-                    if abs(v) > 1e-15:
-                        rows.extend([ni*dim+a, ni*dim+a, nj*dim+a, nj*dim+a])
-                        cols.extend([ni*dim+b, nj*dim+b, ni*dim+b, nj*dim+b])
-                        vals.extend([v, -v, -v, v])
-        return sp.csr_matrix((vals, (rows, cols)), shape=(ndof, ndof))
-
-
-# ======================================================================
-# Backend 2: TaichiEngine (Mass-Spring Dynamics)
-# ======================================================================
 
 class TaichiEngine:
     """Mass-spring dynamics with Taichi parallel force computation.
@@ -727,23 +402,85 @@ class TaichiEngine:
         target_stretch: float = 2.0,
         stiffness: float = 1e5,
         damping: float = 0.3,
-        num_steps: int = 10000,
+        num_steps: int = None,
         save_interval: int = 1000,
+        ramp_fraction: float = 0.2,
+        auto_steps: bool = True,
     ) -> SimResult:
-        """Displacement-controlled uniaxial stretch to target_stretch ratio.
+        """Displacement-controlled uniaxial stretch with automatic step calculation.
 
-        Gradually moves right boundary nodes to achieve target stretch.
+        Two-phase simulation:
+        1. Ramp phase: gradually move right boundary to target_stretch
+        2. Relax phase: hold displacement, let waves propagate and settle
+
+        Parameters
+        ----------
+        target_stretch : float
+            Target stretch ratio (e.g., 2.0 = double the length)
+        stiffness : float
+            Spring stiffness (higher = stiffer springs)
+        damping : float
+            Velocity damping coefficient (0-1)
+        num_steps : int, optional
+            Total simulation steps. If None and auto_steps=True, calculated from graph diameter
+        save_interval : int
+            Save trajectory every N steps
+        ramp_fraction : float
+            Fraction of total steps for ramp phase (default 0.2 = 20%)
+        auto_steps : bool
+            Auto-calculate steps based on graph diameter if num_steps is None
+
+        Returns
+        -------
+        SimResult
+            Result with deformed_positions and trajectory
         """
+        import networkx as nx
+
         pos, elements, _, _ = _graph_to_arrays(graph)
         bnd = _get_boundary_indices(pos)
         L_x = pos[:, 0].max() - pos[:, 0].min()
         target_disp = L_x * (target_stretch - 1)
 
-        # Displacement schedule: linearly ramp up
+        # Auto-calculate steps based on graph diameter
+        if num_steps is None and auto_steps:
+            # Build graph to find diameter
+            G = nx.Graph()
+            for e in elements:
+                G.add_edge(int(e[0]), int(e[1]))
+            
+            # Find max hops from right to left
+            right_set = set(bnd['right'])
+            left_set = set(bnd['left'])
+            max_hops = 0
+            for rid in right_set:
+                for lid in left_set:
+                    try:
+                        hops = nx.shortest_path_length(G, rid, lid)
+                        max_hops = max(max_hops, hops)
+                    except:
+                        pass
+            
+            # Estimate steps needed
+            # Wave propagation: ~100 steps per hop
+            wave_steps = max_hops * 100
+            # Relaxation: 30000 steps for drag=1.0
+            relax_steps = 30000
+            # Total with safety margin
+            num_steps = max(wave_steps + relax_steps, 20000) * 2
+            print(f"Auto-calculated {num_steps} steps (diameter={max_hops} hops)")
+        elif num_steps is None:
+            num_steps = 20000
+
+        # Displacement schedule: ramp phase + hold phase
+        ramp_steps = int(num_steps * ramp_fraction)
         schedule = {}
         for ni in bnd["right"]:
-            schedule[ni] = [(0, np.array([0.0, 0.0, 0.0])),
-                            (num_steps, np.array([target_disp, 0.0, 0.0]))]
+            schedule[ni] = [
+                (0, np.array([0.0, 0.0, 0.0])),
+                (ramp_steps, np.array([target_disp, 0.0, 0.0])),
+                (num_steps, np.array([target_disp, 0.0, 0.0]))  # hold
+            ]
 
         fixed = bnd["left"] + (bnd.get("bottom", [])[:1] if bnd.get("bottom") else [])
 
@@ -777,5 +514,3 @@ class TaichiEngine:
         return np.array(schedule[-1][1])
 
 
-# Keep backward-compatible aliases
-TaichiFEM = TaichiFEMSolver
