@@ -28,7 +28,7 @@ import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.fem import BeamFEM, FEMResult
+from fibernet.sim.accelerated import TaichiFEMSolver, TaichiEngine, SimResult
 from fibernet.viz.render import render_graph, render_deformation
 
 
@@ -72,53 +72,65 @@ def simulate(
     graph: StructureGraph,
     mode: str = "tension",
     strain: float = 0.01,
+    backend: str = "fem",
     save_path: Optional[str] = None,
     **kwargs,
-) -> FEMResult:
-    """一行模拟：FEM 力学模拟。
+) -> SimResult:
+    """一行模拟：力学模拟。
 
     Parameters
     ----------
     graph : StructureGraph
         要模拟的结构。
     mode : str
-        模拟模式: "tension" (单轴拉伸), "compression" (压缩),
-        "biaxial" (双轴拉伸), "shear" (剪切), "fracture" (断裂)。
+        模拟模式:
+        FEM 后端: "tension", "compression", "biaxial", "shear"
+        弹簧后端: "stretch" (位移控制拉伸)
     strain : float
-        施加应变 (无量纲)。
+        FEM: 施加应变 (无量纲)
+        弹簧: target_stretch 倍数 (如 2.0 = 拉到两倍)
+    backend : str
+        "fem" (TaichiFEMSolver 静态杆单元) 或 "spring" (TaichiEngine 质点弹簧)
     save_path : str, optional
         JSON 保存路径。
 
     Returns
     -------
-    FEMResult
+    SimResult
         模拟结果。
 
     Examples
     --------
     >>> from fibernet import pattern_2d, simulate
     >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
-    >>> r = simulate(g, mode="tension", strain=0.02)
-    >>> print(f"E* = {r.effective_youngs_modulus:.2e} Pa")
-    >>> simulate(g, mode="tension", save_path="result.json")
+    >>> r = simulate(g, mode="tension", strain=0.02)  # FEM
+    >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
-    fem = BeamFEM(graph, default_E=1e9, default_nu=0.3)
-
-    if mode == "tension":
-        result = fem.uniaxial_tension(strain=strain, **kwargs)
-    elif mode == "compression":
-        result = fem.compression(strain=strain, **kwargs)
-    elif mode == "biaxial":
-        result = fem.biaxial_tension(strain_x=strain, strain_y=strain, **kwargs)
-    elif mode == "shear":
-        result = fem.shear_test(strain=strain, **kwargs)
-    elif mode == "fracture":
-        result = fem.tensile_fracture(max_strain=strain, **kwargs)
+    if backend == "fem":
+        solver = TaichiFEMSolver()
+        if mode == "tension":
+            result = solver.uniaxial_tension(graph, strain=strain, **kwargs)
+        elif mode == "compression":
+            result = solver.compression(graph, strain=strain, **kwargs)
+        elif mode == "biaxial":
+            result = solver.biaxial_tension(graph, strain_x=strain, strain_y=strain, **kwargs)
+        elif mode == "shear":
+            result = solver.shear_test(graph, strain=strain, **kwargs)
+        else:
+            raise ValueError(f"Unknown FEM mode '{mode}'. Use: tension, compression, biaxial, shear")
+    elif backend == "spring":
+        engine = TaichiEngine()
+        if mode == "stretch":
+            result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
+        elif mode == "dynamics":
+            result = engine.dynamics(graph, **kwargs)
+        else:
+            raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
     else:
-        raise ValueError(f"Unknown mode '{mode}'. Use: tension, compression, biaxial, shear, fracture")
+        raise ValueError(f"Unknown backend '{backend}'. Use: fem, spring")
 
     if save_path:
-        fem.save_result(result, save_path)
+        result.save(save_path)
         print(f"✓ Saved to {save_path}")
 
     return result
@@ -169,7 +181,7 @@ def batch_simulate(
 
         try:
             g = pattern_2d(unit=unit, box=box, grid=grid, seed=seed, **cfg.get("kwargs", {}))
-            result = simulate(g, mode=mode, strain=strain)
+            result = simulate(g, mode=mode, strain=strain, backend="fem")
 
             row = {
                 "id": i,

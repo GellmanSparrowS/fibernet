@@ -67,6 +67,7 @@ from fibernet.ml.dataset_v2 import generate_dataset, extract_features
 from fibernet.sim.rl_env import FiberNetworkEnv
 
 # Easy API (一行代码)
+from fibernet.sim.accelerated import TaichiFEMSolver, TaichiEngine, SimResult
 from fibernet.easy import show, simulate, batch_simulate, train_model, train_rl
 
 __all__ = [
@@ -89,4 +90,6 @@ __all__ = [
     "generate_dataset", "extract_features", "FiberNetworkEnv",
     # Easy API
     "show", "simulate", "batch_simulate", "train_model", "train_rl",
+    # Simulation backends
+    "TaichiFEMSolver", "TaichiEngine", "SimResult",
 ]
