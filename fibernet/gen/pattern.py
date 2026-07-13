@@ -1100,6 +1100,138 @@ def register_unit(name: str, factory):
     """Register a custom unit factory."""
     _UNIT_FACTORIES[name.lower()] = factory
 
+# ======================================================================
+# 3D Unit Factories
+# ======================================================================
+
+def _unit_cubic_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Cubic lattice unit cell."""
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    nids = [g.add_node(c) for c in corners]
+    edges_12 = [
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7),
+    ]
+    _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "cubic"
+    return g
+
+
+def _unit_octet_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Octet truss unit cell (cubic + body center)."""
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    nids = [g.add_node(c) for c in corners]
+    edges_12 = [
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7),
+    ]
+    _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    center = g.add_node([w / 2, h / 2, d / 2])
+    center_edges = [(i, len(nids)) for i in range(len(nids))]
+    nids_with_center = nids + [center]
+    _add_3d_edges(g, nids_with_center, center_edges, n_pts_per_side,
+                  point_displacements, radius * 0.7, mat, n_internal, seed)
+    g._metadata["unit_type"] = "octet"
+    return g
+
+
+def _unit_diamond_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Diamond lattice unit cell (cubic + face centers)."""
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    nids = [g.add_node(c) for c in corners]
+    fc = [
+        g.add_node([w / 2, h / 2, 0]),
+        g.add_node([w / 2, h / 2, d]),
+        g.add_node([w / 2, 0, d / 2]),
+        g.add_node([w / 2, h, d / 2]),
+        g.add_node([0, h / 2, d / 2]),
+        g.add_node([w, h / 2, d / 2]),
+    ]
+    face_to_corners = [
+        (0, [0, 1, 2, 3]),
+        (1, [4, 5, 6, 7]),
+        (2, [0, 1, 4, 5]),
+        (3, [2, 3, 6, 7]),
+        (4, [0, 3, 4, 7]),
+        (5, [1, 2, 5, 6]),
+    ]
+    all_edges = []
+    all_nids = nids + fc
+    for fc_idx, c_list in face_to_corners:
+        for c_idx in c_list:
+            all_edges.append((len(nids) + fc_idx, c_idx))
+    _add_3d_edges(g, all_nids, all_edges, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "diamond_3d"
+    return g
+
+
+_UNIT_FACTORIES_3D = {
+    "cubic": _unit_cubic_3d,
+    "octet": _unit_octet_3d,
+    "diamond_3d": _unit_diamond_3d,
+}
+
+
+def list_units_3d():
+    """Return list of available built-in 3D unit types."""
+    return sorted(_UNIT_FACTORIES_3D.keys())
+
+
+def register_unit_3d(name, factory):
+    """Register a custom 3D unit factory."""
+    _UNIT_FACTORIES_3D[name.lower()] = factory
+
+
 
 # ======================================================================
 # Main pattern_2d / pattern_3d functions
@@ -1282,23 +1414,23 @@ def pattern_2d(
 
 def pattern_3d(
     *,
-    unit: str = "cubic",
-    box: Tuple[float, float, float] = (10.0, 10.0, 10.0),
-    grid: Union[int, Tuple[int, int, int]] = (3, 3, 3),
-    n_internal: int = 0,
-    n_pts_per_side: int = 0,
-    point_displacements: Optional[Sequence[Tuple[float, float, float]]] = None,
-    radius: float = 0.1,
-    material: Optional[Material] = None,
-    seed: Optional[int] = None,
-    unit_kwargs: Optional[Dict[str, Any]] = None,
-) -> StructureGraph:
+    unit="cubic",
+    box=(10.0, 10.0, 10.0),
+    grid=(3, 3, 3),
+    n_internal=0,
+    n_pts_per_side=0,
+    point_displacements=None,
+    radius=0.1,
+    material=None,
+    seed=None,
+    unit_kwargs=None,
+):
     """Generate a 3D periodic structure.
 
     Parameters
     ----------
     unit : str
-        Built-in 3D unit: "cubic", "octet", "diamond_3d".
+        Built-in 3D unit type. Use ``list_units_3d()`` to see available types.
     box : (w, h, d)
         Unit cell dimensions.
     grid : int or (nx, ny, nz)
@@ -1315,92 +1447,47 @@ def pattern_3d(
         Beam material.
     seed : int, optional
         Random seed for auto-generated displacements.
+    unit_kwargs : dict, optional
+        Extra keyword arguments passed to the unit factory.
 
     Returns
     -------
     StructureGraph
     """
-    mat = material or Material()
-    w, h, d = box
+    if isinstance(grid, int):
+        grid = (grid, grid, grid)
 
-    if unit == "cubic":
-        g = StructureGraph(dimension=3, box_size=[w, h, d])
-        corners = [
-            (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
-            (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
-        ]
-        nids = [g.add_node(c) for c in corners]
-        edges_12 = [
-            (0, 1), (1, 2), (2, 3), (3, 0),
-            (4, 5), (5, 6), (6, 7), (7, 4),
-            (0, 4), (1, 5), (2, 6), (3, 7),
-        ]
-        _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
-                      radius, mat, n_internal, seed)
+    unit_name = unit.lower()
+    if unit_name not in _UNIT_FACTORIES_3D:
+        available = ", ".join(sorted(_UNIT_FACTORIES_3D.keys()))
+        raise ValueError(
+            f"Unknown 3D unit \'{unit}\'. Available: {available}"
+        )
 
-    elif unit == "octet":
-        g = StructureGraph(dimension=3, box_size=[w, h, d])
-        corners = [
-            (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
-            (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
-        ]
-        nids = [g.add_node(c) for c in corners]
-        edges_12 = [
-            (0, 1), (1, 2), (2, 3), (3, 0),
-            (4, 5), (5, 6), (6, 7), (7, 4),
-            (0, 4), (1, 5), (2, 6), (3, 7),
-        ]
-        _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
-                      radius, mat, n_internal, seed)
-        center = g.add_node([w / 2, h / 2, d / 2])
-        center_edges = [(i, len(nids)) for i in range(len(nids))]
-        nids_with_center = nids + [center]
-        _add_3d_edges(g, nids_with_center, center_edges, n_pts_per_side,
-                      point_displacements, radius * 0.7, mat, n_internal, seed)
+    factory = _UNIT_FACTORIES_3D[unit_name]
+    fkwargs = dict(unit_kwargs) if unit_kwargs else {}
+    fkwargs.update(
+        box=box,
+        radius=radius,
+        material=material,
+        n_pts_per_side=n_pts_per_side,
+        point_displacements=point_displacements,
+        seed=seed,
+        n_internal=n_internal,
+    )
 
-    elif unit == "diamond_3d":
-        g = StructureGraph(dimension=3, box_size=[w, h, d])
-        corners = [
-            (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
-            (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
-        ]
-        nids = [g.add_node(c) for c in corners]
-        fc = [
-            g.add_node([w / 2, h / 2, 0]),
-            g.add_node([w / 2, h / 2, d]),
-            g.add_node([w / 2, 0, d / 2]),
-            g.add_node([w / 2, h, d / 2]),
-            g.add_node([0, h / 2, d / 2]),
-            g.add_node([w, h / 2, d / 2]),
-        ]
-        face_to_corners = [
-            (0, [0, 1, 2, 3]),
-            (1, [4, 5, 6, 7]),
-            (2, [0, 1, 4, 5]),
-            (3, [2, 3, 6, 7]),
-            (4, [0, 3, 4, 7]),
-            (5, [1, 2, 5, 6]),
-        ]
-        all_edges = []
-        all_nids = nids + fc
-        for fc_idx, c_list in face_to_corners:
-            for c_idx in c_list:
-                all_edges.append((len(nids) + fc_idx, c_idx))
-        _add_3d_edges(g, all_nids, all_edges, n_pts_per_side, point_displacements,
-                      radius, mat, n_internal, seed)
-    else:
-        raise ValueError(f"Unknown 3D unit '{unit}'. Available: cubic, octet, diamond_3d")
-
-    g._metadata["unit_type"] = unit
+    g = factory(**fkwargs)
     g._metadata["n_pts_per_side"] = n_pts_per_side
+
+    w, h, d = box
     result = tile_3d(g, grid=grid, box_size=[w, h, d])
     result._metadata["pattern"] = {
-        "unit": unit, "box": list(box),
-        "grid": list(grid) if isinstance(grid, (list, tuple)) else [grid, grid, grid],
+        "unit": unit_name,
+        "box": list(box),
+        "grid": list(grid),
         "n_pts_per_side": n_pts_per_side,
     }
     return result
-
 
 def _add_3d_edges(
     g: StructureGraph,

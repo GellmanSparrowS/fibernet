@@ -54,6 +54,7 @@ from fibernet.core.tiling import tile_2d, tile_3d, fit_unit_to_box
 from fibernet.gen.pattern import (
     pattern_2d, pattern_3d,
     list_units, register_unit,
+    list_units_3d, register_unit_3d,
 )
 
 # --- Simulation ---
@@ -116,6 +117,7 @@ __all__ = [
     "tile_2d", "tile_3d", "fit_unit_to_box",
     # Generation
     "pattern_2d", "pattern_3d", "list_units", "register_unit",
+    "list_units_3d", "register_unit_3d",
     # Simulation
     "TaichiEngine", "SimResult",
     # Visualization
