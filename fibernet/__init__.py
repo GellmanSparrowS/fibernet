@@ -13,7 +13,7 @@ Quick Start
 StructureGraph(dim=2, nodes=90, edges=130, box=[50.0, 50.0])
 
 >>> # Run mechanical analysis
->>> fem = fn.BeamFEM(g)
+>>> solver = fn.TaichiFEMSolver()
 >>> result = fem.uniaxial_tension(strain=0.01)
 >>> print(f"E* = {result.effective_youngs_modulus:.2e} Pa")
 
@@ -52,7 +52,6 @@ from fibernet.gen.pattern import (
 )
 
 # --- Simulation ---
-from fibernet.sim.fem import BeamFEM, FEMResult
 
 # --- Visualization ---
 from fibernet.viz.render import (
@@ -82,7 +81,6 @@ __all__ = [
     # Generation
     "pattern_2d", "pattern_3d", "list_units", "register_unit",
     # Simulation
-    "BeamFEM", "FEMResult",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
     "render_gallery", "render_with_stats", "THEMES",

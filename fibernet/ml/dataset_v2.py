@@ -49,7 +49,7 @@ import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, list_units
-from fibernet.sim.fem import BeamFEM
+from fibernet.sim.accelerated import TaichiFEMSolver, SimResult
 
 
 # ======================================================================
@@ -207,7 +207,7 @@ def generate_dataset(
             )
 
             # Run FEM
-            fem = BeamFEM(g, default_E=default_E, default_radius=param["radius"])
+            fem = TaichiFEMSolver()
             result = fem.uniaxial_tension(strain=applied_strain)
 
             # Extract features

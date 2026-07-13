@@ -538,12 +538,37 @@ class TaichiEngine:
         displacement_schedule: Dict[int, List[Tuple[float, np.ndarray]]] = None,
         external_force: np.ndarray = None,
         stiffness: float = 1e5,
-        damping: float = 0.1,
-        dt: float = 1e-5,
+        damping: float = 0.3,
+        dt: float = 1e-4,
         num_steps: int = 5000,
         save_interval: int = 500,
+        spring_k: float = None,
+        dashpot: float = 10.0,
+        drag: float = 1.0,
     ) -> SimResult:
-        """Run mass-spring dynamics (Taichi-native loop)."""
+        """Run mass-spring dynamics with dashpot damping and air drag.
+
+        Based on reference implementation with proper physics:
+        - Spring force: F = -k * dir * (dist/rest - 1)
+        - Dashpot damping: F_damp = -damp * (vi-vj).dot(dir) * dir * rest_len
+        - Air drag: v *= exp(-drag * dt)
+        - Constraints by position clamping + velocity zeroing
+
+        Parameters
+        ----------
+        graph : StructureGraph
+        fixed_nodes : list of node indices to fix
+        displacement_schedule : dict mapping node_idx → [(step, displacement), ...]
+        external_force : (N, 3) array
+        stiffness : global spring stiffness (overridden by spring_k if given)
+        damping : dashpot damping coefficient
+        dt : time step
+        num_steps : total integration steps
+        save_interval : save trajectory every N steps
+        spring_k : per-edge spring stiffness array (overrides stiffness)
+        dashpot : dashpot damping coefficient
+        drag : air drag coefficient
+        """
         t0 = time.time()
         pos_orig, elements, node_ids, _ = _graph_to_arrays(graph)
         dim = pos_orig.shape[1]
@@ -552,21 +577,26 @@ class TaichiEngine:
 
         lengths, _ = _element_data(pos_orig, elements)
         rest_lengths_np = lengths.copy()
-        stiff_np = np.full(num_edges, stiffness)
 
-        # Pre-allocate Taichi fields ONCE
+        # Spring stiffness
+        if spring_k is not None:
+            stiff_np = np.asarray(spring_k, dtype=np.float64)
+        else:
+            stiff_np = np.full(num_edges, stiffness)
+
+        # Taichi fields (allocated once)
         ti_pos = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        ti_pos0 = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
         ti_vel = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        ti_forces = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
         ti_edges = ti.Vector.field(2, dtype=ti.i32, shape=num_edges)
         ti_L0 = ti.field(dtype=ti.f64, shape=num_edges)
         ti_k = ti.field(dtype=ti.f64, shape=num_edges)
         ti_fixed = ti.field(dtype=ti.i32, shape=num_nodes)
         ti_ext = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+        ti_pos0 = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
 
         ti_pos0.from_numpy(pos_orig.astype(np.float64))
         ti_pos.from_numpy(pos_orig.astype(np.float64))
+        ti_vel.from_numpy(np.zeros_like(pos_orig))
         ti_edges.from_numpy(elements.astype(np.int32))
         ti_L0.from_numpy(rest_lengths_np.astype(np.float64))
         ti_k.from_numpy(stiff_np.astype(np.float64))
@@ -579,13 +609,12 @@ class TaichiEngine:
         ext_f = external_force if external_force is not None else np.zeros((num_nodes, dim))
         ti_ext.from_numpy(ext_f.astype(np.float64)[:, :dim])
 
-        # Pre-compute displacement targets for schedule nodes
+        # Schedule fields
         schedule_nodes = []
         schedule_targets = np.zeros((num_nodes, dim))
         if displacement_schedule:
             for ni, sched in displacement_schedule.items():
                 schedule_nodes.append(ni)
-                # Final target (last entry)
                 schedule_targets[ni] = np.array(sched[-1][1])[:dim]
         sched_mask = np.zeros(num_nodes, dtype=np.int32)
         for ni in schedule_nodes:
@@ -595,68 +624,83 @@ class TaichiEngine:
         ti_sched_mask = ti.field(dtype=ti.i32, shape=num_nodes)
         ti_sched_mask.from_numpy(sched_mask)
 
-        # Taichi kernels for one step
-        # Parameter fields (avoid kernel argument type issues)
-        ti_damp = ti.field(dtype=ti.f64, shape=())
-        ti_step_dt = ti.field(dtype=ti.f64, shape=())
+        # Parameter fields
+        ti_dt = ti.field(dtype=ti.f64, shape=())
+        ti_dashpot = ti.field(dtype=ti.f64, shape=())
+        ti_drag = ti.field(dtype=ti.f64, shape=())
         ti_ramp = ti.field(dtype=ti.f64, shape=())
 
         @ti.kernel
-        def step_kernel():
-            damp = ti_damp[None]
-            step_dt = ti_step_dt[None]
-            ramp = ti_ramp[None]
-            # Zero forces
-            for n in range(num_nodes):
-                for d in ti.static(range(dim)):
-                    ti_forces[n][d] = ti_ext[n][d]
+        def substep():
+            _dt = ti_dt[None]
+            _dash = ti_dashpot[None]
+            _drag = ti_drag[None]
+            _ramp = ti_ramp[None]
 
-            # Compute spring forces
+            # Spring + dashpot forces
             for e in range(num_edges):
-                i = ti_edges[e][0]
-                j = ti_edges[e][1]
-                diff = ti_pos[j] - ti_pos[i]
-                L = diff.norm()
-                if L > 1e-12:
-                    strain_val = (L - ti_L0[e]) / ti_L0[e]
-                    fmag = ti_k[e] * strain_val
-                    fvec = fmag * (diff / L)
-                    for d in ti.static(range(dim)):
-                        ti.atomic_add(ti_forces[i][d], fvec[d])
-                        ti.atomic_add(ti_forces[j][d], -fvec[d])
+                ia = ti_edges[e][0]
+                ib = ti_edges[e][1]
+                d = ti_pos[ia] - ti_pos[ib]
+                dist = d.norm() + 1e-6
+                dir_ = d / dist
 
-            # Verlet integration
-            for n in range(num_nodes):
-                if ti_fixed[n] == 1:
-                    for d in ti.static(range(dim)):
-                        ti_pos[n][d] = ti_pos0[n][d]
-                        ti_vel[n][d] = 0.0
-                elif ti_sched_mask[n] == 1:
-                    # Displacement-controlled: ramp to target
-                    for d in ti.static(range(dim)):
-                        ti_pos[n][d] = ti_pos0[n][d] + ti_sched[n][d] * ramp
-                        ti_vel[n][d] = 0.0
-                else:
-                    for d in ti.static(range(dim)):
-                        ti_vel[n][d] = (1.0 - damp) * ti_vel[n][d] + (ti_forces[n][d] / 1.0) * step_dt
-                        ti_pos[n][d] = ti_pos[n][d] + ti_vel[n][d] * step_dt
+                # Spring force: F = -k * dir * (dist/rest - 1)
+                f_spring = -ti_k[e] * dir_ * (dist / ti_L0[e] - 1.0)
 
-        # Run dynamics loop
+                # Dashpot: F_damp = -damp * (vi-vj).dot(dir) * dir * rest
+                rel_v = ti_vel[ia] - ti_vel[ib]
+                f_damp = -_dash * rel_v.dot(dir_) * dir_ * ti_L0[e]
+
+                f_total = f_spring + f_damp
+
+                for k in ti.static(range(dim)):
+                    ti.atomic_add(ti_vel[ia][k], f_total[k] * _dt)
+                    ti.atomic_add(ti_vel[ib][k], -f_total[k] * _dt)
+
+            # Euler step + air drag + external force
+            for i in range(num_nodes):
+                # External force
+                for k in ti.static(range(dim)):
+                    ti_vel[i][k] += ti_ext[i][k] * _dt
+
+                # Air drag
+                ti_vel[i] *= ti.exp(-_drag * _dt)
+
+                # Position update
+                for k in ti.static(range(dim)):
+                    ti_pos[i][k] += ti_vel[i][k] * _dt
+
+            # Constraints: fixed nodes
+            for i in range(num_nodes):
+                if ti_fixed[i] == 1:
+                    for k in ti.static(range(dim)):
+                        ti_pos[i][k] = ti_pos0[i][k]
+                        ti_vel[i][k] = 0.0
+
+            # Constraints: schedule nodes (ramped displacement)
+            for i in range(num_nodes):
+                if ti_sched_mask[i] == 1:
+                    for k in ti.static(range(dim)):
+                        ti_pos[i][k] = ti_pos0[i][k] + ti_sched[i][k] * _ramp
+                        ti_vel[i][k] = 0.0
+
+        # Run loop
+        ti_dt[None] = dt
+        ti_dashpot[None] = dashpot
+        ti_drag[None] = drag
+
         trajectory = [pos_orig.copy()]
         max_stretch_history = []
-        n_saves = max(1, num_steps // save_interval)
 
         for step in range(num_steps):
             ramp = min(1.0, (step + 1) / num_steps)
-            ti_damp[None] = damping
-            ti_step_dt[None] = dt
             ti_ramp[None] = ramp
-            step_kernel()
+            substep()
 
             if (step + 1) % save_interval == 0:
                 cur_pos = ti_pos.to_numpy()
                 trajectory.append(cur_pos.copy())
-                # Max stretch
                 new_len = np.array([
                     np.linalg.norm(cur_pos[elements[e, 1]] - cur_pos[elements[e, 0]])
                     for e in range(num_edges)
@@ -665,9 +709,11 @@ class TaichiEngine:
 
         pos_final = ti_pos.to_numpy()
         displacements = pos_final - pos_orig
+        if dim < 3:
+            displacements = np.hstack([displacements, np.zeros((num_nodes, 3 - dim))])
 
         return SimResult(
-            displacements=np.hstack([displacements, np.zeros((num_nodes, 3-dim))]) if dim < 3 else displacements,
+            displacements=displacements,
             time_seconds=time.time() - t0,
             mode="dynamics",
             deformed_positions=pos_final,
@@ -675,7 +721,6 @@ class TaichiEngine:
             history=[{"step": (i+1)*save_interval, "max_stretch": ms}
                      for i, ms in enumerate(max_stretch_history)],
         )
-
     def stretch_test(
         self,
         graph: StructureGraph,
