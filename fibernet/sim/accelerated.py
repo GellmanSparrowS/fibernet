@@ -29,37 +29,113 @@ from fibernet.core.structure_graph import StructureGraph
 
 @dataclass
 class SimResult:
-    """Unified result container for both backends."""
+    """Unified result container for mass-spring simulations.
+
+    Simple mode: basic displacements + energy
+    Detailed mode: per-edge forces, max values, trajectory data
+    """
+    # Basic fields
     displacements: np.ndarray = None
-    forces: np.ndarray = None
-    stresses: np.ndarray = None
-    strains: np.ndarray = None
     energy: float = 0.0
-    effective_youngs_modulus: float = 0.0
-    effective_poissons_ratio: float = 0.0
-    effective_shear_modulus: float = 0.0
     time_seconds: float = 0.0
     mode: str = ""
     deformed_positions: np.ndarray = None
-    history: List[Dict] = field(default_factory=list)
     positions_trajectory: List[np.ndarray] = field(default_factory=list)
 
-    def save(self, path: str):
-        data = {
+    # Detailed fields (populated by compute_detailed or detailed=True)
+    edge_forces: np.ndarray = None       # per-edge axial force magnitude
+    edge_stretches: np.ndarray = None    # per-edge stretch ratio (L/L0)
+    max_force: float = 0.0              # maximum edge force
+    max_stretch: float = 0.0            # maximum edge stretch ratio
+    mean_stretch: float = 0.0           # mean edge stretch ratio
+    std_stretch: float = 0.0            # std of edge stretch ratios
+    max_displacement: float = 0.0       # maximum node displacement magnitude
+    n_nodes: int = 0
+    n_edges: int = 0
+
+    # History
+    history: List[Dict] = field(default_factory=list)
+
+    # Metadata
+    metadata: Dict = field(default_factory=dict)
+
+    def compute_detailed(self, graph, stiffness: float = None):
+        """Compute detailed metrics from deformed positions.
+
+        Parameters
+        ----------
+        graph : StructureGraph
+            Original (undeformed) graph.
+        stiffness : float, optional
+            Spring stiffness for force computation.
+        """
+        from fibernet.sim.accelerated import _graph_to_arrays, _element_data
+
+        pos_orig, elements, _, _ = _graph_to_arrays(graph)
+        lengths, _ = _element_data(pos_orig, elements)
+
+        self.n_nodes = len(pos_orig)
+        self.n_edges = len(elements)
+
+        if self.deformed_positions is not None:
+            pos_def = self.deformed_positions
+            # Per-edge stretch
+            final_lengths = np.array([
+                np.linalg.norm(pos_def[elements[e, 1]] - pos_def[elements[e, 0]])
+                for e in range(len(elements))
+            ])
+            self.edge_stretches = final_lengths / lengths
+            self.max_stretch = float(np.max(self.edge_stretches))
+            self.mean_stretch = float(np.mean(self.edge_stretches))
+            self.std_stretch = float(np.std(self.edge_stretches))
+
+            # Per-edge forces (F = k * (L - L0) / L0)
+            if stiffness is not None:
+                self.edge_forces = stiffness * (final_lengths / lengths - 1.0)
+                self.max_force = float(np.max(np.abs(self.edge_forces)))
+
+        # Max displacement
+        if self.displacements is not None:
+            self.max_displacement = float(np.max(np.linalg.norm(self.displacements, axis=1)))
+
+        return self
+
+    def to_dict(self, detailed: bool = False) -> Dict:
+        """Convert to dictionary for CSV/JSON export.
+
+        Parameters
+        ----------
+        detailed : bool
+            If True, include per-edge arrays (large).
+        """
+        d = {
             "mode": self.mode,
             "energy": self.energy,
-            "effective_youngs_modulus": self.effective_youngs_modulus,
-            "effective_poissons_ratio": self.effective_poissons_ratio,
-            "effective_shear_modulus": self.effective_shear_modulus,
             "time_seconds": self.time_seconds,
-            "displacements": self.displacements.tolist() if self.displacements is not None else None,
-            "forces": self.forces.tolist() if self.forces is not None else None,
-            "stresses": self.stresses.tolist() if self.stresses is not None else None,
-            "strains": self.strains.tolist() if self.strains is not None else None,
-            "history": self.history,
+            "n_nodes": self.n_nodes,
+            "n_edges": self.n_edges,
+            "max_force": self.max_force,
+            "max_stretch": self.max_stretch,
+            "mean_stretch": self.mean_stretch,
+            "std_stretch": self.std_stretch,
+            "max_displacement": self.max_displacement,
         }
-        if self.deformed_positions is not None:
-            data["deformed_positions"] = self.deformed_positions.tolist()
+        d.update(self.metadata)
+        if detailed:
+            if self.edge_forces is not None:
+                d["edge_forces"] = self.edge_forces.tolist()
+            if self.edge_stretches is not None:
+                d["edge_stretches"] = self.edge_stretches.tolist()
+            if self.displacements is not None:
+                d["displacements"] = self.displacements.tolist()
+            if self.deformed_positions is not None:
+                d["deformed_positions"] = self.deformed_positions.tolist()
+            d["history"] = self.history
+        return d
+
+    def save(self, path: str, detailed: bool = False):
+        """Save to JSON file."""
+        data = self.to_dict(detailed=detailed)
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w") as f:
             json.dump(data, f, indent=2)
@@ -71,13 +147,23 @@ class SimResult:
         r = SimResult(
             mode=data.get("mode", ""),
             energy=data.get("energy", 0),
-            effective_youngs_modulus=data.get("effective_youngs_modulus", 0),
-            effective_poissons_ratio=data.get("effective_poissons_ratio", 0),
-            effective_shear_modulus=data.get("effective_shear_modulus", 0),
             time_seconds=data.get("time_seconds", 0),
+            n_nodes=data.get("n_nodes", 0),
+            n_edges=data.get("n_edges", 0),
+            max_force=data.get("max_force", 0),
+            max_stretch=data.get("max_stretch", 0),
+            mean_stretch=data.get("mean_stretch", 0),
+            std_stretch=data.get("std_stretch", 0),
+            max_displacement=data.get("max_displacement", 0),
             history=data.get("history", []),
+            metadata={k: v for k, v in data.items()
+                      if k not in {"mode", "energy", "time_seconds", "n_nodes", "n_edges",
+                                   "max_force", "max_stretch", "mean_stretch", "std_stretch",
+                                   "max_displacement", "history",
+                                   "edge_forces", "edge_stretches",
+                                   "displacements", "deformed_positions"}},
         )
-        for key in ("displacements", "forces", "stresses", "strains", "deformed_positions"):
+        for key in ("edge_forces", "edge_stretches", "displacements", "deformed_positions"):
             if data.get(key) is not None:
                 setattr(r, key, np.array(data[key]))
         return r
@@ -387,7 +473,7 @@ class TaichiEngine:
         if dim < 3:
             displacements = np.hstack([displacements, np.zeros((num_nodes, 3 - dim))])
 
-        return SimResult(
+        result = SimResult(
             displacements=displacements,
             time_seconds=time.time() - t0,
             mode="dynamics",
@@ -395,7 +481,11 @@ class TaichiEngine:
             positions_trajectory=trajectory,
             history=[{"step": (i+1)*save_interval, "max_stretch": ms}
                      for i, ms in enumerate(max_stretch_history)],
+            metadata={"stiffness": float(stiffness), "damping": float(damping),
+                      "dt": float(dt), "num_steps": int(num_steps)},
         )
+        result.compute_detailed(graph, stiffness=stiffness)
+        return result
     def stretch_test(
         self,
         graph: StructureGraph,
