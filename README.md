@@ -48,12 +48,42 @@ Generation → Simulation → Feature Extraction → Machine Learning → Reinfo
 ### 🖼️ Showcase / 展示
 
 <div align="center">
-<img src="docs/images/01_2d_gallery.png" width="48%" alt="2D Structure Gallery" />
-<img src="docs/images/voronoi_1.5x_auto.png" width="48%" alt="Voronoi 1.5x Stretch" />
+<img src="docs/images/01_2d_gallery.png" width="80%" alt="2D Structure Gallery" />
 </div>
 
+*2D Structure Gallery: 12 unit types (square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing_rib).*
+
+<div align="center">
+<img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi 1.5x Stretch" />
+</div>
+
+*Voronoi structure under 1.5× uniaxial stretch — showing deformation and stress distribution.*
+
 *Left: 2D structure gallery (12 unit types). Right: Voronoi structure under 1.5× uniaxial stretch.*
-*左：2D结构画廊（12种基元）。右：Voronoi结构在1.5倍单轴拉伸下的变形。*
+*2D结构画廊：12种基元（正方形、三角形、六边形、蜂窝、kagome、Voronoi、手性、凹角、星形、十字、钻石、缺肋）。*
+
+*Voronoi结构在1.5倍单轴拉伸下的变形 — 显示形变和应力分布。*
+
+---
+
+
+### 📐 Structure Catalog / 结构目录
+
+FiberNet supports **12 built-in unit types** across **6 architecture families**:
+
+| Family | Units | Description | 描述 |
+|--------|-------|-------------|------|
+| **Regular Lattices** | square, triangle, hexagon | Classic periodic tessellations | 经典周期镶嵌 |
+| **Honeycomb Variants** | honeycomb, reentrant, missing_rib | Auxetic and cellular solid models | 凹角与胞状固体 |
+| **Auxetic/Chiral** | chiral, star | Negative Poisson's ratio structures | 负泊松比结构 |
+| **Cross/Diamond** | cross, diamond | Cross-braced and diamond patterns | 交叉与钻石图案 |
+| **Kagome** | kagome | Tri-hexagonal lattice | 三六边形晶格 |
+| **Disordered** | voronoi | Voronoi tessellation (random topology) | Voronoi镶嵌（随机拓扑） |
+
+**Combinatorial space** (grid × pts_per_side × seed):
+- Fixed parameters: **~91,800** unique structures
+- With parametric displacement control: **7.98 × 10¹⁶** (discretized) to **∞** (continuous)
+- With post-generation node manipulation: **368-dimensional** continuous action space (square 3×3, pts=5)
 
 ---
 
@@ -154,6 +184,30 @@ features = ext.extract(g)  # 94-dimensional feature vector
 internal_nodes = g.get_internal_nodes()  # nodes available for RL actions
 g.displace_node(internal_nodes[0], [0.1, 0.2])  # move node by (dx, dy)
 ```
+
+---
+
+
+### 🎯 RL Parametric Control / RL 参数化控制
+
+FiberNet exposes **direct (dx, dy) displacement parameters** for each internal point on every edge, enabling continuous action spaces for reinforcement learning — equivalent to the `move_AB(G, num, dx, dy)` approach in research code, but more general.
+
+```python
+# Method 1: Displacement at generation time
+# Agent outputs 20-dim continuous action vector
+action = agent.act(observation)  # shape: (20,) values in [-0.3, 0.3]
+displacements = [(action[2*i], action[2*i+1]) for i in range(10)]
+g = fn.pattern_2d("square", grid=(3,3), n_pts_per_side=5,
+                  point_displacements=displacements)
+
+# Method 2: Post-generation refinement
+internal_nodes = g.get_internal_nodes()  # 184 nodes for square 3×3 pts=5
+for node_id in internal_nodes:
+    g.displace_node(node_id, agent.refinement_action(node_id))
+```
+
+FiberNet 为每条边上的每个内部点暴露了 **(dx, dy) 位移参数**，为强化学习提供连续动作空间。
+支持生成时位移控制和生成后逐节点微调两种方式。
 
 ---
 
