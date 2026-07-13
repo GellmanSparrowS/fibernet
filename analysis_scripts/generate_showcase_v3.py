@@ -72,7 +72,7 @@ def gen_01_2d_gallery(state, skip_existing):
         titles=units,
         ncols=4,
         theme="dark",
-        color_by="orientation",
+        color_by="uniform",
         suptitle="FiberNet v3: All 12 2D Metamaterial Units",
     )
     save_fig(fig, name, state)
@@ -89,8 +89,8 @@ def gen_02_honeycomb_detail(state, skip_existing):
     g = pattern_2d(unit="honeycomb", box=(10, 10), grid=(5, 5),
                    n_pts_per_side=5, seed=42)
     fig = render_graph(g, figsize=(12, 12), theme="blueprint",
-                       color_by="orientation", colormap="coolwarm",
-                       line_width=1.5, show_nodes=True, node_size=8,
+                       color_by="uniform", 
+                       line_width=1.5, show_nodes=False,
                        title="Honeycomb Detail (5×5, n_pts=5)",
                        subtitle=f"{g.num_nodes} nodes, {g.num_edges} edges")
     save_fig(fig, name, state)
@@ -107,7 +107,7 @@ def gen_03_kagome_detail(state, skip_existing):
     g = pattern_2d(unit="kagome", box=(10, 10), grid=(4, 4),
                    n_pts_per_side=4, seed=42)
     fig = render_graph(g, figsize=(12, 12), theme="dark",
-                       color_by="orientation", colormap="viridis",
+                       color_by="uniform", 
                        line_width=1.8, show_nodes=False,
                        title="Kagome Lattice (4×4, n_pts=4)",
                        subtitle=f"{g.num_nodes} nodes, {g.num_edges} edges")
@@ -125,7 +125,7 @@ def gen_04_voronoi(state, skip_existing):
     g = pattern_2d(unit="voronoi", box=(10, 10), grid=(3, 3),
                    n_pts_per_side=3, seed=42, n_internal=15)
     fig = render_graph(g, figsize=(12, 12), theme="dark",
-                       color_by="orientation", colormap="plasma",
+                       color_by="uniform", 
                        line_width=1.3, show_nodes=False,
                        title="Voronoi Tessellation (3×3)",
                        subtitle=f"{g.num_nodes} nodes, {g.num_edges} edges")
@@ -153,8 +153,8 @@ def gen_05_auxetic_comparison(state, skip_existing):
     for idx, (unit, kwargs) in enumerate(configs):
         ax = axes[idx // 2, idx % 2]
         g = pattern_2d(unit=unit, box=(10, 10), grid=(4, 4), seed=42)
-        render_graph(g, ax=ax, theme="dark", color_by="orientation",
-                     colormap="coolwarm", line_width=1.2, show_nodes=False)
+        render_graph(g, ax=ax, theme="dark", color_by="uniform",
+                      line_width=1.2, show_nodes=False)
         ax.set_title(f"{unit}\n({g.num_nodes} nodes)", color='white', fontsize=12)
 
     fig.suptitle("Regular vs Auxetic Structures", fontsize=16, color='white', y=0.98)
@@ -255,15 +255,15 @@ def gen_10_connectivity(state, skip_existing):
     fig, axes = plt.subplots(1, 3, figsize=(18, 6))
     fig.patch.set_facecolor('#1a1a2e')
 
-    render_graph(g, ax=axes[0], theme="dark", color_by="orientation",
+    render_graph(g, ax=axes[0], theme="dark", color_by="uniform",
                  line_width=1.0, show_nodes=False)
     axes[0].set_title(f"Unit Cell\n({g.num_nodes} nodes)", color='white', fontsize=11)
 
-    render_graph(tiled, ax=axes[1], theme="dark", color_by="orientation",
+    render_graph(tiled, ax=axes[1], theme="dark", color_by="uniform",
                  line_width=1.0, show_nodes=False)
     axes[1].set_title(f"Tiled 3×3\n({tiled.num_nodes} nodes)", color='white', fontsize=11)
 
-    render_graph(rotated, ax=axes[2], theme="dark", color_by="orientation",
+    render_graph(rotated, ax=axes[2], theme="dark", color_by="uniform",
                  line_width=1.0, show_nodes=False)
     axes[2].set_title(f"Rotated 15°\n({rotated.num_nodes} nodes)", color='white', fontsize=11)
 
@@ -286,23 +286,23 @@ def gen_11_transforms(state, skip_existing):
     fig, axes = plt.subplots(2, 2, figsize=(14, 14))
     fig.patch.set_facecolor('#1a1a2e')
 
-    render_graph(g, ax=axes[0, 0], theme="dark", color_by="orientation",
+    render_graph(g, ax=axes[0, 0], theme="dark", color_by="uniform",
                  line_width=1.2, show_nodes=False)
     axes[0, 0].set_title("Original", color='white', fontsize=12)
 
     g_scaled = scale(g, factor=0.6)
-    render_graph(g_scaled, ax=axes[0, 1], theme="dark", color_by="orientation",
+    render_graph(g_scaled, ax=axes[0, 1], theme="dark", color_by="uniform",
                  line_width=1.2, show_nodes=False)
     axes[0, 1].set_title("Scaled ×0.6", color='white', fontsize=12)
 
     g_translated = translate(g, offset=[3, 3])
-    render_graph(g_translated, ax=axes[1, 0], theme="dark", color_by="orientation",
+    render_graph(g_translated, ax=axes[1, 0], theme="dark", color_by="uniform",
                  line_width=1.2, show_nodes=False)
     axes[1, 0].set_title("Translated (3,3)", color='white', fontsize=12)
 
     from fibernet import mirror
     g_mirrored = mirror(g, axis='x')
-    render_graph(g_mirrored, ax=axes[1, 1], theme="dark", color_by="orientation",
+    render_graph(g_mirrored, ax=axes[1, 1], theme="dark", color_by="uniform",
                  line_width=1.2, show_nodes=False)
     axes[1, 1].set_title("Mirror (x-axis)", color='white', fontsize=12)
 
@@ -323,7 +323,7 @@ def gen_12_chiral_stats(state, skip_existing):
                    n_pts_per_side=4, seed=42)
 
     fig = render_with_stats(g, figsize=(12, 12), theme="dark",
-                            color_by="orientation", colormap="coolwarm",
+                            color_by="uniform", 
                             line_width=1.5, show_nodes=False,
                             title="Chiral Honeycomb with Statistics")
     save_fig(fig, name, state)

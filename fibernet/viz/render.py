@@ -368,7 +368,7 @@ def render_gallery(
     ncols: int = 4,
     figsize_per_cell: Tuple[float, float] = (5, 5),
     theme: str = "dark",
-    color_by: str = "orientation",
+    color_by: str = "uniform",
     line_width: float = 1.2,
     show_nodes: bool = False,
     suptitle: str = "",
