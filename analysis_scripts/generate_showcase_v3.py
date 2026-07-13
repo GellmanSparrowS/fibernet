@@ -333,17 +333,12 @@ def gen_12_chiral_stats(state, skip_existing):
 
 GENERATORS = [
     gen_01_2d_gallery,
-    gen_02_honeycomb_detail,
-    gen_03_kagome_detail,
-    gen_04_voronoi,
     gen_05_auxetic_comparison,
     gen_06_3d_cubic,
     gen_07_3d_octet,
     gen_08_fem_deformation,
-    gen_09_fem_stress,
     gen_10_connectivity,
     gen_11_transforms,
-    gen_12_chiral_stats,
 ]
 
 
