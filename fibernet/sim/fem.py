@@ -102,6 +102,9 @@ class FEMResult:
     applied_strain: float = 0.0
     deformed_graph: Optional[StructureGraph] = None
     solve_time: float = 0.0
+    history: List[Dict] = field(default_factory=list)
+    fractured_edges: List[int] = field(default_factory=list)
+    mode: str = ""
 
 
 # ======================================================================
@@ -537,6 +540,231 @@ class BeamFEM:
             applied_strain=strain,
             deformed_graph=deformed,
             solve_time=time.time() - t0,
+        )
+
+    def biaxial_tension(
+        self,
+        strain_x: float = 0.01,
+        strain_y: float = 0.01,
+        deformation_scale: float = 1.0,
+    ) -> FEMResult:
+        """Apply biaxial tension (x and y directions simultaneously).
+
+        Parameters
+        ----------
+        strain_x : float
+            Applied strain in x-direction.
+        strain_y : float
+            Applied strain in y-direction.
+        deformation_scale : float
+            Scale factor for deformed visualization.
+        """
+        import time as _time
+        t0 = _time.time()
+
+        bb_min, bb_max = self._graph.bounding_box()
+        L_x = bb_max[0] - bb_min[0]
+        L_y = bb_max[1] - bb_min[1]
+
+        left_nodes = self._get_boundary_nodes("left")
+        right_nodes = self._get_boundary_nodes("right")
+        bottom_nodes = self._get_boundary_nodes("bottom")
+        top_nodes = self._get_boundary_nodes("top")
+
+        fixed_dofs = []
+        applied = {}
+
+        # X-direction: left fixed, right displaced
+        for ni in left_nodes:
+            fixed_dofs.append(3 * ni)
+        for ni in right_nodes:
+            applied[3 * ni] = strain_x * L_x
+
+        # Y-direction: bottom fixed, top displaced
+        for ni in bottom_nodes:
+            fixed_dofs.append(3 * ni + 1)
+        for ni in top_nodes:
+            applied[3 * ni + 1] = strain_y * L_y
+
+        # Pin corner to prevent rigid body rotation
+        if left_nodes and bottom_nodes:
+            fixed_dofs.append(3 * left_nodes[0] + 1)
+            fixed_dofs.append(3 * bottom_nodes[0])
+
+        u = self.solve(fixed_dofs, applied)
+        forces, stresses, strains_arr = self._compute_element_results(u)
+
+        K = self._assemble()
+        U = 0.5 * u @ (K @ u)
+        deformed = self._build_deformed_graph(u, scale=deformation_scale)
+
+        # Effective properties
+        f_react = K @ u
+        Fx = sum(f_react[3 * ni] for ni in right_nodes) if right_nodes else 0
+        Fy = sum(f_react[3 * ni + 1] for ni in top_nodes) if top_nodes else 0
+        H = L_y if L_y > 0 else 1
+        W = L_x if L_x > 0 else 1
+        E_eff_x = abs(Fx) / (abs(strain_x) * H) if abs(strain_x) > 1e-12 else 0
+        E_eff_y = abs(Fy) / (abs(strain_y) * W) if abs(strain_y) > 1e-12 else 0
+
+        return FEMResult(
+            displacements=u.reshape(-1, 3),
+            forces=forces, stresses=stresses, strains=strains_arr,
+            effective_youngs_modulus=(E_eff_x + E_eff_y) / 2,
+            strain_energy=U,
+            applied_strain=max(abs(strain_x), abs(strain_y)),
+            deformed_graph=deformed,
+            solve_time=_time.time() - t0,
+            mode="biaxial",
+        )
+
+    def compression(
+        self,
+        strain: float = 0.01,
+        deformation_scale: float = 1.0,
+    ) -> FEMResult:
+        """Apply uniaxial compression in x-direction.
+
+        Same as uniaxial_tension but with negative strain.
+        """
+        result = self.uniaxial_tension(strain=-abs(strain), deformation_scale=deformation_scale)
+        result.mode = "compression"
+        return result
+
+    def tensile_fracture(
+        self,
+        max_strain: float = 0.05,
+        n_steps: int = 20,
+        strength: float = 1e8,
+        deformation_scale: float = 5.0,
+    ) -> FEMResult:
+        """Progressive fracture simulation under increasing tension.
+
+        Elements are removed when their stress exceeds `strength`.
+        Returns the final result with history of fracture events.
+
+        Parameters
+        ----------
+        max_strain : float
+            Maximum applied strain.
+        n_steps : int
+            Number of incremental strain steps.
+        strength : float
+            Critical stress threshold for element removal (Pa).
+        deformation_scale : float
+            Scale factor for deformed visualization.
+        """
+        import time as _time
+        t0 = _time.time()
+
+        strain_steps = np.linspace(0, max_strain, n_steps + 1)[1:]
+        history = []
+        fractured_edges = set()
+
+        for step_idx, eps in enumerate(strain_steps):
+            try:
+                result = self.uniaxial_tension(strain=eps, deformation_scale=0)
+            except Exception:
+                break
+
+            max_stress = np.max(np.abs(result.stresses))
+            n_fractured = len(fractured_edges)
+
+            # Find edges exceeding strength
+            for i, s in enumerate(result.stresses):
+                if abs(s) > strength and i not in fractured_edges:
+                    fractured_edges.add(i)
+
+            history.append({
+                "step": step_idx,
+                "strain": float(eps),
+                "stress_max": float(max_stress),
+                "E_eff": float(result.effective_youngs_modulus),
+                "nu_eff": float(result.effective_poissons_ratio),
+                "n_fractured": len(fractured_edges),
+                "energy": float(result.strain_energy),
+            })
+
+            if len(fractured_edges) == n_fractured:
+                # No new fractures this step — still record but continue
+                pass
+
+        # Final solve with current strain
+        final_eps = strain_steps[-1]
+        try:
+            final_result = self.uniaxial_tension(strain=final_eps, deformation_scale=deformation_scale)
+        except Exception:
+            final_result = result  # Use last successful
+
+        final_result.history = history
+        final_result.fractured_edges = sorted(fractured_edges)
+        final_result.mode = "tensile_fracture"
+        final_result.solve_time = _time.time() - t0
+
+        return final_result
+
+    def save_result(self, result: "FEMResult", path: str) -> None:
+        """Save simulation result to JSON file.
+
+        Parameters
+        ----------
+        result : FEMResult
+            Simulation result to save.
+        path : str
+            Output JSON file path.
+        """
+        import json
+        from pathlib import Path as _Path
+
+        data = {
+            "mode": result.mode,
+            "applied_strain": result.applied_strain,
+            "effective_youngs_modulus": result.effective_youngs_modulus,
+            "effective_poissons_ratio": result.effective_poissons_ratio,
+            "strain_energy": result.strain_energy,
+            "solve_time": result.solve_time,
+            "n_nodes": len(result.displacements) if result.displacements is not None else 0,
+            "n_elements": len(result.stresses) if result.stresses is not None else 0,
+            "displacements": result.displacements.tolist() if result.displacements is not None else None,
+            "forces": result.forces.tolist() if result.forces is not None else None,
+            "stresses": result.stresses.tolist() if result.stresses is not None else None,
+            "strains": result.strains.tolist() if result.strains is not None else None,
+            "history": result.history,
+            "fractured_edges": result.fractured_edges,
+        }
+
+        p = _Path(path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        with open(p, "w") as f:
+            json.dump(data, f, indent=2)
+
+    @staticmethod
+    def load_result(path: str) -> "FEMResult":
+        """Load simulation result from JSON file.
+
+        Parameters
+        ----------
+        path : str
+            Input JSON file path.
+        """
+        import json
+
+        with open(path, "r") as f:
+            data = json.load(f)
+
+        return FEMResult(
+            displacements=np.array(data["displacements"]) if data.get("displacements") else None,
+            forces=np.array(data["forces"]) if data.get("forces") else None,
+            stresses=np.array(data["stresses"]) if data.get("stresses") else None,
+            strains=np.array(data["strains"]) if data.get("strains") else None,
+            effective_youngs_modulus=data.get("effective_youngs_modulus", 0),
+            effective_poissons_ratio=data.get("effective_poissons_ratio", 0),
+            strain_energy=data.get("strain_energy", 0),
+            applied_strain=data.get("applied_strain", 0),
+            solve_time=data.get("solve_time", 0),
+            history=data.get("history", []),
+            fractured_edges=data.get("fractured_edges", []),
+            mode=data.get("mode", ""),
         )
 
     def stress_strain_curve(

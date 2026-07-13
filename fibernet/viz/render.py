@@ -43,20 +43,18 @@ from fibernet.core.structure_graph import StructureGraph
 THEMES = {
     "dark": {
         "bg": "#0a0a0f",
-        "fiber": "#00e5a0",
-        "fiber_alt": "#00a5ff",
+        "fiber": "#b388ff",  # purple
+        "fiber_alt": "#7c4dff",
         "node": "#ff6644",
         "text": "#d0d0d0",
         "grid": "#1a1a2a",
         "accent": "#ff4488",
-        "glow": True,
-        "glow_color": "#00e5a0",
-        "glow_alpha": 0.15,
+        "glow": False,
     },
     "light": {
         "bg": "#fafafa",
-        "fiber": "#2c3e50",
-        "fiber_alt": "#e74c3c",
+        "fiber": "#5e35b1",  # dark purple on white
+        "fiber_alt": "#7c4dff",
         "node": "#e74c3c",
         "text": "#2c3e50",
         "grid": "#eeeeee",
@@ -65,20 +63,18 @@ THEMES = {
     },
     "blueprint": {
         "bg": "#0a1628",
-        "fiber": "#4a9eff",
-        "fiber_alt": "#ff8844",
+        "fiber": "#b388ff",  # purple
+        "fiber_alt": "#7c4dff",
         "node": "#ff6644",
         "text": "#6ab0ff",
         "grid": "#1a3050",
         "accent": "#ffaa00",
-        "glow": True,
-        "glow_color": "#4a9eff",
-        "glow_alpha": 0.2,
+        "glow": False,
     },
     "publication": {
         "bg": "#ffffff",
-        "fiber": "#333333",
-        "fiber_alt": "#cc0000",
+        "fiber": "#5e35b1",  # dark purple
+        "fiber_alt": "#7c4dff",
         "node": "#cc0000",
         "text": "#333333",
         "grid": "#cccccc",
@@ -233,14 +229,6 @@ def render_graph(
         edge_colors.extend([color] * (len(pts) - 1))
 
     if segments:
-        # Glow effect (draw wider, semi-transparent line behind)
-        if t.get("glow", False):
-            glow_seg = LineCollection(
-                segments, colors=[(*mcolors.to_rgba(t["glow_color"])[:3], t["glow_alpha"])] * len(segments),
-                linewidths=line_width * 4, capstyle="round",
-            )
-            ax.add_collection(glow_seg)
-
         # Main lines
         lc = LineCollection(
             segments, colors=edge_colors,
