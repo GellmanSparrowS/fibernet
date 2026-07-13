@@ -1403,6 +1403,226 @@ def _unit_hcp_3d(
     g._metadata["unit_type"] = "hcp"
     return g
 
+
+# ======================================================================
+# TPMS (Triply Periodic Minimal Surface) Helpers
+# ======================================================================
+
+def _tpms_field(kind, X, Y, Z):
+    """Compute TPMS level-set field for given kind."""
+    k = kind.lower()
+    if k in ('gyroid', 'g'):
+        return (np.sin(X) * np.cos(Y) +
+                np.sin(Y) * np.cos(Z) +
+                np.sin(Z) * np.cos(X))
+    elif k in ('schwarz_p', 'primitive', 'p'):
+        return np.cos(X) + np.cos(Y) + np.cos(Z)
+    elif k in ('schwarz_d', 'diamond', 'd'):
+        return (np.sin(X) * np.sin(Y) * np.sin(Z) +
+                np.sin(X) * np.cos(Y) * np.cos(Z) +
+                np.cos(X) * np.sin(Y) * np.cos(Z) +
+                np.cos(X) * np.cos(Y) * np.sin(Z))
+    elif k in ('iwp', 'i-wp'):
+        return (2.0 * (np.cos(X) * np.cos(Y) +
+                       np.cos(Y) * np.cos(Z) +
+                       np.cos(Z) * np.cos(X)) -
+                (np.cos(2*X) + np.cos(2*Y) + np.cos(2*Z)))
+    elif k == 'neovius':
+        return (3.0 * (np.cos(X) + np.cos(Y) + np.cos(Z)) +
+                4.0 * np.cos(X) * np.cos(Y) * np.cos(Z))
+    elif k == 'lidinoid':
+        return (np.cos(2*X) * np.sin(Y) * np.cos(Z) +
+                np.cos(2*Y) * np.sin(Z) * np.cos(X) +
+                np.cos(2*Z) * np.sin(X) * np.cos(Y) -
+                np.cos(2*X) * np.cos(2*Y) -
+                np.cos(2*Y) * np.cos(2*Z) -
+                np.cos(2*Z) * np.cos(2*X) + 0.3)
+    else:
+        raise ValueError(f"Unknown TPMS type: {kind}")
+
+
+def _build_tpms_unit(
+    kind,
+    box=(10.0, 10.0, 10.0),
+    num_periods=(1, 1, 1),
+    resolution=12,
+    voxel_factor=2.0,
+    radius=0.05,
+    material=None,
+    **kwargs,
+):
+    """Build TPMS unit cell StructureGraph via marching_cubes + voxel downsampling.
+    
+    Parameters
+    ----------
+    kind : str
+        TPMS type: gyroid, schwarz_p, schwarz_d, iwp, neovius, lidinoid.
+    box : tuple
+        Unit cell dimensions.
+    num_periods : tuple
+        Number of TPMS periods in each direction.
+    resolution : int
+        Marching cubes grid points per period.
+    voxel_factor : float
+        Voxel grid cells per period (controls downsampling density).
+    radius : float
+        Beam radius.
+    material : Material, optional
+        Beam material.
+    """
+    try:
+        from skimage import measure
+    except ImportError:
+        raise ImportError("TPMS generation requires scikit-image: pip install scikit-image")
+    
+    try:
+        import networkx as _nx
+    except ImportError:
+        raise ImportError("TPMS generation requires networkx: pip install networkx")
+    
+    mat = material or Material(name=f"tpms_{kind}")
+    w, h, d = box
+    npx, npy, npz = num_periods
+    
+    res_x = max(resolution * npx, 8)
+    res_y = max(resolution * npy, 8)
+    res_z = max(resolution * npz, 8)
+    
+    x = np.linspace(0, 2 * np.pi * npx, res_x)
+    y = np.linspace(0, 2 * np.pi * npy, res_y)
+    z = np.linspace(0, 2 * np.pi * npz, res_z)
+    X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
+    field = _tpms_field(kind, X, Y, Z)
+    
+    verts, faces, _, _ = measure.marching_cubes(field, level=0.0)
+    
+    # Scale to physical coordinates
+    sx = w / (2 * np.pi * npx)
+    sy = h / (2 * np.pi * npy)
+    sz = d / (2 * np.pi * npz)
+    verts_phys = verts.copy()
+    verts_phys[:, 0] *= sx
+    verts_phys[:, 1] *= sy
+    verts_phys[:, 2] *= sz
+    
+    # Extract unique edges from triangular faces
+    edge_set = set()
+    for face in faces:
+        for i in range(3):
+            edge_set.add(tuple(sorted([face[i], face[(i + 1) % 3]])))
+    
+    # Voxel grid downsampling
+    vs_x = w / (npx * voxel_factor)
+    vs_y = h / (npy * voxel_factor)
+    vs_z = d / (npz * voxel_factor)
+    
+    voxel_idx = np.column_stack([
+        np.floor(verts_phys[:, 0] / vs_x).astype(int),
+        np.floor(verts_phys[:, 1] / vs_y).astype(int),
+        np.floor(verts_phys[:, 2] / vs_z).astype(int),
+    ])
+    
+    voxel_groups = {}
+    for i in range(len(verts_phys)):
+        key = tuple(voxel_idx[i])
+        if key not in voxel_groups:
+            voxel_groups[key] = []
+        voxel_groups[key].append(i)
+    
+    centroids = {}
+    vert_to_cid = {}
+    for key, indices in voxel_groups.items():
+        centroid = np.mean(verts_phys[indices], axis=0)
+        cid = len(centroids)
+        centroids[cid] = centroid
+        for idx in indices:
+            vert_to_cid[idx] = cid
+    
+    centroid_edges = set()
+    for e in edge_set:
+        c0 = vert_to_cid.get(e[0])
+        c1 = vert_to_cid.get(e[1])
+        if c0 is not None and c1 is not None and c0 != c1:
+            centroid_edges.add(tuple(sorted([c0, c1])))
+    
+    # Build StructureGraph
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    cid_to_nid = {}
+    for cid, pos in centroids.items():
+        nid = g.add_node(pos.tolist(), merge=True)
+        cid_to_nid[cid] = nid
+    for c0, c1 in centroid_edges:
+        ni, nj = cid_to_nid[c0], cid_to_nid[c1]
+        if ni != nj:
+            g.add_edge(ni, nj, radius=radius, material=mat)
+    
+    # Connectivity repair: merge small components into largest
+    G_nx = _nx.Graph()
+    for nid in g.nodes:
+        G_nx.add_node(nid)
+    for eid in g.edges:
+        e = g.edges[eid]
+        G_nx.add_edge(e.node_i, e.node_j)
+    comps = sorted(_nx.connected_components(G_nx), key=len, reverse=True)
+    
+    if len(comps) > 1:
+        main = set(comps[0])
+        for small_comp in comps[1:]:
+            if len(small_comp) < 2:
+                continue
+            best_dist = float('inf')
+            best_pair = None
+            for snid in small_comp:
+                spos = g.nodes[snid].position
+                for mnid in list(main)[:100]:
+                    mpos = g.nodes[mnid].position
+                    dd = np.linalg.norm(spos - mpos)
+                    if dd < best_dist:
+                        best_dist = dd
+                        best_pair = (snid, mnid)
+            if best_pair:
+                g.add_edge(best_pair[0], best_pair[1], radius=radius, material=mat)
+                main = main | set(small_comp)
+    
+    g._metadata["unit_type"] = kind
+    g._metadata["tpms_params"] = {
+        "num_periods": list(num_periods),
+        "resolution": resolution,
+        "voxel_factor": voxel_factor,
+    }
+    return g
+
+
+def _make_tpms_factory(tpms_kind):
+    """Create a factory function for a specific TPMS type."""
+    def factory(
+        box=(10.0, 10.0, 10.0),
+        radius=0.05,
+        material=None,
+        n_pts_per_side=0,
+        point_displacements=None,
+        seed=None,
+        n_internal=0,
+        num_periods=(1, 1, 1),
+        resolution=12,
+        voxel_factor=2.0,
+        **kwargs,
+    ):
+        g = _build_tpms_unit(
+            tpms_kind,
+            box=box,
+            num_periods=num_periods,
+            resolution=resolution,
+            voxel_factor=voxel_factor,
+            radius=radius,
+            material=material,
+        )
+        return g
+    factory.__name__ = f"_unit_{tpms_kind}_3d"
+    factory.__doc__ = f"TPMS {tpms_kind} unit cell factory."
+    return factory
+
+
 _UNIT_FACTORIES_3D = {
     "cubic": _unit_cubic_3d,
     "octet": _unit_octet_3d,
@@ -1410,6 +1630,13 @@ _UNIT_FACTORIES_3D = {
     "bcc": _unit_bcc_3d,
     "fcc": _unit_fcc_3d,
     "hcp": _unit_hcp_3d,
+    # TPMS types
+    "gyroid": _make_tpms_factory("gyroid"),
+    "schwarz_p": _make_tpms_factory("schwarz_p"),
+    "schwarz_d": _make_tpms_factory("schwarz_d"),
+    "iwp": _make_tpms_factory("iwp"),
+    "neovius": _make_tpms_factory("neovius"),
+    "lidinoid": _make_tpms_factory("lidinoid"),
 }
 
 
