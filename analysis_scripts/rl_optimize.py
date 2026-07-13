@@ -157,53 +157,88 @@ def run_bayesian(n_iter: int = 50):
 # ───────────────── A2C (Advantage Actor-Critic) ─────────────────
 
 class VoronoiEnv:
-    """Gym-like environment for voronoi structure optimization."""
+    """Surrogate-based environment for RL optimization.
     
-    def __init__(self, target_stretch=1.5, num_steps=5000):
-        self.target_stretch = target_stretch
-        self.num_steps = num_steps
-        # Action space: [grid_x, grid_y, n_internal, stiffness, damping]
-        self.action_low = np.array([2, 2, 5, 1e4, 0.1])
-        self.action_high = np.array([5, 5, 25, 1e6, 0.9])
-        self.action_dim = 5
-        self.obs_dim = 5  # same as action (params are the observation)
+    State: normalized [grid_x, grid_y, n_internal] in [0, 1]
+    Action: delta in [-0.5, 0.5] applied to state
+    Reward: -predicted_max_force (higher = better, i.e. lower force)
+    """
+    
+    def __init__(self, csv_path=None):
+        import pandas as pd
+        from sklearn.ensemble import RandomForestRegressor
+        from sklearn.preprocessing import StandardScaler
+        
+        if csv_path is None:
+            csv_path = str(Path(__file__).resolve().parent.parent / "output_data" / "voronoi_100_results.csv")
+        
+        df = pd.read_csv(csv_path)
+        
+        self.param_cols = ["grid_x", "grid_y", "n_internal"]
+        X_params = df[self.param_cols].values
+        y_target = df["max_force"].values
+        
+        self.scaler = StandardScaler()
+        X_scaled = self.scaler.fit_transform(X_params)
+        self.surrogate = RandomForestRegressor(n_estimators=50, random_state=42)
+        self.surrogate.fit(X_scaled, y_target)
+        
+        self.param_low = np.array([2.0, 2.0, 5.0])
+        self.param_high = np.array([5.0, 5.0, 25.0])
+        self.dim = 3
+        self.obs_dim = 3
+        self.action_dim = 3
         self._step_count = 0
-        self.max_steps = 100
+        self.max_steps = 20
+        self._state = None  # normalized [0,1]
+    
+    def _to_params(self, norm_state):
+        """Convert normalized [0,1] state to actual params."""
+        return norm_state * (self.param_high - self.param_low) + self.param_low
+    
+    def _predict(self, params):
+        """Predict max_force from params."""
+        params_round = np.array([round(params[0]), round(params[1]), round(params[2])])
+        params_round = np.clip(params_round, self.param_low, self.param_high)
+        X_scaled = self.scaler.transform(params_round.reshape(1, -1))
+        return float(self.surrogate.predict(X_scaled)[0])
     
     def reset(self):
         self._step_count = 0
-        self._params = np.random.uniform(self.action_low, self.action_high)
-        return self._params.copy()
+        # Start from random normalized state
+        self._state = np.random.uniform(0, 1, self.dim)
+        return self._state.copy()
     
     def step(self, action):
+        """action: delta in [-0.5, 0.5] added to normalized state"""
         self._step_count += 1
-        # Clip action to valid range
-        action = np.clip(action, self.action_low, self.action_high)
-        self._params = action.copy()
         
-        params = {
-            "grid_x": action[0], "grid_y": action[1],
-            "n_internal": action[2], "stiffness": action[3],
-            "damping": action[4],
-        }
-        r = evaluate_structure(params, self.target_stretch, self.num_steps)
+        # Apply action (delta) and clip to [0, 1]
+        self._state = np.clip(self._state + np.clip(action, -0.5, 0.5), 0, 1)
         
-        if r["success"]:
-            reward = -(r["max_force"] + 1e4 * r["std_stretch"])  # negative = minimize
-        else:
-            reward = -1e6
+        # Convert to params and predict
+        params = self._to_params(self._state)
+        predicted_force = self._predict(params)
+        
+        # Reward: negative force (we want to minimize force)
+        reward = -predicted_force / 1e5  # normalize reward scale
         
         done = self._step_count >= self.max_steps
-        info = r
-        return self._params.copy(), reward, done, info
+        info = {"predicted_max_force": predicted_force, "params": params.tolist(), "success": True}
+        
+        return self._state.copy(), reward, done, info
     
     @property
     def action_space(self):
-        return type('Space', (), {'sample': lambda: np.random.uniform(self.action_low, self.action_high),
-                                   'shape': (self.action_dim,)})()
+        return type('Space', (), {
+            'sample': lambda: np.random.uniform(-0.3, 0.3, self.action_dim),
+            'shape': (self.action_dim,)
+        })()
+    
     @property
     def observation_space(self):
         return type('Space', (), {'shape': (self.obs_dim,)})()
+
 
 
 class A2CAgent:
@@ -243,7 +278,7 @@ class A2CAgent:
             lr=lr
         )
     
-    def select_action(self, state, action_low, action_high):
+    def select_action(self, state):
         import torch
         state_t = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         output = self.actor(state_t)
@@ -254,16 +289,13 @@ class A2CAgent:
         
         dist = torch.distributions.Normal(mean, std)
         action = dist.sample()
-        action = action.clamp(
-            torch.FloatTensor(action_low).to(self.device),
-            torch.FloatTensor(action_high).to(self.device)
-        )
+        action = action.clamp(-0.5, 0.5)
         log_prob = dist.log_prob(action).sum(-1)
         value = self.critic(state_t)
         
         return action.squeeze(0).cpu().numpy(), log_prob, value.squeeze()
     
-    def update(self, states, actions, rewards, log_probs, values, action_low, action_high):
+    def update(self, states, actions, rewards, log_probs, values):
         import torch
         
         # Compute returns
@@ -307,7 +339,7 @@ def run_a2c(n_episodes: int = 100):
     print("A2C (Advantage Actor-Critic) Optimization")
     print("=" * 60)
     
-    env = VoronoiEnv(target_stretch=1.5, num_steps=5000)
+    env = VoronoiEnv()
     agent = A2CAgent(env.obs_dim, env.action_dim, lr=3e-4)
     
     episode_rewards = []
@@ -322,8 +354,7 @@ def run_a2c(n_episodes: int = 100):
         
         done = False
         while not done:
-            action, log_prob, value = agent.select_action(
-                state, env.action_low, env.action_high)
+            action, log_prob, value = agent.select_action(state)
             next_state, reward, done, info = env.step(action)
             
             states.append(state)
@@ -337,8 +368,7 @@ def run_a2c(n_episodes: int = 100):
         
         # Update
         if len(states) > 0:
-            loss = agent.update(states, actions, rewards, log_probs, values,
-                               env.action_low, env.action_high)
+            loss = agent.update(states, actions, rewards, log_probs, values)
         
         episode_rewards.append(total_reward)
         
@@ -346,14 +376,11 @@ def run_a2c(n_episodes: int = 100):
             all_results.append({
                 "episode": ep,
                 "reward": total_reward,
-                "max_force": info["max_force"],
-                "max_stretch": info["max_stretch"],
+                "max_force": info.get("predicted_max_force", info.get("max_force", 0)),
                 "params": {
                     "grid_x": float(state[0]),
                     "grid_y": float(state[1]),
                     "n_internal": float(state[2]),
-                    "stiffness": float(state[3]),
-                    "damping": float(state[4]),
                 }
             })
         
@@ -369,8 +396,7 @@ def run_a2c(n_episodes: int = 100):
     print(f"\nA2C Results:")
     print(f"  Best reward: {best_reward:.0f}")
     print(f"  Best params: grid=({best_params[0]:.0f},{best_params[1]:.0f}), "
-          f"n_internal={best_params[2]:.0f}, stiffness={best_params[3]:.1e}, "
-          f"damping={best_params[4]:.2f}")
+          f"n_internal={best_params[2]:.0f}")
     
     # Save
     a2c_data = {
@@ -381,8 +407,6 @@ def run_a2c(n_episodes: int = 100):
             "grid_x": float(best_params[0]),
             "grid_y": float(best_params[1]),
             "n_internal": float(best_params[2]),
-            "stiffness": float(best_params[3]),
-            "damping": float(best_params[4]),
         },
         "episode_rewards": [float(r) for r in episode_rewards],
         "all_results": all_results,
