@@ -1623,6 +1623,203 @@ def _make_tpms_factory(tpms_kind):
     return factory
 
 
+
+def _unit_chiral_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    node_radius=None,
+    chirality=0.3,
+    **kwargs,
+):
+    """3D chiral metamaterial unit cell.
+    
+    Central ring of nodes on a sphere connected to 8 corner nodes
+    via tangent (chiral) ligaments. The ``chirality`` parameter controls
+    the tangent offset angle, creating auxetic twist behavior.
+    
+    Parameters
+    ----------
+    chirality : float
+        Tangent offset fraction (0=radial, 1=full tangent). Default 0.3.
+    node_radius : float, optional
+        Radius of the central node ring. Default = min(box)/3.
+    """
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    
+    if node_radius is None:
+        node_radius = min(w, h, d) / 3.0
+    
+    cx, cy, cz = w / 2, h / 2, d / 2
+    
+    # 8 ring nodes on a sphere (vertices of a cube inscribed in the sphere)
+    s = node_radius / np.sqrt(3)  # scale so corners are at node_radius
+    ring_positions = [
+        (cx + s, cy + s, cz + s), (cx + s, cy + s, cz - s),
+        (cx + s, cy - s, cz + s), (cx + s, cy - s, cz - s),
+        (cx - s, cy + s, cz + s), (cx - s, cy + s, cz - s),
+        (cx - s, cy - s, cz + s), (cx - s, cy - s, cz - s),
+    ]
+    ring_nids = [g.add_node(p) for p in ring_positions]
+    
+    # 8 corner nodes
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    corner_nids = [g.add_node(c) for c in corners]
+    
+    edge_pairs = []
+    
+    # Ring-to-ring edges (cube edges connecting the 8 ring nodes)
+    ring_edges = [
+        (0,1),(0,2),(0,4),(1,3),(1,5),(2,3),(2,6),(3,7),
+        (4,5),(4,6),(5,7),(6,7),
+    ]
+    for i, j in ring_edges:
+        edge_pairs.append((ring_nids[i], ring_nids[j]))
+    
+    # Chiral (tangent) ligaments from corners to ring nodes
+    # Each corner connects to its 3 nearest ring nodes, but offset by chirality
+    for ci in range(8):
+        # Corner binary representation (which octant)
+        cx_b = (ci >> 2) & 1  # x bit
+        cy_b = (ci >> 1) & 1  # y bit  
+        cz_b = ci & 1         # z bit
+        
+        # Find the 3 nearest ring nodes (same octant neighbors)
+        for axis in range(3):
+            # Flip one bit to get the neighbor ring node
+            ri = ci ^ (1 << axis)
+            if ri < 8:
+                # Create a chiral (tangent) connection point
+                # Instead of connecting corner directly to ring node,
+                # offset the ring endpoint by chirality * tangent direction
+                rp = np.array(ring_positions[ri])
+                cp = np.array(corners[ci])
+                
+                # Tangent direction = perpendicular to radial direction
+                radial = rp - np.array([cx, cy, cz])
+                tangent = np.cross(radial, np.array([0, 0, 1]) if axis == 0 else
+                                  (np.array([1, 0, 0]) if axis == 1 else np.array([0, 1, 0])))
+                tangent_norm = np.linalg.norm(tangent)
+                if tangent_norm > 1e-10:
+                    tangent = tangent / tangent_norm * node_radius * chirality
+                    target = rp + tangent
+                else:
+                    target = rp
+                
+                # Add a tangent node
+                tan_nid = g.add_node(target.tolist())
+                edge_pairs.append((corner_nids[ci], tan_nid))
+                edge_pairs.append((tan_nid, ring_nids[ri]))
+    
+    _add_3d_edges(g, list(range(g.num_nodes)), edge_pairs, n_pts_per_side,
+                  point_displacements, radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "chiral_3d"
+    g._metadata["chirality"] = chirality
+    return g
+
+
+def _unit_reentrant_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    angle=15.0,
+    **kwargs,
+):
+    """3D reentrant (auxetic) metamaterial unit cell.
+    
+    Extends the 2D reentrant arrowhead concept to 3D.
+    Internal indentation nodes create negative Poisson's ratio
+    when the structure is stretched.
+    
+    Parameters
+    ----------
+    angle : float
+        Reentrant angle in degrees (0-40). Controls indentation depth.
+    """
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    
+    cx, cy, cz = w / 2, h / 2, d / 2
+    
+    # 6 boundary nodes at face centers
+    face_centers = [
+        (cx, cy, 0),    # bottom
+        (cx, cy, d),    # top
+        (cx, 0, cz),    # front
+        (cx, h, cz),    # back
+        (0, cy, cz),    # left
+        (w, cy, cz),    # right
+    ]
+    face_nids = [g.add_node(p) for p in face_centers]
+    
+    # 8 corner nodes
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    corner_nids = [g.add_node(c) for c in corners]
+    
+    # Indentation: compute inward offset based on reentrant angle
+    max_indent = min(w, h, d) / 4
+    indent = max_indent * np.tan(np.radians(min(angle, 40)))
+    
+    # 2 indentation nodes along z-axis (above and below center)
+    indent_lo = g.add_node([cx, cy, cz - indent])  # lower indent
+    indent_hi = g.add_node([cx, cy, cz + indent])  # upper indent
+    
+    edge_pairs = []
+    
+    # Corner-to-face edges (12 cube edges)
+    cube_edges = [
+        (0,1),(1,2),(2,3),(3,0),
+        (4,5),(5,6),(6,7),(7,4),
+        (0,4),(1,5),(2,6),(3,7),
+    ]
+    for i, j in cube_edges:
+        edge_pairs.append((corner_nids[i], corner_nids[j]))
+    
+    # Face center to adjacent corners (structural support)
+    face_corner_map = [
+        (0, [0,1,2,3]),   # bottom face → bottom corners
+        (1, [4,5,6,7]),   # top face → top corners
+        (2, [0,1,4,5]),   # front face → front corners
+        (3, [2,3,6,7]),   # back face → back corners
+        (4, [0,3,4,7]),   # left face → left corners
+        (5, [1,2,5,6]),   # right face → right corners
+    ]
+    for fi, c_list in face_corner_map:
+        for ci in c_list:
+            edge_pairs.append((face_nids[fi], corner_nids[ci]))
+    
+    # Reentrant diagonals: each face center connects to both indent nodes
+    for fi in range(6):
+        edge_pairs.append((face_nids[fi], indent_lo))
+        edge_pairs.append((face_nids[fi], indent_hi))
+    
+    # Indent-to-indent connection (vertical spine)
+    edge_pairs.append((indent_lo, indent_hi))
+    
+    _add_3d_edges(g, list(range(g.num_nodes)), edge_pairs, n_pts_per_side,
+                  point_displacements, radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "reentrant_3d"
+    g._metadata["reentrant_angle"] = angle
+    return g
+
+
 _UNIT_FACTORIES_3D = {
     "cubic": _unit_cubic_3d,
     "octet": _unit_octet_3d,
@@ -1630,6 +1827,9 @@ _UNIT_FACTORIES_3D = {
     "bcc": _unit_bcc_3d,
     "fcc": _unit_fcc_3d,
     "hcp": _unit_hcp_3d,
+    # Chiral and reentrant
+    "chiral_3d": _unit_chiral_3d,
+    "reentrant_3d": _unit_reentrant_3d,
     # TPMS types
     "gyroid": _make_tpms_factory("gyroid"),
     "schwarz_p": _make_tpms_factory("schwarz_p"),
