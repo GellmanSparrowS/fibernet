@@ -1,4 +1,7 @@
 """Test ML/RL utilities and StructureGraph node manipulation."""
+
+import pytest
+pytest.importorskip("sklearn")
 import sys
 import os
 import tempfile
