@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fibernet"
-version = "2.0.0"
-description = "A comprehensive fiber network generation and simulation toolkit for materials science research"
+version = "4.0.0-dev"
+description = "A comprehensive fiber network generation, simulation, and ML toolkit for materials science research"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
@@ -20,11 +20,13 @@ keywords = [
     "simulation",
     "mechanical properties",
     "computational materials",
+    "machine learning",
+    "reinforcement learning",
     "polymer physics",
     "biomechanics"
 ]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Chemistry",
@@ -38,25 +40,39 @@ classifiers = [
 dependencies = [
     "numpy>=1.21",
     "scipy>=1.7",
+    "networkx>=3.0",
+    "matplotlib>=3.5",
 ]
 
 [project.optional-dependencies]
-viz = ["pyvista>=0.37", "matplotlib>=3.5"]
+viz = ["pyvista>=0.37"]
 mesh = ["trimesh>=3.20"]
 io = ["h5py>=3.7"]
 accel = ["taichi>=1.6"]
-ml = ["scikit-learn>=1.0", "tqdm>=4.60"]
+ml = [
+    "scikit-learn>=1.0",
+    "pandas>=1.5",
+    "tqdm>=4.60",
+]
+rl = [
+    "gymnasium>=0.26",
+    "scikit-optimize>=0.9",
+    "stable-baselines3>=2.0",
+]
 graph = ["networkx>=3.0"]
 full = [
     "pyvista>=0.37",
-    "matplotlib>=3.5",
     "trimesh>=3.20",
     "h5py>=3.7",
     "taichi>=1.6",
     "scikit-learn>=1.0",
+    "pandas>=1.5",
     "networkx>=3.0",
     "tqdm>=4.60",
     "pyyaml>=6.0",
+    "gymnasium>=0.26",
+    "scikit-optimize>=0.9",
+    "matplotlib>=3.5",
 ]
 dev = [
     "pytest>=7.0",

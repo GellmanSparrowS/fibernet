@@ -9,6 +9,28 @@ Quick Start
 >>> result = engine.stretch_test(g, target_stretch=2.0)
 >>> fig = fn.render_graph(g, theme="dark")
 >>> fig.savefig("honeycomb.png", dpi=200)
+
+ML Pipeline (one-liners)
+------------------------
+>>> from fibernet.ml import train_predictor, predict_from_csv, cross_validate
+>>> model, metrics = train_predictor(X, y, model_type="rf")
+>>> result = predict_from_csv("data.csv", target="max_force")
+
+RL Pipeline (one-liners)
+------------------------
+>>> from fibernet.rl import plot_reward_curve, run_bayesian_optimization
+>>> plot_reward_curve(rewards, window=20, save_path="reward.png")
+>>> best = run_bayesian_optimization(objective_fn, param_space, n_iter=50)
+
+Parametric Structure Generation (for RL)
+------------------------------------------
+>>> # Method 1: Displacements at generation time
+>>> g = fn.pattern_2d("square", box=(10,10), grid=(3,3),
+...                    n_pts_per_side=3, point_displacements=disps)
+>>> # Method 2: Post-generation node manipulation
+>>> g.displace_node(5, [0.1, 0.2])
+>>> g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})
+>>> internal = g.get_internal_nodes()  # Nodes available for RL actions
 """
 
 __version__ = "4.0.0-dev"
@@ -51,6 +73,37 @@ from fibernet.easy import show, simulate, batch_simulate, train_model, train_rl
 # --- Analysis ---
 from fibernet.analysis.graph_features import GraphFeatureExtractor
 
+# --- ML Utilities (lazy import to avoid hard sklearn dependency) ---
+try:
+    from fibernet.ml.utils import (
+        train_predictor,
+        cross_validate,
+        compare_models,
+        predict_from_csv,
+        plot_predictions,
+        plot_feature_importance,
+        plot_residuals,
+        plot_learning_curve,
+    )
+    _HAS_ML = True
+except ImportError:
+    _HAS_ML = False
+
+# --- RL Utilities (lazy import to avoid hard gymnasium dependency) ---
+try:
+    from fibernet.rl.utils import (
+        plot_reward_curve,
+        plot_convergence,
+        plot_action_distribution,
+        evaluate_agent,
+        save_agent,
+        load_agent,
+        run_bayesian_optimization,
+    )
+    _HAS_RL = True
+except ImportError:
+    _HAS_RL = False
+
 __all__ = [
     # Core
     "StructureGraph", "SNode", "SEdge",
@@ -71,4 +124,12 @@ __all__ = [
     "show", "simulate", "batch_simulate", "train_model", "train_rl",
     # Analysis
     "GraphFeatureExtractor",
+    # ML (if available)
+    "train_predictor", "cross_validate", "compare_models",
+    "predict_from_csv", "plot_predictions", "plot_feature_importance",
+    "plot_residuals", "plot_learning_curve",
+    # RL (if available)
+    "plot_reward_curve", "plot_convergence", "plot_action_distribution",
+    "evaluate_agent", "save_agent", "load_agent",
+    "run_bayesian_optimization",
 ]
