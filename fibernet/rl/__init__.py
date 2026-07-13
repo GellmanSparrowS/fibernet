@@ -24,3 +24,10 @@ __all__ = [
     "load_agent",
     "run_bayesian_optimization",
 ]
+
+from fibernet.rl.parametric import (
+    ParametricStructureEnv,
+    create_rl_environment,
+)
+
+__all__.extend(["ParametricStructureEnv", "create_rl_environment"])

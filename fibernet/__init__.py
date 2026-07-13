@@ -69,7 +69,7 @@ from fibernet.viz.render import (
 )
 
 # --- Easy API ---
-from fibernet.easy import show, simulate, batch_simulate, train_model, train_rl
+from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl
 
 # --- Analysis ---
 from fibernet.analysis.graph_features import GraphFeatureExtractor
@@ -122,7 +122,7 @@ __all__ = [
     "render_graph", "render_graph_3d", "render_deformation",
     "render_gallery", "render_with_stats", "render_trajectory", "THEMES",
     # Easy API
-    "show", "simulate", "batch_simulate", "train_model", "train_rl",
+    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",
     # Analysis
     "GraphFeatureExtractor",
     # ML (if available)

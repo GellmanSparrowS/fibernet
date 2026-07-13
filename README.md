@@ -463,7 +463,7 @@ If you use FiberNet in your research, please cite:
 @software{fibernet2024,
   title = {FiberNet: Python Toolkit for Fiber Network Design and Optimization},
   author = {ML-BioMat Lab, BMG-FDU},
-  year = {2024},
+  year = {2026},
   url = {https://github.com/GellmanSparrowS/fibernet},
   version = {4.0.0},
 }

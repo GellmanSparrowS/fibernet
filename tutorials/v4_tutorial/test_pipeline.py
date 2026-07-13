@@ -15,7 +15,7 @@ import pandas as pd
 warnings.filterwarnings("ignore")
 
 # ─── Config ───
-N_SAMPLES = 5 if "--full" not in sys.argv else 2000
+N_SAMPLES = 2000 if "--full" not in sys.argv else 5
 UNIT = "voronoi"
 BOX = (10, 10)
 GRID = (3, 3)

@@ -27,3 +27,6 @@ docs/_build/
 docs/_static/
 docs/_build/
 fibernet_output/
+.env_token
+*.key
+.pypirc

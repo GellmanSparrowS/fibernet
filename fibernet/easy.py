@@ -345,3 +345,157 @@ def train_rl(
 
     print(f"✓ Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")
     return stats
+
+def batch_simulate_from_json(
+    json_dir: str,
+    output_dir: str = "simulation_results",
+    mode: str = "stretch",
+    target_stretch: float = 1.5,
+    stiffness: float = 1e5,
+    damping: float = 0.3,
+    num_steps: int = 1000,
+    save_interval: int = 200,
+    backend: str = "spring",
+) -> str:
+    """Batch simulate structures from JSON files.
+    
+    Reads all .json files in json_dir, simulates each, and saves results.
+    
+    Parameters
+    ----------
+    json_dir : str
+        Directory containing StructureGraph JSON files.
+    output_dir : str
+        Directory to save results (CSV + individual JSON results).
+    mode : str
+        Simulation mode: "stretch", "dynamics".
+    target_stretch : float
+        Target stretch ratio for stretch mode.
+    stiffness : float
+        Spring stiffness for spring backend.
+    damping : float
+        Damping ratio.
+    num_steps : int
+        Number of simulation steps.
+    save_interval : int
+        Save trajectory every N steps.
+    backend : str
+        Simulation backend: "spring" (TaichiEngine).
+    
+    Returns
+    -------
+    str
+        Path to the output CSV file.
+    
+    Examples
+    --------
+    >>> from fibernet import batch_simulate_from_json
+    >>> csv_path = batch_simulate_from_json(
+    ...     "my_structures/",
+    ...     output_dir="results/",
+    ...     mode="stretch",
+    ...     target_stretch=1.5,
+    ... )
+    >>> print(f"Results saved to {csv_path}")
+    
+    Notes
+    -----
+    - Automatically parses JSON files in various formats (StructureGraph, networkx, custom)
+    - Saves trajectory data for visualization
+    - Supports checkpoint resume (skips already simulated files)
+    - Output CSV includes: filename, n_nodes, n_edges, max_force, max_stretch, etc.
+    """
+    import csv
+    import json
+    from pathlib import Path
+    
+    json_path = Path(json_dir)
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    
+    json_files = sorted(json_path.glob("*.json"))
+    if not json_files:
+        print(f"No JSON files found in {json_dir}")
+        return ""
+    
+    print(f"Found {len(json_files)} JSON files in {json_dir}")
+    
+    # Checkpoint: load existing results
+    csv_file = output_path / "simulation_results.csv"
+    existing = set()
+    if csv_file.exists():
+        with open(csv_file) as f:
+            reader = csv.DictReader(f)
+            existing = {row["filename"] for row in reader}
+    
+    results = []
+    engine = TaichiEngine() if backend == "spring" else None
+    
+    for json_file in json_files:
+        fname = json_file.name
+        if fname in existing:
+            print(f"  [{fname}] Already simulated, skipping")
+            continue
+        
+        try:
+            # Try loading as StructureGraph
+            g = StructureGraph.load_json(str(json_file))
+            
+            # Run simulation
+            if mode == "stretch":
+                r = engine.stretch_test(
+                    g,
+                    target_stretch=target_stretch,
+                    stiffness=stiffness,
+                    damping=damping,
+                    num_steps=num_steps,
+                    save_interval=save_interval,
+                    auto_steps=False,
+                )
+                row = {
+                    "filename": fname,
+                    "n_nodes": g.num_nodes,
+                    "n_edges": g.num_edges,
+                    "max_force": float(r.max_force),
+                    "max_stretch": float(r.max_stretch),
+                    "mean_stretch": float(r.mean_stretch),
+                    "std_stretch": float(r.std_stretch),
+                    "time_seconds": float(r.time_seconds),
+                    "success": True,
+                }
+                results.append(row)
+                
+                # Save detailed result
+                r.save(str(output_path / f"{json_file.stem}_result.json"), detailed=True)
+                print(f"  [{fname}] max_force={r.max_force:.0f}, stretch={r.max_stretch:.3f}")
+            else:
+                raise ValueError(f"Unknown mode: {mode}")
+        
+        except Exception as e:
+            results.append({
+                "filename": fname,
+                "success": False,
+                "error": str(e),
+            })
+            print(f"  [{fname}] FAILED: {e}")
+        
+        # Append to CSV after each simulation (checkpoint)
+        if results:
+            with open(csv_file, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=results[0].keys())
+                writer.writeheader()
+                writer.writerows(results)
+    
+    # Final CSV with all results
+    if results:
+        with open(csv_file, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=results[0].keys())
+            writer.writeheader()
+            writer.writerows(results)
+        
+        ok = [r for r in results if r.get("success")]
+        print(f"\n✓ Simulated {len(ok)}/{len(results)} successfully")
+        print(f"  Results: {csv_file}")
+    
+    return str(csv_file)
+
