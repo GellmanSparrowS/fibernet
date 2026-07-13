@@ -1,0 +1,26 @@
+{
+  "01_uniaxial_tension": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/01_uniaxial_tension.png",
+    "time": "2026-07-13 01:26:33"
+  },
+  "02_uniaxial_fracture": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/02_uniaxial_fracture.png",
+    "time": "2026-07-13 01:26:33"
+  },
+  "03_biaxial": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/03_biaxial.png",
+    "time": "2026-07-13 01:26:34"
+  },
+  "05_shear": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/05_shear.png",
+    "time": "2026-07-13 01:26:34"
+  },
+  "06_stress_strain_curve": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/06_stress_strain_curve.png",
+    "time": "2026-07-13 01:26:35"
+  },
+  "04_compression": {
+    "path": "/home/codex/projects/codex_test/fibernet/output_viz/fem_scenarios/04_compression.png",
+    "time": "2026-07-13 01:26:47"
+  }
+}
