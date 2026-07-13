@@ -65,6 +65,7 @@ from fibernet.viz.render import (
     render_trajectory,
     render_graph, render_graph_3d,
     render_deformation, render_gallery,
+    render_deformation_3d, render_trajectory_3d, render_gallery_3d,
     render_with_stats,
     THEMES,
 )
@@ -123,7 +124,9 @@ __all__ = [
     "TaichiEngine", "SimResult",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
-    "render_gallery", "render_with_stats", "render_trajectory", "THEMES",
+    "render_gallery", "render_with_stats", "render_trajectory",
+    "render_deformation_3d", "render_trajectory_3d", "render_gallery_3d",
+    "THEMES",
     # Easy API
     "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",
     # Analysis
