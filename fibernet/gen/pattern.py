@@ -1215,10 +1215,201 @@ def _unit_diamond_3d(
     return g
 
 
+
+
+def _unit_bcc_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Body-Centered Cubic (BCC) unit cell.
+    
+    8 corner atoms + 1 body center. Each corner connected to center
+    (8 nearest-neighbor bonds). Plus 12 cube edges for structural integrity.
+    """
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    nids = [g.add_node(c) for c in corners]
+    center = g.add_node([w / 2, h / 2, d / 2])
+    center_nid = len(nids)
+    # Corner-to-center edges (8 nearest-neighbor bonds)
+    corner_center_edges = [(i, center_nid) for i in range(8)]
+    # Cube edges (12)
+    cube_edges = [
+        (0, 1), (1, 2), (2, 3), (3, 0),
+        (4, 5), (5, 6), (6, 7), (7, 4),
+        (0, 4), (1, 5), (2, 6), (3, 7),
+    ]
+    all_edges = corner_center_edges + cube_edges
+    all_nids = nids + [center]
+    _add_3d_edges(g, all_nids, all_edges, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "bcc"
+    return g
+
+
+def _unit_fcc_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Face-Centered Cubic (FCC) unit cell.
+    
+    8 corner atoms + 6 face center atoms.
+    Face centers connect to their 4 face corners + adjacent face centers.
+    """
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    corners = [
+        (0, 0, 0), (w, 0, 0), (w, h, 0), (0, h, 0),
+        (0, 0, d), (w, 0, d), (w, h, d), (0, h, d),
+    ]
+    nids = [g.add_node(c) for c in corners]
+    # Face centers: index 8-13
+    fc = [
+        g.add_node([w / 2, h / 2, 0]),     # 8: z=0 face
+        g.add_node([w / 2, h / 2, d]),     # 9: z=d face
+        g.add_node([w / 2, 0, d / 2]),     # 10: y=0 face
+        g.add_node([w / 2, h, d / 2]),     # 11: y=h face
+        g.add_node([0, h / 2, d / 2]),     # 12: x=0 face
+        g.add_node([w, h / 2, d / 2]),     # 13: x=w face
+    ]
+    # Face center to corner edges (24 edges)
+    fc_corner_edges = [
+        (8, 0), (8, 1), (8, 2), (8, 3),   # z=0 face
+        (9, 4), (9, 5), (9, 6), (9, 7),   # z=d face
+        (10, 0), (10, 1), (10, 4), (10, 5),  # y=0 face
+        (11, 2), (11, 3), (11, 6), (11, 7),  # y=h face
+        (12, 0), (12, 3), (12, 4), (12, 7),  # x=0 face
+        (13, 1), (13, 2), (13, 5), (13, 6),  # x=w face
+    ]
+    # Face center to adjacent face center edges (12, one per cube edge)
+    # Each cube edge is shared by 2 faces → their face centers connect
+    fc_fc_edges = [
+        (8, 10), (8, 11), (8, 12), (8, 13),   # z=0 face ↔ 4 side faces
+        (9, 10), (9, 11), (9, 12), (9, 13),   # z=d face ↔ 4 side faces
+        (10, 12), (10, 13),                     # y=0 ↔ x=0, x=w
+        (11, 12), (11, 13),                     # y=h ↔ x=0, x=w
+    ]
+    all_nids = nids + fc
+    all_edges = fc_corner_edges + fc_fc_edges
+    _add_3d_edges(g, all_nids, all_edges, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "fcc"
+    return g
+
+
+def _unit_hcp_3d(
+    box=(10.0, 10.0, 10.0),
+    radius=0.1,
+    material=None,
+    n_pts_per_side=0,
+    point_displacements=None,
+    seed=None,
+    n_internal=0,
+    **kwargs,
+):
+    """Hexagonal Close-Packed (HCP) unit cell.
+    
+    Bottom hexagonal layer (z=0) + middle offset layer (z=d/2) +
+    top hexagonal layer (z=d). ABAB stacking.
+    """
+    mat = material or Material()
+    w, h, d = box
+    g = StructureGraph(dimension=3, box_size=[w, h, d])
+    
+    cx, cy = w / 2, h / 2
+    rx, ry = w / 2, h / 2  # radii for hexagonal arrangement
+    
+    # Bottom layer (z=0): 6 hexagonal corners + center
+    bottom_corners = []
+    for i in range(6):
+        angle = i * np.pi / 3
+        x = cx + rx * np.cos(angle)
+        y = cy + ry * np.sin(angle)
+        bottom_corners.append((x, y, 0.0))
+    bottom_center = (cx, cy, 0.0)
+    
+    # Top layer (z=d): same positions
+    top_corners = [(x, y, d) for (x, y, _) in bottom_corners]
+    top_center = (cx, cy, d)
+    
+    # Middle layer (z=d/2): 3 atoms offset by 30° from bottom
+    mid_atoms = []
+    for i in range(3):
+        angle = (2 * i + 1) * np.pi / 6  # 30°, 150°, 270°
+        x = cx + rx * 0.577 * np.cos(angle)  # 1/√3 offset for close packing
+        y = cy + ry * 0.577 * np.sin(angle)
+        mid_atoms.append((x, y, d / 2))
+    
+    # Add all nodes
+    bottom_nids = [g.add_node(p) for p in bottom_corners]
+    bottom_center_nid = g.add_node(bottom_center)
+    top_nids = [g.add_node(p) for p in top_corners]
+    top_center_nid = g.add_node(top_center)
+    mid_nids = [g.add_node(p) for p in mid_atoms]
+    
+    all_nids = bottom_nids + [bottom_center_nid] + top_nids + [top_center_nid] + mid_nids
+    
+    edges = []
+    # Bottom hexagonal edges (6)
+    for i in range(6):
+        edges.append((bottom_nids[i], bottom_nids[(i + 1) % 6]))
+    # Bottom center to corners (6)
+    for i in range(6):
+        edges.append((bottom_center_nid, bottom_nids[i]))
+    # Top hexagonal edges (6)
+    for i in range(6):
+        edges.append((top_nids[i], top_nids[(i + 1) % 6]))
+    # Top center to corners (6)
+    for i in range(6):
+        edges.append((top_center_nid, top_nids[i]))
+    # Middle to bottom: each mid atom connects to 2 nearest bottom corners
+    for mi in range(3):
+        # Each middle atom at angle (2i+1)*30° connects to corners i and (i+1)%6
+        c1 = 2 * mi
+        c2 = (2 * mi + 1) % 6
+        edges.append((mid_nids[mi], bottom_nids[c1]))
+        edges.append((mid_nids[mi], bottom_nids[c2]))
+        edges.append((mid_nids[mi], bottom_center_nid))
+    # Middle to top: each mid atom connects to 2 nearest top corners
+    for mi in range(3):
+        c1 = (2 * mi + 2) % 6
+        c2 = (2 * mi + 3) % 6
+        edges.append((mid_nids[mi], top_nids[c1]))
+        edges.append((mid_nids[mi], top_nids[c2]))
+        edges.append((mid_nids[mi], top_center_nid))
+    # Vertical center-to-center connection
+    edges.append((bottom_center_nid, top_center_nid))
+    
+    _add_3d_edges(g, all_nids, edges, n_pts_per_side, point_displacements,
+                  radius, mat, n_internal, seed)
+    g._metadata["unit_type"] = "hcp"
+    return g
+
 _UNIT_FACTORIES_3D = {
     "cubic": _unit_cubic_3d,
     "octet": _unit_octet_3d,
     "diamond_3d": _unit_diamond_3d,
+    "bcc": _unit_bcc_3d,
+    "fcc": _unit_fcc_3d,
+    "hcp": _unit_hcp_3d,
 }
 
 
