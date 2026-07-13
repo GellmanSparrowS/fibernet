@@ -119,12 +119,12 @@ print(f"Themes: {list(THEMES.keys())}")'''))
     ))
 
     cells.append(code('''# \u2500\u2500 Generation Parameters \u2500\u2500
-UNIT = "square"
+UNIT = "voronoi"
 BOX = (10, 10)
 GRID = (3, 3)
-N_PTS = N_PTS_PER_SIDE
-N_SIDES = 4
-N_DISP = N_SIDES * N_PTS  # total displacement params
+N_PTS = N_PTS_PER_SIDE  # voronoi
+N_SEEDS = 8  # voronoi seed count
+# Voronoi: different seeds give different topology + auto-displacements  # total displacement params
 
 print(f"Unit: {UNIT}")
 print(f"Grid: {GRID}")
@@ -133,13 +133,11 @@ print("Total displacement params: N_DISP ({N_SIDES} sides \u00d7 {N_PTS} pts)")
 print(f"Internal nodes (RL targets): varies by seed")
 
 # \u2500\u2500 Base Structure (zero displacement) \u2500\u2500
-zero_disps = [(0.0, 0.0)] * N_DISP
-
 g_base = pattern_2d(
     unit=UNIT, box=BOX, grid=GRID,
     n_pts_per_side=N_PTS,
-    point_displacements=zero_disps,
     seed=0,
+    unit_kwargs={"n_seeds": N_SEEDS},
 )
 
 base_name = "{UNIT}_{GRID[0]}x{GRID[1]}_pts{N_PTS}_dispN_DISP_seed0"

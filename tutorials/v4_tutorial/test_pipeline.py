@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 End-to-end test of the v4 tutorial pipeline.
-Runs with N=5 samples to verify all steps work.
+Uses VORONOI unit type with internal point variations.
 
 Usage:
     python3 test_pipeline.py          # Test with 5 samples
@@ -16,13 +16,12 @@ warnings.filterwarnings("ignore")
 
 # ─── Config ───
 N_SAMPLES = 5 if "--full" not in sys.argv else 2000
-N_PTS_PER_SIDE = 5
-UNIT = "square"
+UNIT = "voronoi"
 BOX = (10, 10)
 GRID = (3, 3)
-N_PTS = N_PTS_PER_SIDE
-N_SIDES = 4
-N_DISP = N_SIDES * N_PTS
+N_PTS_VARIANT = 3   # internal points per edge for variants
+N_PTS_BASE = 0      # base has no internal points (straight edges)
+N_SEEDS = 8         # voronoi seed count (controls complexity)
 
 OUT = Path("fibernet_v4_tutorial")
 OUT.mkdir(parents=True, exist_ok=True)
@@ -43,54 +42,60 @@ from fibernet import pattern_2d, TaichiEngine, render_graph, render_trajectory
 from fibernet.analysis.graph_features import GraphFeatureExtractor
 from fibernet.sim.accelerated import SimResult
 
-print(f"=== FiberNet v4 Tutorial Test ===")
-print(f"Samples: {N_SAMPLES}, n_pts_per_side: {N_PTS_PER_SIDE}")
+print(f"=== FiberNet v4 Tutorial Test (Voronoi) ===")
+print(f"Samples: {N_SAMPLES}, unit: {UNIT}, n_pts: {N_PTS_VARIANT}")
 print(f"Output: {OUT.resolve()}")
 print()
 
 
 # ─── Step 1: Generate ───
 print("=" * 50)
-print("Step 1: Structure Generation")
+print("Step 1: Structure Generation (Voronoi)")
 print("=" * 50)
 
-def generate_parametric(seed, n_disp=N_DISP):
-    rng = np.random.default_rng(seed)
-    raw = rng.uniform(-0.3, 0.3, size=n_disp * 2)
-    disps = [(float(raw[2*i]), float(raw[2*i+1])) for i in range(n_disp)]
-    g = pattern_2d(unit=UNIT, box=BOX, grid=GRID,
-                   n_pts_per_side=N_PTS, point_displacements=disps, seed=seed)
-    return g, disps
+def generate_voronoi(seed, n_pts=N_PTS_VARIANT):
+    """Generate voronoi structure. Different seeds = different topology + displacements."""
+    g = pattern_2d(
+        unit=UNIT, box=BOX, grid=GRID,
+        n_pts_per_side=n_pts,
+        seed=seed,
+        unit_kwargs={'n_seeds': N_SEEDS},
+    )
+    return g
 
-# Base
-zero_disps = [(0.0, 0.0)] * N_DISP
-g_base = pattern_2d(unit=UNIT, box=BOX, grid=GRID,
-                    n_pts_per_side=N_PTS, point_displacements=zero_disps, seed=0)
-base_name = f"{UNIT}_{GRID[0]}x{GRID[1]}_pts{N_PTS}_disp{N_DISP}_seed0"
+
+# Base: voronoi with straight edges (no internal points)
+g_base = generate_voronoi(seed=42, n_pts=N_PTS_BASE)
+base_name = f"{UNIT}_{GRID[0]}x{GRID[1]}_seeds{N_SEEDS}_pts0_seed42"
 g_base.save_json(str(JSON_OUT / f"{base_name}.json"))
-fig = render_graph(g_base, theme="dark", title="Base")
+fig = render_graph(g_base, theme="dark", title="Base Voronoi (No Internal Points)")
 fig.savefig(str(IMG_OUT / f"{base_name}.png"), dpi=100, bbox_inches="tight",
             facecolor=fig.get_facecolor())
 plt.close(fig)
 
-metadata = [{"id": 0, "seed": 0, "name": base_name,
-             "is_base": True, "n_nodes": g_base.num_nodes, "n_edges": g_base.num_edges}]
+metadata = [{"id": 0, "seed": 42, "name": base_name,
+             "is_base": True, "n_pts": N_PTS_BASE,
+             "n_nodes": g_base.num_nodes, "n_edges": g_base.num_edges}]
 
-print(f"Base: {g_base.num_nodes} nodes, {g_base.num_edges} edges")
+print(f"Base (voronoi, pts=0): {g_base.num_nodes} nodes, {g_base.num_edges} edges")
 print(f"  Internal: {len(g_base.get_internal_nodes())}")
 
-# Variants
+# Variants: voronoi with internal points (auto-displacements from seed)
+print(f"\nGenerating {N_SAMPLES-1} variants (voronoi with n_pts={N_PTS_VARIANT})...")
 for i in range(1, N_SAMPLES):
-    seed = 1000 + i
-    g, disps = generate_parametric(seed)
-    name = f"{UNIT}_{GRID[0]}x{GRID[1]}_pts{N_PTS}_disp{N_DISP}_seed{seed}"
+    seed = 100 + i
+    g = generate_voronoi(seed=seed, n_pts=N_PTS_VARIANT)
+    name = f"{UNIT}_{GRID[0]}x{GRID[1]}_seeds{N_SEEDS}_pts{N_PTS_VARIANT}_seed{seed}"
     g.save_json(str(JSON_OUT / f"{name}.json"))
-    fig = render_graph(g, theme="dark", title=f"V{i}")
+    fig = render_graph(g, theme="dark", title=f"V{i} (seed={seed})")
     fig.savefig(str(IMG_OUT / f"{name}.png"), dpi=100, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
     plt.close(fig)
     metadata.append({"id": i, "seed": seed, "name": name,
-                     "is_base": False, "n_nodes": g.num_nodes, "n_edges": g.num_edges})
+                     "is_base": False, "n_pts": N_PTS_VARIANT,
+                     "n_nodes": g.num_nodes, "n_edges": g.num_edges})
+    if i % 50 == 0:
+        print(f"  [{i}/{N_SAMPLES-1}] Generated")
 
 with open(str(DATA_OUT / "metadata.json"), "w") as f:
     json.dump(metadata, f, indent=2)
@@ -107,8 +112,19 @@ print("=" * 50)
 
 engine = TaichiEngine()
 sim_results = []
+ckpt = DATA_OUT / "sim_partial.json"
+
+if ckpt.exists():
+    with open(ckpt) as f:
+        sim_results = json.load(f)
+    done_ids = {r["id"] for r in sim_results}
+    print(f"Resuming from checkpoint: {len(sim_results)} already done")
+else:
+    done_ids = set()
 
 for rec in metadata:
+    if rec["id"] in done_ids:
+        continue
     g_path = JSON_OUT / f"{rec['name']}.json"
     try:
         g = fn.StructureGraph.load_json(str(g_path))
@@ -125,7 +141,9 @@ for rec in metadata:
         }
         sim_results.append(row)
         r.save(str(DATA_OUT / f"{rec['name']}_result.json"), detailed=True)
-        print(f"  [{rec['id']}] {rec['name'][:30]}: force={r.max_force:.0f}, stretch={r.max_stretch:.3f}")
+        with open(str(ckpt), "w") as f:
+            json.dump(sim_results, f, indent=2)
+        print(f"  [{rec['id']}] {rec['name'][:40]}: force={r.max_force:.0f}")
     except Exception as e:
         sim_results.append({"id": rec["id"], "name": rec["name"], "success": False, "error": str(e)})
         print(f"  [{rec['id']}] FAILED: {e}")
@@ -134,6 +152,8 @@ df_sim = pd.DataFrame(sim_results)
 df_sim.to_csv(str(DATA_OUT / "sim_results.csv"), index=False)
 ok = df_sim[df_sim["success"]]
 print(f"✓ Simulated: {len(ok)} ok, {(~df_sim['success']).sum()} failed")
+if len(ok) > 0:
+    print(f"  max_force: {ok['max_force'].mean():.0f} ± {ok['max_force'].std():.0f}")
 
 
 # ─── Step 3: Deformation Visualization ───
@@ -142,7 +162,7 @@ print("=" * 50)
 print("Step 3: Deformation Visualization")
 print("=" * 50)
 
-for rec in metadata[:3]:  # first 3
+for rec in metadata[:3]:
     r_path = DATA_OUT / f"{rec['name']}_result.json"
     if not r_path.exists():
         continue
@@ -157,11 +177,9 @@ for rec in metadata[:3]:  # first 3
         fig.savefig(str(IMG_OUT / f"{rec['name']}_deform.png"),
                     dpi=100, bbox_inches="tight", facecolor=fig.get_facecolor())
         plt.close(fig)
-        print(f"  ✓ {rec['name'][:30]} deformation")
+        print(f"  ✓ {rec['name'][:40]}")
     except Exception as e:
-        print(f"  ✗ {rec['name'][:30]}: {e}")
-
-print("✓ Deformation visualizations saved")
+        print(f"  ✗ {rec['name'][:40]}: {e}")
 
 
 # ─── Step 4: Feature Extraction ───
@@ -174,8 +192,7 @@ ext = GraphFeatureExtractor(canvas_size=256)
 feat_records = []
 
 for rec in metadata:
-    g_path = JSON_OUT / f"{rec['name']}.json"
-    g = fn.StructureGraph.load_json(str(g_path))
+    g = fn.StructureGraph.load_json(str(JSON_OUT / f"{rec['name']}.json"))
     try:
         feats = ext.extract(g)
         record = {"id": rec["id"], "name": rec["name"]}
@@ -209,10 +226,10 @@ df_ml = df_feat[df_feat["id"].isin(ok_ids)].merge(
 
 feat_cols = [c for c in df_ml.columns if c.startswith("feat_")]
 feat_cols = [c for c in feat_cols if df_ml[c].std() > 1e-12]
-
 X = df_ml[feat_cols].fillna(0).values
 y = df_ml["max_force"].values
 
+r2 = float('nan')
 if len(X) >= 3:
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
     print(f"  Train: {len(X_train)}, Test: {len(X_test)}, Features: {len(feat_cols)}")
@@ -227,63 +244,61 @@ if len(X) >= 3:
     best_rf.fit(X_train, y_train)
     y_pred = best_rf.predict(X_test)
     r2 = r2_score(y_test, y_pred)
-    print(f"  Final RF: R²={r2:.4f}")
 
     fig = plot_predictions(y_test, y_pred, title="RF Test Predictions")
     fig.savefig(str(ML_OUT / "predictions.png"), dpi=100, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
     plt.close(fig)
-
-    fig = plot_feature_importance(best_rf, feat_cols, top_k=10, title="Feature Importance")
-    fig.savefig(str(ML_OUT / "importance.png"), dpi=100, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    print(f"✓ ML done")
+    print(f"  Final RF: R²={r2:.4f}")
 else:
-    print(f"  Not enough samples ({len(X)}) for ML")
+    print(f"  Not enough samples ({len(X)})")
 
 
-# ─── Step 6: RL ───
+# ─── Step 6: RL (Bayesian Optimization) ───
 print()
 print("=" * 50)
 print("Step 6: Bayesian Optimization (RL)")
 print("=" * 50)
 
-def evaluate_displacements(params):
-    disps = []
-    for i in range(N_DISP):
-        dx = float(np.clip(params.get(f"dx{i}", 0), -0.3, 0.3))
-        dy = float(np.clip(params.get(f"dy{i}", 0), -0.3, 0.3))
-        disps.append((dx, dy))
+def evaluate_structure(params):
+    """Evaluate a voronoi structure with given params."""
+    grid_x = max(2, min(5, int(round(params.get("grid_x", 3)))))
+    grid_y = max(2, min(5, int(round(params.get("grid_y", 3)))))
+    n_seeds = max(4, min(15, int(round(params.get("n_seeds", 8)))))
+    n_pts = max(0, min(5, int(round(params.get("n_pts", 3)))))
+    seed = int(params.get("seed", 42))
     try:
-        g = pattern_2d(unit=UNIT, box=BOX, grid=GRID,
-                       n_pts_per_side=N_PTS, point_displacements=disps, seed=99999)
+        g = pattern_2d(unit=UNIT, box=BOX, grid=(grid_x, grid_y),
+                       n_pts_per_side=n_pts, seed=seed,
+                       unit_kwargs={'n_seeds': n_seeds})
         r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5, damping=0.3,
                                 num_steps=500, save_interval=500, auto_steps=False)
         return float(r.max_force)
     except Exception:
         return 1e10
 
-base_force = evaluate_displacements({f"{k}{i}": 0.0 for i in range(N_DISP) for k in ["dx", "dy"]})
+base_force = evaluate_structure({"grid_x": 3, "grid_y": 3, "n_seeds": N_SEEDS, "n_pts": 0, "seed": 42})
 print(f"  Base force: {base_force:.0f}")
 
 try:
     from skopt import gp_minimize
-    from skopt.space import Real
+    from skopt.space import Real, Integer
 
-    dimensions, dim_names = [], []
-    for i in range(N_DISP):
-        dimensions.append(Real(-0.3, 0.3, name=f"dx{i}"))
-        dim_names.append(f"dx{i}")
-        dimensions.append(Real(-0.3, 0.3, name=f"dy{i}"))
-        dim_names.append(f"dy{i}")
+    dimensions = [
+        Integer(2, 5, name="grid_x"),
+        Integer(2, 5, name="grid_y"),
+        Integer(4, 15, name="n_seeds"),
+        Integer(0, 5, name="n_pts"),
+    ]
+    dim_names = ["grid_x", "grid_y", "n_seeds", "n_pts"]
 
     all_forces = []
     all_params_list = []
 
     def _objective(x):
-        params = {dim_names[i]: float(x[i]) for i in range(len(x))}
-        force = evaluate_displacements(params)
+        params = {dim_names[i]: x[i] for i in range(len(x))}
+        params["seed"] = 42
+        force = evaluate_structure(params)
         all_forces.append(force)
         all_params_list.append(params.copy())
         return force
@@ -291,7 +306,9 @@ try:
     result = gp_minimize(_objective, dimensions, n_calls=10, n_initial_points=5,
                          random_state=42, verbose=False)
 
-    print(f"  Best force: {result.fun:.0f} (improvement: {(1 - result.fun / max(base_force, 1)) * 100:.1f}%)")
+    print(f"  Best force: {result.fun:.0f}")
+    print(f"  Best params: {dict(zip(dim_names, result.x))}")
+    print(f"  Improvement: {(1 - result.fun / max(base_force, 1)) * 100:.1f}%")
 
     from fibernet.rl import plot_convergence, plot_reward_curve, plot_action_distribution
     fig = plot_convergence(all_forces, minimize=True, title="Bayesian Optimization")
@@ -305,7 +322,7 @@ try:
     plt.close(fig)
     print(f"✓ RL done")
 except ImportError:
-    print("  skopt not installed, skipping Bayesian optimization")
+    print("  skopt not installed, skipping")
 
 
 # ─── Summary ───
@@ -318,15 +335,13 @@ print(f"  Simulated: {df_sim['success'].sum()} ok")
 print(f"  Features: {n_feat} dims")
 print(f"  ML: R²={r2:.4f}" if len(X) >= 3 else "  ML: skipped")
 print(f"  Output: {OUT.resolve()}")
-print()
 
 # List output files
-print("Output files:")
+print("\nOutput files:")
 for f in sorted(OUT.rglob("*")):
     if f.is_file():
         size = f.stat().st_size
         rel = f.relative_to(OUT)
         print(f"  {rel} ({size/1024:.0f} KB)")
 
-print()
-print("✓ ALL TESTS PASSED")
+print("\n✓ ALL TESTS PASSED")
