@@ -1,0 +1,16 @@
+{
+  "mode": "dynamics",
+  "energy": 26041015.529516533,
+  "time_seconds": 2.187873125076294,
+  "n_nodes": 196,
+  "n_edges": 216,
+  "max_force": 673186.894060077,
+  "max_stretch": 7.73186894060077,
+  "mean_stretch": 1.238509848438476,
+  "std_stretch": 1.1239176435852998,
+  "max_displacement": 15.203458751418552,
+  "stiffness": 100000.0,
+  "damping": 0.3,
+  "dt": 1e-05,
+  "num_steps": 500
+}
