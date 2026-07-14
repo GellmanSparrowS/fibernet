@@ -226,12 +226,12 @@ class TestVisualization3D:
         moved = {nid: [(0, [0.1, 0, 0])] for nid in sorted(g.nodes.keys()) if g.nodes[nid].position[0] > 19.5}
         result = engine.dynamics(g, fixed_nodes=fixed, displacement_schedule=moved,
                                   num_steps=500, save_interval=100)
-        # Use sim_result parameter
-        figs = fn.render_trajectory_3d(g, sim_result=result, n_frames=3)
-        assert len(figs) == 3
+        # Now returns ONE combined Figure
         import matplotlib.pyplot as plt
-        for fig in figs:
-            plt.close(fig)
+        fig = fn.render_trajectory_3d(g, sim_result=result, n_frames=3)
+        assert isinstance(fig, plt.Figure)
+        assert len(fig.axes) >= 3
+        plt.close(fig)
 
 
 class TestEnergyComputation:

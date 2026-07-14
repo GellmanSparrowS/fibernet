@@ -867,8 +867,10 @@ def render_trajectory_3d(
     *,
     sim_result=None,
     save_dir=None,
+    save_path=None,
     n_frames=None,
-    figsize=(10, 10),
+    figsize=None,
+    ncols=None,
     theme="dark",
     line_width=1.0,
     elevation=25,
@@ -876,102 +878,194 @@ def render_trajectory_3d(
     dpi=150,
     color_by="displacement",
 ):
-    """Render multi-frame 3D trajectory animation.
+    """Render multi-frame 3D trajectory in ONE combined figure.
 
     Parameters
     ----------
     graph : StructureGraph
         Original 3D structure.
-    trajectory : list of SimResult, list of np.ndarray, or None
-        Frames to render. If None, uses ``sim_result.positions_trajectory``.
+    trajectory : list of np.ndarray, or None
+        Position arrays per frame. If None, uses sim_result.positions_trajectory.
     sim_result : SimResult, optional
-        If provided and ``trajectory`` is None, uses its positions_trajectory.
+        If provided and trajectory is None, extracts positions_trajectory.
     save_dir : str, optional
-        Directory to save frame images.
+        If given, also save individual frames to this directory.
+    save_path : str, optional
+        Save the combined figure to this path.
     n_frames : int, optional
-        Number of frames to render (subsample if longer).
+        Number of frames to show (subsample if more available).
+    ncols : int, optional
+        Number of columns. Default: min(n_frames, 4).
+    figsize : tuple, optional
+        Figure size. Auto-calculated if None.
     color_by : str
-        "displacement" or "stretch" for edge coloring.
+        "displacement" or "stretch".
 
     Returns
     -------
-    list of plt.Figure
-        One figure per frame.
+    plt.Figure
+        One combined figure with all frames as subplots.
     """
     t = _get_theme(theme)
-    figures = []
 
-    # Build frame list from sim_result if needed
-    if trajectory is None and sim_result is not None:
+    # Build frame list
+    frames = []
+    if trajectory is not None:
+        frames = list(trajectory)
+    elif sim_result is not None:
         if hasattr(sim_result, 'positions_trajectory') and sim_result.positions_trajectory:
-            trajectory = sim_result.positions_trajectory
-        else:
-            trajectory = [sim_result]
+            frames = list(sim_result.positions_trajectory)
+        elif hasattr(sim_result, 'deformed_positions') and sim_result.deformed_positions is not None:
+            frames = [sim_result.deformed_positions]
 
-    if trajectory is None:
-        return figures
+    if not frames:
+        fig = plt.figure(figsize=(8, 6))
+        fig.patch.set_facecolor(t["bg"])
+        fig.text(0.5, 0.5, "No trajectory data", ha="center", va="center",
+                color=t["text"], fontsize=16)
+        if save_path:
+            Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(save_path, dpi=dpi, facecolor=fig.get_facecolor())
+        return fig
 
-    # Determine frame indices
-    if n_frames and len(trajectory) > n_frames:
-        indices = np.linspace(0, len(trajectory) - 1, n_frames, dtype=int)
+    # Subsample
+    if n_frames and len(frames) > n_frames:
+        indices = np.linspace(0, len(frames) - 1, n_frames, dtype=int)
     else:
-        indices = list(range(len(trajectory)))
+        indices = list(range(len(frames)))
 
-    # Get original positions for displacement coloring
+    n_show = len(indices)
+    if ncols is None:
+        ncols = min(n_show, 4)
+    nrows = (n_show + ncols - 1) // ncols
+
+    if figsize is None:
+        figsize = (5 * ncols, 4.5 * nrows)
+
+    fig = plt.figure(figsize=figsize)
+    fig.patch.set_facecolor(t["bg"])
+
+    # Original positions for displacement coloring
     node_ids = sorted(graph.nodes.keys())
     pos_orig = np.array([graph.nodes[nid].position for nid in node_ids])
 
+    # Compute global displacement range for consistent coloring
+    all_disp_mags = []
     for frame_idx in indices:
-        entry = trajectory[frame_idx]
+        cur_pos = frames[frame_idx]
+        if isinstance(cur_pos, np.ndarray) and cur_pos.shape[0] == len(node_ids):
+            dm = np.linalg.norm(cur_pos - pos_orig, axis=1)
+            all_disp_mags.extend(dm.tolist())
+    global_vmax = max(all_disp_mags) if all_disp_mags else 1.0
+    if global_vmax < 1e-12:
+        global_vmax = 1.0
 
-        # Extract positions array
-        if isinstance(entry, np.ndarray):
-            cur_pos = entry
-        elif hasattr(entry, 'deformed_positions') and entry.deformed_positions is not None:
-            cur_pos = entry.deformed_positions
-        elif hasattr(entry, 'displacements'):
-            cur_pos = pos_orig + entry.displacements[:, :pos_orig.shape[1]]
-        else:
-            continue
+    from matplotlib.cm import ScalarMappable
+    from matplotlib.colors import Normalize
+    norm = Normalize(vmin=0, vmax=global_vmax)
 
-        fig = plt.figure(figsize=figsize)
-        fig.patch.set_facecolor(t["bg"])
-        ax = fig.add_subplot(111, projection="3d")
+    for plot_idx, frame_idx in enumerate(indices):
+        cur_pos = frames[frame_idx]
+        ax = fig.add_subplot(nrows, ncols, plot_idx + 1, projection="3d")
         ax.set_facecolor(t["bg"])
 
         # Build deformed graph
         deformed = graph.copy()
-        for idx, nid in enumerate(node_ids):
-            if idx < len(cur_pos):
+        if isinstance(cur_pos, np.ndarray) and cur_pos.shape[0] == len(node_ids):
+            for idx, nid in enumerate(node_ids):
                 deformed.nodes[nid].position = cur_pos[idx].copy()
-
-        # Compute coloring values
-        if color_by == "stretch" and hasattr(entry, 'edge_stretches') and entry.edge_stretches is not None:
-            node_values = np.zeros(len(node_ids))
-            edge_list = [(e.node_i, e.node_j) for e in deformed.edges.values()]
-            for ei, (ni, nj) in enumerate(edge_list):
-                if ei < len(entry.edge_stretches):
-                    s = entry.edge_stretches[ei]
-                    i_idx = node_ids.index(ni) if ni in node_ids else 0
-                    j_idx = node_ids.index(nj) if nj in node_ids else 0
-                    node_values[i_idx] = max(node_values[i_idx], s)
-                    node_values[j_idx] = max(node_values[j_idx], s)
-            _render_3d_colored(ax, deformed, node_values, t, line_width,
-                              elevation, azimuth, f"Frame {frame_idx} (stretch)")
-        else:
             disp_mags = np.linalg.norm(cur_pos - pos_orig, axis=1)
-            _render_3d_colored(ax, deformed, disp_mags, t, line_width,
-                              elevation, azimuth, f"Frame {frame_idx}")
+        else:
+            disp_mags = np.zeros(len(node_ids))
 
+        # Render with global color scale
+        _render_3d_colored_global(ax, deformed, disp_mags, norm, t, line_width,
+                                  elevation, azimuth, f"Frame {frame_idx}")
+
+        # Save individual frame if requested
         if save_dir:
             Path(save_dir).mkdir(parents=True, exist_ok=True)
-            save_path = os.path.join(save_dir, f"frame_{frame_idx:04d}.png")
-            fig.savefig(save_path, dpi=dpi, facecolor=fig.get_facecolor(),
-                       bbox_inches="tight", pad_inches=0.1)
+            fp = os.path.join(save_dir, f"frame_{frame_idx:04d}.png")
+            # Save just this subplot as a separate figure
+            frame_fig = plt.figure(figsize=(8, 8))
+            frame_fig.patch.set_facecolor(t["bg"])
+            fax = frame_fig.add_subplot(111, projection="3d")
+            fax.set_facecolor(t["bg"])
+            _render_3d_colored_global(fax, deformed, disp_mags, norm, t, line_width,
+                                      elevation, azimuth, f"Frame {frame_idx}")
+            frame_fig.savefig(fp, dpi=dpi, facecolor=frame_fig.get_facecolor(),
+                            bbox_inches="tight", pad_inches=0.1)
+            plt.close(frame_fig)
 
-        figures.append(fig)
+    # Hide empty subplots
+    for i in range(n_show, nrows * ncols):
+        ax = fig.add_subplot(nrows, ncols, i + 1, projection="3d")
+        ax.set_visible(False)
 
-    return figures
+    # Add shared colorbar
+    cmap_obj = plt.cm.hot
+    sm = ScalarMappable(cmap=cmap_obj, norm=norm)
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=fig.axes[:n_show], shrink=0.6, pad=0.02, aspect=30)
+    cbar.set_label("Displacement", color=t["text"], fontsize=11)
+    cbar.ax.yaxis.label.set_color(t["text"])
+    cbar.ax.tick_params(colors=t["text"])
+
+    fig.suptitle("Trajectory", color=t["text"], fontsize=14, fontweight="bold", y=0.98)
+
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=dpi, facecolor=fig.get_facecolor(),
+                    bbox_inches="tight", pad_inches=0.1)
+
+    return fig
+
+
+def _render_3d_colored_global(ax, graph, node_values, norm, theme, line_width, elev, azim, title):
+    """Render 3D structure with a shared global color normalization."""
+    from matplotlib.cm import ScalarMappable
+    cmap_obj = plt.cm.hot
+
+    node_ids = sorted(graph.nodes.keys())
+    node_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+
+    segments_3d = []
+    colors = []
+    for edge in graph.edges.values():
+        pi = graph.nodes[edge.node_i].position
+        pj = graph.nodes[edge.node_j].position
+        pts = np.vstack([pi[None, :], pj[None, :]])
+
+        i_idx = node_to_idx.get(edge.node_i, 0)
+        j_idx = node_to_idx.get(edge.node_j, 0)
+        val = (node_values[i_idx] + node_values[j_idx]) / 2 if (
+            i_idx < len(node_values) and j_idx < len(node_values)
+        ) else 0
+        color = cmap_obj(norm(val))
+
+        for k in range(len(pts) - 1):
+            segments_3d.append([pts[k], pts[k + 1]])
+            colors.append(color)
+
+    if segments_3d:
+        lc3d = Line3DCollection(segments_3d, colors=colors, linewidths=line_width)
+        ax.add_collection3d(lc3d)
+
+    if graph.num_nodes > 0:
+        pos = graph.node_positions()
+        for setter, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
+            mn, mx = pos[:, dim].min(), pos[:, dim].max()
+            margin = (mx - mn) * 0.05
+            setter(mn - margin, mx + margin)
+
+    ax.view_init(elev=elev, azim=azim)
+    ax.set_axis_off()
+    if title:
+        ax.set_title(title, color=theme["text"], fontsize=10, pad=3)
+
+
+
+
 
 
 def render_gallery_3d(
@@ -1024,12 +1118,6 @@ def render_gallery_3d(
         fig.savefig(save_path, dpi=dpi, facecolor=fig.get_facecolor(),
                     bbox_inches="tight", pad_inches=0.1)
     return fig
-
-
-# ======================================================================
-# Stress Visualization & Comparison
-# ======================================================================
-
 
 def render_stress_3d(
     graph,
@@ -1158,6 +1246,8 @@ def render_stress_3d(
     cbar.set_label(label, color=t["text"], fontsize=10)
     cbar.ax.yaxis.label.set_color(t["text"])
     cbar.ax.tick_params(colors=t["text"])
+    # Ensure outline is visible on dark backgrounds
+    cbar.outline.set_edgecolor(t["text"])
 
     if title:
         ax.set_title(title, color=t["text"], fontsize=14, fontweight="bold", pad=10)
@@ -1274,6 +1364,8 @@ def render_comparison_3d(
         sm.set_array([])
         cbar = plt.colorbar(sm, ax=ax3, shrink=0.6, pad=0.05)
         cbar.ax.yaxis.label.set_color(t["text"])
+        cbar.ax.tick_params(colors=t["text"])
+        cbar.outline.set_edgecolor(t["text"])
     else:
         _render_3d_segments(ax3, graph, t, line_width, elevation, azimuth, "Stress (N/A)")
 
