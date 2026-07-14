@@ -56,27 +56,34 @@ md("## 2. Import FiberNet / 导入验证")
 code("""import fibernet as fn
 from fibernet import pattern_2d, TaichiEngine, list_units
 from fibernet.viz.render import render_graph, _get_theme
-from fibernet.sim.accelerated import _graph_to_arrays
+from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
+from fibernet.sim import SimResult
 from fibernet.analysis import GraphFeatureExtractor
 
+# RL import — try multiple paths for version compatibility
 HAS_RL = False
-try:
-    from fibernet.rl import ParametricStructureEnv
-    HAS_RL = True
-except ImportError:
+ParametricStructureEnv = None
+for _path in [
+    'from fibernet.rl import ParametricStructureEnv',
+    'from fibernet.rl.parametric import ParametricStructureEnv',
+]:
     try:
-        from fibernet.rl.parametric import ParametricStructureEnv
+        exec(_path)
         HAS_RL = True
-    except ImportError:
-        try:
-            from fibernet.rl import create_rl_environment
-            HAS_RL = True
-        except ImportError:
-            pass
+        break
+    except (ImportError, ModuleNotFoundError, Exception):
+        continue
+
+if not HAS_RL:
+    try:
+        from fibernet.rl import create_rl_environment
+        HAS_RL = 'factory'
+    except (ImportError, ModuleNotFoundError, Exception):
+        pass
 
 print(f'✓ FiberNet loaded')
 print(f'  Units ({len(list_units())}): {list_units()}')
-print(f'  RL available: {HAS_RL}')""")
+print(f'  RL available: {bool(HAS_RL)}')""")
 
 # ═══ 3.1 Base Units ═══
 md(["## 3. Structure Generation / 结构生成\n",
@@ -92,15 +99,22 @@ for unit in units:
     base_structures[unit] = g
     print(f'  {unit:12s}: {g.num_nodes:4d} nodes, {g.num_edges:4d} edges')
 
+# Save gallery JSON (structure data for each unit)
+STRUCT_DIR = DATA_OUT / 'structures'
+STRUCT_DIR.mkdir(parents=True, exist_ok=True)
+
 gallery_data = []
 for unit, g in base_structures.items():
     pos, elems, nids, _ = _graph_to_arrays(g)
-    gallery_data.append({'unit': unit, 'num_nodes': g.num_nodes, 'num_edges': g.num_edges,
-                         'positions': pos[:, :2].tolist(), 'elements': elems.tolist()})
+    gdata = {'unit': unit, 'num_nodes': g.num_nodes, 'num_edges': g.num_edges,
+             'positions': pos[:, :2].tolist(), 'elements': elems.tolist()}
+    gallery_data.append(gdata)
+    with open(STRUCT_DIR / f'base_{unit}.json', 'w') as f:
+        json.dump(gdata, f, indent=1)
 
-with open(DATA_OUT / 'base_structures_gallery.json', 'w') as f:
-    json.dump(gallery_data, f, indent=2)
-print(f'\\n✓ Saved: base_structures_gallery.json')""")
+with open(STRUCT_DIR / 'base_gallery_all.json', 'w') as f:
+    json.dump(gallery_data, f, indent=1)
+print(f'\n✓ Saved {len(base_structures)} base structure JSONs to {STRUCT_DIR}')""")
 
 md("### 3.1.1 Gallery — 12 Base Unit Types")
 code("""for theme in ['dark', 'light']:
@@ -262,21 +276,38 @@ print('Simulation parameters:')
 print(f'  STIFFNESS:       {STIFFNESS:.1e} N/m')
 print(f'  DAMPING:         {DAMPING}')
 print(f'  NUM_STEPS:       {NUM_STEPS}')
-print(f'  RAMP_FRACTION:   {RAMP_FRACTION}')
+print(f'  RAMP_FRACTION:   {RAMP_FRACTION} ({RAMP_FRACTION*100:.0f}% ramp + {(1-RAMP_FRACTION)*100:.0f}% relaxation)')
 print(f'  TARGET_STRETCH:  {TARGET_STRETCH}x')
+print(f'  Boundary:        10% each side (rigid plate)')
 print()
 
 engine = TaichiEngine()
-sim_results = []
 
-ckpt_path = DATA_OUT / 'sim_checkpoint.json'
+# ── Directories for saving ──
+SIM_DIR = DATA_OUT / 'simulations'
+SIM_DIR.mkdir(parents=True, exist_ok=True)
+
+# Save all batch structures as JSON
+for i, g in enumerate(all_structures):
+    pos, elems, nids, _ = _graph_to_arrays(g)
+    sdata = {'name': all_metadata[i]['name'], 'seed': all_metadata[i]['seed'],
+             'num_nodes': g.num_nodes, 'num_edges': g.num_edges,
+             'perturbation': PERTURBATION,
+             'positions': pos[:, :2].tolist(), 'elements': elems.tolist()}
+    with open(STRUCT_DIR / f'{all_metadata[i]["name"]}.json', 'w') as f:
+        json.dump(sdata, f, indent=1)
+print(f'✓ Saved {N_STRUCTURES} structure JSONs to {STRUCT_DIR}')
+
+# ── Checkpoint support ──
+ckpt_path = SIM_DIR / 'checkpoint.json'
 start_idx = 0
 if ckpt_path.exists():
     with open(ckpt_path) as f:
         ckpt = json.load(f)
     start_idx = len(ckpt)
-    sim_results = ckpt
     print(f'Resuming from checkpoint: {start_idx}/{N_STRUCTURES}')
+else:
+    ckpt = []
 
 for i in tqdm(range(start_idx, N_STRUCTURES), desc='Simulating'):
     g = all_structures[i]
@@ -285,28 +316,46 @@ for i in tqdm(range(start_idx, N_STRUCTURES), desc='Simulating'):
         damping=DAMPING, num_steps=NUM_STEPS, ramp_fraction=RAMP_FRACTION,
         save_interval=500
     )
+
     sim_dict = result.to_dict()
     sim_dict['index'] = i
     sim_dict['name'] = all_metadata[i]['name']
-    sim_results.append(sim_dict)
-    result.save(str(DATA_OUT / f"{all_metadata[i]['name']}_sim.json"), detailed=True)
-    if (i + 1) % 5 == 0:
+    ckpt.append(sim_dict)
+
+    # Save individual result (lightweight, no trajectory in JSON)
+    result.save(str(SIM_DIR / f'{all_metadata[i]["name"]}_sim.json'), detailed=False)
+
+    # Update metadata
+    all_metadata[i]['max_force'] = result.max_force
+    all_metadata[i]['max_stretch'] = result.max_stretch
+    all_metadata[i]['energy'] = result.energy
+
+    # Checkpoint every 50 structures
+    if (i + 1) % 50 == 0 or i == N_STRUCTURES - 1:
         with open(ckpt_path, 'w') as f:
-            json.dump(sim_results, f)
+            json.dump(ckpt, f, indent=1)
         gc.collect()
 
+# Save final checkpoint
 with open(ckpt_path, 'w') as f:
-    json.dump(sim_results, f)
+    json.dump(ckpt, f, indent=1)
 
-for meta, sr in zip(all_metadata, sim_results):
-    meta['max_force'] = sr['max_force'] if isinstance(sr, dict) else sr.max_force
-    meta['max_stretch'] = sr['max_stretch'] if isinstance(sr, dict) else sr.max_stretch
-    meta['energy'] = sr['energy'] if isinstance(sr, dict) else sr.energy
+# Load checkpoint if we resumed
+if start_idx == 0:
+    sim_results = ckpt
+else:
+    with open(ckpt_path) as f:
+        sim_results = json.load(f)
+    for meta, sr in zip(all_metadata, sim_results):
+        meta['max_force'] = sr['max_force']
+        meta['max_stretch'] = sr['max_stretch']
+        meta['energy'] = sr['energy']
 
-forces = [m['max_force'] for m in all_metadata]
-print(f'\\n✓ Completed {len(sim_results)} simulations')
-print(f'  Force range: {min(forces):.0f} - {max(forces):.0f} N')
-print(f'  Mean force:  {np.mean(forces):.0f} N')""")
+forces_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
+print(f'\n✓ Completed {len(sim_results)} simulations')
+print(f'  Force range: {forces_kN.min():.1f} - {forces_kN.max():.1f} kN')
+print(f'  Mean force:  {forces_kN.mean():.1f} kN')
+print(f'  Saved to: {SIM_DIR}')""")
 
 # ═══ 4.2 Helper ═══
 md(["### 4.2 Deformation Trajectory (变形轨迹)"])
@@ -320,7 +369,6 @@ code("""def _setup_ax(ax, colors):
     ax.title.set_color(colors['text'])
 
 def draw_deformed_structure(g, sim_result_or_dict, ax, colors, color_by_stretch=False):
-    '''Draw a structure in its deformed state.'''
     if isinstance(sim_result_or_dict, dict):
         pos_def = np.array(sim_result_or_dict['deformed_positions'])
     else:
@@ -349,10 +397,22 @@ def draw_deformed_structure(g, sim_result_or_dict, ax, colors, color_by_stretch=
 
 print('✓ Helpers defined: _setup_ax(), draw_deformed_structure()')""")
 
-code("""g0 = all_structures[0]
+code("""# ── Random sample for visualization ──
+import random
+if N_STRUCTURES <= 20:
+    viz_indices = list(range(N_STRUCTURES))
+else:
+    viz_indices = sorted(random.sample(range(N_STRUCTURES), 20))
+print(f'Visualization sample: {len(viz_indices)} structures (indices: {viz_indices[:10]}{"..." if len(viz_indices) > 10 else ""})')
+
+# Load first viz structure for trajectory
+idx0 = viz_indices[0]
+g0 = all_structures[idx0]
+
+# Re-run simulation for trajectory (detailed save)
 result0 = engine.stretch_test(g0, target_stretch=TARGET_STRETCH, stiffness=STIFFNESS,
     damping=DAMPING, num_steps=NUM_STEPS, ramp_fraction=RAMP_FRACTION, save_interval=500)
-print(f'Structure 0: max_force={result0.max_force:.0f} N, max_stretch={result0.max_stretch:.3f}')
+print(f'Structure {idx0}: max_force={result0.max_force/1000:.1f} kN, max_stretch={result0.max_stretch:.3f}')
 
 traj = result0.positions_trajectory
 if traj is None:
@@ -376,14 +436,14 @@ for theme in ['dark', 'light']:
                     color=colors['fiber'], linewidth=1.0, alpha=0.8)
         ax.set_aspect('equal'); ax.axis('off')
         ax.set_title(f'Frame {fi}/{len(traj)-1}', color=colors['text'], fontsize=10)
-    fig.suptitle(f'Deformation Trajectory: {all_metadata[0]["name"]} (8 frames)',
+    fig.suptitle(f'Deformation Trajectory: {all_metadata[idx0]["name"]} (8 frames)',
                  color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'05_trajectory_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg'])
     plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\\n✓ Trajectory saved')""")
+print('\n✓ Trajectory saved')""")
 
 # ═══ 4.3 Stress ═══
 md("### 4.3 Stress Distribution (应力分布)")
@@ -402,13 +462,13 @@ code("""for theme in ['dark', 'light']:
     cbar = fig.colorbar(sm, ax=ax2, fraction=0.046, pad=0.04)
     cbar.set_label('Stretch Ratio', color=colors['text']); cbar.ax.tick_params(colors=colors['text'])
     ax2.set_title(f'Deformed (Stretch: {stretch.min():.2f}-{stretch.max():.2f})', color=colors['text'], fontsize=14)
-    fig.suptitle(f'Stress Distribution: {all_metadata[0]["name"]}', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
+    fig.suptitle(f'Stress Distribution: {all_metadata[idx0]["name"]}', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'06_stress_distribution_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg'])
     plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\\n✓ Stress distribution saved')""")
+print('\n✓ Stress distribution saved')""")
 
 # ═══ 4.4 Stats ═══
 md("### 4.4 Batch Statistics")
@@ -622,18 +682,32 @@ print('\\n✓ Correlation saved')""")
 md(["## 7. Reinforcement Learning / 强化学习\n",
     "\n", "**注意**: 需要 fibernet >= 4.0。如导入失败请从源码安装。"])
 code("""if not HAS_RL:
-    print('⚠ RL module not available. Install from source:')
-    print('  pip install git+https://github.com/GellmanSparrowS/fibernet')
-    print('Skipping RL section.')
+    print('⚠ RL module not available in your installed fibernet version.')
+    print('  Your pip version may not include the RL module.')
+    print('  Install from source to get RL:')
+    print('    pip install git+https://github.com/GellmanSparrowS/fibernet')
+    print('  Or clone and install:')
+    print('    git clone https://github.com/GellmanSparrowS/fibernet.git')
+    print('    cd fibernet && pip install -e .')
+    print('\nSkipping RL section.')
 else:
     try:
-        env = ParametricStructureEnv(unit=UNIT, box=BOX, grid=GRID, n_pts_per_side=N_PTS_PER_SIDE,
-            stiffness=STIFFNESS, damping=DAMPING, num_steps=5000, target_stretch=TARGET_STRETCH, reward_mode='minimize_force')
-    except Exception:
-        from fibernet.rl import create_rl_environment
-        env = create_rl_environment(unit=UNIT, grid=GRID, n_pts_per_side=N_PTS_PER_SIDE,
-            stiffness=STIFFNESS, num_steps=5000, target_stretch=TARGET_STRETCH, reward_mode='minimize_force', box=BOX)
-    print(f'✓ RL Environment: n_actions={env.n_actions}, reward_mode={env.reward_mode}')""")
+        if HAS_RL == 'factory':
+            from fibernet.rl import create_rl_environment
+            env = create_rl_environment(
+                unit=UNIT, grid=GRID, n_pts_per_side=N_PTS_PER_SIDE,
+                stiffness=STIFFNESS, num_steps=5000,
+                target_stretch=TARGET_STRETCH, reward_mode='minimize_force', box=BOX)
+        else:
+            env = ParametricStructureEnv(
+                unit=UNIT, box=BOX, grid=GRID, n_pts_per_side=N_PTS_PER_SIDE,
+                stiffness=STIFFNESS, damping=DAMPING, num_steps=5000,
+                target_stretch=TARGET_STRETCH, reward_mode='minimize_force')
+        print(f'✓ RL Environment: n_actions={env.n_actions}, reward_mode={env.reward_mode}')
+    except Exception as e:
+        print(f'⚠ RL Environment creation failed: {e}')
+        HAS_RL = False
+        print('Skipping RL section.')""")
 
 code("""if HAS_RL:
     N_EPISODES = 50

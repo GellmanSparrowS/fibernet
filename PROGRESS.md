@@ -1,74 +1,55 @@
 # PROGRESS
 
-## 当前状态: ✅ 教程可视化 v10 完成（变形幅度已调整）
+## 当前状态: ✅ gen_notebook.py 修复 + notebook 重新生成
 
 **最后更新:** 2026-07-14  
-**脚本版本:** run_tutorial_viz_v10.py  
-**输出目录:** tutorials/v4_tutorial/tutorial_viz/
+**最后提交:** 待提交
 
 ---
 
-## 最近变更
+## 2026-07-14 - 修复 gen_notebook.py 语法错误
 
-### 2026-07-14 - 调整02.5图变形幅度
-- **问题**: 02.5 voronoi diverse 变形太剧烈
-- **修复**: 位移幅度从 ±0.4 减小到 ±0.15
-- **影响**: 仅重新生成了 02_5_voronoi_diverse_dark/light.png
-- **其他**: 01-10 图保持不变
+### 问题
+`scripts/gen_notebook.py` 有6处重复的 `code("""` 开头行，导致 triple-quote 不匹配：
+- Line 57: `code("""import fibernet as fn` (重复)
+- Line 93: `code("""BOX = (1.0, 1.0)` (重复)
+- Line 272: `code("""STIFFNESS = 1e5` (重复)
+- Line 366: `code("""def _setup_ax(ax, colors):` (重复)
+- Line 400: `code("""g0 = all_structures[0]` (多余的旧代码)
+- Line 690: `code("""if not HAS_RL:` (重复)
 
-### 2026-07-14 - 修复 voronoi 变形参数（v10）
-- **问题**: 02.5 图只有前3条边变形，其他67条边都是直线
-- **修复**: 
-  - `n_disp` 从 15 改为 350（70条边 × 5个点/边）
-  - 刚度从 1e4 提升到 1e5
-  - 阻尼从 0.5 降到 0.3
-- **结果**: 波传播明显改善，力传导正常
+### 修复
+删除所有6处重复行，验证 triple-quote 数量为偶数 (46)，编译通过。
 
----
-
-## 可视化清单（22个文件）
-
-| 编号 | 文件名 | 内容 | 状态 |
-|------|--------|------|------|
-| 01 | 01_gallery_undeformed_{dark,light}.png | 12种基本单元类型 | ✅ |
-| 02 | 02_gallery_deformed_{dark,light}.png | 12种单元带中间点变形 | ✅ |
-| 02.5 | 02_5_voronoi_diverse_{dark,light}.png | 12种不同变形的voronoi | ✅ 已调整 |
-| 03 | 03_feature_stats_{dark,light}.png | 特征统计分布 | ✅ |
-| 04 | 04_simulation_stretch_{dark,light}.png | 8帧拉伸轨迹 | ✅ |
-| 05 | 05_stress_distribution_{dark,light}.png | 应力分布 | ✅ |
-| 06 | 06_ml_analysis_{dark,light}.png | ML分析（预测/重要性/混淆矩阵） | ✅ |
-| 07 | 07_batch_stats_{dark,light}.png | 批量统计（力/能量/拉伸） | ✅ |
-| 08 | 08_feature_force_correlation_{dark,light}.png | 特征-力相关性 | ✅ |
-| 09 | 09_rl_reward_curves_{dark,light}.png | RL奖励曲线 | ✅ |
-| 10 | 10_rl_structure_changes_{dark,light}.png | RL结构变化 | ✅ |
+### 结果
+- `python3 scripts/gen_notebook.py` → ✓ Notebook saved: 41 cells (19 MD, 22 code)
+- sf_share 和 tutorials 目录都已更新
+- notebook 使用 `engine.stretch_test()` (正确API)，不再是 `engine.stretch()`
 
 ---
 
-## 技术细节
+## 用户问题解答
 
-### Voronoi 变形参数
-- **边数**: 70条（由 seed=12345 生成）
-- **中间点**: 每条边5个点 (n_pts_per_side=5)
-- **总位移**: 350个 (70×5)
-- **位移幅度**: ±0.15（已从±0.4减小）
+### Q: 为什么需要更新pip包？直接改代码不行吗？
+**A:** 教程 notebook 是从 `fibernet` 包导入函数和类的。如果安装的包版本没有 `stretch_test`, `dynamics`, `ParametricStructureEnv` 等方法，notebook 无法调用它们。修改 notebook 不能解决包本身缺少功能的问题。
 
-### 模拟参数
-- **刚度**: 1e5（高刚度确保波传播）
-- **阻尼**: 0.3（低阻尼减少能量耗散）
-- **时间步**: 1e-6
-- **帧数**: 15000帧
+解决方案：
+```
+pip install git+https://github.com/GellmanSparrowS/fibernet
+```
+这安装最新源码版本(4.1.0)，包含所有API。
 
-### 波传播验证
-结构0的位移梯度（从固定端到拉伸端）：
-- x ∈ [0.0, 0.2]: 平均位移 0.01（固定端附近）
-- x ∈ [0.4, 0.6]: 平均位移 0.33（中间区域）
-- x ∈ [1.8, 2.0]: 平均位移 0.93（拉伸端）
+### Q: 模拟显示没变？
+**A:** 新notebook已使用 `engine.stretch_test()`，这是正确的API。旧notebook用的是 `engine.stretch()`（不存在），所以报 AttributeError。
+
+### Q: RL用不了？
+**A:** pip版本(1.13.0)没有RL模块。安装最新源码即可：
+```
+pip install git+https://github.com/GellmanSparrowS/fibernet
+```
 
 ---
 
 ## 下一步
-
-✅ 教程可视化已完成，可以：
-1. 查看 `tutorials/v4_tutorial/tutorial_viz/` 中的22张图片
-2. 如需调整任何可视化，修改 `run_tutorial_viz_v10.py` 后重新运行
-3. 将可视化集成到 Jupyter notebook 或文档中
+- 用户在Windows测试新notebook
+- 如确认没问题，提交到GitHub
