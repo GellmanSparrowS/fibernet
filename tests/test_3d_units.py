@@ -8,6 +8,9 @@ import numpy as np
 import fibernet as fn
 from fibernet.analysis.graph_features_3d import GraphFeatureExtractor3D
 
+# Skip all tests if scikit-image not installed (required for TPMS generation)
+pytest.importorskip("skimage")
+
 
 # All available 3D unit types
 ALL_3D_UNITS = fn.list_units_3d()

@@ -86,6 +86,7 @@ dev = [
     "sphinx-rtd-theme>=2.0",
     "black>=23.0",
     "flake8>=6.0",
+    "scikit-image>=0.19",
 ]
 docs = [
     "sphinx>=7.0",
