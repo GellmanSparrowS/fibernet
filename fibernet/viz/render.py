@@ -341,7 +341,7 @@ def render_deformation(
 
     render_graph(deformed, ax=ax2, theme=theme,
                  color_by="custom" if edge_data is not None else "uniform",
-                 color_data=edge_data, colormap="hot",
+                 color_data=edge_data, colormap="viridis",
                  line_width=line_width, title="Deformed", tight=False)
 
     if title:
@@ -757,6 +757,23 @@ def render_deformation_3d(
     else:
         _render_3d_segments(ax2, graph, t, line_width, elevation, azimuth, "Deformed")
 
+    # Add colorbar for displacement
+    if sim_result is not None and hasattr(sim_result, "displacements"):
+        from matplotlib.cm import ScalarMappable
+        from matplotlib.colors import Normalize as _Norm
+        disp_mags = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
+        d_vmin = float(np.min(disp_mags)) + 0.05 * (float(np.max(disp_mags)) - float(np.min(disp_mags)))
+        d_vmax = float(np.max(disp_mags))
+        if d_vmax - d_vmin < 1e-12:
+            d_vmax = d_vmin + 1
+        sm = ScalarMappable(cmap=plt.cm.viridis, norm=_Norm(vmin=d_vmin, vmax=d_vmax))
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=[ax1, ax2], shrink=0.6, pad=0.02, aspect=30)
+        cbar.set_label("Displacement", color=t["text"], fontsize=11)
+        cbar.ax.yaxis.label.set_color(t["text"])
+        cbar.ax.tick_params(colors=t["text"])
+        cbar.outline.set_edgecolor(t["text"])
+
     if title:
         fig.suptitle(title, color=t["text"], fontsize=14, fontweight="bold", y=0.98)
 
@@ -810,13 +827,15 @@ def _render_3d_colored(ax, graph, node_values, theme, line_width, elev, azim, ti
     from matplotlib.cm import ScalarMappable
     from matplotlib.colors import Normalize
 
-    cmap = plt.cm.hot
+    cmap = plt.cm.viridis
     if len(node_values) > 0:
         vmin, vmax = np.min(node_values), np.max(node_values)
     else:
         vmin, vmax = 0, 1
     if vmax - vmin < 1e-12:
         vmax = vmin + 1
+    # Offset vmin by 5% to skip dark end of colormap on dark backgrounds
+    vmin = vmin + 0.05 * (vmax - vmin)
     norm = Normalize(vmin=vmin, vmax=vmax)
 
     node_ids = sorted(graph.nodes.keys())
@@ -1003,7 +1022,7 @@ def render_trajectory_3d(
         ax.set_visible(False)
 
     # Add shared colorbar
-    cmap_obj = plt.cm.hot
+    cmap_obj = plt.cm.viridis
     sm = ScalarMappable(cmap=cmap_obj, norm=norm)
     sm.set_array([])
     cbar = fig.colorbar(sm, ax=fig.axes[:n_show], shrink=0.6, pad=0.02, aspect=30)
@@ -1024,7 +1043,7 @@ def render_trajectory_3d(
 def _render_3d_colored_global(ax, graph, node_values, norm, theme, line_width, elev, azim, title):
     """Render 3D structure with a shared global color normalization."""
     from matplotlib.cm import ScalarMappable
-    cmap_obj = plt.cm.hot
+    cmap_obj = plt.cm.viridis
 
     node_ids = sorted(graph.nodes.keys())
     node_to_idx = {nid: i for i, nid in enumerate(node_ids)}

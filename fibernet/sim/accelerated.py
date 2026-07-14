@@ -339,12 +339,18 @@ class TaichiEngine:
         dashpot : dashpot damping coefficient
         drag : air drag coefficient
         """
-        # Memory guard
+        # Memory guard: warn by default, hard block if FIBERNET_STRICT_MEMORY=1
         if graph.num_nodes > max_nodes:
-            raise ValueError(
+            import os as _os
+            msg = (
                 f"Structure has {graph.num_nodes} nodes, exceeding max_nodes={max_nodes}. "
-                f"Use a smaller grid or set max_nodes to proceed."
+                f"Simulation may be slow or run out of memory. "
+                f"Use a smaller grid or set max_nodes higher to suppress this warning."
             )
+            if _os.environ.get("FIBERNET_STRICT_MEMORY", "0") == "1":
+                raise ValueError(msg)
+            import warnings as _warnings
+            _warnings.warn(msg, ResourceWarning, stacklevel=2)
 
         t0 = time.time()
         pos_orig, elements, node_ids, _ = _graph_to_arrays(graph)

@@ -257,3 +257,39 @@ class TestEnergyComputation:
         assert result.edge_forces is not None
         assert result.edge_stretches is not None
         assert result.max_force > 0
+
+
+
+class TestOOMGuard:
+    """Test memory guard behavior."""
+
+    def test_warn_by_default(self):
+        import warnings
+        g = fn.pattern_3d(unit="gyroid", box=(10, 10, 10), grid=(3, 3, 3))
+        engine = fn.TaichiEngine()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = engine.dynamics(g, num_steps=10, max_nodes=100)
+            assert len(w) > 0
+            assert "nodes" in str(w[-1].message)
+
+    def test_strict_mode_blocks(self):
+        import os
+        g = fn.pattern_3d(unit="gyroid", box=(10, 10, 10), grid=(3, 3, 3))
+        engine = fn.TaichiEngine()
+        os.environ["FIBERNET_STRICT_MEMORY"] = "1"
+        try:
+            with pytest.raises(ValueError, match="nodes"):
+                engine.dynamics(g, num_steps=10, max_nodes=100)
+        finally:
+            del os.environ["FIBERNET_STRICT_MEMORY"]
+
+    def test_no_warn_under_limit(self):
+        import warnings
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = engine.dynamics(g, num_steps=10, max_nodes=50000)
+            resource_warns = [x for x in w if issubclass(x.category, ResourceWarning)]
+            assert len(resource_warns) == 0
