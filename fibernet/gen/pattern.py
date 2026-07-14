@@ -2030,6 +2030,135 @@ def pattern_2d(
     return result
 
 
+
+def _post_tile_connectivity_repair(
+    graph,
+    max_bridge_dist=3.0,
+    radius=None,
+    material=None,
+):
+    """Repair disconnected components after tiling by adding bridge edges.
+    
+    Uses spatial proximity to find the closest node pairs between
+    disconnected components and adds bridging edges.
+    
+    Parameters
+    ----------
+    graph : StructureGraph
+        Tiled structure (modified in-place).
+    max_bridge_dist : float
+        Maximum distance for bridge edges.
+    radius : float, optional
+        Bridge edge radius. Default: median of existing edge radii.
+    material : Material, optional
+        Bridge material. Default: first edge's material.
+    """
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError:
+        return graph
+    
+    try:
+        import networkx as _nx
+    except ImportError:
+        return graph
+    
+    # Check if already connected
+    G_nx = _nx.Graph()
+    for nid in graph.nodes:
+        G_nx.add_node(nid)
+    for eid in graph.edges:
+        e = graph.edges[eid]
+        G_nx.add_edge(e.node_i, e.node_j)
+    
+    comps = list(_nx.connected_components(G_nx))
+    if len(comps) <= 1:
+        return graph
+    
+    # Default radius/material from existing edges
+    if radius is None:
+        radii = [graph.edges[eid].radius for eid in graph.edges]
+        radius = float(np.median(radii)) if radii else 0.05
+    if material is None:
+        first_eid = next(iter(graph.edges))
+        material = graph.edges[first_eid].material
+    
+    # Get all positions
+    node_ids = sorted(graph.nodes.keys())
+    positions = np.array([graph.nodes[nid].position for nid in node_ids])
+    nid_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+    
+    # Build KDTree
+    tree = cKDTree(positions)
+    
+    # Find close pairs that aren't already connected
+    existing_edges = set()
+    for eid in graph.edges:
+        e = graph.edges[eid]
+        existing_edges.add(frozenset([e.node_i, e.node_j]))
+    
+    # Merge components iteratively
+    max_iterations = len(comps) * 3
+    for iteration in range(max_iterations):
+        # Rebuild connectivity
+        G_nx = _nx.Graph()
+        for nid in graph.nodes:
+            G_nx.add_node(nid)
+        for eid in graph.edges:
+            e = graph.edges[eid]
+            G_nx.add_edge(e.node_i, e.node_j)
+        
+        comps = sorted(_nx.connected_components(G_nx), key=len, reverse=True)
+        if len(comps) <= 1:
+            break
+        
+        # Find closest pair between largest component and next largest
+        main_comp = set(comps[0])
+        for other_comp in comps[1:]:
+            other_set = set(other_comp)
+            if len(other_set) < 1:
+                continue
+            
+            # Get node IDs
+            main_nids = list(main_comp)
+            other_nids = list(other_set)
+            
+            # Use KDTree for efficiency
+            main_indices = [nid_to_idx[nid] for nid in main_nids if nid in nid_to_idx]
+            other_indices = [nid_to_idx[nid] for nid in other_nids if nid in nid_to_idx]
+            
+            if not main_indices or not other_indices:
+                continue
+            
+            main_pos = positions[main_indices]
+            other_pos = positions[other_indices]
+            
+            # Find closest pair using cKDTree
+            main_tree = cKDTree(main_pos)
+            dists, idxs = main_tree.query(other_pos, k=1)
+            
+            # Filter by max distance
+            valid = dists < max_bridge_dist
+            if not np.any(valid):
+                # Try with larger distance
+                continue
+            
+            # Add bridge for the closest valid pair
+            best_other = np.argmin(dists[valid])
+            best_main_idx = idxs[valid][best_other]
+            best_other_idx = np.where(valid)[0][best_other]
+            
+            main_nid = main_nids[best_main_idx]
+            other_nid = other_nids[best_other_idx]
+            
+            # Check not already connected
+            if frozenset([main_nid, other_nid]) not in existing_edges:
+                graph.add_edge(main_nid, other_nid, radius=radius, material=material)
+                existing_edges.add(frozenset([main_nid, other_nid]))
+                main_comp = main_comp | other_set
+    
+    return graph
+
 def pattern_3d(
     *,
     unit="cubic",
@@ -2099,6 +2228,24 @@ def pattern_3d(
 
     w, h, d = box
     result = tile_3d(g, grid=grid, box_size=[w, h, d])
+    # Post-tiling connectivity repair for TPMS and other mesh-based types
+    tpms_types = {"gyroid", "schwarz_p", "schwarz_d", "iwp", "neovius", "lidinoid"}
+    if unit_name in tpms_types or unit_name == "hcp":
+        result = _post_tile_connectivity_repair(result, max_bridge_dist=3.0, radius=radius)
+        # Update component count in metadata
+        try:
+            import networkx as _nx
+            G_check = _nx.Graph()
+            for nid in result.nodes:
+                G_check.add_node(nid)
+            for eid in result.edges:
+                e = result.edges[eid]
+                G_check.add_edge(e.node_i, e.node_j)
+            n_comps = _nx.number_connected_components(G_check)
+            result._metadata["n_components_post_repair"] = n_comps
+        except ImportError:
+            pass
+
     result._metadata["pattern"] = {
         "unit": unit_name,
         "box": list(box),
