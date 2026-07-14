@@ -312,14 +312,25 @@ for i, g in enumerate(all_structures):
         json.dump(sdata, f, indent=1)
 print(f'✓ Saved {N_STRUCTURES} structure JSONs to {STRUCT_DIR}')
 
+
+# ── Helper: get boundary indices (compatible with older fibernet versions) ──
+def get_boundary_nodes(pos, pct=0.10):
+    # Get left/right boundary node indices. Compatible with all fibernet versions.
+    try:
+        bnd = _get_boundary_indices(pos, pct=pct)
+        return bnd['left'], bnd['right']
+    except TypeError:
+        x_sorted = np.argsort(pos[:, 0])
+        n = len(pos)
+        n_bnd = max(int(n * pct), 1)
+        return list(x_sorted[:n_bnd]), list(x_sorted[-n_bnd:])
+
 # ── Helper: run dynamics simulation with rigid plate boundaries ──
 def run_stretch(g, stiffness=STIFFNESS, damping=DAMPING, num_steps=NUM_STEPS,
                 ramp_fraction=RAMP_FRACTION, target_stretch=TARGET_STRETCH,
                 save_interval=500, boundary_pct=0.10):
     pos, elems, nids, _ = _graph_to_arrays(g)
-    bnd = _get_boundary_indices(pos, pct=boundary_pct)
-    left_nodes = bnd['left']
-    right_nodes = bnd['right']
+    left_nodes, right_nodes = get_boundary_nodes(pos, pct=boundary_pct)
     L_x = pos[:, 0].max() - pos[:, 0].min()
     target_disp = L_x * (target_stretch - 1)
     ramp_steps = int(num_steps * ramp_fraction)
@@ -463,8 +474,7 @@ print(f'Trajectory frames: {len(traj)}')
 
 # Boundary info for visualization
 pos0, elems0, _, _ = _graph_to_arrays(g0)
-bnd0 = _get_boundary_indices(pos0, pct=0.10)
-left0, right0 = bnd0['left'], bnd0['right']
+left0, right0 = get_boundary_nodes(pos0, pct=0.10)
 
 for theme in ['dark', 'light']:
     colors = _get_theme(theme)
