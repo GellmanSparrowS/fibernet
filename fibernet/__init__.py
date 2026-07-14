@@ -66,12 +66,20 @@ from fibernet.viz.render import (
     render_graph, render_graph_3d,
     render_deformation, render_gallery,
     render_deformation_3d, render_trajectory_3d, render_gallery_3d,
+    render_stress_3d, render_comparison_3d, render_multi_angle_3d,
     render_with_stats,
     THEMES,
 )
 
 # --- Easy API ---
 from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl
+
+# --- PyVista 3D Rendering (optional) ---
+try:
+    from fibernet.viz.render3d import render_structure_graph_3d, render_stress_pyvista
+    _HAS_PYVISTA = True
+except ImportError:
+    _HAS_PYVISTA = False
 
 # --- Analysis ---
 from fibernet.analysis.graph_features import GraphFeatureExtractor
@@ -126,6 +134,7 @@ __all__ = [
     "render_graph", "render_graph_3d", "render_deformation",
     "render_gallery", "render_with_stats", "render_trajectory",
     "render_deformation_3d", "render_trajectory_3d", "render_gallery_3d",
+    "render_stress_3d", "render_comparison_3d", "render_multi_angle_3d",
     "THEMES",
     # Easy API
     "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",

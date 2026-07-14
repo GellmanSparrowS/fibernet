@@ -94,6 +94,10 @@ class SimResult:
                 self.edge_forces = stiffness * (final_lengths / lengths - 1.0)
                 self.max_force = float(np.max(np.abs(self.edge_forces)))
 
+                # Total elastic energy: E = 0.5 * k * sum((L/L0 - 1)^2 * L0)
+                strain = (final_lengths / lengths - 1.0)
+                self.energy = float(0.5 * stiffness * np.sum(strain ** 2 * lengths))
+
         # Max displacement
         if self.displacements is not None:
             self.max_displacement = float(np.max(np.linalg.norm(self.displacements, axis=1)))
