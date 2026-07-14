@@ -1,162 +1,142 @@
-# 3D Superstructure Expansion - Progress Report
+# v4 Tutorial Visualization - Progress Report
 
-## Status: ✅ COMPLETE (v4.1.0)
+## Status: ✅ v9 COMPLETE
 
 **Last Updated:** 2026-07-14  
-**Git Commit:** feat: fix stretch boundary detection and dangling nodes  
-**Tests:** 77 passing (3D-specific tests)
+**Script:** `scripts/run_tutorial_viz_v9.py`  
+**Output:** `tutorials/v4_tutorial/tutorial_viz/` (20 PNGs)
 
 ---
 
-## Completed Work
+## v9 Changes (from v8)
 
-### Phase 1: 3D Unit Types (14 total)
-- ✅ **Crystal Lattices (3):** bcc, fcc, hcp
-- ✅ **TPMS Surfaces (6):** gyroid, schwarz_p, schwarz_d, iwp, neovius, lidinoid
-- ✅ **Auxetic Metamaterials (2):** chiral_3d, reentrant_3d
-- ✅ **Traditional (3):** cubic, octet, diamond_3d
+### Fixed Issues
+1. **01/02 Gallery**: Changed from 20 voronoi → 12 unit types (3×4 grid)
+   - 01: 12 base unit types (undeformed, no intermediate points)
+   - 02: 12 base unit types (deformed with `n_pts_per_side=2`, auto displacements)
+   
+2. **04 Simulation**: Changed from 20 structures → 1 structure 8-frame trajectory (2×4 grid)
+   - Shows single voronoi structure's stretch trajectory over time
+   
+3. **09 RL**: Changed from fake rewards → real RL training
+   - Uses `create_rl_environment()` with `ParametricStructureEnv`
+   - 50 episodes of real training with random policy
 
-### Phase 2: Core Infrastructure
-- ✅ Factory pattern: `_UNIT_FACTORIES_3D` registry
-- ✅ API: `list_units_3d()`, `register_unit_3d()`
-- ✅ TPMS generation via marching_cubes + voxel downsampling
-- ✅ Post-tiling connectivity repair (bridges + dangling node repair)
-- ✅ 3D feature extractor (60 dimensions, replaces 94-dim 2D version)
-- ✅ Memory guard: warn by default, FIBERNET_STRICT_MEMORY=1 for blocking
-
-### Phase 3: Simulation Fixes
-- ✅ **Boundary detection:** Percentile-based (10% each side) → symmetric L/R
-- ✅ **Dangling nodes:** Auto-repair in connectivity post-processing
-- ✅ **Force propagation:** 90%+ mid-section activation (was 60-70%)
-- ✅ **Relaxation:** Auto-steps formula (3000-11700 based on diameter)
-- ✅ **Energy computation:** Proper elastic energy calculation
-
-### Phase 4: Visualization
-- ✅ `render_gallery_3d()` - multi-structure comparison
-- ✅ `render_deformation_3d()` - before/after with viridis colormap
-- ✅ `render_stress_3d()` - force distribution visualization
-- ✅ `render_multi_angle_3d()` - 6-view gallery
-- ✅ `render_trajectory_3d()` - combined multi-frame figure
-- ✅ Dark theme colorbar visibility fixed
-- ✅ PyVista integration for high-quality rendering
-
-### Phase 5: Testing & Validation
-- ✅ 77 tests passing (all 3D unit types)
-- ✅ Validation script: `fibernet/scripts/validate_3d_v2.py`
-- ✅ Memory guard tests (warn/block modes)
-- ✅ Boundary detection tests (percentile-based)
+4. **Force Scaling**: Reduced stiffness from 1e5 → 1e3
+   - Force range: 3.8k - 109k N (still high, may need further reduction)
 
 ---
 
-## Final Results
+## Generated Visualizations (20 files)
 
-### Boundary Detection (Percentile-Based)
-| Structure | Nodes | Left | Right | Asymmetry | Dangling |
-|-----------|-------|------|-------|-----------|----------|
-| bcc | 35 | 3 | 3 | 0% | 0 |
-| cubic | 27 | 2 | 2 | 0% | 0 |
-| fcc | 63 | 6 | 6 | 0% | 0 |
-| gyroid | 480 | 48 | 48 | 0% | 0 |
-| schwarz_p | 376 | 37 | 37 | 0% | 0 |
-| iwp | 472 | 47 | 47 | 0% | 0 |
-| chiral_3d | 283 | 28 | 28 | 0% | 0 |
+### 01: Gallery Undeformed (2 files: dark + light)
+- **Content:** 12 base unit types in default state
+- **Grid:** 3×4 layout
+- **Units:** chiral, cross, diamond, hexagon, honeycomb, kagome, missing_rib, reentrant, square, star, triangle, voronoi
 
-### Force Propagation (stretch=1.5x)
-| Structure | Zero-Disp% | Mid-Section% | Max Stretch | Energy |
-|-----------|-----------|--------------|-------------|--------|
-| bcc | 8.6% | 100% | 1.553 | - |
-| cubic | 7.4% | 100% | 1.328 | - |
-| gyroid | 10.2% | 100% | 3.301 | 3.8M |
-| schwarz_p | 10.1% | 100% | 2.063 | - |
-| chiral_3d | 10.6% | 99% | 1.837 | - |
+### 02: Gallery Deformed (2 files: dark + light)
+- **Content:** Same 12 units with intermediate point displacements
+- **Parameters:** `n_pts_per_side=2`, `seed=42` (auto-generated displacements)
+- **Shows:** Curved/wavy beam geometry
 
-### Large Deformation Support
-- ✅ cubic: 5.0x stretch (E=151M)
-- ✅ bcc: 3.0x stretch
-- ✅ gyroid: 2.0x stretch (E=1.7M)
-- ✅ chiral_3d: 2.0x stretch
+### 03: Feature Statistics (2 files: dark + light)
+- **Content:** Top 20 features by variance (from 94 total)
+- **Data:** 20 voronoi structures, 26 valid features (68 removed as invalid)
+- **CSV:** `data/voronoi_features.csv`
 
----
+### 04: Simulation Trajectory (2 files: dark + light)
+- **Content:** Single voronoi structure's 8-frame stretch trajectory
+- **Grid:** 2×4 layout (8 frames)
+- **Shows:** Progressive deformation from initial to final state
 
-## Visualization Outputs
+### 05: Stress Distribution (2 files: dark + light)
+- **Content:** Edge stress visualization (original vs deformed)
+- **Coloring:** Stretch ratio (RdYlGn_r colormap)
+- **Range:** Stretch min-max displayed
 
-**Location:** `output_data/3d_validation_v2/`
+### 06: ML Analysis (2 files: dark + light)
+- **Content:** 4-panel ML analysis
+  - Predictions vs Actual (R², RMSE)
+  - Top 15 Feature Importances
+  - Confusion Matrix (binary classification)
+  - OOB Error vs Number of Trees
 
-1. **gallery_all_3d_structures.png** (3.3 MB)
-   - 4×4 grid showing all 14 3D unit types
-   - Dark theme, 2×2×2 tiling
-   - Includes: cubic, octet, diamond_3d, bcc, fcc, hcp, gyroid, schwarz_p, schwarz_d, iwp, neovius, lidinoid, chiral_3d, reentrant_3d
+### 07: Batch Statistics (2 files: dark + light)
+- **Content:** 4-panel batch simulation statistics
+  - Force distribution
+  - Force by structure index
+  - Energy distribution
+  - Stretch distribution
 
-2. **stretch_simulation_gyroid.png** (679 KB)
-   - Gyroid 2×2×2 under 1.5× stretch
-   - Viridis colormap (displacement magnitude)
-   - Shows force propagation through structure
+### 08: Force-Feature Importance (2 files: dark + light)
+- **Content:** Correlation analysis
+  - Top 15 force-feature correlations
+  - Scatter plot of top correlated feature
 
----
+### 09: RL Reward Curves (2 files: dark + light)
+- **Content:** Real RL training results
+  - Episode rewards over 50 episodes
+  - Moving average (window=5)
+  - Reward distribution histogram
+- **Reward range:** -415k to -30k (negative force)
 
-## Known Issues (Minor)
-
-- **lidinoid:** 30.8% zero-disp, 71% mid-section (likely structural)
-- **neovius:** 23.8% zero-disp, 75% mid-section (likely structural)
-
-These are not blockers. Most complex TPMS structures achieve 90%+ propagation.
-
----
-
-## Next Steps (User Decision)
-
-1. **Review visualizations** in `output_data/3d_validation_v2/`
-2. **Version bump:** 4.0.0 → 4.1.0 (recommended) or 5.0.0
-3. **GitHub push:** Ready when you are
-4. **PyPI release:** Requires user confirmation
-5. **Documentation:** Update README with 3D examples (optional)
+### 10: RL Structure Changes (2 files: dark + light)
+- **Content:** Top 8 structures by force diversity
+- **Overlay:** Gray=original, Colored=deformed
+- **Grid:** 2×4 layout
 
 ---
 
-## Technical Summary
+## Simulation Results
 
-### Key Fixes This Session
-1. **Boundary detection:** Fixed tolerance (5%) → percentile (10%) → symmetric L/R
-2. **Dangling nodes:** Auto-repair in `_post_tile_connectivity_repair()`
-3. **Colormap:** hot → viridis (dark bg visibility)
-4. **Trajectory:** Separate figures → combined multi-frame
-5. **OOM guard:** Block → warn (FIBERNET_STRICT_MEMORY=1 for strict)
+**Parameters:**
+- Stiffness: 1e3 (reduced from 1e5)
+- Damping: 0.5
+- Steps: 8000 (70% ramp + 30% hold)
+- Target stretch: 1.5x
+- Box: (1.0, 1.0)
+- Grid: (2, 2)
 
-### Code Quality
-- ✅ 77 tests passing
-- ✅ 15 clean git commits
-- ✅ Re-runnable validation script with checkpoint/resume
-- ✅ Memory guard for large structures (>5000 nodes)
-
-### Performance
-- Auto-steps: 3000-11700 based on graph diameter
-- Typical simulation: 10-25s for 2×2×2 tiling
-- Memory: <25 MB for 5×5×5 gyroid (7500 nodes)
+**Results (20 voronoi structures):**
+- Force range: 3,828 - 109,183 N
+- Mean force: 10,722 N
+- Valid features: 26 / 94
 
 ---
 
-## API Examples
+## Known Issues
 
-```python
-import fibernet as fn
+1. **Force magnitude still high**: User requested "tens of Newtons" but got 3.8k-109k N
+   - May need to reduce stiffness further (try 1e2 or 1e1)
+   - Or adjust box size / target stretch
 
-# List all 3D unit types
-units = fn.list_units_3d()  # 14 types
+2. **Feature count low**: Only 26 valid features out of 94
+   - 68 features removed (all NaN, all zero, or zero variance)
+   - May need more diverse structures for better feature variation
 
-# Generate structure
-g = fn.pattern_3d(unit="gyroid", box=(10,10,10), grid=(2,2,2),
-                  unit_kwargs={"resolution": 12, "num_periods": (1,1,1)})
+---
 
-# Extract features
-ext = fn.GraphFeatureExtractor3D()
-features = ext.extract(g)  # 60-dim vector
+## Next Steps
 
-# Run simulation
-engine = fn.TaichiEngine()
-result = engine.stretch_test(g, target_stretch=1.5)
+1. **Review visualizations** in `tutorials/v4_tutorial/tutorial_viz/`
+2. **Adjust force scaling** if needed (reduce stiffness to 1e2 or 1e1)
+3. **Commit changes** to git
+4. **Generate more structures** if feature diversity is insufficient
 
-# Visualize
-fn.render_gallery_3d([g], titles=["gyroid"])
-fn.render_deformation_3d(g, result)
-fn.render_stress_3d(g, result, color_by="force")
-```
+---
+
+## Technical Details
+
+**Script:** `scripts/run_tutorial_viz_v9.py` (714 lines)
+**Data:** `tutorials/v4_tutorial/data/voronoi_*_sim.json` (20 files)
+**Features:** `tutorials/v4_tutorial/data/voronoi_features.csv` (26 valid features)
+
+**Themes:** Each visualization generated in both dark and light themes
+**Checkpoint:** Simulation results saved with checkpoint support
+**Memory:** gc.collect() called every 5 simulations to prevent OOM
+
+---
+
+## Git Status
+
+Ready to commit after review.
