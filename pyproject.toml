@@ -87,6 +87,7 @@ dev = [
     "black>=23.0",
     "flake8>=6.0",
     "scikit-image>=0.19",
+    "taichi>=1.6",
 ]
 docs = [
     "sphinx>=7.0",
