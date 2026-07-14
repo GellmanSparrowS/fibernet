@@ -253,9 +253,9 @@ md(["## 4. Simulation / 模拟\n",
     "\n", "**API**: `TaichiEngine.stretch_test()`\n",
     "\n", "**参数**: stiffness=1e5, damping=0.3, 15000 steps, 50% ramp, stretch=1.5x"])
 code("""STIFFNESS = 1e5
-DAMPING = 0.3
-NUM_STEPS = 15000
-RAMP_FRACTION = 0.5
+DAMPING = 0.2
+NUM_STEPS = 20000
+RAMP_FRACTION = 0.3
 TARGET_STRETCH = 1.5
 
 print('Simulation parameters:')
@@ -412,30 +412,53 @@ print('\\n✓ Stress distribution saved')""")
 
 # ═══ 4.4 Stats ═══
 md("### 4.4 Batch Statistics")
-code("""forces = [m['max_force'] for m in all_metadata]
-stretches = [m['max_stretch'] for m in all_metadata]
-energies = [m['energy'] for m in all_metadata]
+code("""forces_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
+stretches = np.array([m['max_stretch'] for m in all_metadata])
+energies = np.array([m['energy'] for m in all_metadata])
+sort_idx = np.argsort(forces_kN)
 
 for theme in ['dark', 'light']:
     colors = _get_theme(theme)
-    fig, axes = plt.subplots(2, 2, figsize=(14, 12)); fig.patch.set_facecolor(colors['bg'])
+    fig, axes = plt.subplots(2, 2, figsize=(16, 12)); fig.patch.set_facecolor(colors['bg'])
     for ax in axes.flat: _setup_ax(ax, colors)
-    ax = axes[0,0]; ax.hist(forces, bins=max(5, N_STRUCTURES//2), color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'])
-    ax.axvline(np.mean(forces), color='red', ls='--', lw=2); ax.set_xlabel('Max Force (N)'); ax.set_ylabel('Count')
-    ax.set_title(f'Force Distribution\\nMean={np.mean(forces):.0f} N')
-    ax = axes[0,1]; ax.plot(range(len(forces)), forces, 'o-', color=colors['fiber'], lw=2, ms=6)
-    ax.set_xlabel('Structure Index'); ax.set_ylabel('Max Force (N)'); ax.set_title('Force by Structure')
-    ax.grid(True, alpha=0.3, color=colors['grid'])
-    ax = axes[1,0]; ax.hist(energies, bins=max(5, N_STRUCTURES//2), color=colors.get('accent', colors['fiber']), alpha=0.7, edgecolor=colors['grid'])
-    ax.set_xlabel('Energy'); ax.set_ylabel('Count'); ax.set_title(f'Energy Distribution\\nMean={np.mean(energies):.0f}')
-    ax = axes[1,1]; ax.hist(stretches, bins=max(5, N_STRUCTURES//2), color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'])
-    ax.set_xlabel('Max Stretch Ratio'); ax.set_ylabel('Count'); ax.set_title(f'Stretch Distribution\\nMean={np.mean(stretches):.3f}')
+
+    ax = axes[0,0]
+    ax.hist(forces_kN, bins='auto', color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'])
+    ax.axvline(forces_kN.mean(), color='red', ls='--', lw=2, label=f'Mean={forces_kN.mean():.1f} kN')
+    ax.axvline(np.median(forces_kN), color='orange', ls=':', lw=2, label=f'Median={np.median(forces_kN):.1f} kN')
+    ax.set_xlabel('Max Force (kN)'); ax.set_ylabel('Count')
+    ax.set_title(f'Force Distribution (n={N_STRUCTURES})'); ax.legend(fontsize=9)
+
+    ax = axes[0,1]
+    sorted_forces = forces_kN[sort_idx]
+    sorted_labels = [all_metadata[i]['name'].replace('honeycomb_','#') for i in sort_idx]
+    y_pos = np.arange(len(sorted_forces))
+    ax.barh(y_pos, sorted_forces, color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'], height=0.7)
+    ax.set_yticks(y_pos); ax.set_yticklabels(sorted_labels, fontsize=8)
+    ax.set_xlabel('Max Force (kN)'); ax.set_title('Force by Structure (sorted)')
+    ax.grid(True, axis='x', alpha=0.3, color=colors['grid'])
+
+    ax = axes[1,0]
+    e_max = energies.max()
+    if e_max > 1e6: e_plot, e_unit = energies/1e6, 'MJ'
+    elif e_max > 1e3: e_plot, e_unit = energies/1e3, 'kJ'
+    else: e_plot, e_unit = energies, 'J'
+    ax.hist(e_plot, bins='auto', color=colors.get('accent', colors['fiber']), alpha=0.7, edgecolor=colors['grid'])
+    ax.set_xlabel(f'Energy ({e_unit})'); ax.set_ylabel('Count')
+    ax.set_title(f'Energy Distribution (Mean={energies.mean():.2e} {e_unit})')
+
+    ax = axes[1,1]
+    ax.hist(stretches, bins='auto', color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'])
+    ax.axvline(stretches.mean(), color='red', ls='--', lw=2, label=f'Mean={stretches.mean():.3f}')
+    ax.set_xlabel('Max Stretch Ratio'); ax.set_ylabel('Count')
+    ax.set_title('Stretch Distribution'); ax.legend(fontsize=9)
+
     fig.suptitle(f'Batch Statistics ({N_STRUCTURES} structures)', color=colors['text'], fontsize=14, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'07_batch_stats_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\\n✓ Batch stats saved')""")
+print('\n✓ Batch stats saved')""")
 
 # ═══ 5. Features ═══
 md(["## 5. Feature Extraction / 特征提取\n", "\n", "提取 94 维结构特征。"])
@@ -459,7 +482,9 @@ df.to_csv(DATA_OUT / 'structures_features.csv', index=False)
 print(f'\\n✓ Saved: structures_features.csv')""")
 
 md("### 5.1 Feature Statistics")
-code("""variances = {k: np.var([m[k] for m in all_metadata]) for k in valid_features}
+code("""from scipy.stats import gaussian_kde
+
+variances = {k: np.var([m[k] for m in all_metadata]) for k in valid_features}
 top_features = sorted(variances, key=variances.get, reverse=True)[:20]
 
 for theme in ['dark', 'light']:
@@ -467,16 +492,25 @@ for theme in ['dark', 'light']:
     fig, axes = plt.subplots(4, 5, figsize=(20, 16)); fig.patch.set_facecolor(colors['bg'])
     for i, (feat, ax) in enumerate(zip(top_features, axes.flat)):
         _setup_ax(ax, colors)
-        vals = [m[feat] for m in all_metadata]
-        ax.hist(vals, bins=max(5,N_STRUCTURES//3), color=colors['fiber'], alpha=0.7, edgecolor=colors['grid'])
-        ax.set_title(feat.replace('_','\\n'), color=colors['text'], fontsize=8); ax.set_ylabel('Count', fontsize=8)
+        vals = np.array([m[feat] for m in all_metadata])
+        n_bins = max(5, N_STRUCTURES // 3)
+        ax.hist(vals, bins=n_bins, color=colors['fiber'], alpha=0.5, edgecolor=colors['grid'], density=True)
+        if len(np.unique(vals)) > 1 and vals.std() > 0:
+            try:
+                kde = gaussian_kde(vals)
+                x_range = np.linspace(vals.min() - vals.std()*0.5, vals.max() + vals.std()*0.5, 200)
+                ax.plot(x_range, kde(x_range), color=colors.get('accent', 'red'), linewidth=2)
+            except Exception:
+                pass
+        ax.set_title(feat.replace('_','\n'), color=colors['text'], fontsize=8)
+        ax.set_ylabel('Density', fontsize=8)
     for ax in axes.flat[len(top_features):]: ax.axis('off')
-    fig.suptitle(f'Top 20 Features ({len(valid_features)} valid / {len(feature_keys)} total)', color=colors['text'], fontsize=14, fontweight='bold', y=0.99)
+    fig.suptitle(f'Top 20 Features with KDE ({len(valid_features)} valid / {len(feature_keys)} total)', color=colors['text'], fontsize=14, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'08_feature_stats_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\\n✓ Feature stats saved')""")
+print('\n✓ Feature stats saved')""")
 
 # ═══ 6. ML ═══
 md(["## 6. Machine Learning / 机器学习"])
@@ -485,61 +519,78 @@ from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix, accuracy_score
 
 X = np.array([[m[k] for k in valid_features] for m in all_metadata])
-y = np.array([m['max_force'] for m in all_metadata])
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+y_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
 
-rf_reg = RandomForestRegressor(n_estimators=100, random_state=42, max_depth=8, oob_score=True)
-rf_reg.fit(X_train, y_train)
-y_pred = rf_reg.predict(X_test)
-r2 = r2_score(y_test, y_pred); rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+rf_reg = RandomForestRegressor(n_estimators=200, random_state=42, max_depth=8, oob_score=True)
+rf_reg.fit(X, y_kN)
+y_oob = rf_reg.oob_prediction_
+r2 = r2_score(y_kN, y_oob)
+rmse = np.sqrt(mean_squared_error(y_kN, y_oob))
 
-threshold = np.median(y)
-y_train_bin = (y_train > threshold).astype(int); y_test_bin = (y_test > threshold).astype(int)
-rf_clf = RandomForestClassifier(n_estimators=100, random_state=42)
-rf_clf.fit(X_train, y_train_bin); y_pred_bin = rf_clf.predict(X_test)
-cm = confusion_matrix(y_test_bin, y_pred_bin); acc = accuracy_score(y_test_bin, y_pred_bin)
+terciles = np.percentile(y_kN, [33.3, 66.7])
+y_cat = np.digitize(y_kN, terciles)
+y_oob_cat = np.digitize(y_oob, terciles)
+cm = confusion_matrix(y_cat, y_oob_cat, labels=[0,1,2])
+acc = accuracy_score(y_cat, y_oob_cat)
+cm_labels = ['Low', 'Mid', 'High']
+cm_threshold = f'Low<{terciles[0]:.1f}<{terciles[1]:.1f}<High kN'
 
-print(f'✓ R²={r2:.3f}, RMSE={rmse:.0f} N, OOB={rf_reg.oob_score_:.3f}, Acc={acc:.3f}')""")
+print(f'✓ OOB R²={r2:.3f}, RMSE={rmse:.1f} kN, OOB={rf_reg.oob_score_:.3f}, Acc={acc:.3f}')""")
 
 code("""importances = rf_reg.feature_importances_
 top_idx = np.argsort(importances)[-15:][::-1]
+
+n_est_range = list(range(10, 301, 10))
+oob_rmse = []
+for ne in n_est_range:
+    rft = RandomForestRegressor(n_estimators=ne, random_state=42, oob_score=True, max_depth=8)
+    rft.fit(X, y_kN)
+    oob_rmse.append(np.sqrt(mean_squared_error(y_kN, rft.oob_prediction_)))
 
 for theme in ['dark', 'light']:
     colors = _get_theme(theme)
     fig, axes = plt.subplots(2, 2, figsize=(16, 14)); fig.patch.set_facecolor(colors['bg'])
     for ax in axes.flat: _setup_ax(ax, colors)
+
     ax = axes[0,0]
-    ax.scatter(y_test, y_pred, color=colors['fiber'], alpha=0.7, s=60)
-    ax.plot([y_test.min(), y_test.max()], [y_test.min(), y_test.max()], 'r--', lw=2, alpha=0.5)
-    ax.set_xlabel('Actual (N)'); ax.set_ylabel('Predicted (N)')
-    ax.set_title(f'Predictions vs Actual\\nR²={r2:.3f}, RMSE={rmse:.0f}N')
+    ax.scatter(y_kN, y_oob, color=colors['fiber'], alpha=0.7, s=60, edgecolors=colors.get('grid','white'), linewidths=0.5)
+    lo = min(y_kN.min(), y_oob.min()); hi = max(y_kN.max(), y_oob.max())
+    ax.plot([lo, hi], [lo, hi], 'r--', lw=2, alpha=0.5, label='Perfect')
+    ax.set_xlabel('Actual (kN)'); ax.set_ylabel('OOB Predicted (kN)')
+    ax.set_title(f'OOB Predictions vs Actual (n={N_STRUCTURES})\nR²={r2:.3f}, RMSE={rmse:.1f} kN')
+    ax.legend(fontsize=9)
+
     ax = axes[0,1]
     dn = [valid_features[i].replace('_',' ').title() for i in top_idx]
     ax.barh(range(15), importances[top_idx], color=colors['fiber'], alpha=0.7)
     ax.set_yticks(range(15)); ax.set_yticklabels(dn, fontsize=8)
     ax.set_xlabel('Importance'); ax.set_title('Top 15 Features'); ax.invert_yaxis()
+
     ax = axes[1,0]
-    im = ax.imshow(cm, cmap='viridis'); plt.colorbar(im, ax=ax)
-    ax.set_xticks([0,1]); ax.set_yticks([0,1])
-    ax.set_xticklabels(['Low','High']); ax.set_yticklabels(['Low','High'])
-    ax.set_xlabel('Predicted'); ax.set_ylabel('Actual'); ax.set_title(f'Confusion Matrix\\nAcc={acc:.2f}')
-    for ci in range(2):
-        for cj in range(2):
-            ax.text(cj, ci, str(cm[ci,cj]), ha='center', va='center', color='white' if cm[ci,cj]<cm.max()/2 else 'black', fontsize=20, fontweight='bold')
+    im = ax.imshow(cm, cmap='viridis', aspect='auto'); plt.colorbar(im, ax=ax)
+    n_cls = len(cm_labels)
+    ax.set_xticks(range(n_cls)); ax.set_yticks(range(n_cls))
+    ax.set_xticklabels(cm_labels); ax.set_yticklabels(cm_labels)
+    ax.set_xlabel('Predicted'); ax.set_ylabel('Actual')
+    ax.set_title(f'Confusion Matrix (OOB, n={N_STRUCTURES})\nAcc={acc:.2f}, {cm_threshold}')
+    for ci in range(n_cls):
+        for cj in range(n_cls):
+            val = cm[ci,cj]
+            tc = 'white' if val < (cm.max() or 1)/2 else 'black'
+            ax.text(cj, ci, str(int(val)), ha='center', va='center', color=tc, fontsize=16, fontweight='bold')
+
     ax = axes[1,1]
-    n_est_range = [10, 20, 50, 100, 200]; oob_errors = []
-    for ne in n_est_range:
-        rft = RandomForestRegressor(n_estimators=ne, random_state=42, oob_score=True, max_depth=8)
-        rft.fit(X_train, y_train); oob_errors.append(1 - rft.oob_score_)
-    ax.plot(n_est_range, oob_errors, 'o-', color=colors['fiber'], lw=2, ms=8)
-    ax.set_xlabel('Trees'); ax.set_ylabel('OOB Error'); ax.set_title('Complexity vs Error')
+    ax.plot(n_est_range, oob_rmse, 'o-', color=colors['fiber'], lw=2, ms=4, label='OOB RMSE (kN)')
+    ax.set_xlabel('Number of Trees'); ax.set_ylabel('OOB RMSE (kN)')
+    ax.set_title(f'Loss Curve (Final RMSE={oob_rmse[-1]:.1f} kN)'); ax.legend(fontsize=9)
     ax.grid(True, alpha=0.3, color=colors['grid'])
-    fig.suptitle('ML Analysis', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
+
+    fig.suptitle('ML Analysis (kN)', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'09_ml_analysis_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\\n✓ ML analysis saved')""")
+print('\n✓ ML analysis saved')""")
 
 # ═══ 6.3 Correlation ═══
 md("### 6.3 Force-Feature Correlation")
