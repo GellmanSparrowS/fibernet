@@ -63,3 +63,39 @@ pip install fibernet --upgrade
 # 或
 pip install fibernet==4.0.1
 ```
+
+## 2024-07-15 - Push to GitHub v4.0.1
+
+### 完成的更新
+- **版本号**: 4.0.0 → 4.0.1
+- **N_STRUCTURES**: 20 → 2000 (生产环境默认)
+- **ML 增强**:
+  - Early stopping (800棵树, patience=80)
+  - 5-fold cross-validation
+  - 模型保存为 joblib (`rf_force_model.joblib`)
+- **RL 增强**:
+  - 300 episodes (原100)
+  - 收敛检测 (窗口=50)
+- **向后兼容**: 添加 `get_boundary_nodes()` helper
+- **教程文本**: 英文为主,中文注释为辅
+
+### GitHub 推送状态
+- ✓ Remote HEAD: `cc9f45db2c3e`
+- ✓ 25个文件已推送 (代码、配置、notebook)
+- ⚠ 22个大文件跳过 (>100KB, 包括模拟数据JSON和3D验证图片)
+
+### 本地测试验证
+- ✓ 语法检查通过
+- ✓ Notebook生成成功 (41 cells)
+- ✓ 模拟参数: dynamics, 30000 steps, 20% ramp, 80% relaxation
+- ✓ 边界条件: 10% 每侧 (刚性板)
+
+### 用户测试反馈
+- Windows 上 `_get_boundary_indices(pct=...)` 报错
+- 已通过 `get_boundary_nodes()` helper 解决
+- 等待用户进一步测试反馈
+
+### 下一步
+- 用户测试 N=2000 的完整流程
+- 根据测试结果调整参数
+- 可能需要优化大文件上传 (git-lfs 或单独仓库)
