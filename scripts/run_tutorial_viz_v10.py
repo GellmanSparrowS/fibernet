@@ -38,11 +38,11 @@ from sklearn.model_selection import train_test_split
 N_VORONOI = 20
 UNITS = list_units()  # 12 units
 THEMES_LIST = ['dark', 'light']
-STIFFNESS = 1e4  # Increased from 1e3 for better wave propagation
+STIFFNESS = 1e5  # Increased from 1e3 for better wave propagation
 BOX_SIZE = (1.0, 1.0)
 GRID = (2, 2)
 TARGET_STRETCH = 1.5
-DAMPING = 0.5
+DAMPING = 0.3
 NUM_STEPS = 15000  # Increased from 8000
 RAMP_FRACTION = 0.5  # 50% ramp + 50% hold for better relaxation
 
@@ -168,7 +168,7 @@ rng_global = np.random.default_rng(seed=12345)
 
 for i in range(12):
     # Generate diverse displacements with larger amplitude
-    n_disp = 15  # voronoi with n_pts_per_side=5 needs 15 displacements (3 sides × 5 pts)
+    n_disp = 350  # voronoi has 70 edges, each needs 5 displacements (70 × 5 = 350)
     disps = [(float(rng_global.uniform(-0.4, 0.4)), float(rng_global.uniform(-0.4, 0.4))) 
              for _ in range(n_disp)]
     
