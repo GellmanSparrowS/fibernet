@@ -184,3 +184,76 @@ class TestVisualization3D:
         assert fig is not None
         import matplotlib.pyplot as plt
         plt.close(fig)
+
+    def test_render_stress_3d(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        result = engine.stretch_test(g, target_stretch=1.2, num_steps=200)
+        for color_by in ["force", "stretch", "displacement"]:
+            fig = fn.render_stress_3d(g, result, color_by=color_by)
+            assert fig is not None
+            import matplotlib.pyplot as plt
+            plt.close(fig)
+
+    def test_render_comparison_3d(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        result = engine.stretch_test(g, target_stretch=1.2, num_steps=200)
+        fig = fn.render_comparison_3d(g, result)
+        assert fig is not None
+        import matplotlib.pyplot as plt
+        plt.close(fig)
+
+    def test_render_multi_angle_3d(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        fig = fn.render_multi_angle_3d(g)
+        assert fig is not None
+        import matplotlib.pyplot as plt
+        plt.close(fig)
+
+    def test_render_trajectory_3d_from_sim_result(self):
+        import matplotlib
+        matplotlib.use('Agg')
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        fixed = [nid for nid in sorted(g.nodes.keys()) if g.nodes[nid].position[0] < 0.5]
+        moved = {nid: [(0, [0.1, 0, 0])] for nid in sorted(g.nodes.keys()) if g.nodes[nid].position[0] > 19.5}
+        result = engine.dynamics(g, fixed_nodes=fixed, displacement_schedule=moved,
+                                  num_steps=500, save_interval=100)
+        # Use sim_result parameter
+        figs = fn.render_trajectory_3d(g, sim_result=result, n_frames=3)
+        assert len(figs) == 3
+        import matplotlib.pyplot as plt
+        for fig in figs:
+            plt.close(fig)
+
+
+class TestEnergyComputation:
+    """Test that elastic energy is computed correctly."""
+
+    def test_stretch_energy_nonzero(self):
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        result = engine.stretch_test(g, target_stretch=1.2, num_steps=500)
+        assert result.energy > 0, "Energy should be positive after stretch"
+
+    def test_energy_scales_with_stretch(self):
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        r1 = engine.stretch_test(g, target_stretch=1.1, num_steps=500)
+        r2 = engine.stretch_test(g, target_stretch=1.3, num_steps=500)
+        assert r2.energy > r1.energy, "More stretch should produce more energy"
+
+    def test_edge_forces_computed(self):
+        g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
+        engine = fn.TaichiEngine()
+        result = engine.stretch_test(g, target_stretch=1.2, num_steps=500)
+        assert result.edge_forces is not None
+        assert result.edge_stretches is not None
+        assert result.max_force > 0
