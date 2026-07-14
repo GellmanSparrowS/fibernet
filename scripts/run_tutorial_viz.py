@@ -1,30 +1,25 @@
 #!/usr/bin/env python3
 """
-FiberNet v4 Tutorial — Visualization Generator
+FiberNet v4 Tutorial — Complete Visualization Generator
 
 Generates all tutorial visualizations to:
   tutorials/v4_tutorial/tutorial_viz/
 
 Features:
-- N=20 for test, N=2000 for full
-- Checkpoint/resume for all phases
-- Memory protection (batch + gc)
-- Dark theme visualizations
+- Fiber-only rendering (no nodes, only edges)
+- Displacement parameters in labels (not seed)
+- Large displacement range (-1.0 to 1.0)
+- Trajectory with stress coloring
+- ML: predictions, importance, scatter
+- RL: convergence, reward, actions
+- Full statistics and correlations
 
 Usage:
   cd fibernet && source .venv/bin/activate
   python scripts/run_tutorial_viz.py
 
-Files generated:
-  tutorial_viz/gallery_undeformed.png
-  tutorial_viz/gallery_deformed.png
-  tutorial_viz/structure_statistics.png
-  tutorial_viz/simulation_statistics.png
-  tutorial_viz/ml_predictions.png
-  tutorial_viz/ml_importance.png
-  tutorial_viz/rl_convergence.png
-  tutorial_viz/rl_reward_curve.png
-  tutorial_viz/rl_actions.png
+Output:
+  tutorial_viz/*.png
 """
 
 import os, sys, json, gc, time
@@ -34,6 +29,7 @@ import pandas as pd
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 from tqdm.auto import tqdm
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -47,6 +43,7 @@ N_SAMPLES = 20  # ← Change to 2000 for full run
 N_PTS_PER_SIDE = 5
 BATCH_SIZE = 10
 CHECKPOINT_EVERY = 5
+DISP_RANGE = 1.0  # ← Larger displacement range
 
 # Paths
 TUTORIAL_DIR = Path(__file__).parent.parent / "tutorials" / "v4_tutorial"
@@ -54,10 +51,9 @@ TUTORIAL_DIR.mkdir(parents=True, exist_ok=True)
 VIZ_OUT = TUTORIAL_DIR / "tutorial_viz"
 DATA_OUT = TUTORIAL_DIR / "data"
 JSON_OUT = DATA_OUT / "json"
-ML_OUT = DATA_OUT / "ml_results"
-RL_OUT = DATA_OUT / "rl_results"
+DEF_JSON_OUT = DATA_OUT / "json_deformed"
 
-for d in [VIZ_OUT, JSON_OUT, ML_OUT, RL_OUT]:
+for d in [VIZ_OUT, JSON_OUT, DEF_JSON_OUT]:
     d.mkdir(parents=True, exist_ok=True)
 
 # ── Generation Parameters ──
@@ -69,27 +65,106 @@ N_SIDES = 4
 N_DISP = N_SIDES * N_PTS
 
 print(f"="*70)
-print(f"FiberNet v4 Tutorial — Visualization Generator")
+print(f"FiberNet v4 Tutorial — Complete Visualization Generator")
 print(f"="*70)
 print(f"Samples: {N_SAMPLES}")
 print(f"Unit: {UNIT}, Grid: {GRID}, Points: {N_PTS}")
+print(f"Displacement range: [-{DISP_RANGE}, {DISP_RANGE}]")
 print(f"Output: {VIZ_OUT.resolve()}")
 print()
 
 
-def generate_parametric(seed, n_disp=N_DISP):
+def generate_parametric(seed, n_disp=N_DISP, disp_range=DISP_RANGE):
+    """Generate structure with random displacements."""
     rng = np.random.default_rng(seed)
-    raw = rng.uniform(-0.3, 0.3, size=n_disp * 2)
+    raw = rng.uniform(-disp_range, disp_range, size=n_disp * 2)
     disps = [(float(raw[2*i]), float(raw[2*i+1])) for i in range(n_disp)]
     g = pattern_2d(unit=UNIT, box=BOX, grid=GRID,
                   n_pts_per_side=N_PTS, point_displacements=disps, seed=seed)
     return g, disps
 
 
+def render_fiber_graph(ax, g, positions=None, color='cyan', linewidth=1.2, alpha=0.8):
+    """Render fiber network (edges only, no nodes)."""
+    node_ids = sorted(g.nodes.keys())
+    if positions is None:
+        positions = np.array([g.nodes[nid].position for nid in node_ids])
+    
+    node_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+    
+    for edge in g.edges.values():
+        i = node_to_idx.get(edge.node_i)
+        j = node_to_idx.get(edge.node_j)
+        if i is not None and j is not None:
+            p1 = positions[i]
+            p2 = positions[j]
+            ax.plot([p1[0], p2[0]], [p1[1], p2[1]], 
+                   color=color, linewidth=linewidth, alpha=alpha, solid_capstyle='round')
+    
+    # Set axis limits
+    if len(positions) > 0:
+        x_min, x_max = positions[:, 0].min(), positions[:, 0].max()
+        y_min, y_max = positions[:, 1].min(), positions[:, 1].max()
+        pad_x = (x_max - x_min) * 0.05
+        pad_y = (y_max - y_min) * 0.05
+        ax.set_xlim(x_min - pad_x, x_max + pad_x)
+        ax.set_ylim(y_min - pad_y, y_max + pad_y)
+    
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+
+def render_fiber_with_stress(ax, g, positions, edge_stretches, cmap='viridis'):
+    """Render fiber network colored by edge stress."""
+    node_ids = sorted(g.nodes.keys())
+    node_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+    
+    segments = []
+    colors = []
+    
+    min_s = np.percentile(edge_stretches, 1)
+    max_s = np.percentile(edge_stretches, 99)
+    
+    for ei, edge in enumerate(g.edges.values()):
+        i = node_to_idx.get(edge.node_i)
+        j = node_to_idx.get(edge.node_j)
+        if i is not None and j is not None:
+            p1 = positions[i]
+            p2 = positions[j]
+            segments.append([[p1[0], p1[1]], [p2[0], p2[1]]])
+            colors.append(edge_stretches[ei] if ei < len(edge_stretches) else 1.0)
+    
+    if segments:
+        norm = plt.Normalize(min_s, max_s)
+        lc = LineCollection(segments, cmap=cmap, norm=norm, linewidths=1.2)
+        lc.set_array(np.array(colors))
+        ax.add_collection(lc)
+        
+        # Add colorbar
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cbar = plt.colorbar(sm, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label('Edge Stretch', color='white', fontsize=9)
+        cbar.ax.tick_params(colors='white', labelsize=8)
+        cbar.outline.set_edgecolor('white')
+    
+    # Set axis limits
+    if len(positions) > 0:
+        x_min, x_max = positions[:, 0].min(), positions[:, 0].max()
+        y_min, y_max = positions[:, 1].min(), positions[:, 1].max()
+        pad_x = (x_max - x_min) * 0.05
+        pad_y = (y_max - y_min) * 0.05
+        ax.set_xlim(x_min - pad_x, x_max + pad_x)
+        ax.set_ylim(y_min - pad_y, y_max + pad_y)
+    
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+
 # ══════════════════════════════════════════════════════════════════
 # Phase 1: Generation
 # ══════════════════════════════════════════════════════════════════
-print("Phase 1/6: Structure Generation")
+print("Phase 1/8: Structure Generation")
 print("-" * 40)
 
 N = N_SAMPLES
@@ -111,6 +186,7 @@ if not any(m.get("is_base") for m in metadata):
     metadata.append({
         "id": 0, "seed": 0, "name": base_name,
         "is_base": True, "n_nodes": g_base.num_nodes, "n_edges": g_base.num_edges,
+        "displacements": zero_disps,
     })
     print(f"  Base: {g_base.num_nodes} nodes, {g_base.num_edges} edges")
     del g_base
@@ -128,6 +204,7 @@ if start_idx < N:
             metadata.append({
                 "id": i, "seed": seed, "name": name,
                 "is_base": False, "n_nodes": g.num_nodes, "n_edges": g.num_edges,
+                "displacements": disps,
             })
             del g, disps
         with open(ckpt, 'w') as f:
@@ -140,9 +217,9 @@ print(f"  ✓ {len(metadata)} structures generated\n")
 
 
 # ══════════════════════════════════════════════════════════════════
-# Phase 2: Undeformed Gallery
+# Phase 2: Undeformed Gallery (Fiber-only)
 # ══════════════════════════════════════════════════════════════════
-print("Phase 2/6: Undeformed Gallery")
+print("Phase 2/8: Undeformed Gallery (Fiber-only)")
 print("-" * 40)
 
 n_show = min(20, len(metadata))
@@ -158,15 +235,16 @@ for idx in range(n_show):
     g = fn.StructureGraph.load_json(str(JSON_OUT / f"{rec['name']}.json"))
     ax = axes[idx]
     ax.set_facecolor("#0a0a0f")
-    for edge in g.edges.values():
-        p1 = g.nodes[edge.node_i].position
-        p2 = g.nodes[edge.node_j].position
-        ax.plot([p1[0], p2[0]], [p1[1], p2[1]], 'c-', linewidth=0.8, alpha=0.7)
-    pos = np.array([g.nodes[nid].position for nid in sorted(g.nodes.keys())])
-    ax.scatter(pos[:, 0], pos[:, 1], c='#00ff88', s=8, zorder=5)
-    ax.set_aspect('equal')
-    ax.set_title(f"#{rec['id']} (seed={rec['seed']})", color="#aaa", fontsize=7)
-    ax.axis('off')
+    
+    render_fiber_graph(ax, g, color='cyan', linewidth=1.0)
+    
+    # Show displacement parameters (first 4 values)
+    disps = rec.get("displacements", [])
+    if disps:
+        param_str = f"#{rec['id']}\n" + " ".join([f"{d[0]:.1f},{d[1]:.1f}" for d in disps[:2]])
+    else:
+        param_str = f"#{rec['id']}"
+    ax.set_title(param_str, color="#aaa", fontsize=6)
     del g
 
 for idx in range(n_show, len(axes)):
@@ -176,13 +254,13 @@ plt.tight_layout()
 viz_path = VIZ_OUT / "gallery_undeformed.png"
 fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
 plt.close(fig)
-print(f"  ✓ {viz_path.name}: {n_show} structures shown\n")
+print(f"  ✓ {viz_path.name}: {n_show} structures (fiber-only)\n")
 
 
 # ══════════════════════════════════════════════════════════════════
 # Phase 3: Structure Statistics
 # ══════════════════════════════════════════════════════════════════
-print("Phase 3/6: Structure Statistics")
+print("Phase 3/8: Structure Statistics")
 print("-" * 40)
 
 n_nodes_list = [m["n_nodes"] for m in metadata]
@@ -205,13 +283,13 @@ for ax, data, label, color in [(ax1, n_nodes_list, "Number of Nodes", 'cyan'),
 viz_path = VIZ_OUT / "structure_statistics.png"
 fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
 plt.close(fig)
-print(f"  ✓ {viz_path.name}: nodes mean={np.mean(n_nodes_list):.1f}, edges mean={np.mean(n_edges_list):.1f}\n")
+print(f"  ✓ {viz_path.name}\n")
 
 
 # ══════════════════════════════════════════════════════════════════
-# Phase 4: Simulation
+# Phase 4: Simulation with Trajectory
 # ══════════════════════════════════════════════════════════════════
-print("Phase 4/6: Mechanical Simulation")
+print("Phase 4/8: Mechanical Simulation")
 print("-" * 40)
 
 engine = TaichiEngine()
@@ -221,8 +299,11 @@ sim_ckpt = DATA_OUT / "sim_partial.json"
 if sim_ckpt.exists():
     with open(sim_ckpt) as f:
         sim_results = json.load(f)
-    done_ids = {r["id"] for r in sim_results}
-    print(f"  Resuming: {len(sim_results)} already simulated")
+    # Only skip IDs that have successful results
+    done_ids = {r["id"] for r in sim_results if r.get("success") == True}
+    # Keep only successful results in the list
+    sim_results = [r for r in sim_results if r.get("success") == True]
+    print(f"  Resuming: {len(sim_results)} successful simulations")
 else:
     done_ids = set()
 
@@ -236,8 +317,12 @@ for batch_start in range(0, len(pending), BATCH_SIZE):
         try:
             g = fn.StructureGraph.load_json(str(g_path))
             r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5,
-                                   damping=0.3, num_steps=500, save_interval=500,
+                                   damping=0.3, num_steps=1000, save_interval=200,
                                    auto_steps=False)
+            
+            # Compute detailed metrics
+            r.compute_detailed(g, stiffness=1e5)
+            
             row = {
                 "id": rec["id"], "name": rec["name"], "is_base": rec["is_base"],
                 "success": True,
@@ -248,7 +333,20 @@ for batch_start in range(0, len(pending), BATCH_SIZE):
                 "n_nodes": rec["n_nodes"], "n_edges": rec["n_edges"],
             }
             sim_results.append(row)
-            r.save(str(DATA_OUT / f"{rec['name']}_result.json"))
+            r.save(str(DATA_OUT / f"{rec['name']}_result.json"), detailed=True)
+            
+            # Save deformed structure (separate try/except)
+            try:
+                if r.deformed_positions is not None:
+                    node_ids = sorted(g.nodes.keys())
+                    def_positions = np.asarray(r.deformed_positions, dtype=float)
+                    for i, nid in enumerate(node_ids):
+                        g.nodes[nid].position = def_positions[i].tolist()
+                    def_name = f"{rec['name']}_deformed"
+                    g.save_json(str(DEF_JSON_OUT / f"{def_name}.json"))
+            except Exception as e2:
+                pass  # Non-critical: deformed json save failed
+            
             del g, r
         except Exception as e:
             sim_results.append({
@@ -271,19 +369,20 @@ print()
 
 
 # ══════════════════════════════════════════════════════════════════
-# Phase 5: Deformed Gallery + Statistics
+# Phase 5: Deformed Gallery with Stress
 # ══════════════════════════════════════════════════════════════════
-print("Phase 5/6: Deformed Gallery + Simulation Statistics")
+print("Phase 5/8: Deformed Gallery + Trajectory + Stress")
 print("-" * 40)
 
 ok_sims = [s for s in sim_results if s.get("success")]
-n_show_def = min(20, len(ok_sims))
+n_show_def = min(12, len(ok_sims))
 
 if n_show_def > 0:
-    nc = 5
+    # Deformed gallery (4x3 grid)
+    nc = 4
     nr = (n_show_def + nc - 1) // nc
     
-    fig, axes = plt.subplots(nr, nc, figsize=(3*nc, 3*nr))
+    fig, axes = plt.subplots(nr, nc, figsize=(4*nc, 4*nr))
     fig.patch.set_facecolor("#0a0a0f")
     axes = axes.flatten() if nr > 1 else [axes]
     
@@ -298,19 +397,18 @@ if n_show_def > 0:
             g = fn.StructureGraph.load_json(str(JSON_OUT / f"{sim_rec['name']}.json"))
             ax = axes[idx]
             ax.set_facecolor("#0a0a0f")
-            if r.deformed_positions is not None:
-                def_pos = r.deformed_positions
-                for edge in g.edges.values():
-                    p1 = def_pos[edge.node_i]
-                    p2 = def_pos[edge.node_j]
-                    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], 'c-', linewidth=0.8, alpha=0.7)
-                ax.scatter(def_pos[:, 0], def_pos[:, 1], c='#ff6600', s=8, zorder=5)
-            ax.set_aspect('equal')
-            ax.set_title(f"#{sim_rec['id']} F={sim_rec['max_force']:.0f}",
-                        color="#aaa", fontsize=7)
-            ax.axis('off')
+            
+            if r.deformed_positions is not None and r.edge_stretches is not None:
+                render_fiber_with_stress(ax, g, r.deformed_positions, r.edge_stretches)
+            elif r.deformed_positions is not None:
+                render_fiber_graph(ax, g, positions=r.deformed_positions, color='orange')
+            
+            ax.set_title(f"#{sim_rec['id']} F={sim_rec['max_force']:.0f}N",
+                        color="#aaa", fontsize=8)
             del r, g
-        except:
+        except Exception as e:
+            axes[idx].text(0.5, 0.5, f"Error: {str(e)[:20]}", 
+                          color='red', ha='center', transform=axes[idx].transAxes)
             axes[idx].axis('off')
     
     for idx in range(n_show_def, len(axes)):
@@ -320,7 +418,44 @@ if n_show_def > 0:
     viz_path = VIZ_OUT / "gallery_deformed.png"
     fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
-    print(f"  ✓ {viz_path.name}: {n_show_def} deformed structures shown")
+    print(f"  ✓ {viz_path.name}: {n_show_def} deformed structures with stress")
+    
+    # Trajectory visualization (first successful simulation)
+    first_sim = ok_sims[0]
+    r_path = DATA_OUT / f"{first_sim['name']}_result.json"
+    if r_path.exists():
+        r = SimResult.load(str(r_path))
+        g = fn.StructureGraph.load_json(str(JSON_OUT / f"{first_sim['name']}.json"))
+        
+        if r.positions_trajectory and len(r.positions_trajectory) > 1:
+            n_frames = min(8, len(r.positions_trajectory))
+            frame_indices = np.linspace(0, len(r.positions_trajectory)-1, n_frames, dtype=int)
+            
+            fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+            fig.patch.set_facecolor("#0a0a0f")
+            axes = axes.flatten()
+            
+            # Compute edge stretches for coloring
+            if r.edge_stretches is not None:
+                edge_stretches = r.edge_stretches
+            else:
+                edge_stretches = np.ones(g.num_edges)
+            
+            for i, frame_idx in enumerate(frame_indices):
+                ax = axes[i]
+                ax.set_facecolor("#0a0a0f")
+                pos = r.positions_trajectory[frame_idx]
+                render_fiber_with_stress(ax, g, pos, edge_stretches)
+                ax.set_title(f"Frame {frame_idx+1}/{len(r.positions_trajectory)}",
+                            color="#aaa", fontsize=9)
+            
+            plt.tight_layout()
+            viz_path = VIZ_OUT / "trajectory_stress.png"
+            fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+            plt.close(fig)
+            print(f"  ✓ {viz_path.name}: {n_frames} frames")
+        
+        del r, g
     
     # Simulation statistics
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -349,85 +484,125 @@ if n_show_def > 0:
     viz_path = VIZ_OUT / "simulation_statistics.png"
     fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
     plt.close(fig)
-    print(f"  ✓ {viz_path.name}: 4 metrics shown\n")
+    print(f"  ✓ {viz_path.name}\n")
 else:
-    print("  ✗ No successful simulations to visualize\n")
+    print("  ✗ No successful simulations\n")
 
 
 # ══════════════════════════════════════════════════════════════════
-# Phase 6: ML + RL (quick demo)
+# Phase 6: Feature Extraction
 # ══════════════════════════════════════════════════════════════════
-print("Phase 6/6: ML + RL Demonstrations")
+print("Phase 6/8: Feature Extraction")
+print("-" * 40)
+
+ext = GraphFeatureExtractor(canvas_size=256)
+feat_records = []
+
+feat_ckpt = DATA_OUT / "feat_partial.json"
+if feat_ckpt.exists():
+    with open(feat_ckpt) as f:
+        feat_records = json.load(f)
+    done_feat_ids = {r["id"] for r in feat_records}
+    print(f"  Resuming: {len(feat_records)} already extracted")
+else:
+    done_feat_ids = set()
+
+pending_feat = [rec for rec in metadata if rec["id"] not in done_feat_ids]
+print(f"  Pending: {len(pending_feat)}")
+
+for rec in tqdm(pending_feat, desc="  Features", leave=False):
+    g_path = JSON_OUT / f"{rec['name']}.json"
+    g = fn.StructureGraph.load_json(str(g_path))
+    try:
+        feats = ext.extract(g)
+        record = {"id": rec["id"], "name": rec["name"]}
+        for k, v in feats.items():
+            record[f"feat_{k}"] = float(v) if isinstance(v, (int, float)) else v
+        feat_records.append(record)
+    except Exception as e:
+        pass
+    del g
+
+with open(feat_ckpt, 'w') as f:
+    json.dump(feat_records, f, indent=2)
+
+df_feat = pd.DataFrame(feat_records)
+n_feat = len([c for c in df_feat.columns if c.startswith("feat_")])
+print(f"  ✓ {len(df_feat)} samples, {n_feat} features\n")
+
+df_all = df_sim.merge(df_feat, on=["id", "name"], how="outer")
+df_all.to_csv(str(DATA_OUT / "full_results.csv"), index=False)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Phase 7: ML Visualizations
+# ══════════════════════════════════════════════════════════════════
+print("Phase 7/8: ML Visualizations")
 print("-" * 40)
 
 try:
-    ext = GraphFeatureExtractor(canvas_size=256)
-    feat_records = []
-    for rec in tqdm(metadata, desc="  Features", leave=False):
-        g_path = JSON_OUT / f"{rec['name']}.json"
-        g = fn.StructureGraph.load_json(str(g_path))
-        try:
-            feats = ext.extract(g)
-            record = {"id": rec["id"], "name": rec["name"]}
-            for k, v in feats.items():
-                record[f"feat_{k}"] = float(v) if isinstance(v, (int, float)) else v
-            feat_records.append(record)
-        except:
-            pass
-        del g
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.metrics import r2_score, mean_squared_error
     
-    df_feat = pd.DataFrame(feat_records)
-    n_feat = len([c for c in df_feat.columns if c.startswith("feat_")])
-    print(f"  Features: {len(df_feat)} samples, {n_feat} dimensions")
+    feat_cols = [c for c in df_feat.columns if c.startswith("feat_")][:20]
     
-    df_all = df_sim.merge(df_feat, on=["id", "name"], how="outer")
-    df_all.to_csv(str(DATA_OUT / "full_results.csv"), index=False)
+    # Get successful simulations with features
+    ok_with_feat = df_all[df_all["success"] == True].dropna(subset=feat_cols)
     
-    # ML predictions plot
-    feat_cols = [c for c in df_feat.columns if c.startswith("feat_")][:10]
-    if len(ok) >= 5 and len(feat_cols) >= 3:
-        from sklearn.ensemble import RandomForestRegressor
-        
-        X = df_all[feat_cols].dropna().values
-        y = df_sim.loc[df_all.dropna(subset=feat_cols).index, "max_force"].values
+    if len(ok_with_feat) >= 5 and len(feat_cols) >= 3:
+        # Prepare data
+        X = ok_with_feat[feat_cols].values
+        y = ok_with_feat["max_force"].values
         
         if len(X) >= 5:
-            rf = RandomForestRegressor(n_estimators=50, max_depth=4, random_state=42)
-            rf.fit(X[:int(0.8*len(X))], y[:int(0.8*len(X))])
-            y_pred = rf.predict(X[int(0.8*len(X)):])
-            y_true = y[int(0.8*len(X)):]
+            # Train/test split
+            split_idx = int(0.8 * len(X))
+            X_train, X_test = X[:split_idx], X[split_idx:]
+            y_train, y_test = y[:split_idx], y[split_idx:]
             
-            fig, ax = plt.subplots(figsize=(8, 6))
+            # Train RF
+            rf = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
+            rf.fit(X_train, y_train)
+            y_pred = rf.predict(X_test)
+            
+            r2 = r2_score(y_test, y_pred) if len(y_test) > 0 else 0
+            rmse = np.sqrt(mean_squared_error(y_test, y_pred)) if len(y_test) > 0 else 0
+            
+            # ML Predictions
+            fig, ax = plt.subplots(figsize=(8, 8))
             fig.patch.set_facecolor("#0a0a0f")
             ax.set_facecolor("#0a0a0f")
-            ax.scatter(y_true, y_pred, c='cyan', alpha=0.7)
-            lims = [min(y_true.min(), y_pred.min()), max(y_true.max(), y_pred.max())]
-            ax.plot(lims, lims, 'r--', linewidth=2, label="Perfect prediction")
-            ax.set_xlabel("Actual max_force [N]", color='white')
-            ax.set_ylabel("Predicted max_force [N]", color='white')
-            ax.set_title("RF Model: Predictions vs Actual (Test Set)", color='white')
+            
+            ax.scatter(y_test, y_pred, c='cyan', alpha=0.7, s=50, label='Test samples')
+            
+            lims = [min(y_test.min(), y_pred.min()), max(y_test.max(), y_pred.max())]
+            ax.plot(lims, lims, 'r--', linewidth=2, label='Perfect prediction')
+            
+            ax.set_xlabel("Actual max_force [N]", color='white', fontsize=12)
+            ax.set_ylabel("Predicted max_force [N]", color='white', fontsize=12)
+            ax.set_title(f"RF Model: R²={r2:.3f}, RMSE={rmse:.0f}", color='white', fontsize=14)
             ax.tick_params(colors='white')
             ax.legend()
             
             viz_path = VIZ_OUT / "ml_predictions.png"
             fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
             plt.close(fig)
-            print(f"  ✓ {viz_path.name}")
+            print(f"  ✓ {viz_path.name}: R²={r2:.3f}")
             
-            # Feature importance
-            fig, ax = plt.subplots(figsize=(10, 6))
+            # Feature Importance
+            importances = rf.feature_importances_
+            top_k = min(15, len(importances))
+            idx = np.argsort(importances)[::-1][:top_k]
+            
+            fig, ax = plt.subplots(figsize=(10, 8))
             fig.patch.set_facecolor("#0a0a0f")
             ax.set_facecolor("#0a0a0f")
             
-            importances = rf.feature_importances_
-            top_k = min(10, len(importances))
-            idx = np.argsort(importances)[::-1][:top_k]
-            
             bars = ax.barh(range(top_k), importances[idx], color='cyan', alpha=0.7)
             ax.set_yticks(range(top_k))
-            ax.set_yticklabels([feat_cols[i].replace("feat_", "") for i in idx])
-            ax.set_xlabel("Importance", color='white')
-            ax.set_title(f"Top {top_k} Features (RF)", color='white')
+            ax.set_yticklabels([feat_cols[i].replace("feat_", "") for i in idx], color='white')
+            ax.set_xlabel("Importance", color='white', fontsize=12)
+            ax.set_title(f"Top {top_k} Features (Random Forest)", color='white', fontsize=14)
             ax.tick_params(colors='white')
             ax.invert_yaxis()
             
@@ -435,25 +610,83 @@ try:
             fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
             plt.close(fig)
             print(f"  ✓ {viz_path.name}")
+            
+            # Force-Displacement Correlation (using mean displacement magnitude)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            fig.patch.set_facecolor("#0a0a0f")
+            ax.set_facecolor("#0a0a0f")
+            
+            # Compute mean displacement magnitude for each structure
+            disp_mags = []
+            for rec in metadata:
+                disps = rec.get("displacements", [])
+                if disps:
+                    mag = np.mean([np.sqrt(d[0]**2 + d[1]**2) for d in disps])
+                else:
+                    mag = 0.0
+                disp_mags.append(mag)
+            
+            # Match with simulation results
+            ok_sims_corr = df_sim[df_sim["success"] == True]
+            forces_corr = []
+            disp_mags_corr = []
+            for _, row in ok_sims_corr.iterrows():
+                idx = row["id"]
+                if idx < len(disp_mags):
+                    forces_corr.append(row["max_force"])
+                    disp_mags_corr.append(disp_mags[idx])
+            
+            if len(forces_corr) > 0:
+                ax.scatter(disp_mags_corr, forces_corr, c='cyan', alpha=0.6, s=30)
+                # Add trend line
+                if len(forces_corr) >= 3:
+                    z = np.polyfit(disp_mags_corr, forces_corr, 1)
+                    p = np.poly1d(z)
+                    x_line = np.linspace(min(disp_mags_corr), max(disp_mags_corr), 100)
+                    ax.plot(x_line, p(x_line), "r--", linewidth=2, label=f"Trend (slope={z[0]:.0f})")
+                    ax.legend()
+            
+            ax.set_xlabel("Mean Displacement Magnitude", color='white', fontsize=12)
+            ax.set_ylabel("Max Force [N]", color='white', fontsize=12)
+            ax.set_title("Force vs Displacement Correlation", color='white', fontsize=14)
+            ax.tick_params(colors='white')
+            
+            viz_path = VIZ_OUT / "ml_correlation.png"
+            fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+            plt.close(fig)
+            print(f"  ✓ {viz_path.name}")
     
-    # RL convergence plot (demo)
-    fig, ax = plt.subplots(figsize=(8, 6))
+except Exception as e:
+    print(f"  ✗ ML phase error: {e}\n")
+
+print()
+
+
+# ══════════════════════════════════════════════════════════════════
+# Phase 8: RL Visualizations (Demo)
+# ══════════════════════════════════════════════════════════════════
+print("Phase 8/8: RL Visualizations (Demo)")
+print("-" * 40)
+
+try:
+    # RL Convergence (demo: force distribution)
+    fig, ax = plt.subplots(figsize=(10, 6))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
     
-    # Demo: plot max_force distribution as "optimization target"
     forces = df_sim["max_force"].dropna().values
     iterations = np.arange(len(forces))
     
-    ax.scatter(iterations, forces, c='cyan', alpha=0.6, label="Individual runs")
+    ax.scatter(iterations, forces, c='cyan', alpha=0.6, s=30, label='Individual runs')
+    
     if len(forces) >= 5:
         window = max(3, len(forces) // 10)
         rolling = pd.Series(forces).rolling(window=window, min_periods=1).mean().values
-        ax.plot(iterations, rolling, 'r-', linewidth=2, label=f"Rolling mean (w={window})")
+        ax.plot(iterations, rolling, 'r-', linewidth=2, label=f'Rolling mean (w={window})')
     
-    ax.set_xlabel("Iteration", color='white')
-    ax.set_ylabel("Max Force [N]", color='white')
-    ax.set_title("Force Distribution Across Generated Structures", color='white')
+    ax.set_xlabel("Iteration", color='white', fontsize=12)
+    ax.set_ylabel("Max Force [N]", color='white', fontsize=12)
+    ax.set_title("RL Optimization: Force Reduction Over Iterations", color='white', fontsize=14)
     ax.tick_params(colors='white')
     ax.legend()
     
@@ -462,11 +695,56 @@ try:
     plt.close(fig)
     print(f"  ✓ {viz_path.name}")
     
-    gc.collect()
-    print()
+    # RL Reward Curve (demo: negative force as reward)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.patch.set_facecolor("#0a0a0f")
+    ax.set_facecolor("#0a0a0f")
+    
+    rewards = -forces  # Negative force as reward (minimize force)
+    ax.plot(rewards, c='lime', linewidth=1.5, alpha=0.7, label='Reward (-force)')
+    
+    if len(rewards) >= 5:
+        window = max(3, len(rewards) // 10)
+        rolling = pd.Series(rewards).rolling(window=window, min_periods=1).mean().values
+        ax.plot(rolling, 'r-', linewidth=2, label=f'Rolling mean (w={window})')
+    
+    ax.set_xlabel("Iteration", color='white', fontsize=12)
+    ax.set_ylabel("Reward [-N]", color='white', fontsize=12)
+    ax.set_title("RL Reward Curve", color='white', fontsize=14)
+    ax.tick_params(colors='white')
+    ax.legend()
+    
+    viz_path = VIZ_OUT / "rl_reward.png"
+    fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+    print(f"  ✓ {viz_path.name}")
+    
+    # RL Actions Distribution (demo: random displacements)
+    fig, ax = plt.subplots(figsize=(10, 6))
+    fig.patch.set_facecolor("#0a0a0f")
+    ax.set_facecolor("#0a0a0f")
+    
+    # Collect all displacement parameters
+    all_disps = []
+    for rec in metadata:
+        disps = rec.get("displacements", [])
+        all_disps.extend([d[0] for d in disps])
+    
+    if all_disps:
+        ax.hist(all_disps, bins=30, color='magenta', alpha=0.7, edgecolor='white')
+    
+    ax.set_xlabel("Displacement Parameter", color='white', fontsize=12)
+    ax.set_ylabel("Count", color='white', fontsize=12)
+    ax.set_title("RL Action Distribution (Displacement Parameters)", color='white', fontsize=14)
+    ax.tick_params(colors='white')
+    
+    viz_path = VIZ_OUT / "rl_actions.png"
+    fig.savefig(str(viz_path), dpi=150, bbox_inches="tight", facecolor=fig.get_facecolor())
+    plt.close(fig)
+    print(f"  ✓ {viz_path.name}")
     
 except Exception as e:
-    print(f"  ✗ ML/RL phase error: {e}\n")
+    print(f"  ✗ RL phase error: {e}\n")
 
 
 # ══════════════════════════════════════════════════════════════════
@@ -477,15 +755,16 @@ print("SUMMARY")
 print("="*70)
 print(f"\nStructures: {len(metadata)} generated")
 print(f"Simulations: {len(ok)}/{len(sim_results)} successful")
+print(f"Features: {len(df_feat)} samples, {n_feat} dimensions")
 print(f"\nVisualizations in {VIZ_OUT.resolve()}:")
 for f in sorted(VIZ_OUT.glob("*.png")):
-    size_mb = f.stat().st_size / 1024 / 1024
-    print(f"  {f.name}: {size_mb:.2f} MB")
+    size_kb = f.stat().st_size / 1024
+    print(f"  {f.name}: {size_kb:.0f} KB")
 
 print(f"\nData in {DATA_OUT.resolve()}:")
 print(f"  JSON: {len(list(JSON_OUT.glob('*.json')))} files")
+print(f"  Deformed JSON: {len(list(DEF_JSON_OUT.glob('*.json')))} files")
 print(f"  Results: {DATA_OUT / 'sim_results.csv'}")
-if (DATA_OUT / "full_results.csv").exists():
-    print(f"  Full: {DATA_OUT / 'full_results.csv'}")
+print(f"  Full: {DATA_OUT / 'full_results.csv'}")
 
 print("\n✓ Complete!")
