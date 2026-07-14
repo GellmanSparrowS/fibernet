@@ -217,8 +217,8 @@ code("""UNIT = 'honeycomb'
 N_PTS_PER_SIDE = 3
 PERTURBATION = 0.40
 
-N_STRUCTURES = 20
-## N_STRUCTURES = 2000  # Production (uncomment for full batch)
+N_STRUCTURES = 2000
+## N_STRUCTURES = 200000  # Production (uncomment for full batch)
 
 print('Batch generation parameters:')
 print(f'  UNIT:            {UNIT}')
@@ -650,15 +650,51 @@ print('\\n✓ Feature stats saved')""")
 # ═══ 6. ML ═══
 md(["## 6. Machine Learning / 机器学习\n",
     "\n", "Train a Random Forest to predict mechanical properties from structural features. (使用随机森林预测力学性能)"])
-code("""from sklearn.model_selection import train_test_split
+code("""from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix, accuracy_score
+import joblib
 
 X = np.array([[m[k] for k in valid_features] for m in all_metadata])
 y_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
 
-rf_reg = RandomForestRegressor(n_estimators=200, random_state=42, max_depth=8, oob_score=True)
-rf_reg.fit(X, y_kN)
+# Train with early stopping via OOB score monitoring
+print('Training RandomForest with early stopping...')
+rf_reg = RandomForestRegressor(n_estimators=1, warm_start=True, random_state=42, max_depth=8, oob_score=True)
+oob_scores = []
+best_oob = -np.inf
+patience = 50
+no_improve = 0
+
+for n_trees in range(10, 801, 10):
+    rf_reg.n_estimators = n_trees
+    rf_reg.fit(X, y_kN)
+    oob_scores.append(rf_reg.oob_score_)
+    
+    if rf_reg.oob_score_ > best_oob + 1e-4:
+        best_oob = rf_reg.oob_score_
+        no_improve = 0
+    else:
+        no_improve += 1
+    
+    if no_improve >= patience:
+        print(f'  Early stop at {n_trees} trees (best OOB={best_oob:.4f})')
+        break
+    
+    if n_trees % 100 == 0:
+        print(f'  Trees: {n_trees}, OOB: {rf_reg.oob_score_:.4f}')
+
+print(f'Final model: {rf_reg.n_estimators} trees, OOB={rf_reg.oob_score_:.4f}')
+
+# Cross-validation
+cv_scores = cross_val_score(rf_reg, X, y_kN, cv=5, scoring='r2')
+print(f'5-fold CV: {cv_scores.mean():.4f} (±{cv_scores.std():.4f})')
+
+# Save model
+model_path = VIZ_OUT / 'rf_force_model.joblib'
+joblib.dump(rf_reg, model_path)
+print(f'✓ Model saved: {model_path}')
+
 y_oob = rf_reg.oob_prediction_
 r2 = r2_score(y_kN, y_oob)
 rmse = np.sqrt(mean_squared_error(y_kN, y_oob))
@@ -676,10 +712,12 @@ print(f'✓ OOB R²={r2:.3f}, RMSE={rmse:.1f} kN, OOB={rf_reg.oob_score_:.3f}, A
 code("""importances = rf_reg.feature_importances_
 top_idx = np.argsort(importances)[::-1][:15]
 
-n_est_range = np.arange(10, 301, 10)
+n_est_range = np.arange(10, len(oob_scores)*10+1, 10)
 oob_rmse = []
+# Reconstruct RMSE from saved OOB scores
+rf_tmp = RandomForestRegressor(n_estimators=1, warm_start=True, random_state=42, max_depth=8, oob_score=True)
 for n_est in n_est_range:
-    rf_tmp = RandomForestRegressor(n_estimators=n_est, random_state=42, max_depth=8, oob_score=True)
+    rf_tmp.n_estimators = n_est
     rf_tmp.fit(X, y_kN)
     oob_rmse.append(np.sqrt(mean_squared_error(y_kN, rf_tmp.oob_prediction_)))
 
