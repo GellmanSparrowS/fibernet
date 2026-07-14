@@ -164,18 +164,14 @@ print("\n02.5: 12 voronoi with diverse intermediate point displacements")
 print("-"*70)
 
 structures_voronoi_diverse = []
-rng_global = np.random.default_rng(seed=12345)
 
 for i in range(12):
-    # Generate diverse displacements with larger amplitude
-    n_disp = 350  # voronoi has 70 edges, each needs 5 displacements (70 × 5 = 350)
-    disps = [(float(rng_global.uniform(-0.15, 0.15)), float(rng_global.uniform(-0.15, 0.15))) 
-             for _ in range(n_disp)]
-    
+    # Use perturbation (fraction of mean edge length) for proportional displacements
+    # perturbation=0.20 means displacement magnitude = 20% of mean edge length
+    # Different seed per structure for diversity
     g = pattern_2d(
         unit='voronoi', box=BOX_SIZE, grid=GRID, seed=100+i,
-        n_internal=5, n_pts_per_side=5,
-        point_displacements=disps
+        n_internal=5, n_pts_per_side=5, perturbation=0.20
     )
     structures_voronoi_diverse.append(g)
     print(f"  Voronoi {i}: {g.num_nodes} nodes, {g.num_edges} edges")
@@ -190,10 +186,10 @@ for theme_name in THEMES_LIST:
         ax = axes[i]
         render_graph(g, ax=ax, theme=theme_name,
                      color_by='uniform', line_width=1.2, show_nodes=False, tight=False)
-        ax.set_title(f'Voronoi {i}\n(n_pts=5)', 
+        ax.set_title(f'Voronoi {i}\n(n_pts=5, pert=20%)', 
                      color=colors['text'], fontsize=10)
     
-    fig.suptitle('12 Voronoi Structures (Diverse Intermediate Point Displacements)', 
+    fig.suptitle('12 Voronoi Structures (Intermediate Point Displacements, 20% of Edge Length)', 
                  color=colors['text'], fontsize=13, fontweight='bold', y=0.98)
     plt.tight_layout(rect=[0, 0, 1, 0.96])
     save_fig(fig, '02_5_voronoi_diverse', theme_name, colors)
