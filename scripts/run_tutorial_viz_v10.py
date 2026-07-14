@@ -169,7 +169,7 @@ rng_global = np.random.default_rng(seed=12345)
 for i in range(12):
     # Generate diverse displacements with larger amplitude
     n_disp = 350  # voronoi has 70 edges, each needs 5 displacements (70 × 5 = 350)
-    disps = [(float(rng_global.uniform(-0.4, 0.4)), float(rng_global.uniform(-0.4, 0.4))) 
+    disps = [(float(rng_global.uniform(-0.15, 0.15)), float(rng_global.uniform(-0.15, 0.15))) 
              for _ in range(n_disp)]
     
     g = pattern_2d(

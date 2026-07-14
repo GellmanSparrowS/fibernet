@@ -1,140 +1,74 @@
-# FiberNet v4 Tutorial Visualization - Progress Report
+# PROGRESS
 
-## Status: ✅ COMPLETE (v10 fixed)
+## 当前状态: ✅ 教程可视化 v10 完成（变形幅度已调整）
 
-**Last Updated:** 2026-07-14  
-**Git Commit:** 1578c80  
-**Script:** `scripts/run_tutorial_viz_v10.py`
-
----
-
-## Summary
-
-Successfully generated 22 visualization files (11 visualizations × 2 themes) for the v4 tutorial. All visualizations use correct parameters and show proper wave propagation.
+**最后更新:** 2026-07-14  
+**脚本版本:** run_tutorial_viz_v10.py  
+**输出目录:** tutorials/v4_tutorial/tutorial_viz/
 
 ---
 
-## Visualizations Generated
+## 最近变更
 
-### 01 - Unit Type Gallery (Undeformed)
-- 12 base unit types in 3×4 grid
-- No intermediate points (straight edges)
-- Units: chiral, cross, diamond, hexagon, honeycomb, kagome, missing_rib, reentrant, square, star, triangle, voronoi
+### 2026-07-14 - 调整02.5图变形幅度
+- **问题**: 02.5 voronoi diverse 变形太剧烈
+- **修复**: 位移幅度从 ±0.4 减小到 ±0.15
+- **影响**: 仅重新生成了 02_5_voronoi_diverse_dark/light.png
+- **其他**: 01-10 图保持不变
 
-### 02 - Unit Type Gallery (With Intermediate Points)
-- Same 12 units with `n_pts_per_side=2` (2 intermediate points per edge)
-- Shows how intermediate points create curved edges
-
-### 02.5 - Voronoi Diverse Deformations (NEW)
-- 12 voronoi structures with diverse deformations
-- Uses `n_pts_per_side=5` (5 intermediate points per edge)
-- **Fixed:** Correctly uses 350 displacements (70 edges × 5 points)
-- Shows variety of deformed voronoi patterns
-
-### 03 - Feature Statistics
-- Distribution of 94 structural features across 20 voronoi samples
-- Histograms showing feature value distributions
-
-### 04 - Simulation Trajectory
-- 8-frame trajectory of structure #0 under stretch
-- Shows progressive deformation from initial to final state
-- 2×4 grid layout
-
-### 05 - Stress Distribution
-- Edge coloring by local stress/stretch
-- Viridis colormap (visible on dark background)
-- Shows stress concentration patterns
-
-### 06 - ML Analysis
-- 4 panels: Predicted vs Actual, Feature Importance, Confusion Matrix, Loss Curve
-- Random Forest regression and classification results
-- Feature importance ranking
-
-### 07 - Batch Statistics
-- 4 panels: Force distribution, Energy distribution, Stretch distribution, Force vs Structure ID
-- Statistical analysis across 20 structures
-
-### 08 - Feature-Force Correlation
-- Top 10 features correlated with max force
-- Scatter plots showing strongest correlations
-
-### 09 - RL Reward Curves
-- 50 episodes of reinforcement learning
-- Shows reward progression over training
-- Uses real ParametricStructureEnv
-
-### 10 - RL Structure Changes
-- Top 8 structures from RL training
-- Side-by-side comparison of initial vs optimized
-- Shows how RL modifies structure parameters
+### 2026-07-14 - 修复 voronoi 变形参数（v10）
+- **问题**: 02.5 图只有前3条边变形，其他67条边都是直线
+- **修复**: 
+  - `n_disp` 从 15 改为 350（70条边 × 5个点/边）
+  - 刚度从 1e4 提升到 1e5
+  - 阻尼从 0.5 降到 0.3
+- **结果**: 波传播明显改善，力传导正常
 
 ---
 
-## Simulation Parameters
+## 可视化清单（22个文件）
 
-| Parameter | Value | Notes |
-|-----------|-------|-------|
-| Stiffness | 1e5 N/m | High for good wave propagation |
-| Damping | 0.3 | Low to reduce wave absorption |
-| Steps | 15000 | 7500 ramp + 7500 hold |
-| Target stretch | 1.5× | 50% elongation |
-| Box size | 1.0×1.0 | Small for fast wave propagation |
-| Grid | 2×2 | Standard tiling |
-| n_pts_per_side | 5 | For smooth edge deformation |
-
----
-
-## Wave Propagation Quality
-
-Analysis of structure #0 simulation:
-
-- **Zero displacement nodes:** 5.0% (84/1672) - all at left boundary as expected
-- **Displacement gradient:** Smooth from 0.01 (left) to 0.93 (right)
-- **Mid-section average:** 0.58 (good propagation through center)
-- **Max force range:** 61k - 1.58M N across 20 structures
-- **Mean force:** 287k N
-
-The high stiffness (1e5) ensures good force transmission through the structure, resulting in realistic deformation patterns.
+| 编号 | 文件名 | 内容 | 状态 |
+|------|--------|------|------|
+| 01 | 01_gallery_undeformed_{dark,light}.png | 12种基本单元类型 | ✅ |
+| 02 | 02_gallery_deformed_{dark,light}.png | 12种单元带中间点变形 | ✅ |
+| 02.5 | 02_5_voronoi_diverse_{dark,light}.png | 12种不同变形的voronoi | ✅ 已调整 |
+| 03 | 03_feature_stats_{dark,light}.png | 特征统计分布 | ✅ |
+| 04 | 04_simulation_stretch_{dark,light}.png | 8帧拉伸轨迹 | ✅ |
+| 05 | 05_stress_distribution_{dark,light}.png | 应力分布 | ✅ |
+| 06 | 06_ml_analysis_{dark,light}.png | ML分析（预测/重要性/混淆矩阵） | ✅ |
+| 07 | 07_batch_stats_{dark,light}.png | 批量统计（力/能量/拉伸） | ✅ |
+| 08 | 08_feature_force_correlation_{dark,light}.png | 特征-力相关性 | ✅ |
+| 09 | 09_rl_reward_curves_{dark,light}.png | RL奖励曲线 | ✅ |
+| 10 | 10_rl_structure_changes_{dark,light}.png | RL结构变化 | ✅ |
 
 ---
 
-## Files
+## 技术细节
 
-- **Script:** `scripts/run_tutorial_viz_v10.py` (749 lines)
-- **Visualizations:** `tutorials/v4_tutorial/tutorial_viz/` (22 PNG files)
-- **Simulation data:** `tutorials/v4_tutorial/data/voronoi_5pts_*.json` (20 files)
-- **Features:** `tutorials/v4_tutorial/data/voronoi_features.csv`
+### Voronoi 变形参数
+- **边数**: 70条（由 seed=12345 生成）
+- **中间点**: 每条边5个点 (n_pts_per_side=5)
+- **总位移**: 350个 (70×5)
+- **位移幅度**: ±0.15（已从±0.4减小）
 
----
+### 模拟参数
+- **刚度**: 1e5（高刚度确保波传播）
+- **阻尼**: 0.3（低阻尼减少能量耗散）
+- **时间步**: 1e-6
+- **帧数**: 15000帧
 
-## Key Fixes in This Version
-
-1. **Voronoi displacement count:** Changed from 15 to 350 (70 edges × 5 points per edge)
-   - Previous version only displaced first 3 edges, leaving rest straight
-   - Now all edges properly deform
-
-2. **Stiffness:** Increased from 1e4 to 1e5 N/m
-   - Better wave propagation through structure
-   - Reduces "dead zones" where force doesn't reach
-
-3. **Damping:** Reduced from 0.5 to 0.3
-   - Less wave absorption during simulation
-   - More realistic elastic behavior
+### 波传播验证
+结构0的位移梯度（从固定端到拉伸端）：
+- x ∈ [0.0, 0.2]: 平均位移 0.01（固定端附近）
+- x ∈ [0.4, 0.6]: 平均位移 0.33（中间区域）
+- x ∈ [1.8, 2.0]: 平均位移 0.93（拉伸端）
 
 ---
 
-## Git History
+## 下一步
 
-```
-1578c80 fix: correct voronoi displacement count and increase stiffness
-3a38d73 feat: v10 tutorial visualization with improved wave propagation
-```
-
----
-
-## Next Steps
-
-Tutorial visualization is complete. The user can:
-1. Review visualizations in `tutorials/v4_tutorial/tutorial_viz/`
-2. Use `run_tutorial_viz_v10.py` as reference for custom visualizations
-3. Extend to 2000 structures for production ML/RL training
+✅ 教程可视化已完成，可以：
+1. 查看 `tutorials/v4_tutorial/tutorial_viz/` 中的22张图片
+2. 如需调整任何可视化，修改 `run_tutorial_viz_v10.py` 后重新运行
+3. 将可视化集成到 Jupyter notebook 或文档中
