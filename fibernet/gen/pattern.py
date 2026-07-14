@@ -1496,14 +1496,19 @@ def _build_tpms_unit(
     
     verts, faces, _, _ = measure.marching_cubes(field, level=0.0)
     
-    # Scale to physical coordinates
+    # marching_cubes returns grid indices [0, res-1]
+    # linspace(N) has N-1 intervals, so spacing = range/(N-1)
+    dx = 2 * np.pi * npx / (res_x - 1)
+    dy = 2 * np.pi * npy / (res_y - 1)
+    dz = 2 * np.pi * npz / (res_z - 1)
+    # Step 2: scale parametric coords to box dimensions
     sx = w / (2 * np.pi * npx)
     sy = h / (2 * np.pi * npy)
     sz = d / (2 * np.pi * npz)
     verts_phys = verts.copy()
-    verts_phys[:, 0] *= sx
-    verts_phys[:, 1] *= sy
-    verts_phys[:, 2] *= sz
+    verts_phys[:, 0] *= dx * sx
+    verts_phys[:, 1] *= dy * sy
+    verts_phys[:, 2] *= dz * sz
     
     # Extract unique edges from triangular faces
     edge_set = set()
