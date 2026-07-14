@@ -201,20 +201,47 @@ def _graph_to_arrays(graph: StructureGraph):
     return pos, elements, node_ids, nid_to_idx
 
 
-def _get_boundary_indices(pos: np.ndarray, tol: float = None) -> Dict[str, List[int]]:
-    """Find boundary node indices for each side."""
-    if tol is None:
-        span = pos.max(0) - pos.min(0)
-        tol = max(span.min() * 0.05, 0.1)
-    bb_min, bb_max = pos.min(0), pos.max(0)
+def _get_boundary_indices(pos: np.ndarray, tol: float = None, pct: float = 0.10) -> Dict[str, List[int]]:
+    """Find boundary node indices for each side.
+    
+    Uses percentile-based detection for robust boundary identification
+    across different structure types (crystal lattices, TPMS, etc.).
+    
+    Parameters
+    ----------
+    pos : (N, D) array of node positions
+    tol : float, optional
+        Fixed tolerance. If None, uses percentile-based detection.
+    pct : float
+        Percentile for boundary detection (0.10 = 10% of nodes at each end).
+    """
     result = {}
-    result["left"] = list(np.where(pos[:, 0] < bb_min[0] + tol)[0])
-    result["right"] = list(np.where(pos[:, 0] > bb_max[0] - tol)[0])
-    result["bottom"] = list(np.where(pos[:, 1] < bb_min[1] + tol)[0])
-    result["top"] = list(np.where(pos[:, 1] > bb_max[1] - tol)[0])
-    if pos.shape[1] >= 3:
-        result["back"] = list(np.where(pos[:, 2] < bb_min[2] + tol)[0])
-        result["front"] = list(np.where(pos[:, 2] > bb_max[2] - tol)[0])
+    if tol is not None:
+        # Legacy fixed tolerance mode
+        bb_min, bb_max = pos.min(0), pos.max(0)
+        result["left"] = list(np.where(pos[:, 0] < bb_min[0] + tol)[0])
+        result["right"] = list(np.where(pos[:, 0] > bb_max[0] - tol)[0])
+        result["bottom"] = list(np.where(pos[:, 1] < bb_min[1] + tol)[0])
+        result["top"] = list(np.where(pos[:, 1] > bb_max[1] + tol)[0])
+        if pos.shape[1] >= 3:
+            result["back"] = list(np.where(pos[:, 2] < bb_min[2] + tol)[0])
+            result["front"] = list(np.where(pos[:, 2] > bb_max[2] - tol)[0])
+    else:
+        # Percentile-based detection (robust for TPMS/complex structures)
+        x_sorted = np.argsort(pos[:, 0])
+        y_sorted = np.argsort(pos[:, 1])
+        n = len(pos)
+        n_bnd = max(int(n * pct), 1)
+        result["left"] = list(x_sorted[:n_bnd])
+        result["right"] = list(x_sorted[-n_bnd:])
+        n_bnd_y = max(int(n * pct), 1)
+        result["bottom"] = list(y_sorted[:n_bnd_y])
+        result["top"] = list(y_sorted[-n_bnd_y:])
+        if pos.shape[1] >= 3:
+            z_sorted = np.argsort(pos[:, 2])
+            n_bnd_z = max(int(n * pct), 1)
+            result["back"] = list(z_sorted[:n_bnd_z])
+            result["front"] = list(z_sorted[-n_bnd_z:])
     return result
 
 

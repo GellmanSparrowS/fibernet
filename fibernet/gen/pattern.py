@@ -2157,6 +2157,40 @@ def _post_tile_connectivity_repair(
                 existing_edges.add(frozenset([main_nid, other_nid]))
                 main_comp = main_comp | other_set
     
+    # Repair dangling (degree-1) nodes by connecting to nearest non-boundary neighbor
+    G_check = _nx.Graph()
+    for nid in graph.nodes:
+        G_check.add_node(nid)
+    for eid in graph.edges:
+        e = graph.edges[eid]
+        G_check.add_edge(e.node_i, e.node_j)
+    
+    dangling = [nid for nid, d in G_check.degree() if d == 1]
+    if dangling:
+        node_ids = sorted(graph.nodes.keys())
+        nid_to_idx = {nid: i for i, nid in enumerate(node_ids)}
+        positions = np.array([graph.nodes[nid].position for nid in node_ids])
+        
+        for d_nid in dangling:
+            d_pos = graph.nodes[d_nid].position
+            d_idx = nid_to_idx[d_nid]
+            
+            # Find nearest node that isn't the same dangling node's only neighbor
+            neighbors = set(G_check.neighbors(d_nid))
+            best_dist = float('inf')
+            best_nid = None
+            
+            for other_nid in node_ids:
+                if other_nid == d_nid or other_nid in neighbors:
+                    continue
+                dist = np.linalg.norm(graph.nodes[other_nid].position - d_pos)
+                if dist < best_dist and dist < max_bridge_dist * 2:
+                    best_dist = dist
+                    best_nid = other_nid
+            
+            if best_nid is not None:
+                graph.add_edge(d_nid, best_nid, radius=radius, material=material)
+
     return graph
 
 def pattern_3d(
