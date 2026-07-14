@@ -16,17 +16,19 @@ def code(src):
 
 # ═══ Title ═══
 md([
-    "# FiberNet v4.0 Tutorial — 从生成到优化的完整流水线\n",
+    "# FiberNet v4.0 Tutorial — Complete Pipeline\n",
     "\n",
-    "## Complete Pipeline: Structure Generation → Simulation → Analysis → ML → RL\n",
+    "## Structure Generation → Simulation → Feature Extraction → ML → RL\n",
     "\n",
-    "1. 生成 12 种基础结构类型 + 蜂巢基(honeycomb)变体\n",
-    "2. 机械模拟（拉伸测试）\n",
-    "3. 结构特征提取（94维）\n",
-    "4. 机器学习预测力学性能\n",
-    "5. 强化学习优化结构参数\n",
+    "从生成到优化的完整流水线：\n",
     "\n",
-    "**关键参数**: `perturbation=0.40` (40% of mean edge length)"
+    "1. Generate 12 base structure types + honeycomb variants\n",
+    "2. Mechanical simulation (stretch test)\n",
+    "3. Structural feature extraction (94-dim)\n",
+    "4. Machine learning prediction of mechanical properties\n",
+    "5. Reinforcement learning optimization of structure parameters\n",
+    "\n",
+    "**Key parameter**: `perturbation=0.40` (40% of mean edge length)"
 ])
 
 # ═══ 1. Setup ═══
@@ -60,6 +62,19 @@ from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
 from fibernet.sim import SimResult
 from fibernet.analysis import GraphFeatureExtractor
 
+# ── Version check ──
+MIN_VERSION = '4.0.0'
+v = fn.__version__
+print(f'✓ FiberNet v{v} loaded')
+# Simple version check (no external dependency)
+if tuple(int(x) for x in v.split('.')) < tuple(int(x) for x in MIN_VERSION.split('.')):
+    print(f'⚠ Version {v} < {MIN_VERSION}. Some features may not work.')
+    print(f'  Upgrade: pip install fibernet --upgrade')
+else:
+    print(f'  Version OK (>= {MIN_VERSION})')
+
+print(f'  Available units ({len(list_units())}): {list_units()}')
+
 # RL import — try multiple paths for version compatibility
 HAS_RL = False
 ParametricStructureEnv = None
@@ -81,13 +96,11 @@ if not HAS_RL:
     except (ImportError, ModuleNotFoundError, Exception):
         pass
 
-print(f'✓ FiberNet loaded')
-print(f'  Units ({len(list_units())}): {list_units()}')
 print(f'  RL available: {bool(HAS_RL)}')""")
 
 # ═══ 3.1 Base Units ═══
 md(["## 3. Structure Generation / 结构生成\n",
-    "\n", "### 3.1 12 种基础单元类型"])
+    "\n", "### 3.1 Twelve Base Unit Types (12种基础单元类型)"])
 code("""BOX = (1.0, 1.0)
 GRID = (4, 4)
 units = list_units()
@@ -114,9 +127,9 @@ for unit, g in base_structures.items():
 
 with open(STRUCT_DIR / 'base_gallery_all.json', 'w') as f:
     json.dump(gallery_data, f, indent=1)
-print(f'\n✓ Saved {len(base_structures)} base structure JSONs to {STRUCT_DIR}')""")
+print(f'\\n✓ Saved {len(base_structures)} base structure JSONs to {STRUCT_DIR}')""")
 
-md("### 3.1.1 Gallery — 12 Base Unit Types")
+md("### 3.1.1 Gallery — 12 Base Unit Types (Undeformed / 未变形)")
 code("""for theme in ['dark', 'light']:
     colors = _get_theme(theme)
     fig, axes = plt.subplots(3, 4, figsize=(20, 15))
@@ -125,7 +138,7 @@ code("""for theme in ['dark', 'light']:
         g = base_structures[unit]
         render_graph(g, ax=ax, theme=theme, color_by='uniform', line_width=1.5, show_nodes=False)
         ax.set_title(unit.replace('_', ' ').title(), color=colors['text'], fontsize=12, fontweight='bold')
-    fig.suptitle('12 Base Unit Types (Undeformed, 4x4 grid)', color=colors['text'], fontsize=16, fontweight='bold', y=0.99)
+    fig.suptitle('12 Base Unit Types (Undeformed, 4×4 grid)', color=colors['text'], fontsize=16, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'01_gallery_undeformed_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg'])
@@ -135,7 +148,7 @@ print('\\n✓ Gallery saved (dark + light)')""")
 
 # ═══ 3.2 Perturbation ═══
 md(["### 3.2 Intermediate Point Deformations (中间点变形)\n",
-    "\n", "`perturbation`: 位移幅度 = **平均边长 × 百分比**"])
+    "\n", "`perturbation`: displacement amplitude = **mean edge length × percentage** (位移幅度 = 平均边长 × 百分比)"])
 code("""perturbations = [0.0, 0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.80]
 N_PTS = 3
 
@@ -163,7 +176,7 @@ for theme in ['dark', 'light']:
 print('\\n✓ Perturbation comparison saved')""")
 
 # ═══ 3.3 Deformed ═══
-md("### 3.3 12 种基础单元 + 中间点变形")
+md("### 3.3 12 Base Units + Intermediate Point Deformations (12种基础单元+中间点变形)")
 code("""deformed_structures = {}
 print('Generating deformed structures (n_pts_per_side=3, perturbation=0.40):')
 for unit in units:
@@ -198,14 +211,14 @@ code("""for theme in ['dark', 'light']:
 print('\\n✓ Deformed gallery saved')""")
 
 # ═══ 3.4 Batch ═══
-md(["### 3.4 Batch Generation: Honeycomb Variants\n",
-    "\n", "**教程用 20 个，生产用 2000 个。**"])
+md(["### 3.4 Batch Generation: Honeycomb Variants (批量生成: 蜂巢基变体)\n",
+    "\n", "**Tutorial uses 20 structures; production uses 2000.** (教程用20个，生产用2000个)"])
 code("""UNIT = 'honeycomb'
 N_PTS_PER_SIDE = 3
 PERTURBATION = 0.40
 
 N_STRUCTURES = 20
-## N_STRUCTURES = 2000  # Production (uncomment)
+## N_STRUCTURES = 2000  # Production (uncomment for full batch)
 
 print('Batch generation parameters:')
 print(f'  UNIT:            {UNIT}')
@@ -227,7 +240,7 @@ for i in tqdm(range(N_STRUCTURES), desc='Generating'):
 print(f'\\n✓ Generated {N_STRUCTURES} honeycomb structures')""")
 
 # ═══ 3.5 Gallery ═══
-md("### 3.5 Gallery — Random Selection")
+md("### 3.5 Gallery — Random Selection (随机选取展示)")
 code("""import random
 if len(all_structures) <= 20:
     show_structures = all_structures
@@ -264,12 +277,13 @@ print('\\n✓ Batch gallery saved')""")
 
 # ═══ 4. Simulation ═══
 md(["## 4. Simulation / 模拟\n",
-    "\n", "**API**: `TaichiEngine.stretch_test()`\n",
-    "\n", "**参数**: stiffness=1e5, damping=0.3, 15000 steps, 50% ramp, stretch=1.5x"])
+    "\n", "**API**: `TaichiEngine.dynamics()` — displacement-controlled uniaxial stretch with rigid plate boundaries (单轴拉伸+刚性板边界)\n",
+    "\n", "**Key**: Left 10% nodes = fixed (rigid plate), right 10% nodes = uniform displacement (rigid plate). 80% time for relaxation.\n",
+    "\n", "**Parameters**: stiffness=1e5, damping=0.3, 30000 steps, 20% ramp + 80% relaxation, stretch=1.5×"])
 code("""STIFFNESS = 1e5
-DAMPING = 0.2
-NUM_STEPS = 20000
-RAMP_FRACTION = 0.3
+DAMPING = 0.3
+NUM_STEPS = 30000
+RAMP_FRACTION = 0.2
 TARGET_STRETCH = 1.5
 
 print('Simulation parameters:')
@@ -278,7 +292,7 @@ print(f'  DAMPING:         {DAMPING}')
 print(f'  NUM_STEPS:       {NUM_STEPS}')
 print(f'  RAMP_FRACTION:   {RAMP_FRACTION} ({RAMP_FRACTION*100:.0f}% ramp + {(1-RAMP_FRACTION)*100:.0f}% relaxation)')
 print(f'  TARGET_STRETCH:  {TARGET_STRETCH}x')
-print(f'  Boundary:        10% each side (rigid plate)')
+print(f'  Boundary:        10% each side (rigid plates)')
 print()
 
 engine = TaichiEngine()
@@ -298,6 +312,37 @@ for i, g in enumerate(all_structures):
         json.dump(sdata, f, indent=1)
 print(f'✓ Saved {N_STRUCTURES} structure JSONs to {STRUCT_DIR}')
 
+# ── Helper: run dynamics simulation with rigid plate boundaries ──
+def run_stretch(g, stiffness=STIFFNESS, damping=DAMPING, num_steps=NUM_STEPS,
+                ramp_fraction=RAMP_FRACTION, target_stretch=TARGET_STRETCH,
+                save_interval=500, boundary_pct=0.10):
+    pos, elems, nids, _ = _graph_to_arrays(g)
+    bnd = _get_boundary_indices(pos, pct=boundary_pct)
+    left_nodes = bnd['left']
+    right_nodes = bnd['right']
+    L_x = pos[:, 0].max() - pos[:, 0].min()
+    target_disp = L_x * (target_stretch - 1)
+    ramp_steps = int(num_steps * ramp_fraction)
+
+    # Right boundary: uniform displacement schedule (rigid plate)
+    disp_schedule = {}
+    for ni in right_nodes:
+        disp_schedule[ni] = [(0, np.zeros(3)), (num_steps, np.array([target_disp, 0, 0]))]
+
+    result = engine.dynamics(
+        g,
+        fixed_nodes=left_nodes,
+        displacement_schedule=disp_schedule,
+        stiffness=stiffness,
+        damping=damping,
+        dt=1e-4,
+        num_steps=num_steps,
+        save_interval=save_interval,
+        dashpot=10.0,
+        drag=1.0,
+    )
+    return result
+
 # ── Checkpoint support ──
 ckpt_path = SIM_DIR / 'checkpoint.json'
 start_idx = 0
@@ -311,11 +356,7 @@ else:
 
 for i in tqdm(range(start_idx, N_STRUCTURES), desc='Simulating'):
     g = all_structures[i]
-    result = engine.stretch_test(
-        g, target_stretch=TARGET_STRETCH, stiffness=STIFFNESS,
-        damping=DAMPING, num_steps=NUM_STEPS, ramp_fraction=RAMP_FRACTION,
-        save_interval=500
-    )
+    result = run_stretch(g)
 
     sim_dict = result.to_dict()
     sim_dict['index'] = i
@@ -352,13 +393,14 @@ else:
         meta['energy'] = sr['energy']
 
 forces_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
-print(f'\n✓ Completed {len(sim_results)} simulations')
+print(f'\\n✓ Completed {len(sim_results)} simulations')
 print(f'  Force range: {forces_kN.min():.1f} - {forces_kN.max():.1f} kN')
 print(f'  Mean force:  {forces_kN.mean():.1f} kN')
 print(f'  Saved to: {SIM_DIR}')""")
 
 # ═══ 4.2 Helper ═══
-md(["### 4.2 Deformation Trajectory (变形轨迹)"])
+md(["### 4.2 Deformation Trajectory (变形轨迹)\n",
+    "\n", "Visualize the stretching process frame-by-frame with stress coloring. (逐帧展示拉伸过程+应力着色)"])
 code("""def _setup_ax(ax, colors):
     ax.set_facecolor(colors['bg'])
     ax.tick_params(colors=colors['text'])
@@ -375,8 +417,8 @@ def draw_deformed_structure(g, sim_result_or_dict, ax, colors, color_by_stretch=
         pos_def = sim_result_or_dict.deformed_positions
     pos_orig, elements, node_ids, _ = _graph_to_arrays(g)
     if color_by_stretch:
-        lo = np.array([np.linalg.norm(pos_orig[elements[e,1]] - pos_orig[elements[e,0]]) for e in range(len(elements))])
-        ld = np.array([np.linalg.norm(pos_def[elements[e,1]] - pos_def[elements[e,0]]) for e in range(len(elements))])
+        lo = np.array([np.linalg.norm(pos_orig[elements[e,1], :2] - pos_orig[elements[e,0], :2]) for e in range(len(elements))])
+        ld = np.array([np.linalg.norm(pos_def[elements[e,1], :2] - pos_def[elements[e,0], :2]) for e in range(len(elements))])
         stretch = ld / (lo + 1e-12)
         norm = Normalize(vmin=stretch.min(), vmax=stretch.max())
         cmap = plt.cm.RdYlGn_r
@@ -410,8 +452,7 @@ idx0 = viz_indices[0]
 g0 = all_structures[idx0]
 
 # Re-run simulation for trajectory (detailed save)
-result0 = engine.stretch_test(g0, target_stretch=TARGET_STRETCH, stiffness=STIFFNESS,
-    damping=DAMPING, num_steps=NUM_STEPS, ramp_fraction=RAMP_FRACTION, save_interval=500)
+result0 = run_stretch(g0, save_interval=500)
 print(f'Structure {idx0}: max_force={result0.max_force/1000:.1f} kN, max_stretch={result0.max_stretch:.3f}')
 
 traj = result0.positions_trajectory
@@ -420,6 +461,11 @@ if traj is None:
     traj = [pos_orig, result0.deformed_positions]
 print(f'Trajectory frames: {len(traj)}')
 
+# Boundary info for visualization
+pos0, elems0, _, _ = _graph_to_arrays(g0)
+bnd0 = _get_boundary_indices(pos0, pct=0.10)
+left0, right0 = bnd0['left'], bnd0['right']
+
 for theme in ['dark', 'light']:
     colors = _get_theme(theme)
     n_frames = min(8, len(traj))
@@ -427,23 +473,37 @@ for theme in ['dark', 'light']:
     fig, axes = plt.subplots(2, 4, figsize=(24, 12))
     fig.patch.set_facecolor(colors['bg'])
     axes = axes.flatten()
-    pos_orig, elements, node_ids, _ = _graph_to_arrays(g0)
     for idx, fi in enumerate(frame_indices):
         ax = axes[idx]; ax.set_facecolor(colors['bg'])
         pos_frame = np.array(traj[fi])
-        for e in elements:
-            ax.plot([pos_frame[e[0],0], pos_frame[e[1],0]], [pos_frame[e[0],1], pos_frame[e[1],1]],
-                    color=colors['fiber'], linewidth=1.0, alpha=0.8)
+        # Color edges by stretch ratio
+        lo = np.array([np.linalg.norm(pos0[elems0[e,1], :2] - pos0[elems0[e,0], :2]) for e in range(len(elems0))])
+        ld = np.array([np.linalg.norm(pos_frame[elems0[e,1], :2] - pos_frame[elems0[e,0], :2]) for e in range(len(elems0))])
+        stretch = ld / (lo + 1e-12)
+        norm = Normalize(vmin=stretch.min(), vmax=stretch.max())
+        cmap = plt.cm.RdYlGn_r
+        for ei, e in enumerate(elems0):
+            p0, p1 = pos_frame[e[0]], pos_frame[e[1]]
+            ax.plot([p0[0], p1[0]], [p0[1], p1[1]],
+                    color=cmap(norm(stretch[ei])), linewidth=1.0, alpha=0.9)
+        # Mark boundary nodes
+        ax.scatter(pos_frame[left0, 0], pos_frame[left0, 1],
+                   c='cyan', s=6, zorder=5, alpha=0.5, label='Fixed (L)' if idx == 0 else '')
+        ax.scatter(pos_frame[right0, 0], pos_frame[right0, 1],
+                   c='magenta', s=6, zorder=5, alpha=0.5, label='Moved (R)' if idx == 0 else '')
         ax.set_aspect('equal'); ax.axis('off')
-        ax.set_title(f'Frame {fi}/{len(traj)-1}', color=colors['text'], fontsize=10)
-    fig.suptitle(f'Deformation Trajectory: {all_metadata[idx0]["name"]} (8 frames)',
+        ax.set_title(f'Frame {fi}/{len(traj)-1}\\nStretch: {stretch.min():.3f}-{stretch.max():.3f}',
+                     color=colors['text'], fontsize=9)
+        if idx == 0:
+            ax.legend(fontsize=7, loc='lower left', framealpha=0.5)
+    fig.suptitle(f'Deformation Trajectory: {all_metadata[idx0]["name"]} (8 frames, rigid plates)',
                  color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'05_trajectory_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg'])
     plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\n✓ Trajectory saved')""")
+print('\\n✓ Trajectory saved')""")
 
 # ═══ 4.3 Stress ═══
 md("### 4.3 Stress Distribution (应力分布)")
@@ -461,17 +521,22 @@ code("""for theme in ['dark', 'light']:
     sm = ScalarMappable(cmap=plt.cm.RdYlGn_r, norm=norm); sm.set_array([])
     cbar = fig.colorbar(sm, ax=ax2, fraction=0.046, pad=0.04)
     cbar.set_label('Stretch Ratio', color=colors['text']); cbar.ax.tick_params(colors=colors['text'])
+    # Mark boundaries
+    pos_def0 = result0.deformed_positions
+    ax2.scatter(pos_def0[left0, 0], pos_def0[left0, 1], c='cyan', s=6, zorder=5, alpha=0.5, label='Fixed (L)')
+    ax2.scatter(pos_def0[right0, 0], pos_def0[right0, 1], c='magenta', s=6, zorder=5, alpha=0.5, label='Moved (R)')
+    ax2.legend(fontsize=8, loc='upper left', framealpha=0.5)
     ax2.set_title(f'Deformed (Stretch: {stretch.min():.2f}-{stretch.max():.2f})', color=colors['text'], fontsize=14)
-    fig.suptitle(f'Stress Distribution: {all_metadata[idx0]["name"]}', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
+    fig.suptitle(f'Stress Distribution: {all_metadata[idx0]["name"]} (rigid plates)', color=colors['text'], fontsize=15, fontweight='bold', y=0.99)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     path = VIZ_OUT / f'06_stress_distribution_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg'])
     plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\n✓ Stress distribution saved')""")
+print('\\n✓ Stress distribution saved')""")
 
 # ═══ 4.4 Stats ═══
-md("### 4.4 Batch Statistics")
+md("### 4.4 Batch Statistics (批量统计)")
 code("""forces_kN = np.array([m['max_force'] for m in all_metadata]) / 1000.0
 stretches = np.array([m['max_stretch'] for m in all_metadata])
 energies = np.array([m['energy'] for m in all_metadata])
@@ -518,10 +583,10 @@ for theme in ['dark', 'light']:
     path = VIZ_OUT / f'07_batch_stats_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\n✓ Batch stats saved')""")
+print('\\n✓ Batch stats saved')""")
 
 # ═══ 5. Features ═══
-md(["## 5. Feature Extraction / 特征提取\n", "\n", "提取 94 维结构特征。"])
+md(["## 5. Feature Extraction / 特征提取\n", "\n", "Extract 94-dimensional structural features. (提取94维结构特征)"])
 code("""extractor = GraphFeatureExtractor()
 for i, (g, meta) in enumerate(tqdm(list(zip(all_structures, all_metadata)), desc='Extracting')):
     meta.update(extractor.extract(g))
@@ -541,7 +606,7 @@ df = pd.DataFrame(all_metadata)
 df.to_csv(DATA_OUT / 'structures_features.csv', index=False)
 print(f'\\n✓ Saved: structures_features.csv')""")
 
-md("### 5.1 Feature Statistics")
+md("### 5.1 Feature Statistics (特征统计分布)")
 code("""from scipy.stats import gaussian_kde
 
 variances = {k: np.var([m[k] for m in all_metadata]) for k in valid_features}
@@ -562,7 +627,7 @@ for theme in ['dark', 'light']:
                 ax.plot(x_range, kde(x_range), color=colors.get('accent', 'red'), linewidth=2)
             except Exception:
                 pass
-        ax.set_title(feat.replace('_','\n'), color=colors['text'], fontsize=8)
+        ax.set_title(feat.replace('_','\\n'), color=colors['text'], fontsize=8)
         ax.set_ylabel('Density', fontsize=8)
     for ax in axes.flat[len(top_features):]: ax.axis('off')
     fig.suptitle(f'Top 20 Features with KDE ({len(valid_features)} valid / {len(feature_keys)} total)', color=colors['text'], fontsize=14, fontweight='bold', y=0.99)
@@ -570,10 +635,11 @@ for theme in ['dark', 'light']:
     path = VIZ_OUT / f'08_feature_stats_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\n✓ Feature stats saved')""")
+print('\\n✓ Feature stats saved')""")
 
 # ═══ 6. ML ═══
-md(["## 6. Machine Learning / 机器学习"])
+md(["## 6. Machine Learning / 机器学习\n",
+    "\n", "Train a Random Forest to predict mechanical properties from structural features. (使用随机森林预测力学性能)"])
 code("""from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 from sklearn.metrics import r2_score, mean_squared_error, confusion_matrix, accuracy_score
@@ -598,14 +664,14 @@ cm_threshold = f'Low<{terciles[0]:.1f}<{terciles[1]:.1f}<High kN'
 print(f'✓ OOB R²={r2:.3f}, RMSE={rmse:.1f} kN, OOB={rf_reg.oob_score_:.3f}, Acc={acc:.3f}')""")
 
 code("""importances = rf_reg.feature_importances_
-top_idx = np.argsort(importances)[-15:][::-1]
+top_idx = np.argsort(importances)[::-1][:15]
 
-n_est_range = list(range(10, 301, 10))
+n_est_range = np.arange(10, 301, 10)
 oob_rmse = []
-for ne in n_est_range:
-    rft = RandomForestRegressor(n_estimators=ne, random_state=42, oob_score=True, max_depth=8)
-    rft.fit(X, y_kN)
-    oob_rmse.append(np.sqrt(mean_squared_error(y_kN, rft.oob_prediction_)))
+for n_est in n_est_range:
+    rf_tmp = RandomForestRegressor(n_estimators=n_est, random_state=42, max_depth=8, oob_score=True)
+    rf_tmp.fit(X, y_kN)
+    oob_rmse.append(np.sqrt(mean_squared_error(y_kN, rf_tmp.oob_prediction_)))
 
 for theme in ['dark', 'light']:
     colors = _get_theme(theme)
@@ -617,7 +683,7 @@ for theme in ['dark', 'light']:
     lo = min(y_kN.min(), y_oob.min()); hi = max(y_kN.max(), y_oob.max())
     ax.plot([lo, hi], [lo, hi], 'r--', lw=2, alpha=0.5, label='Perfect')
     ax.set_xlabel('Actual (kN)'); ax.set_ylabel('OOB Predicted (kN)')
-    ax.set_title(f'OOB Predictions vs Actual (n={N_STRUCTURES})\nR²={r2:.3f}, RMSE={rmse:.1f} kN')
+    ax.set_title(f'OOB Predictions vs Actual (n={N_STRUCTURES})\\nR²={r2:.3f}, RMSE={rmse:.1f} kN')
     ax.legend(fontsize=9)
 
     ax = axes[0,1]
@@ -632,7 +698,7 @@ for theme in ['dark', 'light']:
     ax.set_xticks(range(n_cls)); ax.set_yticks(range(n_cls))
     ax.set_xticklabels(cm_labels); ax.set_yticklabels(cm_labels)
     ax.set_xlabel('Predicted'); ax.set_ylabel('Actual')
-    ax.set_title(f'Confusion Matrix (OOB, n={N_STRUCTURES})\nAcc={acc:.2f}, {cm_threshold}')
+    ax.set_title(f'Confusion Matrix (OOB, n={N_STRUCTURES})\\nAcc={acc:.2f}, {cm_threshold}')
     for ci in range(n_cls):
         for cj in range(n_cls):
             val = cm[ci,cj]
@@ -650,10 +716,10 @@ for theme in ['dark', 'light']:
     path = VIZ_OUT / f'09_ml_analysis_{theme}.png'
     fig.savefig(path, dpi=150, bbox_inches='tight', facecolor=colors['bg']); plt.close(fig)
     print(f'  ✓ {path.name} ({path.stat().st_size/1024:.0f} KB)')
-print('\n✓ ML analysis saved')""")
+print('\\n✓ ML analysis saved')""")
 
 # ═══ 6.3 Correlation ═══
-md("### 6.3 Force-Feature Correlation")
+md("### 6.3 Force-Feature Correlation (力-特征相关性)")
 code("""corr = {}
 y_series = pd.Series([m['max_force'] for m in all_metadata])
 for k in valid_features:
@@ -680,7 +746,7 @@ print('\\n✓ Correlation saved')""")
 
 # ═══ 7. RL ═══
 md(["## 7. Reinforcement Learning / 强化学习\n",
-    "\n", "**注意**: 需要 fibernet >= 4.0。如导入失败请从源码安装。"])
+    "\n", "**Note**: Requires `fibernet >= 4.0`. If import fails, install from source. (需要 fibernet >= 4.0，如导入失败请从源码安装)"])
 code("""if not HAS_RL:
     print('⚠ RL module not available in your installed fibernet version.')
     print('  Your pip version may not include the RL module.')
@@ -689,7 +755,7 @@ code("""if not HAS_RL:
     print('  Or clone and install:')
     print('    git clone https://github.com/GellmanSparrowS/fibernet.git')
     print('    cd fibernet && pip install -e .')
-    print('\nSkipping RL section.')
+    print('\\nSkipping RL section.')
 else:
     try:
         if HAS_RL == 'factory':
@@ -752,21 +818,21 @@ else:
 
 # ═══ 8. Summary ═══
 md(["## 8. Summary / 总结\n",
-    "\n", "| # | 可视化 | dark+light |\n",
-    "|---|--------|------------|\n",
-    "| 01 | 12种基础单元 | ✓ |\n",
-    "| 02 | perturbation对比 0%~80% | ✓ |\n",
-    "| 03 | 12种+变形 | ✓ |\n",
-    "| 04 | 批量gallery | ✓ |\n",
-    "| 05 | 变形轨迹 8帧 | ✓ |\n",
-    "| 06 | 应力分布 | ✓ |\n",
-    "| 07 | 批量统计 | ✓ |\n",
-    "| 08 | 特征统计 | ✓ |\n",
-    "| 09 | ML分析 | ✓ |\n",
-    "| 10 | 力-特征相关性 | ✓ |\n",
-    "| 11 | RL奖励曲线 | ✓ (需RL) |\n",
+    "\n", "| # | Visualization | dark+light |\n",
+    "|---|---------------|------------|\n",
+    "| 01 | 12 base unit types (undeformed) | ✓ |\n",
+    "| 02 | Perturbation comparison 0%–80% | ✓ |\n",
+    "| 03 | 12 units + deformations | ✓ |\n",
+    "| 04 | Batch gallery | ✓ |\n",
+    "| 05 | Deformation trajectory (8 frames) | ✓ |\n",
+    "| 06 | Stress distribution | ✓ |\n",
+    "| 07 | Batch statistics | ✓ |\n",
+    "| 08 | Feature statistics | ✓ |\n",
+    "| 09 | ML analysis | ✓ |\n",
+    "| 10 | Force-feature correlation | ✓ |\n",
+    "| 11 | RL reward curves | ✓ (requires RL) |\n",
     "\n",
-    "**生产参数**: `N_STRUCTURES=2000, PERTURBATION=0.40`"
+    "**Production**: `N_STRUCTURES=2000, PERTURBATION=0.40`"
 ])
 
 # ═══ Save ═══

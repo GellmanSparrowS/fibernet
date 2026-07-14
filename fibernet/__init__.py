@@ -33,7 +33,7 @@ Parametric Structure Generation (for RL)
 >>> internal = g.get_internal_nodes()  # Nodes available for RL actions
 """
 
-__version__ = "4.1.0"
+__version__ = "4.0.1"
 
 # --- Core ---
 from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
