@@ -314,6 +314,7 @@ class TaichiEngine:
         spring_k: float = None,
         dashpot: float = 10.0,
         drag: float = 1.0,
+        max_nodes: int = 20000,
     ) -> SimResult:
         """Run mass-spring dynamics with dashpot damping and air drag.
 
@@ -338,6 +339,13 @@ class TaichiEngine:
         dashpot : dashpot damping coefficient
         drag : air drag coefficient
         """
+        # Memory guard
+        if graph.num_nodes > max_nodes:
+            raise ValueError(
+                f"Structure has {graph.num_nodes} nodes, exceeding max_nodes={max_nodes}. "
+                f"Use a smaller grid or set max_nodes to proceed."
+            )
+
         t0 = time.time()
         pos_orig, elements, node_ids, _ = _graph_to_arrays(graph)
         dim = pos_orig.shape[1]
@@ -504,6 +512,7 @@ class TaichiEngine:
         save_interval: int = 1000,
         ramp_fraction: float = 0.2,
         auto_steps: bool = True,
+        max_nodes: int = 20000,
     ) -> SimResult:
         """Displacement-controlled uniaxial stretch with automatic step calculation.
 
@@ -547,28 +556,28 @@ class TaichiEngine:
             for e in elements:
                 G.add_edge(int(e[0]), int(e[1]))
             
-            # Find max hops from right to left
+            # Find max hops from right to left (sample for speed)
             right_set = set(bnd['right'])
             left_set = set(bnd['left'])
             max_hops = 0
-            for rid in right_set:
-                for lid in left_set:
+            for rid in list(right_set)[:5]:
+                for lid in list(left_set)[:5]:
                     try:
                         hops = nx.shortest_path_length(G, rid, lid)
                         max_hops = max(max_hops, hops)
                     except:
                         pass
             
-            # Estimate steps needed
-            # Wave propagation: ~100 steps per hop
-            wave_steps = max_hops * 100
-            # Relaxation: 30000 steps for drag=1.0
-            relax_steps = 30000
-            # Total with safety margin
-            num_steps = max(wave_steps + relax_steps, 20000) * 2
-            print(f"Auto-calculated {num_steps} steps (diameter={max_hops} hops)")
+            # 3D structures need more steps than 2D
+            is_3d = pos.shape[1] == 3 and pos[:, 2].max() > 1e-6
+            
+            # Formula: base + hops * per_hop, capped reasonably
+            base_steps = 3000 if is_3d else 2000
+            per_hop = 300 if is_3d else 150
+            num_steps = base_steps + max_hops * per_hop
+            num_steps = min(num_steps, 20000)
         elif num_steps is None:
-            num_steps = 20000
+            num_steps = 5000
 
         # Displacement schedule: ramp phase + hold phase
         ramp_steps = int(num_steps * ramp_fraction)
@@ -591,6 +600,7 @@ class TaichiEngine:
             dt=1e-5,
             num_steps=num_steps,
             save_interval=save_interval,
+            max_nodes=max_nodes,
         )
 
     @staticmethod
