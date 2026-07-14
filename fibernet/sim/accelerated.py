@@ -201,7 +201,7 @@ def _graph_to_arrays(graph: StructureGraph):
     return pos, elements, node_ids, nid_to_idx
 
 
-def _get_boundary_indices(pos: np.ndarray, tol: float = None, pct: float = 0.03) -> Dict[str, List[int]]:
+def _get_boundary_indices(pos: np.ndarray, tol: float = None, pct: float = 0.10) -> Dict[str, List[int]]:
     """Find boundary node indices for each side.
     
     Uses percentile-based detection for robust boundary identification
@@ -213,7 +213,7 @@ def _get_boundary_indices(pos: np.ndarray, tol: float = None, pct: float = 0.03)
     tol : float, optional
         Fixed tolerance. If None, uses percentile-based detection.
     pct : float
-        Percentile for boundary detection (0.03 = 3% of nodes at each end).
+        Percentile for boundary detection (0.10 = 10% of nodes at each end).
     """
     result = {}
     if tol is not None:
