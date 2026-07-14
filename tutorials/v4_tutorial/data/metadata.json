@@ -1,0 +1,162 @@
+[
+  {
+    "id": 0,
+    "seed": 0,
+    "name": "voronoi_2x2_n5_seed0",
+    "is_base": true,
+    "n_nodes": 232,
+    "n_edges": 289
+  },
+  {
+    "id": 1,
+    "seed": 1001,
+    "name": "voronoi_2x2_n5_seed1001",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 284
+  },
+  {
+    "id": 2,
+    "seed": 1002,
+    "name": "voronoi_2x2_n5_seed1002",
+    "is_base": false,
+    "n_nodes": 238,
+    "n_edges": 293
+  },
+  {
+    "id": 3,
+    "seed": 1003,
+    "name": "voronoi_2x2_n5_seed1003",
+    "is_base": false,
+    "n_nodes": 232,
+    "n_edges": 289
+  },
+  {
+    "id": 4,
+    "seed": 1004,
+    "name": "voronoi_2x2_n5_seed1004",
+    "is_base": false,
+    "n_nodes": 232,
+    "n_edges": 288
+  },
+  {
+    "id": 5,
+    "seed": 1005,
+    "name": "voronoi_2x2_n5_seed1005",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 284
+  },
+  {
+    "id": 6,
+    "seed": 1006,
+    "name": "voronoi_2x2_n5_seed1006",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 284
+  },
+  {
+    "id": 7,
+    "seed": 1007,
+    "name": "voronoi_2x2_n5_seed1007",
+    "is_base": false,
+    "n_nodes": 232,
+    "n_edges": 289
+  },
+  {
+    "id": 8,
+    "seed": 1008,
+    "name": "voronoi_2x2_n5_seed1008",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 286
+  },
+  {
+    "id": 9,
+    "seed": 1009,
+    "name": "voronoi_2x2_n5_seed1009",
+    "is_base": false,
+    "n_nodes": 238,
+    "n_edges": 294
+  },
+  {
+    "id": 10,
+    "seed": 1010,
+    "name": "voronoi_2x2_n5_seed1010",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 284
+  },
+  {
+    "id": 11,
+    "seed": 1011,
+    "name": "voronoi_2x2_n5_seed1011",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 285
+  },
+  {
+    "id": 12,
+    "seed": 1012,
+    "name": "voronoi_2x2_n5_seed1012",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 284
+  },
+  {
+    "id": 13,
+    "seed": 1013,
+    "name": "voronoi_2x2_n5_seed1013",
+    "is_base": false,
+    "n_nodes": 220,
+    "n_edges": 280
+  },
+  {
+    "id": 14,
+    "seed": 1014,
+    "name": "voronoi_2x2_n5_seed1014",
+    "is_base": false,
+    "n_nodes": 214,
+    "n_edges": 277
+  },
+  {
+    "id": 15,
+    "seed": 1015,
+    "name": "voronoi_2x2_n5_seed1015",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 285
+  },
+  {
+    "id": 16,
+    "seed": 1016,
+    "name": "voronoi_2x2_n5_seed1016",
+    "is_base": false,
+    "n_nodes": 244,
+    "n_edges": 297
+  },
+  {
+    "id": 17,
+    "seed": 1017,
+    "name": "voronoi_2x2_n5_seed1017",
+    "is_base": false,
+    "n_nodes": 232,
+    "n_edges": 289
+  },
+  {
+    "id": 18,
+    "seed": 1018,
+    "name": "voronoi_2x2_n5_seed1018",
+    "is_base": false,
+    "n_nodes": 226,
+    "n_edges": 286
+  },
+  {
+    "id": 19,
+    "seed": 1019,
+    "name": "voronoi_2x2_n5_seed1019",
+    "is_base": false,
+    "n_nodes": 238,
+    "n_edges": 292
+  }
+]
