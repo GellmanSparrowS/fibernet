@@ -1,492 +1,351 @@
 <div align="center">
 
-# 🧬 FiberNet v4.0
+# 🧬 FiberNet v4
 
-### Python Toolkit for Fiber Network Design, Simulation & Intelligent Optimization
-### 纤维网络结构生成、力学模拟与智能优化 Python 工具包
+**Python Toolkit for Fiber Network Design, Simulation & Intelligent Optimization**
 
----
+[![PyPI](https://img.shields.io/pypi/v/fibernet?logo=pypi&logoColor=white)](https://pypi.org/project/fibernet/)
+[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![CI](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml/badge.svg)](https://github.com/GellmanSparrowS/fibernet/actions)
+[![Downloads](https://img.shields.io/pypi/dm/fibernet)](https://pypi.org/project/fibernet/)
 
-[![PyPI version](https://img.shields.io/pypi/v/fibernet.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/fibernet/4.0.5/)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Downloads](https://img.shields.io/pypi/dm/fibernet.svg?label=Downloads&color=brightgreen)](https://pypi.org/project/fibernet/)
-
-**[Installation](#-installation--安装)** · **[Quick Start](#-quick-start--快速开始)** · **[API Reference](#-api-reference--api-参考)** · **[Tutorial](#-tutorial--教程)** · **[中文](#-中文说明)**
+[中文文档](README_CN.md) · [PyPI](https://pypi.org/project/fibernet/) · [Tutorial](#-tutorial) · [API Docs](#-api-reference)
 
 *Developed by [ML-BioMat Lab](https://ml-biomat.com/) @ [BMG-FDU](https://github.com/BMG-FDU)*
 
----
-
 </div>
 
-## 📖 Overview
+---
 
-FiberNet is a research-grade Python toolkit for **computational design of fiber network structures** — from periodic unit cells to complex metamaterials. It provides a complete closed-loop workflow:
+## Overview
+
+FiberNet is a research-grade Python toolkit for **computational design of fiber network metamaterials**. It provides a complete closed-loop workflow:
 
 ```
 Generation → Simulation → Feature Extraction → Machine Learning → Reinforcement Learning
 ```
 
-**FiberNet 是一个面向材料科学的研究级 Python 工具包，用于纤维网络结构的计算设计。** 提供从结构生成到力学模拟再到智能优化的完整闭环工作流。
-
-### ✨ Core Capabilities / 核心能力
-
-| Feature | Description | 说明 |
-|---------|-------------|------|
-| **12 Unit Types** | square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing_rib | 12种基元 |
-| **Parametric Control** | Internal point displacements for RL-ready continuous action spaces | 参数化内部点位移控制 |
-| **Taichi Simulation** | Mass-spring dynamics with auto-relaxation, trajectory recording | Taichi质点弹簧动力学 |
-| **94-Dim Features** | Structural + pore + contact feature extraction | 94维特征提取 |
-| **One-Line ML** | `predict_from_csv()` → train, evaluate, visualize, save | 一行ML训练 |
-| **One-Line RL** | `run_bayesian_optimization()` or CEM via `ParametricStructureEnv` | 一行RL / CEM优化 |
-| **Stress Visualization** | Multi-frame trajectory with edge stretch coloring | 多帧应力可视化 |
+| Feature | Description |
+|---------|-------------|
+| **12 Unit Types** | square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing_rib |
+| **Parametric Control** | Internal point displacements for RL-ready continuous action spaces |
+| **Taichi Simulation** | GPU-accelerated mass-spring dynamics with auto-relaxation |
+| **94-Dim Features** | Structural + pore + contact feature extraction |
+| **One-Line ML** | `predict_from_csv()` → train, evaluate, visualize, save |
+| **One-Line RL** | `run_bayesian_optimization()` or CEM optimization |
 
 ---
 
-
-### 🖼️ Showcase / 展示
+## 🖼️ Showcase
 
 <div align="center">
 <img src="docs/images/01_2d_gallery.png" width="80%" alt="2D Structure Gallery" />
 </div>
 
-*2D Structure Gallery: 12 unit types (square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing_rib).*
+*12 unit types: square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing_rib.*
 
 <div align="center">
-<img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi 1.5x Stretch" />
+<img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi Stretch" />
 </div>
 
-*Voronoi structure under 1.5× uniaxial stretch — showing deformation and stress distribution.*
-
-#### 📚 Tutorial Examples / 教程示例
+*Voronoi structure under 1.5× uniaxial stretch — deformation and stress distribution.*
 
 <div align="center">
 <img src="docs/images/05_trajectory_dark.png" width="80%" alt="Deformation Trajectory" />
 </div>
 
-*Deformation trajectory (8 frames): honeycomb structure under stretch — colored by edge stretch ratio.*
+*8-frame deformation trajectory: honeycomb under stretch, colored by edge stretch ratio.*
 
 <div align="center">
 <img src="docs/images/09_ml_analysis_dark.png" width="80%" alt="ML Analysis" />
 </div>
 
-*Machine Learning analysis: confusion matrix, ROC curve, and learning curves for structure classification.*
+*ML analysis: confusion matrix, ROC curves, and learning curves.*
 
 <div align="center">
-<img src="docs/images/11_rl_reward_dark.png" width="80%" alt="RL Reward Curves" />
+<img src="docs/images/11_rl_reward_dark.png" width="80%" alt="RL Reward" />
 </div>
 
-*Reinforcement Learning (CEM): reward per episode and monotonically increasing best reward.*
+*CEM reinforcement learning: reward per episode and monotonically increasing best reward.*
 
 ---
 
+## 🚀 Quick Start
 
-### 📐 Structure Catalog / 结构目录
-
-FiberNet supports **12 built-in unit types** across **6 architecture families**:
-
-| Family | Units | Description | 描述 |
-|--------|-------|-------------|------|
-| **Regular Lattices** | square, triangle, hexagon | Classic periodic tessellations | 经典周期镶嵌 |
-| **Honeycomb Variants** | honeycomb, reentrant, missing_rib | Auxetic and cellular solid models | 凹角与胞状固体 |
-| **Auxetic/Chiral** | chiral, star | Negative Poisson's ratio structures | 负泊松比结构 |
-| **Cross/Diamond** | cross, diamond | Cross-braced and diamond patterns | 交叉与钻石图案 |
-| **Kagome** | kagome | Tri-hexagonal lattice | 三六边形晶格 |
-| **Disordered** | voronoi | Voronoi tessellation (random topology) | Voronoi镶嵌（随机拓扑） |
-
-**Combinatorial space** (grid × pts_per_side × seed):
-- Fixed parameters: **~91,800** unique structures
-- With parametric displacement control: **7.98 × 10¹⁶** (discretized) to **∞** (continuous)
-- With post-generation node manipulation: **368-dimensional** continuous action space (square 3×3, pts=5)
-
----
-
-## 🚀 Installation / 安装
-
-```bash
-# Core installation / 核心安装
-pip install fibernet
-
-# Full installation (ML + RL + viz + simulation) / 完整安装
-pip install fibernet[full]
-
-# ML only / 仅ML
-pip install fibernet[ml]
-
-# RL only / 仅RL
-pip install fibernet[rl]
-```
-
-### Optional Dependencies / 可选依赖
-
-| Group | Packages | Install |
-|-------|----------|---------|
-| `ml` | scikit-learn, pandas, tqdm | `pip install fibernet[ml]` |
-| `rl` | gymnasium, scikit-optimize, stable-baselines3 | `pip install fibernet[rl]` |
-| `accel` | taichi (GPU acceleration) | `pip install fibernet[accel]` |
-| `viz` | pyvista (3D visualization) | `pip install fibernet[viz]` |
-| `full` | All of the above | `pip install fibernet[full]` |
-
----
-
-## ⚡ Quick Start / 快速开始
-
-### One-Line API / 一行代码
+### One-Line API
 
 ```python
 import fibernet as fn
 
-# Generate structure / 生成结构
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
-
-# Visualize / 可视化
-fn.show(g)  # One line! / 一行出图
-
-# Simulate / 模拟
-r = fn.simulate(g, mode="stretch", strain=1.5, backend="spring")  # One line! / 一行模拟
-print(f"max_force={r.max_force:.0f}, max_stretch={r.max_stretch:.3f}")
-
-# ML prediction / ML预测
-result = fn.predict_from_csv("data.csv", target="max_force", output_dir="ml_out/")  # One line! / 一行ML
-
-# RL optimization / RL优化
-best = fn.run_bayesian_optimization(objective_fn, param_space, n_iter=50)  # One line! / 一行RL
+fn.show(g)  # one-line visualization
 ```
 
-### Complete Pipeline / 完整流水线
+```python
+r = fn.simulate(g, mode="stretch", strain=1.5, backend="spring")
+print(f"max_force={r.max_force:.0f} N, max_stretch={r.max_stretch:.3f}")
+```
+
+### Complete Pipeline
 
 ```python
 import fibernet as fn
-from fibernet.ml import train_predictor, plot_predictions
-from fibernet.rl import plot_reward_curve, run_bayesian_optimization
 import numpy as np
 
-# ─── 1. Generate Parametric Structures ───
-# Each structure has 20 displacement parameters (4 sides × 5 points)
+# 1. Parametric structure (20 displacement params for RL)
 displacements = [(np.random.uniform(-0.3, 0.3), np.random.uniform(-0.3, 0.3))
                  for _ in range(20)]
-g = fn.pattern_2d(
-    unit="square", box=(10, 10), grid=(3, 3),
-    n_pts_per_side=5,                    # 5 internal points per edge
-    point_displacements=displacements,   # parametric control
-)
+g = fn.pattern_2d(unit="square", box=(10, 10), grid=(3, 3),
+                  n_pts_per_side=5, point_displacements=displacements)
 
-# ─── 2. Simulate ───
+# 2. Taichi simulation
 engine = fn.TaichiEngine()
-r = engine.stretch_test(
-    g,
-    target_stretch=1.5,      # stretch to 1.5× length
-    stiffness=1e5,            # spring stiffness
-    damping=0.3,              # damping ratio
-    num_steps=1000,           # simulation steps
-    save_interval=200,        # save trajectory every 200 steps
-)
-print(f"max_force={r.max_force:.0f}, max_stretch={r.max_stretch:.3f}")
+r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5,
+                        damping=0.3, num_steps=1000, save_interval=200)
 
-# ─── 3. Visualize Deformation with Stress ───
-fig = fn.render_trajectory(
-    g, r.positions_trajectory, r.edge_stretches,
-    n_frames=6, title="Stretch Process",
-)
+# 3. Visualization with stress
+fig = fn.render_trajectory(g, r.positions_trajectory, r.edge_stretches,
+                           n_frames=6, title="Stretch Process")
 fig.savefig("deformation.png", dpi=150)
 
-# ─── 4. Extract Features ───
+# 4. Feature extraction (94-dim vector)
 ext = fn.GraphFeatureExtractor()
-features = ext.extract(g)  # 94-dimensional feature vector
+features = ext.extract(g)
 
-# ─── 5. Node Manipulation (for RL) ───
-internal_nodes = g.get_internal_nodes()  # nodes available for RL actions
-g.displace_node(internal_nodes[0], [0.1, 0.2])  # move node by (dx, dy)
+# 5. Node manipulation (for RL action space)
+internal = g.get_internal_nodes()
+g.displace_node(internal[0], [0.1, 0.2])
 ```
 
 ---
 
+## 📦 Installation
 
-### 🎯 RL Parametric Control / RL 参数化控制
-
-FiberNet exposes **direct (dx, dy) displacement parameters** for each internal point on every edge, enabling continuous action spaces for reinforcement learning — equivalent to the `move_AB(G, num, dx, dy)` approach in research code, but more general.
-
-FiberNet 为每条边上的每个内部点暴露了 **(dx, dy) 位移参数**，为强化学习提供连续动作空间。支持生成时位移控制和生成后逐节点微调两种方式。
-
-```python
-# Method 1: Displacement at generation time / 方法1：生成时位移控制
-# Agent outputs 40-dim vector → 20 (dx,dy) pairs for square with n_pts_per_side=5
-# 智能体输出40维向量 → 20个(dx,dy)对（正方形, n_pts_per_side=5: 4边×5点）
-action = agent.act(observation)  # shape: (40,) values in [-0.3, 0.3]
-displacements = [(action[2*i], action[2*i+1]) for i in range(20)]
-g = fn.pattern_2d(unit="square", grid=(3,3), n_pts_per_side=5,
-                  point_displacements=displacements)
-
-# Method 2: Post-generation refinement / 方法2：生成后逐节点微调
-internal_nodes = g.get_internal_nodes()  # 184 nodes for square 3×3 pts=5
-for node_id in internal_nodes:
-    g.displace_node(node_id, agent.refinement_action(node_id))
+```bash
+pip install fibernet          # core
+pip install fibernet[full]    # ML + RL + viz + simulation
+pip install fibernet[ml]      # ML only
+pip install fibernet[rl]      # RL only
 ```
+
+| Optional Group | Packages |
+|---------------|----------|
+| `ml` | scikit-learn, pandas, tqdm |
+| `rl` | gymnasium, scikit-optimize, stable-baselines3 |
+| `accel` | taichi (GPU simulation) |
+| `viz` | pyvista (3D visualization) |
+| `full` | all of the above |
 
 ---
 
-## 📚 API Reference / API 参考
+## 📚 API Reference
 
-### Structure Generation / 结构生成
+### Structure Generation
 
 ```python
-# Define parametric displacements / 定义参数化位移
-# For square with n_pts_per_side=5: 4 sides × 5 pts = 20 displacements
 import numpy as np
 disps = [(np.random.uniform(-0.3, 0.3), np.random.uniform(-0.3, 0.3))
          for _ in range(20)]
 
-# Generate 2D structure / 生成2D结构
 g = fn.pattern_2d(
-    unit="square",           # unit type / 基元类型
-    box=(10, 10),            # cell size / 单元格尺寸
-    grid=(3, 3),             # tiling grid / 铺排网格
-    n_pts_per_side=5,        # internal points per edge / 每边内部点数
-    point_displacements=disps,  # [(dx,dy), ...] displacements / 位移向量
-    seed=42,                 # random seed / 随机种子
+    unit="square",              # 12 unit types available
+    box=(10, 10),               # cell size
+    grid=(3, 3),                # tiling grid
+    n_pts_per_side=5,           # internal points per edge
+    point_displacements=disps,  # parametric control
+    seed=42,
 )
 
-# Available units / 可用基元
 print(fn.list_units())
 # ['chiral', 'cross', 'diamond', 'hexagon', 'honeycomb', 'kagome',
 #  'missing_rib', 'reentrant', 'square', 'star', 'triangle', 'voronoi']
 ```
 
-### Node Manipulation / 节点操控 (for RL)
+### Node Manipulation (RL Action Space)
 
 ```python
-# Displace a node / 移动节点
-g.displace_node(node_id, [dx, dy])
+g.displace_node(node_id, [dx, dy])          # relative displacement
+g.set_node_position(node_id, [x, y])        # absolute position
+g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})  # batch
 
-# Set absolute position / 设置绝对位置
-g.set_node_position(node_id, [x, y])
-
-# Batch set / 批量设置
-g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})
-
-# Get internal (non-boundary) nodes → RL action targets
-internal = g.get_internal_nodes()
-
-# Get boundary nodes
+internal = g.get_internal_nodes()  # RL action targets
 boundary = g.get_boundary_nodes()
 ```
 
-### Simulation / 模拟
+### Simulation
 
 ```python
-# Create a structure first / 先生成结构
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
-
 engine = fn.TaichiEngine()
+r = engine.stretch_test(g,
+    target_stretch=1.5,     # stretch ratio
+    stiffness=1e5,          # spring constant
+    damping=0.3,            # damping ratio
+    num_steps=5000,         # total steps
+    ramp_fraction=0.2,      # 20% ramp + 80% hold (relaxation)
+    save_interval=1000)
 
-# Uniaxial stretch test / 单轴拉伸
-r = engine.stretch_test(
-    g,
-    target_stretch=1.5,      # stretch ratio / 拉伸倍数
-    stiffness=1e5,            # spring constant / 弹簧刚度
-    damping=0.3,              # damping ratio / 阻尼比
-    num_steps=5000,           # total simulation steps / 总模拟步数
-    ramp_fraction=0.2,        # first 20% steps = relaxation (弛豫) / 前20%步为弛豫
-    save_interval=1000,       # trajectory save interval / 轨迹保存间隔
-)
+r.max_force           # max edge force (N)
+r.edge_forces         # per-edge forces
+r.edge_stretches      # per-edge stretch ratios
+r.positions_trajectory # list of (N,3) position arrays
 
-# Result fields / 结果字段
-r.max_force          # maximum edge force / 最大边力
-r.max_stretch        # maximum edge stretch ratio / 最大边拉伸比
-r.mean_stretch       # mean stretch / 平均拉伸
-r.edge_forces        # per-edge forces (N,) / 每边力
-r.edge_stretches     # per-edge stretch ratios (N,) / 每边拉伸比
-r.positions_trajectory  # list of (N,3) arrays / 位置轨迹列表
-
-# Save/Load / 保存/加载
-r.save("result.json", detailed=True)   # with trajectory / 含轨迹
-r2 = fn.SimResult.load("result.json")  # restore / 恢复
+r.save("result.json", detailed=True)
+r2 = fn.SimResult.load("result.json")
 ```
 
-### Visualization / 可视化
+### Visualization
 
 ```python
-# Render structure / 渲染结构
-fig = fn.render_graph(g, theme="dark")       # dark purple / 暗紫
-fig = fn.render_graph(g, theme="light")      # white background / 白底
-fig = fn.render_graph(g, theme="blueprint")  # blueprint style / 蓝图风格
+fig = fn.render_graph(g, theme="dark")       # dark purple
+fig = fn.render_graph(g, theme="light")      # white background
+fig = fn.render_graph(g, theme="blueprint")  # blueprint style
 
-# Deformation comparison / 形变对比
 fig = fn.render_deformation(g_original, g_deformed, color_by="stress")
-
-# Multi-frame trajectory with stress / 多帧轨迹+应力
-fig = fn.render_trajectory(
-    g, r.positions_trajectory, r.edge_stretches,
-    n_frames=6, title="Stretch Process",
-)
-
-# Themes / 主题
-print(list(fn.THEMES.keys()))  # ['dark', 'light', 'blueprint', 'publication']
+fig = fn.render_trajectory(g, r.positions_trajectory, r.edge_stretches,
+                           n_frames=6, title="Stretch Process")
 ```
 
-### Machine Learning / 机器学习
+### Machine Learning
 
 ```python
 from fibernet.ml import (
-    train_predictor,         # Train model → (model, metrics)
-    cross_validate,          # K-fold cross-validation
-    compare_models,          # Compare multiple models
-    predict_from_csv,        # One-line: CSV → train → save
-    plot_predictions,        # Scatter: predicted vs actual
-    plot_feature_importance, # Bar chart: feature importance
-    plot_residuals,          # Residual analysis
-    plot_learning_curve,     # Learning curve
+    train_predictor, cross_validate, compare_models,
+    predict_from_csv, plot_predictions, plot_feature_importance,
 )
 
-# One-line ML / 一行ML
-result = predict_from_csv(
-    "simulation_results.csv",
-    target="max_force",
-    model_type="rf",         # rf, ridge, gb, svm, mlp
-    output_dir="ml_output/",
-)
+result = predict_from_csv("sim_results.csv", target="max_force",
+                          model_type="rf", output_dir="ml_out/")
 
-# Manual training / 手动训练
-model, metrics = train_predictor(X_train, y_train, model_type="rf")
+model, metrics = train_predictor(X, y, model_type="rf")
 print(f"R² = {metrics['r2']:.3f}")
 
-# Cross-validation / 交叉验证
 cv = cross_validate(X, y, model_type="ridge", cv=5)
-print(f"CV R² = {cv['mean_r2']:.3f} ± {cv['std_r2']:.3f}")
 ```
 
-### Reinforcement Learning / 强化学习
+### Reinforcement Learning
 
 ```python
 from fibernet.rl import (
-    plot_reward_curve,           # Reward curve with moving average
-    plot_convergence,            # Optimization convergence
-    plot_action_distribution,    # Action histogram
-    evaluate_agent,              # Multi-episode evaluation
-    save_agent, load_agent,      # Serialization
-    run_bayesian_optimization,   # One-line Bayesian opt
+    plot_reward_curve, plot_convergence, plot_action_distribution,
+    run_bayesian_optimization, save_agent, load_agent,
 )
-
-# Bayesian optimization / 贝叶斯优化
-param_space = {
-    "grid_x": (2, 5),       # integer range / 整数范围
-    "grid_y": (2, 5),
-    "stiffness": (1e4, 1e6),  # continuous range / 连续范围
-}
 
 result = run_bayesian_optimization(
-    objective_fn,          # fn(params) → scalar to minimize
-    param_space,
-    n_iter=50,
-)
-print(f"Best: {result['best_params']}, value={result['best_value']:.0f}")
+    objective_fn,
+    param_space={"grid_x": (2, 5), "stiffness": (1e4, 1e6)},
+    n_iter=50)
 
-# RL reward visualization / RL奖励可视化
 plot_reward_curve(rewards, window=20, save_path="reward.png")
-plot_convergence(objective_values, minimize=True, save_path="convergence.png")
+plot_convergence(objectives, minimize=True, save_path="conv.png")
+```
+
+### 🎯 RL Parametric Control
+
+FiberNet exposes **(dx, dy) displacement parameters** for each internal point on every edge — a continuous action space for RL, equivalent to `move_AB(G, num, dx, dy)` in research code.
+
+```python
+# 40-dim action vector → 20 (dx,dy) pairs
+action = agent.act(obs)  # shape: (40,), range: [-0.3, 0.3]
+displacements = [(action[2*i], action[2*i+1]) for i in range(20)]
+g = fn.pattern_2d(unit="square", grid=(3,3), n_pts_per_side=5,
+                  point_displacements=displacements)
+
+# Post-generation refinement
+for nid in g.get_internal_nodes():
+    g.displace_node(nid, agent.refine(nid))
 ```
 
 ---
 
-## 🎓 Tutorial / 教程
+## 🎓 Tutorial
 
-A complete end-to-end tutorial is available as a Jupyter notebook:
+A complete end-to-end Jupyter notebook is available:
 
 ```
 tutorials/complete_tutorial_v4.ipynb
 ```
 
-This tutorial covers:
-1. **Structure Generation** — base + parametric variants with naming convention
-2. **Batch Simulation** — stretch tests with trajectory recording + checkpoint resume
-3. **Deformation Visualization** — multi-frame stress distribution
-4. **Feature Extraction** — 94-dimensional structural features
-5. **Machine Learning** — train/test split, nested CV (no data leakage), model comparison
-6. **Reinforcement Learning** — CEM (Cross-Entropy Method) + Bayesian optimization of displacement parameters
-
-To run the tutorial with a small test dataset first:
+Standalone runner with checkpoint support:
 
 ```bash
-python3 tutorials/run_pipeline.py                        # Full pipeline
-python3 tutorials/run_pipeline.py --num-structures 100   # Quick test
-python3 tutorials/run_pipeline.py --skip-rl              # Skip RL section
+python3 tutorials/run_pipeline.py                        # full pipeline
+python3 tutorials/run_pipeline.py --num-structures 100   # quick test
+python3 tutorials/run_pipeline.py --skip-rl              # skip RL section
 ```
 
-**完整教程覆盖**: 结构生成 → 批量模拟 → 形变可视化 → 特征提取 → 机器学习 → CEM强化学习。支持断点续跑和内存监控。
+Covers: structure generation → batch simulation → deformation visualization → feature extraction → ML → CEM reinforcement learning.
 
 ---
 
-## 📁 Project Structure / 项目结构
-
-```
-fibernet/
-├── fibernet/
-│   ├── core/              # StructureGraph, Material, transforms
-│   ├── gen/               # pattern_2d/3d, unit factories
-│   ├── sim/               # TaichiEngine (mass-spring), SimResult
-│   ├── viz/               # render_graph, render_trajectory, themes
-│   ├── analysis/          # GraphFeatureExtractor (94-dim)
-│   ├── ml/                # train_predictor, cross_validate, plots
-│   ├── rl/                # CEM env, Bayesian opt, reward curves, agent eval
-│   └── easy.py            # show(), simulate(), batch_simulate()
-├── tutorials/
-│   ├── complete_tutorial_v4.ipynb  # Complete tutorial (15MB, with images)
-│   └── run_pipeline.py            # Standalone runner script
-├── tests/                 # Unit tests
-└── pyproject.toml         # Build configuration
-```
-
----
-
-## 🔬 How It Works / 工作原理
+## 🔬 How It Works
 
 ### Mass-Spring Model (Taichi)
 
-FiberNet uses a **mass-spring dynamics model** implemented in Taichi for GPU-accelerated simulation:
+GPU-accelerated mass-spring dynamics:
 
-1. **Nodes** are treated as point masses with position and velocity
-2. **Edges** are linear springs with configurable stiffness and rest length
-3. **Boundary nodes** are fixed (Dirichlet BC) during stretch tests
-4. **Relaxation**: initial energy minimization before loading
-5. **Loading**: controlled displacement of boundary nodes to target stretch ratio
+1. **Nodes** = point masses with position and velocity
+2. **Edges** = linear springs (configurable stiffness, rest length)
+3. **Boundary** = fixed nodes (Dirichlet BC) during stretch
+4. **Relaxation** = initial energy minimization before loading
+5. **Loading** = controlled displacement to target stretch ratio
 
 ```
-F_spring = k × (current_length - rest_length)
-F_damping = -c × velocity
-F_drag = -γ × velocity  (dashpot)
+F_spring = k × (L - L₀) / L₀ × direction
+F_damping = -c × v_rel · direction × direction × L₀
+F_drag = -γ × v  (air drag)
 ```
 
 ### Parametric Structure Control (for RL)
 
-Each unit cell edge can have `n_pts_per_side` internal nodes, each with a programmable `(dx, dy)` displacement. This creates a continuous action space for reinforcement learning:
+Each edge can have `n_pts_per_side` internal nodes with programmable `(dx, dy)` displacement:
 
 ```
 Action = [dx₁, dy₁, dx₂, dy₂, ..., dxₙ, dyₙ] ∈ [-0.3, 0.3]^(2n)
 ```
 
-For a square unit with `n_pts_per_side=5`, this gives **20 continuous parameters** — enough for complex beam geometries.
+For square with `n_pts_per_side=5`: **40 continuous parameters** (20 displacement pairs).
 
 ---
 
-## 📊 Performance / 性能
+## 📁 Project Structure
 
-| Task | Time (per structure) | Hardware |
-|------|---------------------|----------|
-| Generation (square 3×3, 5 pts/side) | ~0.1s | CPU |
-| Stretch simulation (1000 steps) | ~2.5s | CPU (Taichi x64) |
+```
+fibernet/
+├── fibernet/
+│   ├── core/         # StructureGraph, Material, transforms
+│   ├── gen/          # pattern_2d/3d, unit factories
+│   ├── sim/          # TaichiEngine (mass-spring), SimResult
+│   ├── viz/          # render_graph, render_trajectory, themes
+│   ├── analysis/     # GraphFeatureExtractor (94-dim)
+│   ├── ml/           # train_predictor, cross_validate, plots
+│   ├── rl/           # CEM env, Bayesian opt, reward curves
+│   └── easy.py       # show(), simulate(), batch_simulate()
+├── tutorials/        # Jupyter notebook + standalone runner
+├── tests/            # 189 tests (pytest --forked)
+├── examples/         # 19 example scripts
+└── pyproject.toml    # build configuration
+```
+
+---
+
+## 📊 Performance
+
+| Task | Time | Hardware |
+|------|------|----------|
+| Generation (square 3×3) | ~0.1s | CPU |
+| Stretch simulation (5000 steps) | ~6s | Taichi x64 |
 | Feature extraction (94-dim) | ~0.5s | CPU |
 | ML training (RF, 100 samples) | ~1s | CPU |
 | CEM optimization (200 episodes) | ~6 min | CPU |
 
 ---
 
-## 📝 Citation / 引用
-
-If you use FiberNet in your research, please cite:
+## 📝 Citation
 
 ```bibtex
-@software{fibernet2024,
+@software{fibernet2026,
   title = {FiberNet: Python Toolkit for Fiber Network Design and Optimization},
   author = {ML-BioMat Lab, BMG-FDU},
   year = {2026},
@@ -499,75 +358,12 @@ If you use FiberNet in your research, please cite:
 
 ## 📄 License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License. See [LICENSE](LICENSE).
 
 ---
 
-## 🇨🇳 中文说明
+<div align="center">
 
-### 概述
+**[中文文档](README_CN.md)** · [PyPI](https://pypi.org/project/fibernet/4.0.5/) · [GitHub](https://github.com/GellmanSparrowS/fibernet)
 
-FiberNet 是一个面向材料科学的 Python 工具包，提供纤维网络结构的完整工作流：
-
-- **12种基元生成**: 正方形、三角形、六边形、蜂窝、kagome、Voronoi 等
-- **参数化控制**: 每个边上的内部点可以独立位移，支持RL连续动作空间
-- **Taichi模拟**: 质点弹簧动力学，自动弛豫，轨迹记录
-- **94维特征**: 结构+孔隙+接触特征提取
-- **一行ML**: `predict_from_csv()` 自动训练、评估、可视化、保存
-- **一行RL**: `run_bayesian_optimization()` 或 CEM (`ParametricStructureEnv`) 优化结构参数
-
-### 安装
-
-```bash
-pip install fibernet        # 核心
-pip install fibernet[full]  # 完整 (ML + RL + 可视化 + 模拟)
-```
-
-### 快速开始
-
-```python
-import fibernet as fn
-
-# 生成
-g = fn.pattern_2d(unit="honeycomb", box=(10,10), grid=(4,4))
-
-# 可视化（一行）
-fn.show(g)
-
-# 模拟（一行）
-r = fn.simulate(g, mode="stretch", strain=1.5, backend="spring")
-
-# ML（一行）
-result = fn.predict_from_csv("data.csv", target="max_force")
-
-# RL（一行）
-best = fn.run_bayesian_optimization(objective_fn, param_space, n_iter=50)
-```
-
-### 节点操控（RL动作空间）
-
-```python
-# 移动节点
-g.displace_node(node_id, [dx, dy])
-
-# 获取可优化节点
-internal = g.get_internal_nodes()
-
-# 批量设置
-g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})
-```
-
-### 教程
-
-完整教程：`tutorials/complete_tutorial_v4.ipynb`
-
-测试运行（5个样本）：
-```bash
-python3 tutorials/run_pipeline.py                        # 完整流程
-python3 tutorials/run_pipeline.py --num-structures 100   # 快速测试
-python3 tutorials/run_pipeline.py --skip-rl              # 跳过RL
-```
-
----
-
-*FiberNet v4.0.5 | [PyPI](https://pypi.org/project/fibernet/4.0.5/) | [GitHub](https://github.com/GellmanSparrowS/fibernet)*
+</div>
