@@ -7,7 +7,7 @@
 
 ---
 
-[![PyPI version](https://img.shields.io/pypi/v/fibernet.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/fibernet/4.0.3/)
+[![PyPI version](https://img.shields.io/pypi/v/fibernet.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/fibernet/4.0.5/)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/fibernet.svg?label=Downloads&color=brightgreen)](https://pypi.org/project/fibernet/)
@@ -39,7 +39,7 @@ Generation → Simulation → Feature Extraction → Machine Learning → Reinfo
 | **Taichi Simulation** | Mass-spring dynamics with auto-relaxation, trajectory recording | Taichi质点弹簧动力学 |
 | **94-Dim Features** | Structural + pore + contact feature extraction | 94维特征提取 |
 | **One-Line ML** | `predict_from_csv()` → train, evaluate, visualize, save | 一行ML训练 |
-| **One-Line RL** | `run_bayesian_optimization()` → optimize structure parameters | 一行RL优化 |
+| **One-Line RL** | `run_bayesian_optimization()` or CEM via `ParametricStructureEnv` | 一行RL / CEM优化 |
 | **Stress Visualization** | Multi-frame trajectory with edge stretch coloring | 多帧应力可视化 |
 
 ---
@@ -370,7 +370,7 @@ plot_convergence(objective_values, minimize=True, save_path="convergence.png")
 A complete end-to-end tutorial is available as a Jupyter notebook:
 
 ```
-tutorials/v4_tutorial/fibernet_v4_tutorial.ipynb
+tutorials/complete_tutorial_v4.ipynb
 ```
 
 This tutorial covers:
@@ -379,16 +379,17 @@ This tutorial covers:
 3. **Deformation Visualization** — multi-frame stress distribution
 4. **Feature Extraction** — 94-dimensional structural features
 5. **Machine Learning** — train/test split, nested CV (no data leakage), model comparison
-6. **Reinforcement Learning** — Bayesian optimization of displacement parameters
+6. **Reinforcement Learning** — CEM (Cross-Entropy Method) + Bayesian optimization of displacement parameters
 
 To run the tutorial with a small test dataset first:
 
 ```bash
-python3 tutorials/v4_tutorial/test_pipeline.py          # 5 samples (test)
-python3 tutorials/v4_tutorial/test_pipeline.py --full    # 2000 samples (full)
+python3 tutorials/run_pipeline.py                        # Full pipeline
+python3 tutorials/run_pipeline.py --num-structures 100   # Quick test
+python3 tutorials/run_pipeline.py --skip-rl              # Skip RL section
 ```
 
-**完整教程覆盖**: 结构生成 → 批量模拟 → 形变可视化 → 特征提取 → 机器学习 → 强化学习。先用5个样本测试，再扩展到2000个。
+**完整教程覆盖**: 结构生成 → 批量模拟 → 形变可视化 → 特征提取 → 机器学习 → CEM强化学习。支持断点续跑和内存监控。
 
 ---
 
@@ -403,10 +404,11 @@ fibernet/
 │   ├── viz/               # render_graph, render_trajectory, themes
 │   ├── analysis/          # GraphFeatureExtractor (94-dim)
 │   ├── ml/                # train_predictor, cross_validate, plots
-│   ├── rl/                # Bayesian opt, reward curves, agent eval
+│   ├── rl/                # CEM env, Bayesian opt, reward curves, agent eval
 │   └── easy.py            # show(), simulate(), batch_simulate()
 ├── tutorials/
-│   └── v4_tutorial/       # Jupyter notebook + test pipeline
+│   ├── complete_tutorial_v4.ipynb  # Complete tutorial (15MB, with images)
+│   └── run_pipeline.py            # Standalone runner script
 ├── tests/                 # Unit tests
 └── pyproject.toml         # Build configuration
 ```
@@ -451,7 +453,7 @@ For a square unit with `n_pts_per_side=5`, this gives **20 continuous parameters
 | Stretch simulation (1000 steps) | ~2.5s | CPU (Taichi x64) |
 | Feature extraction (94-dim) | ~0.5s | CPU |
 | ML training (RF, 100 samples) | ~1s | CPU |
-| Bayesian opt (30 iterations) | ~90s | CPU |
+| CEM optimization (200 episodes) | ~6 min | CPU |
 
 ---
 
@@ -465,7 +467,7 @@ If you use FiberNet in your research, please cite:
   author = {ML-BioMat Lab, BMG-FDU},
   year = {2026},
   url = {https://github.com/GellmanSparrowS/fibernet},
-  version = {4.0.0},
+  version = {4.0.5},
 }
 ```
 
@@ -488,7 +490,7 @@ FiberNet 是一个面向材料科学的 Python 工具包，提供纤维网络结
 - **Taichi模拟**: 质点弹簧动力学，自动弛豫，轨迹记录
 - **94维特征**: 结构+孔隙+接触特征提取
 - **一行ML**: `predict_from_csv()` 自动训练、评估、可视化、保存
-- **一行RL**: `run_bayesian_optimization()` 优化结构参数
+- **一行RL**: `run_bayesian_optimization()` 或 CEM (`ParametricStructureEnv`) 优化结构参数
 
 ### 安装
 
@@ -533,18 +535,15 @@ g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})
 
 ### 教程
 
-完整教程：`tutorials/v4_tutorial/fibernet_v4_tutorial.ipynb`
+完整教程：`tutorials/complete_tutorial_v4.ipynb`
 
 测试运行（5个样本）：
 ```bash
-python3 tutorials/v4_tutorial/test_pipeline.py
-```
-
-全量运行（2000个样本）：
-```bash
-python3 tutorials/v4_tutorial/test_pipeline.py --full
+python3 tutorials/run_pipeline.py                        # 完整流程
+python3 tutorials/run_pipeline.py --num-structures 100   # 快速测试
+python3 tutorials/run_pipeline.py --skip-rl              # 跳过RL
 ```
 
 ---
 
-*FiberNet v4.0.0 | [PyPI](https://pypi.org/project/fibernet/4.0.3/) | [GitHub](https://github.com/GellmanSparrowS/fibernet)*
+*FiberNet v4.0.5 | [PyPI](https://pypi.org/project/fibernet/4.0.5/) | [GitHub](https://github.com/GellmanSparrowS/fibernet)*
