@@ -18,19 +18,22 @@ Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 - Uses compact JSON format (no indent) for faster I/O
 - Commit: `5985c32`
 
+### Phase 3: Fix trajectory Cell 23 ✅
+- Check if trajectory PNGs exist → skip entirely
+- Otherwise re-run one structure with save_interval=500 to get trajectory
+- Vectorized edge computation preserved
+- display(fig) for dark theme
+- Commit: `12239cf`
+
 ## In Progress
 
-### Phase 3: Fix trajectory Cell 23
+### Phase 4: Fix 07_batch_stats (Cell 27)
 - **Status**: pending
-- Load from saved checkpoint if exists, otherwise re-run one sample
-- Ensure vectorized edge computation
-- Add inline display with display(fig)
-
-## Pending
-
-### Phase 4: Fix 07_batch_stats
 - Replace ForceByStructure (too many Y-axis labels) with meaningful alternative
 - Fix Energy x-axis range (data mostly within 20kJ)
+- Add data path prints
+
+## Pending
 
 ### Phase 5: Add data path prints for all figure cells
 
@@ -51,3 +54,4 @@ Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 - `0a81aa9` — v4.0.5 with field cache + kernel cache + vectorized save
 - `1ebadd4` — notebook in repo + display(fig) fix
 - `5985c32` — skip logic for generation and JSON save
+- `12239cf` — trajectory PNG skip + re-run fallback
