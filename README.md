@@ -231,6 +231,12 @@ FiberNet 为每条边上的每个内部点暴露了 **(dx, dy) 位移参数**，
 ### Structure Generation / 结构生成
 
 ```python
+# Define parametric displacements / 定义参数化位移
+# For square with n_pts_per_side=5: 4 sides × 5 pts = 20 displacements
+import numpy as np
+disps = [(np.random.uniform(-0.3, 0.3), np.random.uniform(-0.3, 0.3))
+         for _ in range(20)]
+
 # Generate 2D structure / 生成2D结构
 g = fn.pattern_2d(
     unit="square",           # unit type / 基元类型
@@ -269,17 +275,20 @@ boundary = g.get_boundary_nodes()
 ### Simulation / 模拟
 
 ```python
+# Create a structure first / 先生成结构
+g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
+
 engine = fn.TaichiEngine()
 
 # Uniaxial stretch test / 单轴拉伸
 r = engine.stretch_test(
-    graph,
+    g,
     target_stretch=1.5,      # stretch ratio / 拉伸倍数
     stiffness=1e5,            # spring constant / 弹簧刚度
     damping=0.3,              # damping ratio / 阻尼比
-    num_steps=1000,           # total steps / 总步数
-    save_interval=200,        # trajectory save interval / 轨迹保存间隔
-    auto_steps=True,          # auto-calculate steps from graph diameter / 自动计算步数
+    num_steps=5000,           # total simulation steps / 总模拟步数
+    ramp_fraction=0.2,        # first 20% steps = relaxation (弛豫) / 前20%步为弛豫
+    save_interval=1000,       # trajectory save interval / 轨迹保存间隔
 )
 
 # Result fields / 结果字段
