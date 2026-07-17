@@ -79,11 +79,8 @@ class SimResult:
 
         if self.deformed_positions is not None:
             pos_def = self.deformed_positions
-            # Per-edge stretch
-            final_lengths = np.array([
-                np.linalg.norm(pos_def[elements[e, 1]] - pos_def[elements[e, 0]])
-                for e in range(len(elements))
-            ])
+            # Per-edge stretch (vectorized)
+            final_lengths = np.linalg.norm(pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
             self.edge_stretches = final_lengths / lengths
             self.max_stretch = float(np.max(self.edge_stretches))
             self.mean_stretch = float(np.mean(self.edge_stretches))
@@ -254,6 +251,7 @@ def _element_data(pos, elements):
     return lengths, directions
 
 
+
 # ======================================================================
 # ======================================================================
 
@@ -264,6 +262,10 @@ class TaichiEngine:
     Axial spring model: F = k * (L - L0) / L0 * direction
     Explicit Verlet integration with damping.
     """
+
+    # Cache Taichi fields and kernels to avoid SNode exhaustion
+    # Key: (dim, num_nodes, num_edges)
+    _field_cache = {}
 
     def __init__(self, arch: str = "cpu", num_threads: int = 4):
         _ensure_taichi(arch, num_threads)
@@ -394,16 +396,94 @@ class TaichiEngine:
         else:
             stiff_np = np.full(num_edges, stiffness)
 
-        # Taichi fields (allocated once)
-        ti_pos = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        ti_vel = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        ti_edges = ti.Vector.field(2, dtype=ti.i32, shape=num_edges)
-        ti_L0 = ti.field(dtype=ti.f64, shape=num_edges)
-        ti_k = ti.field(dtype=ti.f64, shape=num_edges)
-        ti_fixed = ti.field(dtype=ti.i32, shape=num_nodes)
-        ti_ext = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        ti_pos0 = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+        # Taichi fields and kernel (cached to avoid SNode exhaustion and kernel recompilation)
+        cache_key = (dim, num_nodes, num_edges)
+        if cache_key not in TaichiEngine._field_cache:
+            # Allocate fields once
+            ti_pos = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            ti_vel = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            ti_edges = ti.Vector.field(2, dtype=ti.i32, shape=num_edges)
+            ti_L0 = ti.field(dtype=ti.f64, shape=num_edges)
+            ti_k = ti.field(dtype=ti.f64, shape=num_edges)
+            ti_fixed = ti.field(dtype=ti.i32, shape=num_nodes)
+            ti_ext = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            ti_pos0 = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            ti_sched = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            ti_sched_mask = ti.field(dtype=ti.i32, shape=num_nodes)
+            ti_dt = ti.field(dtype=ti.f64, shape=())
+            ti_dashpot = ti.field(dtype=ti.f64, shape=())
+            ti_drag = ti.field(dtype=ti.f64, shape=())
+            ti_ramp = ti.field(dtype=ti.f64, shape=())
 
+            # Compile kernel once (closure captures fields + constants)
+            @ti.kernel
+            def _cached_substep():
+                _dt = ti_dt[None]
+                _dash = ti_dashpot[None]
+                _drag = ti_drag[None]
+                _ramp = ti_ramp[None]
+
+                for e in range(num_edges):
+                    ia = ti_edges[e][0]
+                    ib = ti_edges[e][1]
+                    d = ti_pos[ia] - ti_pos[ib]
+                    dist = d.norm() + 1e-6
+                    dir_ = d / dist
+                    f_spring = -ti_k[e] * dir_ * (dist / ti_L0[e] - 1.0)
+                    rel_v = ti_vel[ia] - ti_vel[ib]
+                    f_damp = -_dash * rel_v.dot(dir_) * dir_ * ti_L0[e]
+                    f_total = f_spring + f_damp
+                    for k in ti.static(range(dim)):
+                        ti.atomic_add(ti_vel[ia][k], f_total[k] * _dt)
+                        ti.atomic_add(ti_vel[ib][k], -f_total[k] * _dt)
+
+                for i in range(num_nodes):
+                    for k in ti.static(range(dim)):
+                        ti_vel[i][k] += ti_ext[i][k] * _dt
+                    ti_vel[i] *= ti.exp(-_drag * _dt)
+                    for k in ti.static(range(dim)):
+                        ti_pos[i][k] += ti_vel[i][k] * _dt
+
+                for i in range(num_nodes):
+                    if ti_fixed[i] == 1:
+                        for k in ti.static(range(dim)):
+                            ti_pos[i][k] = ti_pos0[i][k]
+                            ti_vel[i][k] = 0.0
+
+                for i in range(num_nodes):
+                    if ti_sched_mask[i] == 1:
+                        for k in ti.static(range(dim)):
+                            ti_pos[i][k] = ti_pos0[i][k] + ti_sched[i][k] * _ramp
+                            ti_vel[i][k] = 0.0
+
+            TaichiEngine._field_cache[cache_key] = {
+                'ti_pos': ti_pos, 'ti_vel': ti_vel, 'ti_edges': ti_edges,
+                'ti_L0': ti_L0, 'ti_k': ti_k, 'ti_fixed': ti_fixed,
+                'ti_ext': ti_ext, 'ti_pos0': ti_pos0, 'ti_sched': ti_sched,
+                'ti_sched_mask': ti_sched_mask, 'ti_dt': ti_dt,
+                'ti_dashpot': ti_dashpot, 'ti_drag': ti_drag, 'ti_ramp': ti_ramp,
+                'substep': _cached_substep,
+            }
+
+        # Retrieve cached fields and kernel
+        cached = TaichiEngine._field_cache[cache_key]
+        ti_pos = cached['ti_pos']
+        ti_vel = cached['ti_vel']
+        ti_edges = cached['ti_edges']
+        ti_L0 = cached['ti_L0']
+        ti_k = cached['ti_k']
+        ti_fixed = cached['ti_fixed']
+        ti_ext = cached['ti_ext']
+        ti_pos0 = cached['ti_pos0']
+        ti_sched = cached['ti_sched']
+        ti_sched_mask = cached['ti_sched_mask']
+        ti_dt = cached['ti_dt']
+        ti_dashpot = cached['ti_dashpot']
+        ti_drag = cached['ti_drag']
+        ti_ramp = cached['ti_ramp']
+        substep = cached['substep']
+
+        # Reset field data (always, even on cache hit)
         ti_pos0.from_numpy(pos_orig.astype(np.float64))
         ti_pos.from_numpy(pos_orig.astype(np.float64))
         ti_vel.from_numpy(np.zeros_like(pos_orig))
@@ -429,71 +509,8 @@ class TaichiEngine:
         sched_mask = np.zeros(num_nodes, dtype=np.int32)
         for ni in schedule_nodes:
             sched_mask[ni] = 1
-        ti_sched = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
         ti_sched.from_numpy(schedule_targets.astype(np.float64))
-        ti_sched_mask = ti.field(dtype=ti.i32, shape=num_nodes)
         ti_sched_mask.from_numpy(sched_mask)
-
-        # Parameter fields
-        ti_dt = ti.field(dtype=ti.f64, shape=())
-        ti_dashpot = ti.field(dtype=ti.f64, shape=())
-        ti_drag = ti.field(dtype=ti.f64, shape=())
-        ti_ramp = ti.field(dtype=ti.f64, shape=())
-
-        @ti.kernel
-        def substep():
-            _dt = ti_dt[None]
-            _dash = ti_dashpot[None]
-            _drag = ti_drag[None]
-            _ramp = ti_ramp[None]
-
-            # Spring + dashpot forces
-            for e in range(num_edges):
-                ia = ti_edges[e][0]
-                ib = ti_edges[e][1]
-                d = ti_pos[ia] - ti_pos[ib]
-                dist = d.norm() + 1e-6
-                dir_ = d / dist
-
-                # Spring force: F = -k * dir * (dist/rest - 1)
-                f_spring = -ti_k[e] * dir_ * (dist / ti_L0[e] - 1.0)
-
-                # Dashpot: F_damp = -damp * (vi-vj).dot(dir) * dir * rest
-                rel_v = ti_vel[ia] - ti_vel[ib]
-                f_damp = -_dash * rel_v.dot(dir_) * dir_ * ti_L0[e]
-
-                f_total = f_spring + f_damp
-
-                for k in ti.static(range(dim)):
-                    ti.atomic_add(ti_vel[ia][k], f_total[k] * _dt)
-                    ti.atomic_add(ti_vel[ib][k], -f_total[k] * _dt)
-
-            # Euler step + air drag + external force
-            for i in range(num_nodes):
-                # External force
-                for k in ti.static(range(dim)):
-                    ti_vel[i][k] += ti_ext[i][k] * _dt
-
-                # Air drag
-                ti_vel[i] *= ti.exp(-_drag * _dt)
-
-                # Position update
-                for k in ti.static(range(dim)):
-                    ti_pos[i][k] += ti_vel[i][k] * _dt
-
-            # Constraints: fixed nodes
-            for i in range(num_nodes):
-                if ti_fixed[i] == 1:
-                    for k in ti.static(range(dim)):
-                        ti_pos[i][k] = ti_pos0[i][k]
-                        ti_vel[i][k] = 0.0
-
-            # Constraints: schedule nodes (ramped displacement)
-            for i in range(num_nodes):
-                if ti_sched_mask[i] == 1:
-                    for k in ti.static(range(dim)):
-                        ti_pos[i][k] = ti_pos0[i][k] + ti_sched[i][k] * _ramp
-                        ti_vel[i][k] = 0.0
 
         # Run loop
         ti_dt[None] = dt
@@ -511,10 +528,8 @@ class TaichiEngine:
             if (step + 1) % save_interval == 0:
                 cur_pos = ti_pos.to_numpy()
                 trajectory.append(cur_pos.copy())
-                new_len = np.array([
-                    np.linalg.norm(cur_pos[elements[e, 1]] - cur_pos[elements[e, 0]])
-                    for e in range(num_edges)
-                ])
+                # Vectorized edge length computation
+                new_len = np.linalg.norm(cur_pos[elements[:, 1]] - cur_pos[elements[:, 0]], axis=1)
                 max_stretch_history.append(float(np.max(new_len / rest_lengths_np)))
 
         pos_final = ti_pos.to_numpy()

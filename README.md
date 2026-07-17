@@ -7,7 +7,7 @@
 
 ---
 
-[![PyPI version](https://img.shields.io/pypi/v/fibernet.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/fibernet/4.0.0/)
+[![PyPI version](https://img.shields.io/pypi/v/fibernet.svg?logo=pypi&logoColor=white&label=PyPI)](https://pypi.org/project/fibernet/4.0.3/)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Downloads](https://img.shields.io/pypi/dm/fibernet.svg?label=Downloads&color=brightgreen)](https://pypi.org/project/fibernet/)
@@ -547,4 +547,4 @@ python3 tutorials/v4_tutorial/test_pipeline.py --full
 
 ---
 
-*FiberNet v4.0.0 | [PyPI](https://pypi.org/project/fibernet/4.0.0/) | [GitHub](https://github.com/GellmanSparrowS/fibernet)*
+*FiberNet v4.0.0 | [PyPI](https://pypi.org/project/fibernet/4.0.3/) | [GitHub](https://github.com/GellmanSparrowS/fibernet)*
