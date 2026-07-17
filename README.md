@@ -207,22 +207,22 @@ g.displace_node(internal_nodes[0], [0.1, 0.2])  # move node by (dx, dy)
 
 FiberNet exposes **direct (dx, dy) displacement parameters** for each internal point on every edge, enabling continuous action spaces for reinforcement learning — equivalent to the `move_AB(G, num, dx, dy)` approach in research code, but more general.
 
+FiberNet 为每条边上的每个内部点暴露了 **(dx, dy) 位移参数**，为强化学习提供连续动作空间。支持生成时位移控制和生成后逐节点微调两种方式。
+
 ```python
-# Method 1: Displacement at generation time
-# Agent outputs 20-dim continuous action vector
-action = agent.act(observation)  # shape: (20,) values in [-0.3, 0.3]
-displacements = [(action[2*i], action[2*i+1]) for i in range(10)]
-g = fn.pattern_2d("square", grid=(3,3), n_pts_per_side=5,
+# Method 1: Displacement at generation time / 方法1：生成时位移控制
+# Agent outputs 40-dim vector → 20 (dx,dy) pairs for square with n_pts_per_side=5
+# 智能体输出40维向量 → 20个(dx,dy)对（正方形, n_pts_per_side=5: 4边×5点）
+action = agent.act(observation)  # shape: (40,) values in [-0.3, 0.3]
+displacements = [(action[2*i], action[2*i+1]) for i in range(20)]
+g = fn.pattern_2d(unit="square", grid=(3,3), n_pts_per_side=5,
                   point_displacements=displacements)
 
-# Method 2: Post-generation refinement
+# Method 2: Post-generation refinement / 方法2：生成后逐节点微调
 internal_nodes = g.get_internal_nodes()  # 184 nodes for square 3×3 pts=5
 for node_id in internal_nodes:
     g.displace_node(node_id, agent.refinement_action(node_id))
 ```
-
-FiberNet 为每条边上的每个内部点暴露了 **(dx, dy) 位移参数**，为强化学习提供连续动作空间。
-支持生成时位移控制和生成后逐节点微调两种方式。
 
 ---
 
