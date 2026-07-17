@@ -1,14 +1,29 @@
-"""Pytest configuration - cross-platform Taichi test management."""
+"""Pytest configuration - cross-platform Taichi test management.
+
+IMPORTANT: Taichi version check monkey-patch MUST happen at module level,
+before any test file imports taichi (which starts a background thread that
+crashes on macOS CI).
+"""
 import os
 import sys
-import pytest
 
 collect_ignore_glob = ["_archived/**"]
 
 IS_WINDOWS = sys.platform == "win32"
 
-# Disable Taichi version check (causes abort on macOS CI)
+# Disable Taichi version check env var
 os.environ["TI_DISABLE_VERSION_CHECK"] = "1"
+
+# Monkey-patch Taichi version check IMMEDIATELY (before any import taichi)
+try:
+    import taichi._version_check as _vc
+    _vc.try_check_version = lambda: None
+    _vc.check_version = lambda: None
+except (ImportError, AttributeError):
+    pass
+
+# ── Pytest fixtures and hooks below ──
+import pytest
 
 
 @pytest.fixture(autouse=True, scope="class")
@@ -23,7 +38,7 @@ def _clear_taichi_cache():
 
 
 def pytest_collection_modifyitems(config, items):
-    """Skip Taichi simulation tests on Windows (SNode exhaustion + no fork support)."""
+    """Skip Taichi simulation tests on Windows (no fork support)."""
     if not IS_WINDOWS:
         return
 
