@@ -12,17 +12,21 @@ Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 - `plt.close(fig)` called after display for all themes (prevents memory leak)
 - Commit: `1ebadd4`
 
+### Phase 2: Add skip logic for batch generation ✅
+- Cell 16: Check if `all_structures` already exists in memory with correct count
+- Cell 20: Check if first JSON file exists, skip entire save loop if so
+- Uses compact JSON format (no indent) for faster I/O
+- Commit: `5985c32`
+
 ## In Progress
 
-### Phase 2: Add skip logic for batch generation
-- **Status**: in_progress
-- **Cells**: Cell 15 (structure generation), Cell 19 (JSON save)
-- **Logic**: Check if structures already exist, skip if so
+### Phase 3: Fix trajectory Cell 23
+- **Status**: pending
+- Load from saved checkpoint if exists, otherwise re-run one sample
+- Ensure vectorized edge computation
+- Add inline display with display(fig)
 
 ## Pending
-
-### Phase 3: Fix trajectory Cell 23
-- Load from saved checkpoint if exists, otherwise re-run one sample
 
 ### Phase 4: Fix 07_batch_stats
 - Replace ForceByStructure (too many Y-axis labels) with meaningful alternative
@@ -46,3 +50,4 @@ Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 ## Git Checkpoints
 - `0a81aa9` — v4.0.5 with field cache + kernel cache + vectorized save
 - `1ebadd4` — notebook in repo + display(fig) fix
+- `5985c32` — skip logic for generation and JSON save
