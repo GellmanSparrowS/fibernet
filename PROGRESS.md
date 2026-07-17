@@ -73,3 +73,25 @@ Final std_norm: 0.417 (good convergence)
 - ✅ 5 structure visualizations saved to `rl_structures/`
 - ✅ All improvement structures saved to `rl_improved_structures/` (one JSON per monotonic rise)
 - ✅ Graph reconstruction from checkpoint for resume support
+
+## Phase 13: GitHub Tutorial Update ✅
+
+### Pushed to GitHub
+- **Renamed**: `fibernet_v4_tutorial_updated.ipynb` → `complete_tutorial_v4.ipynb` (15 MB with embedded images)
+- **Cleaned up old tutorials** (all used deprecated APIs):
+  - `01_getting_started.ipynb` — `MorphologyAnalyzer` removed in v4
+  - `02_mechanical_simulation.ipynb` — `FEMSolver` removed in v4
+  - `03_machine_learning.ipynb` — old `.ml` patterns
+  - `04_reinforcement_validation.ipynb` — `sim.mechanical` removed
+  - `05_complete_pipeline_rl_validation.ipynb` — `sim.mechanical` removed
+  - `06_graph_api_workflow.ipynb` — old `FeatureExtractor` API
+  - `metamaterial_design.ipynb` — old `.api` patterns
+  - `v4_tutorial/` directory — superseded by complete_tutorial_v4
+- **Kept**: `run_pipeline.py` (standalone runner script)
+- Commit: `e4e0b95`
+
+### GitHub tutorials/ now contains:
+```
+complete_tutorial_v4.ipynb  (15 MB — full tutorial with images)
+run_pipeline.py             (15 KB — standalone runner)
+```
