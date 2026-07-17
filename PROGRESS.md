@@ -4,101 +4,46 @@
 Fix and improve the tutorial notebook (`tutorials/fibernet_v4_tutorial_updated.ipynb`)
 Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 
+## Latest Update: Phase 10 — Display + RL Robustness ✅
+
+### Phase 10: Fix Jupyter Display + RL Robustness ✅
+- **Issue 1 (Display)**: Replaced all `display(fig)` with `display(_IPyImage(filename=str(path)))` in 12 viz cells. This uses IPython's Image widget which works reliably regardless of matplotlib backend state.
+- **Skip branch display**: All viz cells now show saved PNGs via `_IPyImage` when skipping regeneration.
+- **Issue 3 (Kernel crash)**: Added Taichi field cache clearing before RL cell (Cell 38). Added per-episode try/except, periodic gc.collect(), and timing info in RL loop.
+- **Issue 4 (Progress bar)**: Added per-10-episode timing (elapsed, remaining, best reward, failure count) with sys.stdout.flush().
+- Commit: `cfc0510`
+
 ## All Phases Completed ✅
 
-### Phase 1: Fix plt inline display in Jupyter ✅
-- Replaced `plt.show()` with `display(fig)` (from IPython.display) in all 11 viz cells
-- Commit: `1ebadd4`
+### Phase 1-9: Previous work (see git log)
+- Phase 1: display(fig) fix
+- Phase 2: Skip logic for generation
+- Phase 3: Trajectory fix
+- Phase 4-5: Batch stats + data path prints
+- Phase 6: ML interpretation
+- Phase 7: RL overhaul
+- Phase 8: Standalone runner script
+- Phase 9: Cleanup
 
-### Phase 2: Add skip logic for batch generation ✅
-- Cell 16: Check if structures already exist in memory
-- Cell 20: Check if JSON files exist
-- Commit: `5985c32`
-
-### Phase 3: Fix trajectory Cell 23 ✅
-- Check if PNGs exist → skip
-- Otherwise re-run one structure with save_interval=500
-- Commit: `12239cf`
-
-### Phase 4: Fix 07_batch_stats (Cell 27) ✅
-- Replaced ForceByStructure with Force-vs-Stretch scatter
-- Fixed Energy x-axis range (95th percentile)
-- Commit: `05f320c`
-
-### Phase 5: Add data path prints for all figure cells ✅
-- All 9 viz cells now print data paths
-- Commit: `05f320c`
-
-### Phase 6: ML interpretation/explanation print ✅
-- Added comprehensive interpretation in Cell 34
-- Commit: `f89140e`
-
-### Phase 7: Overhaul RL section ✅
-- Analyzed negative rewards (reward = -max_force)
-- 2-panel figure: reward curve + monotonically increasing best-reward
-- Save improved structures to rl_improved_structures/
-- Commit: `07cbe17`
-
-### Phase 8: Build standalone Python runner script ✅
-- Created `tutorials/run_pipeline.py`
-- Supports checkpoint/resume, memory monitoring, partial execution
-- Tested with 5 structures: all stages passed
-- Commit: `2a3aa0a`
-
-### Phase 9: Final verification + cleanup ✅
-- Cleaned up orphaned files (show_diff.py, CODE_CHANGE_SUMMARY.md, PERFORMANCE_FIX.md)
-- Cleaned up test data
-- All 118 tests pass
-- Synced to /media/sf_share
-- Commit: `32b0711`
-
-## Summary of Changes
-
-### Notebook Improvements
-1. **Inline display fixed**: All figures now display correctly in Jupyter using `display(fig)`
-2. **Skip logic added**: All generation and visualization cells check for existing data and skip if present
-3. **Data path prints**: All cells print where data is saved
-4. **Batch stats improved**: Replaced unreadable bar chart with Force-vs-Stretch scatter, fixed Energy axis
-5. **ML interpretation**: Added comprehensive analysis prints explaining model performance
-6. **RL overhaul**: Explained negative rewards, added 2-panel figure, save improved structures
-
-### Performance Improvements (v4.0.2 → v4.0.5)
-- Vectorized trajectory save: 3.5x speedup
-- Field cache: prevents SNode exhaustion hang at ~128 structures
-- Kernel cache: eliminates progressive slowdown
-- Vectorized edge length computation in trajectory visualization
-
-### Library Version: v4.0.5
-Published to PyPI with all performance fixes.
-
-## Git History
+## Git History (recent)
 ```
+cfc0510 Phase 10: display fix + RL robustness
+efce76a Phase 9 complete
 32b0711 Phase 9: cleanup orphaned files
-2a3aa0a Phase 8: add standalone Python runner script
-07cbe17 Phase 7: RL overhaul
-f89140e Phase 6: ML interpretation
-05f320c Phase 4+5: batch_stats + data path prints
-12239cf Phase 3: trajectory PNG skip
-5985c32 Phase 2: skip logic for generation
-1ebadd4 Phase 1: display(fig) fix
 ```
 
-## Usage
+## Known Issues
 
-### In Jupyter
-Open `fibernet_v4_tutorial_updated.ipynb` and run cells sequentially.
-All cells with heavy computation have skip logic — re-running is safe.
+### Kernel Crash on Windows (under investigation)
+- Field cache works correctly (1 entry for constant topology)
+- No progressive slowdown (consistent ~3.85s/episode)
+- Possible Windows-specific Taichi resource accumulation
+- Mitigations added: field cache clear, per-episode error handling, periodic gc
 
-### Standalone Script
-```bash
-python tutorials/run_pipeline.py                        # Full pipeline
-python tutorials/run_pipeline.py --num-structures 100   # Quick test
-python tutorials/run_pipeline.py --skip-rl              # Skip RL
-python tutorials/run_pipeline.py --from-stage ml        # Resume from ML
-```
+### RL Analysis
+- Action space: 36 dims (18 points × 2 dx/dy) — high dimensional for 200 episodes
+- Reward = -max_force: all negative, closer to 0 = better
+- Not "true" RL (no learned policy, just random search + hill climbing)
+- For tutorial: demonstrates the concept adequately
 
-### Sync to /media/sf_share
-```bash
-./sync_notebook.sh to_share   # Copy notebook to share folder
-./sync_notebook.sh to_repo    # Copy from share to repo
-```
+## Library Version: v4.0.5 (on PyPI)
