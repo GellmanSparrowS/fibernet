@@ -25,33 +25,54 @@ Sync to `/media/sf_share/` via `./sync_notebook.sh to_share`
 - display(fig) for dark theme
 - Commit: `12239cf`
 
+### Phase 4: Fix 07_batch_stats (Cell 27) ✅
+- Replaced ForceByStructure (too many Y-axis labels) with Force-vs-Stretch scatter
+- Fixed Energy x-axis range (uses 95th percentile)
+- Added PNG skip logic and data path prints
+- Commit: `05f320c`
+
+### Phase 5: Add data path prints for all figure cells ✅
+- Added skip logic and data path prints to all 9 remaining viz cells
+- Cells: 9, 11, 14, 18, 25, 31, 34, 36, 40
+- Each cell checks if PNG exists, prints data path if skipping
+- Commit: `05f320c`
+
+### Phase 6: ML interpretation/explanation print ✅
+- Added comprehensive interpretation prints in Cell 34
+- Includes: task description, performance metrics, confusion matrix breakdown
+- Top 3 features with importance percentages
+- Conditional interpretation based on accuracy and AUC
+- Commit: `f89140e`
+
+### Phase 7: Overhaul RL section ✅
+- Analyzed negative rewards (reward = -max_force, closer to 0 is better)
+- Fig 11: only 2 panels — reward curve + monotonically increasing best-reward curve
+- Save structures at each reward improvement point to `rl_improved_structures/` folder
+- Visualize 5 representative improved structures
+- Added comprehensive analysis print with force interpretation
+- Checkpoint support for RL results
+- Commit: `07cbe17`
+
 ## In Progress
 
-### Phase 4: Fix 07_batch_stats (Cell 27)
+### Phase 8: Build standalone Python runner script with checkpoint support
 - **Status**: pending
-- Replace ForceByStructure (too many Y-axis labels) with meaningful alternative
-- Fix Energy x-axis range (data mostly within 20kJ)
-- Add data path prints
+- Requirements: Checkpoint/resume, memory limits, import-friendly
+- Should be runnable outside Jupyter
 
 ## Pending
 
-### Phase 5: Add data path prints for all figure cells
-
-### Phase 6: ML interpretation/explanation print
-
-### Phase 7: Overhaul RL section
-- Analyze negative rewards (metric issue?)
-- Fig 11: 2 panels only — reward curve + monotonically increasing best-reward curve
-- Save 5 structure visualizations from the process
-- Save structures at each reward increase point to a separate folder
-- Print analysis
-
-### Phase 8: Build standalone Python runner script with checkpoint support
-
 ### Phase 9: Final verification + cleanup
+- Run full notebook end-to-end
+- Verify all skip logic works
+- Verify all data path prints appear
+- Clean up temporary files
 
 ## Git Checkpoints
 - `0a81aa9` — v4.0.5 with field cache + kernel cache + vectorized save
 - `1ebadd4` — notebook in repo + display(fig) fix
 - `5985c32` — skip logic for generation and JSON save
 - `12239cf` — trajectory PNG skip + re-run fallback
+- `05f320c` — fix batch_stats + add skip/data-print to all 9 viz cells
+- `f89140e` — ML interpretation/explanation prints
+- `07cbe17` — RL overhaul with structure saving and analysis
