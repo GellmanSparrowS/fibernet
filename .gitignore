@@ -30,3 +30,12 @@ fibernet_output/
 .env_token
 *.key
 .pypirc
+
+# Obsolete/archived directories
+_old_scripts/
+_scripts_archive/
+analysis_results/
+analysis_scripts/
+output_data/
+output_viz/
+datasets/
