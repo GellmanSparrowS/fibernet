@@ -59,10 +59,25 @@ Generation → Simulation → Feature Extraction → Machine Learning → Reinfo
 
 *Voronoi structure under 1.5× uniaxial stretch — showing deformation and stress distribution.*
 
-*Left: 2D structure gallery (12 unit types). Right: Voronoi structure under 1.5× uniaxial stretch.*
-*2D结构画廊：12种基元（正方形、三角形、六边形、蜂窝、kagome、Voronoi、手性、凹角、星形、十字、钻石、缺肋）。*
+#### 📚 Tutorial Examples / 教程示例
 
-*Voronoi结构在1.5倍单轴拉伸下的变形 — 显示形变和应力分布。*
+<div align="center">
+<img src="docs/images/05_trajectory_dark.png" width="80%" alt="Deformation Trajectory" />
+</div>
+
+*Deformation trajectory (8 frames): honeycomb structure under stretch — colored by edge stretch ratio.*
+
+<div align="center">
+<img src="docs/images/09_ml_analysis_dark.png" width="80%" alt="ML Analysis" />
+</div>
+
+*Machine Learning analysis: confusion matrix, ROC curve, and learning curves for structure classification.*
+
+<div align="center">
+<img src="docs/images/11_rl_reward_dark.png" width="80%" alt="RL Reward Curves" />
+</div>
+
+*Reinforcement Learning (CEM): reward per episode and monotonically increasing best reward.*
 
 ---
 
