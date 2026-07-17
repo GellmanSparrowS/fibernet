@@ -1,48 +1,45 @@
 # FiberNet — Task Progress
 
-## Latest Update (2026-07-17): README Overhaul + CI Fix + Cleanup
+## Latest Update (2026-07-17): CI 全绿 ✅
 
-### Phase 17: Cross-Platform CI Fix ✅
-- **Windows**: skip Taichi simulation tests (no fork, SNode exhaustion)
-- **macOS**: set `TI_DISABLE_VERSION_CHECK=1` (fixes abort in version check)
-- **Linux**: `--forked` (each test in isolated subprocess)
-- CI workflow: separate test steps for Unix vs Windows
-- Commit: `27d392e`
+### Phase 18: macOS CI Fix — Taichi Version Check ✅
+- **Root cause**: Taichi background thread calls `urllib.request.urlopen` → `getproxies_macosx_sysconf` → signal 6 abort
+- **Fix**: monkey-patch `taichi._version_check` at conftest.py module level (before any test imports taichi)
+- **Result**: ALL 12 CI jobs pass (Linux×4 + macOS×4 + Windows×4)
+- Commit: `b2d9fad`
+
+### Phase 17: Cross-Platform CI ✅
+- Windows: skip Taichi simulation tests (no fork + SNode exhaustion)
+- macOS: `TI_DISABLE_VERSION_CHECK=1` (not sufficient alone, see Phase 18)
+- Linux: `--forked` (isolated subprocesses)
 
 ### Phase 16: Professional Bilingual README ✅
-- `README.md`: English-only, professional layout
-- `README_CN.md`: Chinese-only, matching structure
-- Language toggle links at top (`[中文文档]` / `[English]`)
-- CI badge, clean sections, proper images
-- `scripts/generate_readme.py`: template-based generator
+- `README.md` (EN) + `README_CN.md` (CN) with language toggle
+- `scripts/generate_readme.py` for maintainability
 - Commit: `77bba69`
 
-### Phase 15.5: Cleanup Obsolete Files ✅
-- Removed 77 files (32K+ lines): `_old_scripts/`, `_scripts_archive/`, `analysis_results/`, `analysis_scripts/`, `output_data/`, `output_viz/`
-- Updated `.gitignore`
+### Phase 15.5: Cleanup ✅
+- 77 obsolete files removed (32K+ lines)
 - Commit: `6b2fb70`
 
 ### Phase 15: CI Fix — Taichi SNode Exhaustion ✅
-- Cached `compute_forces()` Taichi fields (was leaking 6 SNodes per call)
-- Added `TaichiEngine.clear_field_cache()` classmethod
-- Added `pytest-forked` + `--forked` to pyproject.toml
-- 189 passed, 6 skipped, 0 errors
+- Cached `compute_forces()` + `clear_field_cache()` classmethod
+- Added `pytest-forked`
 - Commit: `b5844b7`
 
-## Git History
+## Git Log
 ```
+b2d9fad fix: monkey-patch Taichi version check at conftest module level
 27d392e fix: cross-platform CI — skip Taichi on Windows, disable version check
-1f77007 docs: update PROGRESS.md - README overhaul + cleanup + CI fix
 77bba69 docs: professional bilingual README with language toggle
 6b2fb70 chore: cleanup obsolete directories and files
 b5844b7 fix: resolve Taichi SNode exhaustion segfault in CI tests
 ```
 
 ## Status
-- ✅ CI fix (189 tests pass on Linux)
-- ✅ Cleanup (77 obsolete files removed)
-- ✅ Professional bilingual README (EN + CN + language toggle)
-- ✅ Cross-platform CI (Windows skips Taichi, macOS version check disabled)
-- ⏳ Waiting for CI results on GitHub
+- ✅ CI: 189 passed, 6 skipped (all 12 jobs green)
+- ✅ Cleanup: 77 obsolete files removed
+- ✅ README: professional bilingual (EN/CN + toggle)
+- ℹ️ PyPI: v4.0.5 (unchanged — only updates on `git tag v*`)
 
 ## Library Version: v4.0.5 (on PyPI)
