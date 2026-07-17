@@ -266,6 +266,16 @@ class TaichiEngine:
     # Cache Taichi fields and kernels to avoid SNode exhaustion
     # Key: (dim, num_nodes, num_edges)
     _field_cache = {}
+    _compute_forces_cache = {}
+
+    @classmethod
+    def clear_field_cache(cls):
+        """Clear all cached Taichi fields to free memory.
+        Does NOT free Taichi SNodes (Taichi limitation), but prevents
+        accumulating new cache entries on next calls.
+        """
+        cls._field_cache.clear()
+        cls._compute_forces_cache.clear()
 
     def __init__(self, arch: str = "cpu", num_threads: int = 4):
         _ensure_taichi(arch, num_threads)
@@ -277,56 +287,71 @@ class TaichiEngine:
         stiffness: np.ndarray,
         edges: np.ndarray,
     ) -> np.ndarray:
-        """Compute spring forces in parallel."""
+        """Compute spring forces in parallel (fields cached to avoid SNode leak)."""
         num_nodes = positions.shape[0]
         num_edges = edges.shape[0]
         dim = positions.shape[1]
 
-        pos = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        forces = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
-        edge_arr = ti.Vector.field(2, dtype=ti.i32, shape=num_edges)
-        L0 = ti.field(dtype=ti.f64, shape=num_edges)
-        k_field = ti.field(dtype=ti.f64, shape=num_edges)
-        f_temp = ti.Vector.field(dim, dtype=ti.f64, shape=num_edges)
+        cache_key = (dim, num_nodes, num_edges)
+        if cache_key not in TaichiEngine._compute_forces_cache:
+            pos = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            forces = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+            edge_arr = ti.Vector.field(2, dtype=ti.i32, shape=num_edges)
+            L0 = ti.field(dtype=ti.f64, shape=num_edges)
+            k_field = ti.field(dtype=ti.f64, shape=num_edges)
+            f_temp = ti.Vector.field(dim, dtype=ti.f64, shape=num_edges)
+
+            @ti.kernel
+            def _cf_compute():
+                for e in range(num_edges):
+                    i = edge_arr[e][0]
+                    j = edge_arr[e][1]
+                    diff = pos[j] - pos[i]
+                    L = diff.norm()
+                    if L > 1e-12:
+                        strain_val = (L - L0[e]) / L0[e]
+                        force_mag = k_field[e] * strain_val
+                        f_temp[e] = force_mag * (diff / L)
+                    else:
+                        for d in ti.static(range(dim)):
+                            f_temp[e][d] = 0.0
+
+            @ti.kernel
+            def _cf_zero():
+                for n in range(num_nodes):
+                    for d in ti.static(range(dim)):
+                        forces[n][d] = 0.0
+
+            @ti.kernel
+            def _cf_accumulate():
+                for e in range(num_edges):
+                    i = edge_arr[e][0]
+                    j = edge_arr[e][1]
+                    for d in ti.static(range(dim)):
+                        forces[i][d] += f_temp[e][d]
+                        forces[j][d] -= f_temp[e][d]
+
+            TaichiEngine._compute_forces_cache[cache_key] = {
+                'pos': pos, 'forces': forces, 'edge_arr': edge_arr,
+                'L0': L0, 'k_field': k_field, 'f_temp': f_temp,
+                'compute': _cf_compute, 'zero': _cf_zero, 'accumulate': _cf_accumulate,
+            }
+
+        cached = TaichiEngine._compute_forces_cache[cache_key]
+        pos = cached['pos']
+        forces = cached['forces']
+        edge_arr = cached['edge_arr']
+        L0 = cached['L0']
+        k_field = cached['k_field']
 
         pos.from_numpy(positions.astype(np.float64))
         edge_arr.from_numpy(edges.astype(np.int32))
         L0.from_numpy(rest_lengths.astype(np.float64))
         k_field.from_numpy(stiffness.astype(np.float64))
 
-        @ti.kernel
-        def compute():
-            for e in range(num_edges):
-                i = edge_arr[e][0]
-                j = edge_arr[e][1]
-                diff = pos[j] - pos[i]
-                L = diff.norm()
-                if L > 1e-12:
-                    strain_val = (L - L0[e]) / L0[e]
-                    force_mag = k_field[e] * strain_val
-                    f_temp[e] = force_mag * (diff / L)
-                else:
-                    for d in ti.static(range(dim)):
-                        f_temp[e][d] = 0.0
-
-        @ti.kernel
-        def zero():
-            for n in range(num_nodes):
-                for d in ti.static(range(dim)):
-                    forces[n][d] = 0.0
-
-        @ti.kernel
-        def accumulate():
-            for e in range(num_edges):
-                i = edge_arr[e][0]
-                j = edge_arr[e][1]
-                for d in ti.static(range(dim)):
-                    forces[i][d] += f_temp[e][d]
-                    forces[j][d] -= f_temp[e][d]
-
-        zero()
-        compute()
-        accumulate()
+        cached['zero']()
+        cached['compute']()
+        cached['accumulate']()
         return forces.to_numpy()
 
     def dynamics(

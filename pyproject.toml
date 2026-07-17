@@ -77,6 +77,7 @@ full = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-forked>=1.6",
     "matplotlib>=3.5",
     "networkx>=3.0",
     "pandas>=1.5",
@@ -106,6 +107,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_classes = "Test*"
 python_functions = "test_*"
+addopts = "--forked"
 
 [tool.setuptools.packages.find]
 include = ["fibernet*"]
