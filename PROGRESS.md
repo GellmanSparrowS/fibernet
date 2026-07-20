@@ -1,77 +1,107 @@
-# FiberNet — Task Progress
+# FiberNet Project Progress
 
-## Latest Update (2026-07-17): CI 全绿 ✅
+## Latest Updates (2026-07-20)
 
-### Phase 18: macOS CI Fix — Taichi Version Check ✅
-- **Root cause**: Taichi background thread calls `urllib.request.urlopen` → `getproxies_macosx_sysconf` → signal 6 abort
-- **Fix**: monkey-patch `taichi._version_check` at conftest.py module level (before any test imports taichi)
-- **Result**: ALL 12 CI jobs pass (Linux×4 + macOS×4 + Windows×4)
-- Commit: `b2d9fad`
+### ✅ Phase 19: GitHub Repository Optimization
 
-### Phase 17: Cross-Platform CI ✅
-- Windows: skip Taichi simulation tests (no fork + SNode exhaustion)
-- macOS: `TI_DISABLE_VERSION_CHECK=1` (not sufficient alone, see Phase 18)
-- Linux: `--forked` (isolated subprocesses)
+**Wiki Documentation**
+- Created 9 wiki pages with framework-level documentation (349 lines total)
+  - Home, Framework Overview, Unit Types, Simulation Engine
+  - Feature Extraction, Machine Learning, Reinforcement Learning
+  - Installation, Sidebar navigation, Footer
+- Wiki live at: https://github.com/GellmanSparrowS/fibernet/wiki
+- Content synchronized to `docs/wiki/` for GitHub Pages
 
-### Phase 16: Professional Bilingual README ✅
-- `README.md` (EN) + `README_CN.md` (CN) with language toggle
-- `scripts/generate_readme.py` for maintainability
-- Commit: `77bba69`
+**GitHub Pages**
+- Enabled GitHub Pages serving from `/docs` directory
+- Live at: https://gellmansparrows.github.io/fibernet/
 
-### Phase 15.5: Cleanup ✅
-- 77 obsolete files removed (32K+ lines)
-- Commit: `6b2fb70`
+**Release Management**
+- Created Release v4.0.5 with comprehensive changelog
+- Includes performance improvements, new features, and bug fixes
+- Live at: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.0.5
 
-### Phase 15: CI Fix — Taichi SNode Exhaustion ✅
-- Cached `compute_forces()` + `clear_field_cache()` classmethod
-- Added `pytest-forked`
-- Commit: `b5844b7`
+**Community Health: 57% → 85%**
+- Added Issue templates: bug_report.md, feature_request.md
+- Added PR template: PULL_REQUEST_TEMPLATE.md
+- Added Code of Conduct: Contributor Covenant v2.0
+- Added issue template config.yml for better discoverability
+- Enabled branch protection on main branch
+- Enabled auto-delete merged branches
+- Added 6 custom labels: performance, simulation, visualization, ML/RL, 3D, breaking-change
 
-## Git Log
-```
-b2d9fad fix: monkey-patch Taichi version check at conftest module level
-27d392e fix: cross-platform CI — skip Taichi on Windows, disable version check
-77bba69 docs: professional bilingual README with language toggle
-6b2fb70 chore: cleanup obsolete directories and files
-b5844b7 fix: resolve Taichi SNode exhaustion segfault in CI tests
-```
+**Repository Settings**
+- Branch protection: enabled (main branch)
+- Auto-delete head branches: enabled
+- Custom labels: 6 new project-specific labels
 
-## Status
-- ✅ CI: 189 passed, 6 skipped (all 12 jobs green)
-- ✅ Cleanup: 77 obsolete files removed
-- ✅ README: professional bilingual (EN/CN + toggle)
-- ℹ️ PyPI: v4.0.5 (unchanged — only updates on `git tag v*`)
+### ✅ Phase 18: Cross-Platform CI Fixes (completed earlier)
 
-## Library Version: v4.0.5 (on PyPI)
+- Fixed Taichi SNode exhaustion segfault
+- Implemented field caching with clear_field_cache() method
+- Added pytest-forked for cross-platform compatibility
+- Monkey-patched Taichi version check for macOS
+- CI now passes on Linux/macOS/Windows × Python 3.9/3.10/3.11/3.12
 
-### Phase 19: Lab Homepage HTML ✅
-- Created `fibernet_cn.html` (Chinese, academic style, no emoji)
-- Created `fibernet_en.html` (English version)
-- Output: `/media/sf_share/`
+### ✅ Phase 17: Professional Documentation (completed earlier)
 
-### Phase 20: Wiki Documentation (local, pending push) ✅
-- Created 9 wiki pages in `docs/wiki/` (framework-style, extensible)
-- Pages: Home, Framework Overview, Unit Types, Simulation Engine,
-  Feature Extraction, Machine Learning, Reinforcement Learning
-- Also prepared `/tmp/fn-wiki-fresh/` for direct wiki repo push
-- GitHub temporarily unreachable — 3 commits pending push
-- Also includes lab homepage HTML files in `/media/sf_share/`
+- Bilingual README.md (English) and README_CN.md (Chinese)
+- Cleaned 77 obsolete files (32K+ lines removed)
+- Generated professional HTML pages for lab homepage
+- All code examples verified working
 
-### Pending Push (GitHub network issue)
-```
-7ff7cde docs: add wiki documentation to docs/wiki/
-6d1bfc7 docs: update PROGRESS.md - lab homepage HTML complete
-1599251 docs: update PROGRESS.md - CI all green
-```
-Run `git push origin main` when network recovers.
+## Repository Status
 
-### Phase 21: GitHub Release & Pages ✅
-- **Release v4.0.5** created: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.0.5
-- **GitHub Pages** enabled: https://gellmansparrows.github.io/fibernet/
-  - Serving docs from `/docs` directory on `main` branch
-- Wiki docs also in `docs/wiki/` for GitHub Pages access
+**GitHub Features Enabled**
+- ✅ Wiki (9 pages, framework-level docs)
+- ✅ GitHub Pages (from /docs)
+- ✅ Discussions (empty, ready for community)
+- ✅ Projects (enabled but unused)
+- ✅ Releases (v4.0.5 published)
+- ✅ Branch protection (main branch)
+- ✅ Issue/PR templates
+- ✅ Code of conduct
 
-### Pending (manual action needed)
-- **GitHub Wiki**: Repo needs first page created via GitHub web UI to initialize
-  - Local copy ready at `/tmp/fn-wiki-fresh/`
-  - Or use `docs/wiki/` content directly
+**Community Health Score: 85%**
+- ✅ Code of conduct
+- ✅ Contributing guidelines
+- ✅ Issue templates (bug + feature request)
+- ✅ Pull request template
+- ✅ License (MIT)
+- ✅ README
+- ⚠️ Issue template config (GitHub API may not detect this)
+
+**CI/CD Status**
+- All 12 CI jobs passing (3 OS × 4 Python versions)
+- Tests: 189 passed, 6 skipped
+- Taichi field caching prevents SNode exhaustion
+- Cross-platform compatibility verified
+
+## Next Steps
+
+Potential improvements (not blocking):
+1. Set up GitHub Projects board for task tracking
+2. Create Discussion categories (Q&A, Show and tell, Ideas)
+3. Add more example scripts to `examples/` directory
+4. Set up automated PyPI publishing on tag creation
+5. Add more unit tests for edge cases
+
+## Technical Notes
+
+**Wiki Maintenance**
+- Wiki source in `.wiki/` directory (local only)
+- Push to wiki repo: `git push wiki main`
+- Sync to docs/wiki/: copy files before committing to main repo
+- Keep framework-level, avoid implementation details
+
+**Release Process**
+- Update CHANGELOG.md with changes
+- Bump version in pyproject.toml
+- Create GitHub release with tag (triggers PyPI publish if configured)
+- Update wiki if major features added
+
+**CI Configuration**
+- Uses pytest-forked for process isolation
+- Taichi version check monkey-patched in conftest.py
+- Field cache cleared between test classes
+- Windows skips Taichi simulation tests (no fork support)
