@@ -48,3 +48,19 @@ b5844b7 fix: resolve Taichi SNode exhaustion segfault in CI tests
 - Created `fibernet_cn.html` (Chinese, academic style, no emoji)
 - Created `fibernet_en.html` (English version)
 - Output: `/media/sf_share/`
+
+### Phase 20: Wiki Documentation (local, pending push) ✅
+- Created 9 wiki pages in `docs/wiki/` (framework-style, extensible)
+- Pages: Home, Framework Overview, Unit Types, Simulation Engine,
+  Feature Extraction, Machine Learning, Reinforcement Learning
+- Also prepared `/tmp/fn-wiki-fresh/` for direct wiki repo push
+- GitHub temporarily unreachable — 3 commits pending push
+- Also includes lab homepage HTML files in `/media/sf_share/`
+
+### Pending Push (GitHub network issue)
+```
+7ff7cde docs: add wiki documentation to docs/wiki/
+6d1bfc7 docs: update PROGRESS.md - lab homepage HTML complete
+1599251 docs: update PROGRESS.md - CI all green
+```
+Run `git push origin main` when network recovers.
