@@ -43,3 +43,8 @@ b5844b7 fix: resolve Taichi SNode exhaustion segfault in CI tests
 - ℹ️ PyPI: v4.0.5 (unchanged — only updates on `git tag v*`)
 
 ## Library Version: v4.0.5 (on PyPI)
+
+### Phase 19: Lab Homepage HTML ✅
+- Created `fibernet_cn.html` (Chinese, academic style, no emoji)
+- Created `fibernet_en.html` (English version)
+- Output: `/media/sf_share/`
