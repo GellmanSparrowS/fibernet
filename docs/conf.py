@@ -5,8 +5,8 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'FiberNet'
 copyright = '2026, FiberNet Contributors'
 author = 'FiberNet Contributors'
-version = '1.5'
-release = '1.5.1'
+version = '4.0'
+release = '4.0.5'
 
 extensions = [
     'sphinx.ext.autodoc',

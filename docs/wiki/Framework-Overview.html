@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Framework Overview — FiberNet Wiki</title>
+<style>
+  :root { --bg: #fafafa; --fg: #1a1a2e; --accent: #2c3e50; --link: #2980b9; --border: #e0e0e0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; color: var(--fg); background: var(--bg); line-height: 1.7; }
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .breadcrumb { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: var(--link); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  h1 { font-size: 2rem; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+  h2 { font-size: 1.4rem; color: var(--accent); margin: 2rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; color: #333; margin: 1.5rem 0 0.5rem; }
+  h4 { font-size: 1rem; color: #444; margin: 1rem 0 0.4rem; }
+  p { margin-bottom: 0.8rem; font-size: 1rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: 'Courier New', monospace; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 2px; font-size: 0.9em; }
+  pre { background: #2c3e50; color: #ecf0f1; padding: 1rem 1.2rem; border-radius: 4px; overflow-x: auto; margin: 0.8rem 0; line-height: 1.5; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; font-size: 0.95rem; }
+  strong { font-weight: 700; }
+  blockquote { border-left: 3px solid var(--accent); padding-left: 1rem; margin: 1rem 0; color: #555; font-style: italic; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  .nav-links { display: flex; justify-content: space-between; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.9rem; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: #888; font-family: 'Helvetica Neue', Arial, sans-serif; }
+  @media (max-width: 600px) { h1 { font-size: 1.5rem; } pre { font-size: 0.8rem; } }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="breadcrumb"><a href="../index.html">FiberNet</a> &rsaquo; <a href="../index.html">Wiki</a> &rsaquo; Framework Overview</div>
+<h1>Framework Overview</h1>
+
+<p>FiberNet follows a modular architecture where each component can be used independently or composed into a full pipeline.</p>
+
+<h2>Architecture</h2>
+
+<pre><code>
+┌─────────────┐    ┌──────────────┐    ┌──────────────────┐
+│     gen/     │───▶│    sim/      │───▶│    analysis/     │
+│  (structure  │    │  (Taichi     │    │  (feature        │
+│  generation) │    │  dynamics)   │    │   extraction)    │
+└─────────────┘    └──────────────┘    └──────────────────┘
+                                              │
+                          ┌───────────────────┼───────────────────┐
+                          ▼                   ▼                   ▼
+                   ┌────────────┐    ┌──────────────┐    ┌──────────────┐
+                   │    ml/     │    │     rl/      │    │    viz/      │
+                   │ (learning) │    │ (optimization│    │ (rendering)  │
+                   │            │    │   & control) │    │              │
+                   └────────────┘    └──────────────┘    └──────────────┘
+</code></pre>
+
+<h2>Core Data Model</h2>
+
+<p>All modules operate on a shared <code>StructureGraph</code> object:</p>
+
+<ul>
+<li><strong>Nodes</strong>: positions, optional attributes (mass, boundary flag)</li>
+<li><strong>Edges</strong>: connectivity, optional attributes (stiffness, rest length)</li>
+<li><strong>Metadata</strong>: dimension (2D/3D), box size, grid info, unit type</li>
+</ul>
+
+<h2>Module Responsibilities</h2>
+
+<h3>gen/ — Structure Generation</h3>
+<p>Generates <code>StructureGraph</code> instances from unit type definitions. Supports parametric displacement control for RL action spaces.</p>
+
+<h3>sim/ — Simulation Engine</h3>
+<p>Runs mass-spring dynamics on <code>StructureGraph</code>. Produces <code>SimResult</code> with forces, stretches, trajectories, and energy.</p>
+
+<h3>analysis/ — Feature Extraction</h3>
+<p>Extracts numerical feature vectors from <code>StructureGraph</code> for downstream ML/RL tasks.</p>
+
+<h3>ml/ — Machine Learning</h3>
+<p>Provides regression, classification, cross-validation, and automated pipelines on extracted features.</p>
+
+<h3>rl/ — Reinforcement Learning</h3>
+<p>Defines parametric environments and optimization methods (CEM, Bayesian optimization).</p>
+
+<h3>viz/ — Visualization</h3>
+<p>Renders structures, trajectories, stress distributions, and analysis results.</p>
+
+<h2>Design Principles</h2>
+
+<ol>
+<li><strong>Composability</strong>: Each module accepts and returns standard data structures</li>
+<li><strong>Minimal coupling</strong>: Modules communicate through <code>StructureGraph</code> and <code>SimResult</code></li>
+<li><strong>Progressive disclosure</strong>: Simple one-line API for common tasks, full control when needed</li>
+<li><strong>Performance</strong>: Taichi GPU backend for simulation, cached field allocation</li>
+<li><strong>Reproducibility</strong>: Deterministic generation with seed control</li>
+</ol>
+
+<h2>Data Flow</h2>
+
+<pre><code>
+# 1. Generate
+g = fn.pattern_2d(unit="square", grid=(3,3), n_pts_per_side=5, ...)
+
+# 2. Simulate
+r = fn.TaichiEngine().stretch_test(g, target_stretch=1.5, ...)
+
+# 3. Extract features
+features = fn.GraphFeatureExtractor().extract(g)
+
+# 4. Learn / Optimize
+model, metrics = fn.ml.train_predictor(X, y)
+# or
+result = fn.rl.run_bayesian_optimization(objective_fn, param_space)
+</code></pre>
+
+<div class="nav-links">
+  <a href="../index.html">&larr; Back to Home</a>
+  <a href="https://github.com/GellmanSparrowS/fibernet/wiki">View on GitHub Wiki &rarr;</a>
+</div>
+<footer>FiberNet v4.0.5 &middot; MIT License &middot; ML-BioMat Lab, BMG-FDU</footer>
+</div>
+</body>
+</html>

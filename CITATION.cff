@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "FiberNet: A Python Toolkit for Computational Design of Fiber Network Metamaterials"
+type: software
+authors:
+  - name: "FiberNet Contributors"
+    affiliation: "ML-BioMat Lab, BMG-FDU"
+version: 4.0.5
+date-released: "2026-07-20"
+license: MIT
+url: "https://ml-biomat.com/"
+repository-code: "https://github.com/GellmanSparrowS/fibernet"
+keywords:
+  - fiber networks
+  - metamaterials
+  - machine learning
+  - reinforcement learning
+  - simulation
+  - materials design
+  - taichi
