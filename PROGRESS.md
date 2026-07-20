@@ -64,3 +64,14 @@ b5844b7 fix: resolve Taichi SNode exhaustion segfault in CI tests
 1599251 docs: update PROGRESS.md - CI all green
 ```
 Run `git push origin main` when network recovers.
+
+### Phase 21: GitHub Release & Pages ✅
+- **Release v4.0.5** created: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.0.5
+- **GitHub Pages** enabled: https://gellmansparrows.github.io/fibernet/
+  - Serving docs from `/docs` directory on `main` branch
+- Wiki docs also in `docs/wiki/` for GitHub Pages access
+
+### Pending (manual action needed)
+- **GitHub Wiki**: Repo needs first page created via GitHub web UI to initialize
+  - Local copy ready at `/tmp/fn-wiki-fresh/`
+  - Or use `docs/wiki/` content directly
