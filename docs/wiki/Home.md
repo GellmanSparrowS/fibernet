@@ -1,6 +1,6 @@
 # FiberNet
 
-FiberNet is a Python toolkit for computational design of fiber network metamaterials. It provides a closed-loop workflow from parametric structure generation through GPU-accelerated simulation to machine learning and reinforcement learning optimization.
+A Python toolkit for computational design of fiber network metamaterials. Closed-loop workflow from parametric structure generation through GPU-accelerated simulation to machine learning and reinforcement learning optimization.
 
 ```
 Generation → Simulation → Feature Extraction → Machine Learning → Reinforcement Learning
@@ -8,28 +8,23 @@ Generation → Simulation → Feature Extraction → Machine Learning → Reinfo
 
 ## Documentation
 
-| Module | Description |
-|--------|-------------|
-| [[Framework Overview]] | Architecture, design philosophy, module relationships |
-| [[Unit Types]] | Built-in structural units and their properties |
-| [[Simulation Engine]] | Taichi-based mass-spring dynamics |
-| [[Feature Extraction]] | 94-dimensional feature vector design |
-| [[Machine Learning]] | Prediction, classification, model comparison |
-| [[Reinforcement Learning]] | Parametric optimization, CEM, Bayesian methods |
+- [[Framework Overview]] — Architecture, design philosophy, module relationships
+- [[Unit Types]] — Built-in structural units and parametric control
+- [[Simulation Engine]] — Taichi-based mass-spring dynamics
+- [[Feature Extraction]] — High-dimensional feature vector design
+- [[Machine Learning]] — Prediction, classification, model comparison
+- [[Reinforcement Learning]] — Parametric optimization, CEM, Bayesian methods
 
 ## Quick Links
 
-- **PyPI**: [pypi.org/project/fibernet](https://pypi.org/project/fibernet/)
-- **Source**: [github.com/GellmanSparrowS/fibernet](https://github.com/GellmanSparrowS/fibernet)
-- **Lab**: [ML-BioMat Lab, BMG-FDU](https://ml-biomat.com/)
+- **PyPI**: https://pypi.org/project/fibernet/
+- **Source**: https://github.com/GellmanSparrowS/fibernet
+- **Lab**: https://ml-biomat.com/
+- **Homepage**: https://gellmansparrows.github.io/fibernet/
 
-## Installation
+## Install
 
 ```
 pip install fibernet        # core
-pip install fibernet[full]  # all modules
+pip install fibernet[full]  # all modules (ML + RL + viz + simulation)
 ```
-
-## Version
-
-Current release: **v4.0.5** (see [CHANGELOG](https://github.com/GellmanSparrowS/fibernet/blob/main/CHANGELOG.md))

@@ -2,8 +2,6 @@
 
 ---
 
-**Documentation**
-
 - [Framework Overview](Framework-Overview)
 - [Unit Types](Unit-Types)
 - [Simulation Engine](Simulation-Engine)
@@ -13,8 +11,5 @@
 
 ---
 
-**Links**
-
 - [PyPI](https://pypi.org/project/fibernet/)
 - [GitHub](https://github.com/GellmanSparrowS/fibernet)
-- [Lab](https://ml-biomat.com/)
