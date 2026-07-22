@@ -1,0 +1,5 @@
+feat(ml): add optimization.py (multi-objective, Pareto, sweeper) — Phase 6
+
+- optimization.py: MultiObjectiveOptimizer (Optuna NSGA-II), NSGA2Optimizer (pymoo), ParetoAnalysis (front/hypervolume/select_best), StructureSweeper (checkpoint/resume)
+- Pareto front extraction, hypervolume indicator, knee point detection
+- All tests pass

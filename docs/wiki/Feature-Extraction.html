@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feature Extraction — FiberNet Wiki</title>
+<style>
+  :root { --bg: #fafafa; --fg: #1a1a2e; --accent: #2c3e50; --link: #2980b9; --border: #e0e0e0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; color: var(--fg); background: var(--bg); line-height: 1.7; }
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .breadcrumb { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: var(--link); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  h1 { font-size: 2rem; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+  h2 { font-size: 1.4rem; color: var(--accent); margin: 2rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; color: #333; margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 0.8rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: 'Courier New', monospace; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 2px; font-size: 0.9em; }
+  pre { background: #2c3e50; color: #ecf0f1; padding: 1rem; border-radius: 4px; overflow-x: auto; margin: 0.8rem 0; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  strong { font-weight: 700; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="breadcrumb"><a href="../index.html">FiberNet</a> &rsaquo; Wiki &rsaquo; Feature Extraction</div>
+<h1>Feature Extraction</h1>
+<p>Extracts numerical feature vectors from <code>StructureGraph</code> for downstream ML/RL tasks. Two extractors: 2D (94-dim) and 3D (60-dim).</p>
+<h2>Feature Categories</h2>
+<h3>2D Extractor (<code>fn.GraphFeatureExtractor</code>)</h3>
+<table><thead><tr>
+<th>Category</th>
+<th>Approx. Dims</th>
+<th>What It Captures</th>
+</tr></thead><tbody>
+<tr>
+<td>Structural</td>
+<td>~34</td>
+<td>Node/edge counts, density, degree statistics, clustering</td>
+</tr>
+<tr>
+<td>Spectral</td>
+<td>~12</td>
+<td>Laplacian eigenvalues, spectral gap, spectral moments</td>
+</tr>
+<tr>
+<td>Pore/Contact</td>
+<td>~18</td>
+<td>Pore size distribution, contact geometry (2D image-based)</td>
+</tr>
+<tr>
+<td>Mechanical</td>
+<td>~30</td>
+<td>Force distribution, energy, anisotropy (from simulation)</td>
+</tr>
+</tbody></table>
+<h3>3D Extractor (<code>GraphFeatureExtractor3D</code>)</h3>
+<p>Adapted feature set for volumetric structures. Excludes 2D image-based features; adds volume fraction, surface area, 3D connectivity metrics.</p>
+<h2>API</h2>
+<pre><code>
+# 2D
+ext = fn.GraphFeatureExtractor()
+features = ext.extract(g)            # numpy array, shape (94,)
+names = ext.get_feature_names()      # human-readable names
+
+# 3D
+from fibernet.analysis.graph_features_3d import GraphFeatureExtractor3D
+ext3d = GraphFeatureExtractor3D()
+features = ext3d.extract(g)          # dict with 60 features
+</code></pre>
+<h2>Extensibility</h2>
+<p>Each extractor is designed to be subclassed. New feature categories can be added by implementing additional extraction methods. The 2D and 3D extractors share a common interface pattern.</p>
+<footer>FiberNet v4.0.5 · MIT License · ML-BioMat Lab, BMG-FDU</footer>
+</div>
+</body>
+</html>

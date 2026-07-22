@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installation — FiberNet Wiki</title>
+<style>
+  :root { --bg: #fafafa; --fg: #1a1a2e; --accent: #2c3e50; --link: #2980b9; --border: #e0e0e0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; color: var(--fg); background: var(--bg); line-height: 1.7; }
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .breadcrumb { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: var(--link); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  h1 { font-size: 2rem; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+  h2 { font-size: 1.4rem; color: var(--accent); margin: 2rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; color: #333; margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 0.8rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: 'Courier New', monospace; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 2px; font-size: 0.9em; }
+  pre { background: #2c3e50; color: #ecf0f1; padding: 1rem; border-radius: 4px; overflow-x: auto; margin: 0.8rem 0; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  strong { font-weight: 700; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="breadcrumb"><a href="../index.html">FiberNet</a> &rsaquo; Wiki &rsaquo; Installation</div>
+<h1>Installation</h1>
+<h2>Requirements</h2>
+<ul>
+<li>Python 3.9+</li>
+<li>pip</li>
+</ul>
+<h2>Install from PyPI</h2>
+<pre><code>
+pip install fibernet          # core
+pip install fibernet[full]    # all modules (ML + RL + visualization + simulation)
+</code></pre>
+<h2>Install from source</h2>
+<pre><code>
+git clone https://github.com/GellmanSparrowS/fibernet.git
+cd fibernet
+pip install -e .
+</code></pre>
+<p>For development:</p>
+<pre><code>
+pip install -e ".[dev]"
+</code></pre>
+<h2>Verify installation</h2>
+<pre><code>
+import fibernet as fn
+print(fn.__version__)
+</code></pre>
+<h2>GPU acceleration</h2>
+<p>The simulation engine uses Taichi for GPU-accelerated dynamics. Taichi is included in <code>fibernet[full]</code>, or install separately:</p>
+<pre><code>
+pip install taichi
+</code></pre>
+<p>Taichi automatically detects available GPUs (CUDA, Metal, Vulkan).</p>
+<h2>Troubleshooting</h2>
+<p>If you see import errors, ensure the full installation is up to date:</p>
+<pre><code>
+pip install -U fibernet[full]
+</code></pre>
+<footer>FiberNet v4.0.5 · MIT License · ML-BioMat Lab, BMG-FDU</footer>
+</div>
+</body>
+</html>

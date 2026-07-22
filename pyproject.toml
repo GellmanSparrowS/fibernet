@@ -1,0 +1,113 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fibernet"
+version = "4.0.5"
+description = "A comprehensive fiber network generation, simulation, and ML toolkit for materials science research"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [
+    {name = "FiberNet Contributors"}
+]
+keywords = [
+    "fiber networks",
+    "materials science",
+    "finite element method",
+    "simulation",
+    "mechanical properties",
+    "computational materials",
+    "machine learning",
+    "reinforcement learning",
+    "polymer physics",
+    "biomechanics"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=1.21",
+    "scipy>=1.7",
+    "networkx>=3.0",
+    "matplotlib>=3.5",
+]
+
+[project.optional-dependencies]
+viz = ["pyvista>=0.37"]
+mesh = ["trimesh>=3.20"]
+io = ["h5py>=3.7"]
+accel = ["taichi>=1.6"]
+ml = [
+    "scikit-learn>=1.0",
+    "pandas>=1.5",
+    "tqdm>=4.60",
+]
+rl = [
+    "gymnasium>=0.26",
+    "scikit-optimize>=0.9",
+    "stable-baselines3>=2.0",
+]
+graph = ["networkx>=3.0"]
+full = [
+    "pyvista>=0.37",
+    "trimesh>=3.20",
+    "h5py>=3.7",
+    "taichi>=1.6",
+    "scikit-learn>=1.0",
+    "pandas>=1.5",
+    "networkx>=3.0",
+    "tqdm>=4.60",
+    "pyyaml>=6.0",
+    "gymnasium>=0.26",
+    "scikit-optimize>=0.9",
+    "matplotlib>=3.5",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-forked>=1.6",
+    "matplotlib>=3.5",
+    "networkx>=3.0",
+    "pandas>=1.5",
+    "scikit-learn>=1.0",
+    "pyyaml>=6.0",
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "black>=23.0",
+    "flake8>=6.0",
+    "scikit-image>=0.19",
+    "taichi>=1.6",
+]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "nbsphinx>=0.9",
+]
+
+[project.urls]
+Homepage = "https://github.com/GellmanSparrowS/fibernet"
+Documentation = "https://fibernet.readthedocs.io"
+Repository = "https://github.com/GellmanSparrowS/fibernet"
+Issues = "https://github.com/GellmanSparrowS/fibernet/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--forked"
+
+[tool.setuptools.packages.find]
+include = ["fibernet*"]

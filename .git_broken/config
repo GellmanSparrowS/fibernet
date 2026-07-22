@@ -1,0 +1,15 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://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@github.com/GellmanSparrowS/fibernet.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[http]
+	lowSpeedLimit = 1000
+	lowSpeedTime = 30
+	postBuffer = 524288000

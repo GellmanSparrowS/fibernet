@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit Types — FiberNet Wiki</title>
+<style>
+  :root { --bg: #fafafa; --fg: #1a1a2e; --accent: #2c3e50; --link: #2980b9; --border: #e0e0e0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Georgia', 'Times New Roman', serif; color: var(--fg); background: var(--bg); line-height: 1.7; }
+  .container { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+  .breadcrumb { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 0.85rem; color: #888; margin-bottom: 1.5rem; }
+  .breadcrumb a { color: var(--link); text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  h1 { font-size: 2rem; color: var(--accent); margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); }
+  h2 { font-size: 1.4rem; color: var(--accent); margin: 2rem 0 0.8rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.1rem; color: #333; margin: 1.5rem 0 0.5rem; }
+  p { margin-bottom: 0.8rem; }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: 'Courier New', monospace; background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 2px; font-size: 0.9em; }
+  pre { background: #2c3e50; color: #ecf0f1; padding: 1rem; border-radius: 4px; overflow-x: auto; margin: 0.8rem 0; }
+  pre code { background: none; padding: 0; color: inherit; font-size: 0.85rem; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.8rem; text-align: left; }
+  th { background: #f5f5f5; font-weight: 600; }
+  ul, ol { margin: 0.5rem 0 1rem 1.5rem; }
+  li { margin-bottom: 0.3rem; }
+  strong { font-weight: 700; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--border); text-align: center; font-size: 0.8rem; color: #888; }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="breadcrumb"><a href="../index.html">FiberNet</a> &rsaquo; Wiki &rsaquo; Unit Types</div>
+<h1>Unit Types</h1>
+<p>FiberNet provides built-in unit cell types organized into structural families. Each unit can be tiled into larger structures via <code>pattern_2d()</code> or <code>pattern_3d()</code>.</p>
+<h2>2D Units</h2>
+<table><thead><tr>
+<th>Family</th>
+<th>Units</th>
+<th>Characteristics</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Regular Lattices</strong></td>
+<td><code>square</code>, <code>triangle</code>, <code>hexagon</code></td>
+<td>Classic periodic tessellations</td>
+</tr>
+<tr>
+<td><strong>Cellular</strong></td>
+<td><code>honeycomb</code>, <code>reentrant</code>, <code>missing_rib</code></td>
+<td>Auxetic and cellular solid models</td>
+</tr>
+<tr>
+<td><strong>Chiral/Auxetic</strong></td>
+<td><code>chiral</code>, <code>star</code></td>
+<td>Negative Poisson's ratio structures</td>
+</tr>
+<tr>
+<td><strong>Braced</strong></td>
+<td><code>cross</code>, <code>diamond</code></td>
+<td>Cross-braced and diamond patterns</td>
+</tr>
+<tr>
+<td><strong>Tri-hexagonal</strong></td>
+<td><code>kagome</code></td>
+<td>Kagome lattice</td>
+</tr>
+<tr>
+<td><strong>Disordered</strong></td>
+<td><code>voronoi</code></td>
+<td>Random Voronoi tessellation</td>
+</tr>
+</tbody></table>
+<h3>Querying Available Units</h3>
+<pre><code>
+fn.list_units()
+# ['chiral', 'cross', 'diamond', 'hexagon', 'honeycomb', 'kagome',
+#  'missing_rib', 'reentrant', 'square', 'star', 'triangle', 'voronoi']
+</code></pre>
+<h2>3D Units</h2>
+<table><thead><tr>
+<th>Family</th>
+<th>Units</th>
+<th>Characteristics</th>
+</tr></thead><tbody>
+<tr>
+<td><strong>Cubic Lattices</strong></td>
+<td><code>cubic</code>, <code>bcc</code>, <code>fcc</code></td>
+<td>Body/face-centered cubic</td>
+</tr>
+<tr>
+<td><strong>Close-packed</strong></td>
+<td><code>hcp</code></td>
+<td>Hexagonal close-packed</td>
+</tr>
+<tr>
+<td><strong>TPMS</strong></td>
+<td><code>gyroid</code>, <code>schwarz_p</code>, <code>schwarz_d</code>, <code>iwp</code>, <code>neovius</code>, <code>lidinoid</code></td>
+<td>Triply periodic minimal surfaces</td>
+</tr>
+<tr>
+<td><strong>Truss</strong></td>
+<td><code>octet</code>, <code>diamond_3d</code></td>
+<td>Truss-based lattices</td>
+</tr>
+<tr>
+<td><strong>Auxetic 3D</strong></td>
+<td><code>chiral_3d</code>, <code>reentrant_3d</code></td>
+<td>3D negative Poisson's ratio</td>
+</tr>
+</tbody></table>
+<pre><code>
+fn.list_units_3d()
+# ['bcc', 'chiral_3d', 'cubic', 'diamond_3d', 'fcc', 'gyroid',
+#  'hcp', 'iwp', 'lidinoid', 'neovius', 'octet', 'reentrant_3d',
+#  'schwarz_d', 'schwarz_p']
+</code></pre>
+<h2>Parametric Control</h2>
+<p>Each unit edge supports <code>n_pts_per_side</code> internal nodes with programmable <code>(dx, dy)</code> displacement:</p>
+<pre><code>
+g = fn.pattern_2d(
+unit="square",
+grid=(3, 3),
+n_pts_per_side=5,           # 4 edges x 5 pts = 20 displacement pairs
+point_displacements=disps,  # [(dx, dy), ...]
+)
+</code></pre>
+<p>This parametric interface provides a continuous action space for reinforcement learning, equivalent to <code>move_AB(G, num, dx, dy)</code> in research code.</p>
+<h2>Structure Generation API</h2>
+<pre><code>
+# 2D
+g = fn.pattern_2d(
+unit="honeycomb",
+box=(10, 10),       # cell dimensions
+grid=(4, 4),        # tiling grid
+seed=42,            # reproducibility
+)
+
+# 3D
+g = fn.pattern_3d(
+unit="gyroid",
+box=(10, 10, 10),
+grid=(2, 2, 2),
+)
+</code></pre>
+<h2>Extending with Custom Units</h2>
+<p>Custom unit types can be registered via the unit factory system. See the source code in <code>fibernet/gen/</code> for the unit registration pattern.</p>
+<footer>FiberNet v4.0.5 · MIT License · ML-BioMat Lab, BMG-FDU</footer>
+</div>
+</body>
+</html>
