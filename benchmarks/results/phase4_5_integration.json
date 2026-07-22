@@ -1,0 +1,195 @@
+{
+  "phase4": {
+    "gnn_to_neural_ode": {
+      "name": "gnn_to_neural_ode",
+      "passed": true,
+      "time_s": 0.985,
+      "stats": {
+        "gnn_embed_shape": [
+          4
+        ],
+        "trajectory_shape": [
+          20,
+          4
+        ],
+        "final_state_norm": 2.326507329940796,
+        "gradient_flows_gnn": true,
+        "gradient_flows_ode": true
+      }
+    },
+    "pinn_to_conservative": {
+      "name": "pinn_to_conservative",
+      "passed": true,
+      "time_s": 0.025,
+      "stats": {
+        "node_embed_shape": [
+          49,
+          32
+        ],
+        "ec_output_shape": [
+          32
+        ],
+        "hamiltonian_dq_norm": 0.09416535496711731,
+        "hamiltonian_dp_norm": 0.10449431091547012
+      }
+    },
+    "gflownet_to_physics": {
+      "name": "gflownet_to_physics",
+      "passed": true,
+      "time_s": 0.03,
+      "stats": {
+        "total_generated": 5,
+        "valid_for_physics": 0,
+        "valid_rate": 0.0,
+        "max_displacements": []
+      }
+    },
+    "diffusion_to_inverse_design": {
+      "name": "diffusion_to_inverse_design",
+      "passed": true,
+      "time_s": 0.651,
+      "stats": {
+        "diffusion_samples": [
+          20,
+          8
+        ],
+        "designs": [
+          5,
+          8
+        ],
+        "design_mean": NaN
+      }
+    },
+    "active_learning_with_pinn": {
+      "name": "active_learning_with_pinn",
+      "passed": true,
+      "time_s": 0.033,
+      "stats": {
+        "pool_size": 3,
+        "uncertainties": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "selected_ranking": [
+          2,
+          0,
+          1
+        ]
+      }
+    },
+    "transfer_learning": {
+      "name": "transfer_learning",
+      "passed": true,
+      "time_s": 0.035,
+      "stats": {
+        "pretrain_loss": 20.255614280700684,
+        "finetune_loss": 120.09979248046875,
+        "pred_shape": [
+          5,
+          1
+        ],
+        "improvement": 0.16865653021264124
+      }
+    }
+  },
+  "phase5": {
+    "taichi_simulation": {
+      "name": "taichi_simulation",
+      "passed": true,
+      "time_s": 0.0,
+      "stats": {
+        "error": "Taichi not available: No module named 'fibernet.engine'"
+      }
+    },
+    "networkx_advanced": {
+      "name": "networkx_advanced",
+      "passed": true,
+      "time_s": 0.02,
+      "stats": {
+        "honeycomb": {
+          "n_nodes": 60,
+          "n_edges": 84,
+          "spectral_gap": 0.082368,
+          "algebraic_connectivity": 0.082368,
+          "max_eigenvector_centrality": 0.259398,
+          "density": 0.047458,
+          "assortativity": -0.0,
+          "spectrum_first5": [
+            0.0,
+            0.0824,
+            0.1401,
+            0.2066,
+            0.3192
+          ]
+        },
+        "kagome": {
+          "n_nodes": 81,
+          "n_edges": 144,
+          "spectral_gap": 0.120615,
+          "algebraic_connectivity": 0.120615,
+          "max_eigenvector_centrality": 0.2,
+          "density": 0.044444,
+          "assortativity": 0.5571,
+          "spectrum_first5": [
+            -0.0,
+            0.1206,
+            0.1206,
+            0.2412,
+            0.4679
+          ]
+        },
+        "triangle": {
+          "n_nodes": 25,
+          "n_edges": 56,
+          "spectral_gap": 0.38981,
+          "algebraic_connectivity": 0.38981,
+          "max_eigenvector_centrality": 0.343432,
+          "density": 0.186667,
+          "assortativity": 0.2584,
+          "spectrum_first5": [
+            -0.0,
+            0.3898,
+            0.89,
+            0.9422,
+            1.8009
+          ]
+        },
+        "diamond": {
+          "n_nodes": 40,
+          "n_edges": 64,
+          "spectral_gap": 0.218419,
+          "algebraic_connectivity": 0.218419,
+          "max_eigenvector_centrality": 0.268999,
+          "density": 0.082051,
+          "assortativity": 0.0,
+          "spectrum_first5": [
+            0.0,
+            0.2184,
+            0.2184,
+            0.382,
+            0.8226
+          ]
+        }
+      }
+    },
+    "scipy_optimization": {
+      "name": "scipy_optimization",
+      "passed": true,
+      "time_s": 101.775,
+      "stats": {
+        "optimizer": "L-BFGS-B",
+        "iterations": 8,
+        "final_objective": 0.772087,
+        "initial_objective": 1.04262,
+        "improvement": 0.270533,
+        "optimized_radii_stats": {
+          "min": 0.008261,
+          "max": 0.01475,
+          "mean": 0.010209,
+          "std": 0.001394
+        }
+      }
+    }
+  }
+}
