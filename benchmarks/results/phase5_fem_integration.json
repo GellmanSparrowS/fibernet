@@ -1,0 +1,218 @@
+{
+  "skfem_truss": {
+    "name": "skfem_truss",
+    "passed": true,
+    "time_s": 0.129,
+    "stats": {
+      "solver": "scikit-fem",
+      "mesh_nodes": 4,
+      "solution": [
+        0.2777777777777777,
+        0.44444444444444425,
+        0.49999999999999983
+      ],
+      "u_max": 0.49999999999999983
+    }
+  },
+  "skfem_2d_elasticity": {
+    "name": "skfem_2d_elasticity",
+    "passed": true,
+    "time_s": 0.002,
+    "stats": {
+      "solver": "scikit-fem 2D",
+      "mesh_type": "MeshTri symmetric",
+      "n_vertices": 5,
+      "n_elements": 4,
+      "n_dofs": 10,
+      "max_displacement_x": 4.8606372045221e-07,
+      "max_displacement_y": 1.9239465570400835e-07,
+      "displacement_norm": 6.759769840461818e-07
+    }
+  },
+  "structure_to_skfem": {
+    "name": "structure_to_skfem",
+    "passed": true,
+    "time_s": 0.886,
+    "stats": {
+      "pipeline": "StructureGraph \u2192 Delaunay \u2192 skfem \u2192 solve",
+      "n_nodes": 36,
+      "n_triangles": 52,
+      "skfem_max_disp": 2.503260630526577e-05,
+      "spring_max_disp": 0.0020792081486433744,
+      "skfem_dofs": 72,
+      "solvers_agree_order_of_magnitude": "True"
+    }
+  },
+  "stress_paths": {
+    "name": "stress_paths",
+    "passed": true,
+    "time_s": 0.199,
+    "stats": {
+      "honeycomb": {
+        "n_nodes": 60,
+        "mean_stress": 38361.59,
+        "max_stress": 569059.94,
+        "stress_concentration_factor": 14.834,
+        "force_chain_edges": 18,
+        "force_chain_fraction": 0.1071,
+        "max_stress_path": 0.0123,
+        "avg_stress_path": 0.0006,
+        "top_disp_vs_degree_overlap": 1,
+        "max_displacement": 0.003288
+      },
+      "kagome": {
+        "n_nodes": 81,
+        "mean_stress": 27823.01,
+        "max_stress": 967086.62,
+        "stress_concentration_factor": 34.759,
+        "force_chain_edges": 16,
+        "force_chain_fraction": 0.0556,
+        "max_stress_path": 300.2888,
+        "avg_stress_path": 74.7442,
+        "top_disp_vs_degree_overlap": 1,
+        "max_displacement": 0.010822
+      },
+      "reentrant": {
+        "n_nodes": 92,
+        "mean_stress": 36215.89,
+        "max_stress": 732958.12,
+        "stress_concentration_factor": 20.239,
+        "force_chain_edges": 30,
+        "force_chain_fraction": 0.1293,
+        "max_stress_path": 0.2553,
+        "avg_stress_path": 0.0179,
+        "top_disp_vs_degree_overlap": 2,
+        "max_displacement": 0.005168
+      },
+      "diamond": {
+        "n_nodes": 40,
+        "mean_stress": 54951.21,
+        "max_stress": 769312.94,
+        "stress_concentration_factor": 14.0,
+        "force_chain_edges": 14,
+        "force_chain_fraction": 0.1094,
+        "max_stress_path": 80.162,
+        "avg_stress_path": 11.4804,
+        "top_disp_vs_degree_overlap": 1,
+        "max_displacement": 0.010715
+      }
+    }
+  },
+  "spectral_physics": {
+    "name": "spectral_physics",
+    "passed": true,
+    "time_s": 0.967,
+    "stats": {
+      "per_unit": {
+        "honeycomb": {
+          "n_nodes": 90,
+          "compliance": 1.6652,
+          "algebraic_connectivity": 0.054884,
+          "spectral_gap": 0.041408,
+          "spectral_radius": 6.6647,
+          "fiedler_range": 0.298576,
+          "effective_resistance": 4.18074,
+          "compliance_vs_alg_conn": 0.091391
+        },
+        "kagome": {
+          "n_nodes": 121,
+          "compliance": 7.3474,
+          "algebraic_connectivity": 0.081014,
+          "spectral_gap": 0.0,
+          "spectral_radius": 7.838,
+          "fiedler_range": 0.359935,
+          "effective_resistance": 2.601641,
+          "compliance_vs_alg_conn": 0.595239
+        },
+        "reentrant": {
+          "n_nodes": 140,
+          "compliance": 2.7964,
+          "algebraic_connectivity": 0.017485,
+          "spectral_gap": 0.046743,
+          "spectral_radius": 5.6893,
+          "fiedler_range": 0.238157,
+          "effective_resistance": 6.043301,
+          "compliance_vs_alg_conn": 0.048895
+        },
+        "diamond": {
+          "n_nodes": 60,
+          "compliance": 6.8139,
+          "algebraic_connectivity": 0.149054,
+          "spectral_gap": 0.0,
+          "spectral_radius": 7.6813,
+          "fiedler_range": 0.512944,
+          "effective_resistance": 2.926235,
+          "compliance_vs_alg_conn": 1.01564
+        },
+        "square": {
+          "n_nodes": 36,
+          "compliance": 9.4982,
+          "algebraic_connectivity": 0.267949,
+          "spectral_gap": 0.0,
+          "spectral_radius": 7.4641,
+          "fiedler_range": 0.643951,
+          "effective_resistance": 2.365657,
+          "compliance_vs_alg_conn": 2.545028
+        },
+        "triangle": {
+          "n_nodes": 36,
+          "compliance": 504.0302,
+          "algebraic_connectivity": 0.275604,
+          "spectral_gap": 0.362912,
+          "spectral_radius": 8.4612,
+          "fiedler_range": 0.643865,
+          "effective_resistance": 2.3236,
+          "compliance_vs_alg_conn": 138.912717
+        }
+      },
+      "correlation_algebraic_connectivity_vs_compliance": 0.6088
+    }
+  },
+  "force_chains": {
+    "name": "force_chains",
+    "passed": true,
+    "time_s": 0.104,
+    "stats": {
+      "n_nodes": 90,
+      "n_edges": 260,
+      "stress_p90_threshold": 100367.74,
+      "stress_p95_threshold": 210059.05,
+      "force_chain_edges_p90": 26,
+      "force_chain_edges_p95": 12,
+      "force_chain_nodes_p90": 14,
+      "force_chain_nodes_p95": 7,
+      "stress_carried_by_chain_p90": 0.6764,
+      "stress_carried_by_chain_p95": 0.5177,
+      "equilibrium_residual": 121444.15625,
+      "max_displacement": 0.006661
+    }
+  },
+  "multi_solver_comparison": {
+    "name": "multi_solver_comparison",
+    "passed": true,
+    "time_s": 0.049,
+    "stats": {
+      "honeycomb": {
+        "spring_max_disp": 0.002079,
+        "spring_time_ms": 18.57,
+        "skfem_max_disp": "failed",
+        "skfem_time_ms": "failed",
+        "ratio_skfem_spring": -1
+      },
+      "square": {
+        "spring_max_disp": 0.006963,
+        "spring_time_ms": 10.1,
+        "skfem_max_disp": "failed",
+        "skfem_time_ms": "failed",
+        "ratio_skfem_spring": -1
+      },
+      "triangle": {
+        "spring_max_disp": 0.238101,
+        "spring_time_ms": 10.37,
+        "skfem_max_disp": "failed",
+        "skfem_time_ms": "failed",
+        "ratio_skfem_spring": -1
+      }
+    }
+  }
+}
