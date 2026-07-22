@@ -259,9 +259,11 @@ if HAS_TORCH:
             predicted_stress: torch.Tensor,
             predicted_strain: torch.Tensor,
         ) -> torch.Tensor:
-            """Enforce σ = Eε on predicted fields."""
+            """Enforce σ = Eε on predicted fields (normalized)."""
             target_stress = self.E * predicted_strain
-            return self.weight * F.mse_loss(predicted_stress, target_stress)
+            # Normalize by E^2 to prevent loss explosion with large E
+            scale = max(self.E ** 2, 1.0)
+            return self.weight * F.mse_loss(predicted_stress / self.E, predicted_strain)
 
 
     class EnergyConservationLoss(nn.Module):

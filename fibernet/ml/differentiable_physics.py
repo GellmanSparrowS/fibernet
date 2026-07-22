@@ -65,6 +65,19 @@ def _require_torch():
 
 if HAS_TORCH:
 
+    def _robust_solve(K: torch.Tensor, f: torch.Tensor) -> torch.Tensor:
+        """Robust linear solve Kx = f using pseudoinverse with adaptive threshold.
+
+        Handles near-singular matrices by using SVD-based pseudoinverse
+        with a threshold based on the matrix size and precision.
+        """
+        n = K.shape[0]
+        # Use pseudoinverse with size-dependent threshold
+        # This is more reliable than lstsq for near-singular FEA matrices
+        rcond = n * torch.finfo(K.dtype).eps * 10  # 10x default for safety margin
+        K_pinv = torch.linalg.pinv(K, rcond=rcond)
+        return K_pinv @ f
+
     # ==================================================================
     # Differentiable Spring/Truss Network
     # ==================================================================
@@ -104,7 +117,7 @@ if HAS_TORCH:
             youngs_modulus: float = 1e9,
             dim: int = 2,
             solver: str = "direct",
-            damping: float = 1e-5,
+            damping: float = 1e-3,
         ):
             super().__init__()
             self.E = youngs_modulus
@@ -238,14 +251,14 @@ if HAS_TORCH:
                 K_free = K[free_dofs][:, free_dofs]
                 f_free = f[free_dofs]
 
-                # Solve reduced system
-                u_free = torch.linalg.solve(K_free, f_free)
+                # Use lstsq for robustness (handles near-singular matrices via SVD)
+                u_free = _robust_solve(K_free, f_free)
 
                 u = torch.zeros(n_dof, device=node_pos.device)
                 for idx, dof in enumerate(free_dofs):
                     u[dof] = u_free[idx]
             else:
-                u = torch.linalg.solve(K, f)
+                u = _robust_solve(K, f)
 
             displacements = u.reshape(n_nodes, self.dim)
 
@@ -295,7 +308,7 @@ if HAS_TORCH:
             youngs_modulus: float = 1e9,
             dim: int = 2,
             include_bending: bool = True,
-            damping: float = 1e-5,
+            damping: float = 1e-3,
         ):
             super().__init__()
             self.E = youngs_modulus
@@ -434,12 +447,12 @@ if HAS_TORCH:
                 free_dofs = sorted(set(range(n_dof)) - set(fixed_dofs))
                 K_free = K[free_dofs][:, free_dofs]
                 f_free = f[free_dofs]
-                u_free = torch.linalg.solve(K_free, f_free)
+                u_free = _robust_solve(K_free, f_free)
                 u = torch.zeros(n_dof, device=node_pos.device)
                 for idx, dof in enumerate(free_dofs):
                     u[dof] = u_free[idx]
             else:
-                u = torch.linalg.solve(K, f)
+                u = _robust_solve(K, f)
 
             displacements = u.reshape(n_nodes, 3)
 

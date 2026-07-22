@@ -1,0 +1,155 @@
+{
+  "gflownet": {
+    "passed": true,
+    "time_s": 0.832,
+    "stats": {
+      "model_params": 13358,
+      "sample_nodes": [
+        1,
+        0,
+        0,
+        0,
+        3
+      ],
+      "sample_edges": [
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "train_loss_final": 11.172279357910156,
+      "mean_reward_final": 0.1563198038036196,
+      "max_reward_final": 0.5505584304289569,
+      "db_loss": 1.2655586004257202,
+      "connectivity_reward_sample": 0.1
+    }
+  },
+  "differentiable_physics": {
+    "passed": true,
+    "time_s": 0.753,
+    "stats": {
+      "structure_nodes": 90,
+      "structure_edges": 130,
+      "max_displacement": 0.01705130934715271,
+      "max_stress": 2915802.0,
+      "mean_stress": 138378.15625,
+      "grad_norm_radii": 0.19298802316188812,
+      "grad_nonzero_frac": 0.9923076629638672,
+      "beam_structure_nodes": 18,
+      "beam_structure_edges": 22,
+      "beam_max_displacement": 0.01407071202993393,
+      "beam_max_rotation": 0.08835506439208984,
+      "compliance": 8.525654792785645,
+      "volume": 0.05568606033921242,
+      "optimized_min_radius": 0.0010000000474974513,
+      "optimized_max_radius": 0.01667170040309429,
+      "optimization_improvement": 7.713723003864288,
+      "material_stress_range": 0.0010312795639038086,
+      "material_tangent_mean": -0.10312700271606445,
+      "from_structure_nodes": 90,
+      "from_structure_edges": 130
+    }
+  },
+  "pinn_gnn": {
+    "passed": true,
+    "time_s": 0.55,
+    "stats": {
+      "mp_output_nodes": 90,
+      "mp_output_edges": 260,
+      "mp_force_mean_norm": 0.043228454887866974,
+      "pinn_gnn_params": 46475,
+      "pred_shape": [
+        1,
+        1
+      ],
+      "displacement_mean": 0.06782518327236176,
+      "displacement_std": 0.2849551737308502,
+      "stress_range": 1.1036353707313538,
+      "force_balance_loss": 0.0013463901123031974,
+      "constitutive_loss": 0.29296785593032837,
+      "energy_loss": 0.0,
+      "total_physics_loss": 0.2943142354488373,
+      "train_best_val_loss": 30116.626953125,
+      "multi_structure_preds": [
+        0.1085,
+        0.1198,
+        0.1169,
+        0.1187,
+        0.115
+      ]
+    }
+  },
+  "neural_ode": {
+    "passed": true,
+    "time_s": 0.208,
+    "stats": {
+      "solver_euler_max_error": 0.005645453929901123,
+      "solver_rk4_max_error": 5.960464477539063e-08,
+      "solver_dopri5_max_error": 5.960464477539063e-08,
+      "neural_ode_params": 788,
+      "neural_ode_traj_shape": [
+        50,
+        4
+      ],
+      "neural_ode_final_norm": 2.247290849685669,
+      "maxwell_relax_error_vs_analytical": 1.1444091796875e-05,
+      "maxwell_relax_half_life_steps": 35,
+      "maxwell_tau_expected": 1000.0,
+      "sls_relax_final_stress": 14.466509819030762,
+      "sls_relax_stress_retained_pct": 14.466509819030762,
+      "creep_strain_ratio": 1.000000072759578,
+      "creep_is_monotonic": true,
+      "fatigue_cycles_to_failure": 1,
+      "fatigue_final_damage": 5.898979187011719,
+      "neural_ode_train_loss_final": 0.030640354845672846
+    }
+  },
+  "conservative_nn": {
+    "passed": true,
+    "time_s": 0.085,
+    "stats": {
+      "hamiltonian_params": 705,
+      "hamiltonian_dq_norm": 0.09916666150093079,
+      "hamiltonian_dp_norm": 0.023334525525569916,
+      "hamiltonian_energy_drift": 0.0,
+      "lagrangian_qddot_shape": [
+        5,
+        2
+      ],
+      "lagrangian_qddot_norm": 75.06941986083984,
+      "energy_dx_norm": 0.24333491921424866,
+      "energy_max_drift": 1.7881393432617188e-07,
+      "energy_relative_drift": 2.211710807387135e-06,
+      "momentum_total_force_norm": 1.666000493116826e-08,
+      "momentum_conserved": true,
+      "divfree_velocity_shape": [
+        50,
+        2
+      ],
+      "divfree_velocity_norm_mean": 0.06402076035737991,
+      "divfree_max_divergence": 5.587935447692871e-09,
+      "hamiltonian_train_loss_final": 0.4456345699727535
+    }
+  },
+  "existing_modules": {
+    "passed": true,
+    "time_s": 0.094,
+    "stats": {
+      "gnn_pred_shape": [
+        1,
+        1
+      ],
+      "gnn_params": 4097,
+      "diffusion_sample_shape": [
+        5,
+        10
+      ],
+      "diffusion_train_loss_final": 1.1283714771270752,
+      "gan_sample_shape": [
+        5,
+        10
+      ]
+    }
+  }
+}
