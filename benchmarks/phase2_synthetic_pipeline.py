@@ -123,10 +123,11 @@ def train_gnn_graph_level(dataset, epochs=80, verbose=True):
 
     # Prepare labels
     labels = np.array([d['compliance'] for d in dataset], dtype=np.float32)
-    # Normalize labels
-    label_mean = labels.mean()
-    label_std = labels.std() + 1e-8
-    labels_norm = (labels - label_mean) / label_std
+    # Use log-transform for compliance (spans orders of magnitude)
+    labels_log = np.log1p(labels)  # log(1+x) to handle small values
+    label_mean = labels_log.mean()
+    label_std = labels_log.std() + 1e-8
+    labels_norm = (labels_log - label_mean) / label_std
 
     # Get node_dim from data
     node_dim = dataset[0]['graph_data']['node_features'].shape[1]
@@ -184,7 +185,8 @@ def train_gnn_graph_level(dataset, epochs=80, verbose=True):
             for j in range(n_val):
                 g = graphs[val_idx[j]]
                 p = gnn([g]).squeeze(-1)
-                val_preds.append(p.item() * label_std + label_mean)
+                val_preds_log = p.item() * label_std + label_mean
+                val_preds.append(np.expm1(val_preds_log))  # inverse of log1p
                 val_trues.append(labels[val_idx[j]])
 
             val_preds = np.array(val_preds)
@@ -218,7 +220,8 @@ def train_gnn_graph_level(dataset, epochs=80, verbose=True):
         trues_all = []
         for d in dataset:
             p = gnn([d['graph_data']]).squeeze(-1)
-            preds_all.append(p.item() * label_std + label_mean)
+            pred_log = p.item() * label_std + label_mean
+            preds_all.append(np.expm1(pred_log))  # inverse of log1p
             trues_all.append(d['compliance'])
         preds_all = np.array(preds_all)
         trues_all = np.array(trues_all)
@@ -260,6 +263,15 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
     node_dim = dataset[0]['graph_data']['node_features'].shape[1]
     edge_dim = dataset[0]['graph_data']['edge_features'].shape[1]
 
+    # Compute displacement statistics for normalization
+    all_u = torch.cat([d['u_true'].flatten() for d in dataset])
+    u_mean = all_u.mean().item()
+    u_std = all_u.std().item() + 1e-8
+    
+    # Normalize targets
+    for d in dataset:
+        d['u_norm'] = (d['u_true'] - u_mean) / u_std
+
     # Model: output mode = "node" for per-node displacement
     pinn = PhysicsInformedGNN(
         node_dim=node_dim, edge_dim=edge_dim, hidden=64, n_layers=4,
@@ -291,7 +303,7 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
         for j in range(n_train):
             d = dataset[train_idx[j]]
             gd = d['graph_data']
-            u_true = d['u_true']
+            u_norm = d['u_norm']
 
             optimizer.zero_grad()
 
@@ -299,8 +311,8 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
             fields = pinn.predict_fields(gd)
             pred_disp = fields['displacement']
 
-            # Data loss: MSE between predicted and true displacement
-            data_loss = F.mse_loss(pred_disp, u_true)
+            # Data loss: MSE between predicted and normalized displacement
+            data_loss = F.mse_loss(pred_disp, u_norm)
 
             # Physics loss
             physics_losses = pinn.compute_physics_loss(gd, d['forces'])
@@ -324,16 +336,16 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
             for j in range(len(val_idx)):
                 d = dataset[val_idx[j]]
                 gd = d['graph_data']
-                u_true = d['u_true']
+                u_norm = d['u_norm']
 
                 fields = pinn.predict_fields(gd)
                 pred = fields['displacement']
 
-                val_loss += F.mse_loss(pred, u_true).item()
+                val_loss += F.mse_loss(pred, u_norm).item()
 
                 # Correlation
                 pf = pred.flatten()
-                tf = u_true.flatten()
+                tf = u_norm.flatten()
                 if pf.std() > 1e-8 and tf.std() > 1e-8:
                     corr = torch.corrcoef(torch.stack([pf, tf]))[0, 1]
                     val_corrs.append(corr.item())
@@ -366,6 +378,8 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
         'best_val_loss': best_val_loss,
         'train_time': train_time,
         'n_params': sum(p.numel() for p in pinn.parameters()),
+        'u_mean': u_mean,
+        'u_std': u_std,
     }
 
 
@@ -373,7 +387,7 @@ def train_pinn_gnn_node_level(dataset, epochs=60, verbose=True):
 # Graph-Level Verification
 # ============================================================
 
-def graph_level_verification(dataset, pinn, verbose=True):
+def graph_level_verification(dataset, pinn, u_std=1.0, u_mean=0.0, verbose=True):
     """Verify predictions at graph topology level."""
     if verbose:
         print("\n[Graph-Level Verification]")
@@ -388,7 +402,8 @@ def graph_level_verification(dataset, pinn, verbose=True):
             sigma_true = d['sigma_true']
 
             fields = pinn.predict_fields(gd)
-            pred = fields['displacement']
+            pred_raw = fields['displacement'] * u_std + u_mean  # un-normalize
+            pred = pred_raw
 
             # --- Metric 1: Displacement magnitude ranking ---
             pred_mag = pred.norm(dim=1)
@@ -504,7 +519,9 @@ def run_phase2(epochs_gnn=80, epochs_pinn=60, n_samples=60):
     pinn_result = train_pinn_gnn_node_level(dataset, epochs=epochs_pinn)
 
     # Step 4: Graph-level verification
-    graph_results = graph_level_verification(dataset, pinn_result['pinn'])
+    u_std = pinn_result['u_std']
+    u_mean = pinn_result['u_mean']
+    graph_results = graph_level_verification(dataset, pinn_result['pinn'], u_std=u_std, u_mean=u_mean)
 
     # Summary
     summary = {
@@ -558,3 +575,215 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     run_phase2(args.epochs_gnn, args.epochs_pinn, args.n_samples)
+
+
+# ============================================================
+# NetworkX-based Graph Analysis (Phase 2b)
+# ============================================================
+
+def networkx_graph_analysis(dataset, verbose=True):
+    """Deep graph-level analysis using NetworkX."""
+    import networkx as nx
+    
+    if verbose:
+        print("\n[NetworkX Graph Analysis]")
+    
+    results = []
+    for i, d in enumerate(dataset[:20]):
+        g = d['structure_graph']
+        
+        # Convert to NetworkX
+        nx_g = g.to_networkx()
+        
+        # Topology metrics
+        n_nodes = nx_g.number_of_nodes()
+        n_edges = nx_g.number_of_edges()
+        
+        # Degree distribution
+        degrees = [d for _, d in nx_g.degree()]
+        avg_degree = np.mean(degrees)
+        degree_std = np.std(degrees)
+        max_degree = max(degrees)
+        
+        # Clustering coefficient
+        avg_clustering = nx.average_clustering(nx_g)
+        
+        # Connected components
+        n_components = nx.number_connected_components(nx_g)
+        is_connected = nx.is_connected(nx_g)
+        
+        # Diameter (only for connected graphs)
+        diameter = nx.diameter(nx_g) if is_connected else -1
+        
+        # Average shortest path
+        avg_path = nx.average_shortest_path_length(nx_g) if is_connected else -1
+        
+        # Algebraic connectivity (Fiedler value)
+        if is_connected and n_nodes > 2:
+            L = nx.laplacian_matrix(nx_g).toarray()
+            eigenvalues = np.sort(np.linalg.eigvalsh(L))
+            algebraic_connectivity = eigenvalues[1] if len(eigenvalues) > 1 else 0
+        else:
+            algebraic_connectivity = 0
+        
+        # Betweenness centrality
+        bc = nx.betweenness_centrality(nx_g)
+        max_bc = max(bc.values())
+        avg_bc = np.mean(list(bc.values()))
+        
+        results.append({
+            'idx': i,
+            'unit': d['unit'],
+            'n_nodes': n_nodes,
+            'n_edges': n_edges,
+            'avg_degree': round(avg_degree, 3),
+            'degree_std': round(degree_std, 3),
+            'max_degree': max_degree,
+            'avg_clustering': round(avg_clustering, 4),
+            'n_components': n_components,
+            'is_connected': is_connected,
+            'diameter': diameter,
+            'avg_path_length': round(avg_path, 3) if avg_path > 0 else -1,
+            'algebraic_connectivity': round(algebraic_connectivity, 4),
+            'max_betweenness': round(max_bc, 4),
+            'avg_betweenness': round(avg_bc, 4),
+            'compliance': round(d['compliance'], 4),
+        })
+    
+    if verbose:
+        print(f"\n  Topology metrics for {len(results)} graphs:")
+        print(f"  {'Unit':>12s} {'Nodes':>5s} {'Edges':>5s} {'AvgDeg':>7s} {'Clust':>6s} "
+              f"{'Diam':>5s} {'AlgConn':>8s} {'MaxBC':>7s} {'Compl':>10s}")
+        for r in results:
+            print(f"  {r['unit']:>12s} {r['n_nodes']:5d} {r['n_edges']:5d} "
+                  f"{r['avg_degree']:7.2f} {r['avg_clustering']:6.3f} "
+                  f"{r['diameter']:5d} {r['algebraic_connectivity']:8.4f} "
+                  f"{r['max_betweenness']:7.4f} {r['compliance']:10.4f}")
+        
+        # Correlation analysis: topology vs compliance
+        alg_conns = [r['algebraic_connectivity'] for r in results]
+        compliances = [r['compliance'] for r in results]
+        avg_degrees = [r['avg_degree'] for r in results]
+        
+        if len(alg_conns) > 3:
+            corr_alg_conn = np.corrcoef(alg_conns, compliances)[0, 1]
+            corr_avg_deg = np.corrcoef(avg_degrees, compliances)[0, 1]
+            print(f"\n  Correlation: algebraic_connectivity vs compliance = {corr_alg_conn:.4f}")
+            print(f"  Correlation: avg_degree vs compliance = {corr_avg_deg:.4f}")
+    
+    return results
+
+
+def scipy_stress_path_analysis(dataset, verbose=True):
+    """Analyze stress transmission paths using scipy.sparse."""
+    from scipy.sparse import csr_matrix
+    from scipy.sparse.csgraph import shortest_path
+    
+    if verbose:
+        print("\n[Scipy Stress Path Analysis]")
+    
+    results = []
+    for i, d in enumerate(dataset[:15]):
+        gd = d['graph_data']
+        ei = gd['edge_index']
+        n_nodes = gd['node_features'].shape[0]
+        sigma = d['sigma_true']
+        u = d['u_true']
+        
+        # Build weighted adjacency matrix (weight = 1/stress for shortest path)
+        n_edge_entries = ei.shape[1]
+        
+        # Use displacement differences as edge weights
+        edge_weights = []
+        for e in range(n_edge_entries):
+            ni, nj = ei[0, e].item(), ei[1, e].item()
+            if ni < n_nodes and nj < n_nodes:
+                disp_diff = torch.norm(u[ni] - u[nj]).item()
+                # Invert: high displacement difference = short path
+                weight = 1.0 / (disp_diff + 1e-6)
+                edge_weights.append((ni, nj, weight))
+        
+        if not edge_weights:
+            continue
+        
+        # Build sparse matrix
+        rows = [e[0] for e in edge_weights]
+        cols = [e[1] for e in edge_weights]
+        vals = [e[2] for e in edge_weights]
+        adj = csr_matrix((vals, (rows, cols)), shape=(n_nodes, n_nodes))
+        
+        # Shortest paths from fixed nodes
+        fixed = d['fixed']
+        if len(fixed) > 0:
+            source = fixed[0].item()
+            try:
+                dist_matrix = shortest_path(adj, method='D', indices=source, directed=False)
+                max_dist = float(np.max(dist_matrix[np.isfinite(dist_matrix)]))
+                avg_dist = float(np.mean(dist_matrix[np.isfinite(dist_matrix)]))
+                n_reachable = int(np.sum(np.isfinite(dist_matrix)))
+            except:
+                max_dist = -1
+                avg_dist = -1
+                n_reachable = 0
+        else:
+            max_dist = -1
+            avg_dist = -1
+            n_reachable = 0
+        
+        results.append({
+            'idx': i,
+            'unit': d['unit'],
+            'n_nodes': n_nodes,
+            'max_path_dist': round(max_dist, 4),
+            'avg_path_dist': round(avg_dist, 4),
+            'n_reachable': n_reachable,
+            'reachability': round(n_reachable / n_nodes, 4),
+            'compliance': round(d['compliance'], 4),
+        })
+    
+    if verbose:
+        print(f"\n  Stress path analysis for {len(results)} graphs:")
+        for r in results:
+            print(f"    [{r['unit']:12s}] {r['n_nodes']:4d}n | "
+                  f"max_path={r['max_path_dist']:8.3f} avg_path={r['avg_path_dist']:8.3f} "
+                  f"reach={r['reachability']:.3f} compl={r['compliance']:.4f}")
+    
+    return results
+
+
+# ============================================================
+# Phase 2b: Run additional analysis
+# ============================================================
+
+def run_phase2b():
+    """Run Phase 2b: NetworkX + Scipy graph analysis."""
+    print("=" * 70)
+    print("Phase 2b: Graph-Level Analysis with NetworkX + Scipy")
+    print("=" * 70)
+    
+    # Regenerate dataset
+    dataset = generate_diverse_dataset(n_samples=50)
+    print(f"  Generated {len(dataset)} structures")
+    
+    # NetworkX analysis
+    nx_results = networkx_graph_analysis(dataset)
+    
+    # Scipy analysis
+    scipy_results = scipy_stress_path_analysis(dataset)
+    
+    # Save
+    output = {
+        'networkx_analysis': nx_results,
+        'scipy_stress_paths': scipy_results,
+    }
+    
+    output_file = RESULTS_DIR / "phase2b_graph_analysis.json"
+    with open(output_file, 'w') as f:
+        json.dump(output, f, indent=2)
+    
+    print(f"\nResults saved to: {output_file}")
+    return output
+
+
+if __name__ == '__main__' and 'phase2b' in sys.argv:
+    run_phase2b()
