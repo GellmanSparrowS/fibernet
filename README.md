@@ -28,7 +28,7 @@ Generation → Simulation (Mass-Spring / FEM) → Feature Extraction → Machine
 
 | Feature | Description |
 |---------|-------------|
-| **26 Unit Types** | 12 2D + 14 3D: honeycomb, kagome, reentrant, octet, diamond_3d, fcc, bcc, gyroid, TPMS… |
+| **26 Unit Types** | 12 2D + 14 3D: honeycomb, kagome, reentrant, octet, diamond\_3d, fcc, bcc, gyroid, TPMS… |
 | **Parametric Control** | Internal point displacements for RL-ready continuous action spaces |
 | **Dual Simulation** | Taichi mass-spring (GPU) + Beam Frame FEM (Euler–Bernoulli) |
 | **94-Dim Features** | Structural + pore + contact feature extraction |
@@ -46,22 +46,22 @@ Generation → Simulation (Mass-Spring / FEM) → Feature Extraction → Machine
 *12 2D unit types: square, triangle, hexagon, honeycomb, kagome, voronoi, chiral, reentrant, star, cross, diamond, missing\_rib.*
 
 <div align="center">
-<img src="docs/images/fem_showcase_dark.png" width="80%" alt="FEM Deformation Showcase" />
-</div>
-
-*Beam Frame FEM analysis: uniaxial stretch (2×) and compression (0.5×) across multiple topologies and fiber radii. Bright color = high von Mises stress. Structures modeled as welded frames with radius-dependent bending stiffness.*
-
-<div align="center">
 <img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi Stretch" />
 </div>
 
-*Voronoi structure under 1.5× uniaxial stretch — deformation and stress distribution.*
+*Voronoi structure under 1.5× uniaxial stretch (mass-spring model) — deformation and stress distribution.*
 
 <div align="center">
 <img src="docs/images/05_trajectory_dark.png" width="80%" alt="Deformation Trajectory" />
 </div>
 
 *8-frame deformation trajectory: honeycomb under stretch, colored by edge stretch ratio.*
+
+<div align="center">
+<img src="docs/images/fem_showcase_dark.png" width="80%" alt="FEM Deformation Showcase" />
+</div>
+
+*Beam Frame FEM analysis: uniaxial stretch (2×) and compression (0.5×) across multiple topologies and fiber radii. Bright color = high von Mises stress. Structures modeled as welded frames with radius-dependent bending stiffness.*
 
 <div align="center">
 <img src="docs/images/09_ml_analysis_dark.png" width="80%" alt="ML Analysis" />
@@ -96,9 +96,9 @@ print(f"max_force={r.max_force:.0f} N, max_stretch={r.max_stretch:.3f}")
 ### FEM in 3 Lines
 
 ```python
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml import BeamFrameFEM
 
-solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+solver = BeamFrameFEM(E=1e9, nu=0.3)
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
 result = solver.stretch_test(g, target_stretch=2.0)
 
@@ -124,7 +124,8 @@ r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5,
                         damping=0.3, num_steps=1000, save_interval=200)
 
 # 2b. Or Beam Frame FEM (Euler-Bernoulli, welded joints)
-fem = BeamFrameFEM_v6(E=1e9, nu=0.3)
+from fibernet.ml import BeamFrameFEM
+fem = BeamFrameFEM(E=1e9, nu=0.3)
 fem_result = fem.stretch_test(g, target_stretch=1.5)
 sim_r = fem.to_sim_result(fem_result, graph=g)
 
@@ -197,10 +198,10 @@ All structures show **full deformation propagation** — boundary displacement t
 ### API
 
 ```python
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml import BeamFrameFEM
 import fibernet as fn
 
-solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+solver = BeamFrameFEM(E=1e9, nu=0.3)
 
 # Generate structure (radius matters for FEM!)
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
@@ -275,7 +276,9 @@ internal = g.get_internal_nodes()
 boundary = g.get_boundary_nodes()
 ```
 
-### Simulation (Mass-Spring)
+### Simulation — Mass-Spring
+
+Taichi-based GPU-accelerated mass-spring dynamics. Fibers are modeled as point masses connected by linear springs. Suitable for **large-scale dynamic simulation** and **fast prototyping**. Fiber diameter does not affect mechanics (cosmetic only).
 
 ```python
 engine = fn.TaichiEngine()
@@ -295,6 +298,49 @@ r.positions_trajectory # list of (N,3) position arrays
 r.save("result.json", detailed=True)
 r2 = fn.SimResult.load("result.json")
 ```
+
+### Simulation — FEM (BeamFrameFEM)
+
+Euler–Bernoulli beam frame FEM. Fibers are modeled as **beam elements with welded joints** — radius directly determines bending (r⁴) and axial (r²) stiffness. Provides physically accurate stress decomposition (axial + bending). Use for **quantitative mechanical analysis** and **design validation**.
+
+Supports both **linear** solver (small deformation, fast) and **geometrically nonlinear** solver (large deformation, co-rotational incremental). The convenience method `stretch_test()` auto-selects based on strain magnitude.
+
+```python
+from fibernet.ml import BeamFrameFEM
+
+solver = BeamFrameFEM(E=1e9, nu=0.3)  # Young's modulus, Poisson's ratio
+
+# One-liner (auto-selects solver)
+result = solver.stretch_test(g, target_stretch=2.0, dim=2)
+
+# Full access
+u = result['u']                    # nodal displacements (N×dim)
+sigma = result['sigma_total']      # per-element total stress
+sigma_axial = result['sigma_axial']  # axial stress component
+sigma_bend = result['sigma_bending'] # bending stress component
+reactions = result['reactions']    # boundary reaction forces
+edge_forces = result['edge_forces']  # per-element internal forces
+
+# Low-level API
+fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
+result = solver.solve_2d(**fem_input)              # linear 2D
+result = solver.solve_2d_nonlinear(**fem_input)    # nonlinear 2D (large deformation)
+result = solver.solve_3d(**fem_input)              # 3D beam frame
+
+# Compatible with viz/ML pipeline
+sim_result = solver.to_sim_result(result, graph=g)
+```
+
+**Mass-Spring vs FEM comparison:**
+
+| Aspect | Mass-Spring | BeamFrameFEM |
+|--------|-------------|--------------|
+| Physics | Point masses + linear springs | Euler–Bernoulli beam elements |
+| Joints | Pinned (no moment transfer) | Welded (rigid, moment transfer) |
+| Radius effect | Cosmetic only | Physical (EI ∝ r⁴, EA ∝ r²) |
+| Stress output | Edge stretch ratio | Full decomposition (axial + bending) |
+| Speed | GPU-accelerated, fast for dynamics | CPU sparse solver, fast for statics |
+| Best for | Large-scale dynamics, RL rewards | Quantitative stress analysis, validation |
 
 ### Visualization
 
@@ -428,7 +474,7 @@ fibernet/
 │   ├── core/         # StructureGraph, Material, transforms
 │   ├── gen/          # pattern_2d/3d, unit factories (26 types)
 │   ├── sim/          # TaichiEngine (mass-spring), SimResult
-│   ├── ml/           # BeamFrameFEM_v6, train_predictor, cross_validate
+│   ├── ml/           # BeamFrameFEM, train_predictor, cross_validate
 │   ├── viz/          # render_graph, render_trajectory, themes
 │   ├── analysis/     # GraphFeatureExtractor (94-dim)
 │   ├── rl/           # CEM env, Bayesian opt, reward curves
@@ -439,19 +485,6 @@ fibernet/
 ├── docs/             # Sphinx documentation + images
 └── pyproject.toml    # build configuration
 ```
-
----
-
-## 📊 Performance
-
-| Task | Time | Hardware |
-|------|------|----------|
-| Generation (square 3×3) | ~0.1 s | CPU |
-| Stretch — Mass-Spring (5000 steps) | ~6 s | Taichi x64 |
-| Stretch — FEM (honeycomb 4×4) | ~2 s | CPU (scipy sparse) |
-| Feature extraction (94-dim) | ~0.5 s | CPU |
-| ML training (RF, 100 samples) | ~1 s | CPU |
-| CEM optimization (200 episodes) | ~6 min | CPU |
 
 ---
 

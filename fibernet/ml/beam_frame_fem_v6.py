@@ -730,3 +730,6 @@ class BeamFrameFEM_v6:
                 'edge_forces': fem_result.get('edge_forces'),
             },
         )
+
+# Public alias (use BeamFrameFEM in user-facing code)
+BeamFrameFEM = BeamFrameFEM_v6
