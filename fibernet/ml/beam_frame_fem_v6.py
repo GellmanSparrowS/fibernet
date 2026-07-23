@@ -30,6 +30,22 @@ class BeamFrameFEM_v6:
         J = np.pi * r**4 / 2
         return {'A': A, 'I': I, 'J': J, 'r': r}
     
+    @staticmethod
+    def _validate_nodes(n_nodes, fixed_nodes, prescribed_disp):
+        """Validate node indices against n_nodes. Raises ValueError for out-of-range."""
+        bad_fixed = [n for n in fixed_nodes if int(n) < 0 or int(n) >= n_nodes]
+        if bad_fixed:
+            raise ValueError(
+                f"fixed_nodes contains invalid indices {bad_fixed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
+        bad_prescribed = [n for n in prescribed_disp if int(n) < 0 or int(n) >= n_nodes]
+        if bad_prescribed:
+            raise ValueError(
+                f"prescribed_disp contains invalid node indices {bad_prescribed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
+
     def _deduplicate_edges(self, edge_index: np.ndarray) -> np.ndarray:
         seen = set()
         unique = []
@@ -194,6 +210,8 @@ class BeamFrameFEM_v6:
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 2))
         
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
+        
         K, edge_list = self.build_stiffness_2d(edge_index, node_pos, radii, deduplicate)
         n_nodes = node_pos.shape[0]
         n_dof = 3 * n_nodes
@@ -289,7 +307,11 @@ class BeamFrameFEM_v6:
         else:
             edge_index_np = edge_index
         
+        if fixed_nodes is None:
+            fixed_nodes = []
+        
         n_nodes = node_pos.shape[0]
+        self._validate_nodes(n_nodes, fixed_nodes, prescribed_disp)
         current_pos = node_pos.copy()
         total_u = np.zeros((n_nodes, 3))
         
@@ -381,6 +403,8 @@ class BeamFrameFEM_v6:
             prescribed_disp = {}
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 3))
+        
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
         edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
         n_nodes = node_pos.shape[0]
@@ -501,8 +525,30 @@ class BeamFrameFEM_v6:
             node_stress[i] = max(node_stress[i], sigma_total[idx])
             node_stress[j] = max(node_stress[j], sigma_total[idx])
         
+        # Reactions: R = K*u - f
+        reactions = (K_damped @ u_full - f_global).reshape(n_nodes, 6)
+        
+        # Edge forces [axial_N, shear_V_y, shear_V_z]
+        edge_forces = np.zeros((len(edge_list), 3))
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
+            if L < 1e-12:
+                continue
+            e1_dir = dx / L
+            props = self.section_properties(r)
+            A = props['A']
+            ui_axial = np.dot(e1_dir, u[i, :3])
+            uj_axial = np.dot(e1_dir, u[j, :3])
+            N = self.E * A * (uj_axial - ui_axial) / L
+            edge_forces[idx, 0] = N
+        
         return {
             'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
             'sigma_total': sigma_total, 'node_stress': node_stress,
-            'edge_list': edge_list, 'n_nodes': n_nodes, 'n_edges': len(edge_list)
+            'reactions': reactions, 'edge_forces': edge_forces,
+            'edge_list': edge_list, 'K': K,
+            'n_nodes': n_nodes, 'n_edges': len(edge_list)
         }
