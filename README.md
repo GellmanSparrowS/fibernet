@@ -218,9 +218,20 @@ reactions = result['reactions']      # boundary reaction forces
 
 # Low-level API for custom analysis
 fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # linear
-result = solver.solve_2d_nonlinear(**fem_input)    # geometrically nonlinear
-result = solver.solve_3d(**fem_input)              # 3D analysis
+left = fem_input['boundaries']['left']    # fixed boundary
+right = fem_input['boundaries']['right']  # loaded boundary
+
+# Linear solve (extra keys like boundaries/x_range are safely ignored via **kwargs)
+result = solver.solve_2d(**fem_input, fixed_nodes=left)
+
+# Nonlinear solve with prescribed displacement
+target_disp = fem_input['x_range'] * (2.0 - 1.0)  # 2× stretch
+prescribed = {ni: (target_disp, 0.0) for ni in right}
+result = solver.solve_2d_nonlinear(**fem_input, prescribed_disp=prescribed,
+                                    fixed_nodes=left, n_steps=10)
+
+# 3D analysis
+result = solver.solve_3d(**fem_input, fixed_nodes=left)
 
 # Convert to SimResult for viz/ML compatibility
 sim_result = solver.to_sim_result(result, graph=g)
@@ -323,9 +334,14 @@ edge_forces = result['edge_forces']  # per-element internal forces
 
 # Low-level API
 fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # linear 2D
-result = solver.solve_2d_nonlinear(**fem_input)    # nonlinear 2D (large deformation)
-result = solver.solve_3d(**fem_input)              # 3D beam frame
+left = fem_input['boundaries']['left']
+right = fem_input['boundaries']['right']
+
+result = solver.solve_2d(**fem_input, fixed_nodes=left)                # linear 2D
+prescribed = {ni: (0.5, 0.0) for ni in right}
+result = solver.solve_2d_nonlinear(**fem_input, prescribed_disp=prescribed,
+                                    fixed_nodes=left, n_steps=10)      # nonlinear 2D
+result = solver.solve_3d(**fem_input, fixed_nodes=left)                # 3D beam frame
 
 # Compatible with viz/ML pipeline
 sim_result = solver.to_sim_result(result, graph=g)

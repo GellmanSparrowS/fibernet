@@ -1,3 +1,20 @@
+## [4.1.7] - 2026-07-23
+
+### Added
+- `**kwargs` support for `solve_2d`, `solve_2d_nonlinear`, and `solve_3d` methods
+  - Allows passing extra keys from `graph_to_fem_input()` output (boundaries, x_range)
+  - Enables cleaner API: `solver.solve_2d(**fem_input, fixed_nodes=left)`
+
+### Fixed
+- Corrected low-level FEM API examples in README.md and README_CN.md
+  - Previous examples showed `solve_2d(**fem_input)` without `fixed_nodes`
+  - Now shows proper usage with boundary extraction and prescribed displacement setup
+
+### Documentation
+- Updated FEM API section with complete low-level usage examples
+- Added boundary extraction pattern: `fem_input['boundaries']['left']`
+- Documented prescribed displacement setup for nonlinear solver
+
 ## [4.1.4] - 2026-07-23
 
 ### Changed

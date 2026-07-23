@@ -218,9 +218,20 @@ reactions = result['reactions']      # 边界反力
 
 # 底层API（自定义分析）
 fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # 线性
-result = solver.solve_2d_nonlinear(**fem_input)    # 几何非线性
-result = solver.solve_3d(**fem_input)              # 3D分析
+left = fem_input['boundaries']['left']    # 固定边界
+right = fem_input['boundaries']['right']  # 加载边界
+
+# 线性求解（boundaries/x_range等额外键通过**kwargs安全忽略）
+result = solver.solve_2d(**fem_input, fixed_nodes=left)
+
+# 非线性求解（施加位移）
+target_disp = fem_input['x_range'] * (2.0 - 1.0)  # 2×拉伸
+prescribed = {ni: (target_disp, 0.0) for ni in right}
+result = solver.solve_2d_nonlinear(**fem_input, prescribed_disp=prescribed,
+                                    fixed_nodes=left, n_steps=10)
+
+# 3D分析
+result = solver.solve_3d(**fem_input, fixed_nodes=left)
 
 # 转为SimResult（兼容可视化/ML流水线）
 sim_result = solver.to_sim_result(result, graph=g)
@@ -323,9 +334,14 @@ edge_forces = result['edge_forces']  # 每单元内力
 
 # 底层API
 fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # 线性2D
-result = solver.solve_2d_nonlinear(**fem_input)    # 非线性2D（大变形）
-result = solver.solve_3d(**fem_input)              # 3D梁框架
+left = fem_input['boundaries']['left']
+right = fem_input['boundaries']['right']
+
+result = solver.solve_2d(**fem_input, fixed_nodes=left)                # 线性2D
+prescribed = {ni: (0.5, 0.0) for ni in right}
+result = solver.solve_2d_nonlinear(**fem_input, prescribed_disp=prescribed,
+                                    fixed_nodes=left, n_steps=10)      # 非线性2D
+result = solver.solve_3d(**fem_input, fixed_nodes=left)                # 3D梁框架
 
 # 兼容可视化/ML流水线
 sim_result = solver.to_sim_result(result, graph=g)

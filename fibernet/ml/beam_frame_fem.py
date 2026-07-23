@@ -184,7 +184,7 @@ class BeamFrameFEM:
     def solve_2d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=True, **kwargs):
         """Solve 2D beam frame with force and/or displacement BCs.
         
         Returns dict with:
@@ -289,7 +289,7 @@ class BeamFrameFEM:
     def solve_2d_nonlinear(self, edge_index, node_pos, radii,
                            prescribed_disp, fixed_nodes=None,
                            forces=None, n_steps=10, tol=1e-6, max_iter=20,
-                           damping=1e-6, deduplicate=True):
+                           damping=1e-6, deduplicate=True, **kwargs):
         """Geometrically nonlinear solver using incremental co-rotational approach.
         
         For each increment:
@@ -386,7 +386,7 @@ class BeamFrameFEM:
     def solve_3d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=True, **kwargs):
         """Solve 3D beam frame with corrected stress computation."""
         if isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
