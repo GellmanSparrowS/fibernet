@@ -33,7 +33,7 @@ Parametric Structure Generation (for RL)
 >>> internal = g.get_internal_nodes()  # Nodes available for RL actions
 """
 
-__version__ = "4.1.0"
+__version__ = "4.1.1"
 
 # --- Core ---
 from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
@@ -67,7 +67,7 @@ from fibernet.viz.render import (
     render_deformation, render_gallery,
     render_deformation_3d, render_trajectory_3d, render_gallery_3d,
     render_stress_3d, render_comparison_3d, render_multi_angle_3d,
-    render_with_stats,
+    render_with_stats, render_fem_stress,
     THEMES,
 )
 
@@ -135,6 +135,7 @@ __all__ = [
     "render_gallery", "render_with_stats", "render_trajectory",
     "render_deformation_3d", "render_trajectory_3d", "render_gallery_3d",
     "render_stress_3d", "render_comparison_3d", "render_multi_angle_3d",
+    "render_fem_stress",
     "THEMES",
     # Easy API
     "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",

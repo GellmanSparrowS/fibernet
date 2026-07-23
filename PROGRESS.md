@@ -1,57 +1,52 @@
-# FiberNet v4.1.0 — Release Complete
+# FiberNet v4.1.0+ — Post-Release Progress
 
-## Status: v4.1.0 Released ✅ (2026-07-23)
+## 最新状态 (2026-07-23)
 
-### PyPI
-- **Published**: https://pypi.org/project/fibernet/4.1.0/
-- Install: `pip install fibernet==4.1.0`
+### ✅ 全部完成
 
-### GitHub
-- **Release**: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.0
-- **Commit**: https://github.com/GellmanSparrowS/fibernet/commit/41ece8f92919
+**1. BUG 修复**
+- BUG 5: 无效节点索引 → 清晰的 ValueError (替代 cryptic IndexError)
+- BUG 8: solve_3d() 添加 reactions/edge_forces/K (与 solve_2d 一致)
+- 回归: 312/312 测试通过
 
-### Tests
-- 312/312 passing
-- 0 failures, 1 warning (taichi locale deprecation — upstream issue)
+**2. API 易用性增强 (4 个新功能)**
+- `graph_to_fem_input(graph)`: StructureGraph → FEM 输入一步转换
+- `stretch_test(graph, target_stretch)`: 一行代码完成单轴拉伸 FEM
+- `to_sim_result(fem_result)`: FEM dict → SimResult (后端可替换)
+- `render_fem_stress(graph, result)`: 边着色应力可视化
+
+**API 提升**: 基本 FEM 分析从 ~10 行 → 3 行:
+```python
+solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+g = fn.pattern_2d(unit='honeycomb', box=(10,10), grid=(4,4), radius=0.05)
+res = solver.stretch_test(g, target_stretch=2.0)
+```
+
+**3. API 分析结果**
+- 易用性 (简单场景): ✅ 已改善 (新增 4 个便捷方法)
+- 可编程性 (复杂场景): ✅ 良好 (K矩阵、torch支持、非线性历史)
+- 两套 API (弹簧/FEM) 不冲突, 可通过 SimResult 无缝切换
+
+**4. FEM 展示图**
+- Dark: `fem_showcase_dark.png` (2.0 MB, 3979×2658 px)
+- Light: `fem_showcase_light.png` (2.2 MB, 3979×2658 px)
+- 8种2D单元 × 拉伸/压缩 + 分析图表
+- 脚本: `scripts/fem_showcase.py`
+
+### 提交记录
+```
+72c9ef9 feat: Add FEM showcase images (dark + light themes)
+b487e8f feat: FEM showcase visualization (dark + light themes)
+e69fb56 feat(fem): add convenience API for ease-of-use
+d0a946d fix(beam_fem_v6): validate node indices + add 3D reactions/edge_forces
+31171a4 release: v4.1.0 — BeamFrameFEM + 3D structures + API fixes
+```
 
 ---
 
-## What's New in v4.1.0
+## 历史记录
 
-### BeamFrameFEM_v6 (New FEM Module)
-- `solve_2d()`: Linear 2D beam frame FEM (axial + bending + shear)
-- `solve_2d_nonlinear()`: Geometrically nonlinear co-rotational solver
-- `solve_3d()`: 3D beam frame analysis
-- Full stress decomposition per element
-- Validated: cantilever, displacement BC, nonlinear — all match analytical
-
-### Large Deformation Test Suite
-- 152 FEM simulations (128 2D + 24 3D), all passing
-- 8 2D units × 4 radii × 4 stretch targets
-- 6 3D units × 2 radii × 2 stretch targets
-- Key finding: 100% FULL deformation propagation, all BENDING-dominated
-
-### 3D Unit Types (14 total)
-`bcc`, `chiral_3d`, `cubic`, `diamond_3d`, `fcc`, `gyroid`, `hcp`, `iwp`,
-`lidinoid`, `neovius`, `octet`, `reentrant_3d`, `schwarz_d`, `schwarz_p`
-
-### 2D Unit Types (12 total)
-`chiral`, `cross`, `diamond`, `hexagon`, `honeycomb`, `kagome`,
-`missing_rib`, `reentrant`, `square`, `star`, `triangle`, `voronoi`
-
-### Bug Fixes
-- `easy.py`: `simulate()` default mode `"tension"` → `"stretch"`
-- Version consistency: `__init__.py`, `version.py`, `pyproject.toml` all at 4.1.0
-
-### API Audit Results
-- 62/62 top-level exports verified ✓
-- All 12 2D units generate correctly ✓
-- All 14 3D units generate correctly ✓
-- TaichiEngine.dynamics + stretch_test working ✓
-- SimResult save/load roundtrip ✓
-- GraphFeatureExtractor (94 features) ✓
-- GraphFeatureExtractor3D (60 features) ✓
-- ML utilities (8 functions, lazy import) ✓
-- RL utilities (7 functions, lazy import) ✓
-- Visualization (12 render functions) ✓
-- Transforms + Tiling ✓
+### v4.1.0 Released (2026-07-23)
+- PyPI: https://pypi.org/project/fibernet/4.1.0/
+- GitHub Release: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.0
+- 312/312 tests passing

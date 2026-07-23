@@ -30,6 +30,22 @@ class BeamFrameFEM_v6:
         J = np.pi * r**4 / 2
         return {'A': A, 'I': I, 'J': J, 'r': r}
     
+    @staticmethod
+    def _validate_nodes(n_nodes, fixed_nodes, prescribed_disp):
+        """Validate node indices against n_nodes. Raises ValueError for out-of-range."""
+        bad_fixed = [n for n in fixed_nodes if int(n) < 0 or int(n) >= n_nodes]
+        if bad_fixed:
+            raise ValueError(
+                f"fixed_nodes contains invalid indices {bad_fixed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
+        bad_prescribed = [n for n in prescribed_disp if int(n) < 0 or int(n) >= n_nodes]
+        if bad_prescribed:
+            raise ValueError(
+                f"prescribed_disp contains invalid node indices {bad_prescribed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
+
     def _deduplicate_edges(self, edge_index: np.ndarray) -> np.ndarray:
         seen = set()
         unique = []
@@ -194,6 +210,8 @@ class BeamFrameFEM_v6:
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 2))
         
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
+        
         K, edge_list = self.build_stiffness_2d(edge_index, node_pos, radii, deduplicate)
         n_nodes = node_pos.shape[0]
         n_dof = 3 * n_nodes
@@ -289,7 +307,11 @@ class BeamFrameFEM_v6:
         else:
             edge_index_np = edge_index
         
+        if fixed_nodes is None:
+            fixed_nodes = []
+        
         n_nodes = node_pos.shape[0]
+        self._validate_nodes(n_nodes, fixed_nodes, prescribed_disp)
         current_pos = node_pos.copy()
         total_u = np.zeros((n_nodes, 3))
         
@@ -381,6 +403,8 @@ class BeamFrameFEM_v6:
             prescribed_disp = {}
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 3))
+        
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
         edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
         n_nodes = node_pos.shape[0]
@@ -501,8 +525,208 @@ class BeamFrameFEM_v6:
             node_stress[i] = max(node_stress[i], sigma_total[idx])
             node_stress[j] = max(node_stress[j], sigma_total[idx])
         
+        # Reactions: R = K*u - f
+        reactions = (K_damped @ u_full - f_global).reshape(n_nodes, 6)
+        
+        # Edge forces [axial_N, shear_V_y, shear_V_z]
+        edge_forces = np.zeros((len(edge_list), 3))
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
+            if L < 1e-12:
+                continue
+            e1_dir = dx / L
+            props = self.section_properties(r)
+            A = props['A']
+            ui_axial = np.dot(e1_dir, u[i, :3])
+            uj_axial = np.dot(e1_dir, u[j, :3])
+            N = self.E * A * (uj_axial - ui_axial) / L
+            edge_forces[idx, 0] = N
+        
         return {
             'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
             'sigma_total': sigma_total, 'node_stress': node_stress,
-            'edge_list': edge_list, 'n_nodes': n_nodes, 'n_edges': len(edge_list)
+            'reactions': reactions, 'edge_forces': edge_forces,
+            'edge_list': edge_list, 'K': K,
+            'n_nodes': n_nodes, 'n_edges': len(edge_list)
         }
+
+    # ═══════════════════════════════════════════════════════
+    # CONVENIENCE METHODS (v4.1.1 additions)
+    # ═══════════════════════════════════════════════════════
+
+    @staticmethod
+    def graph_to_fem_input(graph, dim=2, pct=0.10):
+        """Convert StructureGraph to BeamFrameFEM input arrays.
+        
+        Parameters
+        ----------
+        graph : StructureGraph
+        dim : int
+            2 for 2D, 3 for 3D analysis.
+        pct : float
+            Boundary detection percentage (0.10 = 10% each side).
+        
+        Returns
+        -------
+        dict with keys:
+            edge_index: (2, n_edges) int64
+            node_pos: (n_nodes, dim) float64
+            radii: (n_edges,) float64
+            boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
+            x_range: float (for displacement calculation)
+        """
+        from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
+        pos, elements, _, _ = _graph_to_arrays(graph)
+        edge_index = elements.T.astype(np.int64)
+        node_pos = pos[:, :dim] if dim == 2 else pos
+        radii = np.full(edge_index.shape[1], graph.edges[0].radius if hasattr(graph, 'edges') and graph.edges else 0.05)
+        # Try to get per-edge radius from graph
+        try:
+            radii = np.array([e.radius for e in graph.edges])
+            if len(radii) != edge_index.shape[1]:
+                # Bidirectional edges: duplicate radii
+                radii = np.full(edge_index.shape[1], radii[0])
+        except Exception:
+            radii = np.full(edge_index.shape[1], 0.05)
+        
+        boundaries = _get_boundary_indices(pos, pct=pct)
+        x_range = pos[:, 0].max() - pos[:, 0].min()
+        
+        return {
+            'edge_index': edge_index,
+            'node_pos': node_pos,
+            'radii': radii,
+            'boundaries': boundaries,
+            'x_range': x_range,
+        }
+
+    def stretch_test(self, graph, target_stretch=2.0, dim=2, pct=0.10,
+                     nonlinear=None):
+        """One-liner uniaxial stretch test using beam frame FEM.
+        
+        Analogous to TaichiEngine.stretch_test() but uses FEM.
+        
+        Parameters
+        ----------
+        graph : StructureGraph
+        target_stretch : float
+            Target stretch ratio (2.0 = stretch to 2x original length).
+        dim : int
+            2 for 2D, 3 for 3D.
+        pct : float
+            Boundary percentage.
+        nonlinear : bool or None
+            If None, auto-selects nonlinear for |stretch-1| > 0.3.
+            If True, always use nonlinear solver.
+        
+        Returns
+        -------
+        dict : FEM result with u, stresses, reactions, etc.
+        """
+        inp = self.graph_to_fem_input(graph, dim=dim, pct=pct)
+        
+        left = inp['boundaries'].get('left', [])
+        right = inp['boundaries'].get('right', [])
+        target_disp = inp['x_range'] * (target_stretch - 1.0)
+        
+        if dim == 2:
+            prescribed = {ni: (target_disp, 0.0) for ni in right}
+            if nonlinear is None:
+                nonlinear = abs(target_stretch - 1.0) > 0.3
+            if nonlinear:
+                return self.solve_2d_nonlinear(
+                    inp['edge_index'], inp['node_pos'], inp['radii'],
+                    prescribed_disp=prescribed, fixed_nodes=left, n_steps=10
+                )
+            return self.solve_2d(
+                inp['edge_index'], inp['node_pos'], inp['radii'],
+                fixed_nodes=left, prescribed_disp=prescribed
+            )
+        else:
+            prescribed = {ni: (target_disp, 0.0, 0.0) for ni in right}
+            return self.solve_3d(
+                inp['edge_index'], inp['node_pos'], inp['radii'],
+                fixed_nodes=left, prescribed_disp=prescribed
+            )
+
+    def to_sim_result(self, fem_result, graph=None):
+        """Convert FEM dict result to SimResult for backend compatibility.
+        
+        Parameters
+        ----------
+        fem_result : dict
+            Result from solve_2d, solve_3d, or stretch_test.
+        graph : StructureGraph, optional
+            Original graph for metadata.
+        
+        Returns
+        -------
+        SimResult
+        """
+        from fibernet.sim.accelerated import SimResult, _graph_to_arrays
+        
+        u = fem_result['u']
+        n_nodes = fem_result['n_nodes']
+        
+        # Displacement magnitude
+        if u.shape[1] == 3 and fem_result.get('edge_list') is not None:
+            # 2D: u is (n, 3) = [ux, uy, theta]
+            disp_3d = np.column_stack([u[:, :2], np.zeros(n_nodes)])
+        elif u.shape[1] == 6:
+            # 3D: u is (n, 6) = [ux, uy, uz, thx, thy, thz]
+            disp_3d = u[:, :3]
+        else:
+            disp_3d = u
+        
+        max_disp = float(np.max(np.linalg.norm(disp_3d, axis=1)))
+        
+        # Deformed positions
+        if graph is not None:
+            pos, _, _, _ = _graph_to_arrays(graph)
+            deformed = pos + np.column_stack([disp_3d, np.zeros(pos.shape[1] - disp_3d.shape[1])]) if pos.shape[1] > disp_3d.shape[1] else pos + disp_3d
+        else:
+            deformed = disp_3d  # Just the displacement
+        
+        # Energy (elastic strain energy)
+        sigma_axial = fem_result.get('sigma_axial', np.array([]))
+        sigma_bending = fem_result.get('sigma_bending', np.array([]))
+        edge_list = fem_result.get('edge_list', np.array([]))
+        
+        # Approximate energy from stresses
+        energy = 0.0
+        if graph is not None and len(sigma_axial) > 0:
+            pos, elements, _, _ = _graph_to_arrays(graph)
+            for idx, e in enumerate(edge_list):
+                i, j = int(elements[e, 0]), int(elements[e, 1])
+                L = np.linalg.norm(pos[i] - pos[j])
+                r = 0.05  # Default
+                try:
+                    r = graph.edges[e].radius if hasattr(graph, 'edges') else 0.05
+                except:
+                    pass
+                A = np.pi * r**2
+                strain = sigma_axial[idx] / self.E if self.E > 0 else 0
+                energy += 0.5 * self.E * strain**2 * A * L
+        
+        return SimResult(
+            displacements=disp_3d,
+            deformed_positions=deformed,
+            energy=energy,
+            max_displacement=max_disp,
+            max_force=float(np.max(np.abs(sigma_axial))) * np.pi * 0.05**2 if len(sigma_axial) > 0 else 0.0,
+            max_stretch=float(np.max(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
+            mean_stretch=float(np.mean(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
+            n_nodes=n_nodes,
+            n_edges=fem_result.get('n_edges', 0),
+            mode='fem_beam_frame',
+            metadata={
+                'sigma_axial': sigma_axial,
+                'sigma_bending': sigma_bending,
+                'sigma_total': fem_result.get('sigma_total', np.array([])),
+                'reactions': fem_result.get('reactions'),
+                'edge_forces': fem_result.get('edge_forces'),
+            },
+        )

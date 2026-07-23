@@ -1480,3 +1480,142 @@ def render_multi_angle_3d(
         fig.savefig(save_path, dpi=dpi, facecolor=fig.get_facecolor(),
                     bbox_inches="tight", pad_inches=0.1)
     return fig
+
+
+def render_fem_stress(graph, fem_result, *,
+                      theme="dark",
+                      stress_type="total",
+                      title="",
+                      figsize=(8, 8),
+                      linewidth=1.0,
+                      show_colorbar=True,
+                      show_boundary=False,
+                      ax=None,
+                      **kwargs):
+    """Render FEM stress distribution on structure edges.
+    
+    Parameters
+    ----------
+    graph : StructureGraph
+        The structure graph.
+    fem_result : dict
+        Result from BeamFrameFEM_v6 solve methods.
+    stress_type : str
+        "total", "axial", or "bending".
+    theme : str
+        "dark", "light", or custom theme name.
+    title : str
+        Figure title.
+    figsize : tuple
+        Figure size.
+    linewidth : float
+        Edge line width.
+    show_colorbar : bool
+        Show stress colorbar.
+    show_boundary : bool
+        Highlight boundary nodes.
+    ax : matplotlib.axes.Axes, optional
+        Existing axes to draw on.
+    
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    from matplotlib.colors import Normalize
+    import matplotlib.cm as cm
+    
+    from fibernet.sim.accelerated import _graph_to_arrays
+    from fibernet.viz.render import _get_theme
+    
+    colors = _get_theme(theme)
+    
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, figsize=figsize)
+    else:
+        fig = ax.figure
+    
+    ax.set_facecolor(colors['bg'])
+    ax.tick_params(colors=colors['text'])
+    for spine in ax.spines.values():
+        spine.set_color(colors['grid'])
+    
+    pos, elements, _, _ = _graph_to_arrays(graph)
+    u = fem_result['u']
+    
+    # Deformed positions (2D)
+    if u.shape[1] >= 3:
+        deformed = pos[:, :2] + u[:, :2]
+    else:
+        deformed = pos[:, :2] + u
+    
+    # Select stress type
+    stress_map = {
+        "total": fem_result.get('sigma_total', np.zeros(len(fem_result.get('edge_list', [])))),
+        "axial": fem_result.get('sigma_axial', np.zeros(len(fem_result.get('edge_list', [])))),
+        "bending": fem_result.get('sigma_bending', np.zeros(len(fem_result.get('edge_list', [])))),
+    }
+    stresses = stress_map.get(stress_type, stress_map["total"])
+    edge_list = fem_result.get('edge_list', np.arange(len(stresses)))
+    
+    if len(stresses) == 0:
+        return fig
+    
+    # Color scale
+    s_max = np.percentile(np.abs(stresses), 95) if len(stresses) > 0 else 1.0
+    if s_max < 1e-10:
+        s_max = 1.0
+    norm = Normalize(vmin=-s_max, vmax=s_max)
+    cmap = cm.coolwarm if stress_type == "axial" else cm.inferno
+    
+    # Build line segments
+    segments = []
+    seg_colors = []
+    seg_widths = []
+    
+    for idx, e in enumerate(edge_list):
+        i, j = int(elements[e, 0]), int(elements[e, 1])
+        if 0 <= i < len(deformed) and 0 <= j < len(deformed):
+            segments.append([deformed[i], deformed[j]])
+            s = stresses[idx] if idx < len(stresses) else 0
+            seg_colors.append(cmap(norm(np.clip(s, -s_max, s_max))))
+            # Scale linewidth by absolute stress
+            w = linewidth * (0.5 + 1.5 * abs(s) / s_max)
+            seg_widths.append(w)
+    
+    if segments:
+        lc = LineCollection(segments, colors=seg_colors, linewidths=seg_widths)
+        ax.add_collection(lc)
+        ax.autoscale()
+    
+    # Boundary nodes
+    if show_boundary:
+        left_nodes = fem_result.get('left_nodes', [])
+        right_nodes = fem_result.get('right_nodes', [])
+        for ni in left_nodes:
+            if 0 <= ni < len(deformed):
+                ax.plot(deformed[ni, 0], deformed[ni, 1], 's',
+                       color='#e74c3c', markersize=4, zorder=5)
+        for ni in right_nodes:
+            if 0 <= ni < len(deformed):
+                ax.plot(deformed[ni, 0], deformed[ni, 1], '^',
+                       color='#3498db', markersize=4, zorder=5)
+    
+    # Colorbar
+    if show_colorbar:
+        sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        cb = plt.colorbar(sm, ax=ax, shrink=0.8, pad=0.02)
+        cb.set_label(f'{stress_type.capitalize()} Stress (Pa)',
+                    color=colors['text'], fontsize=9)
+        cb.ax.tick_params(colors=colors['text'], labelsize=7)
+    
+    # Title
+    if title:
+        ax.set_title(title, color=colors['text'], fontsize=11, fontweight='bold', pad=10)
+    
+    ax.set_aspect('equal')
+    ax.axis('off')
+    
+    return fig
