@@ -660,3 +660,88 @@ phase5_v4: large-scale beam FEM with complex structures
 phase5_v3: beam frame FEM with welded joints
 phase5_v2: corrected FEM integration (18/18 pass)
 ```
+
+
+## Phase 6b: Proper Deformed Structure FEM Validation ✅ (2026-07-23)
+
+### User Feedback Addressed
+- **Used deformed structures** (n_pts_per_side=5, ±0.4 amplitude) for ALL tests
+- **BCs: 10% fixed on EACH boundary side** (not just one)
+- **Large deformation**: 100% stretch (10cm on 10cm), 50% compress (5cm on 10cm)
+- **Visualization**: EDGES colored by stress (not points), deformed shape preserved
+- **3D**: proper BCs with 10% fixed on top/bottom
+
+### Deformed Structure Baseline (10% stretch)
+
+| Structure | Nodes | Edges | max_u | σ_max | SCF | Propagation |
+|-----------|-------|-------|-------|-------|-----|-------------|
+| Honeycomb | 840 | 900 | 9.64 | 4.64e8 Pa | 6.60 | 19.1% |
+| Kagome | 1321 | 1440 | 5.04 | 3.17e8 Pa | 6.06 | 3.0% |
+| Reentrant | 1140 | 1200 | 18.75 | 6.23e8 Pa | 5.83 | 16.9% |
+| Triangle | 561 | 630 | 8.22 | 3.45e8 Pa | 7.04 | 5.6% |
+
+**Propagation (20%→80% ratio)**: fraction of displacement at 20% from fixed end relative to 80% from fixed end.
+- High propagation (kagome, triangle): stretch-dominated, deformation reaches far side efficiently
+- Low propagation (honeycomb, reentrant): bending-dominated, deformation attenuates
+
+### Large Deformation Results
+
+| Structure | Stretch 100% max_σ | Compress 50% max_σ |
+|-----------|--------------------|--------------------|
+| Honeycomb | 4.64e9 Pa | 1.07e9 Pa |
+| Kagome | 3.17e9 Pa | 6.17e8 Pa |
+| Reentrant | 6.23e9 Pa | 5.23e8 Pa |
+| Triangle | 3.45e9 Pa | 9.48e8 Pa |
+
+### Multi-Radius on Deformed Structures
+
+**Honeycomb (bending-dominated):**
+| r (m) | σ_axial | σ_bending | σ_bend/σ_ax |
+|-------|---------|-----------|-------------|
+| 0.001 | 6.90e2 | 5.08e7 | 73627 |
+| 0.010 | 6.00e4 | 4.64e8 | 7738 |
+| 0.050 | 1.48e6 | 2.30e9 | 1559 |
+
+→ Bending always dominates. σ_bending scales ∝ r (since M*r/I ∝ r/I ∝ r/r⁴ = r⁻³ but M also grows with stiffness)
+
+**Kagome (stretch-dominated):**
+| r (m) | σ_axial | σ_bending | σ_bend/σ_ax |
+|-------|---------|-----------|-------------|
+| 0.001 | 1.25e8 | 3.15e7 | 0.25 |
+| 0.010 | 1.25e8 | 3.17e8 | 2.53 |
+| 0.050 | 1.26e8 | 1.54e9 | 12.20 |
+
+→ σ_axial constant (geometric strain). σ_bending grows with r. Crossover at r≈0.005.
+
+**Reentrant (extreme bending):**
+| r (m) | σ_axial | σ_bending | σ_bend/σ_ax |
+|-------|---------|-----------|-------------|
+| 0.001 | 9.67e2 | 6.48e7 | 67058 |
+| 0.010 | 3.95e4 | 6.23e8 | 15777 |
+| 0.050 | 9.79e5 | 3.09e9 | 3159 |
+
+→ Re-entrant angles create extreme bending moments.
+
+### 3D Structures (20% compression)
+
+| Structure | Nodes | Edges | max_u | max_σ |
+|-----------|-------|-------|-------|-------|
+| 3×3×3 | 27 | 54 | 4.00e-1 | 2.00e8 |
+| 5×5×5 | 125 | 300 | 8.00e-1 | 2.00e8 |
+| 4×4×6 | 96 | 224 | 1.00e+0 | 2.00e8 |
+| 6×6×4 | 144 | 348 | 6.00e-1 | 2.00e8 |
+
+3D propagation is linear through height (uniform compression on cube lattice).
+
+### Visualization
+- `benchmarks/results/phase6b_visualization.png` (1.7 MB)
+- 7 rows: baseline edges, stretch 100% edges, compress 50% edges, propagation curves, multi-radius, 3D edges, summary
+
+### Files
+| File | Purpose |
+|------|---------|
+| `fibernet/ml/beam_frame_fem_v6.py` | V6 solver (508 lines) |
+| `benchmarks/phase6b_proper_fem_test.py` | Main test (785 lines, checkpoint/resume) |
+| `benchmarks/phase6b_visualize.py` | Visualization (224 lines) |
+| `benchmarks/results/phase6b_results.json` | All numeric results |
+| `benchmarks/results/phase6b_visualization.png` | All-in-one figure |
