@@ -1,0 +1,139 @@
+{
+  "gnn_forward": [
+    {
+      "target_nodes": 10,
+      "actual_nodes": 18,
+      "actual_edges": 44,
+      "avg_time_ms": 2.016,
+      "std_time_ms": 1.162
+    },
+    {
+      "target_nodes": 50,
+      "actual_nodes": 90,
+      "actual_edges": 260,
+      "avg_time_ms": 1.363,
+      "std_time_ms": 0.312
+    },
+    {
+      "target_nodes": 100,
+      "actual_nodes": 168,
+      "actual_edges": 504,
+      "avg_time_ms": 1.263,
+      "std_time_ms": 0.12
+    },
+    {
+      "target_nodes": 500,
+      "actual_nodes": 720,
+      "actual_edges": 2280,
+      "avg_time_ms": 2.335,
+      "std_time_ms": 0.362
+    },
+    {
+      "target_nodes": 1000,
+      "actual_nodes": 1518,
+      "actual_edges": 4884,
+      "avg_time_ms": 2.607,
+      "std_time_ms": 0.392
+    }
+  ],
+  "physics_solve": [
+    {
+      "target_nodes": 10,
+      "actual_nodes": 18,
+      "actual_edges": 44,
+      "avg_time_ms": 8.802,
+      "std_time_ms": 0.928
+    },
+    {
+      "target_nodes": 50,
+      "actual_nodes": 90,
+      "actual_edges": 260,
+      "avg_time_ms": 42.913,
+      "std_time_ms": 3.068
+    },
+    {
+      "target_nodes": 100,
+      "actual_nodes": 168,
+      "actual_edges": 504,
+      "avg_time_ms": 86.154,
+      "std_time_ms": 1.247
+    },
+    {
+      "target_nodes": 500,
+      "actual_nodes": 720,
+      "actual_edges": 2280,
+      "avg_time_ms": 527.043,
+      "std_time_ms": 31.356
+    },
+    {
+      "target_nodes": 1000,
+      "actual_nodes": 1518,
+      "actual_edges": 4884,
+      "avg_time_ms": 2199.965,
+      "std_time_ms": 31.389
+    }
+  ],
+  "memory_scaling": [
+    {
+      "actual_nodes": 18,
+      "actual_edges": 44,
+      "mem_before_mb": 730.96,
+      "mem_after_mb": 730.96,
+      "mem_delta_mb": 0.0
+    },
+    {
+      "actual_nodes": 90,
+      "actual_edges": 260,
+      "mem_before_mb": 730.96,
+      "mem_after_mb": 730.96,
+      "mem_delta_mb": 0.0
+    },
+    {
+      "actual_nodes": 168,
+      "actual_edges": 504,
+      "mem_before_mb": 730.96,
+      "mem_after_mb": 730.96,
+      "mem_delta_mb": 0.0
+    },
+    {
+      "actual_nodes": 720,
+      "actual_edges": 2280,
+      "mem_before_mb": 730.96,
+      "mem_after_mb": 730.96,
+      "mem_delta_mb": 0.0
+    },
+    {
+      "actual_nodes": 1518,
+      "actual_edges": 4884,
+      "mem_before_mb": 730.96,
+      "mem_after_mb": 730.96,
+      "mem_delta_mb": 0.0
+    }
+  ],
+  "pinn_gnn": [
+    {
+      "actual_nodes": 18,
+      "actual_edges": 44,
+      "avg_time_ms": 2.025,
+      "std_time_ms": 0.264
+    },
+    {
+      "actual_nodes": 90,
+      "actual_edges": 260,
+      "avg_time_ms": 2.175,
+      "std_time_ms": 0.074
+    },
+    {
+      "actual_nodes": 168,
+      "actual_edges": 504,
+      "avg_time_ms": 3.615,
+      "std_time_ms": 0.569
+    },
+    {
+      "actual_nodes": 720,
+      "actual_edges": 2280,
+      "avg_time_ms": 4.184,
+      "std_time_ms": 0.57
+    }
+  ]
+}

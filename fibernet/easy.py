@@ -13,7 +13,7 @@ Examples
 >>> from fibernet import pattern_2d, show, simulate, batch_simulate
 >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
 >>> show(g)  # 一行出图
->>> result = simulate(g, mode="tension")  # 一行模拟
+>>> result = simulate(g, mode="stretch", strain=2.0)  # 一行模拟
 >>> batch_simulate([{"unit": "honeycomb"}, {"unit": "kagome"}], "results.csv")  # 一行批量
 """
 
@@ -70,8 +70,8 @@ def show(
 
 def simulate(
     graph: StructureGraph,
-    mode: str = "tension",
-    strain: float = 0.01,
+    mode: str = "stretch",
+    strain: float = 2.0,
     backend: str = "spring",
     save_path: Optional[str] = None,
     **kwargs,
@@ -83,9 +83,7 @@ def simulate(
     graph : StructureGraph
         要模拟的结构。
     mode : str
-        模拟模式:
-        弹簧后端: "stretch", "dynamics"
-        弹簧后端: "stretch" (位移控制拉伸)
+        模拟模式: "stretch" (位移控制拉伸) 或 "dynamics" (自定义动力学)
     strain : float
         FEM: 施加应变 (无量纲)
         弹簧: target_stretch 倍数 (如 2.0 = 拉到两倍)
@@ -103,7 +101,7 @@ def simulate(
     --------
     >>> from fibernet import pattern_2d, simulate
     >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
-    >>> r = simulate(g, mode="tension", strain=0.02)  # FEM
+    >>> r = simulate(g, mode="stretch", strain=2.0)  # 质点弹簧拉伸2倍
     >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
     if backend == "spring":
@@ -126,8 +124,8 @@ def simulate(
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
-    mode: str = "tension",
-    strain: float = 0.01,
+    mode: str = "stretch",
+    strain: float = 2.0,
 ) -> str:
     """一行批量模拟：输出 CSV。
 

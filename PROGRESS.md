@@ -1,182 +1,100 @@
-# FiberNet Project Progress
+# FiberNet v4 — Large Deformation FEM Test Results
 
-**Last Updated:** 2026-07-20
-**Status:** Production Ready
-**GitHub Health Score:** 100%
+## 完成时间 (2026-07-23)
 
----
+### ✅ 所有测试完成
 
-## Session 2 Changes (2026-07-20)
+**测试配置:**
+- 方法: BeamFrameFEM_v6 (梁单元有限元)
+- 材料: E=1e9 Pa, ν=0.3
+- 变形结构: n_pts_per_side=5, perturbation=±0.40
+- 边界条件: 两侧各 10% 固定 (刚性板)
+- 求解器: 线性 (|stretch-1|≤0.3), 非线性 (|stretch-1|>0.3)
 
-### New Files Added
-- **CITATION.cff** — Enables GitHub "Cite this repository" button for academic citation
-- **.github/CODEOWNERS** — Auto-assigns PR reviewers to @GellmanSparrowS
-- **docs/index.html** — Professional landing page for GitHub Pages (academic style)
-- **docs/wiki/*.html** — HTML versions of wiki pages for GitHub Pages browsing
-- **scripts/build_wiki_html.py** — Converter script: wiki Markdown → HTML
-- **.nojekyll** + **docs/.nojekyll** — Prevents Jekyll from processing Sphinx files
+**测试范围:**
+- 2D: 8 单元 × 4 半径 × 4 拉伸目标 = 128 模拟
+- 3D: 6 单元 × 2 半径 × 2 拉伸目标 = 24 模拟
+- 总计: 152 模拟, 全部成功 ✅
 
-### Wiki Updates
-- **Installation.md** — Simplified: only shows `fibernet` and `fibernet[full]`, fixed Python version (3.9+)
-- Wiki pages confirmed at framework level — good extensibility, not too detailed
+### 关键发现
 
-### GitHub Settings Updated (via API)
-- **Vulnerability alerts** — Enabled
-- **Automated security fixes** — Enabled
-- **Branch protection** — Requires CI (test on ubuntu-latest, Python 3.12) to pass before merge
-- **Sphinx docs/conf.py** — Fixed version from 1.5 to 4.0.5
+#### 1. 变形传导 (Deformation Propagation)
+- **所有结构都是 FULL propagation** (100%)
+- 变形完全传导到结构内部，没有局部化现象
+- 平均传导比率: ~1.015 (内部最大位移 / 边界最大位移)
+- 半径对传导的影响很小: r=0.02~0.20 时传导比率都在 1.011~1.018
 
-### Cleanup
-- Removed 6 stale scripts: `gen_notebook.py`, `push_github.sh`, `run_tutorial_viz_v7/v8/v9/v10.py`
+#### 2. 弯曲 vs 轴向应力 (Bending vs Axial)
+- **所有结构都是 BENDING-dominated** (弯曲主导)
+- 弯曲主导度 (B/A = σ_bending/σ_axial):
+  - 低 (B/A < 10): honeycomb (9.2), square (9.0), triangle (4.6)
+  - 中 (B/A 10-100): reentrant (21.0), kagome (15.8), star (51.6), diamond (70.4), chiral (98.8)
+  - 高 (B/A > 100): octet (163.0), cubic (218.0), fcc (469.5), reentrant_3d (476.9), diamond_3d (501.5), bcc (376.1)
 
-### Network Issues
-- `git push` to github.com is blocked (connection timeout)
-- Workaround: Push via GitHub REST API (Contents API + Git Database API)
-- Wiki git repo (`fibernet.wiki.git`) push also affected
-- Wiki content mirrored in `docs/wiki/` on main repo (accessible via GitHub Pages)
+#### 3. 力-拉伸关系 (Force-Stretch)
+- 力随半径增加: r=0.02 → r=0.20 时力增加 ~100x
+- 不同结构的平均力:
+  - 低力: honeycomb (12.4 kN), reentrant (24.8 kN)
+  - 中力: square (74.0 kN), star (72.3 kN), triangle (50.4 kN)
+  - 高力: kagome (144.5 kN), reentrant_3d (96.0 kN), fcc (35.3 kN)
 
----
+#### 4. 单元类型特性
+- **triangle**: 传导最好 (prop=1.031), 弯曲最少 (B/A=4.6)
+- **cubic**: 传导好 (prop=1.040), 中等弯曲 (B/A=218.0)
+- **square**: 传导差 (prop=1.001), 弯曲少 (B/A=9.0)
+- **diamond**: 传导中等 (prop=1.024), 弯曲中等 (B/A=70.4)
+- **3D 结构**: 弯曲主导度远高于 2D (B/A > 100)
 
-## Current Repository State
-
-### GitHub Features — Complete Checklist
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Community Health | 100% | All items present |
-| CI/CD | Passing | 12 jobs (3 OS × 4 Python), 189 tests |
-| Wiki | 9 pages | Framework-level, bilingual |
-| GitHub Pages | Enabled | https://gellmansparrows.github.io/fibernet/ |
-| Release | v4.0.5 | With changelog |
-| Branch Protection | Active | CI required to merge |
-| Vulnerability Alerts | Enabled | Dependabot + security advisories |
-| Auto Security Fixes | Enabled | Automatic dependency patch updates |
-| CITATION.cff | Present | GitHub "Cite" button active |
-| CODEOWNERS | Present | Auto-assign reviewers |
-| Issue Templates | Present | Bug report + Feature request |
-| PR Template | Present | Structured PR format |
-| Security Policy | Present | SECURITY.md |
-| License | MIT | Standard open-source |
-| README | Bilingual | EN + CN with language toggle |
-| Topics | 9 tags | Covers all major areas |
-| Labels | 9 custom | Organized by category |
-| Dependabot | Active | pip + GitHub Actions |
-| PyPI Publishing | Configured | Tag-triggered workflow |
-
-### What's NOT possible via API (needs Web UI)
-- **GitHub Discussions categories** — Must be created at github.com/.../discussions
-- **GitHub Projects board** — Projects v2 requires web UI setup
-- **Social preview image** — Must be uploaded via repo Settings page
-- **Wiki git repo push** — Network blocked; content mirrored in docs/wiki/
-
-### Wiki Quality Assessment
-- All pages at framework level (WHAT and WHY, not deep HOW)
-- Code examples are brief API sketches, not implementation details
-- Unit-Types lists all units (acceptable as reference data)
-- Installation simplified to base + full only
-- Each page easy to extend as new features are added
-- Sidebar provides clear navigation
-- Footer shows version and lab affiliation
-
----
-
-## Session 1 Summary (Earlier on 2026-07-20)
-
-### Phase 1: CI Fixes
-- Fixed Taichi SNode exhaustion segfault
-- Cross-platform CI: 12/12 jobs passing
-
-### Phase 2: Cleanup
-- Removed 77 obsolete files (32K+ lines)
-
-### Phase 3: Bilingual README
-- README.md (EN) + README_CN.md (CN) with language toggle
-
-### Phase 4: Lab Homepage HTML
-- Chinese + English HTML in /media/sf_share/
-
-### Phase 5: Wiki Documentation
-- 9 pages at framework level
-- Mirrored to docs/wiki/ for GitHub Pages
-
-### Phase 6: GitHub Optimization
-- GitHub Pages, Release v4.0.5, Community Health 100%
-- Branch protection, custom labels, topics
-
----
-
-## Git History (Latest)
+### 输出文件
 
 ```
-Session 2:
-a72473e feat: add CITATION.cff, CODEOWNERS, GitHub Pages landing, wiki HTML, fix Sphinx version
-073a715 chore: remove stale script run_tutorial_viz_v10.py
-c8e5803 chore: remove stale script run_tutorial_viz_v9.py
-d626646 chore: remove stale script run_tutorial_viz_v8.py
-63306e8 chore: remove stale script run_tutorial_viz_v7.py
-f13696b chore: remove stale script push_github.sh
-369520a chore: remove stale script gen_notebook.py
-bd0187f docs: add Installation.md to docs/wiki
-7709511 docs: add Installation.html to docs/wiki
-3b21d00 chore: add .nojekyll to prevent Jekyll processing
-98e70bc chore: add .nojekyll at repo root
-
-Session 1:
-9193885 docs: update PROGRESS.md with comprehensive session summary
-4c2152e Add security policy and Dependabot configuration
-cbc0b52 Add GitHub community health files
-911b74e Add issue template config
-43bbf82 docs: simplify wiki pages to framework level
-80d78d1 docs: update PROGRESS.md - Release v4.0.5 + GitHub Pages
-d75b848 docs: add wiki documentation to docs/wiki/
-1599251 docs: update PROGRESS.md - CI all green
-b2d9fad fix: monkey-patch Taichi version check
-27d392e fix: cross-platform CI
-77bba69 docs: professional bilingual README
-6b2fb70 chore: cleanup obsolete directories and files
-b5844b7 fix: resolve Taichi SNode exhaustion segfault
+output_data/deformation_test/
+├── analysis_report_fem.json          # 详细分析报告 (6 KB)
+└── viz/
+    └── large_deformation_fem_summary.png  # 综合可视化 (7.8 MB)
 ```
 
----
+### 脚本位置
 
-## Known Issues
+```
+scripts/deformation_test/
+└── run_large_deformation_fem.py      # 主测试脚本 (1100+ 行)
+```
 
-1. **Network** — `git push` to github.com times out; workaround via REST API
-2. **Wiki git repo** — Can't push directly; content mirrored in `docs/wiki/`
-3. **CI queue** — Multiple rapid pushes caused CI queue backup (will resolve automatically)
-4. **Pages build** — May take a few minutes after each push to rebuild
+### 运行方法
 
----
+```bash
+cd fibernet
+source .venv/bin/activate
+python scripts/deformation_test/run_large_deformation_fem.py
+```
 
-## Next Steps (If Continuing)
+脚本支持断点续跑：如果中断，重新运行会自动跳过已完成的模拟。
 
-### Needs Web UI
-1. Set up GitHub Discussions categories (Q&A, Show and Tell, Ideas)
-2. Create GitHub Project board for roadmap visualization
-3. Upload social preview image to repo Settings
+### 技术细节
 
-### Potential Future Improvements
-1. More examples in `examples/` directory
-2. Sphinx API documentation (hosted on GitHub Pages or ReadTheDocs)
-3. Automated benchmark tracking
-4. Edge case unit tests
-5. Zenodo integration for DOI generation
+#### 力计算
+- 2D: 使用 edge_forces (轴向力 + 剪切力) 在边界节点求和
+- 3D: 使用 σ_axial × A × cos(θ) 在边界边求和
+- 非线性求解器: 增量加载 (n_steps=10), 几何非线性
 
----
+#### 传导分析
+- 传导比率 = interior_max_disp / boundary_max_disp
+- 内部节点 = 不在边界 10% 范围内的节点
+- FULL: ratio > 0.5, PARTIAL: 0.2-0.5, LOCALIZED: < 0.2
 
-## Summary
+#### 弯曲主导度
+- B/A = max(σ_bending) / max(σ_axial)
+- B/A > 2.0: 弯曲主导
+- B/A < 0.5: 轴向主导
+- 0.5-2.0: 混合
 
-FiberNet GitHub repository is now fully optimized for production use:
-- 100% community health score
-- Bilingual documentation with language toggle
-- Cross-platform CI (12 jobs, all passing)
-- Framework-level Wiki (easy to extend)
-- GitHub Pages with professional landing page
-- Academic citation support (CITATION.cff)
-- Security features enabled (vulnerability alerts, auto-fixes, Dependabot)
-- Branch protection (CI required to merge)
-- Clean codebase (stale files removed)
-- Automated PyPI publishing on tag
-- Professional issue/PR templates
+### 结论
 
-The repository is ready for public release, academic publication, and community contributions.
+BeamFrameFEM_v6 在大变形测试中表现良好：
+1. **变形传导**: 所有结构都完全传导，没有局部化
+2. **弯曲行为**: 所有结构都是弯曲主导，符合梁单元理论
+3. **数值稳定性**: 152 个模拟全部成功，无失败
+4. **几何非线性**: 大变形 (2x stretch, 0.5x compress) 需要非线性求解器
+
+这些结果为 FiberNet 的力学性能分析提供了可靠的基准数据。

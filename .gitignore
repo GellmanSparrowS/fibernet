@@ -37,5 +37,7 @@ _scripts_archive/
 analysis_results/
 analysis_scripts/
 output_data/
+!output_data/deformation_test/
+!output_data/deformation_test/**
 output_viz/
 datasets/

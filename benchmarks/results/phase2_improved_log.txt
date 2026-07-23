@@ -1,0 +1,32 @@
+======================================================================
+Phase 2 Improved: Real Performance
+======================================================================
+
+[Generating 250 structures...]
+[Taichi] version 1.7.4, llvm 15.0.4, commit b4b956fd, linux, python 3.12.3
+  Generated 1 valid structures...
+  Generated 47 valid structures...
+  Generated 92 valid structures...
+  Generated 140 valid structures...
+  Generated 186 valid structures...
+Generated 235 valid structures in 23.5s
+
+[GNN Improved Training - 235 samples]
+  Epoch   0: train=2.2785, val_mse=36219.17, val_R²=-0.0819
+  Epoch  30: train=0.8534, val_mse=35949.63, val_R²=-0.0739
+  Epoch  60: train=0.7547, val_mse=35816.61, val_R²=-0.0699
+  Epoch  90: train=0.7911, val_mse=36269.27, val_R²=-0.0834
+  Epoch 120: train=0.7406, val_mse=36447.77, val_R²=-0.0887
+  Epoch 149: train=0.8019, val_mse=35901.90, val_R²=-0.0724
+  Final: MAE=43.6859, RMSE=126.1101, R²=-0.0125
+  Train time: 547.3s, Params: 109570
+
+======================================================================
+Improved Phase 2 Summary
+======================================================================
+Dataset: 235 samples
+GNN: R²=-0.0125, MAE=43.6859
+Target: R² > 0.5
+Status: ✗ FAIL
+
+Results saved to: /home/codex/projects/codex_test/fibernet/benchmarks/results/phase2_improved_results.json
