@@ -3,7 +3,7 @@
 FiberNet v4 — Large Deformation FEM Test Suite
 ================================================
 Tests deformed structures (n_pts_per_side=5, perturbation=±0.40) using
-BeamFrameFEM_v6 (beam frame finite element method) under large stretch
+BeamFrameFEM (beam frame finite element method) under large stretch
 and compression with different fiber thicknesses.
 
 Key analysis:
@@ -139,7 +139,7 @@ def generate_3d_structure(unit, radius):
     return g
 
 def graph_to_fem_input(graph, dim=2):
-    """Convert StructureGraph to BeamFrameFEM_v6 input format."""
+    """Convert StructureGraph to BeamFrameFEM input format."""
     from fibernet.sim.accelerated import _graph_to_arrays
     pos, elements, _, _ = _graph_to_arrays(graph)
     edge_index = elements.T.astype(np.int64)
@@ -161,7 +161,7 @@ def run_fem_2d(graph, target_stretch, radius, E=E_MODULUS, nu=NU,
     - Uses nonlinear solver for large deformation
     """
     from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
-    from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+    from fibernet.ml.beam_frame_fem import BeamFrameFEM
     
     pos, elements, _, _ = _graph_to_arrays(graph)
     edge_index = elements.T.astype(np.int64)
@@ -188,7 +188,7 @@ def run_fem_2d(graph, target_stretch, radius, E=E_MODULUS, nu=NU,
     for ni in right_nodes:
         prescribed[ni] = (target_disp, 0.0)
     
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     
     # Choose solver based on deformation magnitude
     strain_mag = abs(target_stretch - 1.0)
@@ -374,7 +374,7 @@ def run_fem_3d(graph, target_stretch, radius, E=E_MODULUS, nu=NU,
                pct=PCT_BOUNDARY, label=""):
     """Run 3D beam frame FEM with prescribed displacement."""
     from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
-    from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+    from fibernet.ml.beam_frame_fem import BeamFrameFEM
     
     pos, elements, _, _ = _graph_to_arrays(graph)
     edge_index = elements.T.astype(np.int64)
@@ -400,7 +400,7 @@ def run_fem_3d(graph, target_stretch, radius, E=E_MODULUS, nu=NU,
     for ni in right_nodes:
         prescribed[ni] = (target_disp, 0.0, 0.0)
     
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     
     try:
         t0 = time.time()
@@ -599,7 +599,7 @@ def analyze_results(all_results):
 
 def print_analysis(summary):
     print("\n" + "=" * 70)
-    print("DEFORMATION PROPAGATION ANALYSIS (FEM Beam Frame v6)")
+    print("DEFORMATION PROPAGATION ANALYSIS (FEM Beam Frame)")
     print("=" * 70)
     
     for unit in sorted(summary.keys()):
@@ -678,7 +678,7 @@ def generate_visualization(all_results, summary):
     fig = plt.figure(figsize=(3.5 * n_cols, 3.5 * n_rows + 2))
     
     fig.suptitle(
-        f"FiberNet v4 — Large Deformation FEM Analysis (BeamFrameFEM_v6)\n"
+        f"FiberNet v4 — Large Deformation FEM Analysis (BeamFrameFEM)\n"
         f"n_pts_per_side={N_PTS_PER_SIDE}, perturbation=±{PERTURBATION}, "
         f"E={E_MODULUS:.0e} Pa, boundary={PCT_BOUNDARY*100:.0f}% each side\n"
         f"{len([v for v in all_results.values() if v])} FEM simulations across "
@@ -897,7 +897,7 @@ def generate_visualization(all_results, summary):
 def generate_report(all_results, summary):
     report = {
         "timestamp": datetime.now().isoformat(),
-        "method": "BeamFrameFEM_v6 (beam frame finite element)",
+        "method": "BeamFrameFEM (beam frame finite element)",
         "parameters": {
             "n_pts_per_side": N_PTS_PER_SIDE,
             "perturbation": PERTURBATION,
@@ -957,7 +957,7 @@ def main():
     print("=" * 60)
     print("FiberNet v4 — Large Deformation FEM Test Suite")
     print("=" * 60)
-    print(f"Method: BeamFrameFEM_v6 (beam frame FEM)")
+    print(f"Method: BeamFrameFEM (beam frame FEM)")
     print(f"E={E_MODULUS:.0e} Pa, ν={NU}")
     print(f"n_pts={N_PTS_PER_SIDE}, pert=±{PERTURBATION}")
     print(f"2D: {len(UNITS_2D)} units × {len(RADII_2D)} radii × {len(STRETCH_TARGETS)} tests = "

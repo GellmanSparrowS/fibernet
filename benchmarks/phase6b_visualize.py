@@ -240,7 +240,7 @@ def main():
     lines = [
         "COMPREHENSIVE FEM VALIDATION — Phase 6b (Deformed Structures, Proper BCs)",
         "=" * 100,
-        "Solver: BeamFrameFEM_v6 | E=1GPa | nu=0.3 | Deformed: n_pts_per_side=5, disp=+-0.4",
+        "Solver: BeamFrameFEM | E=1GPa | nu=0.3 | Deformed: n_pts_per_side=5, disp=+-0.4",
         "BCs: 10% nodes fixed on each boundary side | Fibers: welded joints (moment-resisting)",
         "",
         f"{'Structure':>12s} | {'Nodes':>5s} {'Edges':>5s} | {'max_u':>10s} {'max_s':>10s} {'SCF':>5s} {'Prop':>5s} | {'σ_ax':>10s} {'σ_bend':>10s}",
@@ -287,7 +287,7 @@ def main():
            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9))
     ax.axis('off')
     
-    plt.suptitle("FiberNet Beam FEM v6b: Deformed Structure Validation (Edges View)",
+    plt.suptitle("FiberNet Beam FEM: Deformed Structure Validation (Edges View)",
                  fontsize=20, fontweight='bold', y=0.985)
     
     print(f"Saving {VIZ_FILE}...")

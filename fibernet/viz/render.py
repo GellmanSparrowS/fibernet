@@ -1499,7 +1499,7 @@ def render_fem_stress(graph, fem_result, *,
     graph : StructureGraph
         The structure graph.
     fem_result : dict
-        Result from BeamFrameFEM_v6 solve methods.
+        Result from BeamFrameFEM solve methods.
     stress_type : str
         "total", "axial", or "bending".
     theme : str

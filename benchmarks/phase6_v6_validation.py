@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 
 def test_cantilever():
     print("="*70)
@@ -22,7 +22,7 @@ def test_cantilever():
     forces = np.zeros((n, 2))
     forces[-1, 1] = -P
     
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     res = solver.solve_2d(edge_index, node_pos, radii, forces=forces, fixed_nodes=[0])
     
     I_val = np.pi * r**4 / 4
@@ -79,7 +79,7 @@ def test_displacement_bc():
     edge_index = np.array(edges).T
     radii = np.full(edge_index.shape[1], r)
     
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     
     # Prescribe 0.01m displacement at right end (1% strain)
     delta = 0.01
@@ -144,7 +144,7 @@ def test_nonlinear():
     edge_index = np.array(edges).T
     radii = np.full(edge_index.shape[1], r)
     
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     
     # Large prescribed displacement (50% stretch)
     delta = 0.5
@@ -205,7 +205,7 @@ def test_complex_structure():
     
     r = 0.01
     radii = np.full(n_edges, r)
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     
     # Find boundary nodes
     x = node_pos[:, 0]

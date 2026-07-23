@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fibernet import pattern_2d
 from fibernet.ml.gnn import graph_from_structure
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 
 # ============================================================
 # FIX 1: Corrected propagation for deformed structures
@@ -43,7 +43,7 @@ def fix_deformed_propagation():
         
         r = 0.01
         radii = np.full(edge_index.shape[1], r)
-        solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+        solver = BeamFrameFEM(E=1e9, nu=0.3)
         
         stretch = x_range * 0.1
         prescribed = {int(n): (stretch, 0.0) for n in right}
@@ -116,7 +116,7 @@ def investigate_kagome():
     stretch = x_range * 0.1
     prescribed = {int(n): (stretch, 0.0) for n in right}
     
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     r = 0.01
     radii = np.full(edge_index.shape[1], r)
     
@@ -205,7 +205,7 @@ def run_graph_physics():
         # FEM analysis for stress paths
         r = 0.01
         radii = np.full(edge_index.shape[1], r)
-        solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+        solver = BeamFrameFEM(E=1e9, nu=0.3)
         
         x = node_pos[:, 0]
         x_range = x.max() - x.min()
@@ -464,7 +464,7 @@ def create_visualization(deformed_results, graph_results, comprehensive_data):
     summary = (
         "COMPREHENSIVE FEM VALIDATION SUMMARY\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "✅ Solver: BeamFrameFEM_v6 (corrected bending stress + displacement BCs + nonlinear)\n"
+        "✅ Solver: BeamFrameFEM (corrected bending stress + displacement BCs + nonlinear)\n"
         "✅ Analytical: Cantilever δ=PL³/3EI (ratio=1.000000), Axial stretch σ=E·ε (ratio=1.000000)\n"
         "✅ Displacement BCs: Prescribed non-zero displacements with correct reactions\n"
         "✅ 2D structures: honeycomb(840n), kagome(1321n), reentrant(1140n), triangle(561n)\n"
@@ -482,7 +482,7 @@ def create_visualization(deformed_results, graph_results, comprehensive_data):
            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
     ax.axis('off')
     
-    plt.suptitle("FiberNet Beam FEM v6: Comprehensive Validation", 
+    plt.suptitle("FiberNet Beam FEM: Comprehensive Validation", 
                  fontsize=20, fontweight='bold', y=0.98)
     
     output_path = RESULTS_DIR / "phase6_comprehensive_visualization.png"

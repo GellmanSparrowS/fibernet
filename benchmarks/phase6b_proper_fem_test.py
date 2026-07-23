@@ -16,7 +16,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fibernet import pattern_2d
 from fibernet.ml.gnn import graph_from_structure
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -83,7 +83,7 @@ def test_deformed_baseline():
     print("="*70)
     
     results = {}
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     r = 0.01  # 1cm fiber radius
     
     for unit in ['honeycomb', 'kagome', 'reentrant', 'triangle']:
@@ -179,7 +179,7 @@ def test_large_deformation():
     print("="*70)
     
     results = {}
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     r = 0.01
     
     for unit in ['honeycomb', 'kagome', 'reentrant', 'triangle']:
@@ -284,7 +284,7 @@ def test_multi_radius():
     print("="*70)
     
     results = {}
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     radii_values = [0.001, 0.005, 0.01, 0.02, 0.05]
     
     for unit in ['honeycomb', 'kagome', 'reentrant', 'triangle']:
@@ -332,7 +332,7 @@ def test_3d():
     print("="*70)
     
     results = {}
-    solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+    solver = BeamFrameFEM(E=1e9, nu=0.3)
     
     def make_cube_lattice(nx, ny, nz, spacing=1.0):
         nodes = []
@@ -676,7 +676,7 @@ def create_visualization(all_results):
     summary_lines = [
         "COMPREHENSIVE FEM VALIDATION (Phase 6b)",
         "=" * 80,
-        f"Solver: BeamFrameFEM_v6 | E=1GPa | nu=0.3 | r=0.01m (default)",
+        f"Solver: BeamFrameFEM | E=1GPa | nu=0.3 | r=0.01m (default)",
         f"Structures: Deformed (n_pts_per_side=5, disp=±0.4) | BCs: 10% fixed each side",
         "",
     ]
@@ -717,7 +717,7 @@ def create_visualization(all_results):
            bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.9))
     ax.axis('off')
     
-    plt.suptitle("FiberNet Beam FEM v6b: Deformed Structure Validation",
+    plt.suptitle("FiberNet Beam FEM: Deformed Structure Validation",
                  fontsize=20, fontweight='bold', y=0.98)
     
     plt.savefig(VIZ_FILE, dpi=120, bbox_inches='tight')
