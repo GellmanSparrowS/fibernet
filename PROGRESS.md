@@ -47,3 +47,23 @@
 cf891cd fix(fem): radius propagation + showcase layout + dark theme visibility
 41c65bc release: v4.1.1 — FEM convenience API + showcase
 ```
+
+## 2026-07-23 - Fix Showcase Visualization (v4.1.2)
+
+**Issue**: Dark theme showcase images had invisible/dark edges despite bright colormap values
+
+**Root Cause**: `LineCollection(colors=...)` (plural) only sets edge color, leaving face color as black. This made lines appear dark even when the colormap specified bright colors.
+
+**Fix**: Changed `colors=` to `color=` (singular) in `scripts/fem_showcase.py:draw_fem_panel()`
+- `colors=` → only sets edgecolor (face stays black)
+- `color=` → sets both facecolor and edgecolor (lines become visible)
+
+**Verification**: 
+- Before: 0 bright pixels detected
+- After: 998,013 bright pixels, mean color RGB(111, 217, 146)
+- All 16 panels now show vibrant, visible edges
+
+**Changes**:
+- `scripts/fem_showcase.py`: Line 94, changed `colors=` to `color=`
+- Regenerated showcase images (dark + light themes)
+- Version remains 4.1.2 (no functional API changes)
