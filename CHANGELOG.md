@@ -1,3 +1,14 @@
+## [4.1.3] - 2026-07-23
+
+### Documentation
+- Bilingual README overhaul: added dedicated Beam Frame FEM section with showcase images, API examples, and verification results
+- README.md and README_CN.md updated to v4.1.2 feature set (26 unit types, dual simulation, FEM physics model)
+- Added FEM showcase images (dark + light themes) to `docs/images/`
+
+### Improved
+- Reorganized root-level files: community health files (CONTRIBUTING, SECURITY, CODE_OF_CONDUCT) moved to `.github/`, ATTRIBUTIONS.md moved to `docs/`, utility scripts moved to `scripts/`
+- Updated MANIFEST.in for new file locations
+
 ## [4.1.2] - 2026-07-23
 
 ### Fixed
