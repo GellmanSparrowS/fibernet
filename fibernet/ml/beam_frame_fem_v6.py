@@ -582,14 +582,12 @@ class BeamFrameFEM_v6:
         pos, elements, _, _ = _graph_to_arrays(graph)
         edge_index = elements.T.astype(np.int64)
         node_pos = pos[:, :dim] if dim == 2 else pos
-        radii = np.full(edge_index.shape[1], graph.edges[0].radius if hasattr(graph, 'edges') and graph.edges else 0.05)
-        # Try to get per-edge radius from graph
-        try:
-            radii = np.array([e.radius for e in graph.edges])
+        # Extract per-edge radius from StructureGraph.edges (Dict[int, SEdge])
+        if hasattr(graph, 'edges') and graph.edges:
+            radii = np.array([e.radius for e in graph.edges.values()])
             if len(radii) != edge_index.shape[1]:
-                # Bidirectional edges: duplicate radii
-                radii = np.full(edge_index.shape[1], radii[0])
-        except Exception:
+                radii = np.full(edge_index.shape[1], radii[0] if len(radii) > 0 else 0.05)
+        else:
             radii = np.full(edge_index.shape[1], 0.05)
         
         boundaries = _get_boundary_indices(pos, pct=pct)
@@ -702,10 +700,12 @@ class BeamFrameFEM_v6:
             for idx, e in enumerate(edge_list):
                 i, j = int(elements[e, 0]), int(elements[e, 1])
                 L = np.linalg.norm(pos[i] - pos[j])
-                r = 0.05  # Default
+                r = 0.05
                 try:
-                    r = graph.edges[e].radius if hasattr(graph, 'edges') else 0.05
-                except:
+                    edge_vals = list(graph.edges.values())
+                    if 0 <= e < len(edge_vals):
+                        r = edge_vals[e].radius
+                except Exception:
                     pass
                 A = np.pi * r**2
                 strain = sigma_axial[idx] / self.E if self.E > 0 else 0
