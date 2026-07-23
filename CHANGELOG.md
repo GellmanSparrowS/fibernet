@@ -1,3 +1,16 @@
+## [4.1.4] - 2026-07-23
+
+### Changed
+- Rename `BeamFrameFEM_v6` → `BeamFrameFEM` (public API alias; `BeamFrameFEM_v6` still available for backward compatibility)
+- Split Simulation section into Mass-Spring and FEM subsections with comparison table (physics, joints, radius effect, speed, use cases)
+- Reorder showcase images: generation → mass-spring → trajectory → FEM → ML → RL
+- Remove Performance section from README
+
+### Added
+- `BeamFrameFEM` lazy import in `fibernet.ml` (importable as `from fibernet.ml import BeamFrameFEM`)
+- FEM API section with linear/nonlinear solver explanation
+- Mass-Spring vs FEM comparison table in both README.md and README_CN.md
+
 ## [4.1.3] - 2026-07-23
 
 ### Documentation
