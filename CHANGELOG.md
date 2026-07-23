@@ -1,3 +1,18 @@
+## [4.1.1] - 2026-07-23
+
+### Added
+- `BeamFrameFEM_v6.graph_to_fem_input()`: StructureGraph to FEM input conversion
+- `BeamFrameFEM_v6.stretch_test()`: One-liner uniaxial FEM stretch test
+- `BeamFrameFEM_v6.to_sim_result()`: Convert FEM dict to SimResult
+- `render_fem_stress()`: FEM stress visualization (dark/light themes)
+
+### Fixed
+- solve_2d and solve_3d: Invalid node index now raises clear ValueError
+- solve_3d: Now returns reactions, edge_forces, K matrix (matching solve_2d)
+
+### API Improvement
+- Basic FEM analysis: ~10 lines reduced to 3 lines
+
 ## [4.1.0] - 2026-07-23
 
 ### Added
