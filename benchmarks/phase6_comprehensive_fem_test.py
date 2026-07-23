@@ -1,7 +1,7 @@
 """
 Phase 6: Comprehensive Beam FEM Validation
 ============================================
-Tests the v6 corrected solver on real fiber network structures:
+Tests the corrected solver on real fiber network structures:
 1. Deformed structures (pattern_2d, 5 pts/side, ±0.4 amplitude)
 2. Large deformation (10x10cm → stretch 10cm, compress 5cm)
 3. Deformation propagation analysis
@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from fibernet import pattern_2d
 from fibernet.ml.gnn import graph_from_structure
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
@@ -82,7 +82,7 @@ def test_deformed_structures():
             
             r = 0.01
             radii = np.full(edge_index.shape[1], r)
-            solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+            solver = BeamFrameFEM(E=1e9, nu=0.3)
             
             x = node_pos[:, 0]
             y = node_pos[:, 1]
@@ -167,7 +167,7 @@ def test_large_deformation():
             print(f"    Test A: Stretch right by 5cm (50%)...")
             r = 0.01
             radii = np.full(edge_index.shape[1], r)
-            solver = BeamFrameFEM_v6(E=E, nu=0.3)
+            solver = BeamFrameFEM(E=E, nu=0.3)
             
             stretch_50 = L * 0.5
             prescribed_stretch = {int(n): (stretch_50, 0.0) for n in right}
@@ -262,7 +262,7 @@ def test_multi_radius():
         stretch = (x.max() - x.min()) * 0.1
         prescribed = {int(n): (stretch, 0.0) for n in right}
         
-        solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+        solver = BeamFrameFEM(E=1e9, nu=0.3)
         results[unit] = {}
         
         print(f"    {'r':>8s} {'max_u':>12s} {'sigma_ax':>12s} {'sigma_bend':>12s} {'sigma_tot':>12s}")
@@ -334,7 +334,7 @@ def test_3d_structures():
         
         r = 0.01
         radii = np.full(edge_index.shape[1], r)
-        solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+        solver = BeamFrameFEM(E=1e9, nu=0.3)
         
         # Fix bottom face (z=0)
         z = node_pos[:, 2]
@@ -437,7 +437,7 @@ def test_graph_physics():
         # FEM stress path analysis
         r = 0.01
         radii = np.full(edge_index.shape[1], r)
-        solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+        solver = BeamFrameFEM(E=1e9, nu=0.3)
         
         x = node_pos[:, 0]
         tol = (x.max() - x.min()) * 0.05

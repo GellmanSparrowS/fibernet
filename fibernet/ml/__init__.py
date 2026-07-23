@@ -78,7 +78,7 @@ __all__ = [
     # Features
     # FEM
     "BeamFrameFEM",
-    "BeamFrameFEM_v6",
+    
     # Dataset
     "FiberNetDataset",
 ]
@@ -190,8 +190,7 @@ def __getattr__(name):
         "ConservativeLoss": "fibernet.ml.conservative_nn",
         "ConservativeTrainer": "fibernet.ml.conservative_nn",
         # Beam Frame FEM
-        "BeamFrameFEM": "fibernet.ml.beam_frame_fem_v6",
-        "BeamFrameFEM_v6": "fibernet.ml.beam_frame_fem_v6",
+        "BeamFrameFEM": "fibernet.ml.beam_frame_fem",
     }
 
     if name in _submodules:

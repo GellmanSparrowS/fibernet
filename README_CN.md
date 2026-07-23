@@ -496,7 +496,7 @@ fibernet/
   author = {ML-BioMat Lab, BMG-FDU},
   year = {2026},
   url = {https://github.com/GellmanSparrowS/fibernet},
-  version = {4.1.4},
+  version = {4.1.5},
 }
 ```
 
@@ -510,6 +510,6 @@ MIT License. 详见 [LICENSE](LICENSE)。
 
 <div align="center">
 
-**[English](README.md)** · [PyPI](https://pypi.org/project/fibernet/4.1.4/) · [GitHub](https://github.com/GellmanSparrowS/fibernet)
+**[English](README.md)** · [PyPI](https://pypi.org/project/fibernet/4.1.5/) · [GitHub](https://github.com/GellmanSparrowS/fibernet)
 
 </div>

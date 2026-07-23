@@ -1,611 +1,733 @@
 """
-BeamFrameFEM — Beam/Frame Finite Element Method with Welded Joints.
-
-A full beam/frame FEM solver treating fiber networks as structural frames
-with welded (rigid, moment-resisting) joints. Supports both 2D and 3D.
-
-Key Features
-------------
-- 2D: Euler-Bernoulli beam elements, 3 DOF/node (ux, uy, θz)
-- 3D: Full 3D beam elements, 6 DOF/node (ux, uy, uz, θx, θy, θz)
-- Welded joints: full moment transfer at connections
-- Elastic material: linear elastic (E, G/ν, A, Iy, Iz, J)
-- Circular cross-section support (A=πr², I=πr⁴/4, J=πr⁴/2)
-- scipy.sparse backend — zero external dependencies beyond numpy/scipy
-- Robust solving via SVD pseudoinverse for near-singular systems
-- Integration with FiberNet graph structures
-
-Comparison with DifferentiableSpringNetwork (truss model):
-- Truss: pin-jointed, axial force only, 2/3 DOF/node (translation only)
-- Beam: welded joints, axial + bending + torsion, 3/6 DOF/node
-
-Usage
------
->>> from fibernet.ml.beam_frame_fem import BeamFrameFEM
->>> solver = BeamFrameFEM(dim=2, E=1e9, nu=0.3)
->>> u, sigma, moments = solver.solve(edge_index, node_pos, radii, forces, fixed_nodes)
+Beam Frame FEM v6 - Corrected & Enhanced
+==========================================
+Fixes from v4/v5:
+  1. Corrected moment formula (shape function 2nd derivatives, not stiffness eq)
+  2. Added bending stress sigma = M*c/I (was missing)
+  3. Added displacement BC support (prescribed non-zero displacements)
+  4. Fixed nonlinear solver stress computation
+  5. Per-node stress/strain for graph-level analysis
 """
-
-import math
-from typing import Optional, Tuple, Dict
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
+from typing import Dict, List, Tuple, Optional
+import torch
 
 
 class BeamFrameFEM:
-    """Beam/Frame FEM solver with welded (rigid, moment-resisting) joints.
-
-    Parameters
-    ----------
-    dim : int
-        Spatial dimension (2 or 3).
-    E : float
-        Young's modulus (Pa).
-    nu : float
-        Poisson's ratio (used to compute G = E / (2(1+nu))).
-    damping : float
-        Regularization added to diagonal of K for numerical stability.
-    """
-
-    def __init__(self, dim: int = 2, E: float = 1e9, nu: float = 0.3,
-                 damping: float = 1e-6):
-        if dim not in (2, 3):
-            raise ValueError("dim must be 2 or 3")
-        self.dim = dim
+    """Corrected beam frame FEM with welded joints, displacement BCs, nonlinear solver."""
+    
+    def __init__(self, E: float = 1e9, nu: float = 0.3):
         self.E = E
         self.nu = nu
-        self.G = E / (2 * (1 + nu))  # Shear modulus
-        self.damping = damping
-
-        # DOF per node
-        if dim == 2:
-            self.dof_per_node = 3   # ux, uy, θz
-            self.dof_per_element = 6
-        else:
-            self.dof_per_node = 6   # ux, uy, uz, θx, θy, θz
-            self.dof_per_element = 12
-
+        self.G = E / (2 * (1 + nu))
+    
     @staticmethod
-    def circular_section_properties(radius: float) -> Dict[str, float]:
-        """Compute cross-section properties for a circular cross-section.
+    def section_properties(r: float) -> Dict[str, float]:
+        A = np.pi * r**2
+        I = np.pi * r**4 / 4
+        J = np.pi * r**4 / 2
+        return {'A': A, 'I': I, 'J': J, 'r': r}
+    
+    @staticmethod
+    def _validate_nodes(n_nodes, fixed_nodes, prescribed_disp):
+        """Validate node indices against n_nodes. Raises ValueError for out-of-range."""
+        bad_fixed = [n for n in fixed_nodes if int(n) < 0 or int(n) >= n_nodes]
+        if bad_fixed:
+            raise ValueError(
+                f"fixed_nodes contains invalid indices {bad_fixed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
+        bad_prescribed = [n for n in prescribed_disp if int(n) < 0 or int(n) >= n_nodes]
+        if bad_prescribed:
+            raise ValueError(
+                f"prescribed_disp contains invalid node indices {bad_prescribed} "
+                f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
+            )
 
-        Parameters
-        ----------
-        radius : float
-            Cross-section radius.
-
-        Returns
-        -------
-        dict with keys: A, Iy, Iz, J
-            A  = cross-section area = πr²
-            Iy = second moment of area about y-axis = πr⁴/4
-            Iz = second moment of area about z-axis = πr⁴/4
-            J  = torsional constant = πr⁴/2
-        """
-        r = radius
-        A = math.pi * r**2
-        I_val = math.pi * r**4 / 4
-        J_val = math.pi * r**4 / 2
-        return {'A': A, 'Iy': I_val, 'Iz': I_val, 'J': J_val}
-
-    def _beam_element_stiffness_2d(self, L: float, c: float, s: float,
-                                    A: float, I: float) -> np.ndarray:
-        """Compute 6×6 beam element stiffness matrix in global coords (2D).
-
-        Parameters
-        ----------
-        L : element length
-        c : cos(θ) — direction cosine
-        s : sin(θ) — direction sine
-        A : cross-section area
-        I : second moment of area (Iz for 2D bending)
-
-        Returns
-        -------
-        (6, 6) element stiffness matrix in global coordinates
-        DOF order: [u1x, u1y, θ1z, u2x, u2y, θ2z]
-        """
-        E = self.E
-        # Local stiffness matrix (Euler-Bernoulli beam)
-        # DOF: [u1, v1, θ1, u2, v2, θ2]
-        # Axial + bending combined
-
-        # Axial part
-        EA_L = E * A / L
-        # Bending part
-        EI_L3 = E * I / (L**3)
-        EI_L2 = E * I / (L**2)
-        EI_L = E * I / L
-
-        # Local stiffness (6×6)
-        k_local = np.array([
-            [ EA_L,       0,          0,      -EA_L,       0,          0     ],
-            [ 0,          12*EI_L3,   6*EI_L2, 0,         -12*EI_L3,   6*EI_L2],
-            [ 0,          6*EI_L2,    4*EI_L,  0,         -6*EI_L2,    2*EI_L ],
-            [-EA_L,       0,          0,       EA_L,       0,          0     ],
-            [ 0,         -12*EI_L3,  -6*EI_L2, 0,          12*EI_L3,  -6*EI_L2],
-            [ 0,          6*EI_L2,    2*EI_L,  0,         -6*EI_L2,    4*EI_L ],
-        ])
-
-        # Transformation matrix (local → global)
-        # For 2D beam: T transforms [u_local, v_local, θ] for each node
-        T = np.zeros((6, 6))
-        T[0, 0] = c;  T[0, 1] = s   # u1_local = c*u1x + s*u1y
-        T[1, 0] = -s; T[1, 1] = c   # v1_local = -s*u1x + c*u1y
-        T[2, 2] = 1.0                # θ1z same
-        T[3, 3] = c;  T[3, 4] = s
-        T[4, 3] = -s; T[4, 4] = c
-        T[5, 5] = 1.0
-
-        # Global stiffness = T^T * k_local * T
-        k_global = T.T @ k_local @ T
-        return k_global
-
-    def _beam_element_stiffness_3d(self, L: float, direction: np.ndarray,
-                                    A: float, Iy: float, Iz: float,
-                                    J: float) -> np.ndarray:
-        """Compute 12×12 beam element stiffness matrix in global coords (3D).
-
-        Parameters
-        ----------
-        L : element length
-        direction : (3,) unit vector from node i to node j
-        A : cross-section area
-        Iy, Iz : second moments of area
-        J : torsional constant
-
-        Returns
-        -------
-        (12, 12) element stiffness matrix in global coordinates
-        DOF order: [u1x, u1y, u1z, θ1x, θ1y, θ1z, u2x, u2y, u2z, θ2x, θ2y, θ2z]
-        """
-        E = self.E
-        G = self.G
-
-        # Build local coordinate system
-        # Element axis: e1 = direction
-        e1 = direction / np.linalg.norm(direction)
-
-        # Choose a reference vector not parallel to e1
-        if abs(e1[0]) < 0.9:
-            ref = np.array([1.0, 0.0, 0.0])
-        else:
-            ref = np.array([0.0, 1.0, 0.0])
-
-        e2 = np.cross(e1, ref)
-        e2 = e2 / np.linalg.norm(e2)
-        e3 = np.cross(e1, e2)
-        e3 = e3 / np.linalg.norm(e3)
-
-        # Direction cosine matrix (3×3): rows are e1, e2, e3
-        R = np.array([e1, e2, e3])  # (3, 3)
-
-        # Local stiffness matrix (12×12)
-        # DOF: [u1x, u1y, u1z, θ1x, θ1y, θ1z, u2x, u2y, u2z, θ2x, θ2y, θ2z]
-        k = np.zeros((12, 12))
-
-        # Axial stiffness (along local x)
-        ea = E * A / L
-        k[0, 0] = ea;   k[0, 6] = -ea
-        k[6, 0] = -ea;  k[6, 6] = ea
-
-        # Torsion (about local x)
-        gj = G * J / L
-        k[3, 3] = gj;   k[3, 9] = -gj
-        k[9, 3] = -gj;  k[9, 9] = gj
-
-        # Bending about local y (deflection in local z)
-        eiz = E * Iz
-        k[1, 1] = 12*eiz/L**3;   k[1, 5] = 6*eiz/L**2;    k[1, 7] = -12*eiz/L**3;  k[1, 11] = 6*eiz/L**2
-        k[5, 1] = 6*eiz/L**2;    k[5, 5] = 4*eiz/L;       k[5, 7] = -6*eiz/L**2;   k[5, 11] = 2*eiz/L
-        k[7, 1] = -12*eiz/L**3;  k[7, 5] = -6*eiz/L**2;   k[7, 7] = 12*eiz/L**3;   k[7, 11] = -6*eiz/L**2
-        k[11, 1] = 6*eiz/L**2;   k[11, 5] = 2*eiz/L;      k[11, 7] = -6*eiz/L**2;  k[11, 11] = 4*eiz/L
-
-        # Bending about local z (deflection in local y)
-        eiy = E * Iy
-        k[2, 2] = 12*eiy/L**3;   k[2, 4] = -6*eiy/L**2;   k[2, 8] = -12*eiy/L**3;  k[2, 10] = -6*eiy/L**2
-        k[4, 2] = -6*eiy/L**2;   k[4, 4] = 4*eiy/L;       k[4, 8] = 6*eiy/L**2;    k[4, 10] = 2*eiy/L
-        k[8, 2] = -12*eiy/L**3;  k[8, 4] = 6*eiy/L**2;    k[8, 8] = 12*eiy/L**3;   k[8, 10] = 6*eiy/L**2
-        k[10, 2] = -6*eiy/L**2;  k[10, 4] = 2*eiy/L;      k[10, 8] = 6*eiy/L**2;   k[10, 10] = 4*eiy/L
-
-        # Transformation to global coordinates
-        # Build 12×12 transformation matrix
-        T = np.zeros((12, 12))
-        for block in range(4):  # 4 blocks: u1, θ1, u2, θ2
-            row = block * 3
-            col = block * 3
-            T[row:row+3, col:col+3] = R
-
-        # Global stiffness = T^T * k * T
-        k_global = T.T @ k @ T
-        return k_global
-
-    def assemble_global_stiffness(self, edge_index: np.ndarray,
-                                   node_pos: np.ndarray,
-                                   radii: np.ndarray) -> np.ndarray:
-        """Assemble global stiffness matrix K.
-
-        Parameters
-        ----------
-        edge_index : (2, n_edges) directed edge connectivity (bidirectional)
-        node_pos : (n_nodes, dim) node positions
-        radii : (n_edges,) element radii
-
-        Returns
-        -------
-        K : (n_dof, n_dof) global stiffness matrix (dense)
-        """
-        n_nodes = node_pos.shape[0]
-        n_dof = n_nodes * self.dof_per_node
-        K = np.zeros((n_dof, n_dof))
-
+    def _deduplicate_edges(self, edge_index: np.ndarray) -> np.ndarray:
+        seen = set()
+        unique = []
         for e in range(edge_index.shape[1]):
-            i = int(edge_index[0, e])
-            j = int(edge_index[1, e])
-
-            # Element geometry
-            d = node_pos[j] - node_pos[i]
-            L = np.linalg.norm(d)
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            key = (min(i, j), max(i, j))
+            if key not in seen:
+                seen.add(key)
+                unique.append(e)
+        return np.array(unique)
+    
+    def build_stiffness_2d(self, edge_index, node_pos, radii, deduplicate=True):
+        if deduplicate:
+            edge_list = self._deduplicate_edges(edge_index)
+        else:
+            edge_list = np.arange(edge_index.shape[1])
+        
+        n_nodes = node_pos.shape[0]
+        n_dof = 3 * n_nodes
+        rows, cols, vals = [], [], []
+        
+        for e in edge_list:
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j, 0] - node_pos[i, 0]
+            dy = node_pos[j, 1] - node_pos[i, 1]
+            L = np.sqrt(dx**2 + dy**2)
             if L < 1e-12:
                 continue
-
-            # Section properties
-            sec = self.circular_section_properties(float(radii[e]))
-
-            if self.dim == 2:
-                c = d[0] / L
-                s = d[1] / L
-                ke = self._beam_element_stiffness_2d(L, c, s, sec['A'], sec['Iz'])
-
-                # Global DOF mapping
-                dofs_i = [i * 3, i * 3 + 1, i * 3 + 2]
-                dofs_j = [j * 3, j * 3 + 1, j * 3 + 2]
-                dofs = dofs_i + dofs_j
-            else:
-                direction = d / L
-                ke = self._beam_element_stiffness_3d(
-                    L, direction, sec['A'], sec['Iy'], sec['Iz'], sec['J'])
-
-                # Global DOF mapping
-                dofs_i = list(range(i * 6, (i + 1) * 6))
-                dofs_j = list(range(j * 6, (j + 1) * 6))
-                dofs = dofs_i + dofs_j
-
-            # Scatter into global matrix
-            for a in range(self.dof_per_element):
-                for b in range(self.dof_per_element):
-                    K[dofs[a], dofs[b]] += ke[a, b]
-
-        return K
-
-    def solve(self, edge_index, node_pos, radii, forces,
-              fixed_nodes, moments=None) -> Tuple:
-        """Solve Ku = f with boundary conditions.
-
-        Parameters
-        ----------
-        edge_index : (2, n_edges) torch.Tensor or numpy array
-        node_pos : (n_nodes, dim) torch.Tensor or numpy array
-        radii : (n_edges,) torch.Tensor or numpy array
-        forces : (n_nodes, dim) external forces (torch.Tensor or numpy array)
-        fixed_nodes : list/tensor of fixed node indices
-        moments : (n_nodes, n_mom) optional nodal moments
-            2D: (n_nodes, 1) — moment about z
-            3D: (n_nodes, 3) — moments about x, y, z
-
-        Returns
-        -------
-        2D: (displacements, axial_stresses, bending_moments)
-            displacements : (n_nodes, 3) — [ux, uy, θz]
-            axial_stresses : (n_edges,) — σ = E * ε_axial
-            bending_moments : (n_edges, 2) — M at node i and j end
-        3D: (displacements, axial_stresses, bending_moments)
-            displacements : (n_nodes, 6) — [ux, uy, uz, θx, θy, θz]
-            axial_stresses : (n_edges,)
-            bending_moments : (n_edges, 4) — [My_i, My_j, Mz_i, Mz_j]
+            cx, cy = dx / L, dy / L
+            props = self.section_properties(r)
+            A, I = props['A'], props['I']
+            E = self.E
+            L2, L3 = L**2, L**3
+            
+            k_local = np.array([
+                [E*A/L, 0, 0, -E*A/L, 0, 0],
+                [0, 12*E*I/L3, 6*E*I/L2, 0, -12*E*I/L3, 6*E*I/L2],
+                [0, 6*E*I/L2, 4*E*I/L, 0, -6*E*I/L2, 2*E*I/L],
+                [-E*A/L, 0, 0, E*A/L, 0, 0],
+                [0, -12*E*I/L3, -6*E*I/L2, 0, 12*E*I/L3, -6*E*I/L2],
+                [0, 6*E*I/L2, 2*E*I/L, 0, -6*E*I/L2, 4*E*I/L]
+            ])
+            
+            T = np.array([
+                [cx, cy, 0, 0, 0, 0],
+                [-cy, cx, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0],
+                [0, 0, 0, cx, cy, 0],
+                [0, 0, 0, -cy, cx, 0],
+                [0, 0, 0, 0, 0, 1]
+            ])
+            
+            k_global = T.T @ k_local @ T
+            dofs = [3*i, 3*i+1, 3*i+2, 3*j, 3*j+1, 3*j+2]
+            
+            for a in range(6):
+                for b in range(6):
+                    if abs(k_global[a, b]) > 0:
+                        rows.append(dofs[a])
+                        cols.append(dofs[b])
+                        vals.append(k_global[a, b])
+        
+        K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
+        return K, edge_list
+    
+    def _compute_element_stress_2d(self, node_pos, u, edge_index, edge_list, radii):
+        """Compute stresses using shape function 2nd derivatives (correct formula).
+        
+        M(ξ) = EI * N''(ξ) * d_local
+        where N'' are second derivatives of Hermite shape functions.
         """
-        # Convert tensors to numpy
-        import torch
+        n_edges = len(edge_list)
+        sigma_axial = np.zeros(n_edges)
+        sigma_bending = np.zeros(n_edges)
+        moments = np.zeros((n_edges, 2))
+        edge_forces = np.zeros((n_edges, 3))  # [axial_N, shear_V, moment_avg]
+        
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            
+            dx = node_pos[j, 0] - node_pos[i, 0]
+            dy = node_pos[j, 1] - node_pos[i, 1]
+            L = np.sqrt(dx**2 + dy**2)
+            if L < 1e-12:
+                continue
+            
+            cx, cy = dx / L, dy / L
+            props = self.section_properties(r)
+            A, I_val = props['A'], props['I']
+            
+            # Transform to local frame
+            ui_local = np.array([cx*u[i,0]+cy*u[i,1], -cy*u[i,0]+cx*u[i,1], u[i,2]])
+            uj_local = np.array([cx*u[j,0]+cy*u[j,1], -cy*u[j,0]+cx*u[j,1], u[j,2]])
+            
+            v_i, th_i = ui_local[1], ui_local[2]
+            v_j, th_j = uj_local[1], uj_local[2]
+            
+            # Axial strain and stress
+            eps_axial = (uj_local[0] - ui_local[0]) / L
+            sigma_axial[idx] = self.E * eps_axial
+            
+            # Bending moment from shape function 2nd derivatives
+            # M(ξ=0) = EI * N''(0) * d_local
+            # N''(0) = [12/L², 6/L, -12/L², 6/L]
+            # M(ξ=1) = EI * N''(1) * d_local
+            # N''(1) = [12/L², -6/L, -12/L², -6/L]
+            d_trans = np.array([v_i, th_i, v_j, th_j])
+            
+            Npp_left = np.array([12/L**2, 6/L, -12/L**2, 6/L])
+            Npp_right = np.array([12/L**2, -6/L, -12/L**2, -6/L])
+            
+            # Sign convention: M = -EI * v'' for standard beam
+            # But for internal moment, use: M = EI * N'' * d (positive = sagging)
+            M_i = -self.E * I_val * np.dot(Npp_left, d_trans)
+            M_j = -self.E * I_val * np.dot(Npp_right, d_trans)
+            
+            moments[idx] = [M_i, M_j]
+            
+            # Bending stress at outer fiber
+            c = r
+            sigma_b_i = abs(M_i) * c / I_val
+            sigma_b_j = abs(M_j) * c / I_val
+            sigma_bending[idx] = max(sigma_b_i, sigma_b_j)
+            
+            # Axial force and shear
+            N = self.E * A * eps_axial
+            # Shear from V = dM/dx ≈ (M_j - M_i) / L
+            V = (M_j - M_i) / L
+            edge_forces[idx] = [N, V, (M_i + M_j) / 2]
+        
+        sigma_total = np.abs(sigma_axial) + sigma_bending
+        return sigma_axial, sigma_bending, sigma_total, moments, edge_forces
+    
+    def solve_2d(self, edge_index, node_pos, radii,
+                 forces=None, fixed_nodes=None,
+                 prescribed_disp=None,
+                 damping=1e-6, deduplicate=True):
+        """Solve 2D beam frame with force and/or displacement BCs.
+        
+        Returns dict with:
+            u: (n_nodes, 3) [ux, uy, theta]
+            sigma_axial, sigma_bending, sigma_total: per-edge stresses
+            moments: (n_edges, 2) bending moments at ends
+            node_stress: (n_nodes,) max stress at each node
+            reactions: (n_nodes, 3) reaction forces/moments
+        """
         if isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
         if isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
         if isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if isinstance(forces, torch.Tensor):
+        if forces is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
-        if isinstance(fixed_nodes, torch.Tensor):
-            fixed_nodes = fixed_nodes.numpy().tolist()
-
-        edge_index = np.asarray(edge_index)
-        node_pos = np.asarray(node_pos)
-        radii = np.asarray(radii)
-        forces = np.asarray(forces)
-
-        # Deduplicate bidirectional edges (fiber network graphs use bidirectional edges)
-        edge_index, radii, _ = deduplicate_edges(edge_index, radii)
-
+        
+        if fixed_nodes is None:
+            fixed_nodes = []
+        if prescribed_disp is None:
+            prescribed_disp = {}
+        if forces is None:
+            forces = np.zeros((node_pos.shape[0], 2))
+        
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
+        
+        K, edge_list = self.build_stiffness_2d(edge_index, node_pos, radii, deduplicate)
         n_nodes = node_pos.shape[0]
-        n_dof = n_nodes * self.dof_per_node
-
-        # Assemble
-        K = self.assemble_global_stiffness(edge_index, node_pos, radii)
-
-        # Add damping
-        K += self.damping * np.eye(n_dof)
-
-        # Build force vector (including moments)
-        f = np.zeros(n_dof)
-        for nn in range(n_nodes):
-            for d in range(self.dim):
-                f[nn * self.dof_per_node + d] = forces[nn, d]
-
-        if moments is not None:
-            if isinstance(moments, torch.Tensor):
-                moments = moments.numpy()
-            moments = np.asarray(moments)
-            for nn in range(n_nodes):
-                if self.dim == 2:
-                    f[nn * 3 + 2] += moments[nn] if moments.ndim == 1 else moments[nn, 0]
-                else:
-                    for d in range(3):
-                        f[nn * 6 + 3 + d] += moments[nn, d] if moments.ndim > 1 else moments[nn]
-
-        # Apply boundary conditions
+        n_dof = 3 * n_nodes
+        
+        f_global = np.zeros(n_dof)
+        f_global[0::3] = forces[:, 0]
+        f_global[1::3] = forces[:, 1]
+        
         fixed_dofs = set()
-        for fn in fixed_nodes:
-            fn_val = int(fn)
-            for d in range(self.dof_per_node):
-                fixed_dofs.add(fn_val * self.dof_per_node + d)
-
-        free_dofs = np.array(sorted(set(range(n_dof)) - fixed_dofs))
-
-        if len(free_dofs) == 0:
-            # All DOFs fixed
-            u = np.zeros((n_nodes, self.dof_per_node))
-            sigma = np.zeros(edge_index.shape[1])
-            if self.dim == 2:
-                return u, sigma, np.zeros((edge_index.shape[1], 2))
-            else:
-                return u, sigma, np.zeros((edge_index.shape[1], 4))
-
-        K_ff = K[free_dofs][:, free_dofs]
-        f_f = f[free_dofs]
-
-        # Robust solve
-        u_f = self._robust_solve(K_ff, f_f)
-
+        prescribed_dof_values = {}
+        
+        for node in fixed_nodes:
+            for k in range(3):
+                dof = 3 * int(node) + k
+                fixed_dofs.add(dof)
+                prescribed_dof_values[dof] = 0.0
+        
+        for node, (ux, uy) in prescribed_disp.items():
+            dof_x = 3 * int(node)
+            dof_y = 3 * int(node) + 1
+            fixed_dofs.add(dof_x)
+            fixed_dofs.add(dof_y)
+            prescribed_dof_values[dof_x] = ux
+            prescribed_dof_values[dof_y] = uy
+        
+        fixed_dofs = np.array(sorted(fixed_dofs))
+        all_dofs = np.arange(n_dof)
+        free_dofs = np.setdiff1d(all_dofs, fixed_dofs)
+        
+        f_modified = f_global.copy()
+        K_damped = K + damping * sparse.eye(n_dof, format='csr')
+        
+        for dof, val in prescribed_dof_values.items():
+            if val != 0.0:
+                col = K_damped[:, dof].toarray().flatten()
+                f_modified -= col * val
+        
+        K_reduced = K_damped[np.ix_(free_dofs, free_dofs)]
+        f_reduced = f_modified[free_dofs]
+        u_reduced = spsolve(K_reduced, f_reduced)
+        
         u_full = np.zeros(n_dof)
-        u_full[free_dofs] = u_f
-        u = u_full.reshape(n_nodes, self.dof_per_node)
-
-        # Compute element forces
-        sigma, moments_out = self._compute_element_forces(
-            u, edge_index, node_pos, radii)
-
-        return u, sigma, moments_out
-
-    def _robust_solve(self, K: np.ndarray, f: np.ndarray) -> np.ndarray:
-        """Robust linear solve using pseudoinverse for near-singular systems."""
-        n = K.shape[0]
-        # Try direct solve first (faster for well-conditioned systems)
-        try:
-            K_sparse = sparse.csr_matrix(K)
-            u = spsolve(K_sparse, f)
-            if np.all(np.isfinite(u)):
-                return u
-        except Exception:
-            pass
-
-        # Fall back to pseudoinverse
-        rcond = n * np.finfo(np.float32).eps * 10
-        K_pinv = np.linalg.pinv(K, rcond=rcond)
-        return K_pinv @ f
-
-    def _compute_element_forces(self, u: np.ndarray, edge_index: np.ndarray,
-                                 node_pos: np.ndarray,
-                                 radii: np.ndarray) -> Tuple:
-        """Compute axial stresses and bending moments for each element.
-
-        Returns
-        -------
-        sigma : (n_edges,) axial stress
-        moments : (n_edges, 2) for 2D or (n_edges, 4) for 3D
+        u_full[free_dofs] = u_reduced
+        for dof, val in prescribed_dof_values.items():
+            u_full[dof] = val
+        
+        u = u_full.reshape(n_nodes, 3)
+        
+        # Compute stresses with corrected formula
+        sigma_axial, sigma_bending, sigma_total, moments, edge_forces = \
+            self._compute_element_stress_2d(node_pos, u, edge_index, edge_list, radii)
+        
+        # Per-node max stress
+        node_stress = np.zeros(n_nodes)
+        node_moment = np.zeros(n_nodes)
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            node_stress[i] = max(node_stress[i], sigma_total[idx])
+            node_stress[j] = max(node_stress[j], sigma_total[idx])
+            node_moment[i] = max(node_moment[i], abs(moments[idx, 0]))
+            node_moment[j] = max(node_moment[j], abs(moments[idx, 1]))
+        
+        # Reactions
+        reactions = (K @ u_full - f_global).reshape(n_nodes, 3)
+        
+        return {
+            'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
+            'sigma_total': sigma_total, 'moments': moments,
+            'edge_forces': edge_forces, 'node_stress': node_stress,
+            'node_moment': node_moment, 'reactions': reactions,
+            'edge_list': edge_list, 'K': K,
+            'n_nodes': n_nodes, 'n_edges': len(edge_list)
+        }
+    
+    def solve_2d_nonlinear(self, edge_index, node_pos, radii,
+                           prescribed_disp, fixed_nodes=None,
+                           forces=None, n_steps=10, tol=1e-6, max_iter=20,
+                           damping=1e-6, deduplicate=True):
+        """Geometrically nonlinear solver using incremental co-rotational approach.
+        
+        For each increment:
+          1. Apply fraction of total prescribed displacement
+          2. Solve linear system at current configuration
+          3. Update node positions
+          4. Repeat
         """
-        n_edges = edge_index.shape[1]
-        sigma = np.zeros(n_edges)
-
-        if self.dim == 2:
-            moments = np.zeros((n_edges, 2))  # Mi, Mj (bending moment at each end)
+        if isinstance(node_pos, torch.Tensor):
+            node_pos = node_pos.numpy().copy()
         else:
-            moments = np.zeros((n_edges, 4))  # My_i, My_j, Mz_i, Mz_j
-
-        for e in range(n_edges):
-            i = int(edge_index[0, e])
-            j = int(edge_index[1, e])
-
-            d = node_pos[j] - node_pos[i]
-            L = np.linalg.norm(d)
+            node_pos = node_pos.copy()
+        if isinstance(edge_index, torch.Tensor):
+            edge_index_np = edge_index.numpy()
+        else:
+            edge_index_np = edge_index
+        
+        if fixed_nodes is None:
+            fixed_nodes = []
+        
+        n_nodes = node_pos.shape[0]
+        self._validate_nodes(n_nodes, fixed_nodes, prescribed_disp)
+        current_pos = node_pos.copy()
+        total_u = np.zeros((n_nodes, 3))
+        
+        step_disp = {}
+        for node, (ux, uy) in prescribed_disp.items():
+            step_disp[node] = (ux / n_steps, uy / n_steps)
+        
+        history = []
+        
+        for step in range(n_steps):
+            step_prescribed = {}
+            for node, (dux, duy) in step_disp.items():
+                step_prescribed[node] = (dux, duy)
+            
+            for iteration in range(max_iter):
+                result = self.solve_2d(
+                    edge_index_np, current_pos, radii,
+                    forces=forces, fixed_nodes=fixed_nodes,
+                    prescribed_disp=step_prescribed,
+                    damping=damping, deduplicate=deduplicate
+                )
+                
+                u_step = result['u']
+                du_norm = np.linalg.norm(u_step[:, :2])
+                
+                # Update positions
+                current_pos[:, 0] += u_step[:, 0]
+                current_pos[:, 1] += u_step[:, 1]
+                total_u[:, 0] += u_step[:, 0]
+                total_u[:, 1] += u_step[:, 1]
+                total_u[:, 2] += u_step[:, 2]
+                
+                if du_norm < tol * (1.0 + np.linalg.norm(total_u[:, :2])):
+                    break
+                
+                step_prescribed = {}
+            
+            max_disp = np.max(np.linalg.norm(total_u[:, :2], axis=1))
+            max_stress = np.max(result['sigma_total']) if result['sigma_total'] is not None else 0
+            
+            history.append({
+                'step': step, 'max_disp': float(max_disp),
+                'max_stress': float(max_stress), 'iterations': iteration + 1
+            })
+        
+        # Final stress computation from total displacement on original geometry
+        sigma_axial, sigma_bending, sigma_total, moments, edge_forces = \
+            self._compute_element_stress_2d(
+                node_pos, total_u, edge_index_np,
+                result['edge_list'], radii
+            )
+        
+        node_stress = np.zeros(n_nodes)
+        for idx, e in enumerate(result['edge_list']):
+            i, j = int(edge_index_np[0, e]), int(edge_index_np[1, e])
+            node_stress[i] = max(node_stress[i], sigma_total[idx])
+            node_stress[j] = max(node_stress[j], sigma_total[idx])
+        
+        result['u'] = total_u
+        result['u_total'] = total_u
+        result['deformed_pos'] = current_pos
+        result['sigma_axial'] = sigma_axial
+        result['sigma_bending'] = sigma_bending
+        result['sigma_total'] = sigma_total
+        result['moments'] = moments
+        result['edge_forces'] = edge_forces
+        result['node_stress'] = node_stress
+        result['history'] = history
+        
+        return result
+    
+    def solve_3d(self, edge_index, node_pos, radii,
+                 forces=None, fixed_nodes=None,
+                 prescribed_disp=None,
+                 damping=1e-6, deduplicate=True):
+        """Solve 3D beam frame with corrected stress computation."""
+        if isinstance(edge_index, torch.Tensor):
+            edge_index = edge_index.numpy()
+        if isinstance(node_pos, torch.Tensor):
+            node_pos = node_pos.numpy()
+        if isinstance(radii, torch.Tensor):
+            radii = radii.numpy()
+        if forces is not None and isinstance(forces, torch.Tensor):
+            forces = forces.numpy()
+        
+        if fixed_nodes is None:
+            fixed_nodes = []
+        if prescribed_disp is None:
+            prescribed_disp = {}
+        if forces is None:
+            forces = np.zeros((node_pos.shape[0], 3))
+        
+        self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
+        
+        edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
+        n_nodes = node_pos.shape[0]
+        n_dof = 6 * n_nodes
+        rows, cols, vals = [], [], []
+        
+        for e in edge_list:
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
             if L < 1e-12:
                 continue
-
-            sec = self.circular_section_properties(float(radii[e]))
-
-            if self.dim == 2:
-                c = d[0] / L
-                s = d[1] / L
-
-                # Extract nodal displacements in local coords
-                ui = u[i]  # [ux, uy, θz]
-                uj = u[j]
-
-                # Transform to local
-                u1_local = c * ui[0] + s * ui[1]
-                v1_local = -s * ui[0] + c * ui[1]
-                t1_local = ui[2]
-                u2_local = c * uj[0] + s * uj[1]
-                v2_local = -s * uj[0] + c * uj[1]
-                t2_local = uj[2]
-
-                # Axial strain
-                eps_axial = (u2_local - u1_local) / L
-                sigma[e] = self.E * eps_axial
-
-                # Bending moments (Euler-Bernoulli)
-                EI = self.E * sec['Iz']
-                # M_i = EI/L² * (6/L*(v1-v2) + 4*θ1 + 2*θ2)
-                # M_j = EI/L² * (6/L*(v1-v2) - 2*θ1 - 4*θ2)
-                # Using standard beam formula:
-                M_i = EI / L**2 * (6/L * (v1_local - v2_local) + 4*t1_local + 2*t2_local) * L
-                M_j = EI / L**2 * (6/L * (v1_local - v2_local) - 2*t1_local - 4*t2_local) * L
-                # Simplify:
-                M_i = EI * (6 * (v1_local - v2_local) / L**2 + 4 * t1_local / L + 2 * t2_local / L)
-                M_j = EI * (6 * (v1_local - v2_local) / L**2 - 2 * t1_local / L - 4 * t2_local / L)
-                moments[e, 0] = M_i
-                moments[e, 1] = M_j
-
-            else:
-                direction = d / L
-                # Local coordinate system
-                e1 = direction
-                if abs(e1[0]) < 0.9:
-                    ref = np.array([1.0, 0.0, 0.0])
-                else:
-                    ref = np.array([0.0, 1.0, 0.0])
-                e2 = np.cross(e1, ref)
-                e2 /= np.linalg.norm(e2)
-                e3 = np.cross(e1, e2)
-                e3 /= np.linalg.norm(e3)
-                R = np.array([e1, e2, e3])
-
-                # Extract displacements and rotations
-                di = u[i, :3]  # translation
-                ri = u[i, 3:]  # rotation
-                dj = u[j, :3]
-                rj = u[j, 3:]
-
-                # Transform to local
-                di_local = R @ di
-                dj_local = R @ dj
-                ri_local = R @ ri
-                rj_local = R @ rj
-
-                # Axial strain
-                eps_axial = (dj_local[0] - di_local[0]) / L
-                sigma[e] = self.E * eps_axial
-
-                # Bending moments
-                EIy = self.E * sec['Iy']
-                EIz = self.E * sec['Iz']
-
-                # Bending about local y (deflection in z)
-                My_i = EIz * (6 * (di_local[2] - dj_local[2]) / L**2
-                             + 4 * ri_local[1] / L + 2 * rj_local[1] / L)
-                My_j = EIz * (6 * (di_local[2] - dj_local[2]) / L**2
-                             - 2 * ri_local[1] / L - 4 * rj_local[1] / L)
-
-                # Bending about local z (deflection in y)
-                Mz_i = EIy * (6 * (di_local[1] - dj_local[1]) / L**2
-                             - 4 * ri_local[2] / L - 2 * rj_local[2] / L)
-                Mz_j = EIy * (6 * (di_local[1] - dj_local[1]) / L**2
-                             + 2 * ri_local[2] / L + 4 * rj_local[2] / L)
-
-                moments[e] = [My_i, My_j, Mz_i, Mz_j]
-
-        return sigma, moments
-
-    def get_element_forces(self, u: np.ndarray, edge_index: np.ndarray,
-                           node_pos: np.ndarray, radii: np.ndarray) -> Dict:
-        """Get comprehensive element force data.
-
-        Returns dict with:
-            axial_force : (n_edges,) N = σ * A
-            axial_stress : (n_edges,) σ
-            shear_force : (n_edges,) V = (Mi + Mj) / L  (2D) or per plane (3D)
-            bending_moment : (n_edges, 2) or (n_edges, 4)
-            torsion : (n_edges,)  (3D only, zero for 2D)
-            max_combined_stress : (n_edges,) σ_max = |N/A| + |M*c/I|
-        """
-        n_edges = edge_index.shape[1]
-        sigma, moments = self._compute_element_forces(u, edge_index, node_pos, radii)
-
-        axial_force = np.zeros(n_edges)
-        shear_force = np.zeros(n_edges)
-        torsion = np.zeros(n_edges)
-        max_stress = np.zeros(n_edges)
-
-        for e in range(n_edges):
-            sec = self.circular_section_properties(float(radii[e]))
-            c = float(radii[e])  # outer radius = extreme fiber distance
-            axial_force[e] = sigma[e] * sec['A']
-
-            if self.dim == 2:
-                # Shear from bending moments
-                i = int(edge_index[0, e])
-                j = int(edge_index[1, e])
-                L = np.linalg.norm(node_pos[j] - node_pos[i])
-                if L > 1e-12:
-                    shear_force[e] = abs(moments[e, 0] + moments[e, 1]) / L
-                # Combined stress: axial + bending
-                max_moment = max(abs(moments[e, 0]), abs(moments[e, 1]))
-                max_stress[e] = abs(sigma[e]) + abs(max_moment * c / sec['Iz'])
-            else:
-                i = int(edge_index[0, e])
-                j = int(edge_index[1, e])
-                L = np.linalg.norm(node_pos[j] - node_pos[i])
-                if L > 1e-12:
-                    Vy = abs(moments[e, 2] + moments[e, 3]) / L
-                    Vz = abs(moments[e, 0] + moments[e, 1]) / L
-                    shear_force[e] = np.sqrt(Vy**2 + Vz**2)
-                max_M = max(abs(moments[e, 0]), abs(moments[e, 1]),
-                           abs(moments[e, 2]), abs(moments[e, 3]))
-                max_stress[e] = abs(sigma[e]) + abs(max_M * c / sec['Iy'])
-
+            e1 = dx / L
+            ref = np.array([0, 1.0, 0]) if abs(e1[0]) > 0.9 else np.array([1.0, 0, 0])
+            e2 = np.cross(e1, ref); e2 /= np.linalg.norm(e2)
+            e3 = np.cross(e1, e2)
+            
+            props = self.section_properties(r)
+            A, I, J = props['A'], props['I'], props['J']
+            E, G = self.E, self.G
+            L2, L3 = L**2, L**3
+            
+            k_local = np.zeros((12, 12))
+            k_local[0,0]=k_local[6,6]=E*A/L; k_local[0,6]=k_local[6,0]=-E*A/L
+            k_local[3,3]=k_local[9,9]=G*J/L; k_local[3,9]=k_local[9,3]=-G*J/L
+            k_local[1,1]=k_local[7,7]=12*E*I/L3; k_local[1,7]=k_local[7,1]=-12*E*I/L3
+            k_local[1,5]=k_local[5,1]=6*E*I/L2; k_local[1,11]=k_local[11,1]=6*E*I/L2
+            k_local[7,5]=k_local[5,7]=-6*E*I/L2; k_local[7,11]=k_local[11,7]=-6*E*I/L2
+            k_local[5,5]=k_local[11,11]=4*E*I/L; k_local[5,11]=k_local[11,5]=2*E*I/L
+            k_local[2,2]=k_local[8,8]=12*E*I/L3; k_local[2,8]=k_local[8,2]=-12*E*I/L3
+            k_local[2,4]=k_local[4,2]=-6*E*I/L2; k_local[2,10]=k_local[10,2]=-6*E*I/L2
+            k_local[8,4]=k_local[4,8]=6*E*I/L2; k_local[8,10]=k_local[10,8]=6*E*I/L2
+            k_local[4,4]=k_local[10,10]=4*E*I/L; k_local[4,10]=k_local[10,4]=2*E*I/L
+            
+            R_block = np.array([e1, e2, e3])
+            T = np.zeros((12, 12))
+            for k in range(4): T[3*k:3*k+3, 3*k:3*k+3] = R_block
+            k_global = T.T @ k_local @ T
+            
+            dofs = list(range(6*i, 6*i+6)) + list(range(6*j, 6*j+6))
+            for a in range(12):
+                for b in range(12):
+                    if abs(k_global[a,b]) > 0:
+                        rows.append(dofs[a]); cols.append(dofs[b]); vals.append(k_global[a,b])
+        
+        K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
+        K_damped = K + damping * sparse.eye(n_dof, format='csr')
+        
+        f_global = np.zeros(n_dof)
+        f_global[0::6] = forces[:, 0]
+        f_global[1::6] = forces[:, 1]
+        f_global[2::6] = forces[:, 2]
+        
+        fixed_dofs = set()
+        prescribed_dof_values = {}
+        for node in fixed_nodes:
+            for k in range(6):
+                dof = 6*int(node)+k; fixed_dofs.add(dof); prescribed_dof_values[dof] = 0.0
+        for node, disp in prescribed_disp.items():
+            for k, val in enumerate(disp):
+                dof = 6*int(node)+k; fixed_dofs.add(dof); prescribed_dof_values[dof] = val
+        
+        fixed_dofs = np.array(sorted(fixed_dofs))
+        free_dofs = np.setdiff1d(np.arange(n_dof), fixed_dofs)
+        
+        f_modified = f_global.copy()
+        for dof, val in prescribed_dof_values.items():
+            if val != 0.0:
+                f_modified -= K_damped[:, dof].toarray().flatten() * val
+        
+        u_reduced = spsolve(K_damped[np.ix_(free_dofs, free_dofs)], f_modified[free_dofs])
+        u_full = np.zeros(n_dof); u_full[free_dofs] = u_reduced
+        for dof, val in prescribed_dof_values.items(): u_full[dof] = val
+        u = u_full.reshape(n_nodes, 6)
+        
+        # Stresses
+        n_edges = len(edge_list)
+        sigma_axial = np.zeros(n_edges)
+        sigma_bending = np.zeros(n_edges)
+        
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
+            if L < 1e-12: continue
+            e1 = dx / L
+            props = self.section_properties(r)
+            A, I_val = props['A'], props['I']
+            
+            ui_axial = np.dot(e1, u[i, :3])
+            uj_axial = np.dot(e1, u[j, :3])
+            eps = (uj_axial - ui_axial) / L
+            sigma_axial[idx] = self.E * eps
+            
+            ref = np.array([0, 1.0, 0]) if abs(e1[0]) > 0.9 else np.array([1.0, 0, 0])
+            e2 = np.cross(e1, ref); e2 /= np.linalg.norm(e2)
+            e3 = np.cross(e1, e2)
+            
+            vi = np.dot(e2, u[i,:3]); vj = np.dot(e2, u[j,:3])
+            wi = np.dot(e3, u[i,:3]); wj = np.dot(e3, u[j,:3])
+            th_yi = np.dot(e2, u[i,3:6]); th_yj = np.dot(e2, u[j,3:6])
+            th_zi = np.dot(e3, u[i,3:6]); th_zj = np.dot(e3, u[j,3:6])
+            
+            d_v = np.array([vi, th_yi, vj, th_yj])
+            d_w = np.array([wi, th_zi, wj, th_zj])
+            Npp_left = np.array([12/L**2, 6/L, -12/L**2, 6/L])
+            
+            M_z = abs(self.E * I_val * np.dot(Npp_left, d_v))
+            M_y = abs(self.E * I_val * np.dot(Npp_left, d_w))
+            sigma_bending[idx] = (M_z + M_y) * r / I_val
+        
+        sigma_total = np.abs(sigma_axial) + sigma_bending
+        node_stress = np.zeros(n_nodes)
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            node_stress[i] = max(node_stress[i], sigma_total[idx])
+            node_stress[j] = max(node_stress[j], sigma_total[idx])
+        
+        # Reactions: R = K*u - f
+        reactions = (K_damped @ u_full - f_global).reshape(n_nodes, 6)
+        
+        # Edge forces [axial_N, shear_V_y, shear_V_z]
+        edge_forces = np.zeros((len(edge_list), 3))
+        for idx, e in enumerate(edge_list):
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
+            if L < 1e-12:
+                continue
+            e1_dir = dx / L
+            props = self.section_properties(r)
+            A = props['A']
+            ui_axial = np.dot(e1_dir, u[i, :3])
+            uj_axial = np.dot(e1_dir, u[j, :3])
+            N = self.E * A * (uj_axial - ui_axial) / L
+            edge_forces[idx, 0] = N
+        
         return {
-            'axial_force': axial_force,
-            'axial_stress': sigma,
-            'shear_force': shear_force,
-            'bending_moment': moments,
-            'torsion': torsion,
-            'max_combined_stress': max_stress,
+            'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
+            'sigma_total': sigma_total, 'node_stress': node_stress,
+            'reactions': reactions, 'edge_forces': edge_forces,
+            'edge_list': edge_list, 'K': K,
+            'n_nodes': n_nodes, 'n_edges': len(edge_list)
         }
 
+    # ═══════════════════════════════════════════════════════
+    # CONVENIENCE METHODS (v4.1.1 additions)
+    # ═══════════════════════════════════════════════════════
 
-def deduplicate_edges(edge_index, radii=None):
-    """Remove duplicate bidirectional edges, keeping only one direction.
+    @staticmethod
+    def graph_to_fem_input(graph, dim=2, pct=0.10):
+        """Convert StructureGraph to BeamFrameFEM input arrays.
+        
+        Parameters
+        ----------
+        graph : StructureGraph
+        dim : int
+            2 for 2D, 3 for 3D analysis.
+        pct : float
+            Boundary detection percentage (0.10 = 10% each side).
+        
+        Returns
+        -------
+        dict with keys:
+            edge_index: (2, n_edges) int64
+            node_pos: (n_nodes, dim) float64
+            radii: (n_edges,) float64
+            boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
+            x_range: float (for displacement calculation)
+        """
+        from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
+        pos, elements, _, _ = _graph_to_arrays(graph)
+        edge_index = elements.T.astype(np.int64)
+        node_pos = pos[:, :dim] if dim == 2 else pos
+        # Extract per-edge radius from StructureGraph.edges (Dict[int, SEdge])
+        if hasattr(graph, 'edges') and graph.edges:
+            radii = np.array([e.radius for e in graph.edges.values()])
+            if len(radii) != edge_index.shape[1]:
+                radii = np.full(edge_index.shape[1], radii[0] if len(radii) > 0 else 0.05)
+        else:
+            radii = np.full(edge_index.shape[1], 0.05)
+        
+        boundaries = _get_boundary_indices(pos, pct=pct)
+        x_range = pos[:, 0].max() - pos[:, 0].min()
+        
+        return {
+            'edge_index': edge_index,
+            'node_pos': node_pos,
+            'radii': radii,
+            'boundaries': boundaries,
+            'x_range': x_range,
+        }
 
-    Parameters
-    ----------
-    edge_index : (2, n_edges) array
-    radii : (n_edges,) array, optional
+    def stretch_test(self, graph, target_stretch=2.0, dim=2, pct=0.10,
+                     nonlinear=None):
+        """One-liner uniaxial stretch test using beam frame FEM.
+        
+        Analogous to TaichiEngine.stretch_test() but uses FEM.
+        
+        Parameters
+        ----------
+        graph : StructureGraph
+        target_stretch : float
+            Target stretch ratio (2.0 = stretch to 2x original length).
+        dim : int
+            2 for 2D, 3 for 3D.
+        pct : float
+            Boundary percentage.
+        nonlinear : bool or None
+            If None, auto-selects nonlinear for |stretch-1| > 0.3.
+            If True, always use nonlinear solver.
+        
+        Returns
+        -------
+        dict : FEM result with u, stresses, reactions, etc.
+        """
+        inp = self.graph_to_fem_input(graph, dim=dim, pct=pct)
+        
+        left = inp['boundaries'].get('left', [])
+        right = inp['boundaries'].get('right', [])
+        target_disp = inp['x_range'] * (target_stretch - 1.0)
+        
+        if dim == 2:
+            prescribed = {ni: (target_disp, 0.0) for ni in right}
+            if nonlinear is None:
+                nonlinear = abs(target_stretch - 1.0) > 0.3
+            if nonlinear:
+                return self.solve_2d_nonlinear(
+                    inp['edge_index'], inp['node_pos'], inp['radii'],
+                    prescribed_disp=prescribed, fixed_nodes=left, n_steps=10
+                )
+            return self.solve_2d(
+                inp['edge_index'], inp['node_pos'], inp['radii'],
+                fixed_nodes=left, prescribed_disp=prescribed
+            )
+        else:
+            prescribed = {ni: (target_disp, 0.0, 0.0) for ni in right}
+            return self.solve_3d(
+                inp['edge_index'], inp['node_pos'], inp['radii'],
+                fixed_nodes=left, prescribed_disp=prescribed
+            )
 
-    Returns
-    -------
-    unique_edge_index : (2, n_unique) array
-    unique_radii : (n_unique,) array (if radii provided)
-    unique_indices : list of indices into original edge_index
-    """
-    import numpy as np
-    edge_index = np.asarray(edge_index)
-    
-    seen = set()
-    unique_edges = []
-    unique_idx = []
-    
-    for e in range(edge_index.shape[1]):
-        i, j = int(edge_index[0, e]), int(edge_index[1, e])
-        key = (min(i, j), max(i, j))
-        if key not in seen:
-            seen.add(key)
-            unique_edges.append([i, j])
-            unique_idx.append(e)
-    
-    unique_edge_index = np.array(unique_edges).T
-    
-    if radii is not None:
-        radii = np.asarray(radii)
-        unique_radii = radii[unique_idx]
-        return unique_edge_index, unique_radii, unique_idx
-    else:
-        return unique_edge_index, unique_idx
+    def to_sim_result(self, fem_result, graph=None):
+        """Convert FEM dict result to SimResult for backend compatibility.
+        
+        Parameters
+        ----------
+        fem_result : dict
+            Result from solve_2d, solve_3d, or stretch_test.
+        graph : StructureGraph, optional
+            Original graph for metadata.
+        
+        Returns
+        -------
+        SimResult
+        """
+        from fibernet.sim.accelerated import SimResult, _graph_to_arrays
+        
+        u = fem_result['u']
+        n_nodes = fem_result['n_nodes']
+        
+        # Displacement magnitude
+        if u.shape[1] == 3 and fem_result.get('edge_list') is not None:
+            # 2D: u is (n, 3) = [ux, uy, theta]
+            disp_3d = np.column_stack([u[:, :2], np.zeros(n_nodes)])
+        elif u.shape[1] == 6:
+            # 3D: u is (n, 6) = [ux, uy, uz, thx, thy, thz]
+            disp_3d = u[:, :3]
+        else:
+            disp_3d = u
+        
+        max_disp = float(np.max(np.linalg.norm(disp_3d, axis=1)))
+        
+        # Deformed positions
+        if graph is not None:
+            pos, _, _, _ = _graph_to_arrays(graph)
+            deformed = pos + np.column_stack([disp_3d, np.zeros(pos.shape[1] - disp_3d.shape[1])]) if pos.shape[1] > disp_3d.shape[1] else pos + disp_3d
+        else:
+            deformed = disp_3d  # Just the displacement
+        
+        # Energy (elastic strain energy)
+        sigma_axial = fem_result.get('sigma_axial', np.array([]))
+        sigma_bending = fem_result.get('sigma_bending', np.array([]))
+        edge_list = fem_result.get('edge_list', np.array([]))
+        
+        # Approximate energy from stresses
+        energy = 0.0
+        if graph is not None and len(sigma_axial) > 0:
+            pos, elements, _, _ = _graph_to_arrays(graph)
+            for idx, e in enumerate(edge_list):
+                i, j = int(elements[e, 0]), int(elements[e, 1])
+                L = np.linalg.norm(pos[i] - pos[j])
+                r = 0.05
+                try:
+                    edge_vals = list(graph.edges.values())
+                    if 0 <= e < len(edge_vals):
+                        r = edge_vals[e].radius
+                except Exception:
+                    pass
+                A = np.pi * r**2
+                strain = sigma_axial[idx] / self.E if self.E > 0 else 0
+                energy += 0.5 * self.E * strain**2 * A * L
+        
+        return SimResult(
+            displacements=disp_3d,
+            deformed_positions=deformed,
+            energy=energy,
+            max_displacement=max_disp,
+            max_force=float(np.max(np.abs(sigma_axial))) * np.pi * 0.05**2 if len(sigma_axial) > 0 else 0.0,
+            max_stretch=float(np.max(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
+            mean_stretch=float(np.mean(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
+            n_nodes=n_nodes,
+            n_edges=fem_result.get('n_edges', 0),
+            mode='fem_beam_frame',
+            metadata={
+                'sigma_axial': sigma_axial,
+                'sigma_bending': sigma_bending,
+                'sigma_total': fem_result.get('sigma_total', np.array([])),
+                'reactions': fem_result.get('reactions'),
+                'edge_forces': fem_result.get('edge_forces'),
+            },
+        )
+

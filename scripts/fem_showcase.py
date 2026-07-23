@@ -20,7 +20,7 @@ from pathlib import Path
 import gc
 
 import fibernet as fn
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
 from fibernet.viz.render import _get_theme
 
@@ -66,7 +66,7 @@ def run_fem_stretch(unit, grid=(4,4), box=(2.5, 2.5), radius=0.05,
                       n_pts_per_side=5, perturbation=0.40,
                       radius=radius, seed=seed)
 
-    solver = BeamFrameFEM_v6(E=E, nu=nu)
+    solver = BeamFrameFEM(E=E, nu=nu)
     res = solver.stretch_test(g, target_stretch=target_stretch)
 
     info = {
