@@ -1,3 +1,38 @@
+## [4.1.0] - 2026-07-23
+
+### Added
+- **BeamFrameFEM_v6**: Production-grade beam frame finite element method
+  - `solve_2d()`: Linear 2D beam frame analysis with axial + bending + shear
+  - `solve_2d_nonlinear()`: Geometrically nonlinear solver (co-rotational incremental)
+  - `solve_3d()`: 3D beam frame analysis
+  - Full stress decomposition: axial, bending, total stresses per element
+  - Reaction force computation at fixed boundaries
+  - Moment distribution along beams
+  - Validated against analytical cantilever, displacement BC, and nonlinear benchmarks
+
+- **Large Deformation Test Suite**: Comprehensive FEM validation framework
+  - 152 simulations across 14 structure types (8 2D + 6 3D)
+  - 4 fiber radii (0.02, 0.05, 0.10, 0.20)
+  - Stretch targets: 2.0x, 1.5x, 0.7x, 0.5x
+  - Deformation propagation analysis (boundary vs interior displacement)
+  - Bending vs axial dominance quantification
+  - Checkpoint/resume support for long-running tests
+  - Key finding: 100% FULL deformation propagation, all structures BENDING-dominated
+
+- **14 3D unit types** (up from initial set):
+  `bcc`, `chiral_3d`, `cubic`, `diamond_3d`, `fcc`, `gyroid`, `hcp`, `iwp`,
+  `lidinoid`, `neovius`, `octet`, `reentrant_3d`, `schwarz_d`, `schwarz_p`
+
+- **12 2D unit types**: `chiral`, `cross`, `diamond`, `hexagon`, `honeycomb`,
+  `kagome`, `missing_rib`, `reentrant`, `square`, `star`, `triangle`, `voronoi`
+
+### Fixed
+- `easy.py`: `simulate()` default mode changed from `"tension"` (invalid) to `"stretch"` (correct)
+- `easy.py`: Docstring examples updated to match actual API
+
+### Changed
+- Version bumped to 4.1.0 (minor release: new FEM module + 3D structures)
+
 ## [4.0.5] - 2026-07-17
 
 ### Fixed
