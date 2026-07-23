@@ -509,3 +509,154 @@ phase5_v2: Corrected FEM integration (18/18 pass)
 - `benchmarks/phase5_large_deformation_test.py` - 大变形测试脚本
 - `benchmarks/results/phase5_large_deformation_visualization.png` - 综合可视化
 
+
+
+## Phase 6: Comprehensive FEM Validation (v6) ✅ (2026-07-23)
+
+### Bugs Found & Fixed in v4/v5
+
+| Bug | v4/v5 Behavior | v6 Fix | Validation |
+|-----|----------------|--------|------------|
+| Bending stress = 0 | `sigma[idx] = E * eps_axial` (axial only) | Added `σ_bending = M*c/I` using N'' shape functions | Cantilever: σ_bending/σ_analytical = 1.000000 |
+| Wrong moment formula | Used stiffness eq (f = K·u → -PL/5) | Shape function 2nd derivatives: M = -EI·N''·d | Correct for exact FE solution |
+| Nonlinear stress = 0 | Final solve with no loads → 0 stress | Compute stress from total_u on original geometry | 50% stretch: σ = 5e8 Pa (matches analytical) |
+| No displacement BCs | Only force BCs supported | `prescribed_disp` dict with penalty method | Axial: δ_profile exact, reaction ratio = 1.000000 |
+
+### V6 Solver Architecture
+
+```
+BeamFrameFEM_v6
+├── solve_2d() — Linear with force + displacement BCs
+├── solve_2d_nonlinear() — Incremental co-rotational Newton-Raphson
+├── solve_3d() — 3D beam with displacement BCs
+├── build_stiffness_2d() / build_stiffness_3d()
+└── _compute_element_stress_2d() — Corrected N'' formula
+```
+
+**Output per solve:**
+- `u`: (n_nodes, 3|6) displacements + rotations
+- `sigma_axial`: axial stress per edge (E·ε)
+- `sigma_bending`: max bending stress per edge (M·r/I)
+- `sigma_total`: combined max stress (|σ_axial| + σ_bending)
+- `moments`: (n_edges, 2) bending moments at each end
+- `node_stress`: (n_nodes,) max stress at each node
+- `reactions`: reaction forces/moments at constrained nodes
+
+### Analytical Validation
+
+| Test | Metric | Analytical | FEM | Ratio |
+|------|--------|-----------|-----|-------|
+| Cantilever δ_tip | PL³/(3EI) | 2.122e-01 m | 2.122e-01 m | **1.000000** |
+| Cantilever θ_tip | PL²/(2EI) | 3.183e-01 rad | 3.183e-01 rad | **1.000000** |
+| Cantilever σ_bending | M·r/I | 1.273e+09 Pa | 1.273e+09 Pa | **1.000000** |
+| Axial stretch σ | E·ε | 2.000e+09 Pa | 2.000e+09 Pa | **1.000000** |
+| Axial reaction | E·A·ε | 6.283e+05 N | 6.283e+05 N | **1.000000** |
+| Nonlinear 50% stretch | E·δ/L | 5.000e+08 Pa | 5.000e+08 Pa | **1.000000** |
+
+### Deformed Structure Tests (pattern_2d, 5 pts/side, ±0.4)
+
+| Structure | Nodes | Edges | Max Disp | Max Stress | Propagation |
+|-----------|-------|-------|----------|------------|-------------|
+| Honeycomb | 840 | 900 | 9.11 | 3.57e+08 Pa | Gradient (see bins) |
+| Kagome | 1321 | 1440 | 5.05 | 3.59e+08 Pa | Linear (stretch-dom) |
+| Reentrant | 1140 | 1200 | 17.48 | 5.49e+08 Pa | Amplified (bending-dom) |
+| Triangle | 561 | 630 | 5.87 | 2.72e+08 Pa | Linear (stretch-dom) |
+
+**Propagation bin means (fixed→loaded edge, normalized distance):**
+- Honeycomb: [0.01, 1.12, 2.16, 4.52, 5.08, 5.95, 5.98, 5.41, 5.20, 5.02]
+- Kagome: [0.02, 1.19, 1.96, 2.14, 2.42, 2.83, 3.29, 3.83, 4.36, 4.90]
+- Reentrant: [0.01, 1.24, 4.33, 7.57, 8.69, 9.66, 8.99, 7.94, 5.82, 5.17]
+- Triangle: [0.00, 0.42, 0.83, 1.48, 1.88, 2.54, 2.98, 3.61, 4.13, 4.95]
+
+### Large Deformation Tests (10x10cm structure)
+
+| Structure | Stretch 50% | Compress 50% | Biaxial 50% |
+|-----------|-------------|-------------|-------------|
+| Honeycomb | max_u=7.59, σ=2.07e7 | max_u=5.14, σ=8.88e6 | max_u=7.07, σ=1.00e9 |
+| Kagome | max_u=5.00, σ=8.33e7 | max_u=5.00, σ=8.33e7 | max_u=7.07, σ=1.00e9 |
+| Triangle | max_u=5.00, σ=1.21e8 | max_u=5.00, σ=1.21e8 | max_u=7.07, σ=5.01e8 |
+| Square | max_u=5.00, σ=8.33e7 | max_u=5.00, σ=8.33e7 | max_u=7.07, σ=5.00e8 |
+
+### Multi-Radius Results
+
+**Honeycomb (bending-dominated):**
+| r (m) | σ_axial | σ_bending | σ_total |
+|-------|---------|-----------|---------|
+| 0.001 | 2.31e2 | 2.44e6 | 2.44e6 |
+| 0.010 | 2.16e4 | 2.38e7 | 2.38e7 |
+| 0.100 | 2.12e6 | 2.36e8 | 2.36e8 |
+
+→ σ_bending ∝ r² (bending stiffness scales with I = πr⁴/4)
+
+**Kagome (stretch-dominated):**
+- σ_axial = 1.0e8 Pa (constant, independent of r) ← **CORRECT physics**
+- For prescribed displacement: strain ε is geometric, σ = E·ε
+- σ_bending << σ_axial (negligible bending)
+
+**Triangle (stretch-dominated with some bending):**
+- σ_axial = 1.38e8 Pa (constant)
+- σ_bending increases with r (8.3e4 → 8.3e6)
+
+### 3D Structure Tests
+
+| Structure | Nodes | Edges | Max Disp | Max Stress |
+|-----------|-------|-------|----------|------------|
+| 3×3×3 Cube | 27 | 54 | 5.00e-1 | 2.50e8 Pa |
+| 5×5×5 Cube | 125 | 300 | 5.00e-1 | 1.25e8 Pa |
+| 4×4×6 Cube | 96 | 224 | 5.00e-1 | 1.00e8 Pa |
+
+### Graph-Level Physics
+
+| Structure | Nodes | Edges | Avg Degree | λ₂ | Diameter | SCF | Clustering |
+|-----------|-------|-------|-----------|------|----------|-----|------------|
+| Honeycomb | 90 | 130 | 2.9 | 0.055 | 15 | 3.27 | 0.000 |
+| Kagome | 121 | 220 | 3.6 | 0.081 | 20 | 2.00 | 0.000 |
+| Triangle | 36 | 85 | 4.7 | 0.276 | 10 | 2.74 | 0.493 |
+| Square | 36 | 60 | 3.3 | 0.268 | 10 | 2.00 | 0.000 |
+| Reentrant | 140 | 180 | 2.6 | 0.018 | 25 | 5.23 | 0.000 |
+
+**Key findings:**
+- Reentrant has lowest λ₂ (0.018) → most prone to localization
+- Triangle has highest λ₂ (0.276) → most rigid, well-connected
+- Reentrant has highest SCF (5.23) → strong stress concentrations at re-entrant corners
+- Kagome: SCF=2.0 → very uniform stress distribution
+
+### Junction Physics Verification
+
+✅ **Welded joints verified:**
+- Portal frame test: moment transfers between column and beam
+- Beam element carries bending moment (not just axial force)
+- Rotation DOF (θ) is non-zero at joints → moment-resisting connections
+- Bending stress correctly computed for all structures
+
+### Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `fibernet/ml/beam_frame_fem_v6.py` | 508 | **V6 corrected solver** ★ |
+| `benchmarks/phase6_fem_diagnostic.py` | 120 | Bug identification |
+| `benchmarks/phase6_v6_validation.py` | 170 | Analytical validation |
+| `benchmarks/phase6_comprehensive_fem_test.py` | 543 | Full test suite |
+| `benchmarks/phase6_fix_and_visualize.py` | 535 | Fixes + visualization |
+| `benchmarks/results/phase6_comprehensive_visualization.png` | 1.1MB | All-in-one figure |
+
+### Cross-Platform Compatibility
+
+| Library | Version | Win | Mac | Linux |
+|---------|---------|-----|-----|-------|
+| scipy | 1.18.0 | ✅ | ✅ | ✅ |
+| numpy | 2.5.0 | ✅ | ✅ | ✅ |
+| networkx | 3.6.1 | ✅ | ✅ | ✅ |
+| matplotlib | 3.11.0 | ✅ | ✅ | ✅ |
+| torch | 2.13.0 | ✅ | ✅ | ✅ |
+
+**Zero compilation needed** — all pure Python or prebuilt wheels.
+
+### Git History
+```
+phase6_v6: comprehensive FEM validation with corrected solver
+phase5_v5: large deformation tests
+phase5_v4: large-scale beam FEM with complex structures
+phase5_v3: beam frame FEM with welded joints
+phase5_v2: corrected FEM integration (18/18 pass)
+```

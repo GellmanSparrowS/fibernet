@@ -1,0 +1,29 @@
+{
+  "cantilever": {
+    "delta_ratio": 0.9999999966040264,
+    "bending_stress_ratio": 119.49999957822833,
+    "max_sigma_bending": 152152125058.83557,
+    "max_sigma_axial": 0.0
+  },
+  "disp_bc": {
+    "stress_ratio": 1.000000000000041,
+    "bending_ratio": 0.0,
+    "reaction_ratio": 0.999999999999975
+  },
+  "nonlinear": {
+    "nonlinear_stress": 500000000.00653535,
+    "linear_stress": 500000000.0045369,
+    "analytical_stress": 500000000.0
+  },
+  "complex": {
+    "stretch": {
+      "max_disp": 5.969402058660764,
+      "max_stress": 22215587.413727082,
+      "propagation": 0.11913356284362935
+    },
+    "compress": {
+      "max_disp": 4.039755773006493,
+      "max_stress": 6225354.186167112
+    }
+  }
+}
