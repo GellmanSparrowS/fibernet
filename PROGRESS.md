@@ -1,57 +1,38 @@
-# FiberNet v4.1.0 — Release Complete
+# FiberNet v4.1.0+ — Post-Release Progress
 
-## Status: v4.1.0 Released ✅ (2026-07-23)
+## 最新状态 (2026-07-23)
 
-### PyPI
-- **Published**: https://pypi.org/project/fibernet/4.1.0/
-- Install: `pip install fibernet==4.1.0`
+### ✅ BUG 修复 — 已完成
 
-### GitHub
-- **Release**: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.0
-- **Commit**: https://github.com/GellmanSparrowS/fibernet/commit/41ece8f92919
+**BUG 5: 无效节点索引崩溃**
+- 现象: `fixed_nodes=[0, 99]` 传入 3 节点图时 → IndexError
+- 修复: 在 `solve_2d`, `solve_2d_nonlinear`, `solve_3d` 入口添加 `_validate_nodes()`
+- 效果: 现在抛出清晰的 `ValueError` 消息
 
-### Tests
-- 312/312 passing
-- 0 failures, 1 warning (taichi locale deprecation — upstream issue)
+**BUG 8: 3D 求解器缺少 reactions**
+- 现象: `solve_3d()` 返回 dict 中没有 `reactions` 字段
+- 修复: 添加 `reactions = (K_damped @ u_full - f_global).reshape(n_nodes, 6)`
+- 同时添加: `edge_forces` (n_edges, 3) 和 `K` 矩阵
+- 平衡验证: Sum(reactions) = -Sum(applied_forces) ✓
+
+**回归测试**: 312/312 测试全部通过
+
+### 🔄 下一步
+- API 易用性分析 (简单场景) + 可编程性分析 (复杂场景)
+- FEM 展示图设计 + 生成 (dark+light, 用自带 viz API)
+- git push + PROGRESS.md 更新
+
+### 已提交
+```
+d0a946d fix(beam_fem_v6): validate node indices + add 3D reactions/edge_forces
+31171a4 release: v4.1.0 — BeamFrameFEM + 3D structures + API fixes
+```
 
 ---
 
-## What's New in v4.1.0
+## 历史记录
 
-### BeamFrameFEM_v6 (New FEM Module)
-- `solve_2d()`: Linear 2D beam frame FEM (axial + bending + shear)
-- `solve_2d_nonlinear()`: Geometrically nonlinear co-rotational solver
-- `solve_3d()`: 3D beam frame analysis
-- Full stress decomposition per element
-- Validated: cantilever, displacement BC, nonlinear — all match analytical
-
-### Large Deformation Test Suite
-- 152 FEM simulations (128 2D + 24 3D), all passing
-- 8 2D units × 4 radii × 4 stretch targets
-- 6 3D units × 2 radii × 2 stretch targets
-- Key finding: 100% FULL deformation propagation, all BENDING-dominated
-
-### 3D Unit Types (14 total)
-`bcc`, `chiral_3d`, `cubic`, `diamond_3d`, `fcc`, `gyroid`, `hcp`, `iwp`,
-`lidinoid`, `neovius`, `octet`, `reentrant_3d`, `schwarz_d`, `schwarz_p`
-
-### 2D Unit Types (12 total)
-`chiral`, `cross`, `diamond`, `hexagon`, `honeycomb`, `kagome`,
-`missing_rib`, `reentrant`, `square`, `star`, `triangle`, `voronoi`
-
-### Bug Fixes
-- `easy.py`: `simulate()` default mode `"tension"` → `"stretch"`
-- Version consistency: `__init__.py`, `version.py`, `pyproject.toml` all at 4.1.0
-
-### API Audit Results
-- 62/62 top-level exports verified ✓
-- All 12 2D units generate correctly ✓
-- All 14 3D units generate correctly ✓
-- TaichiEngine.dynamics + stretch_test working ✓
-- SimResult save/load roundtrip ✓
-- GraphFeatureExtractor (94 features) ✓
-- GraphFeatureExtractor3D (60 features) ✓
-- ML utilities (8 functions, lazy import) ✓
-- RL utilities (7 functions, lazy import) ✓
-- Visualization (12 render functions) ✓
-- Transforms + Tiling ✓
+### v4.1.0 Released (2026-07-23)
+- PyPI: https://pypi.org/project/fibernet/4.1.0/
+- GitHub Release: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.0
+- 312/312 tests passing
