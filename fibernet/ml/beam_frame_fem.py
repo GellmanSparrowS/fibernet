@@ -1,5 +1,5 @@
 """
-Beam Frame FEM v6 - Corrected & Enhanced
+Beam Frame FEM - Corrected & Enhanced
 ==========================================
 Fixes from v4/v5:
   1. Corrected moment formula (shape function 2nd derivatives, not stiffness eq)

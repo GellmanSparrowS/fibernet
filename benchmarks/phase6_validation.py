@@ -285,7 +285,7 @@ def main():
     r3 = test_nonlinear()
     r4 = test_complex_structure()
     
-    output = Path(__file__).parent / "results" / "phase6_v6_validation.json"
+    output = Path(__file__).parent / "results" / "phase6_validation.json"
     output.parent.mkdir(exist_ok=True)
     with open(output, 'w') as f:
         json.dump({'cantilever': r1, 'disp_bc': r2, 'nonlinear': r3, 'complex': r4}, f, indent=2, default=str)
