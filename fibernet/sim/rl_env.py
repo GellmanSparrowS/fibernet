@@ -41,7 +41,7 @@ except ImportError:
 
 from fibernet.gen.pattern import pattern_2d, list_units
 from fibernet.sim.accelerated import TaichiEngine, SimResult
-from fibernet.ml.dataset_v2 import extract_features
+from fibernet.ml.dataset import _extract_graph_features as extract_features
 
 
 class FiberNetworkEnv:
