@@ -1,0 +1,191 @@
+{
+  "timestamp": "2026-07-23T06:35:05.376101",
+  "method": "BeamFrameFEM_v6 (beam frame finite element)",
+  "parameters": {
+    "n_pts_per_side": 5,
+    "perturbation": 0.4,
+    "E_modulus": 1000000000.0,
+    "nu": 0.3,
+    "pct_boundary": 0.1,
+    "box_2d": [
+      2.5,
+      2.5
+    ],
+    "grid_2d": [
+      4,
+      4
+    ],
+    "radii_2d": [
+      0.02,
+      0.05,
+      0.1,
+      0.2
+    ],
+    "stretch_targets": {
+      "stretch_2x": 2.0,
+      "stretch_1.5x": 1.5,
+      "compress_0.5x": 0.5,
+      "compress_0.7x": 0.7
+    }
+  },
+  "total_simulations": 152,
+  "failed_simulations": 0,
+  "summary": {
+    "honeycomb": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0163112846635636,
+      "avg_bending_dominance": 9.244351774566232,
+      "avg_force_kN": 12447.147827215606
+    },
+    "reentrant": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.015446465570353,
+      "avg_bending_dominance": 20.963253156417323,
+      "avg_force_kN": 24849.804336948135
+    },
+    "kagome": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0133562580302369,
+      "avg_bending_dominance": 15.761767676550935,
+      "avg_force_kN": 144480.6330097184
+    },
+    "triangle": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.030712471070645,
+      "avg_bending_dominance": 4.588286041758536,
+      "avg_force_kN": 50356.67066718361
+    },
+    "square": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0010310904353403,
+      "avg_bending_dominance": 8.95605783576836,
+      "avg_force_kN": 74041.59224323866
+    },
+    "diamond": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.023691832692036,
+      "avg_bending_dominance": 70.4049419627525,
+      "avg_force_kN": 9847.945847409024
+    },
+    "chiral": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0168556662446542,
+      "avg_bending_dominance": 98.82661388175902,
+      "avg_force_kN": 80722.29342762311
+    },
+    "star": {
+      "n_tests": 16,
+      "full_disp": 16,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.00232954078527,
+      "avg_bending_dominance": 51.62773001470318,
+      "avg_force_kN": 72268.71240666961
+    },
+    "octet": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.014117060428117,
+      "avg_bending_dominance": 162.95528177359682,
+      "avg_force_kN": 58760.28645282996
+    },
+    "diamond_3d": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.003119384751085,
+      "avg_bending_dominance": 501.53597732171613,
+      "avg_force_kN": 16606.90055805167
+    },
+    "reentrant_3d": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0136036396634243,
+      "avg_bending_dominance": 476.8757126882947,
+      "avg_force_kN": 96026.14117505138
+    },
+    "cubic": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0398097940943312,
+      "avg_bending_dominance": 218.007970716901,
+      "avg_force_kN": 43081.95229124706
+    },
+    "fcc": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.017905872016798,
+      "avg_bending_dominance": 469.4845109382719,
+      "avg_force_kN": 35297.63694375388
+    },
+    "bcc": {
+      "n_tests": 4,
+      "full_disp": 4,
+      "partial_disp": 0,
+      "localized_disp": 0,
+      "avg_propagation": 1.0208015121938603,
+      "avg_bending_dominance": 376.0889549235768,
+      "avg_force_kN": 37321.083092014196
+    }
+  },
+  "key_findings": [
+    "\u2713 honeycomb: Deformation FULLY propagates through structure",
+    "  \u2192 honeycomb: BENDING-dominated response (beam behavior)",
+    "\u2713 reentrant: Deformation FULLY propagates through structure",
+    "  \u2192 reentrant: BENDING-dominated response (beam behavior)",
+    "\u2713 kagome: Deformation FULLY propagates through structure",
+    "  \u2192 kagome: BENDING-dominated response (beam behavior)",
+    "\u2713 triangle: Deformation FULLY propagates through structure",
+    "  \u2192 triangle: BENDING-dominated response (beam behavior)",
+    "\u2713 square: Deformation FULLY propagates through structure",
+    "  \u2192 square: BENDING-dominated response (beam behavior)",
+    "\u2713 diamond: Deformation FULLY propagates through structure",
+    "  \u2192 diamond: BENDING-dominated response (beam behavior)",
+    "\u2713 chiral: Deformation FULLY propagates through structure",
+    "  \u2192 chiral: BENDING-dominated response (beam behavior)",
+    "\u2713 star: Deformation FULLY propagates through structure",
+    "  \u2192 star: BENDING-dominated response (beam behavior)",
+    "\u2713 octet: Deformation FULLY propagates through structure",
+    "  \u2192 octet: BENDING-dominated response (beam behavior)",
+    "\u2713 diamond_3d: Deformation FULLY propagates through structure",
+    "  \u2192 diamond_3d: BENDING-dominated response (beam behavior)",
+    "\u2713 reentrant_3d: Deformation FULLY propagates through structure",
+    "  \u2192 reentrant_3d: BENDING-dominated response (beam behavior)",
+    "\u2713 cubic: Deformation FULLY propagates through structure",
+    "  \u2192 cubic: BENDING-dominated response (beam behavior)",
+    "\u2713 fcc: Deformation FULLY propagates through structure",
+    "  \u2192 fcc: BENDING-dominated response (beam behavior)",
+    "\u2713 bcc: Deformation FULLY propagates through structure",
+    "  \u2192 bcc: BENDING-dominated response (beam behavior)"
+  ]
+}
