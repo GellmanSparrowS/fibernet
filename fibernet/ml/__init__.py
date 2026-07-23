@@ -76,6 +76,9 @@ __all__ = [
     "plot_residuals",
     "plot_learning_curve",
     # Features
+    # FEM
+    "BeamFrameFEM",
+    "BeamFrameFEM_v6",
     # Dataset
     "FiberNetDataset",
 ]
@@ -186,6 +189,9 @@ def __getattr__(name):
         "DivergenceFreeNet": "fibernet.ml.conservative_nn",
         "ConservativeLoss": "fibernet.ml.conservative_nn",
         "ConservativeTrainer": "fibernet.ml.conservative_nn",
+        # Beam Frame FEM
+        "BeamFrameFEM": "fibernet.ml.beam_frame_fem_v6",
+        "BeamFrameFEM_v6": "fibernet.ml.beam_frame_fem_v6",
     }
 
     if name in _submodules:

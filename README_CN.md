@@ -30,7 +30,7 @@ FiberNet 是面向材料科学与生物力学研究的 Python 工具包，用于
 |------|------|
 | **26种基元** | 12种2D + 14种3D：蜂窝、kagome、凹角、octet、diamond\_3d、fcc、bcc、gyroid、TPMS… |
 | **参数化控制** | 内部点位移，支持RL连续动作空间 |
-| **双模型仿真** | Taichi质点弹簧（GPU） + 梁单元FEM（Euler–Bernoulli） |
+| **双模型模拟** | Taichi质点弹簧（GPU） + 梁单元FEM（Euler–Bernoulli） |
 | **94维特征** | 结构 + 孔隙 + 接触特征提取 |
 | **一行ML** | `predict_from_csv()` → 训练、评估、可视化、保存 |
 | **一行RL** | `run_bayesian_optimization()` 或 CEM 优化 |
@@ -46,22 +46,22 @@ FiberNet 是面向材料科学与生物力学研究的 Python 工具包，用于
 *12种2D基元：正方形、三角形、六边形、蜂窝、kagome、Voronoi、手性、凹角、星形、交叉、钻石、缺肋。*
 
 <div align="center">
-<img src="docs/images/fem_showcase_dark.png" width="80%" alt="FEM变形展示" />
-</div>
-
-*梁单元FEM分析：多种拓扑结构和纤维半径下的单轴拉伸（2×）与压缩（0.5×）。亮色 = 高von Mises应力。结构建模为焊死接头的梁框架，弯曲刚度与半径的四次方成正比。*
-
-<div align="center">
 <img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi拉伸" />
 </div>
 
-*Voronoi结构在1.5×单轴拉伸下的变形与应力分布。*
+*Voronoi结构在1.5×单轴拉伸下的变形与应力分布（质点弹簧模型）。*
 
 <div align="center">
 <img src="docs/images/05_trajectory_dark.png" width="80%" alt="变形轨迹" />
 </div>
 
 *8帧变形轨迹：蜂窝结构拉伸过程，按边拉伸比着色。*
+
+<div align="center">
+<img src="docs/images/fem_showcase_dark.png" width="80%" alt="FEM变形展示" />
+</div>
+
+*梁单元FEM分析：多种拓扑结构和纤维半径下的单轴拉伸（2×）与压缩（0.5×）。亮色 = 高von Mises应力。结构建模为焊死接头的梁框架，弯曲刚度与半径的四次方成正比。*
 
 <div align="center">
 <img src="docs/images/09_ml_analysis_dark.png" width="80%" alt="ML分析" />
@@ -96,9 +96,9 @@ print(f"最大力={r.max_force:.0f} N, 最大拉伸={r.max_stretch:.3f}")
 ### FEM 三行代码
 
 ```python
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml import BeamFrameFEM
 
-solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+solver = BeamFrameFEM(E=1e9, nu=0.3)
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
 result = solver.stretch_test(g, target_stretch=2.0)
 
@@ -124,7 +124,8 @@ r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5,
                         damping=0.3, num_steps=1000, save_interval=200)
 
 # 2b. 或梁单元FEM（Euler-Bernoulli，焊死接头）
-fem = BeamFrameFEM_v6(E=1e9, nu=0.3)
+from fibernet.ml import BeamFrameFEM
+fem = BeamFrameFEM(E=1e9, nu=0.3)
 fem_result = fem.stretch_test(g, target_stretch=1.5)
 sim_r = fem.to_sim_result(fem_result, graph=g)
 
@@ -197,10 +198,10 @@ EA = E × πr²              （轴向刚度）
 ### API
 
 ```python
-from fibernet.ml.beam_frame_fem_v6 import BeamFrameFEM_v6
+from fibernet.ml import BeamFrameFEM
 import fibernet as fn
 
-solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
+solver = BeamFrameFEM(E=1e9, nu=0.3)
 
 # 生成结构（半径对FEM有物理意义！）
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
@@ -275,7 +276,9 @@ internal = g.get_internal_nodes()  # RL动作目标
 boundary = g.get_boundary_nodes()
 ```
 
-### 模拟（质点弹簧）
+### 模拟 — 质点弹簧
+
+基于 Taichi 的 GPU 加速质点弹簧动力学。纤维建模为质点通过线性弹簧连接。适用于**大规模动力学模拟**和**快速原型验证**。纤维直径不影响力学行为（仅作装饰）。
 
 ```python
 engine = fn.TaichiEngine()
@@ -295,6 +298,49 @@ r.positions_trajectory # 位置轨迹列表
 r.save("result.json", detailed=True)
 r2 = fn.SimResult.load("result.json")
 ```
+
+### 模拟 — FEM（BeamFrameFEM）
+
+Euler–Bernoulli 梁框架有限元法。纤维建模为**焊死接头的梁单元** —— 半径直接决定弯曲（r⁴）和轴向（r²）刚度。提供物理精确的应力分解（轴向 + 弯曲）。适用于**定量力学分析**和**设计验证**。
+
+支持**线性**求解器（小变形，速度快）和**几何非线性**求解器（大变形，共旋增量法）。便捷方法 `stretch_test()` 根据应变幅度自动选择求解器。
+
+```python
+from fibernet.ml import BeamFrameFEM
+
+solver = BeamFrameFEM(E=1e9, nu=0.3)  # 杨氏模量, 泊松比
+
+# 一行调用（自动选择求解器）
+result = solver.stretch_test(g, target_stretch=2.0, dim=2)
+
+# 完整访问
+u = result['u']                    # 节点位移 (N×dim)
+sigma = result['sigma_total']      # 每单元总应力
+sigma_axial = result['sigma_axial']  # 轴向应力分量
+sigma_bend = result['sigma_bending'] # 弯曲应力分量
+reactions = result['reactions']    # 边界反力
+edge_forces = result['edge_forces']  # 每单元内力
+
+# 底层API
+fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
+result = solver.solve_2d(**fem_input)              # 线性2D
+result = solver.solve_2d_nonlinear(**fem_input)    # 非线性2D（大变形）
+result = solver.solve_3d(**fem_input)              # 3D梁框架
+
+# 兼容可视化/ML流水线
+sim_result = solver.to_sim_result(result, graph=g)
+```
+
+**质点弹簧 vs FEM 对比：**
+
+| 方面 | 质点弹簧 | BeamFrameFEM |
+|------|----------|--------------|
+| 物理 | 质点 + 线性弹簧 | Euler–Bernoulli梁单元 |
+| 接头 | 铰接（无弯矩传递） | 焊死（刚性，传递弯矩） |
+| 半径影响 | 仅装饰 | 物理（EI ∝ r⁴, EA ∝ r²） |
+| 应力输出 | 边拉伸比 | 完整分解（轴向 + 弯曲） |
+| 速度 | GPU加速，动力学快 | CPU稀疏求解，静力学快 |
+| 适用场景 | 大规模动力学，RL奖励 | 定量应力分析，设计验证 |
 
 ### 可视化
 
@@ -420,19 +466,6 @@ K_global × U = F    →    σ = E × B × U_element
 
 ---
 
-## 📊 性能
-
-| 任务 | 时间 | 硬件 |
-|------|------|------|
-| 结构生成 (square 3×3) | ~0.1 s | CPU |
-| 拉伸 — 质点弹簧 (5000步) | ~6 s | Taichi x64 |
-| 拉伸 — FEM (蜂窝 4×4) | ~2 s | CPU (scipy稀疏) |
-| 特征提取 (94维) | ~0.5 s | CPU |
-| ML训练 (RF, 100样本) | ~1 s | CPU |
-| CEM优化 (200 episodes) | ~6 min | CPU |
-
----
-
 ## 📁 项目结构
 
 ```
@@ -441,7 +474,7 @@ fibernet/
 │   ├── core/         # StructureGraph, Material, transforms
 │   ├── gen/          # pattern_2d/3d, 单元工厂 (26种)
 │   ├── sim/          # TaichiEngine (质点弹簧), SimResult
-│   ├── ml/           # BeamFrameFEM_v6, train_predictor, cross_validate
+│   ├── ml/           # BeamFrameFEM, train_predictor, cross_validate
 │   ├── viz/          # render_graph, render_trajectory, themes
 │   ├── analysis/     # GraphFeatureExtractor (94维)
 │   ├── rl/           # CEM env, 贝叶斯优化, 奖励曲线
