@@ -1,52 +1,49 @@
-# FiberNet v4.1.0+ — Post-Release Progress
+# FiberNet v4.1.2 — Post-Release Progress
 
 ## 最新状态 (2026-07-23)
 
-### ✅ 全部完成
+### ✅ v4.1.2 Released
 
-**1. BUG 修复**
-- BUG 5: 无效节点索引 → 清晰的 ValueError (替代 cryptic IndexError)
-- BUG 8: solve_3d() 添加 reactions/edge_forces/K (与 solve_2d 一致)
-- 回归: 312/312 测试通过
+**PyPI**: https://pypi.org/project/fibernet/4.1.2/
+**GitHub**: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.2
 
-**2. API 易用性增强 (4 个新功能)**
-- `graph_to_fem_input(graph)`: StructureGraph → FEM 输入一步转换
-- `stretch_test(graph, target_stretch)`: 一行代码完成单轴拉伸 FEM
-- `to_sim_result(fem_result)`: FEM dict → SimResult (后端可替换)
-- `render_fem_stress(graph, result)`: 边着色应力可视化
+**1. BUG 修复: 纤维半径不影响力学结果 (Critical)**
+- 根因: `graph_to_fem_input()` 中 `[e.radius for e in graph.edges]` 遍历 Dict 的 keys (整数), 而非 values (SEdge 对象)
+- 修复: 改为 `[e.radius for e in graph.edges.values()]`
+- 同时修复 `to_sim_result()` 中能量计算的半径访问
+- 验证结果:
+  | 半径 | 最大应力 |
+  |------|---------|
+  | 0.02 | 2967 MPa |
+  | 0.05 | 6309 MPa |
+  | 0.10 | 11530 MPa |
+  | 0.20 | 20997 MPa |
 
-**API 提升**: 基本 FEM 分析从 ~10 行 → 3 行:
-```python
-solver = BeamFrameFEM_v6(E=1e9, nu=0.3)
-g = fn.pattern_2d(unit='honeycomb', box=(10,10), grid=(4,4), radius=0.05)
-res = solver.stretch_test(g, target_stretch=2.0)
-```
+**2. Showcase 布局修复**
+- 问题: 原 3×4 网格放不下 19 个面板 → 中间行拉伸和压缩堆叠
+- 修复: 改为 5×4 GridSpec 布局
+  - Row 1-2: 8 个拉伸结构 (2×4)
+  - Row 3: 4 个压缩结构
+  - Row 4: 4 个半径变化 (r=0.02, 0.05, 0.10, 0.20)
+  - Row 5: 4 个分析图表
 
-**3. API 分析结果**
-- 易用性 (简单场景): ✅ 已改善 (新增 4 个便捷方法)
-- 可编程性 (复杂场景): ✅ 良好 (K矩阵、torch支持、非线性历史)
-- 两套 API (弹簧/FEM) 不冲突, 可通过 SimResult 无缝切换
+**3. 暗色主题可见性修复**
+- 线宽: 0.6 → 2.0 (暗色) / 1.5 (亮色)
+- 色图: inferno → magma (暗色拉伸), coolwarm → RdYlBu (暗色压缩)
+- 添加圆角 capstyle 改善视觉质量
 
-**4. FEM 展示图**
-- Dark: `fem_showcase_dark.png` (2.0 MB, 3979×2658 px)
-- Light: `fem_showcase_light.png` (2.2 MB, 3979×2658 px)
-- 8种2D单元 × 拉伸/压缩 + 分析图表
-- 脚本: `scripts/fem_showcase.py`
+**4. 测试结果**
+- 312/312 测试全部通过
+
+### 文件变更
+- `fibernet/ml/beam_frame_fem_v6.py`: graph_to_fem_input + to_sim_result 半径修复
+- `scripts/fem_showcase.py`: 5×4 GridSpec 布局 + 增亮暗色主题
+- `fibernet/version.py`, `fibernet/__init__.py`, `pyproject.toml`: 版本 → 4.1.2
+- `CHANGELOG.md`, `PROGRESS.md`: 更新日志
+- `output_data/deformation_test/viz/`: 重新生成的展示图
 
 ### 提交记录
 ```
-72c9ef9 feat: Add FEM showcase images (dark + light themes)
-b487e8f feat: FEM showcase visualization (dark + light themes)
-e69fb56 feat(fem): add convenience API for ease-of-use
-d0a946d fix(beam_fem_v6): validate node indices + add 3D reactions/edge_forces
-31171a4 release: v4.1.0 — BeamFrameFEM + 3D structures + API fixes
+cf891cd fix(fem): radius propagation + showcase layout + dark theme visibility
+41c65bc release: v4.1.1 — FEM convenience API + showcase
 ```
-
----
-
-## 历史记录
-
-### v4.1.0 Released (2026-07-23)
-- PyPI: https://pypi.org/project/fibernet/4.1.0/
-- GitHub Release: https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.1.0
-- 312/312 tests passing

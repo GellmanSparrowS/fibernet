@@ -1,3 +1,16 @@
+## [4.1.2] - 2026-07-23
+
+### Fixed
+- **Critical**: `graph_to_fem_input()` now correctly extracts per-edge radius from StructureGraph
+  - Root cause: iterating `graph.edges` (Dict) gave keys (ints) instead of SEdge values
+  - FEM results now properly reflect fiber diameter changes (welded joint physics)
+- `to_sim_result()` radius access fixed for energy calculation
+
+### Improved
+- FEM showcase: restructured layout (5 rows) fixing middle-row panel overflow
+- Dark theme: increased edge linewidth (0.6→2.0), switched to brighter colormaps (magma/RdYlBu)
+- Radius variation row now shows physical stress dependence on fiber diameter
+
 ## [4.1.1] - 2026-07-23
 
 ### Added
