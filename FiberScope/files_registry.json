@@ -1,0 +1,118 @@
+﻿{
+ "fslab/fibernet_bridge.py": {
+  "purpose": "stub-package loader for fibernet.gen.pattern (no heavy __init__)",
+  "key": "ensure_fibernet(); FIBERNET_ROOT env; frozen->vendored bundle import",
+  "status": "stable"
+ },
+ "fslab/structure.py": {
+  "purpose": "parametric structure factory",
+  "key": "line_displacements periodic table; seeded jitter amp 0.35*CELL*pert; UNIT_PRESETS without voronoi (primitives carry no intrinsic randomness); CELL=10",
+  "status": "v3"
+ },
+ "fslab/engine2.py": {
+  "purpose": "numpy physics core",
+  "key": "Engine2Config(+n_increments: >0 quasi-static affine-predictor + relaxation per increment, 0 legacy ramp); run(progress_cb); _forces/_record helpers; grips=percentile10%; energies{axial,bend,contact,kinetic,work}",
+  "status": "validated+quasi-static"
+ },
+ "fslab/simcache.py": {
+  "purpose": "run_stretch wrapper + atomic npz cache",
+  "key": "RunConfig(n_increments=120, auto_scale sqrt(n/600) clip1..2)->engine_cfg(n_nodes); run_stretch(progress_cb); force_curve monotone guard (no fracture); atomic npz cache; MAX_FRAMES=240",
+  "status": "stable"
+ },
+ "fslab/percolation.py": {
+  "purpose": "load-path percolation",
+  "key": "hysteresis=0.6 release band; grip_connected prune (_grip_prune); union-find span; BFS two-sided depth",
+  "status": "v2"
+ },
+ "fslab/inverse.py": {
+  "purpose": "inverse design two-stage",
+  "key": "TARGETS curves + SCALARS; fixed_unit lock (stage-1 screens only current unit); CEM over line point values (2*pts+1 dims); best_spec; metrics_of loading-phase",
+  "status": "v3"
+ },
+ "scripts/run_exploration.py": {
+  "purpose": "offline exploration log generator",
+  "key": "novelty agent vs r0; JSONL append+fsync; resumable by line count; data/exploration_log.jsonl",
+  "status": "ran(240 evals)"
+ },
+ "scripts/build_exe.py": {
+  "purpose": "PyInstaller onedir build",
+  "key": "--icon assets/icon.ico; --add-data assets; minimal hiddens; excludes",
+  "status": "v2"
+ },
+ "studio/i18n.py": {
+  "purpose": "zh/en TEXT",
+  "key": "sim view keys; ai_thinking/ai_done/ai_fallback; neutral key hint; version chip v0.9",
+  "status": "v3"
+ },
+ "studio/theme.py": {
+  "purpose": "visual system v2",
+  "key": "apply_plot_theme mandatory; #explain style; QProgressBar QSS; handle color; #aipanel + #gallery QSS",
+  "status": "v3"
+ },
+ "studio/network_canvas.py": {
+  "purpose": "canvas",
+  "key": "static preview mode; percolation/strain artwork; legend chip overlay; pan/zoom; pixmap cache",
+  "status": "v2"
+ },
+ "studio/design_tab.py": {
+  "purpose": "tab3",
+  "key": "scalar+curve targets; pre-stretch inset; set_spec locks fixed_unit; show_external fills tab from AI-run inverse design; apply_structure",
+  "status": "v4"
+ },
+ "studio/replay_tab.py": {
+  "purpose": "exploration replay",
+  "key": "click/hover scatter; clickable feed (last 30 accepted); step caption; discovery triangles; apply_structure; min plot heights",
+  "status": "v3"
+ },
+ "studio/main.py": {
+  "purpose": "MainWindow v3",
+  "key": "header AI button toggles AIPanel in central QSplitter (ai_dock alias); 4 tabs structure/sim/design/replay; icon; min 1120x700",
+  "status": "v4"
+ },
+ "run.py": {
+  "purpose": "entry",
+  "key": "--lang --theme --smoke; smoke=full 4-tab headless check incl. frozen, writes smoke_result.txt",
+  "status": "validated"
+ },
+ "tests/*": {
+  "purpose": "selftest, selftest_engine2, selftest_inverse, gui_smoke",
+  "status": "green"
+ },
+ "data/exploration_log.jsonl": {
+  "purpose": "shipped exploration log",
+  "key": "240 recs agent120+r0120",
+  "status": "shipped"
+ },
+ "studio/structure_tab.py": {
+  "purpose": "structure studio",
+  "key": "LineEditor big handles + DispRow QGridLayout numeric X/Y% (pts<=6, 3 pairs/row); wrapping gallery; default pert 8%; export; load_spec API",
+  "status": "v4"
+ },
+ "assets/icon.ico": {
+  "purpose": "app icon",
+  "key": "PIL: dark tile + cyan hexagon + fiber ring + amber grips; 16-256px",
+  "status": "new"
+ },
+ "docs/UI.md": {
+  "purpose": "UI maintenance doc",
+  "key": "design tokens, object names, layout skeleton (left 240-320 / right 260-400, progress bar, explain right col), add-tab flow, packaging",
+  "status": "new"
+ },
+ "fslab/exporter.py": {
+  "purpose": "JSON/SVG export of current structure",
+  "key": "export_json(spec+nodes+edges); export_svg chain-colored",
+  "status": "new"
+ },
+ "studio/ai_assistant.py": {
+  "purpose": "AI assistant right panel (DeepSeek function-calling)",
+  "key": "resizable panel; hidden prompt + dynamic context; feedback; theme-aware chat + refresh_theme; replay tools; inverse locked + pushed to design tab; config key persisted",
+  "status": "v2"
+ },
+ "studio/sim_tab.py": {
+  "purpose": "tab: unified live sim (percolation + stretch)",
+  "key": [
+   "view combo perc/strain sharing one run; right col order force->mode->perc; transport+autoplay; progress bar; red-dot contact legend; run_sync"
+  ],
+  "status": "v1"
+ }
+}

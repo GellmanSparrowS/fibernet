@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+_tmp/
+_cache/
+build/
+dist/
+*.spec
+.DS_Store
+
+build_vendor/
+smoke_result.txt
