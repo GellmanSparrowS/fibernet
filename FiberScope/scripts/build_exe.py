@@ -73,4 +73,30 @@ for e in EXCLUDES:
     cmd += ["--exclude-module", e]
 cmd.append(os.path.join(ROOT, "run.py"))
 subprocess.check_call(cmd, cwd=ROOT)
+
+# Qt6Core imports 20 plain ucnv_* symbols from icuuc.dll.  anaconda/
+# conda-forge ICU only exports version-suffixed names (ucnv_open_78), so
+# a bundle that ships it dies at startup with "entry point ucnv_open not
+# found", and a bundle without any icuuc.dll dies on machines whose
+# System32/PATH cannot supply a plain-export build.  Fix: drop every
+# collected ICU dll and ship the Windows system icuuc.dll (self-
+# contained, exports all 20 needed symbols) into the contents dir, where
+# the PyInstaller runtime resolves it before PATH.
+_INTERNAL = os.path.join(ROOT, "dist", "FiberScope", "_internal")
+_DIST = os.path.join(ROOT, "dist", "FiberScope")
+for dirpath, _dirs, files in os.walk(_DIST):
+    for fn in files:
+        if fn.lower().startswith("icu") and fn.lower().endswith(".dll"):
+            os.remove(os.path.join(dirpath, fn))
+            print("removed conflicting ICU dll:", os.path.join(dirpath, fn))
+sys_icu = r"C:\Windows\System32\icuuc.dll"
+if os.path.exists(sys_icu):
+    _dst = os.path.join(_INTERNAL, "icuuc.dll")
+    shutil.copy2(sys_icu, _dst)
+    os.chmod(_dst, os.stat(_dst).st_mode | 0o200)
+    print("bundled system icuuc.dll")
+else:
+    print("WARNING: system icuuc.dll not found; bundle may fail on "
+          "machines without ICU")
+
 print("build done: dist/FiberScope/FiberScope.exe")

@@ -9,3 +9,4 @@ dist/
 
 build_vendor/
 smoke_result.txt
+_build_log.txt

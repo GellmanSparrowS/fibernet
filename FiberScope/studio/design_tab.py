@@ -23,16 +23,18 @@ class DesignWorker(QThread):
     finished_ok = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, target, budget, seed, fixed_unit=None, parent=None):
+    def __init__(self, target, budget, seed, fixed_unit=None, pts=None,
+                 parent=None):
         super().__init__(parent)
         self.target = target
         self.budget = budget
         self.seed = seed
         self.fixed_unit = fixed_unit
+        self.pts = int(pts) if pts else PTS
 
     def _builder(self, unit, pert, ld):
         return StructureFactory(unit=unit, grid_x=3, grid_y=3,
-                                n_pts_per_side=PTS, seed=self.seed,
+                                n_pts_per_side=self.pts, seed=self.seed,
                                 perturbation=pert,
                                 line_displacements=ld).build()
 
@@ -40,6 +42,7 @@ class DesignWorker(QThread):
         try:
             res = run_inverse(self._builder, self.target, budget=self.budget,
                               seed=self.seed, fixed_unit=self.fixed_unit,
+                              pts=self.pts,
                               callback=lambda rec, run: self.progress.emit(
                                   rec, run))
             self.finished_ok.emit(res)
@@ -56,6 +59,7 @@ class DesignTab(QWidget):
         self.worker = None
         self.best_run = None
         self.fixed_unit = "reentrant"
+        self.fixed_pts = 5
         self._build()
         self.retranslate()
 
@@ -63,6 +67,15 @@ class DesignTab(QWidget):
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 8, 8, 8)
         outer.setSpacing(8)
+        head = QHBoxLayout()
+        self.replay_toggle = QPushButton()
+        self.replay_toggle.setCheckable(True)
+        self.replay_toggle.setChecked(False)
+        self.replay_toggle.clicked.connect(self._toggle_replay)
+        head.addStretch(1)
+        head.addWidget(self.replay_toggle)
+        outer.addLayout(head)
+        self.vsplit = QSplitter(Qt.Vertical)
         splitter = QSplitter(Qt.Horizontal)
 
         left = QWidget()
@@ -130,10 +143,15 @@ class DesignTab(QWidget):
         self.curve_best = self.plot_c.plot(
             pen=pg.mkPen(colors(self.mode)["accent"], width=2))
         cvv.addWidget(self.plot_c)
+        self.lbl_target_info = QLabel()
+        self.lbl_target_info.setObjectName('hint')
+        self.lbl_target_info.setWordWrap(True)
+        cvv.addWidget(self.lbl_target_info)
         rv.addWidget(self.gb_curve)
         self.gb_conv = QGroupBox()
         kv = QVBoxLayout(self.gb_conv)
         self.plot_k = pg.PlotWidget(); self.plot_k.setMenuEnabled(False)
+        self.plot_k.setMinimumHeight(130)
         self.curve_conv = self.plot_k.plot(
             pen=pg.mkPen(colors(self.mode)["accent2"], width=2))
         kv.addWidget(self.plot_k)
@@ -142,7 +160,24 @@ class DesignTab(QWidget):
         right.setMaximumWidth(320)
         splitter.addWidget(right)
         splitter.setSizes([280, 600, 260])
-        outer.addWidget(splitter, 1)
+        self.vsplit.addWidget(splitter)
+        outer.addWidget(self.vsplit, 1)
+
+    def embed_replay(self, widget):
+        """Exploration replay lives as a collapsible bottom panel."""
+        self._replay_widget = widget
+        self.vsplit.addWidget(widget)
+        widget.hide()
+        self.vsplit.setSizes([660, 160])
+        self.vsplit.setStretchFactor(0, 1)
+        self.vsplit.setStretchFactor(1, 0)
+        self._toggle_replay()
+
+    def _toggle_replay(self):
+        if getattr(self, "_replay_widget", None) is None:
+            return
+        self._replay_widget.setVisible(self.replay_toggle.isChecked())
+        self.retranslate()
 
     # ---------------- run ----------------
     def start_run(self):
@@ -152,9 +187,11 @@ class DesignTab(QWidget):
         self.status.setText(tr("running"))
         self.log.clear()
         self._evals, self._bests = [], []
+        self._preview_target()
         self.worker = DesignWorker(self.target_combo.currentText(),
                                    self.budget.value(), self.seed.value(),
-                                   fixed_unit=self.fixed_unit)
+                                   fixed_unit=self.fixed_unit,
+                                   pts=self.fixed_pts)
         self.worker.progress.connect(self._on_progress)
         self.worker.finished_ok.connect(self._on_done)
         self.worker.failed.connect(self._on_fail)
@@ -164,6 +201,7 @@ class DesignTab(QWidget):
         self._evals.append(rec.eval_id)
         self._bests.append(rec.best_dist)
         self.curve_conv.setData(self._evals, self._bests)
+        self.plot_k.enableAutoRange()
         if run is not None:
             self.best_run = run
             self.canvas.set_data(run, None)
@@ -177,14 +215,26 @@ class DesignTab(QWidget):
         self.status.setText(f"{tr('running')} #{rec.eval_id}/"
                             f"{self.budget.value()}")
 
-    def _on_done(self, res):
-        self._result = res
+    def _preview_target(self):
         tname = self.target_combo.currentText()
         if tname in TARGETS:
             self.curve_target.setData(np.linspace(0, 1, 24),
                                       target_curve(tname, 24))
+            self.lbl_target_info.setText(tr('target_label') + ': ' + tname)
+        elif tname in SCALARS:
+            key, sign = SCALARS[tname]
+            self.curve_target.setData([], [])
+            kind = 'maximize' if sign < 0 else 'minimize'
+            self.lbl_target_info.setText(
+                tr('target_label') + f': {tname} ({kind} {key})')
         else:
             self.curve_target.setData([], [])
+            self.lbl_target_info.setText('')
+
+    def _on_done(self, res):
+        self._result = res
+        tname = self.target_combo.currentText()
+        self._preview_target()
         if res.get("best_run") is not None:
             m = metrics_of(res["best_run"])
             self.status.setText(
@@ -205,13 +255,15 @@ class DesignTab(QWidget):
             return
         sp = res["best_spec"]
         f = StructureFactory(unit=sp["unit"], grid_x=3, grid_y=3,
-                             n_pts_per_side=PTS, seed=self.seed.value(),
+                             n_pts_per_side=self.fixed_pts,
+                             seed=self.seed.value(),
                              perturbation=sp["pert"],
                              line_displacements=sp["line_displacements"])
         self.apply_structure.emit(f.clamped())
 
     def set_spec(self, f):
         self.fixed_unit = f.unit
+        self.fixed_pts = max(1, min(6, int(f.n_pts_per_side)))
 
     def show_external(self, res, target_name):
         """Populate plots/log from an externally run inverse design (AI)."""
@@ -243,9 +295,9 @@ class DesignTab(QWidget):
         self._evals, self._bests = [], []
         w = DesignWorker(self.target_combo.currentText(),
                          self.budget.value(), self.seed.value(),
-                         fixed_unit=self.fixed_unit)
+                         fixed_unit=self.fixed_unit, pts=self.fixed_pts)
         res = run_inverse(w._builder, w.target, budget=w.budget, seed=w.seed,
-                          fixed_unit=w.fixed_unit,
+                          fixed_unit=w.fixed_unit, pts=w.pts,
                           callback=lambda rec, run: self._on_progress(rec, run))
         self._on_done(res)
 
@@ -272,3 +324,4 @@ class DesignTab(QWidget):
         self.apply_btn.setText(tr("apply_struct"))
         self.lbl_init.setText(tr("initial_struct"))
         self.lbl_def.setText(tr("stretched_struct"))
+        self.replay_toggle.setText(tr("replay_toggle"))

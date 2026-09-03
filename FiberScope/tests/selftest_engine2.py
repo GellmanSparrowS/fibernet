@@ -12,11 +12,13 @@ import numpy as np
 
 from fslab import StructureFactory
 from fslab.engine2 import Engine2, Engine2Config
+from fslab.structure import SPECTRUM_PRESETS, fit_spectrum
 
 
-def build(unit, stretch, **kw):
+def build(unit, stretch, pts=2, ld=None, **kw):
     g = StructureFactory(unit=unit, grid_x=3, grid_y=3,
-                         n_pts_per_side=2, seed=7).build()
+                         n_pts_per_side=pts, seed=7,
+                         line_displacements=ld).build()
     cfg = Engine2Config(target_stretch=stretch, num_steps=8000,
                         save_interval=1000, **kw)
     return Engine2(g, cfg).run()
@@ -29,24 +31,28 @@ def frac(r):
 
 
 def main():
-    # 1) Gibson-Ashby contrast: honeycomb bending-dominated vs kagome stretch
-    rh = build("honeycomb", 1.3)
-    rk = build("kagome", 1.3)
-    bh, ah, _ = frac(rh)
-    bk, ak, _ = frac(rk)
-    print(f"[e2] GA contrast: honeycomb bend_frac={bh[-1]:.2f} "
-          f"kagome bend_frac={bk[-1]:.2f}")
-    assert bh[-1] > bk[-1], "honeycomb should be more bending-dominated"
-    assert ak[-1] > ah[-1], "kagome should be more stretch-dominated"
+    # 1) mode contrast: rigid straight beams (pts=0) are stretch-dominated,
+    #    resolvable fibers (pts=5) engage bending along their length
+    r0 = build('square', 1.3, pts=0)
+    r5 = build('square', 1.3, pts=5)
+    b0, a0, _ = frac(r0)
+    b5, a5, _ = frac(r5)
+    print(f'[e2] mode contrast: pts0 bend_frac={b0[-1]:.2f} '
+          f'pts5 bend_frac={b5[-1]:.2f}')
+    assert b5[-1] > b0[-1], 'resolvable fibers should engage bending'
+    assert a0[-1] > a5[-1], 'rigid straight beams should be stretch-dominated'
 
-    # 2) contact engages + adds hardening on reentrant at high stretch
-    rc = build("reentrant", 2.2, use_contact=True)
-    rn = build("reentrant", 2.2, use_contact=False)
+    # 2) contact engages + adds hardening on a user-bowed reentrant
+    #    (pristine primitives carry no deformation by design)
+    bow = [[x * 1.5, y * 1.5] for x, y in
+           fit_spectrum(SPECTRUM_PRESETS["auxetic_bow"], 2)]
+    rc = build("reentrant", 2.2, use_contact=True, ld=bow)
+    rn = build("reentrant", 2.2, use_contact=False, ld=bow)
     print(f"[e2] contact PE end={rc.energies['contact'][-1]:.1f} "
           f"(axial {rc.energies['axial'][-1]:.1f})")
     assert rc.energies["contact"][-1] > 0, "no contact events at high stretch"
 
-    r_low = build("reentrant", 1.4, use_contact=True)
+    r_low = build("reentrant", 1.4, use_contact=True, ld=bow)
     print(f"[e2] contact engagement: pairs@1.4={r_low.contact_counts[-1]} "
           f"pairs@2.2={rc.contact_counts[-1]}")
     assert rc.contact_counts[-1] > r_low.contact_counts[-1], \
@@ -75,7 +81,7 @@ def main():
     r_b = build("reentrant", 2.0)
     assert np.allclose(r_a.frames_xy, r_b.frames_xy), "non-deterministic engine"
     t0 = time.time()
-    build("honeycomb", 1.5)
+    build("reentrant", 1.5)
     dt = time.time() - t0
     print(f"[e2] determinism ok; speed 8000 steps {dt:.1f}s "
           f"(wall {r_a.metadata['wall_seconds']}s)")

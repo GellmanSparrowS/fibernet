@@ -47,7 +47,8 @@ def main():
 
     # structure studio drives the shared spec
     ts = win.tab_struct
-    ts.unit_combo.setCurrentText("reentrant")
+    from fslab.structure import unit_display
+    ts.unit_combo.setCurrentText(unit_display("reentrant"))
     ts.grid_x.setValue(3); ts.grid_y.setValue(3)
     ts.pts.setValue(2); ts.seed.setValue(7)
     ts.push_spec()
@@ -80,7 +81,7 @@ def main():
     assert b1 > 200, "no visible backbone at final frame"
 
     # ---- stretch tab regression: chiral contact demo ----
-    ts.unit_combo.setCurrentText("chiral")
+    ts.unit_combo.setCurrentText(unit_display("chiral"))
     ts.push_spec()
     app.processEvents()
     st = win.tab_stretch
@@ -140,7 +141,7 @@ def main():
     dock.registry["set_structure"](unit="square", grid_x=3, grid_y=3,
                                      pts=3, seed=11)
     app.processEvents()
-    assert ts.unit_combo.currentText() == "square"
+    assert ts.unit_combo.currentText() == unit_display("square")
     dock.registry["set_line_displacements"](
         displacements=[[0, 0.1], [0, -0.1], [0, 0.05]])
     app.processEvents()

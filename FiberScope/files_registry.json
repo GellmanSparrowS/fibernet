@@ -1,13 +1,13 @@
-﻿{
+{
  "fslab/fibernet_bridge.py": {
   "purpose": "stub-package loader for fibernet.gen.pattern (no heavy __init__)",
   "key": "ensure_fibernet(); FIBERNET_ROOT env; frozen->vendored bundle import",
   "status": "stable"
  },
  "fslab/structure.py": {
-  "purpose": "parametric structure factory",
-  "key": "line_displacements periodic table; seeded jitter amp 0.35*CELL*pert; UNIT_PRESETS without voronoi (primitives carry no intrinsic randomness); CELL=10",
-  "status": "v3"
+  "purpose": "parametric structure factory v7",
+  "key": "BASE_UNIT_KEYS=square+classic(no honeycomb); SPECTRUM presets folded into square; voronoi; per-edge rotated displacement",
+  "status": "v8"
  },
  "fslab/engine2.py": {
   "purpose": "numpy physics core",
@@ -25,9 +25,9 @@
   "status": "v2"
  },
  "fslab/inverse.py": {
-  "purpose": "inverse design two-stage",
-  "key": "TARGETS curves + SCALARS; fixed_unit lock (stage-1 screens only current unit); CEM over line point values (2*pts+1 dims); best_spec; metrics_of loading-phase",
-  "status": "v3"
+  "purpose": "inverse design two-stage v6",
+  "key": "TARGETS J/C/linear; LD_AMP=0.45; CEM wide-then-shrink schedule; fixed_unit lock; pts-aware",
+  "status": "v6"
  },
  "scripts/run_exploration.py": {
   "purpose": "offline exploration log generator",
@@ -35,14 +35,14 @@
   "status": "ran(240 evals)"
  },
  "scripts/build_exe.py": {
-  "purpose": "PyInstaller onedir build",
-  "key": "--icon assets/icon.ico; --add-data assets; minimal hiddens; excludes",
-  "status": "v2"
+  "purpose": "PyInstaller onedir + ICU fix",
+  "key": "strip collected icu*.dll; bundle Windows System32 icuuc.dll (plain ucnv_* exports); icon/assets data",
+  "status": "v3"
  },
  "studio/i18n.py": {
-  "purpose": "zh/en TEXT",
-  "key": "sim view keys; ai_thinking/ai_done/ai_fallback; neutral key hint; version chip v0.9",
-  "status": "v3"
+  "purpose": "zh/en TEXT v5",
+  "key": "V1.0 chip; replay_toggle; colored energy legend text",
+  "status": "v5"
  },
  "studio/theme.py": {
   "purpose": "visual system v2",
@@ -50,14 +50,14 @@
   "status": "v3"
  },
  "studio/network_canvas.py": {
-  "purpose": "canvas",
-  "key": "static preview mode; percolation/strain artwork; legend chip overlay; pan/zoom; pixmap cache",
-  "status": "v2"
+  "purpose": "canvas v4",
+  "key": "node-dot threshold for large nets (<=800); fixed run viewport",
+  "status": "v4"
  },
  "studio/design_tab.py": {
-  "purpose": "tab3",
-  "key": "scalar+curve targets; pre-stretch inset; set_spec locks fixed_unit; show_external fills tab from AI-run inverse design; apply_structure",
-  "status": "v4"
+  "purpose": "design tab v6",
+  "key": "target preview at start (TARGETS/scalars label); fixed_pts=5; collapsible replay; convergence autoRange",
+  "status": "v6"
  },
  "studio/replay_tab.py": {
   "purpose": "exploration replay",
@@ -65,14 +65,14 @@
   "status": "v3"
  },
  "studio/main.py": {
-  "purpose": "MainWindow v3",
-  "key": "header AI button toggles AIPanel in central QSplitter (ai_dock alias); 4 tabs structure/sim/design/replay; icon; min 1120x700",
+  "purpose": "MainWindow v4",
+  "key": "7 tabs structure/sim/features/ml/design(+replay)/surface; surface follows structure_changed; AI panel central splitter",
   "status": "v4"
  },
  "run.py": {
   "purpose": "entry",
-  "key": "--lang --theme --smoke; smoke=full 4-tab headless check incl. frozen, writes smoke_result.txt",
-  "status": "validated"
+  "key": "--lang --theme --smoke; smoke uses unit_display for display names",
+  "status": "v5"
  },
  "tests/*": {
   "purpose": "selftest, selftest_engine2, selftest_inverse, gui_smoke",
@@ -84,9 +84,9 @@
   "status": "shipped"
  },
  "studio/structure_tab.py": {
-  "purpose": "structure studio",
-  "key": "LineEditor big handles + DispRow QGridLayout numeric X/Y% (pts<=6, 3 pairs/row); wrapping gallery; default pert 8%; export; load_spec API",
-  "status": "v4"
+  "purpose": "structure tab v5",
+  "key": "base-unit gallery + square spectrum dropdown; per-edge edit preview; LineEditor zoom; 1x1 gallery",
+  "status": "v5"
  },
  "assets/icon.ico": {
   "purpose": "app icon",
@@ -104,15 +104,48 @@
   "status": "new"
  },
  "studio/ai_assistant.py": {
-  "purpose": "AI assistant right panel (DeepSeek function-calling)",
-  "key": "resizable panel; hidden prompt + dynamic context; feedback; theme-aware chat + refresh_theme; replay tools; inverse locked + pushed to design tab; config key persisted",
-  "status": "v2"
+  "purpose": "AI assistant v6",
+  "key": "SKILL_DOC + get_skill_doc tool; auto tab switch; 18 tools; SSL retry fallback",
+  "status": "v7"
  },
  "studio/sim_tab.py": {
-  "purpose": "tab: unified live sim (percolation + stretch)",
-  "key": [
-   "view combo perc/strain sharing one run; right col order force->mode->perc; transport+autoplay; progress bar; red-dot contact legend; run_sync"
-  ],
+  "purpose": "sim tab v4",
+  "key": "SciAxis; colored mode-energy legend (rich text)",
+  "status": "v4"
+ },
+ "fslab/features.py": {
+  "purpose": "structure feature extraction (numpy) v2",
+  "key": "compute_features; metrics aligned with reference Features.py (orient/degree entropy, unweighted anisotropy); histogram arrays",
+  "status": "v2"
+ },
+ "studio/features_tab.py": {
+  "purpose": "features dashboard v3",
+  "key": "radar fingerprint + mini structure snapshot; short 3-char labels; cards/histograms",
+  "status": "v3"
+ },
+ "fslab/surface3d.py": {
+  "purpose": "3D surface mapping math",
+  "key": "quad OBJ drape; in-face pattern; spectrum deformation; edge fibers",
+  "status": "v1"
+ },
+ "studio/surface_tab.py": {
+  "purpose": "3D surface tab v3",
+  "key": "3 bundled 500 OBJs; import OBJ; reset view; bigger before canvas; apply_structure follow",
+  "status": "v3"
+ },
+ "fslab/mlmodel.py": {
+  "purpose": "ML surrogate + training",
+  "key": "MLP(hidden,seed); dynamic loss; early stop; r2_score; resumable dataset",
+  "status": "v1"
+ },
+ "studio/ml_tab.py": {
+  "purpose": "ML tab v2",
+  "key": "loss curves via setData buffer (appendData was a no-op in pyqtgraph 0.14)",
+  "status": "v2"
+ },
+ "docs/AI_TOOLS.md": {
+  "purpose": "AI assistant tool API reference",
+  "key": "18 tools list + payload examples",
   "status": "v1"
  }
 }

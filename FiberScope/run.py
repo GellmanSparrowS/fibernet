@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 def main():
     ap = argparse.ArgumentParser(description="FiberScope")
     ap.add_argument("--lang", default="zh", choices=["zh", "en"])
-    ap.add_argument("--theme", default="dark", choices=["dark", "light"])
+    ap.add_argument("--theme", default="light", choices=["dark", "light"])
     ap.add_argument("--smoke", action="store_true",
                     help="offscreen smoke mode: quit after 1.5s")
     args = ap.parse_args()
@@ -22,6 +22,7 @@ def main():
 
     from PySide6.QtWidgets import QApplication
     from studio.main import MainWindow
+    from fslab.structure import unit_display
 
     app = QApplication(sys.argv)
     app.setApplicationName("FiberScope")
@@ -48,6 +49,7 @@ def _emit(msg):
 
 
 def _smoke_checks(app, win):
+    from fslab.structure import unit_display
     """Headless end-to-end check of all four tabs (also valid in the frozen
     exe): percolation, stretch+contact, exploration replay, inverse design."""
     import traceback
@@ -55,7 +57,7 @@ def _smoke_checks(app, win):
     try:
         # 0) structure studio drives the shared spec
         ts = win.tab_struct
-        ts.unit_combo.setCurrentText("reentrant")
+        ts.unit_combo.setCurrentText(unit_display("reentrant"))
         ts.grid_x.setValue(3); ts.grid_y.setValue(3)
         ts.pts.setValue(2); ts.seed.setValue(7)
         ts.push_spec()
@@ -73,7 +75,7 @@ def _smoke_checks(app, win):
         assert tab.perc.perc_frame >= 0, "expected percolation in smoke config"
 
         # 2) stretch: chiral rotation-induced contacts
-        ts.unit_combo.setCurrentText("chiral")
+        ts.unit_combo.setCurrentText(unit_display("chiral"))
         ts.push_spec()
         app.processEvents()
         st = win.tab_stretch

@@ -22,12 +22,15 @@ from .structure_tab import StructureTab
 from .sim_tab import SimTab
 from .design_tab import DesignTab
 from .replay_tab import ReplayTab
+from .features_tab import FeaturesTab
+from .surface_tab import SurfaceTab
+from .ml_tab import MLTab
 from .ai_assistant import AIPanel
 from .theme import build_palette, build_qss
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, lang: str = "zh", mode: str = "dark"):
+    def __init__(self, lang: str = "zh", mode: str = "light"):
         super().__init__()
         set_lang(lang)
         self.mode = mode
@@ -77,10 +80,17 @@ class MainWindow(QMainWindow):
         self.tab_stretch = self.tab_sim
         self.tab_design = DesignTab(mode=self.mode)
         self.tab_replay = ReplayTab(mode=self.mode)
+        self.tab_features = FeaturesTab(mode=self.mode)
+        self.tab_surface = SurfaceTab(mode=self.mode)
+        self.tab_ml = MLTab(mode=self.mode)
+        # order: structure / sim / features / ml / design(+replay) / surface
         self.tabs.addTab(self.tab_struct, "")
         self.tabs.addTab(self.tab_sim, "")
+        self.tabs.addTab(self.tab_features, "")
+        self.tabs.addTab(self.tab_ml, "")
         self.tabs.addTab(self.tab_design, "")
-        self.tabs.addTab(self.tab_replay, "")
+        self.tabs.addTab(self.tab_surface, "")
+        self.tab_design.embed_replay(self.tab_replay)
         self.tab_struct.structure_changed.connect(
             self.tab_sim.set_spec)
         self.tab_struct.structure_changed.connect(
@@ -89,6 +99,11 @@ class MainWindow(QMainWindow):
             self.tab_struct.load_spec)
         self.tab_replay.apply_structure.connect(
             self.tab_struct.load_spec)
+        self.tab_struct.structure_changed.connect(
+            self.tab_features.set_factory)
+        if hasattr(self.tab_surface, "apply_structure"):
+            self.tab_struct.structure_changed.connect(
+                self.tab_surface.apply_structure)
 
         central = QWidget()
         outer = QVBoxLayout(central)
@@ -102,7 +117,7 @@ class MainWindow(QMainWindow):
         self.split.addWidget(self.ai_panel)
         self.split.setStretchFactor(0, 1)
         self.split.setStretchFactor(1, 0)
-        self.split.setSizes([960, 400])
+        self.split.setSizes([860, 500])
         self.ai_panel.hide()
         outer.addWidget(self.split, 1)
         self.setCentralWidget(central)
@@ -118,8 +133,10 @@ class MainWindow(QMainWindow):
         app.setPalette(build_palette(self.mode))
         app.setStyleSheet(build_qss(self.mode))
         for t in (self.tab_struct, self.tab_sim,
-                  self.tab_design, self.tab_replay):
-            t.set_mode(self.mode)
+                  self.tab_design, self.tab_replay, self.tab_features,
+                  self.tab_surface, self.tab_ml):
+            if t is not None:
+                t.set_mode(self.mode)
         self.ai_panel.refresh_theme()
 
     def _toggle_theme(self):
@@ -141,8 +158,10 @@ class MainWindow(QMainWindow):
         self.ver_chip.setText(tr("version_chip"))
         self.tabs.setTabText(0, tr("tab_structure"))
         self.tabs.setTabText(1, tr("tab_sim"))
-        self.tabs.setTabText(2, tr("tab_design"))
-        self.tabs.setTabText(3, tr("tab_replay"))
+        self.tabs.setTabText(2, tr("tab_features"))
+        self.tabs.setTabText(3, tr("tab_ml"))
+        self.tabs.setTabText(4, tr("tab_design"))
+        self.tabs.setTabText(5, tr("tab_surface"))
         self.theme_btn.setText(tr("theme_btn") if self.mode == "dark"
                                else "Dark")
         self.ai_btn.setText(tr("ai_btn"))
@@ -151,3 +170,6 @@ class MainWindow(QMainWindow):
         self.tab_sim.retranslate()
         self.tab_design.retranslate()
         self.tab_replay.retranslate()
+        self.tab_features.retranslate()
+        self.tab_surface.retranslate()
+        self.tab_ml.retranslate()

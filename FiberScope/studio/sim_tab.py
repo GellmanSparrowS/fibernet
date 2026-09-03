@@ -20,6 +20,13 @@ from .network_canvas import NetworkCanvas
 from .structure_tab import spec_text
 from .theme import apply_plot_theme, colors
 
+
+class SciAxis(pg.AxisItem):
+    """Left axis with scientific-notation tick labels."""
+
+    def tickStrings(self, values, scale, spacing):
+        return ["0" if v == 0 else "%.1e" % v for v in values]
+
 import sys as _sys
 
 
@@ -209,7 +216,7 @@ class SimTab(QWidget):
         kv = QVBoxLayout(self.gb_curve)
         self.plot = pg.PlotWidget()
         self.plot.setMenuEnabled(False)
-        self.plot.setMinimumHeight(140)
+        self.plot.setFixedHeight(150)
         self.curve_p = self.plot.plot(
             pen=pg.mkPen(colors(self.mode)["accent"], width=2))
         self.curve_b = self.plot.plot(
@@ -228,9 +235,9 @@ class SimTab(QWidget):
 
         self.gb_force = QGroupBox()
         fvv = QVBoxLayout(self.gb_force)
-        self.plot_f = pg.PlotWidget()
+        self.plot_f = pg.PlotWidget(axisItems={"left": SciAxis("left")})
         self.plot_f.setMenuEnabled(False)
-        self.plot_f.setMinimumHeight(130)
+        self.plot_f.setFixedHeight(130)
         self.curve_f = self.plot_f.plot(
             pen=pg.mkPen(colors(self.mode)["accent"], width=2))
         self.marker_f = pg.InfiniteLine(angle=90, movable=False,
@@ -244,7 +251,7 @@ class SimTab(QWidget):
         mv = QVBoxLayout(self.gb_mode)
         self.plot_m = pg.PlotWidget()
         self.plot_m.setMenuEnabled(False)
-        self.plot_m.setMinimumHeight(130)
+        self.plot_m.setFixedHeight(120)
         self.plot_m.setYRange(0, 1)
         self.fill_a = None
         self.m_c1 = self.plot_m.plot(pen=pg.mkPen(colors(self.mode)["accent"],
@@ -270,8 +277,8 @@ class SimTab(QWidget):
         evx.addWidget(self.lbl_explain)
         rv.addWidget(self.gb_explain)
         rv.addStretch(1)
-        right.setMinimumWidth(260)
-        right.setMaximumWidth(400)
+        right.setMinimumWidth(250)
+        right.setMaximumWidth(340)
         right_wrap.setWidget(right)
         body.addWidget(right_wrap)
 
@@ -509,8 +516,12 @@ class SimTab(QWidget):
         self.run_btn.setText(tr("run_btn"))
         self.lbl_legend.setText(
             f"— {tr('perc_order')}   - - {tr('backbone')}")
+        c = colors(self.mode)
+        self.lbl_legend_m.setTextFormat(Qt.RichText)
         self.lbl_legend_m.setText(
-            f"— {tr('m_axial')}  — {tr('m_bend')}  — {tr('m_contact')}")
+            f'<span style="color:{c["accent"]}">— {tr("m_axial")}</span>'
+            f'  <span style="color:{c["warn"]}">— {tr("m_bend")}</span>'
+            f'  <span style="color:#ff5d47">— {tr("m_contact")}</span>')
         self.play_btn.setText(tr("pause_btn") if self._play_timer.isActive()
                               else tr("play_btn"))
         self._set_view(self.view_combo.currentIndex())

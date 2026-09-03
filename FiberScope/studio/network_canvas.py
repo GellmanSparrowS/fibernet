@@ -77,6 +77,13 @@ class NetworkCanvas(QWidget):
         self.frame = 0
         self.zoom, self.pan_x, self.pan_y = 1.0, 0.0, 0.0
         self._contact_cum = None
+        allxy = np.concatenate([np.asarray(f, float)
+                                for f in run.frames_xy])
+        pad = 0.6
+        self._run_rect = QRectF(
+            float(allxy[:, 0].min()) - pad, float(allxy[:, 1].min()) - pad,
+            float(allxy[:, 0].ptp()) + 2 * pad,
+            float(allxy[:, 1].ptp()) + 2 * pad)
         cf = getattr(run, "contact_frames", None)
         if cf is not None:
             cum, acc = [], set()
@@ -100,14 +107,15 @@ class NetworkCanvas(QWidget):
     # ---------------- transform ----------------
     def _world_rect(self) -> QRectF:
         if self.run is not None:
-            xy = self.run.frames_xy[self.frame]
-        elif self.static is not None:
+            # fixed viewport over ALL frames: playback shows the sample
+            # stretching left->right inside a stable window (no re-zoom)
+            return self._run_rect
+        if self.static is not None:
             xy = self.static["pos"]
-        else:
-            return QRectF(0, 0, 1, 1)
-        pad = 0.6
-        return QRectF(xy[:, 0].min() - pad, xy[:, 1].min() - pad,
-                      xy[:, 0].ptp() + 2 * pad, xy[:, 1].ptp() + 2 * pad)
+            pad = 0.6
+            return QRectF(xy[:, 0].min() - pad, xy[:, 1].min() - pad,
+                          xy[:, 0].ptp() + 2 * pad, xy[:, 1].ptp() + 2 * pad)
+        return QRectF(0, 0, 1, 1)
 
     def _transform(self):
         wr = self._world_rect()
@@ -190,12 +198,14 @@ class NetworkCanvas(QWidget):
                         p.setPen(QPen(col, 2.6))
                         p.drawLine(pt(edges[k, 0]), pt(edges[k, 1]))
 
-        # nodes
+        # nodes (skip individual dots on large nets; they overlap and
+        # dominate paint time for no visual gain)
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(c["sub"]))
         r = max(1.6, 0.05 * s)
-        for i in range(xy.shape[0]):
-            p.drawEllipse(pt(i), r, r)
+        if xy.shape[0] <= 800:
+            for i in range(xy.shape[0]):
+                p.drawEllipse(pt(i), r, r)
         # grips
         p.setBrush(QColor(c["warn"]))
         for i in np.concatenate([run.left_nodes, run.right_nodes]):
@@ -230,8 +240,9 @@ class NetworkCanvas(QWidget):
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(c["sub"]))
         r = max(1.4, 0.045 * s)
-        for x, y in st["pos"]:
-            p.drawEllipse(w2s(x, y), r, r)
+        if len(st["pos"]) <= 800:
+            for x, y in st["pos"]:
+                p.drawEllipse(w2s(x, y), r, r)
         if st["left"] is not None:
             p.setBrush(QColor(c["warn"]))
             for i in np.concatenate([st["left"], st["right"]]):

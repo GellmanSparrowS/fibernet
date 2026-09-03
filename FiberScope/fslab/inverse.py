@@ -19,15 +19,13 @@ from .engine2 import Engine2
 from .simcache import RunConfig
 from .structure import UNIT_PRESETS
 
-LD_AMP = 0.25          # max line-point displacement fraction in CEM
+LD_AMP = 0.45          # max line-point displacement fraction in CEM
 PTS = 2                # intermediate points used by the optimizer
 
 TARGETS = {
     "J": lambda t: t ** 2.2,                    # delayed stiffening
     "C": lambda t: 1 - (1 - t) ** 2.2,          # early stiffening
     "linear": lambda t: t,
-    "multi": lambda t: np.clip(0.5 * t + 0.5 * np.maximum(t - 0.55, 0) / 0.45,
-                               0, 1),
 }
 
 # name -> (metric key, sign): sign=-1 means "maximize"
@@ -114,9 +112,10 @@ def decode_line_params(x, pts: int = PTS):
 
 def run_inverse(factory_builder, target_name: str, budget: int = 60,
                 seed: int = 0, stretch: float = 2.0, callback=None,
-                fixed_unit: str = None):
+                fixed_unit: str = None, pts: int = None):
     """factory_builder(unit, pert, line_displacements) -> graph.
     callback(rec, run_if_best)."""
+    pts = int(pts) if pts else PTS
     rng = np.random.default_rng(seed)
     target = target_curve(target_name) if target_name in TARGETS else None
     best_dist = np.inf
@@ -153,28 +152,34 @@ def run_inverse(factory_builder, target_name: str, budget: int = 60,
     dists.sort()
     win_unit = dists[0][1]
 
-    # stage 2: CEM over the reference-line point values (+ perturbation)
-    dim = 2 * PTS + 1
+    # stage 2: CEM over the reference-line point values (+ perturbation).
+    # The exploration radius starts wide (explore broadly) and shrinks as
+    # the budget is spent, so later evaluations polish rather than wander.
+    dim = 2 * pts + 1
     mean = np.zeros(dim)
-    std = np.array([0.5] * (2 * PTS) + [0.3])
-    pop, elite = 10, 3
+    std = np.array([0.85] * (2 * pts) + [0.5])
+    pop = max(3, min(10, int(budget - ev) if budget - ev > 0 else 3))
+    elite = max(2, min(3, pop // 3))
     X = None
     while ev < budget:
+        remaining = max(budget - ev, 1)
+        pop_n = min(pop, remaining)
         if X is None:
-            X = rng.uniform(-1, 1, (pop, dim))
+            X = rng.uniform(-1, 1, (pop_n, dim))
         else:
-            X = np.clip(mean + std[None, :] * rng.standard_normal((pop, dim)),
+            X = np.clip(mean + std[None, :] * rng.standard_normal((pop_n, dim)),
                         -1, 1)
-        X = X[: budget - ev]
+        X = X[:remaining]
         ds = []
         for x in X:
-            ld, pert = decode_line_params(x)
+            ld, pert = decode_line_params(x, pts)
             d = eval_one("refine", win_unit, x, win_unit, pert, ld)
             ds.append(d)
         order = np.argsort(ds)
-        elites = X[order[:elite]]
+        elites = X[order[:max(1, min(elite, len(order)))]]
         mean = elites.mean(0)
-        std = np.clip(elites.std(0) + 1e-3, 0.05, 1.0)
+        shrink = max(0.35, 1.0 - (ev / max(budget, 1)))
+        std = np.clip((elites.std(0) + 1e-3) * shrink, 0.06, 0.9)
 
     return {"best_dist": best_dist, "best_label": best_label,
             "best_spec": best_spec, "records": records,
