@@ -97,7 +97,7 @@ def main():
                 try:
                     sys._MEIPASS = str(folder)
                     open_in_bambu(folder/'test.stl',fake)
-                    assert calls[-1][1]['cwd'] == str(folder)
+                    assert Path(calls[-1][1]['cwd']).resolve() == folder.resolve()
                     assert str(folder) not in calls[-1][1]['env'].get('PATH','')
                 finally:
                     if original_root is None:

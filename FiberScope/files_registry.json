@@ -1034,7 +1034,7 @@
    "check_route",
    "main"
   ],
-  "sha256": "c3db4dd249ebcbfa05d46b98956dc2b73d1bed003f47860d68cf6402f5054c01"
+  "sha256": "8393dd59d60853289e0490518beebe9286e0409642aa9a147ee690e4edc50177"
  },
  "tests/selftest_obj26.py": {
   "purpose": "OBJ concavity, mixed faces, compact defaults and stable curved identities.",
