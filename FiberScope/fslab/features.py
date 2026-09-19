@@ -15,6 +15,7 @@ subdivided).  Contact detection is a pairwise segment test with a bbox
 prefilter (O(E^2); fine for E < 800).
 '''
 import numpy as np
+from .contact import ContactConfig, candidate_pairs
 
 ORIENT_BINS = 12
 
@@ -36,7 +37,11 @@ FEATURE_GROUPS = {
              'largest_pore_ratio', 'porosity', 'pore_aspect_mean',
              'pore_perim_mean', 'pore_neighbor_mean',
              'pore_areas', 'pore_aspect', 'pore_neighbor'],
-    'contact': ['cross_count', 'cross_per_edge', 'cross_pos_ratio',
+    'contact': ['contact_pair_count', 'contact_edge_ratio',
+                'contact_overlap_area', 'contact_coverage_ratio',
+                'contact_patch_count', 'contact_graph_max',
+                'contact_width', 'contact_pixel_size',
+                'cross_count', 'cross_per_edge', 'cross_pos_ratio',
                 'cross_angle_mean', 'overlap_len_mean',
                 'contact_cluster_max', 'contact_cluster_mean',
                 'overlap_len', 'cross_angle'],
@@ -90,8 +95,81 @@ FEATURE_ZH = {
     'cross_angle': '交叉角分布',
 }
 
+# English display names, mirrors FEATURE_ZH key for key
+FEATURE_EN = {
+    'n_node': 'Nodes',
+    'n_edge': 'Edges',
+    'total_length': 'Total edge length',
+    'mean_edge_len': 'Mean edge length',
+    'len_cv': 'Edge length CV',
+    'edge_len_q90': 'Edge length q90',
+    'degree_mean': 'Mean degree',
+    'degree_max': 'Max degree',
+    'junction_count': 'Junctions',
+    'degree_entropy': 'Degree entropy',
+    'orient_entropy': 'Orientation entropy',
+    'orient_bias': 'Orientation bias',
+    'anisotropy': 'Anisotropy',
+    'radius_gyration': 'Radius of gyration',
+    'boundary_ratio': 'Boundary node ratio',
+    'node_density': 'Node density',
+    'edge_density': 'Fiber line density',
+    'nn_dist_mean': 'Mean NN distance',
+    'nn_dist_cv': 'NN distance CV',
+    'straightness_mean': 'Mean chain straightness',
+    'edge_lengths': 'Edge length dist',
+    'orientations': 'Orientation dist',
+    'degree_hist': 'Degree dist',
+    'node_spacing': 'NN distance dist',
+    'segment_straightness': 'Chain straightness dist',
+    'pore_count': 'Pore count',
+    'pore_area_mean': 'Mean pore area',
+    'pore_area_cv': 'Pore area CV',
+    'largest_pore_ratio': 'Largest pore ratio',
+    'porosity': 'Porosity',
+    'pore_aspect_mean': 'Mean pore aspect',
+    'pore_perim_mean': 'Mean pore perimeter',
+    'pore_neighbor_mean': 'Mean pore neighbours',
+    'pore_areas': 'Pore area dist',
+    'pore_aspect': 'Pore aspect dist',
+    'pore_neighbor': 'Pore neighbour dist',
+    'cross_count': 'Crossings',
+    'cross_per_edge': 'Crossings per edge',
+    'cross_pos_ratio': 'Edges with crossings',
+    'cross_angle_mean': 'Mean crossing angle',
+    'overlap_len_mean': 'Mean overlap length',
+    'contact_cluster_max': 'Largest contact cluster',
+    'contact_cluster_mean': 'Mean contact cluster',
+    'overlap_len': 'Overlap length dist',
+    'cross_angle': 'Crossing angle dist',
+}
+
+
+CONTACT_KEYS = tuple(FEATURE_GROUPS.pop('contact'))
+HIST_KEYS = tuple(k for k in HIST_KEYS if k not in ('overlap_len', 'cross_angle'))
+
+
+def feature_name(key: str, lang: str = "zh") -> str:
+    """Display name of a feature key in the active UI language."""
+    table = FEATURE_ZH if lang == "zh" else FEATURE_EN
+    return table.get(key, key)
+
+
+for _key, _zh, _en in (
+    ('contact_pair_count', '带宽接触对数', 'Finite-width contact pairs'),
+    ('contact_edge_ratio', '带宽接触边占比', 'Edges with finite-width contact'),
+    ('contact_overlap_area', '重叠覆盖面积', 'Overlap coverage area'),
+    ('contact_coverage_ratio', '重叠占纤维覆盖比', 'Overlap / fiber coverage'),
+    ('contact_patch_count', '重叠区域数', 'Overlap patches'),
+    ('contact_graph_max', '最大带宽接触簇（边）', 'Largest width-contact cluster (edges)'),
+    ('contact_width', '分析纤维宽度', 'Analysis fiber width'),
+    ('contact_pixel_size', '分析像素间距', 'Analysis pixel spacing'),
+):
+    FEATURE_ZH[_key], FEATURE_EN[_key] = _zh, _en
+
 # display units for scalar cards ('°' values are stored in degrees)
 FEATURE_UNIT = {
+    'contact_width': 'u', 'contact_pixel_size': 'u', 'contact_overlap_area': 'u²',
     'total_length': 'u', 'mean_edge_len': 'u', 'edge_len_q90': 'u',
     'radius_gyration': 'u', 'nn_dist_mean': 'u', 'pore_area_mean': 'u²',
     'pore_perim_mean': 'u', 'overlap_len_mean': 'u',
@@ -305,14 +383,15 @@ def _segment_interactions(pos, edges):
     n_edge = int(edges.shape[0])
     out = dict(cross_pts=np.zeros((0, 2)),
                cross_pairs=np.zeros((0, 2), int),
-               cross_t=np.zeros((0, 2)), overlap_lens=[])
+               cross_t=np.zeros((0, 2)), overlap_lens=[], overlap_pairs=[])
     if n_edge < 2:
         return out
     p1 = pos[edges[:, 0]]
     p2 = pos[edges[:, 1]]
     lo = np.minimum(p1, p2)
     hi = np.maximum(p1, p2)
-    ia, ib = np.triu_indices(n_edge, 1)
+    candidates = np.asarray(list(candidate_pairs(pos, edges, 1e-9)), int).reshape(-1, 2)
+    ia, ib = candidates[:, 0], candidates[:, 1]
     share = ((edges[ia, 0] == edges[ib, 0]) | (edges[ia, 0] == edges[ib, 1])
              | (edges[ia, 1] == edges[ib, 0]) | (edges[ia, 1] == edges[ib, 1]))
     pad = 1e-9
@@ -354,6 +433,7 @@ def _segment_interactions(pos, edges):
                   - np.maximum(0.0, np.minimum(tc, td)))
             good = ov > 1e-9
             out['overlap_lens'] = (ov[good] * lr[idx][good]).tolist()
+            out['overlap_pairs'] = np.column_stack((ia[idx][good], ib[idx][good])).tolist()
     return out
 
 
@@ -556,7 +636,7 @@ def _contact_features(pos, edges, inter):
             x = parent[x]
         return x
 
-    for a, b in cp:
+    for a, b in list(cp) + inter.get('overlap_pairs', []):
         a, b = int(a), int(b)
         parent.setdefault(a, a)
         parent.setdefault(b, b)
@@ -574,7 +654,7 @@ def _contact_features(pos, edges, inter):
     return feats
 
 
-def compute_features(pos, edges, rect=None):
+def compute_features(pos, edges, rect=None, contact_config=None, include_contact=False):
     '''Scalar feature dict + histogram arrays for one network snapshot.'''
     pos, edges = _filter_region(pos, edges, rect)
     feats, lens, ang, deg = _structure_features(pos, edges)
@@ -583,7 +663,9 @@ def compute_features(pos, edges, rect=None):
     area = _region_area(pos, rect)
     pore_feats, pore_arr = _pore_features(pos, edges, inter, area)
     feats.update(pore_feats)
-    feats.update(_contact_features(pos, edges, inter))
+    if include_contact:
+        feats.update(_contact_features(pos, edges, inter))
+        feats.update((contact_config or ContactConfig()).compute(pos, edges))
     feats['edge_lengths'] = lens
     feats['orientations'] = ang
     feats['pore_areas'] = pore_arr['areas']

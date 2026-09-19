@@ -10,20 +10,25 @@ import sys as _sys
 
 import numpy as np
 import pyqtgraph as pg
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal, QTimer
 from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QFormLayout,
                                QGroupBox, QHBoxLayout, QLabel,
                                QProgressBar, QPushButton, QSlider,
                                QSpinBox, QSplitter, QVBoxLayout, QWidget)
 
 from fslab import UNIT_PRESETS
+from fslab.structure import all_unit_keys, unit_display
 from fslab.mlmodel import MLP, TARGET_NAMES, gen_dataset, r2_score
+from fslab.learning import Regressor, MODEL_SPECS, ACQUISITIONS
+from fslab.dataset_stream import dataset_config, config_id
+from .i18n import tr, get_lang
 from .theme import apply_plot_theme, colors
 
 
 def _cache_dir():
     if getattr(_sys, 'frozen', False):
-        return os.path.join(os.path.dirname(_sys.executable), '_cache')
+        from fslab.storage import writable_data_dir
+        return writable_data_dir('datasets')
     return os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '_cache')
 
@@ -38,9 +43,10 @@ class GenWorker(QThread):
     done = Signal(object, object, str)   # X, Y, path
     failed = Signal(str)
 
-    def __init__(self, unit, n, amp, pert, seed0, path, parent=None):
+    def __init__(self, unit, n, amp, pert, seed0, path, parent=None, mode='physics', acquisition='random', model=None):
         super().__init__(parent)
         self.unit, self.n, self.amp = unit, int(n), float(amp)
+        self.label_mode, self.acquisition, self.model = mode, acquisition, model
         self.pert, self.seed0, self.path = float(pert), int(seed0), path
         self._stop = False
 
@@ -53,7 +59,8 @@ class GenWorker(QThread):
                 self.unit, self.n, self.amp, self.pert, self.seed0,
                 self.path,
                 progress_cb=lambda i, n: self.progress.emit(i, n),
-                stop_cb=lambda: self._stop)
+                stop_cb=lambda: self._stop, mode=self.label_mode,
+                acquisition=self.acquisition, model=self.model)
             self.done.emit(X, Y, self.path)
         except Exception as e:
             self.failed.emit('%s: %s' % (e.__class__.__name__, e))
@@ -66,9 +73,10 @@ class TrainWorker(QThread):
     failed = Signal(str)
 
     def __init__(self, X, Y, hidden, lr, epochs, patience, min_delta,
-                 parent=None):
+                 parent=None, algorithm='mlp', parameters=None):
         super().__init__(parent)
         self.X, self.Y = X, Y
+        self.algorithm, self.parameters = algorithm, parameters
         self.hidden, self.lr = int(hidden), float(lr)
         self.epochs, self.patience = int(epochs), int(patience)
         self.min_delta = float(min_delta)
@@ -79,7 +87,7 @@ class TrainWorker(QThread):
 
     def run(self):
         try:
-            model = MLP(hidden=self.hidden)
+            model = Regressor(self.algorithm, self.parameters or ({'hidden': self.hidden} if self.algorithm in ('mlp', 'deep_mlp') else {}))
             hist = model.train(
                 self.X, self.Y, lr=self.lr, epochs=self.epochs,
                 patience=self.patience, min_delta=self.min_delta,
@@ -90,40 +98,29 @@ class TrainWorker(QThread):
             self.failed.emit('%s: %s' % (e.__class__.__name__, e))
 
 
-T = {
-    'zh': {
-        'gb_data': '数据集', 'unit': '结构类型', 'count': '生成数量',
-        'amp': '变形幅度', 'pert': '节点扰动',
-        'gb_train': '训练', 'lr': '学习率', 'epochs': '轮数',
-        'hidden': '隐层宽度', 'patience': '早停耐心',
-        'min_delta': '早停阈值',
-        'gen': '生成数据集', 'train': '开始训练', 'stop': '停止',
-        'loss': 'Loss 曲线 (MSE)', 'scatter': '预测 vs 真实',
-        'target': '目标', 'targets': ('峰值力', '刚度', '韧性'),
-        'ready': '就绪', 'need_data': '请先生成数据集',
-        'busy_gen': '正在生成数据集…', 'busy_train': '正在训练…',
-    },
-    'en': {
-        'gb_data': 'DATASET', 'unit': 'Unit type', 'count': 'Sample count',
-        'amp': 'Deformation amp', 'pert': 'Node jitter',
-        'gb_train': 'TRAINING', 'lr': 'Learning rate', 'epochs': 'Epochs',
-        'hidden': 'Hidden width', 'patience': 'Early-stop patience',
-        'min_delta': 'Early-stop min delta',
-        'gen': 'Generate dataset', 'train': 'Start training', 'stop': 'Stop',
-        'loss': 'Loss curves (MSE)', 'scatter': 'Predicted vs actual',
-        'target': 'Target', 'targets': ('Peak force', 'Stiffness',
-                                        'Toughness'),
-        'ready': 'Ready', 'need_data': 'Generate a dataset first',
-        'busy_gen': 'Generating dataset...', 'busy_train': 'Training...',
-    },
-}
+_ML_KEYS = ('gb_data', 'unit', 'count', 'amp', 'pert', 'gb_train', 'lr',
+            'epochs', 'hidden', 'patience', 'min_delta', 'gen', 'train',
+            'stop', 'loss', 'scatter', 'target', 'targets', 'ready',
+            'need_data', 'busy_gen', 'busy_train')
+
+
+def _T():
+    # this tab reads the central i18n table (keys under ml_*)
+    return {k: tr('ml_' + k) for k in _ML_KEYS}
+
+
 
 
 class MLTab(QWidget):
+    apply_structure = Signal(object)
     def __init__(self, mode='dark', parent=None):
         super().__init__(parent)
         self.mode = mode
-        self.lang = 'zh'
+        self.algorithm, self.parameters, self.acquisition = 'mlp', {}, 'random'
+        self.label_mode = 'physics'
+        self.trained_model = None
+        self.sample_specs = []
+        self._train_after_generation = False
         self.X = None
         self.Y = None
         self.model = None
@@ -152,18 +149,20 @@ class MLTab(QWidget):
         df.setSpacing(8)
         self.lbl_unit = QLabel()
         self.unit_combo = QComboBox()
-        self.unit_combo.addItems(list(UNIT_PRESETS))
+        for key in all_unit_keys():
+            self.unit_combo.addItem(unit_display(key, get_lang()), key)
+        self.unit_combo.setCurrentIndex(self.unit_combo.findData('hexagon'))
         self.unit_combo.currentIndexChanged.connect(self._load_existing)
         df.addRow(self.lbl_unit, self.unit_combo)
         self.lbl_n = QLabel()
         self.n_spin = QSpinBox()
-        self.n_spin.setRange(10, 200)
+        self.n_spin.setRange(10, 2000)
         self.n_spin.setValue(60)
         df.addRow(self.lbl_n, self.n_spin)
         self.lbl_amp = QLabel()
         arow = QHBoxLayout()
         self.amp_slider = QSlider(Qt.Horizontal)
-        self.amp_slider.setRange(0, 35)          # 0 .. 0.35
+        self.amp_slider.setRange(0, 100)         # 0 .. 1.0
         self.amp_slider.setValue(20)             # default 0.20
         self.amp_val = QLabel('0.20')
         self.amp_val.setObjectName('chip')
@@ -175,7 +174,7 @@ class MLTab(QWidget):
         self.lbl_pert = QLabel()
         prow = QHBoxLayout()
         self.pert_slider = QSlider(Qt.Horizontal)
-        self.pert_slider.setRange(0, 30)         # 0 .. 0.30
+        self.pert_slider.setRange(0, 100)        # 0 .. 1.0
         self.pert_slider.setValue(10)            # default 0.10
         self.pert_val = QLabel('0.10')
         self.pert_val.setObjectName('chip')
@@ -184,6 +183,25 @@ class MLTab(QWidget):
         prow.addWidget(self.pert_slider)
         prow.addWidget(self.pert_val)
         df.addRow(self.lbl_pert, prow)
+        self.mode_combo = QComboBox()
+        for key in ('physics',):
+            self.mode_combo.addItem(key, key)
+        self.mode_combo.currentIndexChanged.connect(self._load_existing)
+        self.mode_combo.hide()
+        self.data_note = QLabel()
+        self.data_note.setWordWrap(True)
+        self.data_note.hide()
+        self.algorithm_btn = QPushButton()
+        self.algorithm_btn.clicked.connect(self._configure)
+        df.addRow(self.algorithm_btn)
+        self.sample_spin = QSpinBox()
+        self.sample_spin.setRange(1, 1)
+        self.apply_sample_btn = QPushButton()
+        self.apply_sample_btn.clicked.connect(self._apply_sample)
+        sample_row = QHBoxLayout()
+        sample_row.addWidget(self.sample_spin)
+        sample_row.addWidget(self.apply_sample_btn)
+        df.addRow(sample_row)
         lv.addWidget(self.gb_data)
 
         self.gb_train = QGroupBox()
@@ -203,6 +221,7 @@ class MLTab(QWidget):
         self.hidden_spin = QSpinBox()
         self.hidden_spin.setRange(4, 256)
         self.hidden_spin.setValue(32)
+        self.hidden_spin.valueChanged.connect(self._hidden_changed)
         tf.addRow(self.lbl_hidden, self.hidden_spin)
         self.lbl_patience = QLabel()
         self.patience_spin = QSpinBox()
@@ -261,9 +280,9 @@ class MLTab(QWidget):
         lpi.addLegend()
         c = colors(self.mode)
         self.tr_curve = lpi.plot([], [], pen=pg.mkPen(c['accent'], width=2),
-                                 name='train')
+                                 name='train', symbol='o', symbolSize=4)
         self.va_curve = lpi.plot([], [], pen=pg.mkPen(c['hot'], width=2),
-                                 name='val')
+                                 name='val', symbol='o', symbolSize=4)
         rv.addWidget(self.loss_plot, 3)
 
         r2row = QHBoxLayout()
@@ -279,6 +298,7 @@ class MLTab(QWidget):
         for _ in TARGET_NAMES:
             lab = QLabel('--')
             lab.setObjectName('chip')
+            lab.setWordWrap(True)
             self.r2_labels.append(lab)
             r2row.addWidget(lab)
         rv.addLayout(r2row)
@@ -293,36 +313,92 @@ class MLTab(QWidget):
         self.scatter = pg.ScatterPlotItem(
             size=7, pen=pg.mkPen(None), brush=pg.mkBrush(c['accent2']))
         spi.addItem(self.scatter)
+        self.scatter_plot.setMinimumHeight(180)
         rv.addWidget(self.scatter_plot, 2)
 
         body.addWidget(right)
         outer.addWidget(body, 1)
 
     # ---------------- dataset generation ----------------
+    def _apply_sample(self):
+        from fslab.structure import StructureFactory
+        if self.sample_specs:
+            self.apply_structure.emit(StructureFactory(**self.sample_specs[self.sample_spin.value()-1]))
+
+    def _read_specs(self, path):
+        import json
+        self.sample_specs = []
+        if os.path.exists(path):
+            try:
+                with np.load(path, allow_pickle=False) as z:
+                    if 'specs' in z:
+                        self.sample_specs = json.loads(str(z['specs']))
+            except (ValueError, OSError, KeyError):
+                self.sample_specs = []
+        self.sample_spin.setRange(1, max(1, len(self.sample_specs)))
+        self.apply_sample_btn.setEnabled(bool(self.sample_specs))
+
+    def _hidden_changed(self, value):
+        if self.algorithm in ('mlp', 'deep_mlp'):
+            self.parameters['hidden'] = int(value)
+            self.trained_model = None
+
+    def _sync_model_controls(self):
+        neural = self.algorithm in ('mlp', 'deep_mlp')
+        for widget in (self.lr_combo, self.epochs_spin, self.hidden_spin,
+                       self.patience_spin, self.mindelta_spin):
+            widget.setEnabled(neural)
+        if neural and 'hidden' in self.parameters:
+            self.hidden_spin.setValue(int(self.parameters['hidden']))
+
+    def _configure(self):
+        from .algorithm_dialog import AlgorithmDialog
+        dialog = AlgorithmDialog(MODEL_SPECS, self.algorithm, {self.algorithm: self.parameters},
+                                 ACQUISITIONS, self.acquisition, self)
+        if dialog.exec():
+            self.trained_model = None
+            self.algorithm, self.parameters = dialog.selection()
+            self._sync_model_controls()
+            self.acquisition = dialog.acquisition.currentData()
+            self.algorithm_btn.setText(MODEL_SPECS[self.algorithm][0 if get_lang() == 'zh' else 1] + ' · …')
+            self._load_existing()
+
+    def _dataset_path(self):
+        unit = self.unit_combo.currentData()
+        config = dataset_config(unit, self.amp_slider.value()/100., self.pert_slider.value()/100.,
+                                0, self.mode_combo.currentData(), self.acquisition)
+        return os.path.join(_cache_dir(), 'ml_' + config_id(config) + '.npz')
+
     def start_gen(self):
         if self._busy():
             return
-        unit = self.unit_combo.currentText()
-        path = dataset_path(unit)
+        unit = self.unit_combo.currentData()
+        path = self._dataset_path()
+        if self.mode_combo.currentData() == 'surrogate':
+            import uuid
+            path = path[:-4] + '_' + uuid.uuid4().hex[:8] + '.npz'
         amp = self.amp_slider.value() / 100.0
         pert = self.pert_slider.value() / 100.0
         self.gen_worker = GenWorker(unit, self.n_spin.value(), amp, pert,
-                                    0, path, self)
+                                    0, path, self, mode=self.mode_combo.currentData(),
+                                    acquisition=self.acquisition, model=self.trained_model)
         self.gen_worker.progress.connect(self._gen_progress)
         self.gen_worker.done.connect(self._gen_done)
         self.gen_worker.failed.connect(self._worker_failed)
         self._set_busy(True)
         self.progress.setValue(0)
-        self.status.setText(T[self.lang]['busy_gen'])
+        self.status.setText(_T()['busy_gen'])
         self.gen_worker.start()
 
     def _gen_progress(self, i, n):
         self.progress.setValue(int(100 * i / max(n, 1)))
         self.status.setText('%s %d/%d'
-                            % (T[self.lang]['busy_gen'], i, n))
+                            % (_T()['busy_gen'], i, n))
 
     def _gen_done(self, X, Y, path):
         self.X, self.Y = X, Y
+        self.label_mode = self.gen_worker.label_mode
+        self._read_specs(path)
         self.model = None
         self.history = None
         self.gen_worker.deleteLater()
@@ -332,19 +408,24 @@ class MLTab(QWidget):
         self.status.setText('%d samples -> %s'
                             % (X.shape[0], os.path.basename(path)))
         self._refresh_r2()
+        if self._train_after_generation:
+            self._train_after_generation = False
+            QTimer.singleShot(0, self.start_train)
 
     # ---------------- training ----------------
     def start_train(self):
         if self._busy():
             return
-        if self.X is None or self.X.shape[0] < 5:
-            self.status.setText(T[self.lang]['need_data'])
+        if self.X is None or self.X.shape[0] < 5 or self.label_mode != 'physics' or not np.isfinite(self.Y).all():
+            self.status.setText(_T()['need_data'])
             return
+        self._training_unit = self.unit_combo.currentData()
         lr = float(self.lr_combo.currentText())
         self.train_worker = TrainWorker(
             self.X, self.Y, self.hidden_spin.value(), lr,
             self.epochs_spin.value(), self.patience_spin.value(),
-            self.mindelta_spin.value(), self)
+            self.mindelta_spin.value(), self, algorithm=self.algorithm,
+            parameters=self.parameters)
         self.train_worker.epoch.connect(self._on_epoch)
         self.train_worker.done.connect(self._train_done)
         self.train_worker.failed.connect(self._worker_failed)
@@ -353,8 +434,12 @@ class MLTab(QWidget):
         self._tr_pts, self._tr_loss = [], []
         self._va_pts, self._va_loss = [], []
         self._set_busy(True)
+        forest = self.algorithm in ('random_forest', 'extra_trees')
+        neural = self.algorithm in ('mlp', 'deep_mlp')
+        self._progress_kind = ('树数量' if forest else ('轮次' if neural else '拟合')) if get_lang() == 'zh' else ('trees' if forest else ('epoch' if neural else 'fit'))
+        self.loss_plot.setLabel('bottom', self._progress_kind)
         self.progress.setRange(0, 0)          # busy indicator
-        self.status.setText(T[self.lang]['busy_train'])
+        self.status.setText(_T()['busy_train'])
         self.train_worker.start()
 
     def _on_epoch(self, ep, tr, va):
@@ -365,10 +450,13 @@ class MLTab(QWidget):
         self._va_loss.append(va)
         self.tr_curve.setData(self._tr_pts, self._tr_loss)
         self.va_curve.setData(self._va_pts, self._va_loss)
-        self.status.setText('epoch %d  train %.4f  val %.4f' % (ep, tr, va))
+        self.loss_plot.enableAutoRange()
+        self.status.setText('%s %d  train %.4f  val %.4f' % (self._progress_kind, ep, tr, va))
 
     def _train_done(self, res):
         self.model = res['model']
+        self.trained_unit = getattr(self, '_training_unit', self.unit_combo.currentData())
+        self.trained_model = self.model
         self.history = res['history']
         self.train_worker.deleteLater()
         self.train_worker = None
@@ -381,15 +469,21 @@ class MLTab(QWidget):
             '%s: %d epochs (best %d), final train %.4f / val %.4f'
             % (tag, h['epochs_run'], h['best_epoch'],
                h['train'][-1], h['val'][-1]))
+        if h.get('progress_kind') != 'epoch':
+            self.status.setText(('拟合完成 · ' if get_lang() == 'zh' else 'Fit complete · ') +
+                                self._progress_kind + ' ' + str(h.get('trees_fitted') or 1) +
+                                ' · val MSE %.4f' % h['val'][-1])
         self._refresh_r2()
 
     def stop(self):
+        self._train_after_generation = False
         if self.gen_worker is not None:
             self.gen_worker.request_stop()
         if self.train_worker is not None:
             self.train_worker.request_stop()
 
     def _worker_failed(self, msg):
+        self._train_after_generation = False
         self.status.setText(msg)
         self._set_busy(False)
         self.progress.setRange(0, 100)
@@ -410,11 +504,19 @@ class MLTab(QWidget):
         self.gen_btn.setEnabled(not busy)
         self.train_btn.setEnabled(not busy)
         self.unit_combo.setEnabled(not busy)
+        self.mode_combo.setEnabled(not busy)
+        self.algorithm_btn.setEnabled(not busy)
+        for widget in (self.amp_slider, self.pert_slider, self.n_spin):
+            widget.setEnabled(not busy)
 
     # ---------------- results ----------------
     def _load_existing(self, *_):
-        unit = self.unit_combo.currentText()
-        path = dataset_path(unit)
+        if not hasattr(self, 'mode_combo') or not hasattr(self, 'status'):
+            return
+        self.label_mode = self.mode_combo.currentData()
+        unit = self.unit_combo.currentData()
+        path = self._dataset_path()
+        self._read_specs(path)
         if os.path.exists(path):
             try:
                 with np.load(path) as z:
@@ -431,30 +533,36 @@ class MLTab(QWidget):
         self._refresh_r2()
 
     def _refresh_r2(self):
-        t = T[self.lang]
+        t = _T()
         if self.model is None or self.X is None:
             for lab in self.r2_labels:
                 lab.setText('--')
             self.scatter.setData(x=[], y=[])
             self.id_line.setData([], [])
             return
-        pred = self.model.predict(self.X)
+        ids = getattr(self.model, 'val_indices', np.arange(len(self.X)))
+        pred = self.model.predict(self.X[ids])
         for j, lab in enumerate(self.r2_labels):
-            r2 = r2_score(self.Y[:, j], pred[:, j])
-            lab.setText('%s R2=%.3f' % (t['targets'][j], r2))
+            r2 = r2_score(self.Y[ids, j], pred[:, j])
+            tag = '验证' if get_lang() == 'zh' else 'validation'
+            lab.setText('%s %s R²=%.3f' % (t['targets'][j], tag, r2))
         self._update_scatter()
 
     def _update_scatter(self, *_):
         if self.model is None or self.X is None:
             return
         j = max(self.target_combo.currentIndex(), 0)
-        pred = self.model.predict(self.X)[:, j]
-        truth = self.Y[:, j]
+        ids = getattr(self.model, 'val_indices', np.arange(len(self.X)))
+        pred = self.model.predict(self.X[ids])[:, j]
+        truth = self.Y[ids, j]
         self.scatter.setData(x=truth.tolist(), y=pred.tolist())
         lo = float(min(truth.min(), pred.min()))
         hi = float(max(truth.max(), pred.max()))
         pad = 0.05 * max(hi - lo, 1e-9)
         self.id_line.setData([lo - pad, hi + pad], [lo - pad, hi + pad])
+        self.scatter_plot.setRange(xRange=(lo-pad, hi+pad), yRange=(lo-pad, hi+pad), padding=.03)
+        self.scatter_plot.setLabel('bottom', '物理真实值' if get_lang() == 'zh' else 'Physical truth')
+        self.scatter_plot.setLabel('left', '模型预测值' if get_lang() == 'zh' else 'Prediction')
 
     # ---------------- theming / i18n ----------------
     def set_mode(self, mode):
@@ -468,7 +576,20 @@ class MLTab(QWidget):
         self.scatter.setBrush(pg.mkBrush(c['accent2']))
 
     def retranslate(self):
-        t = T[self.lang]
+        zh = get_lang() == 'zh'
+        self.apply_sample_btn.setText('查看结构' if zh else 'View structure')
+        self._sync_model_controls()
+        self.mode_combo.blockSignals(True)
+        self.data_note.setText('生成结构并自动完成物理标注，完成后即可训练。' if zh else 'Generate structures with physical labels, ready for training.')
+        for i, names in enumerate((('生成并物理标注', 'Generate and simulate'),)):
+            self.mode_combo.setItemText(i, names[0 if zh else 1])
+        self.mode_combo.blockSignals(False)
+        self.algorithm_btn.setText(MODEL_SPECS[self.algorithm][0 if zh else 1] + ' · …')
+        self.unit_combo.blockSignals(True)
+        for i in range(self.unit_combo.count()):
+            self.unit_combo.setItemText(i, unit_display(self.unit_combo.itemData(i), get_lang()))
+        self.unit_combo.blockSignals(False)
+        t = _T()
         self.gb_data.setTitle(t['gb_data'])
         self.gb_train.setTitle(t['gb_train'])
         self.lbl_unit.setText(t['unit'])

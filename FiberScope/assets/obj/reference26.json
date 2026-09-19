@@ -1,0 +1,44 @@
+{
+  "reference_shirt.obj": {
+    "source": "参考/OBJ/Shirt OBJ.obj",
+    "source_sha256": "e25b796b47bb3a2ff39ccfbe7c674fcbcd6d6acbc50349b656629a396cfabca8",
+    "sha256": "2ebf312e1ffc957c30ea91d899cb2fc1a08c61e3d99744111469547953c5ba1e",
+    "bytes": 11243,
+    "quad_faces": 248,
+    "span": [
+      115.9413,
+      77.25340000000001,
+      34.1255
+    ],
+    "source_license": "not supplied",
+    "conversion": "bounded silhouette wrap and offline QuadriFlow; envelope only"
+  },
+  "reference_shoe.obj": {
+    "source": "参考/OBJ/Shoe.obj",
+    "source_sha256": "c502a8cbd5e7430317b3811da8cdbc970d8abfac90739161cb4123f1d2759fcf",
+    "sha256": "e04e55edec091c58aa7835fa3495f370c00eae6615283efc2dfc2c70b726d302",
+    "bytes": 11757,
+    "quad_faces": 237,
+    "span": [
+      0.1372297,
+      0.17867495,
+      0.38323979999999996
+    ],
+    "source_license": "not supplied",
+    "conversion": "bounded silhouette wrap and offline QuadriFlow; envelope only"
+  },
+  "reference_paris.obj": {
+    "source": "参考/OBJ/paris.obj",
+    "source_sha256": "da2378338dcd174f89456bd2a93d2dadcb3fe7ede17ecd6070cfac60b6a444c2",
+    "sha256": "ac5df995b7e4a2944ee3d818208422743b17dd04f98d8a7b20c481b875ceae5b",
+    "bytes": 32126,
+    "quad_faces": 576,
+    "span": [
+      2.6827194,
+      6.6141369999999995,
+      2.586728
+    ],
+    "source_license": "not supplied",
+    "conversion": "regular quad envelope fitted to reference height and silhouette; four arch openings; details omitted"
+  }
+}

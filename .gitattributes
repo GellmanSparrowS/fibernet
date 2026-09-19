@@ -1,0 +1,2 @@
+# The numerical cache identity hashes exact source bytes.
+FiberScope/fslab/*.py -text

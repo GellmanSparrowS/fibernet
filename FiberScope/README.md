@@ -1,69 +1,47 @@
-# FiberScope V1.0 · 纤维网络超材料交互探索台
+# FiberScope 3.0
 
-GOAI 赛道三（开放探索赛题）复赛交付物：可计算、可验证、可复现的纤维网络结构探索环境。工作流为“结构生成 → 原位仿真 → 特征分析 → 机器学习 → AI 逆设计 → 三维曲面”，并由一个可调用全部内部接口的 AI 助手贯穿。
+纤维网络材料交互设计软件：结构生成 → 拉伸仿真 → 特征分析 → 机器学习 → 逆向设计 → 三维曲面 → 制造导出。
 
-## 运行
+## 直接运行
 
-```bash
-conda activate ml310
-python run.py                        # 交互界面
-python run.py --theme light --lang en
-python run.py --smoke                # 离屏冒烟
-```
+从 [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0) 下载 Windows x64 版，解压并运行 FiberScope.exe。无需安装 Python。AI 联网对话需自行配置服务；核心生成、仿真、学习和确定性录像流程可离线使用。
 
-打包为便携软件：`python scripts/build_exe.py` → `dist/FiberScope/FiberScope.exe`。分发时需携带整个 `dist/FiberScope` 目录（含 `_internal/`）。
+[魔搭在线体验](https://modelscope.cn/studios/GellmanSparrow/FiberScope) · [决赛录像指令](docs/finals/AI_RECORDING_3_0.md)
 
-依赖：`numpy`、`scipy`、`PySide6`、`pyqtgraph`；物理核心为纯 numpy，无 `taichi/torch` 依赖。结构生成复用本地 `fibernet` 生成库（MIT）。
+## 源码运行
 
-## 七个板块
+在仓库根目录安装并运行（Python 3.10）：
 
-- **结构生成**：11 种基础单元（方形内含 6 种位移谱预设），单线基元编辑器把“一条线的中间点”周期复制为整体同构变形。
-- **原位仿真**：载荷路径渗流（两端逐渐变蓝直至贯通）与应变—接触双视图；力—拉伸曲线与拉伸/弯曲/接触三通道能量占比。
-- **特征分析**：结构指纹雷达 + 小结构图；结构/孔隙/接触三组标量卡片与可点击直方图；区域与批量统计。
-- **机器学习**：结构—性能代理模型，动态 Loss、早停与预测—真实散点。
-- **AI 逆设计**：拓扑锁定的 CEM 优化，目标曲线 J/C/linear 或标量 max/min；探索回放折叠为底部小窗。
-- **三维曲面**：把当前结构铺覆到 OBJ 曲面，变形前小窗对照，支持导入 OBJ 与复位视图。
-- **AI 助手**：DeepSeek function-calling 闭环，内置操作技能文档，工具调用自动跳转对应板块。
+~~~bash
+python -m pip install -r FiberScope/requirements.txt
+python FiberScope/run.py
+~~~
 
-## 截图
+源码支持本仓库布局，也支持原来的 FiberScope 与 fibernet 两个并列目录。自定义位置可设置 FIBERNET_ROOT，指向包含 fibernet 包的目录。
 
-<div align="center">
-<img src="docs/images/structure.png" width="80%" alt="结构生成" />
-</div>
-<p align="center">结构生成</p>
+## 测试与构建
 
-<div align="center">
-<img src="docs/images/sim.png" width="80%" alt="原位仿真" />
-</div>
-<p align="center">原位仿真</p>
+~~~bash
+python FiberScope/scripts/run_tests.py
+python FiberScope/scripts/build_exe.py
+~~~
 
-<div align="center">
-<img src="docs/images/features.png" width="80%" alt="特征分析" />
-</div>
-<p align="center">特征分析</p>
+构建仅在 Windows 上执行；另需安装 requirements-dev.txt。完整外部 RL 使用 requirements-rl.txt 和 FIBERSCOPE_TRAIN_PYTHON；默认 CEM 和监督模型不需要外部 RL 环境。
 
-<div align="center">
-<img src="docs/images/ml.png" width="80%" alt="机器学习" />
-</div>
-<p align="center">机器学习</p>
+## 3.0 重点
 
-<div align="center">
-<img src="docs/images/design.png" width="80%" alt="AI 逆设计" />
-</div>
-<p align="center">AI 逆设计</p>
+- 随机种子选择十个共享位移参数，幅度滑条实时缩放；手动编辑后继续按比例调整。
+- 圆环由四圆弧和四连接段采样，保留连续制造所需的逻辑纤维身份。
+- 制造随来源自动二维/三维，来源与路径播放同行、导出同行。
+- AI 录像流程按方形、300 个物理样本、J 型目标 200 次预算执行，实际切换七页并显示工具结果。
+- 默认焊接锚点、关闭纤维间接触；GIF 1600×1000、平均48FPS。
+- 曲面保留立体比例；打印尺寸统一为毫米，三轴最大250 mm，默认纤维直径2 mm。
 
-<div align="center">
-<img src="docs/images/surface.png" width="80%" alt="三维曲面" />
-</div>
-<p align="center">三维曲面</p>
+## 文档
 
-## 复现
+- [3.0 方法](docs/METHODS_3_0.md)
+- [扩展 API](docs/open_source/API.md)
+- [AI 工具](docs/AI_TOOLS.md)
+- [第三方说明](THIRD_PARTY_NOTICES.md)
 
-- 探索日志：`python scripts/run_exploration.py --budget 120 --seed 0`，按 JSONL 行数断点续跑。
-- 仿真缓存：`_cache/*.npz` 原子写入，参数哈希命名。
-- 测试：`tests/selftest.py`、`tests/selftest_engine2.py`、`tests/selftest_inverse.py`、`tests/gui_smoke.py`。
-
-## 说明
-
-- 原项目：`fibernet`（MIT），仅复用其结构生成接口。
-- 本目录新增：物理核、渗流、逆设计、特征分析、三维曲面、机器学习、探索管线、AI 助手、GUI 与便携打包。
+制作：复旦大学高分子科学系 杨云浩。致谢世界人工智能开源大赛。

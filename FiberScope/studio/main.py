@@ -1,8 +1,8 @@
-﻿"""MainWindow: branded header + tab container + shared structure wiring."""
+"""MainWindow: branded header + tab container + shared structure wiring."""
 import os
 import sys
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer, QThread
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (QApplication, QComboBox, QFrame, QHBoxLayout,
                                QLabel, QMainWindow, QPushButton, QSplitter,
@@ -30,6 +30,19 @@ from .theme import build_palette, build_qss
 
 
 class MainWindow(QMainWindow):
+    def _on_tab(self, index):
+        if index == self.tabs.indexOf(self.tab_manufacturing) and self.tab_manufacturing.dialog is None:
+            self.tab_manufacturing.open_source(True)
+
+    def _show_learning_sample(self, factory):
+        self.tab_struct.load_spec(factory)
+        self.tabs.setCurrentWidget(self.tab_struct)
+
+    def _show_about(self, *_):
+        from PySide6.QtWidgets import QMessageBox
+        from fslab.version import APP_VERSION, AUTHOR_SIGNATURE
+        QMessageBox.information(self, 'FiberScope', 'FiberScope ' + APP_VERSION + '\n\n制作人：复旦大学高分子系杨云浩\n\n致谢：世界人工智能开源大赛')
+
     def __init__(self, lang: str = "zh", mode: str = "light"):
         super().__init__()
         set_lang(lang)
@@ -56,9 +69,15 @@ class MainWindow(QMainWindow):
         hh.addWidget(self.logo)
         hh.addLayout(titles)
         hh.addStretch(1)
-        self.ver_chip = QLabel()
+        self.ver_chip = QPushButton()
+        self.ver_chip.clicked.connect(self._show_about)
         self.ver_chip.setObjectName("chip")
         hh.addWidget(self.ver_chip)
+        self.ver_chip.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.ver_chip.customContextMenuRequested.connect(self._show_about)
+        from PySide6.QtGui import QShortcut, QKeySequence
+        self.about_shortcut = QShortcut(QKeySequence('Ctrl+Shift+I'), self)
+        self.about_shortcut.activated.connect(self._show_about)
         self.ai_btn = QPushButton()
         self.ai_btn.setProperty("primary", True)
         self.ai_btn.clicked.connect(self._toggle_ai)
@@ -71,6 +90,8 @@ class MainWindow(QMainWindow):
         self.theme_btn.clicked.connect(self._toggle_theme)
         hh.addWidget(self.lang_combo)
         hh.addWidget(self.theme_btn)
+        for control in (self.ver_chip, self.ai_btn, self.lang_combo, self.theme_btn):
+            control.setFixedHeight(34)
 
         # ---- tabs ----
         self.tabs = QTabWidget()
@@ -83,6 +104,7 @@ class MainWindow(QMainWindow):
         self.tab_features = FeaturesTab(mode=self.mode)
         self.tab_surface = SurfaceTab(mode=self.mode)
         self.tab_ml = MLTab(mode=self.mode)
+        self.tab_design.model_provider = lambda: (self.tab_ml.trained_model, getattr(self.tab_ml, 'trained_unit', self.tab_ml.unit_combo.currentData()))
         # order: structure / sim / features / ml / design(+replay) / surface
         self.tabs.addTab(self.tab_struct, "")
         self.tabs.addTab(self.tab_sim, "")
@@ -90,11 +112,18 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.tab_ml, "")
         self.tabs.addTab(self.tab_design, "")
         self.tabs.addTab(self.tab_surface, "")
+        from .manufacturing_tab import ManufacturingTab
+        self.tab_manufacturing = ManufacturingTab(self)
+        self.tabs.addTab(self.tab_manufacturing, "")
+        self.tabs.currentChanged.connect(self._on_tab)
+        self.tab_struct.manufacturing_host = self.tab_manufacturing
+        self.tab_surface.manufacturing_host = self.tab_manufacturing
         self.tab_design.embed_replay(self.tab_replay)
         self.tab_struct.structure_changed.connect(
             self.tab_sim.set_spec)
         self.tab_struct.structure_changed.connect(
             self.tab_design.set_spec)
+        self.tab_ml.apply_structure.connect(self._show_learning_sample)
         self.tab_design.apply_structure.connect(
             self.tab_struct.load_spec)
         self.tab_replay.apply_structure.connect(
@@ -134,7 +163,7 @@ class MainWindow(QMainWindow):
         app.setStyleSheet(build_qss(self.mode))
         for t in (self.tab_struct, self.tab_sim,
                   self.tab_design, self.tab_replay, self.tab_features,
-                  self.tab_surface, self.tab_ml):
+                  self.tab_surface, self.tab_ml, self.tab_manufacturing):
             if t is not None:
                 t.set_mode(self.mode)
         self.ai_panel.refresh_theme()
@@ -151,6 +180,32 @@ class MainWindow(QMainWindow):
         set_lang("zh" if idx == 0 else "en")
         self.retranslate()
 
+    def closeEvent(self, event):
+        gif = getattr(self.tab_sim, "_gif", None)
+        if gif is not None and gif.active: gif.cancel()
+        workflow = self.ai_panel.workflow
+        workflow.cancel()
+        workers = [workflow.worker] if workflow._busy(workflow.worker) else []
+        for tab in (self.tab_sim, self.tab_design, self.tab_features, self.tab_ml, self.ai_panel):
+            for key in ('worker', '_worker', 'gen_worker', 'train_worker'):
+                worker = getattr(tab, key, None)
+                if isinstance(worker, QThread) and worker.isRunning():
+                    workers.append(worker)
+        for tab in (self.tab_struct, self.tab_surface):
+            dialog = getattr(tab, 'manufacturing_dialog', None)
+            worker = getattr(dialog, 'worker', None)
+            if isinstance(worker, QThread) and worker.isRunning():
+                workers.append(worker)
+        if workers:
+            event.ignore()
+            for worker in workers:
+                if hasattr(worker, 'request_stop'):
+                    worker.request_stop()
+            self.setWindowTitle('FiberScope · ' + tr('stopping'))
+            QTimer.singleShot(250, self.close)
+            return
+        super().closeEvent(event)
+
     def retranslate(self):
         self.setWindowTitle(tr("app_title"))
         self.title.setText("FiberScope")
@@ -162,6 +217,8 @@ class MainWindow(QMainWindow):
         self.tabs.setTabText(3, tr("tab_ml"))
         self.tabs.setTabText(4, tr("tab_design"))
         self.tabs.setTabText(5, tr("tab_surface"))
+        self.tabs.setTabText(6, tr("tab_manufacturing"))
+        self.tab_manufacturing.retranslate()
         self.theme_btn.setText(tr("theme_btn") if self.mode == "dark"
                                else "Dark")
         self.ai_btn.setText(tr("ai_btn"))

@@ -81,62 +81,11 @@ def make_sample(factory):
     return x, np.array([peak, k, toughness], dtype=np.float64)
 
 
-def gen_dataset(unit, n=60, amp=0.2, pert=0.1, seed0=0, path=None,
-                progress_cb=None, stop_cb=None):
-    """Generate n samples, appending to path (npz: X, Y, meta).
-
-    Resumable: if path exists, the saved count is read and new samples
-    continue the seed sequence (seed = seed0 + saved_count + i), so an
-    interrupted run never duplicates samples.  Only one graph lives in
-    memory at a time; the npz is rewritten after every accepted sample.
-    """
-    n = int(n)
-    chunks_x, chunks_y = [], []
-    done = 0
-    if path and os.path.exists(path):
-        with np.load(path, allow_pickle=True) as z:
-            chunks_x.append(np.asarray(z['X'], float))
-            chunks_y.append(np.asarray(z['Y'], float))
-        done = chunks_x[0].shape[0]
-    if path:
-        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
-    for i in range(n):
-        if stop_cb is not None and stop_cb():
-            break
-        seed = int(seed0) + done + i
-        rng = np.random.default_rng(seed)
-        spec = [[float(rng.uniform(-amp, amp)),
-                 float(rng.uniform(-amp, amp))] for _ in range(N_PTS)]
-        factory = StructureFactory(
-            unit=unit, line_displacements=spec,
-            perturbation=float(pert) * float(rng.uniform()),
-            seed=seed).clamped()
-        try:
-            x, y = make_sample(factory)
-        except Exception as e:  # skip degenerate builds, keep the stream going
-            print('[mlmodel] sample %d failed: %s' % (seed, e))
-            factory = None
-            gc.collect()
-            continue
-        factory = None
-        gc.collect()
-        chunks_x.append(x[None, :])
-        chunks_y.append(y[None, :])
-        if progress_cb is not None:
-            progress_cb(i + 1, n)
-        if path:
-            X = np.vstack(chunks_x)
-            Y = np.vstack(chunks_y)
-            tmp = path + '.tmp.npz'
-            np.savez_compressed(
-                tmp, X=X, Y=Y,
-                meta=json.dumps({'unit': unit, 'amp': float(amp),
-                                 'pert': float(pert), 'seed0': int(seed0),
-                                 'count': int(X.shape[0])}))
-            os.replace(tmp, path)
-    if chunks_x:
-        return np.vstack(chunks_x), np.vstack(chunks_y)
-    return np.zeros((0, 0)), np.zeros((0, 3))
+def gen_dataset(unit, n=60, amp=.2, pert=.1, seed0=0, path=None,
+                progress_cb=None, stop_cb=None, mode='physics', acquisition='random', model=None):
+    from .dataset_stream import generate_dataset
+    return generate_dataset(unit, n, amp, pert, seed0, path, progress_cb, stop_cb,
+                            mode, acquisition, model)
 
 
 class MLP:
@@ -171,17 +120,18 @@ class MLP:
         n, d = X.shape
         if self.W1 is None or self.W1.shape[0] != d:
             self._init_weights(d)
-        self.x_mean = X.mean(axis=0)
-        self.x_std = X.std(axis=0)
-        self.x_std[self.x_std < 1e-12] = 1.0
-        self.y_mean = Y.mean(axis=0)
-        self.y_std = Y.std(axis=0)
-        self.y_std[self.y_std < 1e-12] = 1.0
-        Xn = (X - self.x_mean) / self.x_std
-        Yn = (Y - self.y_mean) / self.y_std
         idx = self.rng.permutation(n)
         nv = int(n * val_frac) if n >= 5 else 0
         vi, ti = idx[:nv], idx[nv:]
+        self.val_indices, self.train_indices = vi, ti
+        self.x_mean = X[ti].mean(axis=0)
+        self.x_std = X[ti].std(axis=0)
+        self.x_std[self.x_std < 1e-12] = 1.0
+        self.y_mean = Y[ti].mean(axis=0)
+        self.y_std = Y[ti].std(axis=0)
+        self.y_std[self.y_std < 1e-12] = 1.0
+        Xn = (X - self.x_mean) / self.x_std
+        Yn = (Y - self.y_mean) / self.y_std
         if len(ti) == 0:
             ti = idx
 

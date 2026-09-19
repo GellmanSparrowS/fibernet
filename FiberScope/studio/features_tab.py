@@ -5,6 +5,7 @@ All metrics live in fslab.features; this file is presentation only.
 Batch computation runs in a QThread worker with progress reporting.
 '''
 import time
+from dataclasses import replace
 
 import numpy as np
 import pyqtgraph as pg
@@ -13,41 +14,30 @@ from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (QApplication, QCheckBox, QDialog,
                                QDoubleSpinBox, QFrame, QGridLayout,
                                QHBoxLayout, QLabel, QProgressBar,
-                               QPushButton, QScrollArea, QSpinBox,
+                               QMenu, QPushButton, QScrollArea, QSpinBox,
                                QVBoxLayout, QWidget)
 
 from fslab.structure import CELL, StructureFactory
+from fslab.contact import ContactConfig
+from fslab.exporter import export_features_csv, export_hist_csv
 from fslab.features import (FEATURE_GROUPS, FEATURE_INT, FEATURE_RANGE,
-                            FEATURE_UNIT, FEATURE_ZH, HIST_KEYS,
-                            compute_features)
-from .i18n import get_lang
+                            FEATURE_UNIT, HIST_KEYS, compute_features,
+                            feature_name)
+from .exports import add_caption, ask_save, save_widget_png, unique_stem
+from .i18n import get_lang, tr
 from .structure_tab import spec_text
 from .theme import colors
 
 NCOLS = 4
-GROUP_ORDER = ('structure', 'pore', 'contact')
+GROUP_ORDER = ('structure', 'pore')
 GROUP_COLOR = {'structure': 'accent', 'pore': 'violet', 'contact': 'warn'}
 GROUP_NAME = {'structure': ('结构', 'Structure'),
               'pore': ('孔隙', 'Pore'),
               'contact': ('接触', 'Contact')}
 
-_TEXT = {
-    'region': ('区域', 'Region'),
-    'batch': ('批量统计', 'Batch'),
-    'samples': ('样本数', 'Samples'),
-    'refresh': ('刷新', 'Refresh'),
-    'no_struct': ('暂无结构 · 先在「结构生成」板块生成', 'No structure yet'),
-    'computing': ('批量计算中…', 'Batch running…'),
-    'done_single': ('单样本 · %d 特征 · %.0f ms',
-                    'Single · %d features · %.0f ms'),
-    'done_batch': ('批量 N=%d · seeds 0..%d · %.1f s',
-                   'Batch N=%d · seeds 0..%d · %.1f s'),
-}
-
-
 def _t(key):
-    zh, en = _TEXT[key]
-    return zh if get_lang() == 'zh' else en
+    # shim over the central i18n table (keys live under ft_*)
+    return tr('ft_' + key)
 
 
 def _fmt(v):
@@ -94,7 +84,7 @@ RADAR_KEYS = [
     ('mean_edge_len', '边长', 'edge', CELL),
     ('porosity', '孔隙率', 'pore', 1.0),
     ('straightness_mean', '直线度', 'straight', 1.0),
-    ('cross_per_edge', '交叉密', 'cross', 1.0),
+    ('pore_count', '孔隙数', 'pores', 20.0),
     ('boundary_ratio', '边界比', 'boundary', 1.0),
 ]
 
@@ -191,7 +181,7 @@ class FingerprintWidget(QWidget):
         p.setPen(QPen(QColor(c['sub'])))
         for i, (_, z, e, _) in enumerate(RADAR_KEYS):
             x, y = pt(i, r + 18)
-            p.drawText(int(x - 20), int(y + 4), 40, 16,
+            p.drawText(int(x - 20), int(max(0, min(h - 16, y + 4))), 40, 16,
                        Qt.AlignHCenter, z if zh else e)
         p.end()
 
@@ -286,8 +276,7 @@ class FeatureCard(QFrame):
 
     def retranslate(self):
         zh = get_lang() == 'zh'
-        self.title.setText(FEATURE_ZH.get(self.key, self.key)
-                           if zh else self.key)
+        self.title.setText(feature_name(self.key, get_lang()))
         self.tag.setText(GROUP_NAME[self.group][0 if zh else 1])
 
     # ---------------- data ----------------
@@ -391,7 +380,7 @@ class FeatureDialog(QDialog):
         super().__init__(parent)
         self.key = key
         zh = get_lang() == 'zh'
-        name = FEATURE_ZH.get(key, key) if zh else key
+        name = feature_name(key, get_lang())
         self.setWindowTitle('%s · %s' % (name, key))
         self.resize(580, 440)
         self.setStyleSheet('QDialog { background:%s; }' % c['bg'])
@@ -466,25 +455,24 @@ class BatchWorker(QThread):
     done = Signal(list)
     failed = Signal(str)
 
-    def __init__(self, factory, n, rect, token, parent=None):
+    def __init__(self, factory, n, rect, token, parent=None, contact_config=None):
         super().__init__(parent)
         self.factory = factory
         self.n = int(n)
         self.rect = rect
         self.token = token
+        self.contact_config = contact_config or ContactConfig()
 
     def run(self):
         try:
             results = []
             for i in range(self.n):
-                f = StructureFactory(
-                    unit=self.factory.unit, grid_x=3, grid_y=3,
-                    n_pts_per_side=self.factory.n_pts_per_side,
-                    seed=i, perturbation=0.1).clamped()
+                f = replace(self.factory, seed=i).clamped()
                 g = f.build()
                 pos = np.asarray(g.node_positions(), float)[:, :2]
                 edges = np.asarray(g.edge_array(), int)[:, :2]
-                results.append(compute_features(pos, edges, rect=self.rect))
+                results.append(compute_features(pos, edges, rect=self.rect,
+                                               contact_config=self.contact_config))
                 self.progress.emit(i + 1, self.n)
             self.done.emit(results)
         except Exception as e:
@@ -497,6 +485,7 @@ class FeaturesTab(QWidget):
         self.mode = mode
         self.factory = None
         self._feats = None
+        self._batch_results = None
         self._worker = None
         self._batch_token = 0
         self._t_batch = 0.0
@@ -513,8 +502,10 @@ class FeaturesTab(QWidget):
 
         bar = QFrame()
         bar.setObjectName('card')
-        bh = QHBoxLayout(bar)
-        bh.setContentsMargins(12, 8, 12, 8)
+        bars = QVBoxLayout(bar)
+        bars.setContentsMargins(12, 8, 12, 8)
+        bh = QHBoxLayout()
+        bars.addLayout(bh)
         bh.setSpacing(8)
         self.chk_region = QCheckBox()
         self.chk_region.toggled.connect(self._on_region)
@@ -533,7 +524,9 @@ class FeaturesTab(QWidget):
             bh.addWidget(lab)
             bh.addWidget(sp)
             self.rect_spins[name] = sp
-        bh.addSpacing(6)
+        bh.addStretch(1)
+        bh = QHBoxLayout()
+        bars.addLayout(bh)
         self.chk_batch = QCheckBox()
         bh.addWidget(self.chk_batch)
         self.lbl_n = QLabel()
@@ -547,6 +540,17 @@ class FeaturesTab(QWidget):
         self.btn_refresh.setProperty('primary', True)
         self.btn_refresh.clicked.connect(self.refresh)
         bh.addWidget(self.btn_refresh)
+        self.export_btn = QPushButton()
+        self.export_menu = QMenu(self.export_btn)
+        self.act_feat_csv = self.export_menu.addAction('')
+        self.act_hist_csv = self.export_menu.addAction('')
+        self.export_menu.addSeparator()
+        self.act_fp_png = self.export_menu.addAction('')
+        self.export_btn.setMenu(self.export_menu)
+        self.act_feat_csv.triggered.connect(self._export_feat_csv)
+        self.act_hist_csv.triggered.connect(self._export_hist_csv)
+        self.act_fp_png.triggered.connect(self._export_fp_png)
+        bh.addWidget(self.export_btn)
         self.progress = QProgressBar()
         self.progress.setFixedWidth(150)
         self.progress.setTextVisible(False)
@@ -556,6 +560,7 @@ class FeaturesTab(QWidget):
         self.status.setObjectName('hint')
         bh.addWidget(self.status, 1)
         outer.addWidget(bar)
+
 
         fp = QFrame()
         fp.setObjectName('card')
@@ -604,6 +609,9 @@ class FeaturesTab(QWidget):
         '''Slot: main window pushes a new StructureFactory here.'''
         self.factory = factory
         self._feats = None
+        for card in self.cards.values():
+            card.set_single(None)
+        self.fingerprint.set_features(None)
         self._batch_token += 1
         if factory is None:
             self.status.setText(_t('no_struct'))
@@ -623,6 +631,9 @@ class FeaturesTab(QWidget):
         return (s['x0'].value(), s['y0'].value(),
                 s['x1'].value(), s['y1'].value())
 
+    def contact_config(self):
+        return None
+
     def _on_region(self, on):
         for sp in self.rect_spins.values():
             sp.setEnabled(on)
@@ -636,12 +647,18 @@ class FeaturesTab(QWidget):
             return
         rect = self._rect()
         self._batch_token += 1
+        self._batch_results = None
         try:
             t0 = time.perf_counter()
             pos, edges = self._pos_edges(self.factory)
-            self._feats = compute_features(pos, edges, rect=rect)
+            self._feats = compute_features(pos, edges, rect=rect,
+                                           contact_config=self.contact_config())
             dt = (time.perf_counter() - t0) * 1000.0
         except Exception as e:
+            self._feats = None
+            for card in self.cards.values():
+                card.set_single(None)
+            self.fingerprint.set_features(None)
             self.status.setText('%s: %s' % (e.__class__.__name__, e))
             return
         for key, card in self.cards.items():
@@ -656,7 +673,8 @@ class FeaturesTab(QWidget):
         n = int(self.batch_spin.value())
         self._batch_token += 1
         self._worker = BatchWorker(self.factory, n, rect,
-                                   self._batch_token, self)
+                                   self._batch_token, self,
+                                   contact_config=self.contact_config())
         self._worker.progress.connect(self._on_progress)
         self._worker.done.connect(self._on_batch_done)
         self._worker.failed.connect(self._on_batch_failed)
@@ -677,7 +695,9 @@ class FeaturesTab(QWidget):
         self.progress.hide()
         self.btn_refresh.setEnabled(True)
         if worker is None or worker.token != self._batch_token:
+            self.refresh()
             return
+        self._batch_results = results
         for key, card in self.cards.items():
             if card.is_hist:
                 parts = [np.asarray(r.get(key, ()), float)
@@ -697,9 +717,49 @@ class FeaturesTab(QWidget):
         self.btn_refresh.setEnabled(True)
         self.status.setText(msg)
 
+    # ---------------- export ----------------
+    def _export_as(self, writer, stem, ext, title_key, silent=None,
+                   caption=()):
+        if self._feats is None:
+            self.status.setText(_t('no_struct'))
+            return None
+        unit = self.factory.unit if self.factory is not None else 'net'
+        path = ask_save(self, tr(title_key), unique_stem(stem, unit, ext),
+                        '%s (*.%s)' % (ext.upper(), ext), silent)
+        if not path:
+            return None
+        try:
+            writer(path)
+            if caption:
+                add_caption(path, list(caption), self.mode)
+        except Exception as e:
+            self.status.setText('%s: %s' % (e.__class__.__name__, e))
+            return None
+        self.status.setText('%s: %s' % (tr('exported'), path))
+        return path
+
+    def _export_feat_csv(self, silent=None):
+        return self._export_as(
+            lambda p: export_features_csv(self._feats, p,
+                                          batch=self._batch_results),
+            'features', 'csv', 'export_csv_btn', silent)
+
+    def _export_hist_csv(self, silent=None):
+        return self._export_as(lambda p: export_hist_csv(self._feats, p),
+                               'histogram', 'csv', 'export_csv_btn', silent)
+
+    def _export_fp_png(self, silent=None):
+        return self._export_as(
+            lambda p: save_widget_png(self.fingerprint, p),
+            'fingerprint', 'png', 'export_png_btn', silent,
+            caption=['FiberScope · ' + spec_text(self.factory),
+                     tr('ex_fp_png')])
+
     # ---------------- theme / i18n ----------------
     def set_mode(self, mode):
         self.mode = mode
+        self.fingerprint.mode = mode
+        self.fingerprint.update()
         c = colors(mode)
         # inline-styled descendants pin the content palette (Qt QSS
         # quirk); re-apply the app palette so theme switches propagate
@@ -716,8 +776,11 @@ class FeaturesTab(QWidget):
         self.chk_batch.setText(_t('batch'))
         self.lbl_n.setText(_t('samples'))
         self.btn_refresh.setText(_t('refresh'))
-        self.fp_title.setText('结构指纹 · 当前结构' if zh
-                               else 'Structural fingerprint · current net')
+        self.export_btn.setText(tr('export_btn'))
+        self.act_feat_csv.setText(tr('ex_feat_csv'))
+        self.act_hist_csv.setText(tr('ex_hist_csv'))
+        self.act_fp_png.setText(tr('ex_fp_png'))
+        self.fp_title.setText(tr('ft_fp_title'))
         for g in GROUP_ORDER:
             self.group_lbls[g].setText(
                 '%s · %s' % GROUP_NAME[g] if zh else GROUP_NAME[g][1])

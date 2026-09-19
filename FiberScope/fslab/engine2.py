@@ -29,7 +29,7 @@ class Engine2Config:
     ramp_fraction: float = 0.2
     n_increments: int = 0      # >0: quasi-static increments (affine predictor + relaxation); 0 = legacy ramp dynamics
     contact_rebuild: int = 100     # rebuild contact candidates every N steps
-    grip_pct: float = 0.10
+    grip_pct: float = 0.05   # width fraction clamped at each end
 
 
 @dataclass
@@ -58,10 +58,30 @@ class Engine2Result:
 
 
 def _grips(x: np.ndarray, pct: float):
-    n = max(int(len(x) * pct), 1)
-    order = np.argsort(x)
-    return (np.sort(order[:n]).astype(np.int32),
-            np.sort(order[-n:]).astype(np.int32))
+    """Grip bands as a WIDTH fraction of the sample, not a node count.
+
+    The old rule took the pct*N lowest/highest x by argsort order, which
+    split columns of equal x arbitrarily (a 3x3 square gripped 13 of the
+    19 nodes of its end column), leaving part of a clamped boundary free.
+    A width band always takes whole columns and stays symmetric.
+    """
+    lo, hi = float(x.min()), float(x.max())
+    span = hi - lo
+    if span <= 1e-12:
+        return (np.arange(len(x), dtype=np.int32),
+                np.zeros(0, dtype=np.int32))
+    t = float(pct) * span
+    left = np.flatnonzero(x <= lo + t).astype(np.int32)
+    right = np.flatnonzero(x >= hi - t).astype(np.int32)
+    if not len(left):
+        left = np.array([int(np.argmin(x))], dtype=np.int32)
+    if not len(right):
+        right = np.array([int(np.argmax(x))], dtype=np.int32)
+    if len(np.intersect1d(left, right)):
+        mid = 0.5 * (lo + hi)
+        left = np.flatnonzero(x < mid).astype(np.int32)
+        right = np.flatnonzero(x >= mid).astype(np.int32)
+    return left, right
 
 
 def _degree2_triplets(edges: np.ndarray, n: int):
@@ -97,7 +117,16 @@ class Engine2:
         self.edges = edges
         self.ea, self.eb = edges[:, 0], edges[:, 1]
         self.rest = np.linalg.norm(pos[self.eb] - pos[self.ea], axis=1)
+        if not np.isfinite(pos).all() or np.any(self.rest <= 1e-10):
+            raise ValueError('simulation requires finite, nonzero fiber segments')
         self.trips = _degree2_triplets(edges, self.n)
+        extra = graph.metadata.get('weld_triplets', [])
+        if extra:
+            self.trips = np.unique(np.concatenate([self.trips,np.asarray(extra,dtype=np.int64)]),axis=0)
+        if len(self.trips):
+            chord = np.linalg.norm(pos[self.trips[:,2]]-pos[self.trips[:,0]],axis=1)
+            # Coincident independent return fibers do not define a bending chord.
+            self.trips = self.trips[chord > 1e-9]
         if len(self.trips):
             self.na, self.nb, self.nc = (self.trips[:, 0], self.trips[:, 1],
                                          self.trips[:, 2])
@@ -105,7 +134,12 @@ class Engine2:
         else:
             self.na = self.nb = self.nc = np.zeros(0, dtype=np.int64)
             self.nnn_rest = np.zeros(0)
+        self._idx_static = np.concatenate((self.ea, self.eb, self.na,
+                                           self.nc))
         self.excluded = _excluded_pairs(edges, self.trips, self.n)
+        n = self.n
+        self._excl_codes = np.array(
+            sorted(i * n + j for i, j in self.excluded), dtype=np.int64)
         self.left, self.right = _grips(pos[:, 0], self.cfg.grip_pct)
         self._right_disp0 = pos[self.right].copy()
         # pairs already in contact in the as-printed state never count as
@@ -119,63 +153,101 @@ class Engine2:
                 if dd < 1.2 * self.cfg.r_contact)
         else:
             self._rest_close = set()
+        self._rest_codes = np.array(
+            sorted(int(i) * n + int(j) for i, j in self._rest_close),
+            dtype=np.int64)
 
     # ---------------- contact candidates ----------------
     def _contact_candidates(self, pos, fresh=False):
+        """Non-neighbour pairs closer than r_contact (uniform grid, vectorized).
+
+        Same pair SET as the previous per-point dict scan, but the join over
+        the 3x3 cell neighbourhood is done with searchsorted + repeat, so the
+        cost is O(n log n) in C instead of O(n * neighbours) in Python.
+        Pairs come back sorted by (i, j) which makes the order canonical.
+        """
+        if not np.isfinite(pos).all():
+            raise FloatingPointError('simulation became non-finite; reduce deformation or integration step')
         rc = self.cfg.r_contact
+        n = self.n
         cell = np.floor(pos / rc).astype(np.int64)
-        buckets = {}
-        for i in range(self.n):
-            buckets.setdefault((cell[i, 0], cell[i, 1]), []).append(i)
-        pairs = []
-        seen = set()
-        for (cx, cy), ids in buckets.items():
-            neigh = []
-            for dx in (-1, 0, 1):
-                for dy in (-1, 0, 1):
-                    neigh.extend(buckets.get((cx + dx, cy + dy), ()))
-            for i in ids:
-                for j in neigh:
-                    if j <= i:
-                        continue
-                    key = (i, j)
-                    if key in seen or key in self.excluded:
-                        continue
-                    if fresh and key in self._rest_close:
-                        continue
-                    seen.add(key)
-                    pairs.append(key)
-        return np.array(pairs, dtype=np.int64).reshape(-1, 2)
+        cx = cell[:, 0] - cell[:, 0].min()
+        cy = cell[:, 1] - cell[:, 1].min()
+        stride = int(cy.max()) + 2
+        key = cx * stride + cy
+        order = np.argsort(key, kind="stable")
+        ukey, start = np.unique(key[order], return_index=True)
+        count = np.diff(np.append(start, key.size))
+        srcs, dsts = [], []
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                nk = key + dx * stride + dy
+                loc = np.searchsorted(ukey, nk)
+                loc_c = np.minimum(loc, ukey.size - 1)
+                valid = ukey[loc_c] == nk
+                if not valid.any():
+                    continue
+                s = np.flatnonzero(valid)
+                st = start[loc_c[s]]
+                ct = count[loc_c[s]]
+                total = int(ct.sum())
+                if total == 0:
+                    continue
+                within = np.arange(total) - np.repeat(np.cumsum(ct) - ct, ct)
+                srcs.append(np.repeat(s, ct))
+                dsts.append(order[np.repeat(st, ct) + within])
+        if not srcs:
+            return np.zeros((0, 2), dtype=np.int64)
+        I = np.concatenate(srcs)
+        J = np.concatenate(dsts)
+        keep = I < J
+        code = I[keep] * np.int64(n) + J[keep]
+        code = np.unique(code)
+        if self._excl_codes.size:
+            code = code[~np.isin(code, self._excl_codes)]
+        if fresh and self._rest_codes.size:
+            code = code[~np.isin(code, self._rest_codes)]
+        return np.stack((code // n, code % n), axis=1).astype(np.int64)
 
     # ---------------- force / record helpers ----------------
     def _forces(self, pos, cand, step):
+        """Spring forces; one bincount scatter instead of six np.add.at calls.
+
+        The index/weight groups are concatenated in the same order the
+        previous np.add.at passes used (axial ea, axial eb, bend na, bend nc,
+        contact i, contact j), so the per-node floating point summation
+        sequence - and therefore the result - is unchanged.
+        """
         cfg = self.cfg
         k = cfg.stiffness
         kb = cfg.k_bend_frac * cfg.stiffness
         kc = cfg.k_contact
         rc = cfg.r_contact
-        f = np.zeros_like(pos)
 
         # axial springs
         d = pos[self.eb] - pos[self.ea]
-        L = np.linalg.norm(d, axis=1)
+        dx, dy = d[:, 0], d[:, 1]
+        L = np.sqrt(dx * dx + dy * dy)
         Ls = np.maximum(L, 1e-12)
-        dirv = d / Ls[:, None]
         T = k * (L - self.rest) / self.rest
-        Fv = T[:, None] * dirv
-        np.add.at(f, self.ea, Fv)
-        np.add.at(f, self.eb, -Fv)
+        ax = T * (dx / Ls)
+        ay = T * (dy / Ls)
+        idx = [self.ea, self.eb]
+        wx = [ax, -ax]
+        wy = [ay, -ay]
 
         # bending (next-nearest springs along fibers)
         if cfg.use_bending and len(self.na):
             db = pos[self.nc] - pos[self.na]
-            Lb = np.linalg.norm(db, axis=1)
+            bx0, by0 = db[:, 0], db[:, 1]
+            Lb = np.sqrt(bx0 * bx0 + by0 * by0)
             Lbs = np.maximum(Lb, 1e-12)
-            dirb = db / Lbs[:, None]
             Tb = kb * (Lb - self.nnn_rest) / np.maximum(self.nnn_rest, 1e-9)
-            Fb = Tb[:, None] * dirb
-            np.add.at(f, self.na, Fb)
-            np.add.at(f, self.nc, -Fb)
+            bx = Tb * (bx0 / Lbs)
+            by = Tb * (by0 / Lbs)
+            idx += [self.na, self.nc]
+            wx += [bx, -bx]
+            wy += [by, -by]
 
         # contact repulsion
         if cfg.use_contact:
@@ -183,15 +255,23 @@ class Engine2:
                 cand = self._contact_candidates(pos, fresh=True)
             if len(cand):
                 dc = pos[cand[:, 1]] - pos[cand[:, 0]]
-                Lc = np.linalg.norm(dc, axis=1)
+                cx0, cy0 = dc[:, 0], dc[:, 1]
+                Lc = np.sqrt(cx0 * cx0 + cy0 * cy0)
                 mask = (Lc < rc) & (Lc > 1e-9)
                 if mask.any():
-                    idx = cand[mask]
+                    cidx = cand[mask]
                     dcm, Lcm = dc[mask], Lc[mask]
-                    dirc = dcm / Lcm[:, None]
-                    Fcv = (kc * (rc - Lcm))[:, None] * dirc
-                    np.add.at(f, idx[:, 0], -Fcv)
-                    np.add.at(f, idx[:, 1], Fcv)
+                    Fc = kc * (rc - Lcm)
+                    ccx = Fc * (dcm[:, 0] / Lcm)
+                    ccy = Fc * (dcm[:, 1] / Lcm)
+                    idx += [cidx[:, 0], cidx[:, 1]]
+                    wx += [-ccx, ccx]
+                    wy += [-ccy, ccy]
+
+        f = np.empty_like(pos)
+        all_idx = np.concatenate(idx) if len(idx) > 2 else self._idx_static
+        f[:, 0] = np.bincount(all_idx, np.concatenate(wx), self.n)
+        f[:, 1] = np.bincount(all_idx, np.concatenate(wy), self.n)
         return f, cand
 
     def _record(self, pos, cand, Fg, vel, W, rec):
@@ -240,10 +320,16 @@ class Engine2:
         target_disp = Lx * (cfg.target_stretch - 1.0)
         decay = np.exp(-cfg.drag * cfg.dt)
 
-        fixed = set(self.left.tolist())
-        right_set = set(self.right.tolist())
-        free = np.array([i not in fixed and i not in right_set
-                         for i in range(n)])
+        # constrained nodes keep vel == 0 for the whole run, so the
+        # integration below can work on full contiguous arrays: the force
+        # mask makes the update a no-op there (0 * decay == 0, pos += 0).
+        free = np.ones(n, dtype=bool)
+        free[self.left] = False
+        free[self.right] = False
+        free2 = free[:, None]
+        fbuf = np.empty_like(pos)
+        vbuf = np.empty_like(pos)
+        dt = cfg.dt
 
         rec = {kk: [] for kk in ("frames", "strains", "spans", "forces",
                                  "c_pairs", "c_counts", "e_ax", "e_bn",
@@ -278,12 +364,14 @@ class Engine2:
                     pos[self.left] = self.pos0[self.left]
                 for _ in range(R):
                     f, cand = self._forces(pos, cand, done + 1)
-                    vel[free] = (vel[free] + f[free] * cfg.dt) * decay
-                    pos[free] += vel[free] * cfg.dt
-                    vel[self.left] = 0.0
+                    np.multiply(f, free2, out=fbuf)   # keep f for Fg below
+                    fbuf *= dt
+                    vel += fbuf
+                    vel *= decay
+                    np.multiply(vel, dt, out=vbuf)
+                    pos += vbuf
                     pos[self.right] = self._right_disp0
                     pos[self.right, 0] += disp
-                    vel[self.right] = 0.0
                     done += 1
                 Fg = -f[self.right, 0].sum()
                 W += Fg * (disp - prev_disp)
@@ -295,14 +383,16 @@ class Engine2:
             ramp = int(cfg.num_steps * cfg.ramp_fraction)
             for step in range(1, cfg.num_steps + 1):
                 f, cand = self._forces(pos, cand, step)
-                vel[free] = (vel[free] + f[free] * cfg.dt) * decay
-                pos[free] += vel[free] * cfg.dt
-                vel[self.left] = 0.0
+                np.multiply(f, free2, out=fbuf)       # keep f for Fg below
+                fbuf *= dt
+                vel += fbuf
+                vel *= decay
+                np.multiply(vel, dt, out=vbuf)
+                pos += vbuf
                 s = min(step / ramp, 1.0) if ramp > 0 else 1.0
                 disp = target_disp * s
                 pos[self.right] = self._right_disp0
                 pos[self.right, 0] += disp
-                vel[self.right] = 0.0
                 Fg = -f[self.right, 0].sum()
                 W += Fg * (disp - prev_disp)
                 prev_disp = disp

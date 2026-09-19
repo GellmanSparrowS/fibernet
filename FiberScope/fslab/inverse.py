@@ -1,4 +1,4 @@
-﻿"""Inverse design (two-stage, callback-driven for live GUI):
+"""Inverse design (two-stage, callback-driven for live GUI):
 
   stage 1  topology screen: every unit type with a pristine lattice
   stage 2  CEM refinement on the winning unit over the intermediate-point
@@ -17,7 +17,7 @@ import numpy as np
 
 from .engine2 import Engine2
 from .simcache import RunConfig
-from .structure import UNIT_PRESETS
+from .structure import UNIT_PRESETS, all_unit_keys
 
 LD_AMP = 0.45          # max line-point displacement fraction in CEM
 PTS = 2                # intermediate points used by the optimizer
@@ -102,9 +102,9 @@ class InverseRecord:
     best_dist: float
 
 
-def decode_line_params(x, pts: int = PTS):
+def decode_line_params(x, pts: int = PTS, amplitude=LD_AMP):
     """CEM vector -> (line_displacements, perturbation)."""
-    ld = [[float(x[2 * k]) * LD_AMP, float(x[2 * k + 1]) * LD_AMP]
+    ld = [[float(x[2 * k]) * amplitude, float(x[2 * k + 1]) * amplitude]
           for k in range(pts)]
     pert = float(np.clip(x[2 * pts], 0, 1) * 0.5)
     return ld, pert
@@ -112,9 +112,16 @@ def decode_line_params(x, pts: int = PTS):
 
 def run_inverse(factory_builder, target_name: str, budget: int = 60,
                 seed: int = 0, stretch: float = 2.0, callback=None,
-                fixed_unit: str = None, pts: int = None):
+                fixed_unit: str = None, pts: int = None, stop_cb=None,
+                initial_spec=None, evaluator=None, amplitude=.6):
     """factory_builder(unit, pert, line_displacements) -> graph.
-    callback(rec, run_if_best)."""
+    callback(rec, current_run); rec.dist == rec.best_dist identifies a best candidate.
+    stop_cb() -> True aborts between evaluations (same contract as
+    mlmodel.gen_dataset); the best result found so far is still returned
+    with result["stopped"] = True."""
+    budget = max(1, int(budget))
+    if not .05 <= amplitude <= 1.:
+        raise ValueError('deformation amplitude must be 0.05..1.0')
     pts = int(pts) if pts else PTS
     rng = np.random.default_rng(seed)
     target = target_curve(target_name) if target_name in TARGETS else None
@@ -124,12 +131,21 @@ def run_inverse(factory_builder, target_name: str, budget: int = 60,
     best_spec = None
     records = []
     ev = 0
+    stopped = False
+
+    def _stop():
+        return bool(stop_cb()) if stop_cb is not None else False
 
     def eval_one(stage, label, params, unit, pert, ld):
         nonlocal ev, best_dist, best_run, best_label, best_spec
         g = factory_builder(unit, pert, ld)
-        run = Engine2(g, fast_cfg(stretch).engine_cfg()).run()
-        d, _ = objective_of(run, target_name, target)
+        if evaluator is None:
+            run = Engine2(g, fast_cfg(stretch).engine_cfg()).run()
+            d, _ = objective_of(run, target_name, target)
+        else:
+            d, run = evaluator(g, target_name)
+        if not np.isfinite(d):
+            raise ValueError('non-finite inverse objective')
         ev += 1
         is_best = d < best_dist
         if is_best:
@@ -138,18 +154,29 @@ def run_inverse(factory_builder, target_name: str, budget: int = 60,
         rec = InverseRecord(ev, stage, label, [float(x) for x in params],
                             d, best_dist)
         records.append(rec)
+        del records[:-2000]
         if callback is not None:
-            callback(rec, run if is_best else None)
+            callback(rec, run)
         return d
 
     # stage 1: topology screen (locked to the caller's current unit:
     # inverse design reshapes the same primitive, never swaps topology)
-    screen_units = [fixed_unit] if fixed_unit else list(UNIT_PRESETS)
+    screen_units = [fixed_unit] if fixed_unit else all_unit_keys()
     dists = []
     for unit in screen_units:
-        d = eval_one("screen", unit, [], unit, 0.0, None)
+        if ev >= budget or _stop():
+            stopped = _stop()
+            break
+        ld0 = initial_spec.spectrum() if initial_spec is not None else None
+        pert0 = initial_spec.perturbation if initial_spec is not None else 0.
+        d = eval_one('screen', unit, [], unit, pert0, ld0)
         dists.append((d, unit))
+        if _stop():
+            stopped = True
+            break
     dists.sort()
+    if not dists:
+        return dict(best_dist=None, best_label='', best_spec=None, records=[], best_run=None, stopped=True)
     win_unit = dists[0][1]
 
     # stage 2: CEM over the reference-line point values (+ perturbation).
@@ -157,24 +184,37 @@ def run_inverse(factory_builder, target_name: str, budget: int = 60,
     # the budget is spent, so later evaluations polish rather than wander.
     dim = 2 * pts + 1
     mean = np.zeros(dim)
+    if initial_spec is not None:
+        mean[:-1] = np.asarray(initial_spec.spectrum() or [[0., 0.]] * pts).ravel() / amplitude
+        mean[-1] = initial_spec.perturbation / .5
+        mean = np.clip(mean, -1, 1)
     std = np.array([0.85] * (2 * pts) + [0.5])
     pop = max(3, min(10, int(budget - ev) if budget - ev > 0 else 3))
     elite = max(2, min(3, pop // 3))
     X = None
-    while ev < budget:
+    while ev < budget and not stopped:
         remaining = max(budget - ev, 1)
         pop_n = min(pop, remaining)
         if X is None:
             X = rng.uniform(-1, 1, (pop_n, dim))
+            local = max(1, pop_n // 5)
+            X[:local] = np.clip(mean + .85 * rng.standard_normal((local, dim)), -1, 1)
         else:
             X = np.clip(mean + std[None, :] * rng.standard_normal((pop_n, dim)),
                         -1, 1)
+            global_count = max(1, pop_n // 4)
+            X[-global_count:] = rng.uniform(-1, 1, (global_count, dim))
         X = X[:remaining]
         ds = []
         for x in X:
-            ld, pert = decode_line_params(x, pts)
+            if _stop():
+                stopped = True
+                break
+            ld, pert = decode_line_params(x, pts, amplitude)
             d = eval_one("refine", win_unit, x, win_unit, pert, ld)
             ds.append(d)
+        if not ds:
+            break
         order = np.argsort(ds)
         elites = X[order[:max(1, min(elite, len(order)))]]
         mean = elites.mean(0)
@@ -183,7 +223,7 @@ def run_inverse(factory_builder, target_name: str, budget: int = 60,
 
     return {"best_dist": best_dist, "best_label": best_label,
             "best_spec": best_spec, "records": records,
-            "best_run": best_run}
+            "best_run": best_run, "stopped": stopped, "evaluations": ev}
 
 
 def save_log(path, result):

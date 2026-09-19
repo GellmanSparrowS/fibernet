@@ -1,151 +1,1087 @@
 {
- "fslab/fibernet_bridge.py": {
-  "purpose": "stub-package loader for fibernet.gen.pattern (no heavy __init__)",
-  "key": "ensure_fibernet(); FIBERNET_ROOT env; frozen->vendored bundle import",
-  "status": "stable"
+ "run.py": {
+  "purpose": "FiberScope entry point.",
+  "status": "indexed",
+  "symbols": [
+   "main",
+   "_emit",
+   "_smoke_checks"
+  ],
+  "sha256": "86476fe962a589044f3cc986d1588d3772d080aa9415bd03901f1632f61128d6"
  },
- "fslab/structure.py": {
-  "purpose": "parametric structure factory v7",
-  "key": "BASE_UNIT_KEYS=square+classic(no honeycomb); SPECTRUM presets folded into square; voronoi; per-edge rotated displacement",
-  "status": "v8"
+ "fslab/__init__.py": {
+  "purpose": "fslab: pure-numpy science core for FiberScope (no Qt imports here).",
+  "status": "indexed",
+  "symbols": [],
+  "sha256": "0d0522ebf1a05f47356892faf3eb18358963c3394a1c7cac51f7594d73f2e191"
+ },
+ "fslab/bambu.py": {
+  "purpose": "Open a local model in Bambu Studio; never send a printer job or G-code.",
+  "status": "indexed",
+  "symbols": [
+   "find_bambu",
+   "open_in_bambu"
+  ],
+  "sha256": "afab5f187819be686ecea7856e1236211259e00e061a8ba50c9d0950a44806db"
+ },
+ "fslab/cell_cycles.py": {
+  "purpose": "Reference-space closed fiber walks; geometric crossings never weld fibers.",
+  "status": "indexed",
+  "symbols": [
+   "closed_cell_edges"
+  ],
+  "sha256": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70"
+ },
+ "fslab/cell_rules.py": {
+  "purpose": "Deterministic cell transforms and bounded graph assembly.",
+  "status": "indexed",
+  "symbols": [
+   "validate_rule",
+   "transform_cell",
+   "expand_graph",
+   "graph_health"
+  ],
+  "sha256": "3935b24ee0048d8694f1f4737d991ab2e3b5a7a694bb6a3915e013a30c6d474d"
+ },
+ "fslab/contact.py": {
+  "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
+  "status": "indexed",
+  "symbols": [
+   "candidate_pairs",
+   "ContactConfig"
+  ],
+  "sha256": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23"
+ },
+ "fslab/dataset_stream.py": {
+  "purpose": "Atomic bounded datasets with explicit label provenance and resumable seeds.",
+  "status": "indexed",
+  "symbols": [
+   "dataset_config",
+   "config_id",
+   "DatasetStream",
+   "generate_dataset"
+  ],
+  "sha256": "59c9548741e4ccb953167596b1d421caf52931b66f17f7ae4a34d5761351be00"
  },
  "fslab/engine2.py": {
-  "purpose": "numpy physics core",
-  "key": "Engine2Config(+n_increments: >0 quasi-static affine-predictor + relaxation per increment, 0 legacy ramp); run(progress_cb); _forces/_record helpers; grips=percentile10%; energies{axial,bend,contact,kinetic,work}",
-  "status": "validated+quasi-static"
- },
- "fslab/simcache.py": {
-  "purpose": "run_stretch wrapper + atomic npz cache",
-  "key": "RunConfig(n_increments=120, auto_scale sqrt(n/600) clip1..2)->engine_cfg(n_nodes); run_stretch(progress_cb); force_curve monotone guard (no fracture); atomic npz cache; MAX_FRAMES=240",
-  "status": "stable"
- },
- "fslab/percolation.py": {
-  "purpose": "load-path percolation",
-  "key": "hysteresis=0.6 release band; grip_connected prune (_grip_prune); union-find span; BFS two-sided depth",
-  "status": "v2"
- },
- "fslab/inverse.py": {
-  "purpose": "inverse design two-stage v6",
-  "key": "TARGETS J/C/linear; LD_AMP=0.45; CEM wide-then-shrink schedule; fixed_unit lock; pts-aware",
-  "status": "v6"
- },
- "scripts/run_exploration.py": {
-  "purpose": "offline exploration log generator",
-  "key": "novelty agent vs r0; JSONL append+fsync; resumable by line count; data/exploration_log.jsonl",
-  "status": "ran(240 evals)"
- },
- "scripts/build_exe.py": {
-  "purpose": "PyInstaller onedir + ICU fix",
-  "key": "strip collected icu*.dll; bundle Windows System32 icuuc.dll (plain ucnv_* exports); icon/assets data",
-  "status": "v3"
- },
- "studio/i18n.py": {
-  "purpose": "zh/en TEXT v5",
-  "key": "V1.0 chip; replay_toggle; colored energy legend text",
-  "status": "v5"
- },
- "studio/theme.py": {
-  "purpose": "visual system v2",
-  "key": "apply_plot_theme mandatory; #explain style; QProgressBar QSS; handle color; #aipanel + #gallery QSS",
-  "status": "v3"
- },
- "studio/network_canvas.py": {
-  "purpose": "canvas v4",
-  "key": "node-dot threshold for large nets (<=800); fixed run viewport",
-  "status": "v4"
- },
- "studio/design_tab.py": {
-  "purpose": "design tab v6",
-  "key": "target preview at start (TARGETS/scalars label); fixed_pts=5; collapsible replay; convergence autoRange",
-  "status": "v6"
- },
- "studio/replay_tab.py": {
-  "purpose": "exploration replay",
-  "key": "click/hover scatter; clickable feed (last 30 accepted); step caption; discovery triangles; apply_structure; min plot heights",
-  "status": "v3"
- },
- "studio/main.py": {
-  "purpose": "MainWindow v4",
-  "key": "7 tabs structure/sim/features/ml/design(+replay)/surface; surface follows structure_changed; AI panel central splitter",
-  "status": "v4"
- },
- "run.py": {
-  "purpose": "entry",
-  "key": "--lang --theme --smoke; smoke uses unit_display for display names",
-  "status": "v5"
- },
- "tests/*": {
-  "purpose": "selftest, selftest_engine2, selftest_inverse, gui_smoke",
-  "status": "green"
- },
- "data/exploration_log.jsonl": {
-  "purpose": "shipped exploration log",
-  "key": "240 recs agent120+r0120",
-  "status": "shipped"
- },
- "studio/structure_tab.py": {
-  "purpose": "structure tab v5",
-  "key": "base-unit gallery + square spectrum dropdown; per-edge edit preview; LineEditor zoom; 1x1 gallery",
-  "status": "v5"
- },
- "assets/icon.ico": {
-  "purpose": "app icon",
-  "key": "PIL: dark tile + cyan hexagon + fiber ring + amber grips; 16-256px",
-  "status": "new"
- },
- "docs/UI.md": {
-  "purpose": "UI maintenance doc",
-  "key": "design tokens, object names, layout skeleton (left 240-320 / right 260-400, progress bar, explain right col), add-tab flow, packaging",
-  "status": "new"
+  "purpose": "engine2: numpy mass-spring core with bending + contact + energy bookkeeping.",
+  "status": "indexed",
+  "symbols": [
+   "Engine2Config",
+   "Engine2Result",
+   "_grips",
+   "_degree2_triplets",
+   "_excluded_pairs",
+   "Engine2"
+  ],
+  "sha256": "0074ae93c67194a3b0d566e8a20c913dc960bde8d94b82a4dc22cf06f9f26dbf"
  },
  "fslab/exporter.py": {
-  "purpose": "JSON/SVG export of current structure",
-  "key": "export_json(spec+nodes+edges); export_svg chain-colored",
-  "status": "new"
- },
- "studio/ai_assistant.py": {
-  "purpose": "AI assistant v6",
-  "key": "SKILL_DOC + get_skill_doc tool; auto tab switch; 18 tools; SSL retry fallback",
-  "status": "v7"
- },
- "studio/sim_tab.py": {
-  "purpose": "sim tab v4",
-  "key": "SciAxis; colored mode-energy legend (rich text)",
-  "status": "v4"
+  "purpose": "Export helpers: structure as JSON/SVG, results as CSV.",
+  "status": "indexed",
+  "symbols": [
+   "_n",
+   "_write_csv",
+   "_arrays",
+   "export_json",
+   "export_svg",
+   "export_run_csv",
+   "export_features_csv",
+   "export_hist_csv",
+   "export_inverse_csv"
+  ],
+  "sha256": "a75469f3a3752977713deeafa1c1cc24d9fe19dfca42eb648330700eedf7d35c"
  },
  "fslab/features.py": {
-  "purpose": "structure feature extraction (numpy) v2",
-  "key": "compute_features; metrics aligned with reference Features.py (orient/degree entropy, unweighted anisotropy); histogram arrays",
-  "status": "v2"
+  "purpose": "Structure feature extraction for fiber networks (pure numpy).",
+  "status": "indexed",
+  "symbols": [
+   "feature_name",
+   "scalar_keys",
+   "_filter_region",
+   "_region_area",
+   "_nn_distances",
+   "_chain_straightness",
+   "_structure_features",
+   "_structure_extra",
+   "_segment_interactions",
+   "_planarize",
+   "_poly_area",
+   "_poly_perim",
+   "_faces",
+   "_pore_features",
+   "_contact_features",
+   "compute_features"
+  ],
+  "sha256": "9a0e2c6bf34ec05a00376cda0db5bc7c12813383dbf2cb6b67be38f19d7ff6e0"
  },
- "studio/features_tab.py": {
-  "purpose": "features dashboard v3",
-  "key": "radar fingerprint + mini structure snapshot; short 3-char labels; cards/histograms",
-  "status": "v3"
+ "fslab/fibernet_bridge.py": {
+  "purpose": "Load fibernet.gen.pattern WITHOUT executing fibernet/__init__ (which pulls",
+  "status": "indexed",
+  "symbols": [
+   "ensure_fibernet"
+  ],
+  "sha256": "28de7e29820ab09718853f20611691f8c209f1bc8640dde42efa4d1c33a68619"
  },
- "fslab/surface3d.py": {
-  "purpose": "3D surface mapping math",
-  "key": "quad OBJ drape; in-face pattern; spectrum deformation; edge fibers",
-  "status": "v1"
+ "fslab/inverse.py": {
+  "purpose": "Inverse design (two-stage, callback-driven for live GUI):",
+  "status": "indexed",
+  "symbols": [
+   "target_curve",
+   "loading_phase",
+   "curve_of",
+   "metrics_of",
+   "distance",
+   "objective_of",
+   "fast_cfg",
+   "InverseRecord",
+   "decode_line_params",
+   "run_inverse",
+   "save_log"
+  ],
+  "sha256": "52d58759d13b5d645231bdbb41d78f9df5382f2b9ee5a3add029d1ff26af1c32"
  },
- "studio/surface_tab.py": {
-  "purpose": "3D surface tab v3",
-  "key": "3 bundled 500 OBJs; import OBJ; reset view; bigger before canvas; apply_structure follow",
-  "status": "v3"
+ "fslab/learning.py": {
+  "purpose": "Extensible supervised model and acquisition interfaces (contact-free v2).",
+  "status": "indexed",
+  "symbols": [
+   "register_model",
+   "register_acquisition",
+   "select_candidate",
+   "Regressor"
+  ],
+  "sha256": "3b7f9e3401c51f0b6c7e4b8166025273abf664c5ac221096afcabc805c343c5d"
+ },
+ "fslab/manufacturing.py": {
+  "purpose": "Canonical multigraph compilation and deformation-invariant continuous routes.",
+  "status": "indexed",
+  "symbols": [
+   "_route",
+   "ManufacturingNetwork",
+   "_connect",
+   "_even_edges",
+   "_split_junctions",
+   "compile_planar",
+   "compile_surface"
+  ],
+  "sha256": "54329740d3065a2c7d1185cbf7c246efd732c23a8b6950c1ddd487874fed14dc"
  },
  "fslab/mlmodel.py": {
-  "purpose": "ML surrogate + training",
-  "key": "MLP(hidden,seed); dynamic loss; early stop; r2_score; resumable dataset",
-  "status": "v1"
+  "purpose": "Surrogate modeling: structure features -> mechanical properties.",
+  "status": "indexed",
+  "symbols": [
+   "light_features",
+   "make_sample",
+   "gen_dataset",
+   "MLP",
+   "r2_score"
+  ],
+  "sha256": "b234ffb8acb3022b83235ca882b3b3f73614de75a1d95203afa6a396283b174f"
+ },
+ "fslab/model_inverse.py": {
+  "purpose": "Learned scalar evaluation; never fabricate a physical force curve.",
+  "status": "indexed",
+  "symbols": [
+   "PredictedStructure",
+   "predict_structure",
+   "save_prediction",
+   "load_prediction",
+   "run_model_inverse"
+  ],
+  "sha256": "d3395f63e079f009021213409bcc355dae1b4f000ad5b544fc8f041c82ef2b61"
+ },
+ "fslab/obj_polygons.py": {
+  "purpose": "Bounded projected ear clipping for ordinary OBJ polygon faces.",
+  "status": "indexed",
+  "symbols": [
+   "triangulate"
+  ],
+  "sha256": "2c8c724db16430e358b07c1c05b33fd0f23bde4c25326b7d3f34f9487165c2a0"
+ },
+ "fslab/percolation.py": {
+  "purpose": "Load-path percolation analysis on stretch trajectories.",
+  "status": "indexed",
+  "symbols": [
+   "PercolationResult",
+   "_UnionFind",
+   "_frame_analysis",
+   "_grip_prune",
+   "compute_percolation"
+  ],
+  "sha256": "2c43e8f1bfa48a20b39d36809119a2092eba1f07d744ec982b9a96025b2fdd1e"
+ },
+ "fslab/print_export.py": {
+  "purpose": "Millimetre fiber solids, bounded meshing, atomic STL/3MF and route exports.",
+  "status": "indexed",
+  "symbols": [
+   "PrintSettings",
+   "FiberSolid",
+   "build_solid",
+   "build_voxel_solid",
+   "export_solid",
+   "export_route"
+  ],
+  "sha256": "5af0dede90ed17e7aff329257a71a3a28d1b88923ce6d5c672a69c6716af2db4"
+ },
+ "fslab/rl_process.py": {
+  "purpose": "Launch a CPU-bounded optional training runtime without blocking Qt.",
+  "status": "indexed",
+  "symbols": [
+   "training_python",
+   "run_external"
+  ],
+  "sha256": "293cf4ed8f9fc47fc1ce849c1e992c67ac2a6dbad329d7ede88c8fd1bbc11ebf"
+ },
+ "fslab/search_algorithms.py": {
+  "purpose": "Search registry and real Stable-Baselines3 adapters, imported only by workers.",
+  "status": "indexed",
+  "symbols": [
+   "register_search",
+   "atomic_json",
+   "run_rl"
+  ],
+  "sha256": "1e3b196c431a690352f120799122630f5987e6bb4f638637209760278659843a"
+ },
+ "fslab/simcache.py": {
+  "purpose": "Stretch simulation runner on engine2 with per-frame extraction + disk cache.",
+  "status": "indexed",
+  "symbols": [
+   "engine_src_hash",
+   "atomic_replace",
+   "_probe_cache_dir",
+   "default_cache_dir",
+   "cache_tag",
+   "_load_cache",
+   "_save_cache",
+   "RunConfig",
+   "StretchRun",
+   "_downsample",
+   "run_stretch"
+  ],
+  "sha256": "f78aeaa665f404d335f4431e5c8cd25fc4e9764c195ce3aeb682c6c47593c678"
+ },
+ "fslab/solid_process.py": {
+  "purpose": "Isolated solid construction with atomic output and interruptible parent polling.",
+  "status": "indexed",
+  "symbols": [
+   "build_isolated",
+   "worker"
+  ],
+  "sha256": "454307f54697d5f72ff63ee5e15020f03b939e4f8484a4d93d42956f73bbc37c"
+ },
+ "fslab/storage.py": {
+  "purpose": "Validated data directories and strict atomic checkpoint replacement.",
+  "status": "indexed",
+  "symbols": [
+   "atomic_replace",
+   "writable_data_dir"
+  ],
+  "sha256": "e0439f813ac8171497454bf8971b7c7028bdd5bf58b77c951dc3f313c06e8226"
+ },
+ "fslab/structure.py": {
+  "purpose": "Parametric structure factory (square-primitive model, P1-consistent).",
+  "status": "indexed",
+  "symbols": [
+   "_zero",
+   "unit_display",
+   "resolve_unit",
+   "unit_key",
+   "_cell_factory",
+   "_all_cell_specs",
+   "_ensure_cells",
+   "valid_cell_spec",
+   "load_custom_cells",
+   "_write_custom_cells",
+   "save_custom_cell",
+   "delete_custom_cell",
+   "all_unit_keys",
+   "n_intermediate_for",
+   "resample_spectrum",
+   "fit_spectrum",
+   "rotated_displacements",
+   "chains_of",
+   "StructureFactory"
+  ],
+  "sha256": "6113c1d3571558fb4ffc3b48e8ac5190162eca29345a2781a7e361fb6c771aad"
+ },
+ "fslab/surface3d.py": {
+  "purpose": "Drape a fiber network onto a quad OBJ surface (pure numpy).",
+  "status": "indexed",
+  "symbols": [
+   "legacy_parse_obj",
+   "build_edge_faces",
+   "_unit_vecs",
+   "_face_normals",
+   "_chain_segs",
+   "_line_inner",
+   "legacy_deform_surface"
+  ],
+  "sha256": "0576629084ca129f4c748c4f3c113c25160cae9dacef55095d2a6b3170f3c0ac"
+ },
+ "fslab/surface_mapping.py": {
+  "purpose": "Actual cell topology mapped to bilinear patches with explicit seam stitches.",
+  "status": "indexed",
+  "symbols": [
+   "MappingConfig",
+   "bilinear",
+   "map_cells",
+   "front_basis",
+   "subdivide_quads",
+   "corner_quads",
+   "coarsen_quads",
+   "reduce_triangles",
+   "load_obj"
+  ],
+  "sha256": "0fa7dec19352fc4956884660ec06461a1921e7813b98af67a42480a221a4a199"
+ },
+ "fslab/tube_solid.py": {
+  "purpose": "Analytic polygonal cylinders and round joints with manifold Boolean union.",
+  "status": "indexed",
+  "symbols": [
+   "tube_mesh"
+  ],
+  "sha256": "129eb464f8f01deec310f7d26194f5bb1f65c717078cff8f2120c4f80aa0b7f2"
+ },
+ "fslab/version.py": {
+  "purpose": "Single source of truth for app identity.",
+  "status": "indexed",
+  "symbols": [],
+  "sha256": "0cad26def457d88a2f804970d1b540ac1493e84eb704ed19118f9cc594f5dd26"
+ },
+ "fslab/welding.py": {
+  "purpose": "Bounded initial-geometry crosslinks for intersecting planar fiber segments.",
+  "status": "indexed",
+  "symbols": [
+   "IntersectionWelder"
+  ],
+  "sha256": "a32443ac1de960a4193dad21c7295ed5a3db8d95cff87e6bdb813fbe774b7c5b"
+ },
+ "studio/__init__.py": {
+  "purpose": "",
+  "status": "indexed",
+  "symbols": [],
+  "sha256": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6"
+ },
+ "studio/ai_assistant.py": {
+  "purpose": "AI assistant dock: DeepSeek (OpenAI-compatible) function-calling loop that",
+  "status": "indexed",
+  "symbols": [
+   "load_cfg",
+   "save_cfg",
+   "build_tools",
+   "_j",
+   "_ToolRequest",
+   "AIWorker",
+   "KeyDialog",
+   "Bubble",
+   "ToolCard",
+   "AIPanel"
+  ],
+  "sha256": "fef36a149b2ffd5d7dbff9bdb95fbbe06abf76feb76f6eaff55a1a36273ab34c"
+ },
+ "studio/algorithm_dialog.py": {
+  "purpose": "Schema-driven algorithm settings shared by learning and inverse design.",
+  "status": "indexed",
+  "symbols": [
+   "AlgorithmDialog"
+  ],
+  "sha256": "95ddb4f2973e3b005265298f962ccc748e5886265327402e60ab19da6c66c65c"
+ },
+ "studio/cell_editor.py": {
+  "purpose": "Authoring dialog for user-defined square-periodic base units (F8b).",
+  "status": "indexed",
+  "symbols": [
+   "_tiled_graph",
+   "tiled_parity",
+   "CellCanvas",
+   "TilePreview",
+   "CellEditorDialog"
+  ],
+  "sha256": "60d92a60d40a66430207512514d61c80954966e3c6c02d0980df09ba731763e7"
+ },
+ "studio/count_input.py": {
+  "purpose": "Positive integer entry without a product-level iteration ceiling.",
+  "status": "indexed",
+  "symbols": [
+   "CountInput"
+  ],
+  "sha256": "1d4dcab84b057dfb705a3fe1db328550417a9d9b07583aae0ae4aa282ce684a3"
+ },
+ "studio/design_tab.py": {
+  "purpose": "Inverse design tab: live two-stage optimizer (topology screen + CEM over",
+  "status": "indexed",
+  "symbols": [
+   "DesignWorker",
+   "DesignTab"
+  ],
+  "sha256": "30a4fe8f7e506b6c9239324b58a2f2f76c30d0ac8f936f002cb387696dc00a20"
+ },
+ "studio/exports.py": {
+  "purpose": "Shared save-dialog and raster export helpers for the GUI tabs.",
+  "status": "indexed",
+  "symbols": [
+   "ask_save",
+   "save_plot_png",
+   "save_widget_png",
+   "unique_stem",
+   "add_caption"
+  ],
+  "sha256": "e08bdca977a0ffb738c29c6fa3c94bf24bd7be85fa68cce276077ab5b7dce74d"
+ },
+ "studio/features_tab.py": {
+  "purpose": "Feature analysis dashboard: card grid of scalar tiles and mini",
+  "status": "indexed",
+  "symbols": [
+   "_t",
+   "_fmt",
+   "_hist_bins",
+   "FingerprintWidget",
+   "FeatureCard",
+   "FeatureDialog",
+   "BatchWorker",
+   "FeaturesTab"
+  ],
+  "sha256": "db6edab76b2b51c65e7aba94188d3d0600a1c1c72233113dfb75b899c7fc1050"
+ },
+ "studio/gif_export.py": {
+  "purpose": "Bounded-memory, high-resolution GIF export driven by the Qt event loop.",
+  "status": "indexed",
+  "symbols": [
+   "SimulationGif"
+  ],
+  "sha256": "41f3f6dc2e50cd272067851d373b8c11b6c4e6749b66e888bc07119f01efa4bb"
+ },
+ "studio/i18n.py": {
+  "purpose": "Single TEXT table for all static UI strings: key -> (zh, en).",
+  "status": "indexed",
+  "symbols": [
+   "set_lang",
+   "get_lang",
+   "tr"
+  ],
+  "sha256": "c1e1968a5e1ca1ecae99b7adf551885efd654ce850e27f479ff4218b91df15c0"
+ },
+ "studio/main.py": {
+  "purpose": "MainWindow: branded header + tab container + shared structure wiring.",
+  "status": "indexed",
+  "symbols": [
+   "_icon_path",
+   "MainWindow"
+  ],
+  "sha256": "490e94889462e029e64ca26344dad96bd785667bbb4adb741d0ea57cc8addb52"
+ },
+ "studio/manufacturing_dialog.py": {
+  "purpose": "Separate 2D/3D fabrication views backed by one verified multigraph and solid.",
+  "status": "indexed",
+  "symbols": [
+   "ManufacturingWorker",
+   "ManufacturingCanvas",
+   "ManufacturingDialog"
+  ],
+  "sha256": "cfee5392c364c373148cfbf44b40d2d0c22f51b32b60e9d076bdbe1d34d3a4bf"
+ },
+ "studio/manufacturing_tab.py": {
+  "purpose": "Main fabrication workspace with explicit planar and surface sources.",
+  "status": "indexed",
+  "symbols": [
+   "ManufacturingTab"
+  ],
+  "sha256": "ec953cbb76ae07caf7478f62c33b07c43ea3c0e94bdb21cac9fdf7cb69dcdbed"
+ },
+ "studio/mesh_dialog.py": {
+  "purpose": "Adjust OBJ reduction and conforming quad subdivision without editing sources.",
+  "status": "indexed",
+  "symbols": [
+   "MeshDialog"
+  ],
+  "sha256": "9fff965bc833666cc6fca7f44f574e530d653ac5b1fc018e31609858e8808d31"
  },
  "studio/ml_tab.py": {
-  "purpose": "ML tab v2",
-  "key": "loss curves via setData buffer (appendData was a no-op in pyqtgraph 0.14)",
-  "status": "v2"
+  "purpose": "Machine-learning tab: structure features -> mechanical properties.",
+  "status": "indexed",
+  "symbols": [
+   "_cache_dir",
+   "dataset_path",
+   "GenWorker",
+   "TrainWorker",
+   "_T",
+   "MLTab"
+  ],
+  "sha256": "5d63663a9a2285678afe0e647213b6b6b03847d1f8cfe9ef4b050d9586536d02"
  },
- "docs/AI_TOOLS.md": {
-  "purpose": "AI assistant tool API reference",
-  "key": "18 tools list + payload examples",
-  "status": "v1"
+ "studio/network_canvas.py": {
+  "purpose": "QPainter network canvas with pixmap scene cache.",
+  "status": "indexed",
+  "symbols": [
+   "_lerp_color",
+   "NetworkCanvas"
+  ],
+  "sha256": "80a0bdc6dc22441e1f5dabcfea75e61c40d99bf4e41fe6896f946d577e849d43"
+ },
+ "studio/recording_command.py": {
+  "purpose": "Parse explicit recording requests into deterministic workflow parameters.",
+  "status": "indexed",
+  "symbols": [
+   "recording_options"
+  ],
+  "sha256": "ca7ea627ba5031a630370062d75197ef77119d27f39342696169be0934c98a1c"
+ },
+ "studio/replay_tab.py": {
+  "purpose": "Exploration replay tab: plays back the shipped exploration log",
+  "status": "indexed",
+  "symbols": [
+   "_app_root",
+   "load_log",
+   "ReplayTab"
+  ],
+  "sha256": "02260fdf1a23cedb8372130ee0b54ecb0946c56007fcff446efb784597f27b74"
+ },
+ "studio/rule_dialog.py": {
+  "purpose": "Safe visual editor for periodic orientation rules; no executable expressions.",
+  "status": "indexed",
+  "symbols": [
+   "ExpansionDialog",
+   "RuleDialog"
+  ],
+  "sha256": "9be7fa5e151b77916d078c26a82d377c6c0073292620dd3495c22cb269d04172"
+ },
+ "studio/sim_tab.py": {
+  "purpose": "Unified live-simulation tab: one stretch run drives two synchronized",
+  "status": "indexed",
+  "symbols": [
+   "SciAxis",
+   "SimWorker",
+   "SimTab"
+  ],
+  "sha256": "4f2d8301efd828cdea4168783ec7c0021b5de281b743d3565f33c9ed081e88ad"
+ },
+ "studio/structure_tab.py": {
+  "purpose": "Structure studio: standalone structure-generation panel.",
+  "status": "indexed",
+  "symbols": [
+   "spec_text",
+   "LineEditor",
+   "DispRow",
+   "StructureTab"
+  ],
+  "sha256": "f3c10bc1e2760eaa148b5ec7dcc2ba3872ae7abab9d47d26fe25596a540a86b1"
+ },
+ "studio/surface_tab.py": {
+  "purpose": "3D surface tab: drape the fiber network over quad OBJ surfaces.",
+  "status": "indexed",
+  "symbols": [
+   "_obj_dir",
+   "resample_spectrum",
+   "SurfaceCanvas",
+   "SurfaceTab"
+  ],
+  "sha256": "d13fe328e52827acdfc03520a494f45209847599824126cf0c4569025c916869"
+ },
+ "studio/theme.py": {
+  "purpose": "Visual system: layered dark/light palettes + one comprehensive QSS.",
+  "status": "indexed",
+  "symbols": [
+   "colors",
+   "build_palette",
+   "apply_plot_theme",
+   "build_qss"
+  ],
+  "sha256": "3ed133e3f8b3fff4874c035061a84d5c30388dc04f90d5f77a194831dbfcb446"
+ },
+ "studio/workflow.py": {
+  "purpose": "Observable asynchronous UI workflow, with atomic per-stage journal.",
+  "status": "indexed",
+  "symbols": [
+   "PrintWorkflow"
+  ],
+  "sha256": "7cbdda7c05223e8da7940e32a658130a48b04eaa5cdf4569bd297733c0f12c5f"
+ },
+ "scripts/audit_bundle_source.py": {
+  "purpose": "Verify bundled application bytecode matches the current source tree.",
+  "status": "indexed",
+  "symbols": [
+   "signature",
+   "BundleAudit"
+  ],
+  "sha256": "079d87251a20df6633587fa3ef609200791bdda5e5b2c60ae5bd6c51aeca3783"
+ },
+ "scripts/audit_dist.py": {
+  "purpose": "Portability audit of the frozen build (onefile exe or onedir folder).",
+  "status": "indexed",
+  "symbols": [
+   "_system_dlls",
+   "icu_verdict",
+   "collect_pes",
+   "analyze",
+   "main"
+  ],
+  "sha256": "85d3212e5442c727bc58651a07d5d91f3663702d02f6fe12b321c8a525be3aca"
+ },
+ "scripts/audit_ui_layout.py": {
+  "purpose": "Repeatable offscreen layout audit; optional captures are local QA only.",
+  "status": "indexed",
+  "symbols": [
+   "LayoutAudit"
+  ],
+  "sha256": "275708103d5927f05245b4e5dedb7b2ae719ce8e1e7c31cfc4919fcaf93ad3be"
+ },
+ "scripts/bench_perf.py": {
+  "purpose": "Performance baseline harness (before/after numbers for optimization work).",
+  "status": "indexed",
+  "symbols": [
+   "_timed",
+   "bench_build",
+   "bench_engine",
+   "bench_profile",
+   "bench_features",
+   "bench_gui",
+   "main"
+  ],
+  "sha256": "9f88f03381be1f19ca8377ffb39ad96e88e94e09ee1fb73f388e56c4e4fa4862"
+ },
+ "scripts/build_exe.py": {
+  "purpose": "Build the FiberScope Windows exe (single file by default).",
+  "status": "indexed",
+  "symbols": [
+   "vendor_fibernet",
+   "system_icu",
+   "build_env",
+   "cleanroom_env",
+   "private_dlls",
+   "write_spec",
+   "write_version_file",
+   "exe_path",
+   "_read_sidecar",
+   "smoke",
+   "cleanroom_smoke",
+   "dep_gate",
+   "audit",
+   "main"
+  ],
+  "sha256": "826ebf6aba1a645b3f7fadacdb3e41c4adb1ebccbc2d062f9021bbd25c18c703"
+ },
+ "scripts/bump_engine_version.py": {
+  "purpose": "Keep the cache identity in sync with the numeric core.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "5dc03c3e6620f4a96245c7d6de756f3fb6029be62470c97e9cb6a0541dc005ee"
+ },
+ "scripts/check_runtime_deps.py": {
+  "purpose": "Pre-build gate: prove the app never touches modules we plan to exclude.",
+  "status": "indexed",
+  "symbols": [
+   "build_excludes",
+   "_Blocker",
+   "install",
+   "_probe",
+   "_child",
+   "main"
+  ],
+  "sha256": "855722c1026da6a930cfb1f043656a9199b78d826d02e4d22d54f92eecb8f1b7"
+ },
+ "scripts/check_unit_boundary.py": {
+  "purpose": "Unit-cell boundary audit for fslab.structure.",
+  "status": "indexed",
+  "symbols": [
+   "_arrays",
+   "parity",
+   "grid_line_reach",
+   "_fmt",
+   "contact_preload",
+   "twin_pairs",
+   "scale_of",
+   "base_edge_lengths",
+   "relative_deformation",
+   "raw_tile",
+   "check_unit",
+   "main"
+  ],
+  "sha256": "b64c39855edf7940f5da089497714fa059a0513f7352793d69460014570c0476"
+ },
+ "scripts/collect_licenses.py": {
+  "purpose": "Collect installed distribution license files into bundled assets.",
+  "status": "indexed",
+  "symbols": [
+   "LicenseInventory"
+  ],
+  "sha256": "bc3746a91c8a280639236175f3414ec1d3f778cfcfff6aeaf22c494a303c569b"
+ },
+ "scripts/edit_sources.py": {
+  "purpose": "Apply exact, bounded source replacements while preserving newline style.",
+  "status": "indexed",
+  "symbols": [
+   "SourceEdits"
+  ],
+  "sha256": "dd8a303e395ae30a4e1556ae987761792f64abadf1692f4a8c666e2c60d71dfc"
+ },
+ "scripts/generate_demo_meshes.py": {
+  "purpose": "Generate original procedural quad assets; rerun with Python 3.10+.",
+  "status": "indexed",
+  "symbols": [
+   "DemoMeshes"
+  ],
+  "sha256": "412931dae0997eb436abf3defa0c85601bba9c7db39ee0355db4bfaf7e901861"
+ },
+ "scripts/make_golden_engine.py": {
+  "purpose": "Freeze reference engine2 outputs so any numerics change can be verified.",
+  "status": "indexed",
+  "symbols": [
+   "run_case",
+   "collect",
+   "main",
+   "_atomic_write"
+  ],
+  "sha256": "e84ba74056f25c30cfdb786d62f1041c917c4c16b4b13b39df7a5402fd978df7"
+ },
+ "scripts/prepare_demo27.py": {
+  "purpose": "Prepare regular quad demos from preserved references; resume each asset.",
+  "status": "indexed",
+  "symbols": [
+   "DemoPreparation"
+  ],
+  "sha256": "a3006c3c1f8e86b8170ab9f770a80e67444fe634eb551eb2680fc309a6ee8116"
+ },
+ "scripts/prepare_publication.py": {
+  "purpose": "Prepare a reviewed source snapshot; never copy caches, credentials or Git history.",
+  "status": "indexed",
+  "symbols": [
+   "Publication"
+  ],
+  "sha256": "fe4bc126a902bf65e50673e61d079a19370f5a94c1b61dae91f26b4a2e7de531"
+ },
+ "scripts/prepare_real_demos.py": {
+  "purpose": "Download CC0 Khronos geometry and make bounded OBJ demos.",
+  "status": "indexed",
+  "symbols": [
+   "DemoBuilder"
+  ],
+  "sha256": "a1d800a5d12d9b78f37276fa2d61705641f272c55029c537bcdcfe95d07363e5"
+ },
+ "scripts/prepare_reference_models26.py": {
+  "purpose": "Resume lightweight reference OBJ preparation; originals are read-only.",
+  "status": "indexed",
+  "symbols": [
+   "ReferenceModels"
+  ],
+  "sha256": "4540f31e2d8674d4ae6c546ba15aae0bec8fee078833d5a21fcaf0c288743e1d"
+ },
+ "scripts/reproduce_learning23.py": {
+  "purpose": "Reproduce actual physical-data training and plot geometry. Run directly.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "257831d85f690a044a743d650b618ff59400f73d15c75b55093873de1150750f"
+ },
+ "scripts/review_geometry27.py": {
+  "purpose": "Save local-only review views and a pyramid print demo; no printer job is sent.",
+  "status": "indexed",
+  "symbols": [
+   "GeometryReview"
+  ],
+  "sha256": "acefa588806ad8f6d47b58adf5b7f78a26405bcb9ff0f831c43e1b2293ead3e6"
+ },
+ "scripts/rl_worker.py": {
+  "purpose": "Standalone resumable RL worker. Run: python scripts/rl_worker.py request.json.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "366ee10ce1400516ffd15689b974fdd59938711329fdc28a2852db4b2f23b250"
+ },
+ "scripts/run_exploration.py": {
+  "purpose": "Offline exploration run: novelty-search agent vs R0 uniform random,",
+  "status": "indexed",
+  "symbols": [
+   "behavior_of",
+   "evaluate",
+   "load_done",
+   "main"
+  ],
+  "sha256": "9a6094a94f770c262a0d07bb928c83014642fac5e3ef1856b3d5d2285d55856c"
+ },
+ "scripts/run_tests.py": {
+  "purpose": "Run every self-test suite and report a compact summary.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "b1c9c87d5349ca250c2133c45cad20f202306128cb2b61e8569e89f4e546c88a"
+ },
+ "scripts/tower_envelope27.py": {
+  "purpose": "Regular quad tower envelope fitted to the reference's height and outline.",
+  "status": "indexed",
+  "symbols": [
+   "TowerEnvelope"
+  ],
+  "sha256": "eb30371da9c64c2f868b268c031252bb4ca00a97f1f8d037bc214687326e0734"
+ },
+ "scripts/update_code_registry.py": {
+  "purpose": "Refresh code inventory without discarding curated notes.",
+  "status": "indexed",
+  "symbols": [
+   "CodeRegistry"
+  ],
+  "sha256": "7a574a28b9fc3cb1ff025b728c12f8f3cab05df97ad9f4367a705a6def229234"
+ },
+ "scripts/validate_manufacturing25.py": {
+  "purpose": "Resumable real-asset manufacturing matrix: python scripts/validate_manufacturing25.py.",
+  "status": "indexed",
+  "symbols": [
+   "ManufacturingValidation"
+  ],
+  "sha256": "6898042f34d94362ed35df98898bd52ce0c059e97d049733a5e4c8e360db53b2"
+ },
+ "scripts/validate_manufacturing26.py": {
+  "purpose": "Resumable real-asset manufacturing matrix: python scripts/validate_manufacturing26.py.",
+  "status": "indexed",
+  "symbols": [
+   "ManufacturingValidation"
+  ],
+  "sha256": "39dd11617b896326eb3aee5392474a07796553563d62543bb77dbfadd7871f4a"
+ },
+ "scripts/validate_orthogonal.py": {
+  "purpose": "Resumable physical/GUI factorial regression. Run --section ml|search|all.",
+  "status": "indexed",
+  "symbols": [
+   "PhysicalMatrix",
+   "main"
+  ],
+  "sha256": "1db9d2bb27ce95d8aea7aaec80ed835ccf8000207e63b5c519e89ce5ed248acd"
+ },
+ "scripts/validate_surface23.py": {
+  "purpose": "Validate real demos and triangle import in the actual surface widget.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "f6aa65323a3e3d15f4870e00bddcc2d51a4e59cd9a322818533e878ab5aa7123"
+ },
+ "scripts/validate_topnet_physics26.py": {
+  "purpose": "Resumable finite-physics matrix for the new, explicitly versioned topology.",
+  "status": "indexed",
+  "symbols": [
+   "PhysicsValidation"
+  ],
+  "sha256": "2ab5ebbb50115ab88c172b5e7aae16bab8cc2209c8c16f17f289db8d67341187"
+ },
+ "scripts/verify_bambu27.py": {
+  "purpose": "Verify installed Bambu reads STL/3MF and preserves geometry; never slice/send.",
+  "status": "indexed",
+  "symbols": [
+   "BambuCheck"
+  ],
+  "sha256": "ab78f1b75e90a149dc84f6d8c3fdd6a9162c465d73af2b491692fc8efebc0aa3"
+ },
+ "scripts/verify_frozen_rl.py": {
+  "purpose": "Test the EXE's actual bundled worker using a local optional training Python.",
+  "status": "indexed",
+  "symbols": [
+   "FrozenRLCheck"
+  ],
+  "sha256": "b402c0b91715cfa37d9f3e48a73bfb50558f3f78d09bbf48a77a0ff988ad13aa"
+ },
+ "scripts/verify_print_formats25.py": {
+  "purpose": "Independent development-only STL/3MF reader check; requires trimesh.",
+  "status": "indexed",
+  "symbols": [
+   "PrintFormatCheck"
+  ],
+  "sha256": "9b819d3c37867d6761a36b832ed120da21adecb0cb52047fb8b9cac13f86c255"
+ },
+ "tests/gui_final30.py": {
+  "purpose": "Final interaction contract: visible parameters, automatic fabrication and traced navigation.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "e2cf18cdf27faeafab39dea265445662ddf5f96c29c314d386ef573a424eab33"
+ },
+ "tests/gui_finals.py": {
+  "purpose": "Finals UI regression. Run: python tests/gui_finals.py.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "781bc917ce27c16b6e36783f955bb35ad3e44eab3be6930900fc8331eb7cbcda"
+ },
+ "tests/gui_geometry27.py": {
+  "purpose": "Curved GUI identity, print orientation and hidden workflow controls.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "8fdc97ec1f270a459e5704ba81d6b7915c58f58f2644ca19180884f22f709f95"
+ },
+ "tests/gui_manufacturing.py": {
+  "purpose": "Real asynchronous manufacturing dialog, views, route and exports.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "51e5205e60be4a8c3994de541314e657cd32f91139136128309c2da5c6311c1e"
+ },
+ "tests/gui_precision29.py": {
+  "purpose": "Visible controls, regular perturbation and real high-resolution GIF validation.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "68b8a44ef84a7ef607781523bc5301c1edb49db373ed40242769b7f9c717a786"
+ },
+ "tests/gui_refinement24.py": {
+  "purpose": "Rerunnable interaction/model-search regression: python tests/gui_refinement24.py.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "eae524e1307b3d6dffb196c746dd52b7c678fc6ef48cd65ee09e3509b6cc8bdb"
+ },
+ "tests/gui_smoke.py": {
+  "purpose": "Offscreen GUI smoke test: build window, simulate, pixel-probe the canvas.",
+  "status": "indexed",
+  "symbols": [
+   "grab",
+   "_pixels",
+   "count_blue",
+   "main"
+  ],
+  "sha256": "434f8cbf50206092a0a7f2074330579e4a531357ebf6996207e190757f449bb5"
+ },
+ "tests/gui_upgrade.py": {
+  "purpose": "2.2 end-to-end GUI flows using isolated datasets and asynchronous workers.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "5a5b94e38741887096ca97fc35bb8cd8fb98544b0133ae6fdf1874851cdd9507"
+ },
+ "tests/gui_upgrade28.py": {
+  "purpose": "UI type follow, trained unit lock, dark radar and recording command routing.",
+  "status": "indexed",
+  "symbols": [
+   "Model",
+   "main"
+  ],
+  "sha256": "0c634fd5955df52468f6472fb02b35602b146cb770746a5162aeee57777d40e4"
+ },
+ "tests/gui_workflow26.py": {
+  "purpose": "Real asynchronous full workflow, cancellation, UI focus, and atomic outputs.",
+  "status": "indexed",
+  "symbols": [
+   "wait",
+   "main"
+  ],
+  "sha256": "24fa3d8f545944dbc854c3febf1051873a8c50c9a395feced2f94d30dbb5928f"
+ },
+ "tests/selftest.py": {
+  "purpose": "Math-core selftest (no Qt). Run: python tests/selftest.py",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "b93360db954411a60b16faf4b4c99e9035b4ceefaf4624902da3189b39c44ba5"
+ },
+ "tests/selftest_engine2.py": {
+  "purpose": "engine2 validation: physics must be right before any GUI uses it.",
+  "status": "indexed",
+  "symbols": [
+   "build",
+   "frac",
+   "main",
+   "golden_check"
+  ],
+  "sha256": "2a3d89229f8ad1a548f93eff5525d4089f2778b5ec5e3490c6c8ca4ee0430e36"
+ },
+ "tests/selftest_finals.py": {
+  "purpose": "Finals regression suite. Run: python tests/selftest_finals.py.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "d9e13918d23f272346fc77ffc4cc13572119f331253a912e8701c9b15bb091ff"
+ },
+ "tests/selftest_geometry27.py": {
+  "purpose": "Regression checks for perturbation, whole demo geometry and printed tubes.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "623d6bbd35d6957a3fd4adf289f6b07cda7e9508913dfcfe84e3bbd999de6186"
+ },
+ "tests/selftest_inverse.py": {
+  "purpose": "Inverse design validation. Run: python tests/selftest_inverse.py",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "e62af0d6a7944087f8803f2f6cf4014f03bbf0a16672cecdf4126806e7c0af53"
+ },
+ "tests/selftest_learning.py": {
+  "purpose": "Run all registered models, acquisition strategies and checkpoint contracts.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "6add602b52bb38e191c6d41639df15769477138a735a85d7a85c0bdac4083365"
+ },
+ "tests/selftest_manufacturing.py": {
+  "purpose": "Canonical topology/route matrix and real STL/3MF closed-solid verification.",
+  "status": "indexed",
+  "symbols": [
+   "check_route",
+   "main"
+  ],
+  "sha256": "c3db4dd249ebcbfa05d46b98956dc2b73d1bed003f47860d68cf6402f5054c01"
+ },
+ "tests/selftest_obj26.py": {
+  "purpose": "OBJ concavity, mixed faces, compact defaults and stable curved identities.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "17cb2b15002da0496fcdd16ea64339928eb538cc41f43c58b1c0cd049ccb40b4"
+ },
+ "tests/selftest_regression23.py": {
+  "purpose": "Parameter limits, physical topology coverage, fresh and resumed jobs.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "84c3dc0413bbd867bbd8a47bc0961d0d84ff778a2082424f75d91730761f571c"
+ },
+ "tests/selftest_search.py": {
+  "purpose": "Actual RL adapter training, checkpoint restart and per-topology exploration.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "4ad644faad39f8a1ab1aeab98c52f83fed04b778ba4f2081fafff6ba7b74f877"
+ },
+ "tests/selftest_surface.py": {
+  "purpose": "Verify topology mapping, seam connectivity, assets and safe import budgets.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "c1c12d812ea16fb9a56848130937fb722730a396ea60f9058f54fa099a7fd409"
+ },
+ "tests/selftest_topnet26.py": {
+  "purpose": "Reference-derived degree, twin identity, and simulation/export consistency.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "914aeb75293c8baffddaf31cdfd210754705639f9bae1c17ab5ed2775befc88e"
+ },
+ "tests/selftest_upgrade28.py": {
+  "purpose": "New unit, initial welded intersections and adjustable quad resolution.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "217b93813671cb07b4c70ab7843348e4d4246d5f0950659cf6ab6e7e83365144"
  }
 }

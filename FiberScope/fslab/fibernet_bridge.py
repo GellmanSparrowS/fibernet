@@ -8,6 +8,8 @@ import types
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEFAULT = os.path.normpath(os.path.join(os.path.dirname(_ROOT), "fibernet"))
+if os.path.isdir(os.path.join(_DEFAULT, "core")):
+    _DEFAULT = os.path.dirname(_ROOT)
 FIBERNET_ROOT = os.environ.get("FIBERNET_ROOT", _DEFAULT)
 
 

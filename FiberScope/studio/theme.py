@@ -1,4 +1,4 @@
-﻿"""Visual system: layered dark/light palettes + one comprehensive QSS.
+"""Visual system: layered dark/light palettes + one comprehensive QSS.
 
 Design language: deep graphite-blue surfaces, cyan accent, rounded cards,
 pill chips, gradient primary actions. Artwork colors (canvas) live in
@@ -137,6 +137,10 @@ def build_qss(mode: str) -> str:
     QPushButton[primary="true"]:disabled {{
         background: {c['card2']}; color: {c['faint']};
     }}
+    QPushButton#loopbtn:checked {{
+        border: 1px solid {c['accent2']}; background: {c['accent2']}22;
+        color: {c['accent2']};
+    }}
     QPushButton#gallery {{
         background: {c['card2']}; border: 1px solid {c['line']};
         border-radius: 8px; padding: 2px;
@@ -169,6 +173,21 @@ def build_qss(mode: str) -> str:
         background: {c['card']}; border: 1px solid {c['line2']};
         selection-background-color: {c['accent']}33;
         selection-color: {c['text']}; padding: 4px; outline: none;
+    }}
+    QMenu {{
+        background: {c['card']}; color: {c['text']};
+        border: 1px solid {c['line2']}; border-radius: 8px; padding: 4px;
+    }}
+    QMenu::item {{
+        padding: 6px 22px 6px 14px; border-radius: 6px;
+        background: transparent;
+    }}
+    QMenu::item:selected {{
+        background: {c['accent']}33; color: {c['text']};
+    }}
+    QMenu::item:disabled {{ color: {c['faint']}; }}
+    QMenu::separator {{
+        height: 1px; background: {c['line']}; margin: 4px 8px;
     }}
     QCheckBox {{ spacing: 8px; }}
     QCheckBox::indicator {{
@@ -218,6 +237,13 @@ def build_qss(mode: str) -> str:
     QWidget#aipanel {{
         background: {c['panel']}; border-left: 1px solid {c['line']};
     }}
+    QLineEdit#ai_input, QLineEdit#ai_input:focus {{
+        background: {c['card2']}; color: {c['text']};
+        border: 1px solid {c['line2']}; border-radius: 10px;
+        padding: 4px 10px; selection-background-color: {c['accent']};
+        selection-color: #ffffff;
+    }}
+    QLineEdit#ai_input:focus {{ border-color: {c['accent']}; }}
     QTextBrowser#aichat {{
         background: {c['card2']}; border: 1px solid {c['line']};
         border-radius: 10px; padding: 8px;

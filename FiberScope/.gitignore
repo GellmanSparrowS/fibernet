@@ -1,12 +1,10 @@
+_cache/
+_tmp/
 __pycache__/
 *.pyc
-_tmp/
-_cache/
 build/
+build_vendor/
 dist/
 *.spec
-.DS_Store
-
-build_vendor/
 smoke_result.txt
-_build_log.txt
+build_version.txt

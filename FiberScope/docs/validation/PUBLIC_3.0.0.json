@@ -1,0 +1,17 @@
+{
+  "version": "3.0.0",
+  "desktop_regression": "22/22 passed in final desktop checkout",
+  "public_source_regression": "21/22 initial; missing numerical replay fixture restored; remaining gui_smoke 1/1 passed",
+  "monorepo_layout": "3/3 passed",
+  "web_core": "all seven stages and six ML models passed",
+  "web_http": "all seven stages passed locally",
+  "modelscope": "Running; all seven stages passed via hosted API; browser HTML publicly available",
+  "desktop_physics_recording": {
+    "unit": "square",
+    "samples": 300,
+    "target": "J",
+    "evaluations": 200
+  },
+  "physical_printer_job": false,
+  "exe_sha256": "7036e0162d7a6710da6f1fe072403a33699eabb72d8b4c2c7e25cee7f6908eb0"
+}

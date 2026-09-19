@@ -1,3 +1,41 @@
+# FiberScope 3.0 · FiberNet
+
+**从纤维网络基本单元到物理仿真、AI 逆向设计与可打印实体。**
+
+FiberScope is an interactive desktop application for manufacturability-informed fiber-network materials design, powered by the FiberNet Python toolkit.
+
+- **在线体验 / Live demo:** https://modelscope.cn/studios/GellmanSparrow/FiberScope
+- **Windows 完整版 / Download:** [FiberScope 3.0 release](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0)
+- **操作与源码 / Desktop guide:** [FiberScope/README.md](FiberScope/README.md)
+- **方法与复现 / Methods:** [3.0 methods](FiberScope/docs/METHODS_3_0.md)
+- **录像流程 / Recording command:** [AI workflow](FiberScope/docs/finals/AI_RECORDING_3_0.md)
+
+## FiberScope 软件
+
+| 板块 | 能力 |
+| --- | --- |
+| 结构生成 | 多种基本单元、共享位移参数、自定义单元与周期规则 |
+| 原位仿真 | 拉伸、焊接锚点、曲线及高分辨率 GIF 回放 |
+| 特征分析 | 结构与孔隙特征，不以几何接触指标作为训练输入 |
+| 机器学习 | 真实物理标签、六种回归模型、主动学习及留出集评价 |
+| AI 逆向设计 | 目标曲线搜索、CEM、可扩展强化学习与可选代理模型 |
+| 三维曲面 | 真实单元映射、三角 OBJ 转四边网格及采样控制 |
+| 制造 | 闭合路径、圆柱纤维实体、STL/路径导出与本地拓竹交接 |
+
+桌面版运行于 Windows 10/11 x64，无需安装 Python。在线版复用同一数值核心，在共享 CPU 上提供七步核心体验；完整 AI 助手、自定义编辑和高预算任务在桌面版使用。在线版不会控制访问者的打印机。
+
+制作：**杨云浩，复旦大学高分子科学系**。致谢 **世界人工智能开源大赛（GOAI）**。
+
+## 验证与适用范围
+
+桌面 3.0 已通过 22 套回归、真实 300 样本物理标注及 200 次 J 型逆设计流程。STL 已通过独立封闭检查并在 Bambu Studio 导入；未将这些检查表述为实际打印验证。力学结果来自降阶数值模型，实验定量预测需材料校准。闭合图路径与常规切片器重新生成的机床路径不同。
+
+项目代码沿用 MIT 许可；依赖与衍生模型说明见 [THIRD_PARTY_NOTICES.md](FiberScope/THIRD_PARTY_NOTICES.md)。
+
+---
+
+## FiberNet Python toolkit
+
 <div align="center">
 
 # 🧬 FiberNet v4

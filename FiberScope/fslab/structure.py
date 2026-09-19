@@ -3,18 +3,34 @@
 Two generation paths share one deformation language (the displacement
 spectrum of one reference fiber line):
 
+Scale convention (both paths, single rule):
+  the spectrum is a list of (dx along the line, dy normal to it) offsets
+  expressed as FRACTIONS OF THAT LINE'S OWN LENGTH.  Each fiber line of the
+  network receives the same profile scaled by its own length, so one drag in
+  the editor means the same relative deformation on every unit and on every
+  edge of a unit, regardless of how long that edge happens to be.  This is
+  what LineEditor emits and what `resample_spectrum` preserves.
+
 P1 path (unit in SPECTRUM_PRESETS, default 'square'):
   base primitive : square unit cell, n_pts_per_side interior nodes per edge
   spectrum       : per-index offsets of the interior nodes of one reference
-                   edge, as fractions of the edge length
+                   edge, as fractions of the edge length (every square edge
+                   is CELL long, so the scale factor is CELL)
   replication    : 4-fold rotational symmetry onto the four cell edges,
-                   periodic tiling, then lens welding so shared boundaries
-                   are single fibers (same math as the P1 dataset code)
+                   then periodic tiling.  Adjacent cells each draw their own
+                   copy of a shared boundary, so every interior boundary is
+                   a pair of overlapping fibers (a thin lens) - exactly the
+                   paper's construction: the twins are identified as two
+                   distinct edges (node degrees stay even, <= 8) and are
+                   bonded where they overlap, which is what makes them
+                   anchors.  They are NOT merged: merging at the midpoint
+                   flattened every interior boundary back to a straight line
+                   for symmetric spectra, i.e. only the outer frame deformed.
 
-classic path (fibernet units: hexagon, honeycomb, kagome, ...):
+classic path (fibernet units: hexagon, reentrant, chiral, ...):
   base primitive : the canonical undeformed unit (no baked-in randomness)
-  replication    : the spectrum is rotated into every fiber line's own
-                   orientation via a prototype displacement table
+  replication    : the spectrum is rotated into every base-unit edge's own
+                   orientation and scaled by that edge's own length
 
 Named spectrum presets are fixed spectra on the square base; the
 undeformed square is the neutral element.  The editor, the preview and the
@@ -23,15 +39,17 @@ canvas all consume the same spectrum, so what you edit is what you get.
 from dataclasses import dataclass, asdict
 import hashlib
 import json
+import math
+import os
 import re
 
 import numpy as np
 
 from .fibernet_bridge import ensure_fibernet
 
-MAX_NODES = 6000      # hard cap: canvas + memory guard
-MAX_GRID = 8
-MAX_PTS = 6
+MAX_NODES = 40000      # hard cap: canvas + memory guard
+MAX_GRID = 128
+MAX_PTS = 24
 CELL = 10.0           # unit-cell edge length (box=(10,10))
 
 _PRESET_PTS = 5
@@ -41,27 +59,67 @@ def _zero():
     return [(0.0, 0.0)] * _PRESET_PTS
 
 
+# Values are fractions of the reference line's own length.  They were
+# originally authored as absolute units on a CELL=10 square, so they carry a
+# 1/10 factor here; the rendered square geometry is unchanged.
 SPECTRUM_PRESETS = {
     'square': _zero(),
-    'auxetic_bow': [(0.0, -0.34), (0.0, -0.50), (0.0, -0.56),
-                  (0.0, -0.50), (0.0, -0.34)],
-    'rhombic_bow': [(0.0, 0.34), (0.0, 0.50), (0.0, 0.56),
-                (0.0, 0.50), (0.0, 0.34)],
-    'swirl': [(-0.46, -0.08), (-0.28, 0.22), (0.0, 0.38),
-               (0.28, 0.22), (0.46, -0.08)],
-    'zigzag': [(0.0, 0.48), (0.0, -0.48), (0.0, 0.48),
-             (0.0, -0.48), (0.0, 0.48)],
-    'pinwheel': [(0.38, 0.22), (0.16, 0.42), (0.0, -0.28),
-             (-0.16, 0.42), (-0.38, 0.22)],
+    'auxetic_bow': [(0.0, -0.034), (0.0, -0.050), (0.0, -0.056),
+                    (0.0, -0.050), (0.0, -0.034)],
+    'rhombic_bow': [(0.0, 0.034), (0.0, 0.050), (0.0, 0.056),
+                    (0.0, 0.050), (0.0, 0.034)],
+    'swirl': [(-0.046, -0.008), (-0.028, 0.022), (0.0, 0.038),
+              (0.028, 0.022), (0.046, -0.008)],
+    'zigzag': [(0.0, 0.048), (0.0, -0.048), (0.0, 0.048),
+               (0.0, -0.048), (0.0, 0.048)],
+    'pinwheel': [(0.038, 0.022), (0.016, 0.042), (0.0, -0.028),
+                 (-0.016, 0.042), (-0.038, 0.022)],
 }
 
-CLASSIC_UNITS = ['triangle', 'hexagon', 'voronoi', 'reentrant',
-                 'chiral', 'star', 'cross', 'missing_rib', 'diamond']
+CLASSIC_UNITS = ['triangle', 'hexagon', 'reentrant',
+                 'chiral', 'star', 'cross', 'diamond']
 
-UNIT_PRESETS = {k: k for k in list(SPECTRUM_PRESETS) + CLASSIC_UNITS}
+# truncated-square cut fraction (octagon cell below)
+T8 = 1.0 / (2.0 + math.sqrt(2.0))
+
+# Square-periodic corner-graph cells: nodes in unit-box coordinates and
+# edges listed as one counter-clockwise walk, so a shared boundary is
+# traversed in opposite senses by the two neighbouring cells and survives
+# tiling as a twin-fiber lens (paper TOPNet: all-even degree <= 8).
+CELL_UNITS = {
+    'ring': {
+        'nodes': [(0.5+0.36*math.cos(k*math.pi/2), 0.5+0.36*math.sin(k*math.pi/2)) for k in range(4)]
+                 + [(1.,.5),(.5,1.),(0.,.5),(.5,0.)],
+        'edges': [(k,(k+1)%4) for k in range(4)] + [(0,4),(1,5),(2,6),(3,7)],
+    },
+    'kagome': {
+        'nodes': [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0),
+                  (0.5, 0.0), (1.0, 0.5), (0.5, 1.0), (0.0, 0.5)],
+        'edges': [(0, 4), (4, 1), (1, 5), (5, 2), (2, 6), (6, 3), (3, 7),
+                  (7, 0), (4, 5), (5, 6), (6, 7), (7, 4)],
+    },
+    'octagon': {
+        'nodes': [(T8, 0.0), (1.0 - T8, 0.0), (1.0, T8), (1.0, 1.0 - T8),
+                  (1.0 - T8, 1.0), (T8, 1.0), (0.0, 1.0 - T8), (0.0, T8)],
+        'edges': [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7),
+                  (7, 0)],
+    },
+}
+
+import sys
+_CUSTOM_ROOT = (os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')),
+                             'FiberScope') if getattr(sys, 'frozen', False)
+                else os.path.join(os.path.dirname(os.path.dirname(
+                    os.path.abspath(__file__))), 'data'))
+CUSTOM_CELL_FILE = os.path.join(_CUSTOM_ROOT, 'custom_units.json')
+CUSTOM_CELLS = {}        # key -> {'nodes', 'edges', 'zh', 'en'}
+_CELLS_REGISTERED = set()
+
+UNIT_PRESETS = {k: k for k in
+                list(SPECTRUM_PRESETS) + CLASSIC_UNITS + list(CELL_UNITS)}
 
 # base-unit list for the UI (square spectrum presets are folded into square)
-BASE_UNIT_KEYS = ['square'] + CLASSIC_UNITS
+BASE_UNIT_KEYS = ['square'] + CLASSIC_UNITS + list(CELL_UNITS)
 
 # internal key -> (zh, en) display names (no underscores in UI)
 UNIT_DISPLAY = {
@@ -73,13 +131,15 @@ UNIT_DISPLAY = {
     'pinwheel': ('风车', 'Pinwheel'),
     'triangle': ('三角形', 'Triangle'),
     'hexagon': ('六边形', 'Hexagon'),
-    'voronoi': ('Voronoi', 'Voronoi'),
+    'ring': ('圆环晶格', 'Ring lattice'),
+    'voronoi': ('Voronoi（旧版）', 'Voronoi (legacy)'),
     'reentrant': ('内凹蜂窝', 'Reentrant'),
     'chiral': ('手性', 'Chiral'),
     'star': ('星形', 'Star'),
     'cross': ('十字形', 'Cross'),
-    'missing_rib': ('缺肋', 'Missing rib'),
     'diamond': ('菱形', 'Diamond'),
+    'kagome': ('笼目', 'Kagome'),
+    'octagon': ('八角方形', 'Truncated square'),
 }
 
 
@@ -89,12 +149,179 @@ def unit_display(key, lang='zh'):
     return names[0] if lang == 'zh' else names[1]
 
 
+# units that appear in older exploration logs but were retired from the UI
+# (missing_rib was hexagon-derived: identical base edge lengths 5.00/5.59)
+LEGACY_UNIT_MAP = {'voronoi': 'ring', 'honeycomb': 'hexagon',
+                   'missing_rib': 'hexagon'}
+
+
+def resolve_unit(key):
+    """Map a possibly retired unit key onto a supported one.
+
+    Returns (resolved_key, note); note is None for a currently listed unit.
+    """
+    if key in UNIT_PRESETS or key in CUSTOM_CELLS:
+        return key, None
+    if key in LEGACY_UNIT_MAP:
+        return LEGACY_UNIT_MAP[key], 'legacy:%s->%s' % (
+            key, LEGACY_UNIT_MAP[key])
+    return 'square', 'unknown:%s->square' % key
+
+
 def unit_key(display, lang='zh'):
     """Resolve a display name back to its internal key."""
     for key, names in UNIT_DISPLAY.items():
         if display == names[0] or display == names[1]:
             return key
+    for key, spec in CUSTOM_CELLS.items():
+        if display in (spec.get('zh'), spec.get('en')):
+            return key
     return display
+
+
+# ---------------- cell-graph units (built-in + user authored) ----------------
+def _cell_factory(spec):
+    """pattern_2d unit factory for one corner-graph cell spec."""
+    nodes = [(float(a), float(b)) for a, b in spec['nodes']]
+    edges = [(int(a), int(b)) for a, b in spec['edges']]
+
+    def factory(box=(10.0, 10.0), n_internal=0, radius=0.1, material=None,
+                n_pts_per_side=0, point_displacements=None,
+                perturbation=0.0, seed=None):
+        from fibernet.core.structure_graph import StructureGraph
+        from fibernet.gen.pattern import _add_edge_with_intermediates
+        w, h = box
+        g = StructureGraph(dimension=2, box_size=[w, h])
+        pos = [(nx * w, ny * h) for nx, ny in nodes]
+        for p in pos:
+            g.add_node(list(p))
+        n = int(n_pts_per_side)
+        disp = list(point_displacements) if point_displacements else None
+        for k, (a, b) in enumerate(edges):
+            sl = disp[k * n:(k + 1) * n] if (disp and n) else None
+            _add_edge_with_intermediates(g, pos[a], pos[b], n, sl,
+                                         radius, material, n_internal)
+        g._metadata['unit_type'] = 'cell'
+        g._metadata['n_pts_per_side'] = n
+        return g
+
+    return factory
+
+
+def _all_cell_specs():
+    specs = dict(CELL_UNITS)
+    specs.update(CUSTOM_CELLS)
+    return specs
+
+
+def _ensure_cells():
+    """Register built-in + custom cell specs as pattern_2d units."""
+    ensure_fibernet()
+    from fibernet.gen.pattern import register_unit
+    for key, spec in _all_cell_specs().items():
+        if key not in _CELLS_REGISTERED:
+            register_unit(key, _cell_factory(spec))
+            _CELLS_REGISTERED.add(key)
+
+
+def valid_cell_spec(spec):
+    """Validate a connected graph; the unit box is a period, not a clipping boundary."""
+    try:
+        nodes = [(float(a), float(b)) for a, b in spec['nodes']]
+        edges = [(int(a), int(b)) for a, b in spec['edges']]
+    except (TypeError, ValueError, KeyError):
+        return False
+    if not 2 <= len(nodes) <= 48 or not edges:
+        return False
+    if any(not (math.isfinite(x) and math.isfinite(y)) or max(abs(x), abs(y)) > 1e6 for x, y in nodes):
+        return False
+    seen, adj = set(), {}
+    for a, b in edges:
+        if not (0 <= a < len(nodes) and 0 <= b < len(nodes)) or a == b:
+            return False
+        key = (min(a, b), max(a, b))
+        if key in seen:
+            return False
+        seen.add(key)
+        adj.setdefault(a, []).append(b)
+        adj.setdefault(b, []).append(a)
+    stack, seen_n = [0], {0}
+    while stack:
+        for v in adj.get(stack.pop(), ()):
+            if v not in seen_n:
+                seen_n.add(v)
+                stack.append(v)
+    return len(seen_n) == len(nodes)
+
+
+def load_custom_cells(path=None):
+    """Read data/custom_units.json; returns the loaded key -> spec dict."""
+    global CUSTOM_CELLS
+    path = path or CUSTOM_CELL_FILE
+    try:
+        with open(path, encoding='utf-8') as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        data = {}
+    CUSTOM_CELLS.clear()
+    CUSTOM_CELLS.update({k: v for k, v in (data or {}).items()
+                        if isinstance(v, dict) and valid_cell_spec(v)})
+    _CELLS_REGISTERED.clear()
+    return dict(CUSTOM_CELLS)
+
+
+def _write_custom_cells():
+    os.makedirs(os.path.dirname(os.path.abspath(CUSTOM_CELL_FILE)), exist_ok=True)
+    tmp = CUSTOM_CELL_FILE + '.tmp'
+    with open(tmp, 'w', encoding='utf-8') as fh:
+        json.dump(CUSTOM_CELLS, fh, ensure_ascii=False, indent=1)
+    os.replace(tmp, CUSTOM_CELL_FILE)
+
+
+def save_custom_cell(key, nodes, edges, zh=None, en=None, settings=None):
+    """Persist one user cell and make it buildable; returns the final key."""
+    spec = {'nodes': [[float(a), float(b)] for a, b in nodes],
+            'edges': [[int(a), int(b)] for a, b in edges],
+            'zh': zh or key, 'en': en or key}
+    if settings is not None:
+        spec['settings'] = dict(settings)
+    if not valid_cell_spec(spec):
+        raise ValueError('invalid cell spec')
+    key = re.sub(r'[^a-z0-9_]+', '_', str(key).lower()).strip('_') or 'cell'
+    while key in CELL_UNITS or key in SPECTRUM_PRESETS \
+            or key in CLASSIC_UNITS:
+        key += '_x'
+    previous = CUSTOM_CELLS.get(key)
+    CUSTOM_CELLS[key] = spec
+    try:
+        _write_custom_cells()
+    except OSError:
+        if previous is None:
+            CUSTOM_CELLS.pop(key, None)
+        else:
+            CUSTOM_CELLS[key] = previous
+        raise
+    _CELLS_REGISTERED.discard(key)
+    _INTERMEDIATE_CACHE.clear()
+    return key
+
+
+def delete_custom_cell(key):
+    if key not in CUSTOM_CELLS:
+        return False
+    previous = CUSTOM_CELLS.pop(key)
+    try:
+        _write_custom_cells()
+    except OSError:
+        CUSTOM_CELLS[key] = previous
+        raise
+    _CELLS_REGISTERED.discard(key)
+    return True
+
+
+def all_unit_keys():
+    """Every buildable base unit: built-ins first, then user cells."""
+    return BASE_UNIT_KEYS + sorted(CUSTOM_CELLS)
 
 _INTERMEDIATE_CACHE = {}
 
@@ -107,6 +334,7 @@ def n_intermediate_for(unit, n_pts_per_side):
     if key in _INTERMEDIATE_CACHE:
         return _INTERMEDIATE_CACHE[key]
     ensure_fibernet()
+    _ensure_cells()
     from fibernet.gen.pattern import pattern_2d
     # node-count delta: robust for builders that do not validate the
     # displacement list length (they would silently auto-perturb otherwise)
@@ -145,12 +373,15 @@ def fit_spectrum(spec, pts):
     return resample_spectrum(spec, pts)
 
 
-def rotated_displacements(spectrum):
+def rotated_displacements(spectrum, length=CELL):
     '''Replicate one-edge spectrum onto the 4 cell edges with C4 symmetry.
 
+    `spectrum` is in fractions of the reference line's own length; `length`
+    is that length in absolute units (CELL for every edge of a square cell).
     Order matches the closed square polyline edges AB, BC, CD, DA.
     '''
-    ab = [(float(dx), float(dy)) for dx, dy in spectrum]
+    s = float(length)
+    ab = [(float(dx) * s, float(dy) * s) for dx, dy in spectrum]
     bc = [(-dy, dx) for dx, dy in ab]
     cd = [(-dx, -dy) for dx, dy in ab]
     da = [(dy, -dx) for dx, dy in ab]
@@ -187,101 +418,22 @@ def chains_of(pos, edges):
     return chains, deg
 
 
-def weld_lens(g):
-    '''Merge twin boundary polylines (lens pairs) into one welded line.
-
-    Tiling the C4-deformed cell makes adjacent cells draw their own copy of
-    each shared boundary (a thin lens).  Physically the boundary is a single
-    fiber, so each twin pair is welded: inner nodes are merged at their
-    midpoint and the duplicate chain is removed; the graph is rebuilt with
-    the same node/edge API.
-    '''
-    pos = np.asarray(g.node_positions(), float)[:, :2]
-    edges = np.asarray(g.edge_array(), int)[:, :2]
-    chains, deg = chains_of(pos, edges)
-    n = pos.shape[0]
-    adj = [[] for _ in range(n)]
-    for a, b in edges:
-        a = int(a)
-        b = int(b)
-        adj[a].append(b)
-        adj[b].append(a)
-
-    def end_key(ch):
-        ea = [x for x in adj[ch[0]] if deg[x] != 2]
-        eb = [x for x in adj[ch[-1]] if deg[x] != 2]
-        u = ea[0] if ea else ch[0]
-        v = eb[0] if eb else ch[-1]
-        return (min(u, v), max(u, v))
-
-    by_ends = {}
-    for ch in chains:
-        if len(ch) < 3:
-            continue
-        by_ends.setdefault(end_key(ch), []).append(ch)
-    parent = list(range(n))
-
-    def find(x):
-        while parent[x] != x:
-            parent[x] = parent[parent[x]]
-            x = parent[x]
-        return x
-
-    pairs = []
-    for key in sorted(by_ends):
-        grp = by_ends[key]
-        if len(grp) != 2:
-            continue
-        c1, c2 = grp
-        if len(c1) != len(c2):
-            continue
-        i1, i2 = list(c1), list(c2)
-        fwd = float(np.abs(pos[i1] - pos[i2]).sum())
-        rev = float(np.abs(pos[i1] - pos[i2[::-1]]).sum())
-        if rev < fwd:
-            i2 = i2[::-1]
-        for a, b in zip(i1, i2):
-            ra, rb = find(a), find(b)
-            if ra != rb:
-                parent[rb] = ra
-                pairs.append((a, b))
-    if not pairs:
-        return g
-    newpos = pos.copy()
-    for a, b in pairs:
-        newpos[a] = 0.5 * (pos[a] + pos[b])
-    g2 = type(g)(dimension=2, tolerance=1e-9)
-    ids = {}
-    for i in range(n):
-        r = find(i)
-        if r not in ids:
-            ids[r] = g2.add_node(np.array([newpos[r][0], newpos[r][1], 0.0]))
-    seen = set()
-    for a, b in edges:
-        ra, rb = find(int(a)), find(int(b))
-        if ra == rb:
-            continue
-        ia, ib = ids[ra], ids[rb]
-        key = (min(ia, ib), max(ia, ib))
-        if key in seen:
-            continue
-        seen.add(key)
-        g2.add_edge(ia, ib, radius=0.1)
-    return g2
-
-
 @dataclass
 class StructureFactory:
     unit: str = 'square'
     grid_x: int = 3
     grid_y: int = 3
     n_pts_per_side: int = 5
-    perturbation: float = 0.0   # 0..1 seeded node-jitter fraction
+    perturbation: float = 0.0   # relative perturbation of shared displacement parameters
     radius: float = 0.1
     seed: int = 7
     wave: bool = False          # True = fibernet seeded auto displacements
     line_displacements: list = None   # spectrum of reference edge
     node_offsets: list = None         # [[bx, by, dx, dy]] abs units
+    expansion_rule: str = 'translate'
+    custom_rule: list = None
+    topology: str = 'topnet26'
+    spectrum_resolved: bool = False
 
     def clamped(self):
         self.grid_x = int(max(1, min(MAX_GRID, self.grid_x)))
@@ -302,10 +454,56 @@ class StructureFactory:
             return resample_spectrum(SPECTRUM_PRESETS[self.unit], pts)
         return None
 
+    def effective_spectrum(self):
+        spectrum = np.asarray(fit_spectrum(self.spectrum(), self.n_pts_per_side), float).reshape(-1, 2)
+        if self.spectrum_resolved:
+            return spectrum
+        rng = np.random.default_rng(self.seed)
+        if not self.line_displacements and not np.any(spectrum) and self.perturbation and not self.wave:
+            return np.round(rng.uniform(-.25,.25,spectrum.shape)*self.perturbation,3)
+        if self.wave and self.n_pts_per_side:
+            spectrum = rng.uniform(-.08, .08, spectrum.shape)
+        if self.perturbation:
+            spectrum *= 1. + rng.uniform(-self.perturbation, self.perturbation, spectrum.shape)
+        return spectrum
+
     def build(self):
+        if self.topology == 'topnet26':
+            from .manufacturing import compile_planar
+            ensure_fibernet()
+            from fibernet.core.structure_graph import StructureGraph
+            network = compile_planar(self)
+            if len(network.positions) > MAX_NODES:
+                raise MemoryError('structure exceeds simulation node budget; reduce grid or points')
+            graph = StructureGraph(dimension=2)
+            for point in network.positions:
+                graph.add_node(point, merge=False)
+            for a, b in network.edges:
+                graph.add_edge(int(a), int(b), radius=self.radius)
+            graph.metadata.update(topology=self.topology, topology_id=network.topology_id,
+                                  route_nodes=network.route_nodes.tolist(),
+                                  route_edges=network.route_edges.tolist())
+            return graph
+        if self.topology != 'legacy':
+            raise ValueError('unknown topology version')
         ensure_fibernet()
+        _ensure_cells()
         from fibernet.gen.pattern import pattern_2d
         self.clamped()
+        spec = _all_cell_specs().get(self.unit)
+        if spec and (len(spec['nodes']) + len(spec['edges'])*self.n_pts_per_side) * self.grid_x*self.grid_y > MAX_NODES:
+            raise MemoryError('custom cell expansion exceeds node budget; reduce grid or points')
+        if self.expansion_rule != 'translate':
+            from dataclasses import replace
+            from .cell_rules import expand_graph
+            base = replace(self, grid_x=1, grid_y=1,
+                           expansion_rule='translate', perturbation=0.0,
+                           node_offsets=None).build()
+            g = expand_graph(base, self.grid_x, self.grid_y,
+                             self.expansion_rule, CELL, MAX_NODES, self.custom_rule)
+            self._apply_offsets(g)
+            self._apply_jitter(g)
+            return g
         pts = self.n_pts_per_side
         if self.is_p1():
             kwargs = dict(
@@ -324,7 +522,6 @@ class StructureFactory:
                     kwargs['point_displacements'] = rotated_displacements(
                         self.spectrum())
             g = pattern_2d(**kwargs)
-            g = weld_lens(g)
         else:
             kwargs = dict(
                 unit=self.unit,
@@ -356,7 +553,11 @@ class StructureFactory:
 
         Each classic unit is described by its zero-point corner graph;
         every original edge receives the same (dx along edge, dy normal)
-        profile, exactly like the square P1 path.  The flattened list
+        profile scaled by THAT EDGE'S OWN length, exactly like the square P1
+        path.  Classic units mix edge lengths freely (chiral: 1.15 and 8.57;
+        voronoi: 0.01 to 3.58), so a single CELL-wide scale made short edges
+        deform several times their own length while long edges barely moved.
+        The flattened list
         follows base.edge_array() order, which matches the unit factory
         edge-insertion order used when n_pts_per_side > 0.
         """
@@ -373,69 +574,10 @@ class StructureFactory:
             L = max(float(np.hypot(d[0], d[1])), 1e-9)
             ca, sa = d[0] / L, d[1] / L
             for dx, dy in spec:
-                rx = dx * CELL * ca - dy * CELL * sa
-                ry = dx * CELL * sa + dy * CELL * ca
+                rx = dx * L * ca - dy * L * sa
+                ry = dx * L * sa + dy * L * ca
                 out.append((float(rx), float(ry)))
         return out
-
-    def _line_disp_table(self):
-        '''Prototype (3x3) displacement table keyed by base pos mod CELL.
-
-        Maximal fiber lines of the prototype are sampled along their own
-        chord; the profile is rotated into each line's orientation.  Keys
-        are base positions mod CELL, so replication is exactly periodic on
-        any grid size.
-        '''
-        ld = self.line_displacements
-        pts = len(ld)
-        ts = np.concatenate(([0.0], [(k + 1) / (pts + 1) for k in range(pts)],
-                             [1.0]))
-        prof = np.vstack(([0.0, 0.0], np.asarray(ld, float) * CELL,
-                          [0.0, 0.0]))
-        proto = StructureFactory(
-            unit=self.unit, grid_x=3, grid_y=3,
-            n_pts_per_side=self.n_pts_per_side, radius=self.radius,
-            seed=self.seed, wave=self.wave, perturbation=0.0).clamped()
-        g3 = proto.build()
-        pos = np.asarray(g3.node_positions(), float)[:, :2]
-        edges = np.asarray(g3.edge_array(), int)[:, :2]
-        chains, _ = chains_of(pos, edges)
-        chains.sort(key=len, reverse=True)
-        table = {}
-        for mem in chains:
-            m = len(mem)
-            if m == 0:
-                continue
-            d = pos[mem[-1]] - pos[mem[0]]
-            L = float(np.hypot(d[0], d[1]))
-            if L < 1e-9:
-                continue
-            ca, sa = d[0] / L, d[1] / L
-            tt = np.array([(j + 1) / (m + 1) for j in range(m)])
-            ax = np.interp(tt, ts, prof[:, 0])
-            ay = np.interp(tt, ts, prof[:, 1])
-            rx = ax * ca - ay * sa
-            ry = ax * sa + ay * ca
-            for nid, dx, dy in zip(mem, rx, ry):
-                q = pos[nid]
-                key = (round(float(q[0]) % CELL, 2),
-                       round(float(q[1]) % CELL, 2))
-                table.setdefault(key, (float(dx), float(dy)))
-        return table
-
-    def _apply_line_displacements(self, g):
-        if not self.line_displacements or self.n_pts_per_side <= 0:
-            return
-        table = self._line_disp_table()
-        pos = self._pos(g)
-        for nid, p in enumerate(pos):
-            key = (round(float(p[0]) % CELL, 2),
-                   round(float(p[1]) % CELL, 2))
-            d = table.get(key)
-            if d is not None:
-                g.set_node_position(int(nid),
-                                    [float(p[0] + d[0]), float(p[1] + d[1]),
-                                     0.0])
 
     # ---------------- post-build adjustments ----------------
     def _pos(self, g):
@@ -468,5 +610,8 @@ class StructureFactory:
             g.set_node_position(int(nid), [float(x), float(y), 0.0])
 
     def key(self) -> str:
-        raw = json.dumps(asdict(self), sort_keys=True)
+        spec = asdict(self)
+        if self.unit in CUSTOM_CELLS:
+            spec['custom_cell'] = CUSTOM_CELLS[self.unit]
+        raw = json.dumps(spec, sort_keys=True)
         return hashlib.sha1(raw.encode()).hexdigest()[:16]

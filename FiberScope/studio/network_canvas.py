@@ -9,8 +9,8 @@ Modes:
 A small legend chip is drawn in the top-right corner.
 """
 import numpy as np
-from PySide6.QtCore import Qt, QPointF, QRectF
-from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
+from PySide6.QtCore import Qt, QLineF, QPointF, QRectF
+from PySide6.QtGui import QColor, QImage, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QWidget
 
 from .theme import colors
@@ -147,69 +147,48 @@ class NetworkCanvas(QWidget):
 
     def _render_scene(self) -> QPixmap:
         dpr = self.devicePixelRatioF()
-        pm = QPixmap(int(self.width() * dpr), int(self.height() * dpr))
-        pm.setDevicePixelRatio(dpr)
-        pm.fill(Qt.transparent)
-        p = QPainter(pm)
-        p.setRenderHint(QPainter.Antialiasing, True)
-        s, ox, oy = self._transform()
         c = colors(self.mode)
-
-        def w2s(x, y):
-            return QPointF(float(x) * s + ox, float(y) * s + oy)
+        img = QImage(max(1, int(round(self.width() * dpr))),
+                     max(1, int(round(self.height() * dpr))),
+                     QImage.Format_RGB32)
+        img.setDevicePixelRatio(dpr)
+        img.fill(QColor(c["bg"]).rgb())
+        p = QPainter(img)
+        # thousands of thin edges: source-over blending on an alpha pixmap
+        # plus antialiasing costs ~5-20x the raster time of an opaque
+        # non-AA pass and buys nothing visible at dpr >= 1; the few dots
+        # and contact markers below keep antialiasing
+        p.setRenderHint(QPainter.Antialiasing, False)
+        s, ox, oy = self._transform()
 
         if self.run is None:
-            self._draw_static(p, w2s, s, c)
+            self._draw_static(p, s, ox, oy, c)
             p.end()
-            return pm
+            return QPixmap.fromImage(img)
 
         run, perc = self.run, self.perc
         f = self.frame
-        xy = run.frames_xy[f]
-        edges = run.edges
-
-        def pt(i):
-            return w2s(xy[i, 0], xy[i, 1])
-
+        S = np.asarray(run.frames_xy[f], float) * s + (ox, oy)
         if self.color_mode == "strain":
-            self._draw_strain_edges(p, pt, run, f)
+            groups = self._strain_groups(run, f, c)
         else:
-            blue = QColor(c["accent"])
-            cyan = QColor("#7ef0ff")
-            dim = QColor("#5b7fb9")
-            inactive = QColor(c["edge_inactive"])
-            in_span = perc.edge_in_spanning[f] if perc is not None else None
-            active = perc.active_mask(f) if perc is not None else None
-            depth = perc.edge_depth_norm[f] if perc is not None else None
-
-            p.setPen(QPen(inactive, 1.2))
-            for k in range(run.n_edges):
-                if active is not None and active[k]:
-                    continue
-                p.drawLine(pt(edges[k, 0]), pt(edges[k, 1]))
-            if active is not None:
-                p.setPen(QPen(dim, 1.8))
-                for k in range(run.n_edges):
-                    if active[k] and not in_span[k]:
-                        p.drawLine(pt(edges[k, 0]), pt(edges[k, 1]))
-                for k in range(run.n_edges):
-                    if in_span[k]:
-                        col = _lerp_color(blue, cyan, depth[k])
-                        p.setPen(QPen(col, 2.6))
-                        p.drawLine(pt(edges[k, 0]), pt(edges[k, 1]))
+            groups = self._perc_groups(run, perc, f, c)
+        self._draw_edge_groups(p, S, run.edges, groups)
 
         # nodes (skip individual dots on large nets; they overlap and
         # dominate paint time for no visual gain)
+        p.setRenderHint(QPainter.Antialiasing, True)
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(c["sub"]))
         r = max(1.6, 0.05 * s)
-        if xy.shape[0] <= 800:
-            for i in range(xy.shape[0]):
-                p.drawEllipse(pt(i), r, r)
+        if S.shape[0] <= 800:
+            for i in range(S.shape[0]):
+                p.drawEllipse(QPointF(S[i, 0], S[i, 1]), r, r)
         # grips
         p.setBrush(QColor(c["warn"]))
         for i in np.concatenate([run.left_nodes, run.right_nodes]):
-            p.drawEllipse(pt(int(i)), r * 1.7, r * 1.7)
+            p.drawEllipse(QPointF(S[int(i), 0], S[int(i), 1]),
+                          r * 1.7, r * 1.7)
         # contacts: history dim, fresh bright
         cf = getattr(run, "contact_frames", None)
         if cf is not None and f < len(cf):
@@ -217,50 +196,103 @@ class NetworkCanvas(QWidget):
                         np.asarray(cf[f], dtype=int).reshape(-1, 2)) \
                 if len(cf[f]) else set()
             if self._contact_cum is not None and f < len(self._contact_cum):
-                old_pairs = set(self._contact_cum[f]) - fresh
-                p.setBrush(QColor(255, 59, 48, 80))
-                for a, b in old_pairs:
-                    mx = (xy[a, 0] + xy[b, 0]) / 2
-                    my = (xy[a, 1] + xy[b, 1]) / 2
-                    p.drawEllipse(w2s(mx, my), 3.5, 3.5)
+                old = np.asarray(sorted(set(self._contact_cum[f]) - fresh),
+                                 dtype=int).reshape(-1, 2)
+                if len(old):
+                    M = 0.5 * (S[old[:, 0]] + S[old[:, 1]])
+                    p.setBrush(QColor(255, 59, 48, 80))
+                    for x, y in M:
+                        p.drawEllipse(QPointF(x, y), 3.5, 3.5)
             if fresh:
+                fr = np.asarray(sorted(fresh), dtype=int).reshape(-1, 2)
+                M = 0.5 * (S[fr[:, 0]] + S[fr[:, 1]])
                 p.setBrush(QColor("#ff3b30"))
-                for a, b in fresh:
-                    mx = (xy[a, 0] + xy[b, 0]) / 2
-                    my = (xy[a, 1] + xy[b, 1]) / 2
-                    p.drawEllipse(w2s(mx, my), 4.5, 4.5)
+                for x, y in M:
+                    p.drawEllipse(QPointF(x, y), 4.5, 4.5)
         p.end()
-        return pm
+        return QPixmap.fromImage(img)
 
-    def _draw_static(self, p, w2s, s, c):
+    # ---------------- batched edge painting ----------------
+    @staticmethod
+    def _draw_edge_groups(p, S, edges, groups):
+        """One drawLines call per colour bucket.
+
+        Per-edge drawLine + per-edge QPen was the playback bottleneck on
+        big networks (37 ms/frame at dpr 1 for voronoi 3x3, ~4x worse on
+        HiDPI); bucketing by colour turns it into a handful of batched
+        raster calls.
+        """
+        for pen, idx in groups:
+            if not len(idx):
+                continue
+            p.setPen(pen)
+            e = edges[idx].tolist()
+            p.drawLines([QLineF(S[a, 0], S[a, 1], S[b, 0], S[b, 1])
+                         for a, b in e])
+
+    def _perc_groups(self, run, perc, f, c):
+        nE = run.n_edges
+        allidx = np.arange(nE)
+        if perc is None:
+            return [(QPen(QColor(c["edge_inactive"]), 1.2), allidx)]
+        blue = QColor(c["accent"])
+        cyan = QColor("#7ef0ff")
+        in_span = perc.edge_in_spanning[f]
+        active = perc.active_mask(f)
+        depth = perc.edge_depth_norm[f]
+        groups = [(QPen(QColor(c["edge_inactive"]), 1.2), allidx[~active]),
+                  (QPen(QColor("#5b7fb9"), 1.8), allidx[active & ~in_span])]
+        sp = allidx[active & in_span]
+        K = 8
+        if len(sp):
+            b = np.clip((depth[sp] * K).astype(int), 0, K - 1)
+            for k in range(K):
+                idx = sp[b == k]
+                if len(idx):
+                    groups.append((QPen(_lerp_color(blue, cyan,
+                                                    (k + 0.5) / K), 2.6),
+                                   idx))
+        return groups
+
+    def _strain_groups(self, run, f, c):
+        sf = run.edge_strain[f]
+        scale = float(np.percentile(np.abs(sf), 95)) or 1.0
+        cold = QColor("#4dd0e1")
+        mid = QColor(c["edge_inactive"])
+        hot = QColor("#ff5d47")
+        v = np.clip(sf / scale, -1.0, 1.0)
+        K = 12
+        b = np.clip(((v + 1.0) * K).astype(int), 0, 2 * K - 1)
+        groups = []
+        for k in range(2 * K):
+            idx = np.flatnonzero(b == k)
+            if not len(idx):
+                continue
+            t = (k + 0.5) / K - 1.0
+            col = _lerp_color(mid, hot, t) if t >= 0 else \
+                _lerp_color(mid, cold, -t)
+            groups.append((QPen(col, 1.4 + 1.6 * abs(t)), idx))
+        return groups
+
+    def _draw_static(self, p, s, ox, oy, c):
         st = self.static
-        p.setPen(QPen(QColor(c["line2"]), max(1.2, 0.035 * s)))
-        for a, b in st["edges"]:
-            p.drawLine(w2s(*st["pos"][a]), w2s(*st["pos"][b]))
+        S = np.asarray(st["pos"], float) * s + (ox, oy)
+        e = np.asarray(st["edges"], int).tolist()
+        p.setPen(QPen(QColor(c["accent2"]), max(1.2, 0.035 * s)))
+        p.drawLines([QLineF(S[a, 0], S[a, 1], S[b, 0], S[b, 1])
+                     for a, b in e])
+        p.setRenderHint(QPainter.Antialiasing, True)
         p.setPen(Qt.NoPen)
         p.setBrush(QColor(c["sub"]))
         r = max(1.4, 0.045 * s)
         if len(st["pos"]) <= 800:
-            for x, y in st["pos"]:
-                p.drawEllipse(w2s(x, y), r, r)
+            for x, y in S:
+                p.drawEllipse(QPointF(x, y), r, r)
         if st["left"] is not None:
             p.setBrush(QColor(c["warn"]))
             for i in np.concatenate([st["left"], st["right"]]):
-                x, y = st["pos"][int(i)]
-                p.drawEllipse(w2s(x, y), r * 1.7, r * 1.7)
-
-    def _draw_strain_edges(self, p, pt, run, f):
-        sf = run.edge_strain[f]
-        scale = float(np.percentile(np.abs(sf), 95)) or 1.0
-        cold = QColor("#4dd0e1")
-        mid = QColor(colors(self.mode)["edge_inactive"])
-        hot = QColor("#ff5d47")
-        for k in range(run.n_edges):
-            v = max(-1.0, min(1.0, float(sf[k]) / scale))
-            col = _lerp_color(mid, hot, v) if v >= 0 else \
-                _lerp_color(mid, cold, -v)
-            p.setPen(QPen(col, 1.4 + 1.6 * abs(v)))
-            p.drawLine(pt(run.edges[k, 0]), pt(run.edges[k, 1]))
+                x, y = S[int(i)]
+                p.drawEllipse(QPointF(x, y), r * 1.7, r * 1.7)
 
     def _draw_overlay(self, p: QPainter):
         if self.run is None:

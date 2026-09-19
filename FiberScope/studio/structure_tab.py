@@ -1,4 +1,4 @@
-﻿"""Structure studio: standalone structure-generation panel.
+"""Structure studio: standalone structure-generation panel.
 
 Owns the shared StructureFactory; simulation tabs consume the emitted spec.
 The primitive editor edits ONE reference fiber line (control points as
@@ -6,17 +6,23 @@ fractions of the line length); the profile is replicated onto every fiber
 line of the lattice, so dragging one line reshapes the whole unit.
 """
 import numpy as np
-from PySide6.QtCore import QPointF, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, QSize, Qt, QTimer, Signal, QSignalBlocker
 from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QFileDialog, QGridLayout, QGroupBox,
                                QHBoxLayout, QLabel, QPushButton, QSizePolicy,
                                QSlider, QSpinBox, QSplitter, QStackedWidget,
-                               QListWidget, QListWidgetItem, QVBoxLayout, QWidget)
+                               QListWidget, QListWidgetItem, QMenu,
+                               QMessageBox, QVBoxLayout, QWidget)
 
 from fslab.structure import (StructureFactory, UNIT_PRESETS, BASE_UNIT_KEYS,
-                                 SPECTRUM_PRESETS, unit_display, unit_key)
+                                 SPECTRUM_PRESETS,
+                                 all_unit_keys, load_custom_cells,
+                                 CUSTOM_CELLS, delete_custom_cell,
+                                 resolve_unit, unit_display, unit_key)
+from .cell_editor import CellEditorDialog
 from fslab.engine2 import _grips
 from fslab.exporter import export_json, export_svg
+from .exports import add_caption, ask_save, save_widget_png
 from .i18n import tr, get_lang
 from .network_canvas import NetworkCanvas
 from .theme import colors
@@ -244,18 +250,19 @@ class StructureTab(QWidget):
         self.gb_params = QGroupBox()
         g = QGridLayout(self.gb_params)
         g.setHorizontalSpacing(8); g.setVerticalSpacing(10)
+        load_custom_cells()   # user-authored cells join the gallery
         self.unit_combo = QComboBox()
         self.unit_combo.addItems(
-            [unit_display(k, get_lang()) for k in BASE_UNIT_KEYS])
+            [unit_display(k, get_lang()) for k in all_unit_keys()])
         self.unit_combo.setCurrentText(unit_display("square", get_lang()))
         self.spectrum_combo = QComboBox()
         self.spectrum_combo.addItems(
             [unit_display(k, get_lang()) for k in SPECTRUM_PRESETS])
         self.spectrum_combo.setCurrentText(unit_display("square", get_lang()))
-        self.grid_x = QSpinBox(); self.grid_x.setRange(1, 8); self.grid_x.setValue(3)
-        self.grid_y = QSpinBox(); self.grid_y.setRange(1, 8); self.grid_y.setValue(3)
+        self.grid_x = QSpinBox(); self.grid_x.setRange(1, 128); self.grid_x.setValue(3)
+        self.grid_y = QSpinBox(); self.grid_y.setRange(1, 128); self.grid_y.setValue(3)
         self.lbl_x = QLabel("×")
-        self.pts = QSpinBox(); self.pts.setRange(0, 6); self.pts.setValue(5)
+        self.pts = QSpinBox(); self.pts.setRange(0, 24); self.pts.setValue(5)
         self.pert = QSlider(Qt.Horizontal); self.pert.setRange(0, 100)
         self.pert.setValue(0)
         self.seed = QSpinBox(); self.seed.setRange(0, 9999); self.seed.setValue(7)
@@ -274,7 +281,25 @@ class StructureTab(QWidget):
         g.addWidget(self.lbl_seed, 5, 0); g.addWidget(self.seed, 5, 1, 1, 3)
         g.addWidget(self.dice_btn, 6, 0, 1, 4)
         self.dice_btn.clicked.connect(self._random_seed)
+        from fslab.cell_rules import RULES
+        self.custom_rule = None
+        self.rule_combo = QComboBox()
+        for rule in RULES:
+            self.rule_combo.addItem(tr('rule_' + rule), rule)
+        self.lbl_rule = QLabel(tr('expansion_rule'))
+        g.addWidget(self.lbl_rule, 7, 0)
+        g.addWidget(self.rule_combo, 7, 1, 1, 2)
+        self.rule_edit = QPushButton(tr('rule_edit'))
+        self.rule_edit.clicked.connect(self._edit_rule)
+        g.addWidget(self.rule_edit, 7, 3)
+        self.rule_combo.currentIndexChanged.connect(lambda: self._debounce.start())
+        for control in (self.lbl_rule, self.rule_combo, self.rule_edit):
+            control.hide()
         lv.addWidget(self.gb_params)
+
+        self.workbench_btn = QPushButton(tr('cell_workbench'))
+        self.workbench_btn.clicked.connect(lambda: self._open_cell_editor(None))
+        lv.addWidget(self.workbench_btn)
 
         self.edit_btn = QPushButton()
         self.edit_btn.setProperty("primary", True)
@@ -284,11 +309,17 @@ class StructureTab(QWidget):
         exrow = QHBoxLayout()
         self.export_json_btn = QPushButton()
         self.export_svg_btn = QPushButton()
+        self.export_png_btn = QPushButton()
         self.export_json_btn.clicked.connect(self._do_export_json)
         self.export_svg_btn.clicked.connect(self._do_export_svg)
+        self.export_png_btn.clicked.connect(self._do_export_png)
         exrow.addWidget(self.export_json_btn)
         exrow.addWidget(self.export_svg_btn)
+        exrow.addWidget(self.export_png_btn)
         lv.addLayout(exrow)
+        self.manufacturing_btn = QPushButton()
+        self.manufacturing_btn.clicked.connect(self._open_manufacturing)
+        lv.addWidget(self.manufacturing_btn)
 
         self.gb_stats = QGroupBox()
         sv = QHBoxLayout(self.gb_stats)
@@ -319,14 +350,13 @@ class StructureTab(QWidget):
         rv.setContentsMargins(0, 0, 0, 0)
         rv.setSpacing(10)
 
-        self.stack = QStackedWidget()
-        page0 = QWidget()
-        p0 = QVBoxLayout(page0)
-        p0.setContentsMargins(0, 0, 0, 0)
-        p0.setSpacing(10)
+        # The canvas never hides: editing the spectrum is only worth seeing
+        # while the whole network deforms live, so the gallery/editor deck
+        # sits BELOW the canvas instead of replacing it.
         self.canvas = NetworkCanvas(mode=self.mode)
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        p0.addWidget(self.canvas, 1)
+        self.canvas.setMinimumHeight(170)
+        self.deck = QStackedWidget()
         self.gb_gallery = QGroupBox()
         gal = QVBoxLayout(self.gb_gallery)
         gal.setContentsMargins(8, 16, 8, 8)
@@ -339,19 +369,35 @@ class StructureTab(QWidget):
         self.gallery.setIconSize(QSize(70, 44))
         self.gallery.setGridSize(QSize(96, 76))
         self.gallery.setSpacing(4)
+        # Built-ins stay in two rows; saved cells have their own compact shelf.
+        self.gallery.setFixedWidth(6 * (96 + 4) + 8)
         self.gallery.setFixedHeight(176)
         self.gallery.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.gallery.setSelectionMode(QListWidget.SingleSelection)
         self._gallery_guard = False
-        for name in BASE_UNIT_KEYS:
-            it = QListWidgetItem(unit_display(name, get_lang()))
-            it.setData(Qt.UserRole, name)
-            it.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-            self.gallery.addItem(it)
+        self._fill_gallery_items()
         self.gallery.currentItemChanged.connect(self._on_gallery_pick)
+        self.gallery.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.gallery.customContextMenuRequested.connect(self._gallery_menu)
         gal.addWidget(self.gallery)
-        p0.addWidget(self.gb_gallery)
-        self.stack.addWidget(page0)
+        gal.setAlignment(self.gallery, Qt.AlignHCenter)
+        self.custom_shelf = QWidget()
+        shelf = QHBoxLayout(self.custom_shelf)
+        shelf.setContentsMargins(0, 0, 0, 0)
+        self.custom_label = QLabel(tr('cell_saved'))
+        self.custom_combo = QComboBox()
+        self.custom_edit = QPushButton(tr('cell_edit'))
+        self.custom_delete = QPushButton(tr('cell_delete'))
+        shelf.addWidget(self.custom_label)
+        shelf.addWidget(self.custom_combo, 1)
+        shelf.addWidget(self.custom_edit)
+        shelf.addWidget(self.custom_delete)
+        self.custom_edit.clicked.connect(lambda: self._open_cell_editor(self.custom_combo.currentData()))
+        self.custom_delete.clicked.connect(self._delete_saved_cell)
+        self.custom_combo.activated.connect(self._choose_saved_cell)
+        gal.addWidget(self.custom_shelf)
+        self._refresh_custom_shelf()
+        self.deck.addWidget(self.gb_gallery)
 
         page1 = QWidget()
         p1 = QVBoxLayout(page1)
@@ -360,21 +406,27 @@ class StructureTab(QWidget):
         self.editor = LineEditor(mode=self.mode)
         self.editor.set_pts(self.pts.value())
         self.editor.changed.connect(self._on_edit_changed)
-        p1.addWidget(self.editor, 3)
+        top = QHBoxLayout()
+        top.setSpacing(10)
+        top.addWidget(self.editor, 1)
+        side = QVBoxLayout()
+        side.setSpacing(4)
+        self.lbl_preview = QLabel()
+        self.lbl_preview.setObjectName("subtitle")
+        self.unit_preview = QLabel()
+        self.unit_preview.setAlignment(Qt.AlignCenter)
+        self.unit_preview.setObjectName("well")
+        self.unit_preview.setFixedSize(168, 148)
+        side.addWidget(self.lbl_preview)
+        side.addWidget(self.unit_preview, 1)
+        top.addLayout(side)
+        p1.addLayout(top, 1)
         self.lbl_disp_row = QLabel()
         self.lbl_disp_row.setObjectName("subtitle")
         p1.addWidget(self.lbl_disp_row)
         self.disp_row = DispRow()
         self.disp_row.set_pts(self.pts.value())
         p1.addWidget(self.disp_row)
-        self.lbl_preview = QLabel()
-        self.lbl_preview.setObjectName("subtitle")
-        p1.addWidget(self.lbl_preview)
-        self.unit_preview = QLabel()
-        self.unit_preview.setAlignment(Qt.AlignCenter)
-        self.unit_preview.setMinimumHeight(140)
-        self.unit_preview.setObjectName("well")
-        p1.addWidget(self.unit_preview, 2)
         erow = QHBoxLayout()
         self.edit_hint = QLabel()
         self.edit_hint.setObjectName("hint")
@@ -388,23 +440,31 @@ class StructureTab(QWidget):
         erow.addWidget(self.clear_btn)
         erow.addWidget(self.done_btn)
         p1.addLayout(erow)
-        self.stack.addWidget(page1)
+        self.deck.addWidget(page1)
+        self.deck.setMinimumHeight(214)
 
-        rv.addWidget(self.stack, 1)
+        self.vsplit = QSplitter(Qt.Vertical)
+        self.vsplit.setChildrenCollapsible(False)
+        self.vsplit.addWidget(self.canvas)
+        self.vsplit.addWidget(self.deck)
+        self.vsplit.setStretchFactor(0, 3)
+        self.vsplit.setStretchFactor(1, 1)
+        self.vsplit.setSizes([430, 250])
+        rv.addWidget(self.vsplit, 1)
         body.addWidget(right)
         body.setStretchFactor(0, 0)
         body.setStretchFactor(1, 1)
         outer.addWidget(body, 1)
 
-        for w in (self.grid_x, self.grid_y, self.pts, self.seed):
+        for w in (self.grid_x, self.grid_y):
             w.valueChanged.connect(lambda *a: self._on_discrete())
-        self.pts.valueChanged.connect(self.editor.set_pts)
-        self.pts.valueChanged.connect(self._sync_row)
+        self.pts.valueChanged.connect(self._on_points_changed)
+        self.seed.valueChanged.connect(self._on_seed_changed)
         self.disp_row.changed.connect(self._on_row_changed)
         self._sync_row()
         self.unit_combo.currentTextChanged.connect(self._on_unit_changed)
         self.spectrum_combo.currentTextChanged.connect(self._on_spectrum_changed)
-        self.pert.valueChanged.connect(lambda *a: self._debounce.start())
+        self.pert.valueChanged.connect(self._apply_seeded_parameters)
         self._refresh_gallery()
 
     # ---------------- actions ----------------
@@ -420,6 +480,7 @@ class StructureTab(QWidget):
         key = unit_key(self.spectrum_combo.currentText(), get_lang())
         if key in SPECTRUM_PRESETS:
             self.editor.set_displacements(SPECTRUM_PRESETS[key])
+            self._parameter_basis=np.asarray(self.editor.disp,float)/(self.pert.value()/100. or 1.)
             self._sync_row()
         self._refresh_gallery()
         self.push_spec()
@@ -428,8 +489,36 @@ class StructureTab(QWidget):
         self.spectrum_combo.setEnabled(
             unit_key(self.unit_combo.currentText(), get_lang()) == 'square')
 
+    def _on_points_changed(self, value):
+        self.editor.set_pts(value)
+        self._sync_row()
+        if self.pert.value():
+            self._apply_seeded_parameters()
+        else:
+            self.push_spec()
+
+    def _on_seed_changed(self, *_):
+        self._parameter_basis=None
+        if self.pert.value()==0:
+            blocker=QSignalBlocker(self.pert)
+            self.pert.setValue(25)
+            del blocker
+        self._apply_seeded_parameters()
+
+    def _apply_seeded_parameters(self, *_):
+        shape=(self.pts.value(),2)
+        basis=getattr(self,'_parameter_basis',None)
+        if basis is None or basis.shape!=shape:
+            basis=np.random.default_rng(self.seed.value()).uniform(-.25,.25,shape)
+            self._parameter_basis=basis
+        self.editor.disp=np.round(np.clip(basis*self.pert.value()/100.,-1.,1.),3).tolist()
+        self.editor.update()
+        self._sync_row()
+        self._update_preview()
+        self._debounce.start()
+
     def _random_seed(self):
-        self.seed.setValue(int(np.random.randint(0, 9999)))
+        self.seed.setValue((self.seed.value()+int(np.random.randint(1,10000)))%10000)
 
     def _on_gallery_pick(self, cur, prev):
         if self._gallery_guard or cur is None:
@@ -440,14 +529,137 @@ class StructureTab(QWidget):
         key = name.data(Qt.UserRole) if hasattr(name, "data") else name
         if hasattr(name, "data") and name.data(Qt.UserRole):
             key = name.data(Qt.UserRole)
+        if key == "__new__":
+            self._open_cell_editor(None)
+            return
         self.unit_combo.setCurrentText(unit_display(key, get_lang()))
 
+    # ---------------- custom base units ----------------
+    def _fill_gallery_items(self):
+        for name in BASE_UNIT_KEYS:
+            it = QListWidgetItem(unit_display(name, get_lang()))
+            it.setData(Qt.UserRole, name)
+            it.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+            self.gallery.addItem(it)
+        it = QListWidgetItem(tr("cell_new"))
+        it.setData(Qt.UserRole, "__new__")
+        it.setTextAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        self.gallery.addItem(it)
+
+    def _refresh_custom_shelf(self):
+        key = self.custom_combo.currentData()
+        self.custom_combo.blockSignals(True)
+        self.custom_combo.clear()
+        for k in sorted(CUSTOM_CELLS):
+            self.custom_combo.addItem(unit_display(k, get_lang()), k)
+        index = self.custom_combo.findData(key)
+        if index >= 0:
+            self.custom_combo.setCurrentIndex(index)
+        self.custom_combo.blockSignals(False)
+        self.custom_shelf.setVisible(bool(CUSTOM_CELLS))
+
+    def _choose_saved_cell(self):
+        key = self.custom_combo.currentData()
+        if key not in CUSTOM_CELLS:
+            return
+        settings = CUSTOM_CELLS[key].get('settings', {})
+        from fslab.structure import resample_spectrum
+        self.load_spec(StructureFactory(unit=key,
+            grid_x=settings.get('grid_x', 3), grid_y=settings.get('grid_y', 3),
+            expansion_rule=settings.get('expansion_rule', 'translate'),
+            custom_rule=settings.get('custom_rule'),
+            line_displacements=(np.asarray(resample_spectrum(SPECTRUM_PRESETS.get(
+                settings.get('profile', 'square'), SPECTRUM_PRESETS['square']), 5))
+                * settings.get('amplitude', 1.0)).tolist()))
+
+    def _delete_saved_cell(self):
+        key = self.custom_combo.currentData()
+        if key not in CUSTOM_CELLS:
+            return
+        if QMessageBox.question(self, tr('cell_delete'),
+                tr('cell_confirm_del') % key) != QMessageBox.Yes:
+            return
+        delete_custom_cell(key)
+        self._rebuild_gallery()
+        self.load_spec(StructureFactory())
+
+    def _select_gallery(self, key):
+        self._gallery_guard = True
+        for i in range(self.gallery.count()):
+            it = self.gallery.item(i)
+            selected = (it.data(Qt.UserRole) or it.text()) == key
+            it.setSelected(selected)
+            if selected:
+                self.gallery.setCurrentItem(it)
+        self._gallery_guard = False
+
+    def _plus_icon(self):
+        pm = QPixmap(70, 44)
+        pm.fill(Qt.transparent)
+        p = QPainter(pm)
+        p.setRenderHint(QPainter.Antialiasing, True)
+        p.setPen(QPen(QColor(colors(self.mode)["faint"]), 2.0))
+        p.drawLine(QPointF(35, 10), QPointF(35, 34))
+        p.drawLine(QPointF(23, 22), QPointF(47, 22))
+        p.end()
+        return pm
+
+    def _rebuild_gallery(self):
+        self._refresh_custom_shelf()
+        cur = unit_key(self.unit_combo.currentText(), get_lang())
+        self.gallery.clear()
+        self._fill_gallery_items()
+        self.unit_combo.clear()
+        self.unit_combo.addItems(
+            [unit_display(k, get_lang()) for k in all_unit_keys()])
+        self.unit_combo.setCurrentText(unit_display(cur, get_lang()))
+        self._refresh_gallery()
+        self._select_gallery(cur)
+
+    def _open_cell_editor(self, key):
+        dlg = CellEditorDialog(self.mode, key, self)
+        dlg.exec()
+        saved = dlg.saved_key
+        prev = self.factory.unit if self.factory is not None else 'square'
+        self._rebuild_gallery()
+        target = saved or prev
+        self._select_gallery(target)
+        if saved:
+            self.load_spec(dlg.saved_factory)
+        dlg.deleteLater()
+
+    def _gallery_menu(self, pos):
+        it = self.gallery.itemAt(pos)
+        if it is None:
+            return
+        key = it.data(Qt.UserRole)
+        if key not in CUSTOM_CELLS:
+            return
+        menu = QMenu(self)
+        act_edit = menu.addAction(tr("cell_edit"))
+        act_del = menu.addAction(tr("cell_delete"))
+        act = menu.exec(self.gallery.mapToGlobal(pos))
+        if act == act_edit:
+            self._open_cell_editor(key)
+        elif act == act_del:
+            if QMessageBox.question(
+                    self, tr("cell_delete"),
+                    tr("cell_confirm_del") % key) != QMessageBox.Yes:
+                return
+            delete_custom_cell(key)
+            prev = self.factory.unit if self.factory is not None else 'square'
+            if prev == key:
+                prev = 'square'
+            self._rebuild_gallery()
+            self._select_gallery(prev)
+            self.unit_combo.setCurrentText(unit_display(prev, get_lang()))
+
     def _toggle_edit(self):
-        if self.stack.currentIndex() == 0:
+        if self.deck.currentIndex() == 0:
             self._update_preview()
-            self.stack.setCurrentIndex(1)
+            self.deck.setCurrentIndex(1)
         else:
-            self.stack.setCurrentIndex(0)
+            self.deck.setCurrentIndex(0)
             self.push_spec()
         self.retranslate()
 
@@ -455,6 +667,8 @@ class StructureTab(QWidget):
         self.editor.clear()
 
     def _sync_row(self, *a):
+        if len(self.disp_row.spins)!=2*self.pts.value():
+            self.disp_row.set_pts(self.pts.value())
         self.disp_row.set_values(self.editor.disp)
 
     def _on_row_changed(self):
@@ -463,11 +677,20 @@ class StructureTab(QWidget):
         self._on_edit_changed()
 
     def _on_edit_changed(self):
+        self._parameter_basis=np.asarray(self.editor.disp,float)/(self.pert.value()/100. or 1.)
         self.disp_row.set_values(self.editor.disp)
         self._update_preview()
         self._debounce.start()
 
     # ---------------- data ----------------
+    def _edit_rule(self):
+        from .rule_dialog import RuleDialog
+        dialog = RuleDialog(self.custom_rule, self)
+        if dialog.exec():
+            self.custom_rule = dialog.pattern()
+            self.rule_combo.setCurrentIndex(self.rule_combo.findData('custom'))
+            self._debounce.start()
+
     def collect_factory(self) -> StructureFactory:
         return StructureFactory(
             unit=unit_key(self.unit_combo.currentText(), get_lang()),
@@ -475,11 +698,19 @@ class StructureTab(QWidget):
             n_pts_per_side=self.pts.value(),
             perturbation=self.pert.value() / 100.0,
             seed=self.seed.value(),
-            line_displacements=self.editor.displacements()).clamped()
+            expansion_rule=self.rule_combo.currentData(), custom_rule=self.custom_rule,
+            line_displacements=self.editor.displacements(), spectrum_resolved=True).clamped()
 
     def load_spec(self, f: StructureFactory):
         """Programmatic entry (AI assistant / inverse design hand-off)."""
-        key = f.unit
+        blockers = [QSignalBlocker(w) for w in (self.unit_combo, self.spectrum_combo,
+            self.rule_combo, self.grid_x, self.grid_y, self.pts, self.pert,
+            self.seed, self.editor, self.disp_row)]
+        self.rule_combo.setCurrentIndex(max(0, self.rule_combo.findData(f.expansion_rule)))
+        self.custom_rule = f.custom_rule
+        key, note = resolve_unit(f.unit)
+        if note:
+            f.unit = key       # retired unit: load the closest current one
         if key in SPECTRUM_PRESETS and key != 'square':
             self.unit_combo.setCurrentText(unit_display('square', get_lang()))
             self.spectrum_combo.setCurrentText(unit_display(key, get_lang()))
@@ -490,17 +721,15 @@ class StructureTab(QWidget):
         self.pert.setValue(int(round(f.perturbation * 100)))
         self.seed.setValue(f.seed)
         self.editor.set_pts(f.n_pts_per_side)
-        if key in SPECTRUM_PRESETS and key != 'square' and \
-                not f.line_displacements:
-            self.editor.disp = [[float(x), float(y)]
-                                for x, y in SPECTRUM_PRESETS[key]]
-        else:
-            self.editor.disp = [[float(x), float(y)]
-                                for x, y in (f.line_displacements or [])]
-        self.disp_row.set_values(self.editor.disp)
+        self.editor.disp = f.effective_spectrum().tolist()
+        self._parameter_basis=np.asarray(self.editor.disp,float)/(self.pert.value()/100. or 1.)
+        self._sync_row()
         self._sync_spectrum_visibility()
         self._update_preview()
+        del blockers
         self.push_spec()
+        if note:
+            self.status.setText(tr("struct_synced") + " · " + note)
 
     def push_spec(self):
         self._debounce.stop()
@@ -509,21 +738,14 @@ class StructureTab(QWidget):
             g = f.build()
             pos = np.asarray(g.node_positions(), float)[:, :2]
             edges = np.asarray(g.edge_array(), int)[:, :2]
-            left, right = _grips(pos[:, 0], 0.10)
+            left, right = _grips(pos[:, 0], 0.05)
             self.canvas.set_static(pos, edges, left, right)
             self.factory = f
             self.stat_n_v.setText(str(pos.shape[0]))
             self.stat_e_v.setText(str(edges.shape[0]))
             self.stat_u_v.setText(unit_display(f.unit, get_lang()))
             self.status.setText(tr("struct_synced"))
-            self._gallery_guard = True
-            for i in range(self.gallery.count()):
-                it = self.gallery.item(i)
-                selected = (it.data(Qt.UserRole) or it.text()) == f.unit
-                it.setSelected(selected)
-                if selected:
-                    self.gallery.setCurrentItem(it)
-            self._gallery_guard = False
+            self._select_gallery(f.unit)
             self.structure_changed.emit(f)
         except Exception as e:
             self.status.setText(f"{tr('sim_failed')}: {e}")
@@ -561,6 +783,9 @@ class StructureTab(QWidget):
         for i in range(self.gallery.count()):
             it = self.gallery.item(i)
             key = it.data(Qt.UserRole) or it.text()
+            if key == "__new__":
+                it.setIcon(self._plus_icon())
+                continue
             try:
                 ld = (SPECTRUM_PRESETS[spec_key]
                       if key == 'square' and spec_key != 'square' else None)
@@ -587,11 +812,13 @@ class StructureTab(QWidget):
                 n_pts_per_side=self.pts.value(),
                 perturbation=self.pert.value() / 100.0,
                 seed=self.seed.value(),
-                line_displacements=self.editor.displacements()).clamped()
+                line_displacements=self.editor.displacements(), spectrum_resolved=True).clamped()
             g = f.build()
             pos = np.asarray(g.node_positions(), float)[:, :2]
             edges = np.asarray(g.edge_array(), int)[:, :2]
-            pm = self._draw_unit_preview(pos, edges, 300, 230, line_w=1.5)
+            w = max(90, self.unit_preview.width() - 8)
+            h = max(70, self.unit_preview.height() - 8)
+            pm = self._draw_unit_preview(pos, edges, w, h, line_w=1.4)
             self.unit_preview.setPixmap(pm)
         except Exception:
             self.unit_preview.setPixmap(QPixmap())
@@ -641,6 +868,18 @@ class StructureTab(QWidget):
         p.end()
         return pm
 
+    def _open_manufacturing(self):
+        if hasattr(self, "manufacturing_host"):
+            return self.manufacturing_host.open_source(False)
+        dialog = getattr(self, 'manufacturing_dialog', None)
+        if dialog is not None and (dialog.isVisible() or (dialog.worker is not None and dialog.worker.isRunning())):
+            dialog.show()
+            dialog.raise_()
+            return
+        from .manufacturing_dialog import ManufacturingDialog
+        self.manufacturing_dialog = ManufacturingDialog(self.collect_factory(), mode=self.mode, parent=self)
+        self.manufacturing_dialog.show()
+
     # ---------------- export ----------------
     def _do_export_json(self):
         path, _ = QFileDialog.getSaveFileName(
@@ -668,6 +907,25 @@ class StructureTab(QWidget):
         except Exception as e:
             self.status.setText(f"{tr('sim_failed')}: {e}")
 
+    def _do_export_png(self, silent=None):
+        """Raster of the big network canvas exactly as it is framed now."""
+        stem = unit_key(self.unit_combo.currentText(), get_lang())
+        path = ask_save(self, tr("export_png_btn"),
+                        f"fiberscope_{stem}_network.png", "PNG (*.png)",
+                        silent)
+        if not path:
+            return None
+        try:
+            save_widget_png(self.canvas, path)
+            add_caption(path,
+                        [f"FiberScope · {spec_text(self.collect_factory())}",
+                         tr("ex_canvas_png")], self.mode)
+        except Exception as e:
+            self.status.setText(f"{tr('sim_failed')}: {e}")
+            return None
+        self.status.setText(f"{tr('exported')}: {path}")
+        return path
+
     # ---------------- theme / i18n ----------------
     def set_mode(self, mode):
         self.mode = mode
@@ -678,6 +936,15 @@ class StructureTab(QWidget):
         self._update_preview()
 
     def retranslate(self):
+        self.custom_label.setText(tr('cell_saved'))
+        self.custom_edit.setText(tr('cell_edit'))
+        self.custom_delete.setText(tr('cell_delete'))
+        self._refresh_custom_shelf()
+        self.lbl_rule.setText(tr('expansion_rule'))
+        self.rule_edit.setText(tr('rule_edit'))
+        self.workbench_btn.setText(tr('cell_workbench'))
+        for i in range(self.rule_combo.count()):
+            self.rule_combo.setItemText(i, tr('rule_' + self.rule_combo.itemData(i)))
         self.gb_params.setTitle(tr("struct_params"))
         self.gb_stats.setTitle(tr("struct_stats"))
         self.gb_gallery.setTitle(tr("struct_gallery"))
@@ -693,11 +960,31 @@ class StructureTab(QWidget):
         self.clear_btn.setText(tr("disp_clear"))
         self.edit_hint.setText(tr("edit_line_hint"))
         self.lbl_disp_row.setText(tr("disp_row"))
+        self.manufacturing_btn.setText("连续制造 · 2D / 3D" if get_lang() == "zh" else "Fabrication · 2D / 3D")
         self.export_json_btn.setText(tr("export_json_btn"))
         self.export_svg_btn.setText(tr("export_svg_btn"))
+        self.export_png_btn.setText(tr("export_png_btn"))
         self.lbl_preview.setText(tr("prim_preview"))
         self.stat_n_l.setText("NODES")
         self.stat_e_l.setText("EDGES")
         self.stat_u_l.setText("UNIT")
-        if self.stack.currentIndex() == 0:
+        # unit display names are language-dependent: rewrite in place so the
+        # current selection survives a language switch
+        cur_u = unit_key(self.unit_combo.currentText(), get_lang())
+        for i, k in enumerate(all_unit_keys()):
+            self.unit_combo.setItemText(i, unit_display(k, get_lang()))
+        self.unit_combo.setCurrentText(unit_display(cur_u, get_lang()))
+        cur_s = unit_key(self.spectrum_combo.currentText(), get_lang())
+        for i, k in enumerate(SPECTRUM_PRESETS):
+            self.spectrum_combo.setItemText(i, unit_display(k, get_lang()))
+        self.spectrum_combo.setCurrentText(unit_display(cur_s, get_lang()))
+        for i in range(self.gallery.count()):
+            it = self.gallery.item(i)
+            key = it.data(Qt.UserRole)
+            it.setText(tr("cell_new") if key == "__new__"
+                       else unit_display(key, get_lang()))
+        if self.factory is not None:
+            self.stat_u_v.setText(
+                unit_display(self.factory.unit, get_lang()))
+        if self.deck.currentIndex() == 0:
             self.edit_btn.setText(tr("edit_line"))

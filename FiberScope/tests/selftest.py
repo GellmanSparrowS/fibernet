@@ -52,9 +52,9 @@ def main():
         delta = p1 - p0
         assert np.abs(delta).max() > 1e-3, 'line disp not applied: %s' % unit
         n_moved = int((np.abs(delta).max(axis=1) > 1e-6).sum())
-        assert n_moved == n_lines * 3, \
+        assert n_moved == n_lines * 2 * 3, \
             'expected %d moved intermediates, got %d: %s' % (
-                n_lines * 3, n_moved, unit)
+                n_lines * 2 * 3, n_moved, unit)
     # M1b: P1 path - welded bulk is periodic cell-to-cell
     g4 = StructureFactory(unit='square', grid_x=4, grid_y=4,
                           n_pts_per_side=3, seed=1,
@@ -73,17 +73,147 @@ def main():
 
     # M1: perturbation jitter is seeded and live
     fa = StructureFactory(unit="square", grid_x=2, grid_y=2,
-                          n_pts_per_side=2, perturbation=0.3, seed=5)
+                          line_displacements=[[.02,.04],[.03,.05]], n_pts_per_side=2, perturbation=0.3, seed=5)
     fb = StructureFactory(unit="square", grid_x=2, grid_y=2,
-                          n_pts_per_side=2, perturbation=0.3, seed=5)
+                          line_displacements=[[.02,.04],[.03,.05]], n_pts_per_side=2, perturbation=0.3, seed=5)
     fc = StructureFactory(unit="square", grid_x=2, grid_y=2,
-                          n_pts_per_side=2, perturbation=0.3, seed=6)
+                          line_displacements=[[.02,.04],[.03,.05]], n_pts_per_side=2, perturbation=0.3, seed=6)
     pa = np.asarray(fa.build().node_positions(), float)
     pb = np.asarray(fb.build().node_positions(), float)
     pc = np.asarray(fc.build().node_positions(), float)
     assert np.allclose(pa, pb), "jitter not deterministic in seed"
     assert not np.allclose(pa, pc), "seed has no effect"
     print("[selftest] seeded jitter ok")
+    # S0: cache identity + robustness (a cache problem must never break a run)
+    import io
+    import re
+    import shutil
+    import tempfile
+
+    from fslab.simcache import (ENGINE_SRC_HASH, cache_tag, default_cache_dir,
+                                engine_src_hash)
+    src_h = engine_src_hash()
+    # read the recorded constant from disk: a same-second rewrite of equal
+    # size can leave a stale .pyc behind and fake a mismatch
+    _sim = io.open(os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "fslab", "simcache.py"),
+        encoding="utf-8").read()
+    rec_h = re.search(r'^ENGINE_SRC_HASH = "([^"]*)"', _sim, re.M)
+    rec_h = rec_h.group(1) if rec_h else ENGINE_SRC_HASH
+    assert src_h is None or src_h == rec_h, (
+        "numeric core changed without a cache-identity bump: run "
+        "scripts/bump_engine_version.py (src=%s recorded=%s)" % (src_h, rec_h))
+    scfg = RunConfig(target_stretch=1.6, num_steps=1200, n_increments=12,
+                     save_interval=400)
+    small = StructureFactory(unit="square", grid_x=2, grid_y=2,
+                             n_pts_per_side=1, seed=7).clamped()
+    tag = cache_tag(small, scfg)
+    assert cache_tag(small, RunConfig(target_stretch=1.8, num_steps=1200,
+                                      n_increments=12,
+                                      save_interval=400)) != tag, \
+        "cache tag ignores run config"
+    other = StructureFactory(unit="square", grid_x=2, grid_y=2,
+                             n_pts_per_side=1, seed=8).clamped()
+    assert cache_tag(other, scfg) != tag, "cache tag ignores structure spec"
+
+    d = tempfile.mkdtemp(prefix="fscache")
+    try:
+        fresh = run_stretch(small, scfg, cache_dir=d)
+        assert os.path.exists(os.path.join(d, "run_%s.npz" % tag)), \
+            "cache file not written"
+        cached = run_stretch(small, scfg, cache_dir=d)
+        assert np.array_equal(fresh.force_curve, cached.force_curve), \
+            "cached run differs from fresh run"
+        blocker = os.path.join(d, "blocker")
+        with open(blocker, "w", encoding="utf-8") as fh:
+            fh.write("x")
+        ro = run_stretch(small, scfg, cache_dir=os.path.join(blocker, "sub"))
+        assert np.array_equal(fresh.force_curve, ro.force_curve), \
+            "unwritable cache path changed the result"
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+    cdir = default_cache_dir()
+    assert cdir and os.path.isdir(cdir), "no writable cache dir found"
+    print(f"[selftest] cache ok: tag={tag} dir={cdir}")
+
+    # S0: retired units still resolve, and the shipped log stays loadable
+    from fslab.structure import resolve_unit
+    assert resolve_unit("square") == ("square", None)
+    # kagome is live again as a parity-correct cell-graph unit (F8a); the
+    # fibernet original (odd-degree midpoints) is no longer reachable
+    assert resolve_unit("kagome") == ("kagome", None)
+    assert resolve_unit("honeycomb")[0] == "hexagon"
+    assert resolve_unit("nonexistent_unit")[0] == "square"
+    log = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "data", "exploration_log.jsonl")
+    if os.path.exists(log):
+        import json
+        units = set()
+        with io.open(log, encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    units.add(json.loads(line)["unit"])
+        unknown = sorted(u for u in units
+                         if (resolve_unit(u)[1] or "").startswith("unknown"))
+        legacy = sorted(u for u in units if resolve_unit(u)[1])
+        assert not unknown, "exploration log has unloadable units: %s" % unknown
+        print(f"[selftest] replay units ok: {len(units)} units, "
+              f"legacy remap {legacy or 'none'}")
+
+    # S4e: CSV exporters must round-trip the arrays they claim to write
+    import csv
+    from fslab.exporter import (export_features_csv, export_hist_csv,
+                                export_inverse_csv, export_run_csv)
+    from fslab.features import compute_features
+    from fslab.inverse import InverseRecord
+
+    def _rows(p):
+        with io.open(p, encoding="utf-8-sig", newline="") as fh:
+            return list(csv.reader(fh))
+
+    g = factory.build()
+    pos = np.asarray(g.node_positions(), float)[:, :2]
+    edg = np.asarray(g.edge_array(), int)[:, :2]
+    feats = compute_features(pos, edg)
+    g2 = StructureFactory(unit="reentrant", grid_x=3, grid_y=3,
+                          n_pts_per_side=2, seed=8).build()
+    feats_b = compute_features(
+        np.asarray(g2.node_positions(), float)[:, :2],
+        np.asarray(g2.edge_array(), int)[:, :2])
+    d = tempfile.mkdtemp(prefix="fsexport")
+    try:
+        rows = _rows(export_run_csv(run, os.path.join(d, "run.csv"),
+                                    perc=perc))
+        assert rows[0][:3] == ["frame", "strain", "force"], rows[0][:3]
+        assert len(rows) == run.n_frames + 1, "not one row per frame"
+        assert abs(float(rows[-1][2]) - run.force_curve[-1]) < 1e-6
+        assert abs(float(rows[-1][9]) - perc.spanning_frac[-1]) < 1e-6
+
+        rows = _rows(export_features_csv(feats, os.path.join(d, "f.csv"),
+                                         batch=[feats, feats_b]))
+        assert rows[0][:5] == ["key", "name", "group", "unit", "value"]
+        assert "batch_mean" in rows[0], "batch stats missing"
+        keys = [r[0] for r in rows[1:]]
+        assert len(keys) == len(set(keys)), "duplicate feature rows"
+        assert len(keys) >= 15, f"only {len(keys)} scalar features"
+        table = {r[0]: r for r in rows[1:]}
+        for k in keys:
+            assert abs(float(table[k][4]) - float(feats[k])) < 1e-6, k
+
+        n_hist = len(_rows(export_hist_csv(feats, os.path.join(d, "h.csv"))))
+        assert n_hist > 100, f"histogram export too small ({n_hist})"
+
+        recs = [InverseRecord(1, "screen", "square", [], 0.5, 0.5),
+                InverseRecord(2, "refine", "square", [0.1, -0.2], 0.3, 0.3)]
+        rows = _rows(export_inverse_csv(recs, os.path.join(d, "i.csv")))
+        assert rows[0] == ["eval_id", "stage", "label", "dist", "best_dist",
+                           "p0", "p1"], rows[0]
+        assert rows[1][5:] == ["", ""], "short params not padded"
+        assert float(rows[2][5]) == 0.1 and float(rows[2][6]) == -0.2
+        print(f"[selftest] export ok: run={run.n_frames} rows "
+              f"feat={len(keys)} hist={n_hist - 1} inv={len(rows) - 1}")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
     print("[selftest] PASS")
 
 

@@ -12,7 +12,6 @@ import numpy as np
 
 from fslab import StructureFactory
 from fslab.engine2 import Engine2, Engine2Config
-from fslab.structure import SPECTRUM_PRESETS, fit_spectrum
 
 
 def build(unit, stretch, pts=2, ld=None, **kw):
@@ -42,17 +41,21 @@ def main():
     assert b5[-1] > b0[-1], 'resolvable fibers should engage bending'
     assert a0[-1] > a5[-1], 'rigid straight beams should be stretch-dominated'
 
-    # 2) contact engages + adds hardening on a user-bowed reentrant
-    #    (pristine primitives carry no deformation by design)
-    bow = [[x * 1.5, y * 1.5] for x, y in
-           fit_spectrum(SPECTRUM_PRESETS["auxetic_bow"], 2)]
-    rc = build("reentrant", 2.2, use_contact=True, ld=bow)
-    rn = build("reentrant", 2.2, use_contact=False, ld=bow)
+    # 2) contact engages progressively on a bowed, laterally-contracting unit
+    #    (pristine primitives carry no deformation by design).  chiral's
+    #    rotating arms interlock as the sample narrows: 39 pairs in contact
+    #    at stretch 1.4 vs 112 at 2.2.  cross served before the F6 grip
+    #    change; with whole-column width bands its fibers no longer meet in
+    #    ramp mode.  Amplitudes are fractions of the edge length, matching
+    #    what LineEditor emits.
+    bow = [[0.0, 0.0], [0.0, -0.225], [0.0, -0.45], [0.0, -0.225],
+           [0.0, 0.0]]
+    rc = build("chiral", 2.2, pts=5, use_contact=True, ld=bow)
     print(f"[e2] contact PE end={rc.energies['contact'][-1]:.1f} "
           f"(axial {rc.energies['axial'][-1]:.1f})")
     assert rc.energies["contact"][-1] > 0, "no contact events at high stretch"
 
-    r_low = build("reentrant", 1.4, use_contact=True, ld=bow)
+    r_low = build("chiral", 1.4, pts=5, use_contact=True, ld=bow)
     print(f"[e2] contact engagement: pairs@1.4={r_low.contact_counts[-1]} "
           f"pairs@2.2={rc.contact_counts[-1]}")
     assert rc.contact_counts[-1] > r_low.contact_counts[-1], \
@@ -102,7 +105,61 @@ def main():
           f"right_strain={sr:.3f} prog_calls={len(prog)}")
     assert 0.5 < sr / max(sl, 1e-6) < 2.0, "strain field not uniform"
     assert len(prog) == 61 and prog[-1][0] == prog[-1][1], "progress cb broken"
+
+    # 7) golden reference: numerics must not drift when the solver is
+    #    refactored (regenerate with scripts/make_golden_engine.py)
+    golden_check()
     print("[e2] PASS")
+
+
+def golden_check():
+    """Re-run the frozen cases and compare every stored array."""
+    import json
+
+    from fslab.simcache import ENGINE_VERSION
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "golden_engine.npz")
+    if not os.path.exists(ref_path):
+        print("[e2] golden: no reference file, skipped")
+        return
+    sys.path.insert(0, os.path.join(root, "scripts"))
+    from make_golden_engine import CASES, run_case
+    worst_key, worst = "", 0.0
+    n_arr = 0
+    t0 = time.time()
+    with np.load(ref_path, allow_pickle=False) as z:
+        meta = json.loads(str(z["meta"]))
+        assert meta["engine_version"] == ENGINE_VERSION, (
+            "golden reference was made with engine %s, code is %s: run "
+            "scripts/make_golden_engine.py" % (meta["engine_version"],
+                                               ENGINE_VERSION))
+        for case in CASES:
+            res, _dt = run_case(case)
+            n = case[0]
+            pairs = [(n + "_force", res.force_curve),
+                     (n + "_strain", res.strain_levels),
+                     (n + "_ccounts", res.contact_counts),
+                     (n + "_final", res.frames_xy[-1]),
+                     (n + "_estrain", res.edge_strain[-1])]
+            pairs += [("%s_e_%s" % (n, k), np.asarray(v, float))
+                      for k, v in res.energies.items()]
+            for key, arr in pairs:
+                ref = np.asarray(z[key], float)
+                got = np.asarray(arr, float)
+                assert got.shape == ref.shape, (key, got.shape, ref.shape)
+                scale = max(float(np.abs(ref).max()), 1e-12)
+                dev = float(np.abs(got - ref).max()) / scale
+                n_arr += 1
+                if dev > worst:
+                    worst, worst_key = dev, key
+                assert dev < 1e-9, (
+                    "golden mismatch %s: rel dev %.3e (refactor changed the "
+                    "physics)" % (key, dev))
+    rec = sum(c["seconds"] for c in meta["cases"])
+    print("[e2] golden ok: %d arrays, max rel dev %.2e (%s), "
+          "%.1fs vs %.1fs recorded" % (n_arr, worst, worst_key,
+                                       time.time() - t0, rec))
 
 
 if __name__ == "__main__":

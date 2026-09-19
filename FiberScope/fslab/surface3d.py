@@ -15,9 +15,10 @@ Optional in-face patterns (unit='triangle' / 'hexagon' / 'reentrant')
 add per-face fibers whose dy is applied along the face normal.
 """
 import numpy as np
+from .surface_mapping import load_obj as parse_obj, map_cells as deform_surface
 
 
-def parse_obj(path):
+def legacy_parse_obj(path):
     """Parse an OBJ file keeping quad faces only. Returns (V, F)."""
     verts, faces = [], []
     with open(path, encoding='utf-8', errors='ignore') as fh:
@@ -82,7 +83,7 @@ def _line_inner(p0, p1, nrm, S):
     return pts.reshape(-1, 3)
 
 
-def deform_surface(V, F, spectrum, unit='square'):
+def legacy_deform_surface(V, F, spectrum, unit='square'):
     """Drape fibers over the quad mesh.
 
     Returns (P, segs): P (m,3) all points (mesh vertices first),

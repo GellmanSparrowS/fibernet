@@ -24,12 +24,14 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QGroupBox,
                                QHBoxLayout, QLabel, QPushButton, QSlider,
                                QSpinBox, QVBoxLayout, QWidget)
 
-from fslab.structure import SPECTRUM_PRESETS
+from fslab.structure import SPECTRUM_PRESETS, all_unit_keys, unit_display
+from fslab.surface_mapping import MappingConfig, front_basis, load_obj
 from fslab import surface3d
+from .i18n import tr, get_lang
 from .theme import colors
 
-OBJ_NAMES = ['3_Lung_quad_500.obj', '4_Heart_quad_500.obj',
-             '6_vans_500.obj']
+OBJ_NAMES = ['3_Lung_quad_500.obj', '4_Heart_quad_500.obj', '6_vans_500.obj',
+             'reference_shirt.obj', 'reference_shoe.obj', 'reference_paris.obj', 'demo_pyramid.obj']
 
 
 def _obj_dir():
@@ -41,15 +43,14 @@ def _obj_dir():
     cand = os.path.join(base, 'assets', 'obj')
     if os.path.isdir(cand):
         return cand
-    return r'E:\GOAI\复赛'
+    return cand      # bundled assets missing: the tab shows a hint
 
 
 OBJ_DIR = _obj_dir()
 OBJ_FILES = [os.path.join(OBJ_DIR, n) for n in OBJ_NAMES]
 
-UNIT_ITEMS = ['square', 'triangle', 'hexagon', 'reentrant']
-PRESET_ITEMS = [('平直', 'square'), ('内凹', 'auxetic_bow'),
-                ('外凸', 'rhombic_bow'), ('旋涡', 'swirl')]
+UNIT_ITEMS = all_unit_keys()
+PRESET_KEYS = ['square', 'auxetic_bow', 'rhombic_bow', 'swirl']
 CUSTOM_KEY = '__custom__'
 # tune: preset match acceptance (rms residual after best-fit scale)
 MATCH_RES = 0.02
@@ -73,7 +74,7 @@ def resample_spectrum(spec, n):
 class SurfaceCanvas(QWidget):
     """Orthographic 3D viewer: drag rotates, wheel zooms, dblclick resets."""
 
-    YAW0, PITCH0, ZOOM0 = -60.0, 22.0, 1.0
+    YAW0, PITCH0, ZOOM0 = 0.0, 0.0, 1.0
 
     def __init__(self, mode='dark', parent=None):
         super().__init__(parent)
@@ -84,7 +85,9 @@ class SurfaceCanvas(QWidget):
         self.Pc = None            # centered fiber points
         self.edge_idx = None      # (E,2) unique mesh edges
         self.segs = None          # (k,2) fiber segments
-        self.show_nodes = True
+        self.show_nodes = False
+        self.show_mesh = False
+        self.basis = np.eye(3)
         self.yaw, self.pitch, self.zoom = self.YAW0, self.PITCH0, self.ZOOM0
         self._rm = None           # rotated mesh vertices
         self._rf = None           # rotated fiber points
@@ -97,6 +100,8 @@ class SurfaceCanvas(QWidget):
     def set_mesh(self, V, F):
         V = np.asarray(V, dtype=float)
         self.center = V.mean(axis=0)
+        self.basis = front_basis(V)
+        self.yaw, self.pitch = self.YAW0, self.PITCH0
         self.Vc = V - self.center
         r = float(np.max(np.linalg.norm(self.Vc, axis=1)))
         self.radius = r if r > 1e-12 else 1.0
@@ -128,9 +133,9 @@ class SurfaceCanvas(QWidget):
     def _rotate(self):
         cy, sy = np.cos(np.radians(self.yaw)), np.sin(np.radians(self.yaw))
         cp, sp = np.cos(np.radians(self.pitch)), np.sin(np.radians(self.pitch))
-        Rz = np.array([[cy, -sy, 0.0], [sy, cy, 0.0], [0.0, 0.0, 1.0]])
+        Rz = np.array([[cy, 0., sy], [0., 1., 0.], [-sy, 0., cy]])
         Rx = np.array([[1.0, 0.0, 0.0], [0.0, cp, -sp], [0.0, sp, cp]])
-        rot = Rx @ Rz
+        rot = Rx @ Rz @ self.basis
         if self.Vc is not None:
             self._rm = self.Vc @ rot.T
         if self.Pc is not None:
@@ -185,7 +190,7 @@ class SurfaceCanvas(QWidget):
         cx, cy = w / 2.0, h / 2.0
 
         # mesh wireframe (faint)
-        if self._rm is not None and self.edge_idx is not None \
+        if self.show_mesh and self._rm is not None and self.edge_idx is not None \
                 and len(self.edge_idx):
             xm = self._rm[:, 0] * s + cx
             ym = cy - self._rm[:, 1] * s
@@ -239,6 +244,7 @@ class SurfaceTab(QWidget):
         super().__init__(parent)
         self.mode = mode
         self._mesh_cache = {}
+        self._mesh_settings = {}
         self._edge_cache = {}
         self._cur_path = None
         self._obj_files = list(OBJ_FILES)
@@ -246,7 +252,7 @@ class SurfaceTab(QWidget):
         self._follow_spec = None      # raw (n,2) spectrum from structure
         self._follow_unit = 'square'  # resolved surface unit
         self._follow_hint = None      # preset key if spectrum came from one
-        self._custom_spec = None      # spectrum behind the 自定义 item
+        self._custom_spec = None      # spectrum behind the custom item
         self._syncing = False         # guard: programmatic combo updates
         self._debounce = QTimer(self)
         self._debounce.setSingleShot(True)
@@ -269,11 +275,11 @@ class SurfaceTab(QWidget):
         lv.setContentsMargins(0, 0, 0, 0)
         lv.setSpacing(10)
 
-        gb = QGroupBox('曲面与纤维')
-        gv = QVBoxLayout(gb)
+        self.gb = QGroupBox()
+        gv = QVBoxLayout(self.gb)
         gv.setSpacing(10)
 
-        self.lbl_obj = QLabel('OBJ 模型')
+        self.lbl_obj = QLabel()
         self.obj_combo = QComboBox()
         for path in self._obj_files:
             self.obj_combo.addItem(
@@ -281,40 +287,44 @@ class SurfaceTab(QWidget):
         gv.addWidget(self.lbl_obj)
         gv.addWidget(self.obj_combo)
         objrow = QHBoxLayout()
-        self.import_btn = QPushButton('导入 OBJ')
-        self.reset_btn = QPushButton('复位视图')
+        self.import_btn = QPushButton()
+        self.reset_btn = QPushButton()
         self.import_btn.clicked.connect(self._import_obj)
         self.reset_btn.clicked.connect(self._reset_view)
         objrow.addWidget(self.import_btn)
         objrow.addWidget(self.reset_btn)
+        self.mesh_btn = QPushButton()
+        self.mesh_btn.clicked.connect(self._configure_mesh)
+        gv.addWidget(self.mesh_btn)
         gv.addLayout(objrow)
 
         row = QHBoxLayout()
-        self.lbl_pts = QLabel('每边内点')
+        self.lbl_pts = QLabel()
         self.spin_pts = QSpinBox()
-        self.spin_pts.setRange(1, 6)
+        self.spin_pts.setRange(1, 24)
         self.spin_pts.setValue(5)
         row.addWidget(self.lbl_pts)
         row.addWidget(self.spin_pts)
         gv.addLayout(row)
 
-        self.lbl_unit = QLabel('基元图案')
+        self.lbl_unit = QLabel()
         self.unit_combo = QComboBox()
-        self.unit_combo.addItems(UNIT_ITEMS)
+        for key in UNIT_ITEMS:
+            self.unit_combo.addItem(unit_display(key, get_lang()), key)
         gv.addWidget(self.lbl_unit)
         gv.addWidget(self.unit_combo)
 
-        self.lbl_preset = QLabel('预设谱')
+        self.lbl_preset = QLabel()
         self.preset_combo = QComboBox()
-        for zh, key in PRESET_ITEMS:
-            self.preset_combo.addItem(zh, key)
+        for key in PRESET_KEYS:
+            self.preset_combo.addItem(tr("surf_p_" + key), key)
         gv.addWidget(self.lbl_preset)
         gv.addWidget(self.preset_combo)
 
         row2 = QHBoxLayout()
-        self.lbl_amp = QLabel('变形幅度')
+        self.lbl_amp = QLabel()
         self.amp_slider = QSlider(Qt.Horizontal)
-        self.amp_slider.setRange(0, 150)
+        self.amp_slider.setRange(0, 500)
         self.amp_slider.setValue(100)
         self.amp_val = QLabel('100%')
         self.amp_val.setObjectName('chip')
@@ -323,20 +333,41 @@ class SurfaceTab(QWidget):
         row2.addWidget(self.amp_val)
         gv.addLayout(row2)
 
-        self.chk_follow = QCheckBox('跟随当前结构')
+        self.chk_follow = QCheckBox()
         self.chk_follow.setChecked(True)
         gv.addWidget(self.chk_follow)
 
-        self.chk_nodes = QCheckBox('显示节点')
-        self.chk_nodes.setChecked(True)
+        self.chk_nodes = QCheckBox()
+        self.chk_nodes.setChecked(False)
         gv.addWidget(self.chk_nodes)
+        self.overscale = QSpinBox()
+        self.overscale.setRange(101, 130)
+        self.overscale.setValue(106)
+        self.overscale.setSuffix('%')
+        self.lbl_overlap = QLabel()
+        overlap_row = QHBoxLayout()
+        overlap_row.addWidget(self.lbl_overlap)
+        overlap_row.addWidget(self.overscale)
+        gv.addLayout(overlap_row)
+        self.overscale.valueChanged.connect(self._schedule)
+        self.view_combo = QComboBox()
+        for key in ('front', 'back', 'left', 'top', 'iso'):
+            self.view_combo.addItem(key, key)
+        self.view_combo.currentIndexChanged.connect(self._choose_view)
+        gv.addWidget(self.view_combo)
+        self.manufacturing_btn = QPushButton()
+        self.manufacturing_btn.clicked.connect(self._open_manufacturing)
+        self.export_network_btn = QPushButton()
+        self.export_network_btn.clicked.connect(self._export_network)
+        gv.addWidget(self.export_network_btn)
+        gv.addWidget(self.manufacturing_btn)
 
         self.status = QLabel('')
         self.status.setObjectName('hint')
         self.status.setWordWrap(True)
         gv.addWidget(self.status)
 
-        lv.addWidget(gb)
+        lv.addWidget(self.gb)
         lv.addStretch(1)
 
         # main canvas with floating before/after overlays
@@ -351,7 +382,7 @@ class SurfaceTab(QWidget):
         bv = QVBoxLayout(self.before_panel)
         bv.setContentsMargins(6, 4, 6, 6)
         bv.setSpacing(2)
-        self.lbl_before = QLabel('变形前')
+        self.lbl_before = QLabel()
         self.lbl_before.setObjectName('before_lbl')
         self.before_canvas = SurfaceCanvas(self.mode, self.canvas)
         self.before_canvas.setMinimumSize(0, 0)
@@ -363,7 +394,7 @@ class SurfaceTab(QWidget):
         ov.addLayout(top)
         ov.addStretch(1)
         bot = QHBoxLayout()
-        self.after_chip = QLabel('变形后', self.canvas)
+        self.after_chip = QLabel(self.canvas)
         self.after_chip.setObjectName('after_chip')
         bot.addWidget(self.after_chip)
         bot.addStretch(1)
@@ -395,7 +426,42 @@ class SurfaceTab(QWidget):
             % (c['faint'], c['panel'], c['line']))
 
     def retranslate(self):
-        pass
+        was_syncing = self._syncing
+        self._syncing = True
+        zh = get_lang() == 'zh'
+        names = [('肺', 'Lung'), ('心脏', 'Heart'), ('运动鞋', 'Sneaker'),
+                 ('衣服轮廓', 'Shirt envelope'), ('鞋轮廓', 'Shoe envelope'), ('铁塔轮廓', 'Tower envelope'),
+                 ('金字塔 · 打印演示', 'Pyramid · print demo')]
+        for i, pair in enumerate(names):
+            self.obj_combo.setItemText(i, pair[0 if zh else 1])
+        self.lbl_overlap.setText('映射覆盖比例' if zh else 'Patch coverage')
+        self.manufacturing_btn.setText('曲面连续制造 · 3D' if zh else 'Surface fabrication · 3D')
+        self.export_network_btn.setText('导出纤维网络 OBJ' if zh else 'Export fiber OBJ')
+        for i, names in enumerate((('正视', 'Front'), ('背面', 'Back'), ('侧面', 'Side'), ('顶部', 'Top'), ('立体', 'Isometric'))):
+            self.view_combo.setItemText(i, names[0 if zh else 1])
+        for i in range(self.unit_combo.count()):
+            self.unit_combo.setItemText(i, unit_display(self.unit_combo.itemData(i), get_lang()))
+        self.gb.setTitle(tr("surf_group"))
+        self.lbl_obj.setText(tr("surf_obj"))
+        self.import_btn.setText(tr("surf_import"))
+        self.mesh_btn.setText('网格设置…' if zh else 'Mesh settings…')
+        self.import_btn.setToolTip('三角面自动转为四边面；高密度三角网格自动减面，原文件不变。' if zh else 'Triangles convert to quads; dense triangle meshes are reduced. Source files are preserved.')
+        self.reset_btn.setText(tr("surf_reset"))
+        self.lbl_pts.setText(tr("surf_pts"))
+        self.lbl_unit.setText(tr("surf_unit"))
+        self.lbl_preset.setText(tr("surf_preset"))
+        for i in range(self.preset_combo.count()):
+            key = self.preset_combo.itemData(i)
+            if key == CUSTOM_KEY:
+                self.preset_combo.setItemText(i, tr("surf_custom"))
+            elif key in PRESET_KEYS:
+                self.preset_combo.setItemText(i, tr("surf_p_" + key))
+        self.lbl_amp.setText(tr("surf_amp"))
+        self.chk_follow.setText(tr("surf_follow"))
+        self.chk_nodes.setText(tr("surf_nodes"))
+        self.lbl_before.setText(tr("surf_before"))
+        self.after_chip.setText(tr("surf_after"))
+        self._syncing = was_syncing
 
     def set_mode(self, mode):
         self.mode = mode
@@ -413,12 +479,14 @@ class SurfaceTab(QWidget):
         (line_displacements or spectrum()), resampled to spin_pts at
         recompute time.  Units not supported by surface3d fall back to
         square edge fibers but keep the spectrum shape.  UI combos are
-        synced only while 跟随当前结构 is checked.
+        synced only while "follow current structure" is checked.
         """
         if factory is None:
             return
         unit = getattr(factory, 'unit', 'square') or 'square'
-        surf_unit = unit if unit in UNIT_ITEMS else 'square'
+        surf_unit = 'square' if unit in SPECTRUM_PRESETS else unit
+        if self.unit_combo.findData(surf_unit) < 0:
+            self.unit_combo.addItem(unit_display(surf_unit, get_lang()), surf_unit)
         spec = None
         ld = getattr(factory, 'line_displacements', None)
         if ld:
@@ -435,6 +503,8 @@ class SurfaceTab(QWidget):
                     spec = s
         if spec is None:
             spec = np.zeros((max(1, self.spin_pts.value()), 2))
+        if factory.topology == 'topnet26':
+            spec = factory.effective_spectrum()
         # deterministic hint: P1 units ARE spectrum presets on square
         preset_hint = unit if (not ld and unit in SPECTRUM_PRESETS) else None
         self._follow_unit = surf_unit
@@ -444,8 +514,10 @@ class SurfaceTab(QWidget):
             self._syncing = True
             try:
                 self.unit_combo.setCurrentIndex(
-                    UNIT_ITEMS.index(surf_unit))
+                    self.unit_combo.findData(surf_unit))
                 self._sync_preset_for(spec, preset_hint)
+                self.amp_slider.setValue(100)
+                self.spin_pts.setValue(max(1,int(factory.n_pts_per_side)))
             finally:
                 self._syncing = False
             self._schedule()
@@ -456,12 +528,13 @@ class SurfaceTab(QWidget):
             self._syncing = True
             try:
                 self.unit_combo.setCurrentIndex(
-                    UNIT_ITEMS.index(self._follow_unit))
+                    self.unit_combo.findData(self._follow_unit))
                 self._sync_preset_for(self._follow_spec, self._follow_hint)
+                self.amp_slider.setValue(100)
             finally:
                 self._syncing = False
         elif on:
-            self.status.setText('跟随已开启：等待结构信号，暂用当前预设')
+            self.status.setText(tr('surf_follow_on'))
         self._schedule()
 
     def _on_unit_changed(self, idx):
@@ -489,7 +562,7 @@ class SurfaceTab(QWidget):
         for i in range(self.preset_combo.count()):
             if self.preset_combo.itemData(i) == CUSTOM_KEY:
                 return i
-        self.preset_combo.addItem('自定义', CUSTOM_KEY)
+        self.preset_combo.addItem(tr('surf_custom'), CUSTOM_KEY)
         return self.preset_combo.count() - 1
 
     def _match_preset(self, spec):
@@ -507,7 +580,7 @@ class SurfaceTab(QWidget):
                              np.interp(tt, ts, x[:, 1])], axis=1)
         a = _rs(a0, m)
         best = (None, float('inf'), 0.0)
-        for _, key in PRESET_ITEMS:
+        for key in PRESET_KEYS:
             b = _rs(SPECTRUM_PRESETS[key], m)
             bb = float((b * b).sum())
             s = float((a * b).sum()) / bb if bb > 1e-12 else 0.0
@@ -542,7 +615,7 @@ class SurfaceTab(QWidget):
 
     def _import_obj(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, '导入 OBJ', OBJ_DIR, 'OBJ (*.obj)')
+            self, tr('surf_import'), OBJ_DIR, 'OBJ (*.obj)')
         if not path:
             return
         path = os.path.abspath(path)
@@ -553,6 +626,17 @@ class SurfaceTab(QWidget):
         self.obj_combo.addItem(os.path.splitext(os.path.basename(path))[0])
         self.obj_combo.setCurrentIndex(self.obj_combo.count() - 1)
         self._schedule()
+
+    def _configure_mesh(self):
+        from .mesh_dialog import MeshDialog
+        path = self._obj_files[self.obj_combo.currentIndex()]
+        dialog = MeshDialog(*self._mesh_settings.get(path,(1500,0)),parent=self)
+        if dialog.exec():
+            self._mesh_settings[path] = dialog.values()
+            self._mesh_cache.pop(path,None)
+            self._edge_cache.pop(path,None)
+            self._cur_path = None
+            self._schedule()
 
     def _reset_view(self):
         self.canvas.reset_view()
@@ -566,7 +650,55 @@ class SurfaceTab(QWidget):
     def _schedule(self, *_):
         self._debounce.start()
 
+    def _choose_view(self):
+        angles = {'front': (0., 0.), 'back': (180., 0.), 'left': (90., 0.), 'top': (0., 90.), 'iso': (-35., 25.)}
+        self.canvas.yaw, self.canvas.pitch = angles[self.view_combo.currentData()]
+        self.canvas._rotate()
+        self.canvas.update()
+        self.canvas._emit_view()
+
+    def _open_manufacturing(self):
+        if hasattr(self, "manufacturing_host"):
+            return self.manufacturing_host.open_source(True)
+        dialog = getattr(self, 'manufacturing_dialog', None)
+        if dialog is not None and (dialog.isVisible() or (dialog.worker is not None and dialog.worker.isRunning())):
+            dialog.show()
+            dialog.raise_()
+            return
+        if not hasattr(self, '_manufacturing_source') or self._mapping_error:
+            return
+        from .manufacturing_dialog import ManufacturingDialog
+        vertices, faces, factory, overscale = self._manufacturing_source
+        self.manufacturing_dialog = ManufacturingDialog(factory, (vertices, faces, overscale), self.mode, self,
+                                                         network=self.manufacturing_network)
+        self.manufacturing_dialog.show()
+
+    def _export_network(self):
+        if not hasattr(self, 'network'):
+            return
+        path, _ = QFileDialog.getSaveFileName(self, 'Export fiber network', 'fibers.obj', 'OBJ (*.obj)')
+        if path:
+            points, edges = self.network
+            try:
+                with open(path, 'w', encoding='utf-8') as stream:
+                    stream.write('# Mapped fibers and seam stitches; no support mesh\n')
+                    for p in points:
+                        stream.write('v %.9g %.9g %.9g\n' % tuple(p))
+                    for a, b in edges:
+                        stream.write('l %d %d\n' % (a+1, b+1))
+            except OSError as exc:
+                self.status.setText(str(exc))
+
     def _recompute(self):
+        self._mapping_error = None
+        try:
+            self._compute_mapping()
+        except (ValueError, MemoryError, OSError) as exc:
+            self._mapping_error = str(exc)
+            self.export_network_btn.setEnabled(False)
+            self.status.setText(str(exc))
+
+    def _compute_mapping(self):
         idx = self.obj_combo.currentIndex()
         if idx < 0 or idx >= len(self._obj_files):
             return
@@ -575,8 +707,14 @@ class SurfaceTab(QWidget):
             self.status.setText('OBJ missing: %s' % path)
             return
         if path not in self._mesh_cache:
-            self._mesh_cache[path] = surface3d.parse_obj(path)
-        V, F = self._mesh_cache[path]
+            target, levels = self._mesh_settings.get(path,(1500,0))
+            v,f,info = load_obj(path, return_info=True, target_faces=target)
+            if levels:
+                from fslab.surface_mapping import subdivide_quads
+                v,f = subdivide_quads(v,f,levels)
+                info['quad_faces'] = len(f)
+            self._mesh_cache[path] = v,f,info
+        V, F, info = self._mesh_cache[path]
         n = self.spin_pts.value()
         amp = self.amp_slider.value() / 100.0
         follow_on = (self.chk_follow.isChecked()
@@ -584,7 +722,7 @@ class SurfaceTab(QWidget):
         if follow_on:
             spec = resample_spectrum(self._follow_spec, n) * amp
             unit = self._follow_unit
-            src = '谱:结构'
+            src = tr('surf_src_struct')
         else:
             key = self.preset_combo.currentData()
             if key == CUSTOM_KEY and self._custom_spec is not None:
@@ -594,22 +732,52 @@ class SurfaceTab(QWidget):
             else:
                 base = SPECTRUM_PRESETS['square']
             spec = resample_spectrum(base, n) * amp
-            unit = UNIT_ITEMS[self.unit_combo.currentIndex()]
-            src = '谱:预设'
+            unit = self.unit_combo.currentData()
+            src = tr('surf_src_preset')
         t0 = time.perf_counter()
-        P, segs = surface3d.deform_surface(V, F, spec, unit=unit)
-        P0, segs0 = surface3d.deform_surface(
-            V, F, np.zeros((n, 2)), unit=unit)
+        from fslab.structure import StructureFactory
+        self._manufacturing_source = (V, F, StructureFactory(unit=unit, n_pts_per_side=n, line_displacements=np.asarray(spec).tolist()), self.overscale.value()/100.)
+        config = MappingConfig(overscale=self.overscale.value()/100.)
+        from dataclasses import replace
+        from fslab.manufacturing import compile_surface
+        factory = self._manufacturing_source[2]
+        mapped = compile_surface(V, F, factory, config.overscale)
+        reference = compile_surface(V, F, replace(factory, line_displacements=np.zeros((n,2)).tolist()), config.overscale)
+        P, segs = mapped.positions, mapped.edges
+        P0, segs0 = reference.positions, reference.edges
+        config.mapped_faces = mapped.mapped_faces
+        config.source_faces = len(F)
+        self.network = P, segs
+        mapped.up_axis = 'z' if os.path.basename(path)=='demo_pyramid.obj' else 'y'
+        self.manufacturing_network = mapped
+        self.export_network_btn.setEnabled(True)
         self.last_ms = (time.perf_counter() - t0) * 1000.0
         if path != self._cur_path:
             self.canvas.set_mesh(V, F)
             self.before_canvas.set_mesh(V, F)
+            if os.path.basename(path)=='demo_pyramid.obj':
+                self.canvas.basis = np.array([[1.,0,0],[0,0,1.],[0,-1.,0]])
+                self.before_canvas.basis = self.canvas.basis.copy()
+                self.canvas.yaw = self.before_canvas.yaw = -25.
+                self.canvas.pitch = self.before_canvas.pitch = 15.
+            if os.path.basename(path).startswith('real_'):
+                basis = np.eye(3)
+                self.canvas.basis = basis
+                self.before_canvas.basis = basis.copy()
+            self.view_combo.blockSignals(True)
+            self.view_combo.setCurrentIndex(0)
+            self.view_combo.blockSignals(False)
             self._cur_path = path
         self.canvas.set_fibers(P, segs)
         self.before_canvas.set_fibers(P0, segs0)
         if path not in self._edge_cache:
             self._edge_cache[path] = len(surface3d.build_edge_faces(F))
         self.status.setText(
-            f'顶点 {len(V)} · 网格边 {self._edge_cache[path]}'
-            f' · 纤维段 {len(segs)} · 重算 {self.last_ms:.1f} ms · {src}')
-
+            tr('surf_stat') % (len(V), self._edge_cache[path], len(segs),
+                               self.last_ms, src))
+        if info['converted']:
+            note = ('自动转换：%d 个原始面 → %d 个四边面' if get_lang() == 'zh' else 'Converted: %d source faces → %d quads')
+            self.status.setText(self.status.text() + '\n' + note % (info['source_faces'], info['quad_faces']))
+        if config.source_faces != config.mapped_faces:
+            note = ('为适配复杂单元，展示曲面降至 %d 个面' if get_lang() == 'zh' else 'Display surface reduced to %d patches for this cell')
+            self.status.setText(self.status.text() + '\n' + note % config.mapped_faces)

@@ -1,4 +1,4 @@
-﻿"""Unified live-simulation tab: one stretch run drives two synchronized
+"""Unified live-simulation tab: one stretch run drives two synchronized
 views (load-path percolation / strain+contact) plus three curves
 (percolation order parameter, force-stretch, mode energy split).
 
@@ -11,11 +11,16 @@ import pyqtgraph as pg
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox,
                                QGroupBox, QHBoxLayout, QLabel, QProgressBar,
-                               QPushButton, QScrollArea, QSizePolicy, QSlider,
+                               QMenu, QPushButton, QScrollArea, QSizePolicy,
+                               QSlider,
                                QSplitter, QVBoxLayout, QWidget)
 
 from fslab import StructureFactory, RunConfig, run_stretch, compute_percolation
-from .i18n import tr
+from fslab.exporter import export_run_csv
+from fslab.simcache import cache_tag, default_cache_dir
+from .exports import (add_caption, ask_save, save_plot_png, save_widget_png,
+                      unique_stem)
+from .i18n import tr, get_lang
 from .network_canvas import NetworkCanvas
 from .structure_tab import spec_text
 from .theme import apply_plot_theme, colors
@@ -27,18 +32,10 @@ class SciAxis(pg.AxisItem):
     def tickStrings(self, values, scale, spacing):
         return ["0" if v == 0 else "%.1e" % v for v in values]
 
-import sys as _sys
-
-
-def _cache_dir():
-    if getattr(_sys, "frozen", False):
-        return os.path.join(os.path.dirname(_sys.executable), "_cache")
-    return os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "_cache")
-
-
-CACHE_DIR = _cache_dir()
-SPEEDS = [0.5, 1.0, 2.0, 4.0]
+CACHE_DIR = default_cache_dir()
+# playback frame rates; single-frame render is 1.3-8 ms so 24-48 fps
+# is affordable and reads as smooth animation instead of a slideshow
+FPS = [8, 16, 24, 32, 48]
 
 
 class SimWorker(QThread):
@@ -54,15 +51,8 @@ class SimWorker(QThread):
 
     def run(self):
         try:
-            hit = False
-            if os.path.isdir(CACHE_DIR):
-                import json, hashlib
-                from dataclasses import asdict
-                raw = json.dumps({"s": self.factory.key(),
-                                  "c": asdict(self.cfg)}, sort_keys=True)
-                tag = hashlib.sha1(raw.encode()).hexdigest()[:16]
-                hit = os.path.exists(os.path.join(CACHE_DIR,
-                                                  f"run_{tag}.npz"))
+            hit = bool(CACHE_DIR) and os.path.exists(os.path.join(
+                CACHE_DIR, f"run_{cache_tag(self.factory, self.cfg)}.npz"))
 
             def cb(done, total):
                 self.progress.emit(int(100 * done // max(int(total), 1)))
@@ -85,7 +75,7 @@ class SimTab(QWidget):
         self.spec = StructureFactory(unit="reentrant", grid_x=3, grid_y=3,
                                      n_pts_per_side=5, seed=7).clamped()
         self._play_timer = QTimer(self)
-        self._play_timer.setInterval(120)
+        self._play_timer.setInterval(round(1000 / 48))
         self._play_timer.timeout.connect(self._play_step)
         self._build()
         self.retranslate()
@@ -119,7 +109,7 @@ class SimTab(QWidget):
         row1 = QHBoxLayout()
         self.lbl_stretch = QLabel()
         self.stretch = QDoubleSpinBox()
-        self.stretch.setRange(1.1, 3.0); self.stretch.setSingleStep(0.1)
+        self.stretch.setRange(1.01, 20.0); self.stretch.setSingleStep(0.1)
         self.stretch.setValue(2.0)
         row1.addWidget(self.lbl_stretch); row1.addWidget(self.stretch)
         fv.addLayout(row1)
@@ -134,9 +124,19 @@ class SimTab(QWidget):
         row2.addWidget(self.lbl_quant); row2.addWidget(self.quant)
         row2.addWidget(self.quant_val)
         fv.addLayout(row2)
+        row3 = QHBoxLayout()
+        self.lbl_grip = QLabel()
+        self.grip = QDoubleSpinBox()
+        self.grip.setRange(1.0, 20.0); self.grip.setSingleStep(1.0)
+        self.grip.setSuffix("%"); self.grip.setValue(5.0)
+        row3.addWidget(self.lbl_grip); row3.addWidget(self.grip)
+        fv.addLayout(row3)
         self.chk_bend = QCheckBox(); self.chk_bend.setChecked(True)
-        self.chk_contact = QCheckBox(); self.chk_contact.setChecked(True)
+        self.chk_contact = QCheckBox(); self.chk_contact.setChecked(False)
+        self.chk_weld = QCheckBox()
+        self.chk_weld.setChecked(True)
         fv.addWidget(self.chk_bend); fv.addWidget(self.chk_contact)
+        fv.addWidget(self.chk_weld)
         self.lbl_phys = QLabel(); self.lbl_phys.setObjectName("hint")
         self.lbl_phys.setWordWrap(True)
         self.lbl_bc = QLabel(); self.lbl_bc.setObjectName("hint")
@@ -157,6 +157,23 @@ class SimTab(QWidget):
         self.status = QLabel(); self.status.setObjectName("subtitle")
         self.status.setWordWrap(True)
         lv.addWidget(self.status)
+        self.export_btn = QPushButton()
+        self.export_menu = QMenu(self.export_btn)
+        self.act_force_png = self.export_menu.addAction("")
+        self.act_perc_png = self.export_menu.addAction("")
+        self.act_mode_png = self.export_menu.addAction("")
+        self.export_menu.addSeparator()
+        self.act_frame_png = self.export_menu.addAction("")
+        self.act_csv = self.export_menu.addAction("")
+        self.act_gif = self.export_menu.addAction("")
+        self.act_gif.triggered.connect(self._export_gif)
+        self.export_btn.setMenu(self.export_menu)
+        self.act_force_png.triggered.connect(self._export_force_png)
+        self.act_perc_png.triggered.connect(self._export_perc_png)
+        self.act_mode_png.triggered.connect(self._export_mode_png)
+        self.act_frame_png.triggered.connect(self._export_frame_png)
+        self.act_csv.triggered.connect(self._export_csv)
+        lv.addWidget(self.export_btn)
         lv.addStretch(1)
         left.setMinimumWidth(240)
         left.setMaximumWidth(320)
@@ -186,10 +203,15 @@ class SimTab(QWidget):
         self.play_btn.setFixedWidth(76)
         self.play_btn.clicked.connect(self._toggle_play)
         self.speed_combo = QComboBox()
-        self.speed_combo.addItems(["0.5×", "1×", "2×", "4×"])
-        self.speed_combo.setCurrentIndex(1)
-        self.speed_combo.setFixedWidth(64)
+        self.speed_combo.addItems(["%d fps" % f for f in FPS])
+        self.speed_combo.setCurrentIndex(FPS.index(48))
+        self.speed_combo.setFixedWidth(68)
         self.speed_combo.currentIndexChanged.connect(self._on_speed)
+        self.loop_btn = QPushButton()
+        self.loop_btn.setCheckable(True)
+        self.loop_btn.setChecked(True)
+        self.loop_btn.setFixedWidth(52)
+        self.loop_btn.setObjectName("loopbtn")
         self.slider = QSlider(Qt.Horizontal)
         self.slider.valueChanged.connect(self._on_slider)
         self.lbl_frame = QLabel(); self.lbl_frame.setObjectName("chip")
@@ -197,6 +219,7 @@ class SimTab(QWidget):
         self.lbl_contacts = QLabel(); self.lbl_contacts.setObjectName("chip")
         transport.addWidget(self.play_btn)
         transport.addWidget(self.speed_combo)
+        transport.addWidget(self.loop_btn)
         transport.addWidget(self.slider, 1)
         transport.addWidget(self.lbl_frame)
         transport.addWidget(self.lbl_strain)
@@ -294,17 +317,15 @@ class SimTab(QWidget):
         self.struct_chip.setText("⬡ " + spec_text(factory))
 
     def collect_factory(self) -> StructureFactory:
-        return StructureFactory(
-            unit=self.spec.unit, grid_x=self.spec.grid_x,
-            grid_y=self.spec.grid_y, n_pts_per_side=self.spec.n_pts_per_side,
-            perturbation=self.spec.perturbation,
-            seed=self.spec.seed,
-            line_displacements=self.spec.line_displacements).clamped()
+        from dataclasses import replace
+        return replace(self.spec).clamped()
 
     def collect_cfg(self) -> RunConfig:
         return RunConfig(target_stretch=self.stretch.value(),
                          use_bending=self.chk_bend.isChecked(),
-                         use_contact=self.chk_contact.isChecked())
+                         use_contact=self.chk_contact.isChecked(),
+                         weld_intersections=self.chk_weld.isChecked(),
+                         grip_pct=self.grip.value() / 100.0)
 
     # ---------------- run ----------------
     def start_run(self):
@@ -411,7 +432,7 @@ class SimTab(QWidget):
         self.canvas.set_frame(self.slider.value())
 
     def _on_speed(self, idx):
-        self._play_timer.setInterval(int(120 / SPEEDS[idx]))
+        self._play_timer.setInterval(int(round(1000.0 / FPS[idx])))
 
     def _on_slider(self, v):
         self._sync_frame(v)
@@ -449,12 +470,104 @@ class SimTab(QWidget):
         self.retranslate()
 
     def _play_step(self):
+        top = self.slider.maximum()
         v = self.slider.value() + 1
-        if v > self.slider.maximum():
-            self._play_timer.stop()
-            self.retranslate()
-            return
+        if v > top:
+            if not self.loop_btn.isChecked() or top <= 0:
+                self._play_timer.stop()
+                self.retranslate()
+                return
+            v = 0
         self.slider.setValue(v)
+
+    # ---------------- export ----------------
+    def _export_fail(self, e):
+        self.status.setText(f"{tr('sim_failed')}: {e}")
+        return None
+
+    def _need_run(self):
+        if self.run is None:
+            self.status.setText(tr("export_nothing"))
+            return False
+        return True
+
+    def _save_plot(self, plot, stem, title_key, label_key, silent=None):
+        if not self._need_run():
+            return None
+        path = ask_save(self, tr(title_key),
+                        unique_stem(stem, self.spec.unit, "png"),
+                        "PNG (*.png)", silent)
+        if not path:
+            return None
+        try:
+            save_plot_png(plot, path)
+            add_caption(path, [f"FiberScope · {spec_text(self.spec)}",
+                               f"{tr(label_key)} · stretch="
+                               f"{self.stretch.value():.2f}"], self.mode)
+        except Exception as e:
+            return self._export_fail(e)
+        self.status.setText(f"{tr('exported')}: {path}")
+        return path
+
+    def _export_force_png(self, silent=None):
+        return self._save_plot(self.plot_f, "force_curve",
+                               "export_png_btn", "ex_force_png", silent)
+
+    def _export_perc_png(self, silent=None):
+        return self._save_plot(self.plot, "percolation",
+                               "export_png_btn", "ex_perc_png", silent)
+
+    def _export_mode_png(self, silent=None):
+        return self._save_plot(self.plot_m, "energy_split",
+                               "export_png_btn", "ex_mode_png", silent)
+
+    def _export_frame_png(self, silent=None):
+        """Raster of the network canvas at the frame currently on screen."""
+        if not self._need_run():
+            return None
+        path = ask_save(self, tr("export_png_btn"),
+                        unique_stem(f"frame{self.slider.value():03d}",
+                                    self.spec.unit, "png"),
+                        "PNG (*.png)", silent)
+        if not path:
+            return None
+        try:
+            save_widget_png(self.canvas, path)
+            add_caption(path,
+                        [f"FiberScope · {spec_text(self.spec)}",
+                         f"{tr('ex_frame_png')} · frame "
+                         f"{self.slider.value()}/{self.run.n_frames - 1} "
+                         f"strain="
+                         f"{self.run.strain_levels[self.slider.value()]:.3f}"],
+                        self.mode)
+        except Exception as e:
+            return self._export_fail(e)
+        self.status.setText(f"{tr('exported')}: {path}")
+        return path
+
+    def _export_gif(self, silent=None):
+        if not self._need_run(): return None
+        path = ask_save(self, "GIF", unique_stem("simulation", self.spec.unit, "gif"), "GIF (*.gif)", silent)
+        if not path: return None
+        from .gif_export import SimulationGif
+        self.act_gif.setEnabled(False)
+        self._gif = SimulationGif(self, path)
+        return path
+
+    def _export_csv(self, silent=None):
+        if not self._need_run():
+            return None
+        path = ask_save(self, tr("export_csv_btn"),
+                        unique_stem("curve", self.spec.unit, "csv"),
+                        "CSV (*.csv)", silent)
+        if not path:
+            return None
+        try:
+            export_run_csv(self.run, path, perc=self.perc)
+        except Exception as e:
+            return self._export_fail(e)
+        self.status.setText(f"{tr('exported')}: {path}")
+        return path
 
     # ---------------- theme / i18n ----------------
     def set_mode(self, mode):
@@ -509,11 +622,21 @@ class SimTab(QWidget):
             self.view_combo.setItemText(1, tr("view_strain"))
         self.lbl_stretch.setText(tr("stretch"))
         self.lbl_quant.setText(tr("quantile"))
+        self.lbl_grip.setText(tr("grip"))
+        self.grip.setToolTip(tr("grip_hint"))
         self.chk_bend.setText(tr("phys_bending"))
         self.chk_contact.setText(tr("phys_contact"))
+        self.chk_weld.setText('焊接锚点' if get_lang()=='zh' else 'Weld intersections')
         self.lbl_phys.setText(tr("fixed_physics"))
         self.lbl_bc.setText(tr("fixed_bc"))
         self.run_btn.setText(tr("run_btn"))
+        self.export_btn.setText(tr("export_btn"))
+        self.act_gif.setText("导出 GIF · 48 FPS" if get_lang()=="zh" else "Export GIF · 48 FPS")
+        self.act_force_png.setText(tr("ex_force_png"))
+        self.act_perc_png.setText(tr("ex_perc_png"))
+        self.act_mode_png.setText(tr("ex_mode_png"))
+        self.act_frame_png.setText(tr("ex_frame_png"))
+        self.act_csv.setText(tr("ex_curve_csv"))
         self.lbl_legend.setText(
             f"— {tr('perc_order')}   - - {tr('backbone')}")
         c = colors(self.mode)
@@ -522,6 +645,15 @@ class SimTab(QWidget):
             f'<span style="color:{c["accent"]}">— {tr("m_axial")}</span>'
             f'  <span style="color:{c["warn"]}">— {tr("m_bend")}</span>'
             f'  <span style="color:#ff5d47">— {tr("m_contact")}</span>')
+        self.loop_btn.setText(tr("loop_btn"))
+        self.loop_btn.setToolTip(tr("loop_hint"))
+        if self.run is not None and self.perc is not None:
+            if self.perc.perc_frame >= 0:
+                s = self.run.strain_levels[self.perc.perc_frame]
+                self.lbl_perc_at.setText(
+                    f"{tr('perc_at')}: #{self.perc.perc_frame} ({s:.2f})")
+            else:
+                self.lbl_perc_at.setText(tr("never"))
         self.play_btn.setText(tr("pause_btn") if self._play_timer.isActive()
                               else tr("play_btn"))
         self._set_view(self.view_combo.currentIndex())
