@@ -17,7 +17,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - run: python -m pip install -r FiberScope/requirements.txt networkx matplotlib trimesh
+      - run: python -m pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install -r FiberScope/requirements-rl.txt networkx matplotlib trimesh
       - run: python FiberScope/scripts/run_tests.py
   web:
     runs-on: ubuntu-latest
