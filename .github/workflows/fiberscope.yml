@@ -30,3 +30,4 @@ jobs:
           python-version: '3.10'
       - run: python -m pip install -r web_demo/requirements.txt
       - run: python web_demo/test_demo.py
+      - run: python web_demo/test_studio.py

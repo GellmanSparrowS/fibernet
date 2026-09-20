@@ -1,3 +1,5 @@
+[**查看全部中英文界面 · Bilingual desktop gallery (16 screenshots)**](FiberScope/docs/screenshots/README.md)
+
 # FiberScope 3.0 · FiberNet
 
 **从纤维网络基本单元到物理仿真、AI 逆向设计与可打印实体。**

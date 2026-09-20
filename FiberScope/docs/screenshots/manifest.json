@@ -1,0 +1,134 @@
+{
+  "samples": 60,
+  "inverse_evaluations": 24,
+  "pages": [
+    {
+      "file": "structure-zh.png",
+      "language": "zh",
+      "page": "structure",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "simulation-zh.png",
+      "language": "zh",
+      "page": "simulation",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "features-zh.png",
+      "language": "zh",
+      "page": "features",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "learning-zh.png",
+      "language": "zh",
+      "page": "learning",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "inverse-zh.png",
+      "language": "zh",
+      "page": "inverse",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "surface-zh.png",
+      "language": "zh",
+      "page": "surface",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "manufacturing-zh.png",
+      "language": "zh",
+      "page": "manufacturing",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "assistant-zh.png",
+      "language": "zh",
+      "page": "assistant",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "structure-en.png",
+      "language": "en",
+      "page": "structure",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "simulation-en.png",
+      "language": "en",
+      "page": "simulation",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "features-en.png",
+      "language": "en",
+      "page": "features",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "learning-en.png",
+      "language": "en",
+      "page": "learning",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "inverse-en.png",
+      "language": "en",
+      "page": "inverse",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "surface-en.png",
+      "language": "en",
+      "page": "surface",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "manufacturing-en.png",
+      "language": "en",
+      "page": "manufacturing",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    },
+    {
+      "file": "assistant-en.png",
+      "language": "en",
+      "page": "assistant",
+      "width": 1600,
+      "height": 1000,
+      "real_computation": true
+    }
+  ]
+}

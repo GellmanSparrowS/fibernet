@@ -22,7 +22,7 @@ def main():
         assert plot.data[0].type=='scatter3d'
         stl,route,_=demo.manufacture(state,'曲面结构',2,100)
         assert Path(stl).stat().st_size>1000 and Path(route).stat().st_size>100
-        app=create_app();assert len(app.config['dependencies'])==7
+        app=create_app();assert len(app.config['dependencies'])==9
         print('[web] isolated sessions, generation, stretch, features, six real physical-label models, J inverse, pyramid, STL and Gradio config PASS')
     finally:
         shutil.rmtree(state['directory'],ignore_errors=True);shutil.rmtree(other['directory'],ignore_errors=True)
