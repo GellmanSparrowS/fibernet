@@ -6,4 +6,4 @@ plotly>=5.24,<7
 networkx>=3.0,<4
 manifold3d==3.5.1
 scikit-image==0.25.2
-fast-simplification==0.1.13
+fast-simplification==0.2.0
