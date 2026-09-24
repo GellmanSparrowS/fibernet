@@ -294,7 +294,7 @@ TEXT = {
                   "release to apply periodically to the full grid. Dots = original."),
 }
 
-_LANG = "zh"
+_LANG = "en"
 
 
 def set_lang(lang: str):

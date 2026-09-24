@@ -227,10 +227,25 @@ __all__.extend([
 # Regular fiber network generators (weld graph workflow)
 from .regular import RegularNetworkGenerator
 from .zigzag import ZigZagGenerator
+from .manufacturing import (PlanarManufacturingConfig, ManufacturingNetwork,
+                            compile_planar, compile_surface,
+                            manufacturable_graph)
+from .custom_cells import CustomCell, CustomCellRegistry
+from .solid_export import (PrintSettings, FiberSolid, build_solid,
+                           build_voxel_solid, export_solid, export_route)
+from .obj_import import load_obj
+from .surface_mapping import MappingConfig, map_cells
 
 __all__.extend([
     "RegularNetworkGenerator",
     "ZigZagGenerator",
+    "PlanarManufacturingConfig", "ManufacturingNetwork",
+    "compile_planar", "compile_surface", "manufacturable_graph",
+    "CustomCell", "CustomCellRegistry",
+    "PrintSettings", "FiberSolid", "build_solid", "build_voxel_solid",
+    "export_solid", "export_route",
+    "load_obj",
+    "MappingConfig", "map_cells",
 ])
 
 # Unified generators (consolidate many specific ones)

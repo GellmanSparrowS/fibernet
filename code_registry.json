@@ -1,0 +1,4229 @@
+{
+ "fibernet/__init__.py": {
+  "purpose": "FiberNet — Unified framework for fiber networks, lattices, and metamaterials.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "baf32910115b6bca5fef23ababe32daeb468f2d886d8316ea4b7cf6861994fea"
+ },
+ "fibernet/analysis/__init__.py": {
+  "purpose": "Analysis tools for FiberNet.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "53227ac285b028bde2bfbea0453b70bb49d9c1682aedec70a8597b3cc785f92f"
+ },
+ "fibernet/analysis/_archived/advanced.py": {
+  "purpose": "Advanced analysis tools for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "SpectralAnalyzer",
+   "PoreAnalyzer",
+   "AnisotropyAnalyzer",
+   "StructuralFingerprint"
+  ],
+  "sha256": "0bdb7e9589f8c47a6da8c32e14d1a1723d38a43594f8f6b4fc2978a9a3795eac"
+ },
+ "fibernet/analysis/_archived/comparison.py": {
+  "purpose": "Network Comparison and Similarity Analysis",
+  "status": "archived",
+  "symbols": [
+   "NetworkFingerprint",
+   "NetworkComparator",
+   "compare_networks",
+   "network_similarity"
+  ],
+  "sha256": "b6cbb11ece2ff7ef2842dc6a92c168fac4441193e3f42647e8fc56e65b3733d1"
+ },
+ "fibernet/analysis/_archived/homogenization.py": {
+  "purpose": "Homogenization and Effective Property Computation",
+  "status": "archived",
+  "symbols": [
+   "EffectiveElasticProperties",
+   "EffectiveThermalProperties",
+   "EffectiveElectricalProperties",
+   "compute_effective_properties"
+  ],
+  "sha256": "45f018735d17ecc056b52ad85e2584806f417c5b23b593649af3d5ea4f58fed1"
+ },
+ "fibernet/analysis/_archived/morphology.py": {
+  "purpose": "Morphological analysis for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "MorphologyAnalyzer"
+  ],
+  "sha256": "3432cc53f55d0dcf3ec9cf35456eeade65db8525cfe05058447738fc937812c3"
+ },
+ "fibernet/analysis/_archived/networkx_integration.py": {
+  "purpose": "NetworkX Integration for Advanced Topology Analysis",
+  "status": "archived",
+  "symbols": [
+   "to_networkx",
+   "compute_centrality",
+   "detect_communities",
+   "compute_graph_metrics",
+   "find_shortest_path",
+   "compute_small_world_metrics"
+  ],
+  "sha256": "cd7bc18de03b7d73ae5d5d14467e527b0ba9d505ff17af5e8d2172c5e45347bc"
+ },
+ "fibernet/analysis/_archived/percolation.py": {
+  "purpose": "Percolation analysis for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "PercolationResult",
+   "PercolationAnalyzer",
+   "estimate_percolation_threshold"
+  ],
+  "sha256": "eb02b52e3c9227911646d840b3eac2b1aefa9133333a7ac1df3f862c147dcea1"
+ },
+ "fibernet/analysis/_archived/properties.py": {
+  "purpose": "Property computation for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "PropertyEstimator"
+  ],
+  "sha256": "4969712d34fc343fe6b0c7959c0806c3994d32e6e93fda60ed28f91c29aacf1b"
+ },
+ "fibernet/analysis/_archived/spatial.py": {
+  "purpose": "Advanced spatial and structural statistics for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "SpatialStatistics",
+   "OrientationAnalysis",
+   "LengthAnalysis",
+   "ConnectivityAnalysis",
+   "AnisotropyAnalysis",
+   "compute_spatial_statistics"
+  ],
+  "sha256": "7abadc2ed3f24f61758ced129c3979c0220d95370ceed999550b45559de57a0f"
+ },
+ "fibernet/analysis/_archived/statistics.py": {
+  "purpose": "Statistical Analysis Tools for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "StatisticalAnalyzer"
+  ],
+  "sha256": "7c4184de384612bca7cce3f6657e4b0cddb72bbcc73678bb7f8d2878a4f221cb"
+ },
+ "fibernet/analysis/_archived/stress_strain.py": {
+  "purpose": "Stress-strain curve extraction and analysis.",
+  "status": "archived",
+  "symbols": [
+   "StressStrainCurve",
+   "extract_stress_strain",
+   "compare_curves"
+  ],
+  "sha256": "804513865377d133abbb46c5f20a105363ed2f1a40046c7bdd9fa2a16e3a3271"
+ },
+ "fibernet/analysis/_archived/topology.py": {
+  "purpose": "Network Topology Analysis Module",
+  "status": "archived",
+  "symbols": [
+   "TopologyResult",
+   "CentralityResult",
+   "TopologyAnalyzer",
+   "analyze_topology"
+  ],
+  "sha256": "afc0e5f6caa0053fe039f3a703ea9e61d88275a018b5b74f7cc07f1d433e204c"
+ },
+ "fibernet/analysis/graph_features.py": {
+  "purpose": "94-dimensional graph feature extractor for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "GraphFeatureExtractor"
+  ],
+  "sha256": "9568b20b7562d32b8278f17d48c4c2ebe47e067ae7cc56ecf6799b3cd238b1c2"
+ },
+ "fibernet/analysis/graph_features_3d.py": {
+  "purpose": "3D-aware graph feature extractor for fiber networks and metamaterials.",
+  "status": "active",
+  "symbols": [
+   "GraphFeatureExtractor3D"
+  ],
+  "sha256": "9c3e771113ff64398e5d19ce7246288b92c55c1d7de963a4c8e608aa6f2337de"
+ },
+ "fibernet/api.py": {
+  "purpose": "High-level convenience API for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_Registry",
+   "register_generator",
+   "register_backend",
+   "_register_builtin_generators",
+   "create",
+   "list_generators",
+   "list_backends",
+   "mirror",
+   "rotate",
+   "scale",
+   "translate",
+   "merge",
+   "tile",
+   "simulate_mechanics",
+   "simulate_dynamics",
+   "_build_mass_spring_system",
+   "_numpy_dynamics",
+   "simulate_thermal",
+   "analyze",
+   "export",
+   "load",
+   "plot",
+   "plot_dynamics",
+   "plot_metamaterial",
+   "plot_stress_strain",
+   "create_metamaterial",
+   "print_metamaterial_info"
+  ],
+  "sha256": "ec9148c263ab0a80cc600f52e8d67bf36a5d1c5c4c59346782b3f9991adc5078"
+ },
+ "fibernet/core/__init__.py": {
+  "purpose": "Core data structures for FiberNet.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "59d684a9f4589f43b36b1e6458a0f3abba444924344b48babcd806f3bf805bc8"
+ },
+ "fibernet/core/copy_utils.py": {
+  "purpose": "Copy utilities for FiberNet core classes.",
+  "status": "active",
+  "symbols": [
+   "copy_fiber",
+   "copy_material",
+   "copy_network",
+   "_fiber_copy",
+   "_material_copy",
+   "_network_copy"
+  ],
+  "sha256": "19b328546296df7e35aefb924c7cae30afd0a0b06bac42779504a9cbf287fc50"
+ },
+ "fibernet/core/crosslinks.py": {
+  "purpose": "Advanced crosslink models for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "CrosslinkState",
+   "CrosslinkModel",
+   "RigidCrosslink",
+   "SpringCrosslink",
+   "BreakableCrosslink",
+   "FrictionCrosslink",
+   "BondedCrosslink",
+   "CovalentBond",
+   "HydrogenBond",
+   "PhysicalEntanglement",
+   "IonicBond",
+   "create_crosslink"
+  ],
+  "sha256": "a4197a41b04131a6fbc7ffe8a8b301abd09d32787bc16f6956fc867fb8a5dff6"
+ },
+ "fibernet/core/fiber.py": {
+  "purpose": "Fiber class - represents a single fiber with 3D geometry, cross-section, and material.",
+  "status": "active",
+  "symbols": [
+   "CrossSection",
+   "Fiber"
+  ],
+  "sha256": "5e3ff11fa60cdde6c17a01cd3795f05839e412698483ccba51e03101556118b4"
+ },
+ "fibernet/core/material.py": {
+  "purpose": "Material properties database for fiber network simulations.",
+  "status": "active",
+  "symbols": [
+   "Material",
+   "get_material",
+   "list_materials"
+  ],
+  "sha256": "73035226ae3959d44c2a7fadf69fff2f814599a53104fdbbee8bae3dba84d87a"
+ },
+ "fibernet/core/network.py": {
+  "purpose": "FiberNetwork - core data structure for a collection of fibers with connectivity.",
+  "status": "active",
+  "symbols": [
+   "Crosslink",
+   "FiberNetwork"
+  ],
+  "sha256": "2ccd8ef0769bb928fdea9dde94e52c9aadbd30fb7096501449edff0633b93449"
+ },
+ "fibernet/core/pbc.py": {
+  "purpose": "Periodic boundary conditions for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "PeriodicBox",
+   "apply_pbc",
+   "pbc_distance",
+   "compute_rdf"
+  ],
+  "sha256": "93497595f14cb4b1e8d8cbfa9bbafa5a28354ccf3d354c9a96815e26ccf1df90"
+ },
+ "fibernet/core/structure_graph.py": {
+  "purpose": "StructureGraph — The unified graph representation for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "SNode",
+   "SEdge",
+   "StructureGraph"
+  ],
+  "sha256": "2e3d1207567ae50f4cacff2121b6b3515bebc71a214777273d9e74c1a232b1a8"
+ },
+ "fibernet/core/tiling.py": {
+  "purpose": "Tiling and welding engine for StructureGraph.",
+  "status": "active",
+  "symbols": [
+   "_detect_boundary_nodes",
+   "tile_2d",
+   "tile_3d",
+   "tile_with_transforms",
+   "fit_unit_to_box"
+  ],
+  "sha256": "b7a0d8236cd2508dc884419f1cb58327bb77862614a4080bd308afe66b69e084"
+ },
+ "fibernet/core/transform.py": {
+  "purpose": "Network transformation operations.",
+  "status": "active",
+  "symbols": [
+   "mirror",
+   "rotate",
+   "scale",
+   "translate",
+   "merge",
+   "tile",
+   "trim_to_box",
+   "duplicate_and_transform",
+   "align_by_anchor",
+   "create_pattern"
+  ],
+  "sha256": "e15d8c0b2d3597fa69f7583cedb7d25617561d680918b6cce317962f7f7489e1"
+ },
+ "fibernet/core/transforms.py": {
+  "purpose": "Geometric transforms for StructureGraph.",
+  "status": "active",
+  "symbols": [
+   "_rotation_matrix_2d",
+   "_rotation_matrix_3d",
+   "_apply_transform_to_graph",
+   "translate",
+   "rotate",
+   "mirror",
+   "mirror_x",
+   "mirror_y",
+   "mirror_z",
+   "scale",
+   "compose",
+   "make_translate",
+   "make_rotate",
+   "make_mirror",
+   "make_scale"
+  ],
+  "sha256": "6c6082846e110946b13a7acfb2c1b95885bbe4ebec49944b99448f0d2b453831"
+ },
+ "fibernet/doe.py": {
+  "purpose": "Design of Experiments (DOE) Module for Fiber Networks",
+  "status": "active",
+  "symbols": [
+   "ExperimentDesign",
+   "ExperimentResult",
+   "SweepResult",
+   "_convert_params",
+   "DesignOfExperiments",
+   "run_parameter_sweep"
+  ],
+  "sha256": "3e7a25be0d34f933dc98397c6ab4ecbc90811e3f347157899e6d397a636f38f1"
+ },
+ "fibernet/easy.py": {
+  "purpose": "FiberNet Easy API — 一行代码完成常见任务",
+  "status": "active",
+  "symbols": [
+   "show",
+   "simulate",
+   "batch_simulate",
+   "train_model",
+   "train_rl",
+   "batch_simulate_from_json"
+  ],
+  "sha256": "c0cf9e06d192399949bf6f0fa0807c9ca1db19414a1ea4f53123009e6bacd745"
+ },
+ "fibernet/examples/__init__.py": {
+  "purpose": "__init__",
+  "status": "active",
+  "symbols": [],
+  "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+ },
+ "fibernet/examples/basic_usage.py": {
+  "purpose": "Basic usage example for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "f9035ae48d9914c4f7228373e715fed68b5e3b92eca4b4afe9378fe494848f8a"
+ },
+ "fibernet/gen/__init__.py": {
+  "purpose": "Fiber network generators.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "7aa22fbafe59018f8cff0716311e1d7da2f3d567a1e276e7f62e2c47e3b331e0"
+ },
+ "fibernet/gen/_fixes.py": {
+  "purpose": "Patches for known generator bugs.",
+  "status": "active",
+  "symbols": [
+   "_edges_to_network_safe",
+   "lattice_3d_fixed"
+  ],
+  "sha256": "946bc576e767b3ca17e8c79bc34ad02b1d7df775ffaa935b1bc92c06081aac29"
+ },
+ "fibernet/gen/_graph_builder.py": {
+  "purpose": "FiberGraph Builder — shared infrastructure for all generators.",
+  "status": "active",
+  "symbols": [
+   "GraphNode",
+   "GraphEdge",
+   "FiberGraph",
+   "GeneratorParams",
+   "_ensure_connected_fallback"
+  ],
+  "sha256": "5f5d3323236e60afe043b8dfc501169f818d34f10046970e9d0c8ff5ed498718"
+ },
+ "fibernet/gen/advanced.py": {
+  "purpose": "Advanced fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "voronoi_network_2d",
+   "voronoi_network_3d",
+   "electrospun_network",
+   "meltblown_network",
+   "biomimetic_collagen",
+   "biomimetic_fibrin",
+   "defected_lattice",
+   "composite_network",
+   "graded_network",
+   "auxetic_structure",
+   "kirigami_structure"
+  ],
+  "sha256": "a1fdaffa3c014a17d10452da86a1c62efa7a0668af0337a20cef9f7e9063c951"
+ },
+ "fibernet/gen/bundles.py": {
+  "purpose": "Fiber Bundle Generators",
+  "status": "active",
+  "symbols": [
+   "_detect_intersections_2d",
+   "_add_bundle_crosslinks",
+   "parallel_bundle_2d",
+   "twisted_bundle_2d",
+   "random_bundle_3d",
+   "braided_bundle_3d",
+   "tendon_like_bundle_3d"
+  ],
+  "sha256": "c35428ac477e69a1586f06c191f7cfd98fbc38b637fba4dbb42c9f71ba842523"
+ },
+ "fibernet/gen/chiral.py": {
+  "purpose": "Chiral fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "single_helix",
+   "double_helix",
+   "braided_rope",
+   "twisted_bundle",
+   "chiral_metamaterial",
+   "_hexagonal_pack",
+   "_circular_pack"
+  ],
+  "sha256": "510ad65e17e8c7e22c64f58588219ae76d4ca7288d40d664d232ac99089fd492"
+ },
+ "fibernet/gen/curved.py": {
+  "purpose": "Curved Fiber Generators",
+  "status": "active",
+  "symbols": [
+   "sinusoidal_fiber_2d",
+   "helical_fiber_3d",
+   "arc_fiber_2d",
+   "bezier_fiber_3d",
+   "random_curved_network_3d",
+   "crimped_network_2d"
+  ],
+  "sha256": "a19072ce9e13ccd7c5fb9605ee8f3c12659cb0c412d1ef22fa85a539e1cc8f08"
+ },
+ "fibernet/gen/disordered.py": {
+  "purpose": "Disordered fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "_compute_percolation_box_2d",
+   "_compute_percolation_box_3d",
+   "_count_components",
+   "_ensure_connected",
+   "_segment_min_distance_3d",
+   "_detect_intersections_3d",
+   "random_straight_2d",
+   "random_straight_3d",
+   "random_walk_fibers",
+   "oriented_random_2d",
+   "oriented_random_3d",
+   "electrospun_random",
+   "voronoi_2d",
+   "voronoi_3d",
+   "_bridge_if_needed",
+   "poisson_line_network_2d",
+   "random_curved_fibers_3d"
+  ],
+  "sha256": "f3d817981e1209e3b469bfe085a7d1bcacb61044faa4f8b352f502b23675e9ab"
+ },
+ "fibernet/gen/field_guided.py": {
+  "purpose": "Field-guided fiber network generator.",
+  "status": "active",
+  "symbols": [
+   "FieldGuidedConfig",
+   "OrientationField",
+   "field_guided_network",
+   "multi_scale_orientation_analysis"
+  ],
+  "sha256": "0d3f56d4a8f997cd2684ef9f270b2048f596426659447da4550842b019758acc"
+ },
+ "fibernet/gen/fractal.py": {
+  "purpose": "Fractal and Self-Similar Network Generator Module",
+  "status": "active",
+  "symbols": [
+   "_FractalGraph",
+   "sierpinski_triangle",
+   "koch_curve",
+   "fractal_tree",
+   "hilbert_curve"
+  ],
+  "sha256": "08a42b13a65c871ecc7c1a0305e88bda4ce38c9e075f2b33714df27f33b8084f"
+ },
+ "fibernet/gen/gradient.py": {
+  "purpose": "Gradient Network Generator Module",
+  "status": "active",
+  "symbols": [
+   "density_gradient_2d",
+   "property_gradient_2d",
+   "multi_zone_2d"
+  ],
+  "sha256": "6f1727dc3822823b0a309162094ef8ca8dba5c55998b4e6842bff76883eb37d5"
+ },
+ "fibernet/gen/hierarchical.py": {
+  "purpose": "Hierarchical and super-structure fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "hierarchical_bundle",
+   "gradient_density_network",
+   "core_shell_fiber",
+   "fractal_network"
+  ],
+  "sha256": "6729cd4827602225d129f11482155a29cf9b61e676c74f9a7fb5a6c267156b32"
+ },
+ "fibernet/gen/laminates.py": {
+  "purpose": "Composite Laminate Generators",
+  "status": "active",
+  "symbols": [
+   "_add_laminate_crosslinks",
+   "unidirectional_laminate",
+   "crossply_laminate",
+   "angle_ply_laminate",
+   "quasi_isotropic_laminate",
+   "custom_laminate",
+   "sandwich_laminate"
+  ],
+  "sha256": "70a82b16a7479838a4f6aa71ce8671796ad4acd9d7197890467f4ddcb01cc236"
+ },
+ "fibernet/gen/metamaterials.py": {
+  "purpose": "Mechanics metamaterial structure generators (v2 — node-based, properly connected).",
+  "status": "active",
+  "symbols": [
+   "_graph_to_network",
+   "_NodeGraph",
+   "_ensure_connected",
+   "reentrant_honeycomb_2d",
+   "chiral_honeycomb_2d",
+   "star_honeycomb_2d",
+   "arrowhead_auxetic_2d",
+   "hierarchical_lattice_2d",
+   "missing_rib_auxetic_2d",
+   "kagome_lattice_2d",
+   "proper_octet_truss_3d",
+   "diamond_lattice_3d",
+   "gyroid_lattice_3d",
+   "reentrant_honeycomb_3d",
+   "plate_lattice_3d"
+  ],
+  "sha256": "ed968c42cce2971cc925e3ae65eaddfa3866c50ca123130955f44d1b56e84673"
+ },
+ "fibernet/gen/ordered.py": {
+  "purpose": "Ordered fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "square_lattice_2d",
+   "triangular_lattice_2d",
+   "honeycomb_lattice_2d",
+   "kagome_lattice_2d",
+   "cubic_lattice_3d",
+   "octet_truss_3d"
+  ],
+  "sha256": "e2cbb0337e1f6c2c57bd865beafead1100196ad04ba89d49eeb17d3fa7a15af4"
+ },
+ "fibernet/gen/pattern.py": {
+  "purpose": "Pattern Engine — Unified structure generation for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_interpolate_edge_points",
+   "_apply_displacements",
+   "_generate_polygon_perimeter",
+   "_cn_symmetric_displacements",
+   "_displace_intermediate_nodes",
+   "_add_edge_with_intermediates",
+   "_auto_displacements",
+   "_unit_square",
+   "_unit_triangle",
+   "_unit_hexagon",
+   "_unit_honeycomb",
+   "_unit_kagome",
+   "_unit_reentrant",
+   "_unit_chiral",
+   "_unit_star",
+   "_unit_cross",
+   "_unit_missing_rib",
+   "_unit_diamond",
+   "list_units",
+   "register_unit",
+   "_unit_cubic_3d",
+   "_unit_octet_3d",
+   "_unit_diamond_3d",
+   "_unit_bcc_3d",
+   "_unit_fcc_3d",
+   "_unit_hcp_3d",
+   "_tpms_field",
+   "_build_tpms_unit",
+   "_make_tpms_factory",
+   "_unit_chiral_3d",
+   "_unit_reentrant_3d",
+   "list_units_3d",
+   "register_unit_3d",
+   "pattern_2d",
+   "_post_tile_connectivity_repair",
+   "pattern_3d",
+   "_add_3d_edges",
+   "_weld_nearby_nodes",
+   "_check_boundary_contact",
+   "_extend_to_boundary",
+   "_bridge_small_components",
+   "_clip_segment_to_box",
+   "_unit_voronoi"
+  ],
+  "sha256": "bcfa1962b9afe2bb0d49fd80fc80e13ede43b154b8274cc215d83896e836aa03"
+ },
+ "fibernet/gen/regular.py": {
+  "purpose": "Regular fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "RegularNetworkGenerator"
+  ],
+  "sha256": "8e984c42233ac4be5743fe173cda734b80ac967bb3b2a4fd4bc81893049962af"
+ },
+ "fibernet/gen/specialized.py": {
+  "purpose": "Specialized Fiber Network Generators",
+  "status": "active",
+  "symbols": [
+   "cnt_network_2d",
+   "cnt_network_3d",
+   "paper_network",
+   "textile_weave",
+   "electrospun_mat",
+   "fiber_reinforced_composite"
+  ],
+  "sha256": "d70e297e0f8e7cbdd45843b4a9bd231401361cb5b6b27b49e88ebc149a1164db"
+ },
+ "fibernet/gen/tpms.py": {
+  "purpose": "Triply Periodic Minimal Surface (TPMS) generators for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "_merge_components",
+   "_tpms_field",
+   "_extract_tpms_edges",
+   "tpms_sheet",
+   "tpms_lattice",
+   "tpms_gradient"
+  ],
+  "sha256": "e8d77bfd26febe0d2b6ac69ff61918d00dd961e1e4dc1ac5301dc3689b931bef"
+ },
+ "fibernet/gen/unified.py": {
+  "purpose": "Unified fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "_edges_to_network",
+   "_tile_unit_cell",
+   "_connect_tiles",
+   "_unit_cell_square",
+   "_unit_cell_honeycomb",
+   "_unit_cell_triangular",
+   "_unit_cell_kagome",
+   "_unit_cell_reentrant",
+   "_unit_cell_star",
+   "_unit_cell_arrowhead",
+   "_unit_cell_chiral",
+   "_unit_cell_missing_rib",
+   "_build_square_direct",
+   "_build_triangular_direct",
+   "_build_honeycomb_direct",
+   "lattice_2d",
+   "_build_chiral_direct",
+   "metamaterial_2d",
+   "curved_random_2d",
+   "lattice_3d",
+   "entangled_3d",
+   "biomimetic_network",
+   "hierarchical_lattice"
+  ],
+  "sha256": "42f2ec5ab75340f5b680efa0e159c97fb9fbb8b6eca8193685bed9da4eb668e7"
+ },
+ "fibernet/gen/variants.py": {
+  "purpose": "Enhanced variants of existing generators with 2D/3D support and more options.",
+  "status": "active",
+  "symbols": [
+   "lattice_2d_to_3d",
+   "curved_lattice",
+   "multi_radius_network",
+   "variable_stiffness_network",
+   "gyroid_infill",
+   "diamond_lattice_3d",
+   "foam_like_3d"
+  ],
+  "sha256": "d8c179de949ff7e574a2104f55e5e38697bf2424260b728d73ffc7786d1e0317"
+ },
+ "fibernet/gen/woven.py": {
+  "purpose": "Woven and textile fiber network generators.",
+  "status": "active",
+  "symbols": [
+   "plain_weave_2d",
+   "twill_weave_2d",
+   "satin_weave_2d",
+   "woven_3d_orthogonal"
+  ],
+  "sha256": "2e411ea0a5e4faa4ae11a8793ee836859dab09b9532f3ca009e86118832373a4"
+ },
+ "fibernet/gen/zigzag.py": {
+  "purpose": "ZigZag lattice generator.",
+  "status": "active",
+  "symbols": [
+   "ZigZagGenerator"
+  ],
+  "sha256": "0d863a081af0f1b3fafc61f3f4d32e80132fdfc55b4adaaa19bfcb5bd03404ac"
+ },
+ "fibernet/graph/__init__.py": {
+  "purpose": "Graph-based operations for fiber networks.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "8f2115320fac79200c083db8f27e365276b6091d3f033929f04c5975bcc78a3b"
+ },
+ "fibernet/graph/io.py": {
+  "purpose": "Graph I/O for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "to_networkx",
+   "from_networkx",
+   "save_graph_json",
+   "load_graph_json"
+  ],
+  "sha256": "e14472da33d4aac42e0c7edb71666ce419a9d8a5e1c40c9c42a3605ee994367a"
+ },
+ "fibernet/graph/weld.py": {
+  "purpose": "Weld graph operations for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "_line_segment_intersection",
+   "find_intersections",
+   "weld_graph",
+   "merge_coincident_nodes"
+  ],
+  "sha256": "b1ffd86b8f2e9d9e514b08c1c24818c0e71916c820f67572ccbbe6fa85cb0112"
+ },
+ "fibernet/integrations/__init__.py": {
+  "purpose": "FiberNet Integrations Module",
+  "status": "active",
+  "symbols": [],
+  "sha256": "46de04cb33ad3252aeb8dff6ce785132bea62a98bae08bb02a6fd641e52a7f59"
+ },
+ "fibernet/integrations/lammps_integration.py": {
+  "purpose": "LAMMPS Integration for FiberNet",
+  "status": "active",
+  "symbols": [
+   "LAMMPSResult",
+   "LAMMPSBridge",
+   "run_lammps_md"
+  ],
+  "sha256": "c0b3c0324803c310358b46979a2f4fdaf5fde42a18d65b293549a449b1a0e7e1"
+ },
+ "fibernet/integrations/mdanalysis_integration.py": {
+  "purpose": "MDAnalysis Integration for FiberNet",
+  "status": "active",
+  "symbols": [
+   "MDAnalysisResult",
+   "MDAnalysisBridge",
+   "analyze_fiber_dynamics"
+  ],
+  "sha256": "93a748960e1d601905024396ec2c8a3122c3b3f886d63b703720b1c7024f9fb3"
+ },
+ "fibernet/integrations/networkx_integration.py": {
+  "purpose": "NetworkX Integration for FiberNet",
+  "status": "active",
+  "symbols": [
+   "GraphAnalysisResult",
+   "NetworkXBridge",
+   "analyze_network_topology"
+  ],
+  "sha256": "9cdb5320ab78c8dcc3b4f81c13621ec6cac9cc4c1909548846fd63c610e6a7be"
+ },
+ "fibernet/integrations/ovito_integration.py": {
+  "purpose": "OVITO Integration for FiberNet",
+  "status": "active",
+  "symbols": [
+   "OVITOAnalysisResult",
+   "OVITOBridge",
+   "render_network_ovito"
+  ],
+  "sha256": "fc16d895b51c7f9eee4a563b7ea987f63f0f096e40f4ab57fc42a420235d9e6e"
+ },
+ "fibernet/io/__init__.py": {
+  "purpose": "I/O interoperability module.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "5f08bd4fd0a8192e833fc36fe15a86d96e205a45855252f37273a230445b3071"
+ },
+ "fibernet/io/fea_export.py": {
+  "purpose": "Export to Commercial Finite Element Analysis Software",
+  "status": "active",
+  "symbols": [
+   "export_to_abaqus",
+   "export_to_ansys",
+   "export_to_gmsh",
+   "export_to_lammps"
+  ],
+  "sha256": "bd5049cdb28748439ebc1f9861a2f24147c8fe4bac8b5a9d1ba02ffa724aa777"
+ },
+ "fibernet/io/gmsh.py": {
+  "purpose": "GMSH mesh file export.",
+  "status": "active",
+  "symbols": [
+   "to_gmsh"
+  ],
+  "sha256": "5fb7635fb2fb1a8a00d93e1a1d3b38bd3f11cd37476e1ebcf1885d5fc83e67c4"
+ },
+ "fibernet/io/lammps.py": {
+  "purpose": "LAMMPS data file I/O.",
+  "status": "active",
+  "symbols": [
+   "to_lammps",
+   "from_lammps"
+  ],
+  "sha256": "196c1d467aa5c6759a18c11904e2fe3d311ada8cff38e98a3952d459d3a0509a"
+ },
+ "fibernet/io/mesh_export.py": {
+  "purpose": "Mesh Export Module",
+  "status": "active",
+  "symbols": [
+   "_generate_cylinder_mesh",
+   "export_stl",
+   "_write_ascii_stl",
+   "_write_binary_stl",
+   "export_obj",
+   "export_ply"
+  ],
+  "sha256": "e7a67be27cd0d354ba9f410d8d6fd635f9b7987cad24a628dc94f2e090ff5b01"
+ },
+ "fibernet/io/pandas_io.py": {
+  "purpose": "Pandas integration for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_require_pandas",
+   "to_dataframe",
+   "from_dataframe",
+   "network_summary",
+   "parametric_to_dataframe"
+  ],
+  "sha256": "2099a6a0fb555d6df4330eef9b5f4ce84536dbb06214d8ef76032bdcd655817a"
+ },
+ "fibernet/io/pdb.py": {
+  "purpose": "PDB (Protein Data Bank) file format I/O.",
+  "status": "active",
+  "symbols": [
+   "to_pdb",
+   "from_pdb"
+  ],
+  "sha256": "4adc6f923c8cc9926d6bd06be4053d08d0ed31f24acebc16571683b3d07168c0"
+ },
+ "fibernet/io/vtk.py": {
+  "purpose": "VTK file export for visualization in Paraview/VisIt.",
+  "status": "active",
+  "symbols": [
+   "to_vtk",
+   "to_vtk_xml"
+  ],
+  "sha256": "8aa93ccfe8fd158aebe27fabe84c9c2973df2ca941a30466e6b218cfc45202f0"
+ },
+ "fibernet/io/xyz.py": {
+  "purpose": "XYZ file format I/O.",
+  "status": "active",
+  "symbols": [
+   "to_xyz",
+   "from_xyz"
+  ],
+  "sha256": "4e75a88aa232c226bfe91ad68d5a49485374153b1552a22336ffde96b3e18d3c"
+ },
+ "fibernet/materials.py": {
+  "purpose": "Material Database Module",
+  "status": "active",
+  "symbols": [
+   "_create_material_db",
+   "get_material_database",
+   "get_material",
+   "list_materials",
+   "compare_materials",
+   "m"
+  ],
+  "sha256": "9e0c3f9b6ef750daad55d3b46e8d1fbfe132b97042897a85531f871db814c6e6"
+ },
+ "fibernet/ml/__init__.py": {
+  "purpose": "Machine Learning Tools for FiberNet — Comprehensive AI Pipeline.",
+  "status": "active",
+  "symbols": [
+   "__getattr__"
+  ],
+  "sha256": "c3e1dfcea7f98fd89badd6f9d9cdacc6a2eb77070aa5a866bd579efcf6d7ba6a"
+ },
+ "fibernet/ml/_archived/dataset.py": {
+  "purpose": "Dataset Generation and Management for ML Training",
+  "status": "archived",
+  "symbols": [
+   "generate_dataset",
+   "load_dataset",
+   "save_dataset",
+   "extract_features_dataset"
+  ],
+  "sha256": "5e6d96f9b3dfd5db6da712a79536319d3f6d88cea51e1a0953479ef9b4b7b90d"
+ },
+ "fibernet/ml/_archived/dataset_v2.py": {
+  "purpose": "ML dataset generation pipeline for FiberNet.",
+  "status": "archived",
+  "symbols": [
+   "extract_features",
+   "generate_dataset",
+   "_save_checkpoint",
+   "_save_dataset"
+  ],
+  "sha256": "6a6cf2491185c450a972f51d5f82c2f3db6fe544ff247aea62f203a84f97a456"
+ },
+ "fibernet/ml/_archived/graph_neural_network.py": {
+  "purpose": "Graph Neural Network Module for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "GraphData",
+   "NetworkGraphConverter",
+   "GNNPropertyPredictor",
+   "predict_property"
+  ],
+  "sha256": "ea7255090ca6af9f68d1782a92cacbf3b4a42a42cb383ec0ee7c9c5314904ccb"
+ },
+ "fibernet/ml/_archived/predictor.py": {
+  "purpose": "Property Prediction with Machine Learning",
+  "status": "archived",
+  "symbols": [
+   "PropertyPredictor",
+   "train_predictor"
+  ],
+  "sha256": "fab34483d59b99e957f5080f2aa37736aeb0c315b3ea36e06f5ce46115256596"
+ },
+ "fibernet/ml/active_learning.py": {
+  "purpose": "Active Learning for FiberNet — Efficient Data Acquisition.",
+  "status": "active",
+  "symbols": [
+   "UncertaintySampling",
+   "DiversitySampling",
+   "QueryByCommittee",
+   "ActiveLearningLoop"
+  ],
+  "sha256": "4bb2d2af43c1bf2f5fe0b0c2bb9e1eebf799432e0859c7bd2918f2449a1fbf3d"
+ },
+ "fibernet/ml/beam_frame_fem.py": {
+  "purpose": "Beam Frame FEM - Corrected & Enhanced",
+  "status": "active",
+  "symbols": [
+   "BeamFrameFEM"
+  ],
+  "sha256": "d2a0e56066d5ec8ebb5755ca4e7d94a8f99418fd6dda787f510d970523109224"
+ },
+ "fibernet/ml/beam_frame_fem_sparse.py": {
+  "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
+  "status": "active",
+  "symbols": [
+   "SparseBeamFrameFEM"
+  ],
+  "sha256": "d45779a57317c992623befd4c5691aea4f710655e3b1550ce2805d8b9fc69795"
+ },
+ "fibernet/ml/beam_frame_fem_v6.py": {
+  "purpose": "Backward-compatibility shim. Use fibernet.ml.beam_frame_fem instead.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "527df9a5376634b112c94448006239b87cb1bcf0461abb2d94bbfc437e538ab5"
+ },
+ "fibernet/ml/conservative_nn.py": {
+  "purpose": "Conservative Neural Networks for FiberNet — Guaranteed Conservation Laws.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "b8c29d0c7144424b1b4705794e64c19f7d0e8cf7ae20459aeabc2e4ada6dd0ec"
+ },
+ "fibernet/ml/dataset.py": {
+  "purpose": "Dataset Generation & Management for FiberNet ML Pipeline.",
+  "status": "active",
+  "symbols": [
+   "_extract_graph_features",
+   "DatasetSample",
+   "FiberNetDataset",
+   "_make_id",
+   "_json_safe",
+   "_save_checkpoint"
+  ],
+  "sha256": "430f694e3456745caf0f180599eb657a0f048da75355ecbce75e43c2305c2fce"
+ },
+ "fibernet/ml/differentiable_physics.py": {
+  "purpose": "Differentiable Physics Simulation for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "4ee54cff1bf5b9c13f47695083b88b36eb681f1be0bf2dbea888659b24288aa9"
+ },
+ "fibernet/ml/diffusion.py": {
+  "purpose": "Diffusion Models for FiberNet Structure Generation.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "e81cc19e2c0f6c992f4d999ae7221441b0ef3f1df665837f24e9b511bc0254fc"
+ },
+ "fibernet/ml/features.py": {
+  "purpose": "Feature Extraction for Fiber Networks",
+  "status": "active",
+  "symbols": [
+   "FeatureExtractor",
+   "extract_features",
+   "GNNFeatureExtractor"
+  ],
+  "sha256": "561580cf5a4797f9c0fea83f655124d6dcadaa6836553ddbed6a04af718186bc"
+ },
+ "fibernet/ml/field_prediction.py": {
+  "purpose": "Field-Level Prediction Models for FiberNet (2D/3D Spatial Fields).",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "0305e09115dbb365ae83c95c916f15640faebdf2e75b37984024807f281f5bc3"
+ },
+ "fibernet/ml/gan.py": {
+  "purpose": "Generative Adversarial Networks for FiberNet Structure Generation.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "b5f5d1dc091d1733a15cb0e39fdcb0abfcb6ecfb41b793b274298119b92212ac"
+ },
+ "fibernet/ml/generative.py": {
+  "purpose": "Generative Models for FiberNet Structure Design.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "83e45e6e08c59b291a924446b01d1d74589d09227153b5c78ab466d8cff68a51"
+ },
+ "fibernet/ml/gflownet.py": {
+  "purpose": "GFlowNet (Generative Flow Networks) for FiberNet Structure Generation.",
+  "status": "active",
+  "symbols": [
+   "_require_torch",
+   "StructureAction",
+   "StructureState"
+  ],
+  "sha256": "2731ebc640246a3b797ab9b83eb5c1f6634e14514a28d5a677bdecd420a0a97c"
+ },
+ "fibernet/ml/gnn.py": {
+  "purpose": "Graph Neural Networks for FiberNet Structure-Property Prediction.",
+  "status": "active",
+  "symbols": [
+   "_require_torch",
+   "graph_from_structure",
+   "_build_normalized_adjacency"
+  ],
+  "sha256": "b21fa7b59dde5300a650b79655963a493f300a3b93bef5cddd8fef6851283848"
+ },
+ "fibernet/ml/inverse_design.py": {
+  "purpose": "Inverse Design for FiberNet — Property-to-Structure Mapping.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "0da6906e197bf65a4fee6161d133b152fc085f5b8a267b28c3de1964215d002c"
+ },
+ "fibernet/ml/models.py": {
+  "purpose": "PyTorch Model Zoo for FiberNet ML Pipeline.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "f6fd2d125836c95360b4b8a3533e2b5a47d5eb961176fa093a3f1423bbf241d9"
+ },
+ "fibernet/ml/multiscale.py": {
+  "purpose": "Multi-Scale Learning for FiberNet — Hierarchical Feature Extraction.",
+  "status": "active",
+  "symbols": [
+   "_require_torch",
+   "MultiScaleFeatureExtractor"
+  ],
+  "sha256": "9dcbdd796d0d93bd2d6b430e547a6a9daf69eedcc78352a8f010e56f72e21e77"
+ },
+ "fibernet/ml/neural_ode.py": {
+  "purpose": "Neural ODE for FiberNet — Continuous-Time Dynamics Modeling.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "ada7ad549f25d33902b2ab2555d4f9ec1922be82fd86b36a6157c25775996fcb"
+ },
+ "fibernet/ml/neural_operator.py": {
+  "purpose": "Neural Operators for FiberNet — Learning Mappings Between Function Spaces.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "8550833508a8eca1ea091861cc4f5b1f9d17f2c67cf60d3244898b3b4d6516a1"
+ },
+ "fibernet/ml/optimization.py": {
+  "purpose": "Multi-Objective Optimization for FiberNet Structure Design.",
+  "status": "active",
+  "symbols": [
+   "MultiObjectiveOptimizer",
+   "NSGA2Optimizer",
+   "ParetoAnalysis",
+   "StructureSweeper"
+  ],
+  "sha256": "92dc4dac142c144b2dac4bfac4f0395a60fa953e03ed6fc092cfe62c6fdb4ed3"
+ },
+ "fibernet/ml/pinn.py": {
+  "purpose": "Physics-Informed Neural Networks (PINN) for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "6b40dd38e2d25e63cd2443c179f662fc94c907b73f39207672bfc40eb13e6d4f"
+ },
+ "fibernet/ml/pinn_gnn.py": {
+  "purpose": "Physics-Informed Graph Neural Networks for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "8ddca9b9e233ffd05288e2992c57d57ee5957288f9159c82f6fce96c4e5a22a7"
+ },
+ "fibernet/ml/symbolic.py": {
+  "purpose": "Symbolic Regression for FiberNet — Discovering Interpretable Relationships.",
+  "status": "active",
+  "symbols": [
+   "FeatureSelection",
+   "SymbolicRegressor",
+   "ExpressionAnalyzer"
+  ],
+  "sha256": "a621bcf243fb759ce0d3c295d199c2a067fa1e9c5d4a7864b90d09606747d264"
+ },
+ "fibernet/ml/training.py": {
+  "purpose": "Advanced Training Utilities for FiberNet ML Pipeline.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "a65a37d94d409d140e8e3e95d5e16ddb443c11e2f1897c0edba721c29d1fe90a"
+ },
+ "fibernet/ml/transfer_learning.py": {
+  "purpose": "Transfer & Meta-Learning for FiberNet — Low-Data Regime Support.",
+  "status": "active",
+  "symbols": [
+   "_require_torch"
+  ],
+  "sha256": "ed35e591b12a26b9fb8d08a9eb078d704a51e528eeba1740a3ccfb46398811b7"
+ },
+ "fibernet/ml/utils.py": {
+  "purpose": "ML Utilities for FiberNet — One-line ML workflows.",
+  "status": "active",
+  "symbols": [
+   "train_predictor",
+   "cross_validate",
+   "compare_models",
+   "plot_predictions",
+   "plot_feature_importance",
+   "plot_residuals",
+   "plot_learning_curve",
+   "predict_from_csv",
+   "_build_model"
+  ],
+  "sha256": "56451f64c26ca5b76196e242e971da897a4b21c029436b7849a58faeacaa44bc"
+ },
+ "fibernet/ml/xai.py": {
+  "purpose": "Explainable AI (XAI) for FiberNet ML Models.",
+  "status": "active",
+  "symbols": [
+   "permutation_importance",
+   "shap_explanation",
+   "explain_torch_model",
+   "partial_dependence",
+   "detect_interactions",
+   "explain_model"
+  ],
+  "sha256": "5aafe725f6c7437262eab14410a9d8182117b1e72258c216df4505c0a572ec82"
+ },
+ "fibernet/pyvista_viz.py": {
+  "purpose": "PyVista Integration for Advanced 3D Visualization",
+  "status": "active",
+  "symbols": [
+   "PyVistaVisualizer",
+   "visualize_network_3d"
+  ],
+  "sha256": "e14c240207032b9a0785f6b16697f553c518ede95a23dfdaa20a85a41b35e93a"
+ },
+ "fibernet/rl/__init__.py": {
+  "purpose": "Reinforcement Learning Tools for FiberNet — Advanced RL Pipeline.",
+  "status": "active",
+  "symbols": [
+   "__getattr__"
+  ],
+  "sha256": "90481af1cbc8d2fd4c5d90fb4d103a030a542321c603945955a59db3bfb9b157"
+ },
+ "fibernet/rl/algorithms.py": {
+  "purpose": "RL Algorithm Wrappers for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "train_rl",
+   "evaluate_rl",
+   "replay_best",
+   "get_algorithm_info"
+  ],
+  "sha256": "1e913ac87cfc0d3253ec42ded2b1f587a337ad8ee8251bc6904fc38128b61746"
+ },
+ "fibernet/rl/curriculum.py": {
+  "purpose": "Curriculum Learning for FiberNet RL — Progressive Difficulty Training.",
+  "status": "active",
+  "symbols": [
+   "CurriculumScheduler",
+   "LinearCurriculum",
+   "AdaptiveCurriculum",
+   "MultiStageCurriculum",
+   "CurriculumWrapper"
+  ],
+  "sha256": "1e05778c831da41cdf0f94b0aa01b8ff374695b1c0063da0738dfc341f1ccb2b"
+ },
+ "fibernet/rl/env.py": {
+  "purpose": "Gymnasium-Compatible RL Environments for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_require_gym"
+  ],
+  "sha256": "6a2e5a2650540f8e58777ce320fa418badc894300f7ecbaed3d89805680c4e50"
+ },
+ "fibernet/rl/hyperparams.py": {
+  "purpose": "Hyperparameter Optimization for FiberNet RL with Optuna.",
+  "status": "active",
+  "symbols": [
+   "tune_rl_hyperparams",
+   "tune_env_params",
+   "_suggest_hyperparams",
+   "study_summary"
+  ],
+  "sha256": "0cde559b73e2ea514ec5c5c5b8102012b913dade69a475b401a0086eafe07e1b"
+ },
+ "fibernet/rl/multi_objective_rl.py": {
+  "purpose": "Multi-Objective Reinforcement Learning for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "ScalarizedMORL",
+   "ParetoFrontExplorer"
+  ],
+  "sha256": "e0d715faf4379c9c8512c2d376c92e96d5a215f00b59a8a2b95936651e76aafa"
+ },
+ "fibernet/rl/parametric.py": {
+  "purpose": "Parametric Structure Environment for RL.",
+  "status": "active",
+  "symbols": [
+   "ParametricStructureEnv",
+   "create_rl_environment"
+  ],
+  "sha256": "62f22c1ce8be38c5ebac2570f5d484af7f1c48406218d69dc2bcfdbf40ce0ee0"
+ },
+ "fibernet/rl/reward_shaping.py": {
+  "purpose": "Advanced Reward Shaping for FiberNet RL.",
+  "status": "active",
+  "symbols": [
+   "RewardFunction",
+   "CompositeReward",
+   "DistanceReward",
+   "PotentialBasedShaping",
+   "SparseReward",
+   "RewardNormalizer",
+   "RewardWrapper",
+   "minimize_force_reward",
+   "maximize_stretch_reward",
+   "uniform_deformation_reward",
+   "energy_absorption_reward",
+   "lightweight_reward",
+   "create_default_reward"
+  ],
+  "sha256": "33e901ea240d70bbc3695a4bf43fec1ce6b53719ebe2f041612df0d9bbc7de6c"
+ },
+ "fibernet/rl/utils.py": {
+  "purpose": "RL Utilities for FiberNet — One-line RL workflows.",
+  "status": "active",
+  "symbols": [
+   "plot_reward_curve",
+   "plot_convergence",
+   "plot_action_distribution",
+   "evaluate_agent",
+   "save_agent",
+   "load_agent",
+   "run_bayesian_optimization"
+  ],
+  "sha256": "c371255216c44537caf99c4faf3d86867c18b7585ed2af5b70e7839e94605183"
+ },
+ "fibernet/scripts/validate_3d_units.py": {
+  "purpose": "Comprehensive validation script for all 14 3D unit types.",
+  "status": "active",
+  "symbols": [
+   "validate_unit",
+   "main"
+  ],
+  "sha256": "6ffcef5178208b256d95354ca80b08b0c52bd5a44f92a475a4a9950c67605b2f"
+ },
+ "fibernet/scripts/validate_3d_v2.py": {
+  "purpose": "FiberNet v4.1.0 — Comprehensive 3D Validation Script (v2)",
+  "status": "active",
+  "symbols": [
+   "load_checkpoint",
+   "save_checkpoint",
+   "validate_single_unit",
+   "main"
+  ],
+  "sha256": "2885173013d0175bac9bb6046a918447a24d9d5f5d889bb07614efa37ea96b87"
+ },
+ "fibernet/sim/__init__.py": {
+  "purpose": "Simulation engines for FiberNet.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "21af5e7e9b621aac1fc2aacc7976f6b9c16887b06fbe4f3a4cb90866b8d5666a"
+ },
+ "fibernet/sim/_archived/acoustic.py": {
+  "purpose": "Acoustic Wave Propagation Simulation",
+  "status": "archived",
+  "symbols": [
+   "AcousticResult",
+   "AcousticSolver"
+  ],
+  "sha256": "73d1b424b68952cac20026a4b285dd7e88f5471d4ad2aa16f42d944e04fec24e"
+ },
+ "fibernet/sim/_archived/buckling_analysis.py": {
+  "purpose": "Buckling Analysis Module",
+  "status": "archived",
+  "symbols": [
+   "FiberBucklingResult",
+   "NetworkBucklingResult",
+   "BucklingAnalyzer",
+   "analyze_buckling"
+  ],
+  "sha256": "0a8a2a1ba52a8e3c6db64acb78a56f570d0ec74ee2020abb15ad9377c1e3df31"
+ },
+ "fibernet/sim/_archived/coupled.py": {
+  "purpose": "Coupled multi-physics simulations for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "ThermoMechanicalResult",
+   "ElectroMechanicalResult",
+   "ThermoMechanicalSolver",
+   "ElectroMechanicalSolver",
+   "run_thermo_mechanical_analysis"
+  ],
+  "sha256": "3142d242179509e284030530293a5c74aa8b7a5ed20135622bd325713222bc3c"
+ },
+ "fibernet/sim/_archived/coupling.py": {
+  "purpose": "Multi-physics coupling module for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "CoupledResult",
+   "ThermoMechanical",
+   "PiezoResistive"
+  ],
+  "sha256": "9a5e72da9261482ed7fdc93a063c682246957edad31e41cd3a0203b9f1ae4415"
+ },
+ "fibernet/sim/_archived/creep.py": {
+  "purpose": "Creep Analysis Module for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "CreepResult",
+   "CreepModelParameters",
+   "CreepAnalyzer",
+   "analyze_creep"
+  ],
+  "sha256": "0a92e1838059931c9b863fddce25913c1234e74ea068c4d3aa7ed6627c4eb494"
+ },
+ "fibernet/sim/_archived/cte.py": {
+  "purpose": "Coefficient of Thermal Expansion (CTE) Module",
+  "status": "archived",
+  "symbols": [
+   "CTEResult",
+   "CTEAnalyzer",
+   "compute_cte"
+  ],
+  "sha256": "85a959570d3c2cf3213347e8ad46060dde22d9ae10007f9990f863592a88d402"
+ },
+ "fibernet/sim/_archived/damage.py": {
+  "purpose": "Damage mechanics and fatigue module for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "DamageState",
+   "FatigueResult",
+   "ProgressiveFailureResult",
+   "DamageMechanicsSolver",
+   "FatigueSolver",
+   "compute_damage_tolerance"
+  ],
+  "sha256": "02a8e2137a38a9ba0d2625e5a38b4ee33678bc27bce87508e94efcf2a9f48450"
+ },
+ "fibernet/sim/_archived/diffusion.py": {
+  "purpose": "Diffusion and Transport Module for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "DiffusionResult",
+   "FiltrationResult",
+   "DiffusionAnalyzer",
+   "analyze_diffusion"
+  ],
+  "sha256": "6a6b96cbf45eac28795614c0d58e6b7df27316fffddd9092abeb836c76091e55"
+ },
+ "fibernet/sim/_archived/dma.py": {
+  "purpose": "Dynamic Mechanical Analysis (DMA) simulations.",
+  "status": "archived",
+  "symbols": [
+   "DMAResult",
+   "frequency_sweep",
+   "temperature_sweep",
+   "master_curve"
+  ],
+  "sha256": "6331897df023b3e3f16b2f2195fd9ee33edb765213328470f8b20f1473ccabfb"
+ },
+ "fibernet/sim/_archived/dynamics.py": {
+  "purpose": "Dynamics simulation engine for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "DynamicsResult",
+   "FiberDynamics",
+   "TimeDependentLoading",
+   "compute_kinetic_energy",
+   "compute_temperature"
+  ],
+  "sha256": "56e7b8bf15c8815d7d0ef0f3cc85f80743ce28cac2e595c15fef9153f6550e19"
+ },
+ "fibernet/sim/_archived/electromagnetic.py": {
+  "purpose": "Electromagnetic simulation engine for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "EMResult",
+   "EMSolver"
+  ],
+  "sha256": "cd7856f3889d1e4a25eef6eca7427496dd4fb6033fc1dfacfce728fc270dd869"
+ },
+ "fibernet/sim/_archived/fatigue.py": {
+  "purpose": "Fatigue Analysis Module for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "SNPoint",
+   "FatigueResult",
+   "CyclicLoadResult",
+   "FatigueAnalyzer",
+   "analyze_fatigue"
+  ],
+  "sha256": "106f92088d70f6d0c93fd7fd2dd6c4b7365b6a8306cac1d9845b9e4446ffbb6d"
+ },
+ "fibernet/sim/_archived/fluid.py": {
+  "purpose": "Fluid Flow Simulation for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "FluidResult",
+   "DarcySolver",
+   "PoreNetworkModel"
+  ],
+  "sha256": "eb0d3a6555c7fb4c818bc1f32ab3577630e3f8e3473567b25315367d2599e2c8"
+ },
+ "fibernet/sim/_archived/fracture.py": {
+  "purpose": "Fracture mechanics simulation for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "FractureResult",
+   "FiberFracture"
+  ],
+  "sha256": "a74902d9ccdd39ba4960925ab384401ff38bbffcc07f95bd84ed5c92bd89e7d0"
+ },
+ "fibernet/sim/_archived/fracture_mechanics.py": {
+  "purpose": "Fracture mechanics module for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "CrackTip",
+   "FractureResult",
+   "CrackPropagationSolver",
+   "compute_energy_release_rate",
+   "compute_fracture_toughness"
+  ],
+  "sha256": "8cdc55b5514228ec6958cf0277395ecb7e1712b90536f188cf6148cf3b962c0b"
+ },
+ "fibernet/sim/_archived/incremental_fem.py": {
+  "purpose": "Incremental Nonlinear Finite Element Method",
+  "status": "archived",
+  "symbols": [
+   "IncrementalResult",
+   "IncrementalFEM",
+   "compute_stress_strain_curve"
+  ],
+  "sha256": "9b51f138164f6d59eb4f887ff269c0e24db10f89e359b78910035f88336cbb22"
+ },
+ "fibernet/sim/_archived/mechanical.py": {
+  "purpose": "Mechanical simulation engine for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "MechanicalResult",
+   "BeamElement",
+   "FiberFEM",
+   "stress_strain_curve",
+   "EffectiveProperties",
+   "compute_effective_properties",
+   "poisson_ratio"
+  ],
+  "sha256": "6b95865d909b3ff515a787de8aeec3216efbab52acf00f7c04219dcfd4b93b9b"
+ },
+ "fibernet/sim/_archived/molecular_dynamics.py": {
+  "purpose": "Molecular Dynamics Module for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "MDTrajectory",
+   "MDParameters",
+   "FiberMDSolver",
+   "run_fiber_md"
+  ],
+  "sha256": "0cfa0f8da3b7fd1a6601a6421def7ba4f098b6b5e20cd2c69777d541a5c92262"
+ },
+ "fibernet/sim/_archived/multiscale.py": {
+  "purpose": "Multi-scale modeling framework for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "HomogenizedProperties",
+   "RVEResult",
+   "HomogenizationSolver",
+   "RVEAnalyzer",
+   "compute_effective_properties",
+   "estimate_rve_size"
+  ],
+  "sha256": "3bbaca2a2d2a1900a7a3c5e8738c689d53605f34e04c1934d9f9f9234669263c"
+ },
+ "fibernet/sim/_archived/nonlinear.py": {
+  "purpose": "Nonlinear mechanical simulation for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "NonlinearResult",
+   "ConstitutiveModel",
+   "LinearElastic",
+   "BilinearPlasticity",
+   "PowerLawHardening",
+   "HyperelasticNeoHookean",
+   "HyperelasticMooneyRivlin",
+   "ArrudaBoyce",
+   "ViscoelasticModel",
+   "MaxwellModel",
+   "KelvinVoigtModel",
+   "StandardLinearSolid",
+   "NonlinearFEM"
+  ],
+  "sha256": "3691e2288c64fe88c5b28036f740fac28bc2b573e3929b03676408f9501a9d6a"
+ },
+ "fibernet/sim/_archived/optimization.py": {
+  "purpose": "SciPy-based Optimization for Fiber Networks",
+  "status": "archived",
+  "symbols": [
+   "OptimizationResult",
+   "EnergyMinimizer",
+   "ParameterOptimizer"
+  ],
+  "sha256": "a3b590e5b41d79150a63e44455a20c2ecd978aba92b422eeceb279672de6024c"
+ },
+ "fibernet/sim/_archived/periodic.py": {
+  "purpose": "Periodic boundary conditions for fiber network simulations.",
+  "status": "archived",
+  "symbols": [
+   "PeriodicBoundary",
+   "create_periodic_network",
+   "apply_periodic_strain",
+   "homogenize_properties"
+  ],
+  "sha256": "380df749da1bb67df919c205b19387ee9350cfab382a57dd4502a86c73e505a5"
+ },
+ "fibernet/sim/_archived/permeability.py": {
+  "purpose": "Permeability and Diffusion Solver Module",
+  "status": "archived",
+  "symbols": [
+   "PermeabilityResult",
+   "DiffusionResult",
+   "PermeabilitySolver",
+   "DiffusionSolver",
+   "compute_permeability",
+   "compute_diffusion"
+  ],
+  "sha256": "9559204bd45c9e14baa7c0ace64e8586958721d61d52bfe35a598bc9a9469a70"
+ },
+ "fibernet/sim/_archived/rheology.py": {
+  "purpose": "Rheology module for fiber suspensions.",
+  "status": "archived",
+  "symbols": [
+   "RheologyResult",
+   "JefferyOrbit",
+   "FiberSuspensionRheology",
+   "compute_intrinsic_viscosity",
+   "compute_dilute_limit_viscosity"
+  ],
+  "sha256": "9ad12983c951b7052023d90968d149dc2b2d9398ad012a3b46cc3ebd91d462c2"
+ },
+ "fibernet/sim/_archived/rl_environment.py": {
+  "purpose": "Reinforcement Learning environments for fiber network inverse design.",
+  "status": "archived",
+  "symbols": [
+   "RLEnvConfig",
+   "FiberNetworkEnv",
+   "run_rl_optimization"
+  ],
+  "sha256": "ad24e2938163cfb6322e4fcccb284e432e43cfb0fee52a3f2a0200cee2dfbbf9"
+ },
+ "fibernet/sim/_archived/thermal.py": {
+  "purpose": "Thermal simulation for fiber networks.",
+  "status": "archived",
+  "symbols": [
+   "ThermalResult",
+   "ThermalSolver"
+  ],
+  "sha256": "50049c2f407f7ff39124b0ab5cab301f18f1bfb016df784760c300bd827b03f9"
+ },
+ "fibernet/sim/_archived/uncertainty.py": {
+  "purpose": "Uncertainty Quantification Module",
+  "status": "archived",
+  "symbols": [
+   "EnsembleResult",
+   "monte_carlo_ensemble",
+   "sensitivity_analysis",
+   "convergence_study"
+  ],
+  "sha256": "7b50683874cc90da91e9719e30c6a226dc189c7691f05ea32c3ba5c3b145fff3"
+ },
+ "fibernet/sim/_archived/validation.py": {
+  "purpose": "Validation module for FiberNet mechanical simulations.",
+  "status": "archived",
+  "symbols": [
+   "ValidationResult",
+   "gibson_ashby_honeycomb",
+   "gibson_ashby_foam_3d",
+   "gibson_ashby_closed_cell",
+   "euler_beam_cantilever",
+   "euler_beam_bending_stiffness",
+   "validate_cantilever_beam",
+   "validate_honeycomb_scaling",
+   "validate_convergence",
+   "validate_patch_test",
+   "run_all_validations",
+   "print_validation_report"
+  ],
+  "sha256": "163a29b6aeca98b76ba025b7e677afbbf624a649b031e7316379d22c28b96a5f"
+ },
+ "fibernet/sim/_archived/viscoelastic.py": {
+  "purpose": "Viscoelastic material models for time-dependent simulations.",
+  "status": "archived",
+  "symbols": [
+   "ViscoelasticResult",
+   "MaxwellModel",
+   "KelvinVoigtModel",
+   "StandardLinearSolid",
+   "GeneralizedMaxwell"
+  ],
+  "sha256": "376632d87fe53ebff0b6498a7785b1a5beea013936a7a6b18d74f084f68fcdc7"
+ },
+ "fibernet/sim/_archived_fem/__init__.py": {
+  "purpose": "Archived: TaichiFEMSolver (static truss FEM). 雪藏 2026-07-13.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "47aee8b8bf675c786d60e4b813962dadd3d9b8f06c0249a547a0132747c31b41"
+ },
+ "fibernet/sim/_archived_fem/taichi_fem.py": {
+  "purpose": "Archived: TaichiFEMSolver (static truss FEM)",
+  "status": "active",
+  "symbols": [
+   "SimResult",
+   "_ensure_taichi",
+   "_graph_to_arrays",
+   "_element_data",
+   "_get_boundary_indices",
+   "TaichiFEMSolver"
+  ],
+  "sha256": "82d77f58073dfe6fec043d39d761042caa019d154de9f122b6aba8db1530d00b"
+ },
+ "fibernet/sim/_fem_archive.py": {
+  "purpose": "Beam FEM solver for StructureGraph — with Taichi acceleration support.",
+  "status": "active",
+  "symbols": [
+   "FEMResult",
+   "BeamFEM"
+  ],
+  "sha256": "859c210d7e4fb0103b456bfe812fb65b9816104f4c2e473c9737074bc5c0d152"
+ },
+ "fibernet/sim/accelerated.py": {
+  "purpose": "Taichi-accelerated simulations for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "SimResult",
+   "_ensure_taichi",
+   "_graph_to_arrays",
+   "_get_boundary_indices",
+   "_element_data",
+   "TaichiEngine"
+  ],
+  "sha256": "60b5145f4945cf9d60cf40493c93fd0b8dd61076030baec6d1c52bc1cea63daf"
+ },
+ "fibernet/sim/fem.py": {
+  "purpose": "BeamFEM has been removed. All simulation now uses TaichiEngine (mass-spring dynamics).",
+  "status": "active",
+  "symbols": [],
+  "sha256": "b9d29bbe958bcb25419991e5a35539336f91df5b0b5e81c75aedfd627e142119"
+ },
+ "fibernet/sim/rl_env.py": {
+  "purpose": "Reinforcement learning environment for fiber network optimization.",
+  "status": "active",
+  "symbols": [
+   "FiberNetworkEnv"
+  ],
+  "sha256": "38738c4704b4a636d02072b8ad254b709df3256b1c2d2adcf2cefb52c68c9f64"
+ },
+ "fibernet/trimesh_integration.py": {
+  "purpose": "Trimesh Integration for Mesh Operations",
+  "status": "active",
+  "symbols": [
+   "TrimeshConverter",
+   "network_to_trimesh",
+   "analyze_mesh_properties",
+   "boolean_operation",
+   "repair_mesh",
+   "simplify_mesh"
+  ],
+  "sha256": "f227da1620b1513aeadc4805db5fb36ed8a15263a1a652533238133a095c0374"
+ },
+ "fibernet/units.py": {
+  "purpose": "Unit Conversion Utilities Module",
+  "status": "active",
+  "symbols": [
+   "convert_length",
+   "convert_force",
+   "convert_pressure",
+   "convert_temperature",
+   "convert_energy",
+   "scale_network_properties",
+   "parse_unit_string"
+  ],
+  "sha256": "cc38121f133000f2a9a740c1ffecc1b84f0973600f6144c251832d6325f07202"
+ },
+ "fibernet/utils/__init__.py": {
+  "purpose": "Utility modules for FiberNet.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "1d693415c025c927915bff38af1ab91f536f74b64457779e269085f31da48efe"
+ },
+ "fibernet/utils/batch.py": {
+  "purpose": "Batch simulation utilities.",
+  "status": "active",
+  "symbols": [
+   "BatchResult",
+   "batch_simulate",
+   "parameter_study"
+  ],
+  "sha256": "95e238113c27882afffc81400ad9dab8057e31eaa5c3d8872ac73d8212985d0a"
+ },
+ "fibernet/utils/config.py": {
+  "purpose": "YAML-based configuration system for reproducible experiments.",
+  "status": "active",
+  "symbols": [
+   "ExperimentConfig",
+   "create_template_config",
+   "run_from_config"
+  ],
+  "sha256": "698fab28183963184ae2226d742f41910732146337159d451810966118f3ddfd"
+ },
+ "fibernet/utils/ensemble.py": {
+  "purpose": "Statistical ensemble generation for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "EnsembleResult",
+   "generate_ensemble",
+   "ensemble_analysis",
+   "convergence_study"
+  ],
+  "sha256": "133357e2b3a22b951064d1ad61759d06283c182d0579dbf9547be9449cb9a4c6"
+ },
+ "fibernet/utils/exceptions.py": {
+  "purpose": "Custom exceptions for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "FiberNetError",
+   "NetworkError",
+   "EmptyNetworkError",
+   "DimensionError",
+   "GeneratorError",
+   "InvalidParameterError",
+   "SimulationError",
+   "SingularMatrixError",
+   "ConvergenceError",
+   "IOError",
+   "FileFormatError",
+   "AnalysisError",
+   "check_nonempty",
+   "check_positive",
+   "check_range",
+   "check_integer"
+  ],
+  "sha256": "e132c8041bf5c84bc565a7391c342de9fb9cec3d218af627c1b093efa1f9153f"
+ },
+ "fibernet/utils/geometry.py": {
+  "purpose": "Geometric utility functions for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "rotation_matrix_x",
+   "rotation_matrix_y",
+   "rotation_matrix_z",
+   "rotation_matrix_axis_angle",
+   "segment_distance",
+   "point_to_segment_distance"
+  ],
+  "sha256": "0718fd9d8abee7550241035ae9e19feba7caf3bd83d6ed65e5675325e6dd2d44"
+ },
+ "fibernet/utils/io.py": {
+  "purpose": "File I/O utilities for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "export_vtk",
+   "export_csv",
+   "export_stl"
+  ],
+  "sha256": "79eb78b55ae95384c32e8e75707818bc2cbb495ea898578d62bdf0513a72584e"
+ },
+ "fibernet/utils/parametric.py": {
+  "purpose": "Parametric study and sensitivity analysis utilities.",
+  "status": "active",
+  "symbols": [
+   "parametric_sweep",
+   "sensitivity_analysis",
+   "monte_carlo_analysis",
+   "correlation_matrix"
+  ],
+  "sha256": "27ac00b6967f548d39a944566f477b3b34fcd234d54d640c24abc2c66a7fe68b"
+ },
+ "fibernet/utils/units.py": {
+  "purpose": "Unit system management for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "UnitSystem",
+   "UnitConverter",
+   "convert_network_units"
+  ],
+  "sha256": "f689a2a856d8802457a61b38bb360216091b776c37b275bc519219b20c84b567"
+ },
+ "fibernet/utils/validation.py": {
+  "purpose": "Parameter Validation Utilities",
+  "status": "active",
+  "symbols": [
+   "ValidationError",
+   "validate_type",
+   "validate_range",
+   "validate_positive",
+   "validate_array",
+   "validate_choices",
+   "validate_condition",
+   "validate_mutually_exclusive",
+   "with_validation",
+   "ParameterValidator"
+  ],
+  "sha256": "656fd743a4f7d7f3a5d69bcf24ce0f4d562f6cf1b2c8ed522c77edcfc3c866b5"
+ },
+ "fibernet/version.py": {
+  "purpose": "FiberNet Version Information",
+  "status": "active",
+  "symbols": [],
+  "sha256": "f0cd487d64f94a97191b296737dbb18e9742a4bb14d08649b9a60ac6c69fcfa3"
+ },
+ "fibernet/visualization.py": {
+  "purpose": "Visualization Module for Fiber Networks",
+  "status": "active",
+  "symbols": [
+   "PlotStyle",
+   "NetworkVisualizer",
+   "visualize_network"
+  ],
+  "sha256": "300a8c70d3ab892c74e600dec1bb8fd80f54a5362d992338d196ef9b1ba78b12"
+ },
+ "fibernet/viz/__init__.py": {
+  "purpose": "Visualization module for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "visualize_network_stress",
+   "animate_deformation"
+  ],
+  "sha256": "ecb5e8d191b329e887c350cef50f6c1b351c8f754cb999c0280e72f8fcaf060b"
+ },
+ "fibernet/viz/advanced.py": {
+  "purpose": "Advanced visualization utilities.",
+  "status": "active",
+  "symbols": [
+   "plot_stress_field",
+   "plot_temperature_field",
+   "plot_displacement_field",
+   "plot_cross_section",
+   "create_animation"
+  ],
+  "sha256": "bee368f8ce850288bb6970ef2cbec091befde3a99c932e3bc679118da9d9a3ed"
+ },
+ "fibernet/viz/animate.py": {
+  "purpose": "Animation utilities for fiber network simulations.",
+  "status": "active",
+  "symbols": [
+   "animate_deformation"
+  ],
+  "sha256": "a00f1447373e0444bf8a66a45dcaeae961df19319d8406215733e7d5e3128921"
+ },
+ "fibernet/viz/graph_plot.py": {
+  "purpose": "Professional graph visualization for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "plot_graph",
+   "plot_graph_comparison",
+   "plot_structure_stats"
+  ],
+  "sha256": "543c1a82e043cd6e4cea8f5cb3666240cdd91fd2bd17a8e79275e8f9969abaab"
+ },
+ "fibernet/viz/plot2d.py": {
+  "purpose": "2D visualization for fiber networks using matplotlib.",
+  "status": "active",
+  "symbols": [
+   "plot_network_2d",
+   "plot_orientation_distribution",
+   "plot_stress_strain",
+   "plot_length_distribution",
+   "plot_dynamics_result",
+   "plot_metamaterial",
+   "plot_stress_strain"
+  ],
+  "sha256": "f1779b29a4574a1407bef72aae5f32f8f7255bf7f9631fcc47f433dfd3be8986"
+ },
+ "fibernet/viz/plotly_viz.py": {
+  "purpose": "Interactive visualization using Plotly.",
+  "status": "active",
+  "symbols": [
+   "visualize_interactive",
+   "visualize_stress_field",
+   "visualize_comparison",
+   "export_html"
+  ],
+  "sha256": "800c42dd83f50990e483ca00f05ce97b18c44dd9a437da9b3c037dca6076d39d"
+ },
+ "fibernet/viz/render.py": {
+  "purpose": "Publication-quality visualization for StructureGraph.",
+  "status": "active",
+  "symbols": [
+   "_get_theme",
+   "render_graph",
+   "render_deformation",
+   "render_trajectory",
+   "render_gallery",
+   "render_graph_3d",
+   "render_with_stats",
+   "render_deformation_3d",
+   "_render_3d_segments",
+   "_render_3d_colored",
+   "render_trajectory_3d",
+   "_render_3d_colored_global",
+   "render_gallery_3d",
+   "render_stress_3d",
+   "render_comparison_3d",
+   "render_multi_angle_3d",
+   "render_fem_stress"
+  ],
+  "sha256": "282e7d449e0e8d0ad7e6019b358c5b70e13f40e8a239fd4b855dd97c531ac5bc"
+ },
+ "fibernet/viz/render3d.py": {
+  "purpose": "3D visualization for fiber networks using PyVista.",
+  "status": "active",
+  "symbols": [
+   "render_network_3d",
+   "render_deformation",
+   "render_structure_graph_3d",
+   "render_stress_pyvista"
+  ],
+  "sha256": "58d4a38c773e268b77fa7a9b50e293cc829129dd8c5237a3fbfef4f1083628a1"
+ },
+ "fibernet/viz/renderer.py": {
+  "purpose": "FiberNet Publication-Quality Renderer",
+  "status": "active",
+  "symbols": [
+   "render_network_2d",
+   "render_network_3d",
+   "render_comparison_grid",
+   "render_parametric_study"
+  ],
+  "sha256": "5891a9860a777ec1245182fc1f3f34cc27d9e638c4cf7fe519162f466f88e86c"
+ },
+ "fibernet/viz/showcase.py": {
+  "purpose": "Publication-quality visualization for fiber networks.",
+  "status": "active",
+  "symbols": [
+   "ShowcaseStyle",
+   "render_2d",
+   "render_2d_grid",
+   "render_3d",
+   "render_3d_grid"
+  ],
+  "sha256": "12ddc048067c25f3dc2e4a2fb51920f7b8cc3deedc884aea208d432e12eb4522"
+ },
+ "fibernet/viz/showcase_renderer.py": {
+  "purpose": "FiberNet Showcase Renderer — publication-grade 2D/3D visualization.",
+  "status": "active",
+  "symbols": [
+   "_adaptive_lw",
+   "_normalize_lines",
+   "render_2d_single",
+   "render_2d_grid",
+   "render_3d_single",
+   "render_3d_grid",
+   "_extract_2d_lines",
+   "_extract_3d_lines",
+   "_normalize_3d",
+   "_lines_to_polydata",
+   "_render_3d_to_array",
+   "_set_camera",
+   "_render_3d_mpl"
+  ],
+  "sha256": "dd465416142db9ce7602ce0ce80e3b27f88bfd99199cc5886f67a54c8ab62d8f"
+ },
+ "fibernet/viz/visualization.py": {
+  "purpose": "Advanced visualization module for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "_get_colormap",
+   "plot",
+   "_style_axes",
+   "plot_3d",
+   "theme_axis_color",
+   "plot_comparison",
+   "plot_statistics",
+   "visualize_3d_matplotlib",
+   "visualize_3d_pyvista",
+   "plot_network_2d",
+   "plot_network_3d",
+   "plot_graph",
+   "plot_graph_comparison",
+   "save_figure",
+   "visualize_deformation",
+   "visualize_damage_evolution"
+  ],
+  "sha256": "7f6d8d1d866348fbc1bba1914f6b900c2adcfd9b0f291c6efa308d1754febf7b"
+ },
+ "tests/_archived/test_accelerated.py": {
+  "purpose": "Tests for Taichi-accelerated simulations.",
+  "status": "archived",
+  "symbols": [
+   "TestTaichiEngine"
+  ],
+  "sha256": "4edbc56631de7c6c9881aa6b7b4477d925a968f7ce5412cd3bb5d0ebf0600e63"
+ },
+ "tests/_archived/test_acoustic.py": {
+  "purpose": "Tests for acoustic wave propagation simulation.",
+  "status": "archived",
+  "symbols": [
+   "TestAcousticResult",
+   "TestAcousticSolver"
+  ],
+  "sha256": "6268442230c1cff60538b862257e6a31a62d01d5a4ed7bde469b1298681d2b04"
+ },
+ "tests/_archived/test_advanced.py": {
+  "purpose": "Tests for advanced generators and variants.",
+  "status": "archived",
+  "symbols": [
+   "TestAdvancedGenerators",
+   "TestVariants",
+   "TestAdvancedAnalysis"
+  ],
+  "sha256": "4a56c2043440a5e434d06bcaf228adaf63ad8b10415f78d47f5c06382f00f6d5"
+ },
+ "tests/_archived/test_advanced_statistics.py": {
+  "purpose": "Tests for advanced statistical analysis.",
+  "status": "archived",
+  "symbols": [
+   "TestSpatialStatistics",
+   "TestOrientationAnalysis",
+   "TestLengthAnalysis",
+   "TestConnectivityAnalysis",
+   "TestAnisotropyAnalysis",
+   "TestComputeAllStatistics"
+  ],
+  "sha256": "9c992bdade24a1a07a0ba2bce626674f0112ed277c553ac685ba1c842852a1c5"
+ },
+ "tests/_archived/test_api.py": {
+  "purpose": "Tests for high-level convenience API.",
+  "status": "archived",
+  "symbols": [
+   "TestCreate",
+   "TestTransforms",
+   "TestAnalyze",
+   "TestSimulate",
+   "TestExportImport"
+  ],
+  "sha256": "42d0e0acbe1e8b1a6e4a45d72eca02e7880f1b164dea8743ca3976ec39e6c1fb"
+ },
+ "tests/_archived/test_benchmark.py": {
+  "purpose": "Benchmark tests for performance tracking.",
+  "status": "archived",
+  "symbols": [
+   "TestBenchmarks"
+  ],
+  "sha256": "e9c5dee0f2c765f942cd2a45b9638571407424acf34770aae71ef8b2d0cffa5b"
+ },
+ "tests/_archived/test_buckling_analysis.py": {
+  "purpose": "Tests for buckling analysis module.",
+  "status": "archived",
+  "symbols": [
+   "TestFiberBucklingResult",
+   "TestNetworkBucklingResult",
+   "TestBucklingAnalyzer",
+   "TestAnalyzeBucklingFunction",
+   "TestBucklingAnalysisIntegration"
+  ],
+  "sha256": "0af280bcf51d91a4ca1b5173fb56d02a0c5b4f187fa0c134696fe4bf8afb21d5"
+ },
+ "tests/_archived/test_bundles.py": {
+  "purpose": "Tests for fiber bundle generators.",
+  "status": "archived",
+  "symbols": [
+   "TestParallelBundle2D",
+   "TestTwistedBundle2D",
+   "TestRandomBundle3D",
+   "TestBraidedBundle3D",
+   "TestTendonLikeBundle3D",
+   "TestBundleIntegration"
+  ],
+  "sha256": "e36d1db7581ef5368b5b34699103fd6a157d36e403fa64f235af0394e15b26c3"
+ },
+ "tests/_archived/test_comparison.py": {
+  "purpose": "Tests for network comparison and similarity analysis.",
+  "status": "archived",
+  "symbols": [
+   "TestNetworkFingerprint",
+   "TestNetworkComparator",
+   "TestCompareNetworks",
+   "TestNetworkSimilarity"
+  ],
+  "sha256": "ce6e2d4c4c7a68f605cae526e3c5916768e5f602b5c0e92d754cc11c829aca3c"
+ },
+ "tests/_archived/test_copy.py": {
+  "purpose": "Tests for copy utilities.",
+  "status": "archived",
+  "symbols": [
+   "TestCopyNetwork",
+   "TestCopyFiber",
+   "TestCopyMaterial"
+  ],
+  "sha256": "8e590fcc299ba9ebf2a0ee0fd1aa9ca54d9ebff8f1ff52ee1ba00a9f77dd4778"
+ },
+ "tests/_archived/test_coupled.py": {
+  "purpose": "Test coupled multi-physics simulations.",
+  "status": "archived",
+  "symbols": [
+   "TestThermoMechanicalSolver",
+   "TestElectroMechanicalSolver",
+   "TestConvenienceFunctions"
+  ],
+  "sha256": "1a2036cdc718ecbe9623339e92d75d939d4c1edf072572c3cbc83b6c26e3040c"
+ },
+ "tests/_archived/test_creep.py": {
+  "purpose": "Tests for creep analysis module.",
+  "status": "archived",
+  "symbols": [
+   "TestCreepResult",
+   "TestCreepModelParameters",
+   "TestCreepAnalyzer",
+   "TestAnalyzeCreep"
+  ],
+  "sha256": "7f337425841ddbeb9d1d678212ea58b4b0c41b363b987e08eaad76aa46658ade"
+ },
+ "tests/_archived/test_cte.py": {
+  "purpose": "Tests for CTE (Coefficient of Thermal Expansion) module.",
+  "status": "archived",
+  "symbols": [
+   "TestCTEResult",
+   "TestCTEAnalyzer",
+   "TestComputeCTEFunction",
+   "TestCTEValidation"
+  ],
+  "sha256": "083329d239f1566c2979d14b54aba9bd24ce790759f1f4efa4ec0084d881d705"
+ },
+ "tests/_archived/test_curved.py": {
+  "purpose": "Tests for curved fiber generators.",
+  "status": "archived",
+  "symbols": [
+   "TestSinusoidalFiber2D",
+   "TestHelicalFiber3D",
+   "TestArcFiber2D",
+   "TestBezierFiber3D",
+   "TestRandomCurvedNetwork3D",
+   "TestCrimpedNetwork2D"
+  ],
+  "sha256": "d21d61f8d062fd3bc17985ba1b8eaa9b2abd91186cd7d2db9e271068c8126a02"
+ },
+ "tests/_archived/test_damage.py": {
+  "purpose": "Test damage mechanics and fatigue module.",
+  "status": "archived",
+  "symbols": [
+   "TestDamageMechanicsSolver",
+   "TestFatigueSolver",
+   "TestDamageTolerance"
+  ],
+  "sha256": "72d9e1bac53b4b04ff87eec7ed14bd2d5bbbde0aaab4c586514f7dfeb5e12234"
+ },
+ "tests/_archived/test_diffusion.py": {
+  "purpose": "Tests for diffusion and transport module.",
+  "status": "archived",
+  "symbols": [
+   "TestDiffusionResult",
+   "TestDiffusionAnalyzer",
+   "TestAnalyzeDiffusion"
+  ],
+  "sha256": "82aa03437c34f878c05d6c18c5d39666c666b5695d86c3c090b323ab45359db1"
+ },
+ "tests/_archived/test_dma.py": {
+  "purpose": "Tests for DMA simulations.",
+  "status": "archived",
+  "symbols": [
+   "TestFrequencySweep",
+   "TestTemperatureSweep",
+   "TestMasterCurve",
+   "TestDMAResult"
+  ],
+  "sha256": "a925b86d58ba950931bbbefa3da4e12450db37bfc17f0debac3f5230433ed752"
+ },
+ "tests/_archived/test_dynamics.py": {
+  "purpose": "Tests for dynamics simulation enhancements.",
+  "status": "archived",
+  "symbols": [
+   "TestFiberDynamics",
+   "TestTimeDependentLoading",
+   "TestComputeKineticEnergy",
+   "TestComputeTemperature",
+   "TestDynamicsIntegration"
+  ],
+  "sha256": "7245b292aec5d25f36939879b4ea5526689400581a7381261069080057de6b4c"
+ },
+ "tests/_archived/test_edge_cases.py": {
+  "purpose": "Edge case tests for FiberNet.",
+  "status": "archived",
+  "symbols": [
+   "TestEdgeCases"
+  ],
+  "sha256": "af369b33989ea607feecbfea599ec11bc5d9c50939c7bfc19898b40f20bd9ac1"
+ },
+ "tests/_archived/test_effective_properties.py": {
+  "purpose": "Tests for effective mechanical property computation.",
+  "status": "archived",
+  "symbols": [
+   "TestEffectiveProperties",
+   "TestPoissonRatio",
+   "TestMetamaterialProperties"
+  ],
+  "sha256": "92c795813b6370784e31845e2e492c0ec0d921ed677867aea3b5157000d5a3a0"
+ },
+ "tests/_archived/test_electromagnetic.py": {
+  "purpose": "Test electromagnetic simulation module.",
+  "status": "archived",
+  "symbols": [
+   "TestEMSolver"
+  ],
+  "sha256": "cb664ed3356593e18b8b04dc4214081bea41b33b0dab32a1632548c0d9f23370"
+ },
+ "tests/_archived/test_ensemble.py": {
+  "purpose": "Tests for statistical ensemble generation.",
+  "status": "archived",
+  "symbols": [
+   "TestGenerateEnsemble",
+   "TestEnsembleAnalysis",
+   "TestEnsembleStatistics",
+   "TestEnsembleWithGenerators"
+  ],
+  "sha256": "957f56c2bcef7ad1a671ac3edbaa748a355b066c1759d7063c71b472a1a99288"
+ },
+ "tests/_archived/test_fatigue.py": {
+  "purpose": "Tests for fatigue analysis module.",
+  "status": "archived",
+  "symbols": [
+   "TestSNPoint",
+   "TestFatigueResult",
+   "TestFatigueAnalyzer",
+   "TestAnalyzeFatigue"
+  ],
+  "sha256": "d8bda1f97eb94cc241ed50605bd721ccbf742967f68ba325aec1ba1ad38c7974"
+ },
+ "tests/_archived/test_fea_export.py": {
+  "purpose": "Tests for FEA export functionality.",
+  "status": "archived",
+  "symbols": [
+   "sample_network",
+   "TestAbaqusExport",
+   "TestAnsysExport",
+   "TestGmshExport",
+   "TestLammpsExport",
+   "TestExportIntegration"
+  ],
+  "sha256": "5395b727908431a5059bf819bc7c08a773bc619ca4997312b392daf9db389c13"
+ },
+ "tests/_archived/test_field_guided.py": {
+  "purpose": "Tests for field-guided network generator.",
+  "status": "archived",
+  "symbols": [
+   "TestOrientationField",
+   "TestFieldGuidedNetwork",
+   "TestMultiScaleAnalysis"
+  ],
+  "sha256": "38f33e9b1d16bc4cd22b18cd2a0fa3a8f2b079c55ad88904a90c4a97009849bc"
+ },
+ "tests/_archived/test_fluid_acoustic.py": {
+  "purpose": "Tests for fluid flow and acoustic modules.",
+  "status": "archived",
+  "symbols": [
+   "TestDarcySolver",
+   "TestPoreNetworkModel",
+   "TestAcousticSolver"
+  ],
+  "sha256": "f3b267ecaddb265fa78da60120772b08ec017fd7697f90ba47dfa2560676a237"
+ },
+ "tests/_archived/test_fractal.py": {
+  "purpose": "Tests for fractal network generators.",
+  "status": "archived",
+  "symbols": [
+   "TestSierpinskiTriangle",
+   "TestKochCurve",
+   "TestFractalTree",
+   "TestHilbertCurve"
+  ],
+  "sha256": "64d80b31eda9fdc318ea59282a8e9bc15ffa7e8384181fb422f3ae0e94945049"
+ },
+ "tests/_archived/test_fracture_mechanics.py": {
+  "purpose": "Test fracture mechanics module.",
+  "status": "archived",
+  "symbols": [
+   "TestCrackPropagationSolver",
+   "TestFractureFunctions"
+  ],
+  "sha256": "69dbf168ef017ee97ed1255bd7966c1cf1d12e9c4863c1cf76c7dc45344d8ee4"
+ },
+ "tests/_archived/test_generators.py": {
+  "purpose": "Tests for fiber network generators.",
+  "status": "archived",
+  "symbols": [
+   "TestDisordered",
+   "TestOrdered",
+   "TestChiral",
+   "TestWoven",
+   "TestHierarchical"
+  ],
+  "sha256": "67ae1f53faace1db12ac65d37458b7892502f6a44560a18948a4451fd7b49751"
+ },
+ "tests/_archived/test_gnn.py": {
+  "purpose": "Tests for GNN feature extraction.",
+  "status": "archived",
+  "symbols": [
+   "TestGNNFeatureExtractor",
+   "TestGNNFeatureExtractorEdgeCases",
+   "TestGNNFeatureExtractor3D"
+  ],
+  "sha256": "bedc7157811ffdbf3dfe5b7438cf8dc480526d88763ccbe875acfe95d7dcf98b"
+ },
+ "tests/_archived/test_gradient.py": {
+  "purpose": "Tests for gradient network generators.",
+  "status": "archived",
+  "symbols": [
+   "TestDensityGradient2D",
+   "TestPropertyGradient2D",
+   "TestMultiZone2D"
+  ],
+  "sha256": "165953ee69b0fbc799f489d601259bc96ba2a4b9b5b09d63b91fc7bedf09e252"
+ },
+ "tests/_archived/test_graph_api.py": {
+  "purpose": "Comprehensive tests for the graph-based API:",
+  "status": "archived",
+  "symbols": [
+   "TestGraphIO",
+   "TestWeldGraph",
+   "TestRegularNetworkGenerator",
+   "TestZigZagGenerator",
+   "TestGraphFeatureExtractor",
+   "TestVisualization",
+   "TestIntegration"
+  ],
+  "sha256": "1a571f26d6832014a7fea2e71912f3a504174589011c8b1d94bfc4947c418997"
+ },
+ "tests/_archived/test_graph_neural_network.py": {
+  "purpose": "Tests for graph neural network module.",
+  "status": "archived",
+  "symbols": [
+   "TestGraphData",
+   "TestNetworkGraphConverter",
+   "TestGNNPropertyPredictor",
+   "TestPredictPropertyFunction",
+   "TestGNNIntegration"
+  ],
+  "sha256": "42db1e7dc895c7bfded3db1100af43a72d3787719a982a6b0662cd2ee1c13a72"
+ },
+ "tests/_archived/test_homogenization.py": {
+  "purpose": "Tests for homogenization and effective property computation.",
+  "status": "archived",
+  "symbols": [
+   "TestEffectiveElasticProperties",
+   "TestEffectiveThermalProperties",
+   "TestEffectiveElectricalProperties",
+   "TestComputeEffectiveProperties"
+  ],
+  "sha256": "418ab907d1a01d0980f26b9713ca12237eb7e30da94619a105ff722a199231e9"
+ },
+ "tests/_archived/test_incremental_fem.py": {
+  "purpose": "Tests for incremental nonlinear FEM module.",
+  "status": "archived",
+  "symbols": [
+   "TestIncrementalFEM",
+   "TestComputeStressStrainCurve",
+   "TestIncrementalResult"
+  ],
+  "sha256": "e59c9c75c73db0b87e0fde3d5a3a58b6c0b2cb099822eda6e9a7e8ef4e7ae678"
+ },
+ "tests/_archived/test_integration.py": {
+  "purpose": "Integration tests for complete FiberNet workflows.",
+  "status": "archived",
+  "symbols": [
+   "TestCompleteWorkflow2D",
+   "TestCompleteWorkflow3D",
+   "TestMultiPhysicsIntegration",
+   "TestCrossModuleIntegration",
+   "TestFormatInteroperability",
+   "TestGeneratorDiversity"
+  ],
+  "sha256": "d45aefff058b36405109a9cec66043d021d75d658fc6fe4ab57b6b267c8225f2"
+ },
+ "tests/_archived/test_integration_v3.py": {
+  "purpose": "Integration test for FiberNet v3 — exercises the full pipeline.",
+  "status": "archived",
+  "symbols": [
+   "test_core",
+   "test_transforms",
+   "test_tiling",
+   "test_pattern_engine",
+   "test_fem",
+   "test_visualization",
+   "test_ml_dataset",
+   "test_rl_env",
+   "test_full_pipeline",
+   "main"
+  ],
+  "sha256": "16d62640315db250cc6f78c019d8410beb541018364a5fc7c1d645e9f6b032e1"
+ },
+ "tests/_archived/test_integrations.py": {
+  "purpose": "Tests for integrations module.",
+  "status": "archived",
+  "symbols": [
+   "TestNetworkXIntegration",
+   "TestMDAnalysisIntegration",
+   "TestLAMMPSIntegration",
+   "TestOVITOIntegration"
+  ],
+  "sha256": "3922ed4629b488387bda15808c30475cfac28c226f670af46a6ab24a21f23630"
+ },
+ "tests/_archived/test_io.py": {
+  "purpose": "Tests for I/O interoperability module.",
+  "status": "archived",
+  "symbols": [
+   "TestLAMMPS",
+   "TestVTK",
+   "TestXYZ",
+   "TestPDB",
+   "TestGMSH",
+   "TestIOIntegration"
+  ],
+  "sha256": "2fa1878386950c4b83bfedd47a4bf7133e4412c1ec64c5af1d3581bf4c2f0d88"
+ },
+ "tests/_archived/test_laminates.py": {
+  "purpose": "Tests for composite laminate generators.",
+  "status": "archived",
+  "symbols": [
+   "TestUnidirectionalLaminate",
+   "TestCrossplyLaminate",
+   "TestAnglePlyLaminate",
+   "TestQuasiIsotropicLaminate",
+   "TestCustomLaminate",
+   "TestSandwichLaminate",
+   "TestLaminateIntegration"
+  ],
+  "sha256": "177f8c928d57d743212a469aba120ae8ec9b01806664e7739bd1adc5ce1243d5"
+ },
+ "tests/_archived/test_mesh_export.py": {
+  "purpose": "Tests for mesh export functionality.",
+  "status": "archived",
+  "symbols": [
+   "TestExportSTL",
+   "TestExportOBJ",
+   "TestExportPLY",
+   "TestDifferentNetworks"
+  ],
+  "sha256": "4a086111fa421be1f8eaa115faafc34afa86403eee9ff65e19f743542b127900"
+ },
+ "tests/_archived/test_metamaterial_workflow.py": {
+  "purpose": "Test metamaterial workflow: create, tile, weld, simulate.",
+  "status": "archived",
+  "symbols": [
+   "TestMetamaterialCreation",
+   "TestMassSpringSystem",
+   "TestDynamics",
+   "TestMechanics",
+   "TestVisualization",
+   "TestAPI"
+  ],
+  "sha256": "3785b6494cfa8dc1b806c12475a390dfba3729ed6b11421bbf609ecc1955bca2"
+ },
+ "tests/_archived/test_metamaterials.py": {
+  "purpose": "Tests for mechanics metamaterial structure generators.",
+  "status": "archived",
+  "symbols": [
+   "TestReentrantHoneycomb",
+   "TestChiralHoneycomb",
+   "TestStarHoneycomb",
+   "TestArrowheadAuxetic",
+   "TestHierarchicalLattice",
+   "TestProperOctetTruss",
+   "TestDiamondLattice",
+   "TestGyroidLattice",
+   "TestMissingRibAuxetic",
+   "TestPlateLattice",
+   "TestMetamaterialMechanics"
+  ],
+  "sha256": "a6a52483d738b085b68b045660d1350f2142b883384889c02f8f8a98c5145192"
+ },
+ "tests/_archived/test_ml.py": {
+  "purpose": "Tests for ML module.",
+  "status": "archived",
+  "symbols": [
+   "TestFeatureExtraction",
+   "TestDatasetGeneration"
+  ],
+  "sha256": "6784c029c7fa39b3eca45b06761134e93bf190f4aa5627cef76e89db58e1fc54"
+ },
+ "tests/_archived/test_molecular_dynamics.py": {
+  "purpose": "Tests for molecular dynamics module.",
+  "status": "archived",
+  "symbols": [
+   "TestMDParameters",
+   "TestMDTrajectory",
+   "TestFiberMDSolver",
+   "TestRunFiberMD"
+  ],
+  "sha256": "2d3967a66487a95967628344590ca59f87b14d42e61a40efbb378ea797db6a54"
+ },
+ "tests/_archived/test_multiscale.py": {
+  "purpose": "Tests for multiscale homogenization module.",
+  "status": "archived",
+  "symbols": [
+   "TestHomogenizedProperties",
+   "TestHomogenizationSolver",
+   "TestRVEAnalyzer",
+   "TestConvenienceFunctions"
+  ],
+  "sha256": "cefcda45fcb728c746429c885bc04ad36cfa74a4f08de88062c88bf586b38023"
+ },
+ "tests/_archived/test_nonlinear.py": {
+  "purpose": "Tests for nonlinear mechanics module.",
+  "status": "archived",
+  "symbols": [
+   "TestConstitutiveModels",
+   "TestViscoelasticModels",
+   "TestNonlinearFEM",
+   "TestNonlinearFeatures"
+  ],
+  "sha256": "bb0f6a1f595ca6b73b9abbdb7fd3b92c0d0a69c488e3d2fd3acdd2704df84020"
+ },
+ "tests/_archived/test_optimization.py": {
+  "purpose": "Tests for SciPy-based optimization.",
+  "status": "archived",
+  "symbols": [
+   "TestEnergyMinimizer",
+   "TestParameterOptimizer",
+   "TestOptimizationResult"
+  ],
+  "sha256": "bbd3ddda19501c346a316186c2a8754c5d9a651641879f472f6261df2d805a58"
+ },
+ "tests/_archived/test_pandas_io.py": {
+  "purpose": "Tests for pandas I/O integration.",
+  "status": "archived",
+  "symbols": [
+   "test_to_dataframe",
+   "test_from_dataframe_roundtrip",
+   "test_network_summary",
+   "test_parametric_to_dataframe",
+   "test_describe_method",
+   "test_empty_network",
+   "test_plot_method_2d",
+   "test_plot_statistics",
+   "test_plot_method_3d",
+   "test_validate_method",
+   "test_validate_empty_network",
+   "test_to_networkx",
+   "test_batch_simulate",
+   "test_parameter_study"
+  ],
+  "sha256": "93116f54ec08eed4978194408fc26b58d9f4707e4fb333d6a24803e12f711e2e"
+ },
+ "tests/_archived/test_parametric.py": {
+  "purpose": "Tests for parametric study utilities.",
+  "status": "archived",
+  "symbols": [
+   "analyze",
+   "TestParametricSweep",
+   "TestSensitivityAnalysis",
+   "TestMonteCarlo",
+   "TestCorrelationMatrix"
+  ],
+  "sha256": "8499192a11eb8cf9ae7f8d028de48de61931a50acdb3539c99990355777688cc"
+ },
+ "tests/_archived/test_pbc.py": {
+  "purpose": "Tests for periodic boundary conditions.",
+  "status": "archived",
+  "symbols": [
+   "TestPeriodicBox",
+   "TestPBCNetwork",
+   "TestRDF"
+  ],
+  "sha256": "f54c8470693e6ea78e348f08f822ed599620254eff0e5db972b8cccd0fa57b26"
+ },
+ "tests/_archived/test_percolation.py": {
+  "purpose": "Test percolation analysis module.",
+  "status": "archived",
+  "symbols": [
+   "TestPercolationAnalyzer"
+  ],
+  "sha256": "14caa88c94a8e715999b988d19d6733b36e3ba047123a7f574bd9e65bc881f5c"
+ },
+ "tests/_archived/test_periodic.py": {
+  "purpose": "Tests for periodic boundary conditions.",
+  "status": "archived",
+  "symbols": [
+   "TestPeriodicBoundary",
+   "TestPeriodicNetwork",
+   "TestHomogenization"
+  ],
+  "sha256": "60cc08c20c133bfe624eb65c44cbd7db8054f68629fef8b143db1a9c51e75671"
+ },
+ "tests/_archived/test_permeability.py": {
+  "purpose": "Tests for permeability and diffusion solver module.",
+  "status": "archived",
+  "symbols": [
+   "TestPermeabilityResult",
+   "TestDiffusionResult",
+   "TestPermeabilitySolver",
+   "TestDiffusionSolver",
+   "TestConvenienceFunctions",
+   "TestPermeabilityValidation"
+  ],
+  "sha256": "16383807f53284da3b862bd68f3a99c7af3329d6a5efee88320148cb0ea2718a"
+ },
+ "tests/_archived/test_pyvista.py": {
+  "purpose": "Tests for PyVista integration.",
+  "status": "archived",
+  "symbols": [
+   "TestPyVistaVisualizer",
+   "TestPyVistaAvailability"
+  ],
+  "sha256": "d8d09acf67936cff1e52a2ad90dbc2b442a11fe2dffa14d53d94901ca459e0da"
+ },
+ "tests/_archived/test_rl_environment.py": {
+  "purpose": "Tests for RL environment.",
+  "status": "archived",
+  "symbols": [
+   "TestRLEnvConfig",
+   "TestFiberNetworkEnv",
+   "TestRLOptimization"
+  ],
+  "sha256": "ae03740f1e521ee33b354f585d438f973bcdb079e4905e07a17c6c31ffc0d7c3"
+ },
+ "tests/_archived/test_simulation.py": {
+  "purpose": "Tests for simulation engines.",
+  "status": "archived",
+  "symbols": [
+   "TestFEM",
+   "TestDynamics",
+   "TestThermal",
+   "TestEM",
+   "TestAnalysis"
+  ],
+  "sha256": "d8bdc737e0dd5923bebf7417a8d957b0371e2bfd439a1cc268eaa226ce0f3865"
+ },
+ "tests/_archived/test_specialized.py": {
+  "purpose": "Tests for specialized generators.",
+  "status": "archived",
+  "symbols": [
+   "TestCNTNetworks",
+   "TestPaperNetwork",
+   "TestTextileWeave",
+   "TestElectrospunMat",
+   "TestFiberReinforcedComposite"
+  ],
+  "sha256": "a4986e1b19e42c6dd7ecd4c11bee2cabf01b9047ef618b9e403b144ac7e43ccf"
+ },
+ "tests/_archived/test_stress_strain.py": {
+  "purpose": "Tests for stress-strain curve extraction.",
+  "status": "archived",
+  "symbols": [
+   "TestStressStrainCurve"
+  ],
+  "sha256": "e242fbbb95f45b2e6760ddf3219c7507bb7b22e9755293c2a482cdba67f50a9f"
+ },
+ "tests/_archived/test_taichi_fem.py": {
+  "purpose": "Tests for Taichi-accelerated FEM solver.",
+  "status": "archived",
+  "symbols": [
+   "TestTaichiFEMSolver",
+   "TestTaichiFEMSolverIntegration"
+  ],
+  "sha256": "e7df6a31ff8063063a4ce9b578c1119d03e80fd810f15e96f4f6e4fe86121d05"
+ },
+ "tests/_archived/test_topology.py": {
+  "purpose": "Tests for network topology analysis module.",
+  "status": "archived",
+  "symbols": [
+   "TestTopologyResult",
+   "TestCentralityResult",
+   "TestTopologyAnalyzer",
+   "TestAnalyzeTopology"
+  ],
+  "sha256": "0ce34f9972601adb8bd3fb2509fc7fe407b19660bf55d28c961683e997775891"
+ },
+ "tests/_archived/test_tpms.py": {
+  "purpose": "Tests for TPMS generators.",
+  "status": "archived",
+  "symbols": [
+   "TestTPMSSheet",
+   "TestTPMSLattice",
+   "TestTPMSGradient"
+  ],
+  "sha256": "017b3357b6e89340b8bc82e5d68dfc3e4a29661dfd9f5acef48541dc0763e492"
+ },
+ "tests/_archived/test_transforms.py": {
+  "purpose": "Tests for network transformation operations.",
+  "status": "archived",
+  "symbols": [
+   "TestMirror",
+   "TestRotate",
+   "TestScale",
+   "TestTranslate",
+   "TestMerge",
+   "TestTile",
+   "TestTrim",
+   "TestAlign",
+   "TestPattern"
+  ],
+  "sha256": "ea67a2f183b2e76e28951cabe9cbeda361f702b296dad931b59dd2ec8cb4f2c3"
+ },
+ "tests/_archived/test_trimesh.py": {
+  "purpose": "Tests for trimesh integration.",
+  "status": "archived",
+  "symbols": [
+   "TestTrimeshConverter",
+   "TestNetworkToTrimesh",
+   "TestAnalyzeMeshProperties",
+   "TestBooleanOperation",
+   "TestRepairMesh",
+   "TestSimplifyMesh"
+  ],
+  "sha256": "05d2072d1a3c298f093f0db3ef74d3bef4e49be62788ccbb162a2d7c0fee17d1"
+ },
+ "tests/_archived/test_uncertainty.py": {
+  "purpose": "Tests for uncertainty quantification module.",
+  "status": "archived",
+  "symbols": [
+   "compute_order",
+   "compute_fiber_count",
+   "TestEnsembleResult",
+   "TestMonteCarloEnsemble",
+   "TestSensitivityAnalysis",
+   "TestConvergenceStudy"
+  ],
+  "sha256": "20142db0b71e9559c1e4c78f20e69fb7f236b99d0ec6088f7861f72e62f06982"
+ },
+ "tests/_archived/test_validation.py": {
+  "purpose": "Tests for validation module.",
+  "status": "archived",
+  "symbols": [
+   "TestGibsonAshby",
+   "TestEulerBeam",
+   "TestValidation"
+  ],
+  "sha256": "00991b57ace23577d0dfe11781a74377a43e121ecac62c9c59b43b724b6b9bee"
+ },
+ "tests/_archived/test_viscoelastic.py": {
+  "purpose": "Tests for viscoelastic material models.",
+  "status": "archived",
+  "symbols": [
+   "TestMaxwellModel",
+   "TestKelvinVoigtModel",
+   "TestStandardLinearSolid",
+   "TestGeneralizedMaxwell"
+  ],
+  "sha256": "d84628dbe3c2f3234cb5e8eed79ced9da334e799dbb0ae0613884866f15bc226"
+ },
+ "tests/_archived/test_visualization.py": {
+  "purpose": "Tests for visualization module.",
+  "status": "archived",
+  "symbols": [
+   "TestPlotStyle",
+   "TestNetworkVisualizer",
+   "TestVisualizeNetwork"
+  ],
+  "sha256": "282624acbaa678689ea4d7969431968fa3c2e930c48ee871396488827f079115"
+ },
+ "tests/conftest.py": {
+  "purpose": "Pytest configuration - cross-platform Taichi test management.",
+  "status": "active",
+  "symbols": [
+   "_clear_taichi_cache",
+   "pytest_collection_modifyitems"
+  ],
+  "sha256": "d867c8b0d8bf1b28acd18ec336394c433732f6d9a69b743fb1a2c596eb30ee66"
+ },
+ "tests/test_3d_units.py": {
+  "purpose": "Integration tests for 3D unit types and GraphFeatureExtractor3D.",
+  "status": "active",
+  "symbols": [
+   "TestListUnits3D",
+   "TestPattern3DGeneration",
+   "TestSimulation3D",
+   "TestGraphFeatureExtractor3D",
+   "TestVisualization3D",
+   "TestEnergyComputation",
+   "TestOOMGuard"
+  ],
+  "sha256": "432b2a53f8ffc18b0422f874134a29468c27ba38423821fd615eee818df7fac4"
+ },
+ "tests/test_advanced_ml_rl.py": {
+  "purpose": "Comprehensive Tests for FiberNet Advanced ML/RL Modules.",
+  "status": "active",
+  "symbols": [
+   "TestDiffusion",
+   "TestGAN",
+   "TestFieldPrediction",
+   "TestNeuralOperator",
+   "TestInverseDesign",
+   "TestActiveLearning",
+   "TestTransferLearning",
+   "TestMultiScale",
+   "TestCurriculum",
+   "TestRewardShaping",
+   "TestMultiObjective",
+   "TestSymbolic",
+   "TestIntegration",
+   "TestGFlowNet",
+   "TestDifferentiablePhysics",
+   "TestPhysicsInformedGNN",
+   "TestNeuralODE",
+   "TestConservativeNN",
+   "TestNewModuleIntegration"
+  ],
+  "sha256": "65478929d4fd04545b21a34a531d4e3049c8d96fefe3be5dc1d526c98f03bc8c"
+ },
+ "tests/test_config.py": {
+  "purpose": "Tests for YAML-based configuration system.",
+  "status": "active",
+  "symbols": [
+   "_tmp_path",
+   "TestExperimentConfig",
+   "TestTemplateConfigs",
+   "TestConfigRepr"
+  ],
+  "sha256": "043ef93fccfb338e46fc7c4b4aedbbfcbeae549985597ac1824f19481d079f1f"
+ },
+ "tests/test_core.py": {
+  "purpose": "Tests for core data structures.",
+  "status": "active",
+  "symbols": [
+   "TestMaterial",
+   "TestFiber",
+   "TestFiberNetwork"
+  ],
+  "sha256": "3e7dc9baecacbae0ee09cfd17f54535b355bdb3d2a0febca1c9121070463361a"
+ },
+ "tests/test_crosslinks.py": {
+  "purpose": "Tests for advanced crosslink models.",
+  "status": "active",
+  "symbols": [
+   "TestCovalentBond",
+   "TestHydrogenBond",
+   "TestPhysicalEntanglement",
+   "TestIonicBond",
+   "TestCrosslinkState"
+  ],
+  "sha256": "07cd8b9392f36ebe83e1e6447413b30f540ad56ece5f346806775450bc6c66fa"
+ },
+ "tests/test_doe.py": {
+  "purpose": "Tests for design of experiments module.",
+  "status": "active",
+  "symbols": [
+   "TestExperimentDesign",
+   "TestExperimentResult",
+   "TestDesignOfExperiments",
+   "TestSweepResult",
+   "TestRunParameterSweep"
+  ],
+  "sha256": "41b9f1edde02cc7516b884dd1e78a05b279f9ae723acfe8185116274a3bbde9f"
+ },
+ "tests/test_materials.py": {
+  "purpose": "Tests for materials database.",
+  "status": "active",
+  "symbols": [
+   "TestMaterialsDatabase"
+  ],
+  "sha256": "3383baa3b3baabb0bf5a70420e155400ae1fe4dd0565637e72d22a342062b3a7"
+ },
+ "tests/test_ml_rl_utils.py": {
+  "purpose": "Test ML/RL utilities and StructureGraph node manipulation.",
+  "status": "active",
+  "symbols": [
+   "test_structure_graph_node_manipulation",
+   "test_parametric_generation",
+   "test_ml_train_predictor",
+   "test_ml_plots",
+   "test_rl_plots",
+   "test_save_load_agent",
+   "test_top_level_imports",
+   "test_predict_from_csv"
+  ],
+  "sha256": "8c3c17b7bf65100f3d2df32cf7d558f60e8e9d88f11b1aeb69ebd76c3664b504"
+ },
+ "tests/test_structure_parallel.py": {
+  "purpose": "Parallel fiber contract for StructureGraph and its conversions.",
+  "status": "active",
+  "symbols": [
+   "test_default_deduplicates",
+   "test_parallel_roundtrip"
+  ],
+  "sha256": "781e2af47d80202f29f91cf9957a1f0a2cdd9a993394c2b2075f5c5d1089146e"
+ },
+ "tests/test_units.py": {
+  "purpose": "Tests for unit conversion utilities.",
+  "status": "active",
+  "symbols": [
+   "TestLengthConversions",
+   "TestPressureConversions",
+   "TestForceConversions",
+   "TestTemperatureConversions",
+   "TestEnergyConversions",
+   "TestParseUnitString",
+   "TestScaleNetworkProperties"
+  ],
+  "sha256": "c29a8c5b6f7d09729645cef9b4bbbd803c7fb33f70416267fbae29613ef73ca6"
+ },
+ "scripts/build_wiki_html.py": {
+  "purpose": "Convert wiki markdown files to HTML for GitHub Pages.",
+  "status": "active",
+  "symbols": [
+   "md_to_html",
+   "_inline",
+   "main"
+  ],
+  "sha256": "a3e0346c853a779ae93d940f9b30b6d7704eff2034237eef781905f19f920a92"
+ },
+ "scripts/deformation_test/run_large_deformation_fem.py": {
+  "purpose": "FiberNet v4 — Large Deformation FEM Test Suite",
+  "status": "active",
+  "symbols": [
+   "parse_task_key",
+   "load_checkpoint",
+   "save_checkpoint",
+   "make_task_key",
+   "generate_2d_structure",
+   "generate_3d_structure",
+   "graph_to_fem_input",
+   "run_fem_2d",
+   "run_fem_3d",
+   "analyze_results",
+   "print_analysis",
+   "generate_visualization",
+   "generate_report",
+   "main"
+  ],
+  "sha256": "3300cf83d683b8422fd9715fa5e5c2773b1e60490b9581117be2ab4ca42f516d"
+ },
+ "scripts/fem_showcase.py": {
+  "purpose": "FiberNet FEM Showcase — Publication-quality visualization",
+  "status": "active",
+  "symbols": [
+   "make_bright_colormap",
+   "run_fem_stretch",
+   "draw_fem_panel",
+   "generate_showcase"
+  ],
+  "sha256": "c3d3929200e85691feb2749d5d3267f1bbf369af3bba42b5ec519fbde3fef269"
+ },
+ "scripts/generate_3d_viz.py": {
+  "purpose": "FiberNet v4.1.0 — 3D Visualization Generator",
+  "status": "active",
+  "symbols": [
+   "load_checkpoint",
+   "save_checkpoint",
+   "generate_gallery",
+   "generate_stretch_simulation",
+   "main"
+  ],
+  "sha256": "0e15b89fc199214f2193214e4a120d90724f9971d5f3b658917b0ad1a7f3ccf4"
+ },
+ "scripts/generate_readme.py": {
+  "purpose": "Generate bilingual README.md (EN) and README_CN.md (CN) with language toggle.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "2782048ecc30d4fea9fa3bdc3c072d58b62879832aa7c9dcac7c7ea43850acdc"
+ },
+ "scripts/run_tutorial_viz.py": {
+  "purpose": "FiberNet v4 Tutorial — Visualization Generator v5 (with checkpoint)",
+  "status": "active",
+  "symbols": [],
+  "sha256": "8f268b976ad7dd9ec058af75de865cb0a562a7bfdc0325a8bb5b52ece49ae89f"
+ },
+ "scripts/run_tutorial_viz_v6.py": {
+  "purpose": "FiberNet v4 Tutorial — Visualization Generator v6",
+  "status": "active",
+  "symbols": [],
+  "sha256": "cd0000f8bfa1d029ba53294463fee4b0c74612d43da7130432fd939c7360f053"
+ },
+ "scripts/update_code_registry.py": {
+  "purpose": "Update the library code inventory while preserving curated notes.",
+  "status": "active",
+  "symbols": [
+   "CodeRegistry"
+  ],
+  "sha256": "b0ceaa6e21837d9aa00d6ec58957ed1069b5db7846e394252b36378888ddddc1"
+ },
+ "scripts/verify_readme.py": {
+  "purpose": "Verify all README code blocks work correctly.",
+  "status": "active",
+  "symbols": [
+   "test_block",
+   "test_block1",
+   "test_block2",
+   "test_block3",
+   "test_block4",
+   "test_block5",
+   "test_block6",
+   "test_block7",
+   "test_block8",
+   "test_block9",
+   "test_block10",
+   "test_block11"
+  ],
+  "sha256": "4e04c8a3aee33a29c3f19dc7fad02d3dfedbc0a98f25ea865e4653be2eae2819"
+ },
+ "examples/01_mechanical_analysis.py": {
+  "purpose": "Example 1: Mechanical Analysis of Random Fiber Network",
+  "status": "active",
+  "symbols": [],
+  "sha256": "981b6d173db41919f97a9e5d2316e5ae718df645df3d85074325faa0be761b45"
+ },
+ "examples/02_structure_comparison.py": {
+  "purpose": "Example 2: Structure Comparison - Random vs Ordered Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "2a797ec4e6a1375dd2b6fc203bc9cc0990d70a5836a7ddfb50ce8aa849acb200"
+ },
+ "examples/03_thermal_analysis.py": {
+  "purpose": "Example 3: Thermal Analysis - CTE and Heat Transfer",
+  "status": "active",
+  "symbols": [],
+  "sha256": "8e5e21ac0472e6fb3e52bae86f497f39f99bf0a8d6c7a0a7a75dc34a7b110943"
+ },
+ "examples/04_buckling_analysis.py": {
+  "purpose": "Example 4: Buckling Analysis of Fiber Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "85024e869c786f2f847648b3cdae699c1c8ba19b0a6de96b264871d3548c774b"
+ },
+ "examples/05_chiral_braided_structures.py": {
+  "purpose": "Example 5: Advanced Structures - Chiral and Braided Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "4b2aecd96b71da296d0fa6385a4954a51b2f0967ced4696d489b4065d55ebf4c"
+ },
+ "examples/06_uncertainty_quantification.py": {
+  "purpose": "Example 6: Uncertainty Quantification via Monte Carlo Simulation",
+  "status": "active",
+  "symbols": [
+   "compute_modulus",
+   "compute_order"
+  ],
+  "sha256": "e16d902914a448c738de5af70dbf7466500986292761c5e575f72a49dc573ded"
+ },
+ "examples/07_electromagnetic_analysis.py": {
+  "purpose": "Example 7: Electromagnetic Analysis of Fiber Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "1294d8018ad54bdbbb9f386b63ae9e7076b54bfbb8d0cd288411f9f5df06d486"
+ },
+ "examples/08_fatigue_analysis.py": {
+  "purpose": "Example 8: Fatigue Analysis of Fiber Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "c7d28e8f3f7e7a0828339ad7e2612f7d4ca02abe252c8d6d7d4358cc22eee04a"
+ },
+ "examples/09_creep_analysis.py": {
+  "purpose": "Example 9: Creep Analysis of Fiber Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "6a3c0e636aa2ac569bb5e3c41f23ad2da01a651413fffac2dbd4aba0e291790f"
+ },
+ "examples/10_diffusion_transport.py": {
+  "purpose": "Example 10: Diffusion and Transport Through Fiber Networks",
+  "status": "active",
+  "symbols": [],
+  "sha256": "c6e3d94d84b0288d4e0e0e71ce88aadf5d140d34a8fe185108b01224c07f78c5"
+ },
+ "examples/11_parameter_sweep.py": {
+  "purpose": "Example 11: Parameter Sweep and Sensitivity Analysis",
+  "status": "active",
+  "symbols": [
+   "compute_properties"
+  ],
+  "sha256": "74b9e4c76c8b9cc8c7eee48b6ff437faaa27391de7656f3f954a18e69b18c5b1"
+ },
+ "examples/12_topology_analysis.py": {
+  "purpose": "Example 12: Network Topology Analysis",
+  "status": "active",
+  "symbols": [],
+  "sha256": "64282c2ce15fe61f0a26e18086d42f5269228ad86f8106fa84cf2f850ae4acac"
+ },
+ "examples/13_publication_workflow.py": {
+  "purpose": "Example 13: Publication-Ready Research Workflow",
+  "status": "active",
+  "symbols": [
+   "compute_modulus"
+  ],
+  "sha256": "c7d566e62a0bf2226464478f158a7a72027b0cc63278ed2e6041d5c2ac4df90a"
+ },
+ "examples/14_advanced_analysis.py": {
+  "purpose": "Example 14: Advanced Structural Analysis",
+  "status": "active",
+  "symbols": [],
+  "sha256": "cba42c50856f0d865cb9a6849e2a1254b0b88ff39916c1545bfd191b3346a112"
+ },
+ "examples/15_ml_property_prediction.py": {
+  "purpose": "Example 15: Machine Learning for Property Prediction",
+  "status": "active",
+  "symbols": [
+   "generate_network_and_features"
+  ],
+  "sha256": "c540dfc3e18394cda3139da816e6e81468956a0cd5d6b76ae03fd360b6d38fba"
+ },
+ "examples/16_fiber_bundles.py": {
+  "purpose": "Example 16: Fiber Bundles",
+  "status": "active",
+  "symbols": [],
+  "sha256": "2dfbe0313a182e842cbd616bd8e456a63892a2b35bc8a7f38620ee800c7965ab"
+ },
+ "examples/17_composite_laminates.py": {
+  "purpose": "Example 17: Composite Laminate Structures",
+  "status": "active",
+  "symbols": [],
+  "sha256": "abbb6c2fb414c9e69b8274e80b914cf503395973cec62b0b3937d24eafa44101"
+ },
+ "examples/18_pyvista_visualization.py": {
+  "purpose": "Example 18: Advanced 3D Visualization with PyVista",
+  "status": "active",
+  "symbols": [],
+  "sha256": "e3055fd46af5a69fd883a2e7edd9978e5754aca80431f8baf0a1f743398d3235"
+ },
+ "examples/19_optimization.py": {
+  "purpose": "Example 19: Energy Minimization and Parameter Optimization",
+  "status": "active",
+  "symbols": [
+   "density_objective",
+   "complex_objective"
+  ],
+  "sha256": "873ec6d134e61cc8f0371a24c14e671dde7ed9e4c0be88dfdf570b979532ced4"
+ },
+ "examples/__init__.py": {
+  "purpose": "FiberNet examples.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "6415d8f5d9b680f36aa80cbec498af06e94e889c0359eedbcb3800c97c0df8cb"
+ },
+ "examples/advanced_generators.py": {
+  "purpose": "Advanced generators example - demonstrating complex fiber network structures.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "5f455d6dc10e45b58115d35202083c9a702a7079f310b7755053450b71bccffc"
+ },
+ "examples/comprehensive_demo.py": {
+  "purpose": "Comprehensive FiberNet Demo Script",
+  "status": "active",
+  "symbols": [
+   "section",
+   "main"
+  ],
+  "sha256": "fb6a58aedefca04f456a25f7200e27c36270711b0e7771ebb9d7bb0cdcbd0420"
+ },
+ "examples/full_workflow.py": {
+  "purpose": "Full FiberNet Workflow Example",
+  "status": "active",
+  "symbols": [],
+  "sha256": "e6fd3309b7fcb4199a799389303ca3ea7d422ab9b59fdd27f39f6840091c06fc"
+ },
+ "examples/integration_examples.py": {
+  "purpose": "Integration examples demonstrating end-to-end workflows.",
+  "status": "active",
+  "symbols": [
+   "example_mechanical_characterization",
+   "example_thermal_simulation",
+   "example_dma_analysis",
+   "example_ensemble_study",
+   "example_periodic_boundary",
+   "example_machine_learning",
+   "example_config_driven_workflow",
+   "example_comprehensive_study"
+  ],
+  "sha256": "308a32aea3ff4ac0131c3b9505a8b4dfdd4ce1952966270ae4c84bc6fd7952b5"
+ },
+ "examples/ml_example.py": {
+  "purpose": "Machine Learning Integration Example",
+  "status": "active",
+  "symbols": [],
+  "sha256": "aee8d0a0e331dfed02ee0b6deafc8eed743cb184332c19e544437c92005ebe60"
+ },
+ "examples/nonlinear_mechanics.py": {
+  "purpose": "Nonlinear mechanics example - demonstrating advanced constitutive models.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "503b6d9438af8f98ac64b7d6e822692c08aec0adf9174877f03dda5ad15db9d0"
+ },
+ "examples/research_case_study.py": {
+  "purpose": "Research Case Study: Hierarchical Carbon Fiber Composite Analysis",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "8d2032f903fecf3949221432dbf0ec3e8881d0d2c1c5fccdfdc5f8e513bfff63"
+ },
+ "examples/transformations.py": {
+  "purpose": "Network transformations example - demonstrating powerful network manipulation tools.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "48d751d456ff8d7316a5557a72e9daeecc96ab746377bee18b0d4d1513a41a08"
+ },
+ "benchmarks/_archive_phase5_fem_rebuild_v1.py": {
+  "purpose": "Phase 5 Rebuild: Proper FEM Integration with Graph-Level Verification",
+  "status": "active",
+  "symbols": [
+   "reference_truss_solve",
+   "skfem_continuum_solve",
+   "run_benchmarks",
+   "cross_platform_audit",
+   "generate_visualization",
+   "main"
+  ],
+  "sha256": "940e4281a7fe133c56c25db88a325dc4972f62e41adff34c13dfefd2a5381860"
+ },
+ "benchmarks/benchmark_generators.py": {
+  "purpose": "Benchmark Suite: Network Generators",
+  "status": "active",
+  "symbols": [
+   "measure_generation"
+  ],
+  "sha256": "525d4e243c5853e942bbff2227852badc33e91ee5b9a0a1c51824d0705f04440"
+ },
+ "benchmarks/benchmark_mechanical.py": {
+  "purpose": "Benchmark Suite: Mechanical Analysis",
+  "status": "active",
+  "symbols": [],
+  "sha256": "dd57c790c3af4831c438d6503ab22c735ac509fa1c355f20efa11142a7f1b1c1"
+ },
+ "benchmarks/phase1_api_correctness.py": {
+  "purpose": "Phase 1: API Correctness & Robustness Benchmark",
+  "status": "active",
+  "symbols": [
+   "get_memory_mb",
+   "memory_check",
+   "generate_structures",
+   "graph_to_dict",
+   "TestResult",
+   "timed_test",
+   "test_gflownet",
+   "test_differentiable_physics",
+   "test_pinn_gnn",
+   "test_neural_ode",
+   "test_conservative_nn",
+   "test_existing_modules",
+   "run_all"
+  ],
+  "sha256": "106762b2112aeb0f81780ebc975cf5a8d956e59c52256a86ffdd585f30212cab"
+ },
+ "benchmarks/phase2_final.py": {
+  "purpose": "Phase 2 Final: Properly tuned GNN + PINN_GNN benchmarks",
+  "status": "active",
+  "symbols": [
+   "generate_dataset",
+   "train_gnn_proper",
+   "train_pinn_gnn_proper",
+   "graph_level_verification_proper",
+   "run_final"
+  ],
+  "sha256": "c2f4fc001a1b95cc8ee1f0f7eecb6d02cbf3c68349fe7dea5ec0b7e2752af26a"
+ },
+ "benchmarks/phase2_improved.py": {
+  "purpose": "Phase 2 Improved: Better Training for Real Performance",
+  "status": "active",
+  "symbols": [
+   "generate_large_dataset",
+   "train_gnn_improved",
+   "run_improved_phase2"
+  ],
+  "sha256": "7d08815e49849e47ff422bc5f60454640c74d9263483ae09bfa058d9a5b92ef8"
+ },
+ "benchmarks/phase2_synthetic_pipeline.py": {
+  "purpose": "Phase 2: Synthetic Data End-to-End Pipeline with Graph-Level Verification",
+  "status": "active",
+  "symbols": [
+   "generate_diverse_dataset",
+   "train_gnn_graph_level",
+   "train_pinn_gnn_node_level",
+   "graph_level_verification",
+   "run_phase2",
+   "networkx_graph_analysis",
+   "scipy_stress_path_analysis",
+   "run_phase2b"
+  ],
+  "sha256": "f3ba17f6ac63b132aa6fc5650c4ab76b7ca6e439d6fab5389012c351a8de829a"
+ },
+ "benchmarks/phase3_complexity_scaling.py": {
+  "purpose": "Phase 3: Complexity Scaling Benchmark",
+  "status": "active",
+  "symbols": [
+   "measure_memory",
+   "benchmark_gnn_forward",
+   "benchmark_physics_solve",
+   "benchmark_memory_scaling",
+   "benchmark_pinn_gnn_scaling",
+   "run_phase3"
+  ],
+  "sha256": "cfc7fe5a8e9b0bb83e5a99e69341c9c198cfe0e6eacbeb3d1a4760d1f198086b"
+ },
+ "benchmarks/phase4_5_integration.py": {
+  "purpose": "Phase 4+5: Cross-Module Integration & Simulation Extensions",
+  "status": "active",
+  "symbols": [
+   "safe_test",
+   "test_gnn_to_neural_ode",
+   "test_pinn_to_conservative",
+   "test_gflownet_to_physics",
+   "test_diffusion_to_inverse_design",
+   "test_active_learning_with_pinn",
+   "test_transfer_learning_pipeline",
+   "test_taichi_simulation",
+   "test_networkx_advanced_analysis",
+   "test_scipy_optimization",
+   "run_all"
+  ],
+  "sha256": "a14e6f060ec079b64fffd85c4f347048819495aa4e074ba98c3a68752a01cf61"
+ },
+ "benchmarks/phase5_beam_fem.py": {
+  "purpose": "Phase 5 Beam FEM: Welded-Joint Frame Analysis",
+  "status": "active",
+  "symbols": [
+   "test_analytical_2d",
+   "test_analytical_3d",
+   "test_pynite_validation",
+   "test_fiber_network_2d",
+   "test_fiber_network_3d",
+   "test_scaling"
+  ],
+  "sha256": "090f13b4e6f2b07db45b3028147792b33ff332d8e0811b71cd12a5bf8908f22d"
+ },
+ "benchmarks/phase5_beam_fem_large_scale.py": {
+  "purpose": "Phase 5 Beam FEM: Large-Scale Complex Structure Tests",
+  "status": "active",
+  "symbols": [
+   "test_pyNite_cross_validation",
+   "test_large_scale_structures",
+   "test_3d_structures",
+   "test_graph_analysis",
+   "main"
+  ],
+  "sha256": "85ceb6c2c08237c1f4397ed166025032d50490b77275346a8735016926b46551"
+ },
+ "benchmarks/phase5_fem_integration.py": {
+  "purpose": "Phase 5: FEM Integration & Deep Graph-Level Physics Verification",
+  "status": "active",
+  "symbols": [
+   "safe_test",
+   "test_skfem_truss_solver",
+   "test_skfem_2d_mesh",
+   "test_structure_to_skfem_pipeline",
+   "test_stress_path_analysis",
+   "test_graph_spectral_physics",
+   "test_force_chain_network",
+   "test_multi_solver_comparison",
+   "run_phase5"
+  ],
+  "sha256": "a74fee8207411f2837bccacf43875471b6b2b05be520dfcd6bc4c8c7c6ecb1af"
+ },
+ "benchmarks/phase5_fem_rebuild_v2.py": {
+  "purpose": "Phase 5 Rebuild v2: Corrected FEM with Graph-Level Deep Analysis",
+  "status": "active",
+  "symbols": [
+   "reference_truss_solve",
+   "get_unique_edges",
+   "skfem_continuum_solve",
+   "run_benchmarks",
+   "cross_platform_audit",
+   "generate_visualization",
+   "main"
+  ],
+  "sha256": "1e36fd8665559815cb09812f9687d27b7783aab4d8cda3cc2f71043909faf45b"
+ },
+ "benchmarks/phase5_large_deformation_test.py": {
+  "purpose": "Phase 5 Large Deformation Test",
+  "status": "active",
+  "symbols": [
+   "generate_deformed_structures",
+   "test_large_deformation_propagation",
+   "test_3d_complex_structures",
+   "create_comprehensive_visualization",
+   "main"
+  ],
+  "sha256": "46e682d256986d9ccdd450b6cc8df2e1da237a5a6d1f827cb5b12466fd826025"
+ },
+ "benchmarks/phase6_comprehensive_fem_test.py": {
+  "purpose": "Phase 6: Comprehensive Beam FEM Validation",
+  "status": "active",
+  "symbols": [
+   "save_checkpoint",
+   "load_checkpoint",
+   "_json_default",
+   "deduplicate_edge_count",
+   "test_deformed_structures",
+   "test_large_deformation",
+   "test_multi_radius",
+   "test_3d_structures",
+   "test_graph_physics",
+   "main"
+  ],
+  "sha256": "cb529dcc69e12d207ccb86f07a858e088e837695d72ded41b7c28b3e8f4bb772"
+ },
+ "benchmarks/phase6_fem_diagnostic.py": {
+  "purpose": "Phase 6: FEM Diagnostic - identify issues with current beam FEM.",
+  "status": "active",
+  "symbols": [
+   "test_cantilever_analytical",
+   "test_portal_frame",
+   "test_propagation",
+   "test_radius_scaling",
+   "main"
+  ],
+  "sha256": "22749268d70af63eb67279473b92221e31d5b7880c2e8638f12c90ee3fc730a1"
+ },
+ "benchmarks/phase6_fix_and_visualize.py": {
+  "purpose": "Phase 6: Fix bugs, run graph physics, create visualization.",
+  "status": "active",
+  "symbols": [
+   "fix_deformed_propagation",
+   "investigate_kagome",
+   "run_graph_physics",
+   "create_visualization",
+   "main"
+  ],
+  "sha256": "be8d2a3b2f071a7a6172329694001789f3ace7f3057043773cb58bcdcbbe54fd"
+ },
+ "benchmarks/phase6_v6_validation.py": {
+  "purpose": "Validate v6 solver against analytical solutions and v4 results.",
+  "status": "active",
+  "symbols": [
+   "test_cantilever",
+   "test_displacement_bc",
+   "test_nonlinear",
+   "test_complex_structure",
+   "main"
+  ],
+  "sha256": "0ac952c38451396e7a6dd68f7b04304384aeb7ac0ccaa5b29016a477cb4cdfc4"
+ },
+ "benchmarks/phase6b_proper_fem_test.py": {
+  "purpose": "Phase 6b: Proper FEM Test with Deformed Structures",
+  "status": "active",
+  "symbols": [
+   "save_data",
+   "load_data",
+   "_json_default",
+   "get_deformed_structure",
+   "get_boundary_nodes_10pct",
+   "dedup_edge_count",
+   "test_deformed_baseline",
+   "test_large_deformation",
+   "test_multi_radius",
+   "test_3d",
+   "create_visualization",
+   "main"
+  ],
+  "sha256": "72d0a9de142c32f6717e81fea25b4066cb89b842afe83c43f570138342a91f44"
+ },
+ "benchmarks/phase6b_visualize.py": {
+  "purpose": "Phase 6b: Visualization from saved results. Edges colored by stress.",
+  "status": "active",
+  "symbols": [
+   "draw_edges",
+   "draw_edges_3d",
+   "main"
+  ],
+  "sha256": "32a84da016722fc5e86c4a896328a9c23090f142e1d3f167cad26947d6993f83"
+ },
+ "tests/test_fem_quickstart.py": {
+  "purpose": "Exercise the documented three-line FEM user journey.",
+  "status": "active",
+  "symbols": [
+   "test_fem_quickstart"
+  ],
+  "sha256": "e28ed965a69fa6cb8b2a5e6a797534ba11eecd3721ba27d0d2d11fd2837d7978"
+ },
+ "tests/test_release_contract.py": {
+  "purpose": "Check that the public package reports its packaged version.",
+  "status": "active",
+  "symbols": [
+   "test_version_matches_package_metadata"
+  ],
+  "sha256": "ffda958c28ac94cd9a376a10bc09bdb607ae14f9faf3ebbdddcb8a3f8ffab616"
+ },
+ "benchmarks/percolation_pruning_pilot.py": {
+  "purpose": "Small, resumable intervention audit for thresholded tensile recruitment.",
+  "status": "active",
+  "symbols": [
+   "PilotConfig",
+   "PruningPilot"
+  ],
+  "sha256": "d1cef9677579810eca94f5feab8987e7c0a570db90188cb44781e3e0468d3e70"
+ },
+ "fibernet/analysis/tensile_recruitment.py": {
+  "purpose": "Thresholded tensile-strain recruitment on a network trajectory.",
+  "status": "active",
+  "symbols": [
+   "PercolationResult",
+   "_UnionFind",
+   "_frame_analysis",
+   "_grip_prune",
+   "analyze_tensile_recruitment",
+   "compute_percolation"
+  ],
+  "sha256": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33"
+ },
+ "tests/test_tensile_recruitment.py": {
+  "purpose": "Public API and APP compatibility checks for tensile recruitment.",
+  "status": "active",
+  "symbols": [
+   "test_small_spanning_path_and_hysteresis",
+   "test_app_run_adapter_matches_independent_api",
+   "test_invalid_input_is_rejected",
+   "test_app_import_uses_same_calculation"
+  ],
+  "sha256": "077169cd7cdb950152fe7c5e4180b2bba0775c994b7ec97608660aad5763c4dc"
+ },
+ "examples/tensile_recruitment_quickstart.py": {
+  "purpose": "Library-only example: python -m examples.tensile_recruitment_quickstart.",
+  "status": "active",
+  "symbols": [
+   "RecruitmentExample"
+  ],
+  "sha256": "6bd1b2d3c4433a683797ab4bd582fde73ecf1f4d34b8ec2abcc03c41fac9f6d8"
+ },
+ "scripts/make_homepage_media.py": {
+  "purpose": "Render reproducible local homepage media from the shared science core.",
+  "status": "active",
+  "symbols": [
+   "HomepageMedia"
+  ],
+  "sha256": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209"
+ },
+ "tests/test_cycle_intervention.py": {
+  "purpose": "Mechanical graph identity checks for compacted Euler-cycle deletions.",
+  "status": "active",
+  "symbols": [
+   "test_ring_cycle_compaction_preserves_remaining_fibers"
+  ],
+  "sha256": "0fb530d7bbfeb8de076f1bee37f99d0eddfc5a1af1e1b0336233e9c893430489"
+ },
+ "tests/test_pruning_matching.py": {
+  "purpose": "Check that the intervention comparison matches physical edge length.",
+  "status": "active",
+  "symbols": [
+   "test_ring_interventions_match_length_and_edge_count"
+  ],
+  "sha256": "5c58cce7e87243db6fad2738497acad4598abbfd53f2b31b432db8ac39b2ea1b"
+ },
+ "benchmarks/percolation_cycle_intervention.py": {
+  "purpose": "Screen and rerun even-degree cycle removals with compacted node IDs.",
+  "status": "active",
+  "symbols": [
+   "CycleConfig",
+   "CycleInterventionStudy"
+  ],
+  "sha256": "2c32b8761c63b0fe5968dba79a7b90b0c5238e6e05a2fccb2b2cde88d12f8822"
+ },
+ "benchmarks/percolation_pruning_matched.py": {
+  "purpose": "Length-stratified, resumable pruning screen with independent reruns.",
+  "status": "active",
+  "symbols": [
+   "MatchedConfig",
+   "MatchedPruningPilot"
+  ],
+  "sha256": "1fcfcf723b7d626634e8a40401dbe0920d46fcba4cf08dae97e995db3bbbe61b"
+ },
+ "tests/test_import_order.py": {
+  "purpose": "The desktop adapter and public package must coexist in one Python process.",
+  "status": "active",
+  "symbols": [
+   "_check",
+   "test_app_first",
+   "test_library_first"
+  ],
+  "sha256": "8d7a834b56ec420af427f8b76681ce16b7d570800bbfb94562c3c967e47a93a5"
+ },
+ "fibernet/gen/spectrum.py": {
+  "purpose": "Dimensionless reference-fiber displacement profiles for network design.",
+  "status": "active",
+  "symbols": [
+   "FiberSpectrum",
+   "resample_spectrum",
+   "fit_spectrum",
+   "rotated_displacements"
+  ],
+  "sha256": "6c0ad37a24c0d38671c06aa2149aab54cd6472d7bc0ca3ad2636edd154c55e19"
+ },
+ "tests/test_spectrum_profile.py": {
+  "purpose": "Cross-interface reference-fiber displacement semantics.",
+  "status": "active",
+  "symbols": [
+   "test_interpolation_and_fourfold_rotation",
+   "test_app_reexports_shared_profile_functions",
+   "test_invalid_profile_rejected"
+  ],
+  "sha256": "b56a78276fff7dab2369f4c713e285f5031c266c7fc0dee226aeebd1988b1d05"
+ },
+ "scripts/check_homepage_media.py": {
+  "purpose": "Verify local animated homepage assets without displaying the images.",
+  "status": "active",
+  "symbols": [
+   "MediaAudit"
+  ],
+  "sha256": "f1ca5934c1a16ca17c937b07e15d7e6e5639481bbca9055143f7164cd3a90683"
+ },
+ "tests/test_open_source_workflow.py": {
+  "purpose": "Verify the documented public API journey and its saved artifacts.",
+  "status": "active",
+  "symbols": [
+   "test_documented_workflow",
+   "test_batch_fem_columns_and_invalid_backend"
+  ],
+  "sha256": "4234eb893635bf996e472ba20c41c994807a072cdb19212f2f2b2325d2520d5f"
+ },
+ "examples/open_source_workflow.py": {
+  "purpose": "Runnable FiberNet workflow from graph generation to tensile recruitment.",
+  "status": "active",
+  "symbols": [
+   "OpenSourceWorkflow"
+  ],
+  "sha256": "ae2d6aaf594aa39c2a2329d8232df714c8e2444367271957797e4c5efb236db8"
+ },
+ "fibernet/gen/cell_cycles.py": {
+  "purpose": "Reference-space closed fiber walks; geometric crossings never weld fibers.",
+  "status": "active",
+  "symbols": [
+   "closed_cell_edges"
+  ],
+  "sha256": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70"
+ },
+ "fibernet/gen/cell_rules.py": {
+  "purpose": "Deterministic cell transforms and bounded graph assembly.",
+  "status": "active",
+  "symbols": [
+   "validate_rule",
+   "transform_cell",
+   "expand_graph",
+   "graph_health"
+  ],
+  "sha256": "3935b24ee0048d8694f1f4737d991ab2e3b5a7a694bb6a3915e013a30c6d474d"
+ },
+ "fibernet/gen/manufacturing.py": {
+  "purpose": "Canonical planar multigraph compilation and continuous Euler routes.",
+  "status": "active",
+  "symbols": [
+   "PlanarManufacturingConfig",
+   "_route",
+   "ManufacturingNetwork",
+   "_connect",
+   "_even_edges",
+   "_split_junctions",
+   "compile_planar",
+   "manufacturable_graph",
+   "compile_surface"
+  ],
+  "sha256": "c8b9a5827456886b4a181ac000d3e818d32258a812e68285c256c3cb243badea"
+ },
+ "fibernet/gen/surface_geometry.py": {
+  "purpose": "Pure quad mapping and bounded surface coarsening helpers.",
+  "status": "active",
+  "symbols": [
+   "bilinear",
+   "corner_quads",
+   "coarsen_quads",
+   "reduce_triangles"
+  ],
+  "sha256": "6194bc5ee501186d08c96554a0ec0b77e030346650d4632cc59789c217ce6668"
+ },
+ "tests/test_manufacturing_cross_end.py": {
+  "purpose": "Compare independent library and desktop manufacturing topology inputs.",
+  "status": "active",
+  "symbols": [
+   "test_planar_library_matches_app",
+   "test_surface_library_matches_app",
+   "test_surface_rejects_invalid_indices",
+   "test_documented_manufacturing_workflow"
+  ],
+  "sha256": "54019c93d523f64a4f1e5b7652c53b515ad80a2073563e69bf9ea3a52de9f929"
+ },
+ "scripts/refresh_study_checkpoints.py": {
+  "purpose": "Recompute resumable study checkpoints and replace only identical case data.",
+  "status": "active",
+  "symbols": [
+   "CheckpointRefresh"
+  ],
+  "sha256": "cf41dafe489495bf9dcaab9b3791d761f4b5f8916ac9d891fd13ab6c2bb3e418"
+ },
+ "examples/manufacturing_workflow.py": {
+  "purpose": "Independent planar and curved-route example for FiberNet.",
+  "status": "active",
+  "symbols": [
+   "ManufacturingWorkflow"
+  ],
+  "sha256": "fb74c7c7d07af8f402aea2cd3f7f9222b0e3f0b9fb0c691231fa9a98462c295b"
+ },
+ "fibernet/gen/solid_export.py": {
+  "purpose": "Millimetre fiber solids, bounded meshing, atomic STL/3MF and route exports.",
+  "status": "active",
+  "symbols": [
+   "PrintSettings",
+   "FiberSolid",
+   "build_solid",
+   "build_voxel_solid",
+   "export_solid",
+   "export_route"
+  ],
+  "sha256": "1140fdbeb084c22164dcbe5ec32e3aefefc7fec484ad0e326ad65ad426dd2cc8"
+ },
+ "fibernet/gen/tube_solid.py": {
+  "purpose": "Analytic polygonal cylinders and round joints with manifold Boolean union.",
+  "status": "active",
+  "symbols": [
+   "tube_mesh"
+  ],
+  "sha256": "129eb464f8f01deec310f7d26194f5bb1f65c717078cff8f2120c4f80aa0b7f2"
+ },
+ "tests/test_manufacturing_export.py": {
+  "purpose": "Exercise installable-library solid exports without FiberScope imports.",
+  "status": "active",
+  "symbols": [
+   "test_library_stl_3mf_and_route"
+  ],
+  "sha256": "7577cdfa77e88c2ff288b9007d390a4ba8b3bd0d2bf4060091d5f38d7980a636"
+ },
+ "examples/solid_export_workflow.py": {
+  "purpose": "Generate a bounded fiber solid and export STL, 3MF, and route CSV.",
+  "status": "active",
+  "symbols": [
+   "SolidExportWorkflow"
+  ],
+  "sha256": "1ccf5ce323e62584a9d110aa4c76f11f69f2ff721c2969427682052f202adcd6"
+ },
+ "fibernet/gen/obj_import.py": {
+  "purpose": "Bounded OBJ import for mapped manufacturing surfaces.",
+  "status": "active",
+  "symbols": [
+   "load_obj"
+  ],
+  "sha256": "8e54787f85474ad22096d1388fad296b54cefe692b6a0aba880b650791660529"
+ },
+ "fibernet/gen/obj_polygons.py": {
+  "purpose": "Bounded projected ear clipping for ordinary OBJ polygon faces.",
+  "status": "active",
+  "symbols": [
+   "triangulate"
+  ],
+  "sha256": "2c8c724db16430e358b07c1c05b33fd0f23bde4c25326b7d3f34f9487165c2a0"
+ },
+ "tests/test_surface_obj_import.py": {
+  "purpose": "Public OBJ import should match the APP and reject invalid geometry.",
+  "status": "active",
+  "symbols": [
+   "test_import_bundled_surface_without_app_import",
+   "test_invalid_obj_indices",
+   "test_obj_to_closed_route_workflow"
+  ],
+  "sha256": "576907efe2fe8fd136b02bcd488de13885d79c51e99ef4967600d4895a28daa8"
+ },
+ "examples/obj_surface_workflow.py": {
+  "purpose": "Import an OBJ and compile a continuous curved fiber route.",
+  "status": "active",
+  "symbols": [
+   "ObjSurfaceWorkflow"
+  ],
+  "sha256": "a854e496e1c764c79a8f9a3124fd40b356431a112ec859871357d6d4d22ba1fc"
+ },
+ "tests/test_recruitment_sensitivity.py": {
+  "purpose": "Check case identity, loading direction and safe resumable output.",
+  "status": "active",
+  "symbols": [
+   "test_sensitivity_resume_and_direction"
+  ],
+  "sha256": "8582f9c0a924fd62cc9be7646df164f6aafc45df8c999eeea2bfea3f897ef6a0"
+ },
+ "benchmarks/recruitment_contact_control.py": {
+  "purpose": "Run bowed chiral contact as a positive control for recruitment screens.",
+  "status": "active",
+  "symbols": [
+   "ChiralContactControl"
+  ],
+  "sha256": "cda84ab566cc53e1152520b2b2b9758a713721f9d23cffd291335c67682b281f"
+ },
+ "benchmarks/recruitment_sensitivity.py": {
+  "purpose": "Resumable multi-topology screen of strain-threshold recruitment.",
+  "status": "active",
+  "symbols": [
+   "SensitivityConfig",
+   "RecruitmentSensitivity"
+  ],
+  "sha256": "d5fa8261df213996bd23c2a88b82b5dcdd82d700bfabc0f553caaeaebd7494a7"
+ },
+ "tests/test_recruitment_fem_validation.py": {
+  "purpose": "Validate the independent FEM checkpoint and recruitment protocol.",
+  "status": "active",
+  "symbols": [
+   "test_fem_validation_one_case_resume"
+  ],
+  "sha256": "d360139d72dab39ee709b06ec31b4211841ba5e93a19f72b3c6a79f51e5ab92f"
+ },
+ "benchmarks/recruitment_fem_validation.py": {
+  "purpose": "Independent beam-frame FEM screen for directional tensile recruitment.",
+  "status": "active",
+  "symbols": [
+   "FemValidationConfig",
+   "FemRecruitmentValidation"
+  ],
+  "sha256": "e3a1e6adf66b379c1bae41e154f74b48b69c2716e678f1cc281b45642b99636b"
+ },
+ "scripts/make_directional_recruitment_media.py": {
+  "purpose": "Make an editable, source-backed x/y recruitment comparison for the local homepage.",
+  "status": "active",
+  "symbols": [
+   "DirectionalRecruitmentMedia"
+  ],
+  "sha256": "a425576ad5d27a85911875d38481d76a61746aa62952b651e11fd8484353f68b"
+ },
+ "fibernet/gen/surface_mapping.py": {
+  "purpose": "Actual cell topology mapped to bilinear patches with explicit seam stitches.",
+  "status": "active",
+  "symbols": [
+   "MappingConfig",
+   "bilinear",
+   "map_cells"
+  ],
+  "sha256": "643ade554b01064052d42adcc39b4aa264be2f560d2c80f9aa5ff650fdf42097"
+ },
+ "tests/test_surface_mapping_cross_end.py": {
+  "purpose": "Verify the independent surface map preserves APP geometry and seam edges.",
+  "status": "active",
+  "symbols": [
+   "test_surface_map_matches_app_and_old_output",
+   "test_surface_map_rejects_tiny_budget",
+   "test_surface_mapping_public_workflow",
+   "test_surface_mapping_invalid_inputs"
+  ],
+  "sha256": "dfc3fff4204d49fbc8e0a1ca952927b92b59d1619895b319d2f4a08a67f846f9"
+ },
+ "examples/surface_mapping_workflow.py": {
+  "purpose": "Map repeated fiber cells to an OBJ surface with explicit seam stitches.",
+  "status": "active",
+  "symbols": [
+   "SurfaceMappingWorkflow"
+  ],
+  "sha256": "87c189a43a55036914ca8d077d3ff826b0293b1196748cfb6e3e10e251bd649a"
+ },
+ "fibernet/ml/physical_learning.py": {
+  "purpose": "Extensible supervised model and acquisition interfaces (contact-free v2).",
+  "status": "active",
+  "symbols": [
+   "register_model",
+   "register_acquisition",
+   "select_candidate",
+   "Regressor"
+  ],
+  "sha256": "4bad25bc7b5904e1f4cc1f34244ea2978e8b47743a9579b76ca7e64e9b757cd7"
+ },
+ "fibernet/ml/physical_surrogate.py": {
+  "purpose": "NumPy-only structural descriptors and three-target surrogate MLP.",
+  "status": "active",
+  "symbols": [
+   "light_features",
+   "MLP",
+   "r2_score"
+  ],
+  "sha256": "52c8438a67343e486719e6ce7de34f4f9cdc6edf22c28dfd1591c91eb1a44f64"
+ },
+ "tests/test_physical_learning_cross_end.py": {
+  "purpose": "Shared APP physical surrogate keeps training and acquisition behavior.",
+  "status": "active",
+  "symbols": [
+   "test_regressor_public_api_matches_app",
+   "test_structural_features_and_acquisition",
+   "test_public_learning_errors_are_clear",
+   "test_physical_learning_workflow"
+  ],
+  "sha256": "ac2e65fd795c6be01f65cf1da5f93377b4ce25bb5b8aa85cb59bdeb8f88b20ef"
+ },
+ "examples/physical_learning_workflow.py": {
+  "purpose": "Train the shared three-target physical surrogate from an NPZ dataset.",
+  "status": "active",
+  "symbols": [
+   "PhysicalLearningWorkflow"
+  ],
+  "sha256": "113c3544dd05154986a4fa7e56dd3819f3e90ad3d3c0139c3acddb8e21014e94"
+ },
+ "fibernet/sim/reduced_beam.py": {
+  "purpose": "engine2: numpy mass-spring core with bending + contact + energy bookkeeping.",
+  "status": "active",
+  "symbols": [
+   "Engine2Config",
+   "Engine2Result",
+   "_grips",
+   "_degree2_triplets",
+   "_excluded_pairs",
+   "Engine2"
+  ],
+  "sha256": "6195cd097841199f275b77df232c9495ee8b51d353d9ef3ae2af658fb4525714"
+ },
+ "tests/test_reduced_beam_cross_end.py": {
+  "purpose": "Public reduced solver matches the APP and feeds recruitment directly.",
+  "status": "active",
+  "symbols": [
+   "test_public_reduced_solver_matches_app",
+   "test_public_stretch_workflow_saves_replayable_arrays"
+  ],
+  "sha256": "1cd48fb84a3472dbd19db8d3f61f1a4acf34b89279017b8325121c290262906e"
+ },
+ "scripts/refresh_recruitment_checkpoints.py": {
+  "purpose": "Refresh recruitment screens only after exact case-level comparison.",
+  "status": "active",
+  "symbols": [
+   "RecruitmentCheckpointRefresh"
+  ],
+  "sha256": "c706e7034347f46c5940353566d0005b0bf06d5fa03fcb27980e30cc1485b77a"
+ },
+ "examples/reduced_recruitment_workflow.py": {
+  "purpose": "Run the shared reduced stretch solver and save a recruitment trajectory.",
+  "status": "active",
+  "symbols": [
+   "ReducedRecruitmentWorkflow"
+  ],
+  "sha256": "060107f7908ea554df1d57cff6ecf7559590a1db1afd63034d4cfbdc78b270bb"
+ },
+ "benchmarks/early_recruitment_prediction.py": {
+  "purpose": "Topology-held-out early recruitment screen on the shared reduced solver.",
+  "status": "active",
+  "symbols": [
+   "PredictionConfig",
+   "EarlyRecruitmentPrediction"
+  ],
+  "sha256": "a911c458d359cf1312c0c072068e56ecc37999199b585eb9d24e23f9e9478b3f"
+ },
+ "fibernet/ml/curve_inverse.py": {
+  "purpose": "Target-curve and scalar inverse search on the shared reduced solver.",
+  "status": "active",
+  "symbols": [
+   "target_curve",
+   "loading_phase",
+   "curve_of",
+   "metrics_of",
+   "distance",
+   "objective_of",
+   "fast_cfg",
+   "InverseRecord",
+   "decode_line_params",
+   "run_inverse",
+   "save_log",
+   "CurveInverseDesigner"
+  ],
+  "sha256": "8ae8f913c1ee6bdb6311fa8c8ad7ced7c2a8224493617996aa0687d79ea35f44"
+ },
+ "tests/test_curve_inverse_cross_end.py": {
+  "purpose": "The desktop adapter and public inverse search choose the same candidates.",
+  "status": "active",
+  "symbols": [
+   "_builder",
+   "_evaluator",
+   "test_inverse_candidates_and_objectives_match_app",
+   "test_public_designer_requires_explicit_topology_scope",
+   "test_inverse_solver_configuration_matches_app"
+  ],
+  "sha256": "9b17a3b15ac92996991c26745c90449af9355bdcac5a7679438b1ada1ae79c2f"
+ },
+ "examples/curve_inverse_workflow.py": {
+  "purpose": "Search a target stretch-curve shape with the shared reduced solver.",
+  "status": "active",
+  "symbols": [
+   "CurveInverseWorkflow"
+  ],
+  "sha256": "3fb527fa74e017270622e9b8169f6e1d043fcee24da3f23bb7a0a9bced949413"
+ },
+ "fibernet/ml/physical_dataset.py": {
+  "purpose": "Callback-driven physical datasets with atomic, resumable checkpoints.",
+  "status": "active",
+  "symbols": [
+   "DatasetStream",
+   "_PlanarCandidate",
+   "PlanarPhysicalDataset"
+  ],
+  "sha256": "375a3510cfbb8aa5b15d207bd72c6fdcab847172e44ad939884492498b072bbc"
+ },
+ "tests/test_physical_dataset_cross_end.py": {
+  "purpose": "Resumable public physical labels agree with the desktop APP.",
+  "status": "active",
+  "symbols": [
+   "test_library_physical_label_matches_app",
+   "test_unlabeled_stream_is_explicit_and_bounded"
+  ],
+  "sha256": "927cd487d736326914e4941ad6dd2044fddd1197cec09a8760d2f1af67277e1d"
+ },
+ "examples/physical_dataset_workflow.py": {
+  "purpose": "Build a resumable physical-label dataset using the library alone.",
+  "status": "active",
+  "symbols": [
+   "PhysicalDatasetWorkflow"
+  ],
+  "sha256": "d2f7297a73c545032060fbf69dafbf29a6d25ee19217877af46df79b231ca788"
+ },
+ "manuscript/scripts/build_figures_ppt.py": {
+  "purpose": "Build editable working figures for the FiberNet software Methods draft.",
+  "status": "active",
+  "symbols": [
+   "FigureDeckBuilder"
+  ],
+  "sha256": "221d689410482421d8cdab5a92a6f0c05b6736afb7b988c6f05e8ab925714921"
+ },
+ "tests/test_constrained_cycle_intervention.py": {
+  "purpose": "Matched cycle deletions preserve a complete route and checkpoint identity.",
+  "status": "active",
+  "symbols": [
+   "test_matched_cycle_reruns_and_resume"
+  ],
+  "sha256": "26cf2e2386cc02351cde343984e5c0d83e00e381899afa4aff2dacddbc2efe79"
+ },
+ "benchmarks/constrained_cycle_intervention.py": {
+  "purpose": "Resumable, length-class-matched Euler-cycle removal and rerun study.",
+  "status": "active",
+  "symbols": [
+   "ConstrainedCycleConfig",
+   "ConstrainedCycleIntervention"
+  ],
+  "sha256": "f5469833d9bb97dd01845dd1b22022d1365acb878f603e28e68ecb7ef8c4b379"
+ },
+ "fibernet/analysis/snapshot_features.py": {
+  "purpose": "Structure feature extraction for fiber networks (pure numpy).",
+  "status": "active",
+  "symbols": [
+   "feature_name",
+   "scalar_keys",
+   "_filter_region",
+   "_region_area",
+   "_nn_distances",
+   "_chain_straightness",
+   "_structure_features",
+   "_structure_extra",
+   "_segment_interactions",
+   "_planarize",
+   "_poly_area",
+   "_poly_perim",
+   "_faces",
+   "_pore_features",
+   "_contact_features",
+   "compute_features",
+   "SnapshotFeatureExtractor"
+  ],
+  "sha256": "432f8e9a7b5d0e6fb39e5a2c5cef0bc2527ee53048be99fda97351862c7a73a6"
+ },
+ "fibernet/analysis/width_contact.py": {
+  "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
+  "status": "active",
+  "symbols": [
+   "candidate_pairs",
+   "ContactConfig"
+  ],
+  "sha256": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23"
+ },
+ "tests/test_snapshot_features_cross_end.py": {
+  "purpose": "The desktop snapshot-feature contract remains numerically unchanged.",
+  "status": "active",
+  "symbols": [
+   "_digest",
+   "test_snapshot_feature_golden_and_app_alias",
+   "test_snapshot_feature_public_input_budgets",
+   "test_public_graph_and_real_example_schema"
+  ],
+  "sha256": "fae858a931d4524281addfeac863b5148daf57b8977c19ca85ce1d0380d2daa7"
+ },
+ "scripts/make_intervention_media.py": {
+  "purpose": "Render a source-backed route-preserving deletion comparison for the local homepage.",
+  "status": "active",
+  "symbols": [
+   "InterventionMedia"
+  ],
+  "sha256": "bd83921ed481b98a893fd3abe516926da6a5e77e67d87fbb9930e435f16a07a4"
+ },
+ "examples/snapshot_features_workflow.py": {
+  "purpose": "Analyze a generated network snapshot without importing FiberScope.",
+  "status": "active",
+  "symbols": [
+   "SnapshotFeatureWorkflow"
+  ],
+  "sha256": "443a14f16d17fa68c5d503aa9ea3ac76baf3fa93b38dfc7755bc938a3a22ea2f"
+ },
+ "tests/test_ai_cycle_selector.py": {
+  "purpose": "AI cycle study resumes candidate reruns and rejects stale checkpoints.",
+  "status": "active",
+  "symbols": [
+   "test_ai_cycle_candidate_resume_and_signature"
+  ],
+  "sha256": "379289cf5a83ddd93e9ea08dd7395dc6810dcf6f89e1bbf21ebef3e4c40e8687"
+ },
+ "benchmarks/ai_cycle_selector.py": {
+  "purpose": "Topology-held-out, route-preserving cycle selection with actual reruns.",
+  "status": "active",
+  "symbols": [
+   "AICycleSelector"
+  ],
+  "sha256": "46baeaddb5867f5a85d7fb34df63e3ce0e6631f2b69342d203765bdd3df7072f"
+ },
+ "tests/test_fem_parallel_contract.py": {
+  "purpose": "Public beam FEM retains parallel-fiber mechanics and honest summaries.",
+  "status": "active",
+  "symbols": [
+   "_two_node_graph",
+   "test_fem_preserves_parallel_grip_reaction",
+   "test_fem_uses_actual_radius_and_signed_stretch",
+   "test_direct_beam_stiffness_defaults_to_independent_edges"
+  ],
+  "sha256": "d7498b575bfbe8e6b32cb43d85db22a71272aa66a82f10c5ca2760f1679b326c"
+ },
+ "tests/test_independent_fem_cycle_intervention.py": {
+  "purpose": "Independent beam-FEM cycle screening is bounded and resumable.",
+  "status": "active",
+  "symbols": [
+   "test_independent_fem_resume_and_matched_grips"
+  ],
+  "sha256": "7778b4d55112ea26ace72121eded689a9bf69034af968cf59727d1ef3c920ee3"
+ },
+ "benchmarks/independent_fem_cycle_intervention.py": {
+  "purpose": "Matched-grip, matched-stretch linear beam-FEM check of cycle deletions.",
+  "status": "active",
+  "symbols": [
+   "IndependentFemCycleCheck"
+  ],
+  "sha256": "fc05982c772f81338d956712b213ca73c151ae3a509ee83a6f8f8b0fa2913f51"
+ },
+ "fibernet/gen/custom_cells.py": {
+  "purpose": "Portable, bounded custom-cell specifications compatible with FiberScope JSON.",
+  "status": "active",
+  "symbols": [
+   "CustomCell",
+   "CustomCellRegistry"
+  ],
+  "sha256": "3ac34aa4384a5121fbc4606298550ba802ad2a7fe7375c482f969a03e4e1725e"
+ },
+ "tests/test_custom_cell_registry.py": {
+  "purpose": "Custom cells share APP JSON and compile through the public library API.",
+  "status": "active",
+  "symbols": [
+   "test_app_custom_cell_json_roundtrip_and_route",
+   "test_custom_cell_rejects_invalid_or_oversized_input",
+   "test_registry_save_preserves_existing_app_entries"
+  ],
+  "sha256": "4b4ba4b0c818fc79b00634f8917950b2b2aef8ad03289e75026417c4ebfc1712"
+ },
+ "scripts/promote_homepage.py": {
+  "purpose": "Render the tested docs preview as the repository homepage.",
+  "status": "active",
+  "symbols": [
+   "HomepagePromoter"
+  ],
+  "sha256": "c1d999ef10aeaa639b2f7cf0b0511e304f22e4c13b426e14788e130034e0023b"
+ },
+ "scripts/refresh_cycle_study_checkpoints.py": {
+  "purpose": "Recompute cycle studies and atomically accept only identical case results.",
+  "status": "active",
+  "symbols": [
+   "CycleCheckpointRefresh"
+  ],
+  "sha256": "0f47218be832906cb8b1f606efb4b6026eca3fb8f34cbb5ac26522d644906fa0"
+ },
+ "scripts/seal_local_candidate.py": {
+  "purpose": "Record hashes for the tested local wheel and Windows APP folder.",
+  "status": "active",
+  "symbols": [
+   "CandidateSealer"
+  ],
+  "sha256": "37a580199e90fefbca1d2b9e896fca525c0c83ffe93c895d8f39cf59458cf2ac"
+ },
+ "examples/custom_cell_workflow.py": {
+  "purpose": "Persist an APP-compatible custom unit and compile its closed planar route.",
+  "status": "active",
+  "symbols": [
+   "CustomCellWorkflow"
+  ],
+  "sha256": "5b9f387160fcb2c026266e695cbcd25c1dbbd94dbc269fc334314ae8da064d9c"
+ },
+ "scripts/build_work_bundle.py": {
+  "purpose": "Make one bounded, reproducible Work-mode handoff ZIP from committed source.",
+  "status": "active",
+  "symbols": [
+   "WorkBundleBuilder"
+  ],
+  "sha256": "17438f311e78efb68e3d25933807e51666a82b18dcd6e1a8f1faad278c6ac938"
+ },
+ "scripts/preflight_publish.py": {
+  "purpose": "Check source file boundaries, common credential formats and homepage links.",
+  "status": "active",
+  "symbols": [
+   "PublishPreflight"
+  ],
+  "sha256": "116922cbc7c8542ae124f81c88b1d64ef874a61fe9caf8db2ea0ddd1d91fa664"
+ }
+}

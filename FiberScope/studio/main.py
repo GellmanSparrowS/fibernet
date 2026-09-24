@@ -17,7 +17,7 @@ def _icon_path():
     p = os.path.join(base, "assets", "icon.ico")
     return p if os.path.exists(p) else None
 
-from .i18n import set_lang, tr
+from .i18n import get_lang, set_lang, tr
 from .structure_tab import StructureTab
 from .sim_tab import SimTab
 from .design_tab import DesignTab
@@ -40,10 +40,14 @@ class MainWindow(QMainWindow):
 
     def _show_about(self, *_):
         from PySide6.QtWidgets import QMessageBox
-        from fslab.version import APP_VERSION, AUTHOR_SIGNATURE
-        QMessageBox.information(self, 'FiberScope', 'FiberScope ' + APP_VERSION + '\n\n制作人：复旦大学高分子系杨云浩\n\n致谢：世界人工智能开源大赛')
+        from fslab.version import APP_VERSION, ORG_EN, CONTEST_EN
+        if get_lang() == 'en':
+            body = f'FiberScope {APP_VERSION}\n\nYunhao Yang · {ORG_EN}\n\nAcknowledgment: {CONTEST_EN}'
+        else:
+            body = f'FiberScope {APP_VERSION}\n\n制作人：复旦大学高分子系杨云浩\n\n致谢：世界人工智能开源大赛'
+        QMessageBox.information(self, 'FiberScope', body)
 
-    def __init__(self, lang: str = "zh", mode: str = "light"):
+    def __init__(self, lang: str = "en", mode: str = "light"):
         super().__init__()
         set_lang(lang)
         self.mode = mode

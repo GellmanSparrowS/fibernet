@@ -1,15 +1,7 @@
 """Actual cell topology mapped to bilinear patches with explicit seam stitches."""
-from dataclasses import dataclass
 import numpy as np
-from .structure import StructureFactory
-
-
-@dataclass
-class MappingConfig:
-    overscale: float = 1.06
-    max_points: int = 150000
-    max_segments: int = 200000
-    stitch: bool = True
+from fibernet.gen.surface_mapping import (MappingConfig,
+                                           map_cells as _shared_map_cells)
 
 
 def bilinear(quad, uv):
@@ -19,94 +11,13 @@ def bilinear(quad, uv):
 
 
 def map_cells(vertices, faces, spectrum, unit='square', config=None):
-    """Map one actual unit per patch; output contains no supporting mesh edges.
-
-    Each shared patch edge gets one common midpoint anchor. Short stitches
-    join it to the nearest point on each adjacent cell fiber. This is an
-    explicit manufactured connection, not a claim that visual overlap bonds.
-    """
-    config = config or MappingConfig()
-    if not 1. <= config.overscale <= 1.3:
-        raise ValueError('mapping overscale must be 1.00..1.30')
-    vertices = np.asarray(vertices, float)
-    faces = np.asarray(faces, int)
-    if vertices.ndim != 2 or vertices.shape[1] != 3 or not np.isfinite(vertices).all():
-        raise ValueError('invalid surface vertices')
-    if faces.ndim != 2 or faces.shape[1] != 4 or not len(faces) or faces.min() < 0 or faces.max() >= len(vertices):
-        raise ValueError('surface requires valid quad faces')
-    graph = StructureFactory(unit=unit, grid_x=1, grid_y=1, n_pts_per_side=len(spectrum),
-                             line_displacements=np.asarray(spectrum).tolist()).build()
-    pos = np.asarray(graph.node_positions(), float)[:, :2]
-    edges = np.asarray(graph.edge_array(), int)[:, :2]
-    span = np.ptp(pos, axis=0)
-    if len(edges) == 0 or np.any(span < 1e-9):
-        raise ValueError('unit must have fibers and nonzero width/height')
-    uv = ((pos - pos.min(axis=0)) / span - .5) * config.overscale + .5
-    # Reserve for up to four seam split points and anchors per patch.
-    if len(faces) * (len(pos) + 8) > config.max_points or len(faces) * (len(edges) + 16) > config.max_segments:
-        allowed = min(config.max_points // (len(pos)+8), config.max_segments // (len(edges)+16))
-        if allowed < 12:
-            raise MemoryError('surface mapping budget exceeded; reduce mesh faces or spectrum points')
-        source_count = len(faces)
-        vertices, faces = coarsen_quads(vertices, faces, allowed)
-        output = map_cells(vertices, faces, spectrum, unit, config)
-        config.source_faces = source_count
-        return output
-    mapped = np.concatenate([bilinear(vertices[face], uv) for face in faces])
-    points = list(mapped)
-    output = []
-    splits = {}
-    seams = {}
-    for fid, face in enumerate(faces):
-        for side in range(4):
-            a, b = int(face[side]), int(face[(side+1) % 4])
-            seams.setdefault(tuple(sorted((a, b))), []).append((fid, side))
-    boundary_uv = np.array([[.5, 0.], [1., .5], [.5, 1.], [0., .5]])
-    start, vector = uv[edges[:, 0]], uv[edges[:, 1]] - uv[edges[:, 0]]
-    norm = np.maximum((vector * vector).sum(axis=1), 1e-15)
-    stitch_count = 0
-    if config.stitch:
-        for seam, adjacent in seams.items():
-            if len(adjacent) < 2:
-                continue
-            anchor = len(points)
-            points.append(vertices[list(seam)].mean(axis=0))
-            for fid, side in adjacent:
-                target = boundary_uv[side]
-                t = np.clip(((target-start) * vector).sum(axis=1) / norm, 0., 1.)
-                foot = start + t[:, None] * vector
-                edge_id = int(np.argmin(((foot-target) ** 2).sum(axis=1)))
-                value = float(t[edge_id])
-                a, b = edges[edge_id] + fid * len(pos)
-                if value < 1e-9:
-                    node = int(a)
-                elif value > 1-1e-9:
-                    node = int(b)
-                else:
-                    node = len(points)
-                    # Linear interpolation on the rendered fiber, not the curved patch.
-                    points.append((1-value)*mapped[a] + value*mapped[b])
-                    splits.setdefault((fid, edge_id), []).append((value, node))
-                output.append((node, anchor))
-                stitch_count += 1
-    for fid in range(len(faces)):
-        for eid, (a, b) in enumerate(edges):
-            chain = [int(a)+fid*len(pos)]
-            chain.extend(node for _, node in sorted(splits.get((fid, eid), [])))
-            chain.append(int(b)+fid*len(pos))
-            output.extend(zip(chain[:-1], chain[1:]))
-    # Weld numerical coincidences, including seam feet repeated by two sides.
-    points = np.asarray(points)
-    scale = max(float(np.ptp(vertices, axis=0).max()), 1.)
-    _, index, inverse = np.unique(np.round(points / (scale*1e-9)).astype(np.int64),
-                                  axis=0, return_index=True, return_inverse=True)
-    segments = inverse[np.asarray(output, int)]
-    segments = np.unique(np.sort(segments, axis=1), axis=0)
-    segments = segments[segments[:, 0] != segments[:, 1]]
-    if len(index) > config.max_points or len(segments) > config.max_segments:
-        raise MemoryError('surface mapping exceeds output budget')
-    config.source_faces = config.mapped_faces = len(faces)
-    return points[index], segments
+    """Map APP unit cells through the shared library geometry core."""
+    from .structure import StructureFactory
+    graph = StructureFactory(
+        unit=unit, grid_x=1, grid_y=1, n_pts_per_side=len(spectrum),
+        line_displacements=np.asarray(spectrum).tolist()).build()
+    return _shared_map_cells(vertices, faces, spectrum, unit=unit,
+                             config=config, base_graph=graph)
 
 
 def front_basis(vertices):
@@ -215,46 +126,6 @@ def reduce_triangles(vertices, faces, target=500):
 
 
 def load_obj(path, return_info=False, target_faces=None):
-    """Bounded OBJ parser; polygons become conforming corner quads as needed."""
-    from pathlib import Path
-    if Path(path).stat().st_size > 64 * 1024 * 1024:
-        raise MemoryError('OBJ exceeds the 64 MB import limit')
-    vertices, faces = [], []
-    with open(path, encoding='utf-8', errors='strict') as stream:
-        for line in stream:
-            parts = line.split('#', 1)[0].split()
-            if not parts:
-                continue
-            if parts[0] == 'v':
-                vertices.append([float(x) for x in parts[1:4]])
-            elif parts[0] == 'f':
-                raw = [int(x.split('/')[0]) for x in parts[1:]]
-                ids = [x-1 if x > 0 else len(vertices)+x for x in raw]
-                if 0 in raw or not 3 <= len(ids) <= 256 or len(set(ids)) != len(ids) or any(x < 0 or x >= len(vertices) for x in ids):
-                    raise ValueError('invalid OBJ face indices')
-                faces.append(ids)
-            if len(vertices) > (500000 if target_faces else 100000) or len(faces) > (1000000 if target_faces else 10000):
-                raise MemoryError('OBJ import budget exceeded')
-    if not faces or not vertices:
-        raise ValueError('OBJ has no valid faces')
-    info = dict(source_vertices=len(vertices), source_faces=len(faces),
-                triangles=sum(len(f) == 3 for f in faces), reduced=False)
-    if target_faces is not None:
-        if not 12 <= int(target_faces) <= 10000:
-            raise ValueError('target quad budget must be 12..10000')
-        if len(faces) > target_faces or (any(len(f)!=4 for f in faces) and sum(len(f) for f in faces)>target_faces):
-            from .obj_polygons import triangulate
-            triangles = triangulate(vertices, faces)
-            v, f = reduce_triangles(vertices, triangles, target=max(4, int(target_faces)//3))
-            vertices, faces = v.tolist(), f.tolist()
-            info['reduced'] = True
-    if any(len(face) != 4 for face in faces):
-        vertices, faces = corner_quads(vertices, faces)
-    if target_faces is not None and len(faces) > int(target_faces):
-        vertices, faces = coarsen_quads(vertices, faces, int(target_faces))
-        info['reduced'] = True
-    array = np.asarray(vertices, float)
-    if array.shape[1] != 3 or not np.isfinite(array).all():
-        raise ValueError('OBJ has non-finite or malformed vertices')
-    info.update(quad_faces=len(faces), converted=bool(info['triangles'] or info['source_faces'] != len(faces)))
-    return (array, faces, info) if return_info else (array, faces)
+    from fibernet.gen.obj_import import load_obj as shared_load_obj
+    return shared_load_obj(path, return_info=return_info,
+                           target_faces=target_faces)

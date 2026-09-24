@@ -13,17 +13,17 @@ import tempfile
 import numpy as np
 
 from .engine2 import Engine2, Engine2Config
-from .fibernet_bridge import ensure_fibernet
+from .fibernet_bridge import FIBERNET_ROOT, ensure_fibernet
 
 MAX_FRAMES = 240     # downsample cap for trajectory frames
 
 # --- cache identity ------------------------------------------------------
 # A cached npz is only valid for the numerics that produced it, so the key
 # carries an explicit engine version.  After changing the solver, the
-# downsampling or the structure builder run scripts/bump_engine_version.py;
+# downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
-ENGINE_VERSION = "e2v7"
-ENGINE_SRC_HASH = "f8e9f230c796"
+ENGINE_VERSION = "e2v12"
+ENGINE_SRC_HASH = "fc5e7bb3a08d"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -45,6 +45,15 @@ def engine_src_hash():
                     if not ln.startswith((b"ENGINE_VERSION =",
                                           b"ENGINE_SRC_HASH =")))
             h.update(data)
+        for shared in (("core", "structure_graph.py"),
+                       ("gen", "spectrum.py"),
+                       ("gen", "cell_rules.py"),
+                       ("gen", "cell_cycles.py"),
+                       ("gen", "manufacturing.py"),
+                       ("gen", "surface_geometry.py"),
+                       ("sim", "reduced_beam.py")):
+            with open(os.path.join(FIBERNET_ROOT, "fibernet", *shared), "rb") as fh:
+                h.update(fh.read())
     except OSError:
         return None
     return h.hexdigest()[:12]

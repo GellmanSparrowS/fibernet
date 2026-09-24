@@ -35,7 +35,7 @@ class SparseBeamFrameFEM:
         return {'A': A, 'I': I, 'J': J}
     
     def build_sparse_stiffness_2d(self, edge_index: np.ndarray, node_pos: np.ndarray, 
-                                    radii: np.ndarray, deduplicate: bool = True) -> Tuple[sparse.csr_matrix, np.ndarray]:
+                                    radii: np.ndarray, deduplicate: bool = False) -> Tuple[sparse.csr_matrix, np.ndarray]:
         """Build sparse global stiffness matrix for 2D beam frame
         
         Args:
@@ -46,7 +46,7 @@ class SparseBeamFrameFEM:
             
         Returns:
             K_global: (3*n_nodes, 3*n_nodes) sparse stiffness matrix
-            edge_list: deduplicated edge indices
+            edge_list: retained edge indices (or deduplicated if requested)
         """
         if deduplicate:
             # Remove duplicate edges
@@ -129,7 +129,7 @@ class SparseBeamFrameFEM:
         return K_global.tocsr(), edge_list
     
     def solve_2d(self, edge_index, node_pos, radii, forces, fixed_nodes, 
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 2D beam frame problem
         
         Args:
@@ -238,7 +238,7 @@ class SparseBeamFrameFEM:
         return u, sigma, moments, edge_list
     
     def solve_3d(self, edge_index, node_pos, radii, forces, fixed_nodes, 
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 3D beam frame problem (6 DOF per node)"""
         # Convert to numpy if needed
         if isinstance(edge_index, torch.Tensor):

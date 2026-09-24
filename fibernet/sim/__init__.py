@@ -14,3 +14,7 @@ except ImportError:
 __all__ = [
     "TaichiEngine", "SimResult",
 ]
+
+from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
+                                       ReducedBeamSolver)
+__all__ += ["ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver"]

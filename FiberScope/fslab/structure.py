@@ -47,6 +47,11 @@ import numpy as np
 
 from .fibernet_bridge import ensure_fibernet
 
+ensure_fibernet()
+from fibernet.gen.spectrum import (FiberSpectrum, fit_spectrum,
+                                   resample_spectrum, rotated_displacements)
+from fibernet.gen.custom_cells import CustomCell, CustomCellRegistry
+
 MAX_NODES = 40000      # hard cap: canvas + memory guard
 MAX_GRID = 128
 MAX_PTS = 24
@@ -227,31 +232,10 @@ def _ensure_cells():
 def valid_cell_spec(spec):
     """Validate a connected graph; the unit box is a period, not a clipping boundary."""
     try:
-        nodes = [(float(a), float(b)) for a, b in spec['nodes']]
-        edges = [(int(a), int(b)) for a, b in spec['edges']]
-    except (TypeError, ValueError, KeyError):
+        CustomCell.from_mapping(spec)
+    except ValueError:
         return False
-    if not 2 <= len(nodes) <= 48 or not edges:
-        return False
-    if any(not (math.isfinite(x) and math.isfinite(y)) or max(abs(x), abs(y)) > 1e6 for x, y in nodes):
-        return False
-    seen, adj = set(), {}
-    for a, b in edges:
-        if not (0 <= a < len(nodes) and 0 <= b < len(nodes)) or a == b:
-            return False
-        key = (min(a, b), max(a, b))
-        if key in seen:
-            return False
-        seen.add(key)
-        adj.setdefault(a, []).append(b)
-        adj.setdefault(b, []).append(a)
-    stack, seen_n = [0], {0}
-    while stack:
-        for v in adj.get(stack.pop(), ()):
-            if v not in seen_n:
-                seen_n.add(v)
-                stack.append(v)
-    return len(seen_n) == len(nodes)
+    return True
 
 
 def load_custom_cells(path=None):
@@ -259,23 +243,17 @@ def load_custom_cells(path=None):
     global CUSTOM_CELLS
     path = path or CUSTOM_CELL_FILE
     try:
-        with open(path, encoding='utf-8') as fh:
-            data = json.load(fh)
-    except (OSError, ValueError):
+        data = CustomCellRegistry(path).load(strict=False)
+    except (OSError, ValueError, MemoryError):
         data = {}
     CUSTOM_CELLS.clear()
-    CUSTOM_CELLS.update({k: v for k, v in (data or {}).items()
-                        if isinstance(v, dict) and valid_cell_spec(v)})
+    CUSTOM_CELLS.update({k: v.to_mapping() for k, v in data.items()})
     _CELLS_REGISTERED.clear()
     return dict(CUSTOM_CELLS)
 
 
 def _write_custom_cells():
-    os.makedirs(os.path.dirname(os.path.abspath(CUSTOM_CELL_FILE)), exist_ok=True)
-    tmp = CUSTOM_CELL_FILE + '.tmp'
-    with open(tmp, 'w', encoding='utf-8') as fh:
-        json.dump(CUSTOM_CELLS, fh, ensure_ascii=False, indent=1)
-    os.replace(tmp, CUSTOM_CELL_FILE)
+    CustomCellRegistry(CUSTOM_CELL_FILE).replace_all(CUSTOM_CELLS)
 
 
 def save_custom_cell(key, nodes, edges, zh=None, en=None, settings=None):
@@ -295,7 +273,7 @@ def save_custom_cell(key, nodes, edges, zh=None, en=None, settings=None):
     CUSTOM_CELLS[key] = spec
     try:
         _write_custom_cells()
-    except OSError:
+    except (OSError, ValueError, MemoryError):
         if previous is None:
             CUSTOM_CELLS.pop(key, None)
         else:
@@ -312,7 +290,7 @@ def delete_custom_cell(key):
     previous = CUSTOM_CELLS.pop(key)
     try:
         _write_custom_cells()
-    except OSError:
+    except (OSError, ValueError, MemoryError):
         CUSTOM_CELLS[key] = previous
         raise
     _CELLS_REGISTERED.discard(key)
@@ -346,46 +324,6 @@ def n_intermediate_for(unit, n_pts_per_side):
     n = max(0, int(withd.num_nodes) - int(base.num_nodes))
     _INTERMEDIATE_CACHE[key] = n
     return n
-
-
-def resample_spectrum(spec, pts):
-    '''Resample a preset spectrum (any length) onto pts interior nodes.'''
-    pts = int(pts)
-    if pts <= 0:
-        return []
-    src = np.asarray(spec, float)
-    n = src.shape[0]
-    ts = (np.arange(n) + 1.0) / (n + 1.0)
-    tt = (np.arange(pts) + 1.0) / (pts + 1.0)
-    x = np.interp(tt, ts, src[:, 0])
-    y = np.interp(tt, ts, src[:, 1])
-    return [[float(a), float(b)] for a, b in zip(x, y)]
-
-
-def fit_spectrum(spec, pts):
-    '''Pad or resample an arbitrary spectrum list to exactly pts entries.'''
-    spec = list(spec or [])
-    pts = int(pts)
-    if len(spec) == pts:
-        return [[float(a), float(b)] for a, b in spec]
-    if not spec:
-        return [[0.0, 0.0] for _ in range(pts)]
-    return resample_spectrum(spec, pts)
-
-
-def rotated_displacements(spectrum, length=CELL):
-    '''Replicate one-edge spectrum onto the 4 cell edges with C4 symmetry.
-
-    `spectrum` is in fractions of the reference line's own length; `length`
-    is that length in absolute units (CELL for every edge of a square cell).
-    Order matches the closed square polyline edges AB, BC, CD, DA.
-    '''
-    s = float(length)
-    ab = [(float(dx) * s, float(dy) * s) for dx, dy in spectrum]
-    bc = [(-dy, dx) for dx, dy in ab]
-    cd = [(-dx, -dy) for dx, dy in ab]
-    da = [(dy, -dx) for dx, dy in ab]
-    return ab + bc + cd + da
 
 
 def chains_of(pos, edges):
@@ -469,21 +407,8 @@ class StructureFactory:
 
     def build(self):
         if self.topology == 'topnet26':
-            from .manufacturing import compile_planar
-            ensure_fibernet()
-            from fibernet.core.structure_graph import StructureGraph
-            network = compile_planar(self)
-            if len(network.positions) > MAX_NODES:
-                raise MemoryError('structure exceeds simulation node budget; reduce grid or points')
-            graph = StructureGraph(dimension=2)
-            for point in network.positions:
-                graph.add_node(point, merge=False)
-            for a, b in network.edges:
-                graph.add_edge(int(a), int(b), radius=self.radius)
-            graph.metadata.update(topology=self.topology, topology_id=network.topology_id,
-                                  route_nodes=network.route_nodes.tolist(),
-                                  route_edges=network.route_edges.tolist())
-            return graph
+            from fibernet.gen.manufacturing import manufacturable_graph
+            return manufacturable_graph(self)
         if self.topology != 'legacy':
             raise ValueError('unknown topology version')
         ensure_fibernet()

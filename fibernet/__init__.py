@@ -33,7 +33,7 @@ Parametric Structure Generation (for RL)
 >>> internal = g.get_internal_nodes()  # Nodes available for RL actions
 """
 
-__version__ = "4.1.2"
+from fibernet.version import __version__
 
 # --- Core ---
 from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
@@ -56,9 +56,18 @@ from fibernet.gen.pattern import (
     list_units, register_unit,
     list_units_3d, register_unit_3d,
 )
+from fibernet.gen.manufacturing import (PlanarManufacturingConfig,
+                                        ManufacturingNetwork, compile_planar,
+                                        compile_surface,
+                                        manufacturable_graph)
+from fibernet.gen.solid_export import (PrintSettings, FiberSolid, build_solid,
+                                       build_voxel_solid, export_solid,
+                                       export_route)
 
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
+from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
+                                       ReducedBeamSolver)
 
 # --- Visualization ---
 from fibernet.viz.render import (
@@ -128,8 +137,13 @@ __all__ = [
     # Generation
     "pattern_2d", "pattern_3d", "list_units", "register_unit",
     "list_units_3d", "register_unit_3d",
+    "PlanarManufacturingConfig", "ManufacturingNetwork",
+    "compile_planar", "compile_surface", "manufacturable_graph",
+    "PrintSettings", "FiberSolid", "build_solid", "build_voxel_solid",
+    "export_solid", "export_route",
     # Simulation
     "TaichiEngine", "SimResult",
+    "ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
     "render_gallery", "render_with_stats", "render_trajectory",

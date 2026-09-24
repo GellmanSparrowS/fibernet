@@ -57,7 +57,7 @@ class BeamFrameFEM:
                 unique.append(e)
         return np.array(unique)
     
-    def build_stiffness_2d(self, edge_index, node_pos, radii, deduplicate=True):
+    def build_stiffness_2d(self, edge_index, node_pos, radii, deduplicate=False):
         if deduplicate:
             edge_list = self._deduplicate_edges(edge_index)
         else:
@@ -184,7 +184,7 @@ class BeamFrameFEM:
     def solve_2d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 2D beam frame with force and/or displacement BCs.
         
         Returns dict with:
@@ -289,7 +289,7 @@ class BeamFrameFEM:
     def solve_2d_nonlinear(self, edge_index, node_pos, radii,
                            prescribed_disp, fixed_nodes=None,
                            forces=None, n_steps=10, tol=1e-6, max_iter=20,
-                           damping=1e-6, deduplicate=True):
+                           damping=1e-6, deduplicate=False):
         """Geometrically nonlinear solver using incremental co-rotational approach.
         
         For each increment:
@@ -386,7 +386,7 @@ class BeamFrameFEM:
     def solve_3d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 3D beam frame with corrected stress computation."""
         if isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
@@ -602,7 +602,7 @@ class BeamFrameFEM:
         }
 
     def stretch_test(self, graph, target_stretch=2.0, dim=2, pct=0.10,
-                     nonlinear=None):
+                     nonlinear=None, deduplicate=False):
         """One-liner uniaxial stretch test using beam frame FEM.
         
         Analogous to TaichiEngine.stretch_test() but uses FEM.
@@ -619,6 +619,9 @@ class BeamFrameFEM:
         nonlinear : bool or None
             If None, auto-selects nonlinear for |stretch-1| > 0.3.
             If True, always use nonlinear solver.
+        deduplicate : bool
+            False preserves independent parallel fibers. True is available
+            only for reproducing legacy simple-graph calculations.
         
         Returns
         -------
@@ -635,20 +638,27 @@ class BeamFrameFEM:
             if nonlinear is None:
                 nonlinear = abs(target_stretch - 1.0) > 0.3
             if nonlinear:
-                return self.solve_2d_nonlinear(
+                result = self.solve_2d_nonlinear(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
-                    prescribed_disp=prescribed, fixed_nodes=left, n_steps=10
+                    prescribed_disp=prescribed, fixed_nodes=left, n_steps=10,
+                    deduplicate=deduplicate
                 )
-            return self.solve_2d(
-                inp['edge_index'], inp['node_pos'], inp['radii'],
-                fixed_nodes=left, prescribed_disp=prescribed
-            )
+            else:
+                result = self.solve_2d(
+                    inp['edge_index'], inp['node_pos'], inp['radii'],
+                    fixed_nodes=left, prescribed_disp=prescribed,
+                    deduplicate=deduplicate
+                )
         else:
             prescribed = {ni: (target_disp, 0.0, 0.0) for ni in right}
-            return self.solve_3d(
+            result = self.solve_3d(
                 inp['edge_index'], inp['node_pos'], inp['radii'],
-                fixed_nodes=left, prescribed_disp=prescribed
+                fixed_nodes=left, prescribed_disp=prescribed,
+                deduplicate=deduplicate
             )
+        displacement = np.asarray(result['u'])[:, :dim]
+        result['max_displacement'] = float(np.linalg.norm(displacement, axis=1).max())
+        return result
 
     def to_sim_result(self, fem_result, graph=None):
         """Convert FEM dict result to SimResult for backend compatibility.
@@ -688,15 +698,25 @@ class BeamFrameFEM:
         else:
             deformed = disp_3d  # Just the displacement
         
-        # Energy (elastic strain energy)
+        # Energy (axial-stress proxy over the assembled beam elements)
         sigma_axial = fem_result.get('sigma_axial', np.array([]))
         sigma_bending = fem_result.get('sigma_bending', np.array([]))
         edge_list = fem_result.get('edge_list', np.array([]))
+        beam_forces = np.asarray(fem_result.get('edge_forces', np.empty((0, 3))))
+        axial_forces = (beam_forces[:, 0].copy()
+                        if beam_forces.ndim == 2 and beam_forces.shape[1] >= 1
+                        else np.zeros(0))
+        edge_stretches = np.zeros(0)
         
         # Approximate energy from stresses
         energy = 0.0
         if graph is not None and len(sigma_axial) > 0:
             pos, elements, _, _ = _graph_to_arrays(graph)
+            selected = elements[np.asarray(edge_list, dtype=int)]
+            lengths = np.linalg.norm(pos[selected[:, 1]] - pos[selected[:, 0]], axis=1)
+            final_lengths = np.linalg.norm(deformed[selected[:, 1]] -
+                                           deformed[selected[:, 0]], axis=1)
+            edge_stretches = final_lengths / np.maximum(lengths, 1e-12)
             for idx, e in enumerate(edge_list):
                 i, j = int(elements[e, 0]), int(elements[e, 1])
                 L = np.linalg.norm(pos[i] - pos[j])
@@ -715,10 +735,13 @@ class BeamFrameFEM:
             displacements=disp_3d,
             deformed_positions=deformed,
             energy=energy,
+            edge_forces=axial_forces,
+            edge_stretches=edge_stretches,
             max_displacement=max_disp,
-            max_force=float(np.max(np.abs(sigma_axial))) * np.pi * 0.05**2 if len(sigma_axial) > 0 else 0.0,
-            max_stretch=float(np.max(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
-            mean_stretch=float(np.mean(np.abs(sigma_axial) / self.E + 1.0)) if len(sigma_axial) > 0 else 1.0,
+            max_force=float(np.max(np.abs(axial_forces))) if axial_forces.size else 0.0,
+            max_stretch=float(edge_stretches.max()) if edge_stretches.size else 1.0,
+            mean_stretch=float(edge_stretches.mean()) if edge_stretches.size else 1.0,
+            std_stretch=float(edge_stretches.std()) if edge_stretches.size else 0.0,
             n_nodes=n_nodes,
             n_edges=fem_result.get('n_edges', 0),
             mode='fem_beam_frame',
@@ -728,6 +751,7 @@ class BeamFrameFEM:
                 'sigma_total': fem_result.get('sigma_total', np.array([])),
                 'reactions': fem_result.get('reactions'),
                 'edge_forces': fem_result.get('edge_forces'),
+                'energy_kind': 'axial_stress_proxy',
             },
         )
 

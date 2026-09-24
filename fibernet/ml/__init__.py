@@ -78,6 +78,12 @@ __all__ = [
     # Features
     # FEM
     "BeamFrameFEM",
+    "PhysicalRegressor",
+    "light_features",
+    "CurveInverseDesigner",
+    "run_curve_inverse",
+    "target_curve",
+    "PlanarPhysicalDataset",
     
     # Dataset
     "FiberNetDataset",
@@ -130,6 +136,10 @@ def __getattr__(name):
         "FiberDeepONet": "fibernet.ml.neural_operator",
         "NeuralOperatorTrainer": "fibernet.ml.neural_operator",
         # Inverse design
+        "CurveInverseDesigner": "fibernet.ml.curve_inverse",
+        "run_curve_inverse": "fibernet.ml.curve_inverse",
+        "target_curve": "fibernet.ml.curve_inverse",
+        "PlanarPhysicalDataset": "fibernet.ml.physical_dataset",
         "InverseDesignNet": "fibernet.ml.inverse_design",
         "TandemNetwork": "fibernet.ml.inverse_design",
         "InverseDesignTrainer": "fibernet.ml.inverse_design",
@@ -191,6 +201,8 @@ def __getattr__(name):
         "ConservativeTrainer": "fibernet.ml.conservative_nn",
         # Beam Frame FEM
         "BeamFrameFEM": "fibernet.ml.beam_frame_fem",
+        "PhysicalRegressor": "fibernet.ml.physical_learning",
+        "light_features": "fibernet.ml.physical_surrogate",
     }
 
     if name in _submodules:
