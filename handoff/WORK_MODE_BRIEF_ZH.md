@@ -1,6 +1,6 @@
 # FiberNet–FiberScope：Work 模式交接与拟投稿主线
 
-本文件供后续 Work 模式拼图、复跑、整理引用和撰文。它是任务书和证据索引，不是投稿手稿。当前代码属于原有 `fibernet` 仓库的 4.2.0 开发分支；FiberScope 为同仓库 APP。Python 3.10 库测试 368 通过、19 跳过，APP 本地测试 25/25；本地 wheel 隔离安装及冻结 APP 的 Windows 可携带性门槛通过。库端源码测试在 GitHub CI 的 Linux、macOS、Windows 与 Python 3.9–3.12 共 12 个组合通过。尚无第三方机器安装、Linux/macOS 冻结 APP、材料实验或打印后性能验证。研究数据与图不得超出这些条件解释。
+本文件供后续 Work 模式拼图、复跑、整理引用和撰文。它是任务书和证据索引，不是投稿手稿。当前代码属于原有 `fibernet` 仓库的 4.2.0 开发分支；FiberScope 为同仓库 APP。Python 3.10 库测试 368 通过、19 跳过，APP 本地及 GitHub Windows CI 测试均为 25/25；本地 wheel 隔离安装及冻结 APP 的 Windows 可携带性门槛通过。库端源码测试在 GitHub CI 的 Linux、macOS、Windows 与 Python 3.9–3.12 共 12 个组合通过。尚无第三方机器安装、Linux/macOS 冻结 APP、材料实验或打印后性能验证。研究数据与图不得超出这些条件解释。
 
 ## 建议中心问题
 
