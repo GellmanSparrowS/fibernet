@@ -23,7 +23,7 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
 ENGINE_VERSION = "e2v12"
-ENGINE_SRC_HASH = "fc5e7bb3a08d"
+ENGINE_SRC_HASH = "30cb3ada6337"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -38,7 +38,7 @@ def engine_src_hash():
     try:
         for name in ENGINE_SRC_FILES:
             with open(os.path.join(base, name), "rb") as fh:
-                data = fh.read()
+                data = fh.read().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
             if name == "simcache.py":
                 data = b"\n".join(
                     ln for ln in data.split(b"\n")
@@ -53,7 +53,7 @@ def engine_src_hash():
                        ("gen", "surface_geometry.py"),
                        ("sim", "reduced_beam.py")):
             with open(os.path.join(FIBERNET_ROOT, "fibernet", *shared), "rb") as fh:
-                h.update(fh.read())
+                h.update(fh.read().replace(b"\r\n", b"\n").replace(b"\r", b"\n"))
     except OSError:
         return None
     return h.hexdigest()[:12]

@@ -81,7 +81,7 @@ result = analyze_tensile_recruitment(
 print(result.perc_frame)  # 1
 ```
 
-From a source checkout, run `python -m examples.tensile_recruitment_quickstart` for a complete executable example. The [method definition](docs/METHODS_TENSILE_RECRUITMENT.md) documents thresholds, hysteresis, output fractions, and physical limits. The Python 3.10 test suite and an isolated installation of a locally built wheel have passed. Optional-dependency combinations and other operating systems still require separate verification.
+From a source checkout, run `python -m examples.tensile_recruitment_quickstart` for a complete executable example. The [method definition](docs/METHODS_TENSILE_RECRUITMENT.md) documents thresholds, hysteresis, output fractions, and physical limits. The Python 3.10 test suite and an isolated installation of a locally built wheel have passed. Source tests also passed on Linux, macOS, and Windows with Python 3.9–3.12. Third-party-machine installation, frozen APP portability outside Windows, and broader optional-dependency combinations still need verification.
 
 To replay the desktop APP's reduced model directly in Python, run `python -m examples.reduced_recruitment_workflow --output-dir demo_stretch`. The [trajectory workflow](examples/reduced_recruitment_workflow.py) saves node frames, ordered edges, edge axial strain, raw reaction, recruited masks, and a JSON summary. The solver includes axial springs, a degree-two bending approximation, and optional node contact; its [method description](docs/METHODS_REDUCED_SOLVER_UNIFIED.md) distinguishes it from the beam-frame FEM below. Neither solver is calibrated to a material experiment here.
 

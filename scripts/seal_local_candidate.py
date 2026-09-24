@@ -59,7 +59,8 @@ class CandidateSealer:
                             "desktop_suites": "25/25",
                             "engine_golden_arrays_exact": 40},
             "limits": ["No PyPI or APP release has been published.",
-                       "No cross-machine, Linux/macOS or material-experiment validation.",
+                       "Library CI passed on Linux, macOS and Windows with Python 3.9-3.12; no third-party-machine install or frozen APP validation outside Windows.",
+                       "No material-experiment validation.",
                        "Recruitment colors show a positive axial-strain "
                        "threshold, not complete force flow."],
         }

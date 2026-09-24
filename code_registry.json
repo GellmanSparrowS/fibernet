@@ -4200,7 +4200,7 @@
   "symbols": [
    "CandidateSealer"
   ],
-  "sha256": "37a580199e90fefbca1d2b9e896fca525c0c83ffe93c895d8f39cf59458cf2ac"
+  "sha256": "ad9a71d23632d50658cadf93dd0fa76f7697c592b2dae6435dcba0e6e60c71f3"
  },
  "examples/custom_cell_workflow.py": {
   "purpose": "Persist an APP-compatible custom unit and compile its closed planar route.",
