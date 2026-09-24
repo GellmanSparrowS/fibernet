@@ -4141,7 +4141,7 @@
    "test_fem_uses_actual_radius_and_signed_stretch",
    "test_direct_beam_stiffness_defaults_to_independent_edges"
   ],
-  "sha256": "d7498b575bfbe8e6b32cb43d85db22a71272aa66a82f10c5ca2760f1679b326c"
+  "sha256": "6f03048b7cde1f1dda49fefacad0c52cf880ff93e33214c77afd3d8e444669fa"
  },
  "tests/test_independent_fem_cycle_intervention.py": {
   "purpose": "Independent beam-FEM cycle screening is bounded and resumable.",
@@ -4149,7 +4149,7 @@
   "symbols": [
    "test_independent_fem_resume_and_matched_grips"
   ],
-  "sha256": "7778b4d55112ea26ace72121eded689a9bf69034af968cf59727d1ef3c920ee3"
+  "sha256": "4a57f351109afe08ac00a546b94beaa045a2f8036f9f3c68293c0d74bb25bef0"
  },
  "benchmarks/independent_fem_cycle_intervention.py": {
   "purpose": "Matched-grip, matched-stretch linear beam-FEM check of cycle deletions.",

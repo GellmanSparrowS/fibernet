@@ -1,6 +1,8 @@
 """Independent beam-FEM cycle screening is bounded and resumable."""
 import pytest
 
+pytest.importorskip("torch")
+
 from benchmarks.independent_fem_cycle_intervention import (
     IndependentFemCycleCheck, ROOT)
 
