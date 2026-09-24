@@ -1,0 +1,165 @@
+{
+  "status": "working scientific figures, not publication final",
+  "source_files": [
+    "FiberScope/assets/obj/demo_pyramid.obj",
+    "FiberScope/docs/screenshots/structure-en.png",
+    "benchmarks/results/constrained_cycle_intervention.json",
+    "benchmarks/results/independent_fem_cycle_intervention.json",
+    "fibernet/analysis/snapshot_features.py",
+    "fibernet/analysis/tensile_recruitment.py",
+    "fibernet/analysis/width_contact.py",
+    "fibernet/gen/manufacturing.py",
+    "fibernet/ml/beam_frame_fem.py",
+    "fibernet/ml/beam_frame_fem_sparse.py",
+    "fibernet/sim/reduced_beam.py",
+    "manuscript/scripts/build_figures_ppt.py"
+  ],
+  "slides": [
+    {
+      "slide": 1,
+      "unit": "square",
+      "nodes": 57,
+      "edges": 72
+    },
+    {
+      "slide": 1,
+      "unit": "hexagon",
+      "nodes": 106,
+      "edges": 132
+    },
+    {
+      "slide": 1,
+      "unit": "ring",
+      "nodes": 156,
+      "edges": 192
+    },
+    {
+      "slide": 1,
+      "unit": "kagome",
+      "nodes": 201,
+      "edges": 264
+    },
+    {
+      "slide": 1,
+      "unit": "curved_kagome",
+      "nodes": 387,
+      "edges": 581,
+      "obj_input": {
+        "source_vertices": 121,
+        "source_faces": 108,
+        "triangles": 0,
+        "reduced": true,
+        "quad_faces": 18,
+        "converted": true
+      },
+      "route_closed": true
+    },
+    {
+      "slide": 3,
+      "direction": "x",
+      "nodes": 228,
+      "edges": 288,
+      "first_spanning_frame": 8,
+      "first_spanning_stretch": 1.159999966621399
+    },
+    {
+      "slide": 3,
+      "direction": "y",
+      "nodes": 228,
+      "edges": 288,
+      "first_spanning_frame": 19,
+      "first_spanning_stretch": 1.3799999952316284
+    },
+    {
+      "slide": 4,
+      "unit": "square",
+      "cases": 6,
+      "removed_percent": 4.1667000000000005,
+      "mean_reaction_ratio": {
+        "low_early": 1.0,
+        "low_alignment": 1.0,
+        "random": 0.9985978679512654,
+        "high_late": 0.7916639037303127
+      }
+    },
+    {
+      "slide": 4,
+      "unit": "hexagon",
+      "cases": 6,
+      "removed_percent": 2.1398,
+      "mean_reaction_ratio": {
+        "low_early": 0.9999961545287491,
+        "low_alignment": 0.9999929673548559,
+        "random": 0.9992733123204975,
+        "high_late": 0.9724054327367613
+      }
+    },
+    {
+      "slide": 4,
+      "unit": "ring",
+      "cases": 6,
+      "removed_percent": 2.219466666666667,
+      "mean_reaction_ratio": {
+        "low_early": 1.0,
+        "low_alignment": 1.0,
+        "random": 0.9444444107975762,
+        "high_late": 0.8481389387276413
+      }
+    },
+    {
+      "slide": 4,
+      "unit": "kagome",
+      "cases": 6,
+      "removed_percent": 1.0041,
+      "mean_reaction_ratio": {
+        "low_early": 0.9999679020227213,
+        "low_alignment": 1.0,
+        "random": 0.9999893424798406,
+        "high_late": 0.8753716415303843
+      }
+    },
+    {
+      "slide": 5,
+      "unit": "square",
+      "cases": 6,
+      "mean_reduced_ratio": 1.0,
+      "mean_fem_ratio": 0.988363329151691
+    },
+    {
+      "slide": 5,
+      "unit": "hexagon",
+      "cases": 6,
+      "mean_reduced_ratio": 0.9999976022056405,
+      "mean_fem_ratio": 0.9500747061096925
+    },
+    {
+      "slide": 5,
+      "unit": "ring",
+      "cases": 6,
+      "mean_reduced_ratio": 1.0,
+      "mean_fem_ratio": 0.9509450105347108
+    },
+    {
+      "slide": 5,
+      "unit": "kagome",
+      "cases": 6,
+      "mean_reduced_ratio": 0.9999710357279016,
+      "mean_fem_ratio": 0.8418938087116515
+    }
+  ],
+  "source_sha256": {
+    "FiberScope/assets/obj/demo_pyramid.obj": "637b8fa215cbdb4170132ac0ab131054bbf3007056698ee29877f0c5db2600bf",
+    "FiberScope/docs/screenshots/structure-en.png": "18484bd14a3ebe0a91929daf0f550046db64c4f53340235622b7771af2398be2",
+    "benchmarks/results/constrained_cycle_intervention.json": "d39fff1a4e4e028322f84fcb0a37c7f03e113be225d5d455f2c8065b01fc2989",
+    "benchmarks/results/independent_fem_cycle_intervention.json": "daea53b9f5b803e57eeca07e79e59ab5f002f73b4738cb926defbf7f5136eb45",
+    "fibernet/analysis/snapshot_features.py": "432f8e9a7b5d0e6fb39e5a2c5cef0bc2527ee53048be99fda97351862c7a73a6",
+    "fibernet/analysis/tensile_recruitment.py": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33",
+    "fibernet/analysis/width_contact.py": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23",
+    "fibernet/gen/manufacturing.py": "c8b9a5827456886b4a181ac000d3e818d32258a812e68285c256c3cb243badea",
+    "fibernet/ml/beam_frame_fem.py": "fb8d65e802d9dc7affdede3e48ab52bebddfc0f25d01a3358d5a677bbafc61c6",
+    "fibernet/ml/beam_frame_fem_sparse.py": "0bb403900ef52284451dcfaae38e7e33fb32d521e245868fc46d7c0baeff4909",
+    "fibernet/sim/reduced_beam.py": "6195cd097841199f275b77df232c9495ee8b51d353d9ef3ae2af658fb4525714",
+    "manuscript/scripts/build_figures_ppt.py": "221d689410482421d8cdab5a92a6f0c05b6736afb7b988c6f05e8ab925714921"
+  },
+  "pptx_sha256": "8ee42cd4fe536a6f5cb5f5d1e09bcf7b543fdbf501be3ed5b6016f932e1e8d22"
+}

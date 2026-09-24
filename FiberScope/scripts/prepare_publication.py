@@ -25,10 +25,7 @@ class Publication:
             if not path.is_file() or '__pycache__' in path.parts: continue
             dest=app/path.relative_to(source);dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(path,dest)
         shutil.copy2(root/'LICENSE',app/'LICENSE')
-        # Support both the original sibling checkout and the public monorepo.
-        bridge=app/'fslab/fibernet_bridge.py';text=bridge.read_text(encoding='utf-8')
-        text=text.replace('FIBERNET_ROOT = os.environ.get', 'if os.path.isdir(os.path.join(_DEFAULT, "core")):\n    _DEFAULT = os.path.dirname(_ROOT)\nFIBERNET_ROOT = os.environ.get')
-        bridge.write_text(text,encoding='utf-8',newline='')
+        # The source bridge resolves both the sibling checkout and monorepo.
         (app/'.gitignore').write_text('_cache/\n_tmp/\n__pycache__/\n*.pyc\nbuild/\nbuild_vendor/\ndist/\n*.spec\nsmoke_result.txt\nbuild_version.txt\n',encoding='utf-8')
         self.scan(root)
         print('[publication] staged application source and notices')

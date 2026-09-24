@@ -407,6 +407,7 @@ class StructureGraph:
         n_internal: int = 0,
         internal_points: Optional[np.ndarray] = None,
         segments: int = 4,
+        allow_parallel: bool = False,
         **metadata: Any,
     ) -> int:
         """Add an edge between two existing nodes.
@@ -426,6 +427,9 @@ class StructureGraph:
             Explicit (M, 3) internal point array. Overrides ``n_internal``.
         segments : int
             Number of FEM beam segments.
+        allow_parallel : bool
+            Keep a distinct fiber when another edge has the same endpoints.
+            The default preserves the existing simple-graph behavior.
 
         Returns
         -------
@@ -439,7 +443,7 @@ class StructureGraph:
 
         # Deduplicate: if edge between these nodes already exists, return existing
         edge_key = frozenset({node_i, node_j})
-        if edge_key in self._edge_set:
+        if edge_key in self._edge_set and not allow_parallel:
             return self._edge_set[edge_key]
 
         if internal_points is None and n_internal > 0:
@@ -460,7 +464,7 @@ class StructureGraph:
             metadata=dict(metadata),
         )
         self._edges[eid] = edge
-        self._edge_set[frozenset({node_i, node_j})] = eid
+        self._edge_set.setdefault(edge_key, eid)
         self._next_edge_id += 1
         return eid
 
@@ -468,7 +472,14 @@ class StructureGraph:
         """Remove an edge by ID."""
         edge = self._edges.pop(edge_id, None)
         if edge is not None:
-            self._edge_set.pop(frozenset({edge.node_i, edge.node_j}), None)
+            key = frozenset({edge.node_i, edge.node_j})
+            if self._edge_set.get(key) == edge_id:
+                replacement = next((eid for eid, other in self._edges.items()
+                                    if frozenset({other.node_i, other.node_j}) == key), None)
+                if replacement is None:
+                    self._edge_set.pop(key, None)
+                else:
+                    self._edge_set[key] = replacement
 
     # ------------------------------------------------------------------
     # Bulk operations
@@ -688,7 +699,7 @@ class StructureGraph:
                 id_map[edge.node_i], id_map[edge.node_j],
                 radius=edge.radius, material=edge.material,
                 internal_points=edge.internal_points,
-                segments=edge.segments, **edge.metadata,
+                segments=edge.segments, allow_parallel=True, **edge.metadata,
             )
         return g
 
@@ -697,12 +708,13 @@ class StructureGraph:
     # ------------------------------------------------------------------
 
     def to_networkx(self):
-        """Convert to a networkx.Graph with pos attribute on nodes."""
+        """Convert to a NetworkX graph, retaining parallel fibers when present."""
         try:
             import networkx as nx
         except ImportError:
             raise ImportError("networkx required: pip install networkx")
-        G = nx.Graph()
+        pairs = [frozenset((e.node_i, e.node_j)) for e in self._edges.values()]
+        G = nx.MultiGraph() if len(set(pairs)) < len(pairs) else nx.Graph()
         for nid, node in self._nodes.items():
             G.add_node(
                 nid,
@@ -722,7 +734,7 @@ class StructureGraph:
 
     @classmethod
     def from_networkx(cls, G, dimension: int = 2, tolerance: float = 1e-6) -> "StructureGraph":
-        """Create a StructureGraph from a networkx.Graph.
+        """Create a StructureGraph from a NetworkX Graph or MultiGraph.
 
         Expects nodes to have a 'pos' attribute (2-tuple or 3-tuple).
         """
@@ -738,6 +750,7 @@ class StructureGraph:
                 id_map[u], id_map[v],
                 radius=data.get("radius", 0.1),
                 segments=data.get("segments", 4),
+                allow_parallel=G.is_multigraph(),
             )
         return g
 
@@ -813,7 +826,8 @@ class StructureGraph:
         for fiber in net.fibers:
             n_start = g.add_node(fiber.start_point, merge=True)
             n_end = g.add_node(fiber.end_point, merge=True)
-            g.add_edge(n_start, n_end, radius=fiber.radius, material=fiber.material)
+            g.add_edge(n_start, n_end, radius=fiber.radius, material=fiber.material,
+                       allow_parallel=True)
         return g
 
     # ------------------------------------------------------------------
@@ -893,6 +907,7 @@ class StructureGraph:
                 radius=ed.get("radius", 0.1),
                 internal_points=ip,
                 segments=ed.get("segments", 4),
+                allow_parallel=True,
                 **ed.get("metadata", {}),
             )
         return g

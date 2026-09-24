@@ -3,7 +3,10 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple
-import torch
+try:
+    import torch
+except ImportError:  # NumPy/SciPy beam solvers also work in the base install.
+    torch = None
 
 class SparseBeamFrameFEM:
     """Sparse matrix implementation for beam frame FEM (scalable to large structures)"""
@@ -35,7 +38,7 @@ class SparseBeamFrameFEM:
         return {'A': A, 'I': I, 'J': J}
     
     def build_sparse_stiffness_2d(self, edge_index: np.ndarray, node_pos: np.ndarray, 
-                                    radii: np.ndarray, deduplicate: bool = True) -> Tuple[sparse.csr_matrix, np.ndarray]:
+                                    radii: np.ndarray, deduplicate: bool = False) -> Tuple[sparse.csr_matrix, np.ndarray]:
         """Build sparse global stiffness matrix for 2D beam frame
         
         Args:
@@ -46,7 +49,7 @@ class SparseBeamFrameFEM:
             
         Returns:
             K_global: (3*n_nodes, 3*n_nodes) sparse stiffness matrix
-            edge_list: deduplicated edge indices
+            edge_list: retained edge indices (or deduplicated if requested)
         """
         if deduplicate:
             # Remove duplicate edges
@@ -129,7 +132,7 @@ class SparseBeamFrameFEM:
         return K_global.tocsr(), edge_list
     
     def solve_2d(self, edge_index, node_pos, radii, forces, fixed_nodes, 
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 2D beam frame problem
         
         Args:
@@ -147,15 +150,15 @@ class SparseBeamFrameFEM:
             moments: (n_unique_edges, 2) bending moments at each end
         """
         # Convert to numpy if needed
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
-        if isinstance(fixed_nodes, torch.Tensor):
+        if torch is not None and isinstance(fixed_nodes, torch.Tensor):
             fixed_nodes = fixed_nodes.numpy().tolist()
         
         # Build stiffness matrix
@@ -238,18 +241,18 @@ class SparseBeamFrameFEM:
         return u, sigma, moments, edge_list
     
     def solve_3d(self, edge_index, node_pos, radii, forces, fixed_nodes, 
-                 damping=1e-6, deduplicate=True):
+                 damping=1e-6, deduplicate=False):
         """Solve 3D beam frame problem (6 DOF per node)"""
         # Convert to numpy if needed
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
-        if isinstance(fixed_nodes, torch.Tensor):
+        if torch is not None and isinstance(fixed_nodes, torch.Tensor):
             fixed_nodes = fixed_nodes.numpy().tolist()
         
         # Deduplicate edges

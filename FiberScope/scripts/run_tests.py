@@ -11,8 +11,8 @@ import sys
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SUITES = ["selftest", "selftest_engine2", "selftest_inverse", "selftest_finals", "selftest_learning", "selftest_search", "selftest_surface",
-          "gui_smoke", "gui_finals", "gui_upgrade", "gui_refinement24", "selftest_manufacturing", "gui_manufacturing", "selftest_topnet26", "selftest_obj26", "gui_workflow26", "selftest_geometry27", "gui_geometry27", "selftest_upgrade28", "gui_upgrade28", "gui_precision29", "gui_final30"]
+SUITES = ["selftest_bridge", "selftest_graph_contract", "selftest", "selftest_engine2", "selftest_inverse", "selftest_finals", "selftest_learning", "selftest_search", "selftest_surface",
+          "gui_default_language", "gui_smoke", "gui_finals", "gui_upgrade", "gui_refinement24", "selftest_manufacturing", "gui_manufacturing", "selftest_topnet26", "selftest_obj26", "gui_workflow26", "selftest_geometry27", "gui_geometry27", "selftest_upgrade28", "gui_upgrade28", "gui_precision29", "gui_final30"]
 
 
 def main():

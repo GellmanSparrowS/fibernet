@@ -4,11 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fibernet"
-version = "4.1.6"
+version = "4.2.0"
 description = "A comprehensive fiber network generation, simulation, and ML toolkit for materials science research"
 readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
+license = {text = "MIT"}
 requires-python = ">=3.9"
 authors = [
     {name = "FiberNet Contributors"}
@@ -47,6 +46,7 @@ dependencies = [
 [project.optional-dependencies]
 viz = ["pyvista>=0.37"]
 mesh = ["trimesh>=3.20"]
+manufacturing = ["manifold3d", "scikit-image>=0.19", "fast-simplification"]
 io = ["h5py>=3.7"]
 accel = ["taichi>=1.6"]
 ml = [
@@ -73,6 +73,9 @@ full = [
     "gymnasium>=0.26",
     "scikit-optimize>=0.9",
     "matplotlib>=3.5",
+    "manifold3d",
+    "scikit-image>=0.19",
+    "fast-simplification",
 ]
 dev = [
     "pytest>=7.0",

@@ -1,0 +1,464 @@
+{
+  "config": {
+    "unit": "hexagon",
+    "seeds": [
+      11,
+      23,
+      41
+    ],
+    "directions": [
+      "x",
+      "y"
+    ],
+    "stretches": [
+      1.08,
+      1.16,
+      1.24
+    ],
+    "min_actives": [
+      0.03,
+      0.05,
+      0.1
+    ],
+    "grid": 3,
+    "points_per_edge": 1,
+    "perturbation": 0.04,
+    "max_nodes": 500,
+    "max_edges": 800
+  },
+  "source_hash": "52e65decd5a1543d",
+  "cases": {
+    "seed11:x:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "3c8ae72cf9a70d4f",
+      "max_force": 903894.1985346215,
+      "max_edge_strain": 0.021282587411282528,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed11:x:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "3c8ae72cf9a70d4f",
+      "max_force": 2870628.1112227314,
+      "max_edge_strain": 0.24309871132070215,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.265625,
+          "recruited_edge_fraction": 0.4427083333333333
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.13541666666666666
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.015625
+        }
+      }
+    },
+    "seed11:x:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "3c8ae72cf9a70d4f",
+      "max_force": 2978959.0656626928,
+      "max_edge_strain": 0.38228562670711974,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.6822916865348816,
+          "recruited_edge_fraction": 0.7239583333333334
+        },
+        "0.0500": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.125,
+          "recruited_edge_fraction": 0.4427083333333333
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.2552083333333333
+        }
+      }
+    },
+    "seed11:y:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "cf0ecc77a282e8c4",
+      "max_force": 97779.15385555901,
+      "max_edge_strain": 0.0026094161893188694,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed11:y:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "cf0ecc77a282e8c4",
+      "max_force": 519970.92242548615,
+      "max_edge_strain": 0.009768736286347446,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed11:y:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "cf0ecc77a282e8c4",
+      "max_force": 1584285.0273266002,
+      "max_edge_strain": 0.029089668231019328,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed23:x:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "c63bbbc04e3c4a8f",
+      "max_force": 1800769.4580844555,
+      "max_edge_strain": 0.04999368876225607,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.026041666666666668
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed23:x:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "c63bbbc04e3c4a8f",
+      "max_force": 2183331.33616531,
+      "max_edge_strain": 0.33372951822305574,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.609375,
+          "recruited_edge_fraction": 0.6614583333333334
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.11979166666666667
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.036458333333333336
+        }
+      }
+    },
+    "seed23:x:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "c63bbbc04e3c4a8f",
+      "max_force": 3693692.14180371,
+      "max_edge_strain": 0.48995238215269854,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.6354166865348816,
+          "recruited_edge_fraction": 0.6979166666666666
+        },
+        "0.0500": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.4166666567325592,
+          "recruited_edge_fraction": 0.5989583333333334
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.11458333333333333
+        }
+      }
+    },
+    "seed23:y:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "04d6fad1c74fe535",
+      "max_force": 105275.47217041615,
+      "max_edge_strain": 0.0027679878884148135,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed23:y:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "04d6fad1c74fe535",
+      "max_force": 518249.20752585295,
+      "max_edge_strain": 0.00928481912789092,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed23:y:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "04d6fad1c74fe535",
+      "max_force": 1566657.080613625,
+      "max_edge_strain": 0.026116498727967397,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed41:x:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "6a8ca7982e732c99",
+      "max_force": 1805384.8036438446,
+      "max_edge_strain": 0.05048228651919051,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.026041666666666668
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.005208333333333333
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed41:x:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "6a8ca7982e732c99",
+      "max_force": 2174110.1609779038,
+      "max_edge_strain": 0.33633321511647174,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.6145833134651184,
+          "recruited_edge_fraction": 0.6666666666666666
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.125
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.036458333333333336
+        }
+      }
+    },
+    "seed41:x:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "6a8ca7982e732c99",
+      "max_force": 3835767.8584608138,
+      "max_edge_strain": 0.49734227829926314,
+      "thresholds": {
+        "0.0300": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.6354166865348816,
+          "recruited_edge_fraction": 0.6979166666666666
+        },
+        "0.0500": {
+          "spanning": true,
+          "spanning_edge_fraction": 0.4166666567325592,
+          "recruited_edge_fraction": 0.5989583333333334
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.11458333333333333
+        }
+      }
+    },
+    "seed41:y:stretch1.080": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "05072e248c6e0e58",
+      "max_force": 105797.15923522992,
+      "max_edge_strain": 0.002971909397631478,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed41:y:stretch1.160": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "05072e248c6e0e58",
+      "max_force": 523303.112962894,
+      "max_edge_strain": 0.009422690322036242,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    },
+    "seed41:y:stretch1.240": {
+      "nodes": 132,
+      "edges": 192,
+      "geometry_hash": "05072e248c6e0e58",
+      "max_force": 1582577.081742627,
+      "max_edge_strain": 0.02603907961992169,
+      "thresholds": {
+        "0.0300": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "spanning": false,
+          "spanning_edge_fraction": 0.0,
+          "recruited_edge_fraction": 0.0
+        }
+      }
+    }
+  }
+}

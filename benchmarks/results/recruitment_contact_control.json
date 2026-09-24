@@ -1,0 +1,798 @@
+{
+  "config": {
+    "units": [
+      "chiral"
+    ],
+    "seeds": [
+      11,
+      23,
+      41
+    ],
+    "directions": [
+      "x",
+      "y"
+    ],
+    "contact": [
+      false,
+      true
+    ],
+    "alphas": [
+      0.02,
+      0.05,
+      0.1
+    ],
+    "min_actives": [
+      0.0001,
+      0.03,
+      0.05,
+      0.1
+    ],
+    "grid": 3,
+    "points_per_edge": 5,
+    "line_displacements": [
+      [
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        -0.225
+      ],
+      [
+        0.0,
+        -0.45
+      ],
+      [
+        0.0,
+        -0.225
+      ],
+      [
+        0.0,
+        0.0
+      ]
+    ],
+    "perturbation": 0.04,
+    "target_stretch": 2.2,
+    "increments": 20,
+    "steps": 2000,
+    "max_nodes": 3000,
+    "max_edges": 5000
+  },
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "analysis_hash": "67d1fbce4200bfbb",
+  "cases": {
+    "chiral:seed11:x:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "75c40498a099a263",
+      "frames": 21,
+      "final_raw_reaction": 5074747.5,
+      "work_proxy": 3125881.0,
+      "final_axial_energy": 44479805.71615426,
+      "final_bend_energy": 19963391.19765604,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6335825324058533,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945146918296814,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128500580787659,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed11:x:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "75c40498a099a263",
+      "frames": 21,
+      "final_raw_reaction": 5074747.5,
+      "work_proxy": 3125881.0,
+      "final_axial_energy": 44489533.04064292,
+      "final_bend_energy": 19965974.305170536,
+      "final_contact_energy": 13972.251717343284,
+      "max_contact_pairs": 36,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6335825324058533,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945146918296814,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128500580787659,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed11:y:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "09b2f1a6a9e439ff",
+      "frames": 21,
+      "final_raw_reaction": 5074747.5,
+      "work_proxy": 3125881.0,
+      "final_axial_energy": 44479805.71615426,
+      "final_bend_energy": 19963391.197656043,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6335825324058533,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945146322250366,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128500580787659,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed11:y:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "09b2f1a6a9e439ff",
+      "frames": 21,
+      "final_raw_reaction": 5074747.5,
+      "work_proxy": 3125881.0,
+      "final_axial_energy": 44489533.04064292,
+      "final_bend_energy": 19965974.30517054,
+      "final_contact_energy": 13972.2517173434,
+      "max_contact_pairs": 36,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6335825324058533,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945146322250366,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128500580787659,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed23:x:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "8c103d0ef6b77750",
+      "frames": 21,
+      "final_raw_reaction": 5060746.5,
+      "work_proxy": 3117410.0,
+      "final_axial_energy": 44289995.78624725,
+      "final_bend_energy": 19916134.126348518,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6333526372909546,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945180296897888,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128135204315186,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed23:x:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "8c103d0ef6b77750",
+      "frames": 21,
+      "final_raw_reaction": 5060746.5,
+      "work_proxy": 3117410.0,
+      "final_axial_energy": 44301722.66742721,
+      "final_bend_energy": 19919226.905487593,
+      "final_contact_energy": 15783.12239632594,
+      "max_contact_pairs": 36,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6333526372909546,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945180296897888,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128135204315186,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed23:y:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "fd742837361cfe22",
+      "frames": 21,
+      "final_raw_reaction": 5060746.5,
+      "work_proxy": 3117410.0,
+      "final_axial_energy": 44289995.78624726,
+      "final_bend_energy": 19916134.126348518,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6333525776863098,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945180296897888,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128135204315186,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed23:y:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "fd742837361cfe22",
+      "frames": 21,
+      "final_raw_reaction": 5060746.5,
+      "work_proxy": 3117410.0,
+      "final_axial_energy": 44301722.66742721,
+      "final_bend_energy": 19919226.905487593,
+      "final_contact_energy": 15783.122396329321,
+      "max_contact_pairs": 36,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 932,
+          "never_recruited_fraction": 0.5295454545454545,
+          "never_recruited_length_fraction": 0.6333525776863098,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1064,
+          "never_recruited_fraction": 0.6045454545454545,
+          "never_recruited_length_fraction": 0.6945180296897888,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1364,
+          "never_recruited_fraction": 0.775,
+          "never_recruited_length_fraction": 0.8128135204315186,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6045454545454545,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6556818181818181,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed41:x:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "a28fce965e666557",
+      "frames": 21,
+      "final_raw_reaction": 4993719.0,
+      "work_proxy": 3110367.5,
+      "final_axial_energy": 43379514.92620677,
+      "final_bend_energy": 20062169.142090186,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 776,
+          "never_recruited_fraction": 0.4409090909090909,
+          "never_recruited_length_fraction": 0.5085024237632751,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1070,
+          "never_recruited_fraction": 0.6079545454545454,
+          "never_recruited_length_fraction": 0.7133636474609375,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1376,
+          "never_recruited_fraction": 0.7818181818181819,
+          "never_recruited_length_fraction": 0.8208377361297607,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6079545454545454,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6522727272727272,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed41:x:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "a28fce965e666557",
+      "frames": 21,
+      "final_raw_reaction": 4994170.5,
+      "work_proxy": 3110391.0,
+      "final_axial_energy": 43440175.53111117,
+      "final_bend_energy": 20079026.827179976,
+      "final_contact_energy": 76291.80802414329,
+      "max_contact_pairs": 64,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 776,
+          "never_recruited_fraction": 0.4409090909090909,
+          "never_recruited_length_fraction": 0.5085024237632751,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1070,
+          "never_recruited_fraction": 0.6079545454545454,
+          "never_recruited_length_fraction": 0.7133636474609375,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1376,
+          "never_recruited_fraction": 0.7818181818181819,
+          "never_recruited_length_fraction": 0.8208377361297607,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6079545454545454,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6522727272727272,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed41:y:contact0": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "f501d71910d6aaa5",
+      "frames": 21,
+      "final_raw_reaction": 4993719.0,
+      "work_proxy": 3110367.5,
+      "final_axial_energy": 43379514.92620675,
+      "final_bend_energy": 20062169.142090183,
+      "final_contact_energy": 0.0,
+      "max_contact_pairs": 0,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 776,
+          "never_recruited_fraction": 0.4409090909090909,
+          "never_recruited_length_fraction": 0.5085023641586304,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1070,
+          "never_recruited_fraction": 0.6079545454545454,
+          "never_recruited_length_fraction": 0.7133636474609375,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1376,
+          "never_recruited_fraction": 0.7818181818181819,
+          "never_recruited_length_fraction": 0.8208377361297607,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6079545454545454,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6522727272727272,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    },
+    "chiral:seed41:y:contact1": {
+      "nodes": 1556,
+      "edges": 1760,
+      "geometry_hash": "f501d71910d6aaa5",
+      "frames": 21,
+      "final_raw_reaction": 4994170.5,
+      "work_proxy": 3110391.0,
+      "final_axial_energy": 43440175.53111115,
+      "final_bend_energy": 20079026.827179976,
+      "final_contact_energy": 76291.80802414767,
+      "max_contact_pairs": 64,
+      "thresholds": {
+        "0.020": {
+          "never_recruited_count": 776,
+          "never_recruited_fraction": 0.4409090909090909,
+          "never_recruited_length_fraction": 0.5085023641586304,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.050": {
+          "never_recruited_count": 1070,
+          "never_recruited_fraction": 0.6079545454545454,
+          "never_recruited_length_fraction": 0.7133636474609375,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.100": {
+          "never_recruited_count": 1376,
+          "never_recruited_fraction": 0.7818181818181819,
+          "never_recruited_length_fraction": 0.8208377361297607,
+          "first_spanning_frame": -1,
+          "final_spanning_edge_fraction": 0.0
+        }
+      },
+      "absolute_thresholds": {
+        "0.0001": {
+          "never_recruited_fraction": 0.6079545454545454,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0300": {
+          "never_recruited_fraction": 0.6284090909090909,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.0500": {
+          "never_recruited_fraction": 0.6318181818181818,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        },
+        "0.1000": {
+          "never_recruited_fraction": 0.6522727272727272,
+          "first_spanning_frame": -1,
+          "first_spanning_stretch": null,
+          "final_spanning_edge_fraction": 0.0
+        }
+      }
+    }
+  }
+}
