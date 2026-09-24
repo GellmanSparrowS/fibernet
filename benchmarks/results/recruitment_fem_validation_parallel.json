@@ -26,7 +26,7 @@
     "max_nodes": 500,
     "max_edges": 800
   },
-  "source_hash": "06cdc0bc4ffa91f6",
+  "source_hash": "3777e82d2fdf2762",
   "cases": {
     "seed11:x:stretch1.080": {
       "nodes": 132,

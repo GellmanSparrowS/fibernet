@@ -13,6 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "FiberScope"))
@@ -92,7 +93,7 @@ class RecruitmentSensitivity:
             "geometry_hash": geometry.hexdigest()[:16],
             "frames": int(run.n_frames),
             "final_raw_reaction": float(run.force_curve[-1]),
-            "work_proxy": float(np.trapz(run.force_curve, run.strain_levels)),
+            "work_proxy": float(trapezoid(run.force_curve, run.strain_levels)),
             "final_axial_energy": float(run.energies["axial"][-1]),
             "final_bend_energy": float(run.energies["bend"][-1]),
             "final_contact_energy": float(run.energies["contact"][-1]),

@@ -68,7 +68,7 @@ class AICycleSelector:
         positions = np.asarray(graph.node_positions(), float)
         xy = positions[:, :2]
         edges = np.asarray(graph.edge_array(), int)
-        digest = hashlib.sha256(positions.tobytes() + edges.tobytes()).hexdigest()[:16]
+        digest = self.study.geometry_digest(positions, edges)
         if digest != reference["geometry_hash"]:
             raise AssertionError("AI candidate geometry differs from reference")
         if not np.isclose(float(baseline.force_curve[-1]),

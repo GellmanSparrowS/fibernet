@@ -33,10 +33,10 @@
   },
   "engine_version": "e2v12",
   "engine_hash": "fc5e7bb3a08d",
-  "analysis_hash": "8d67704462578a5f",
+  "analysis_hash": "afd2c66ed49d4a2e",
   "cases": {
     "square:seed11:x": {
-      "geometry_hash": "2e0fa39791b9f4ce",
+      "geometry_hash": "843e962a8b24ce6c",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -184,7 +184,7 @@
       "status": "complete"
     },
     "square:seed11:y": {
-      "geometry_hash": "485894da66cc9e4e",
+      "geometry_hash": "d8996295b3f3d0f8",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -332,7 +332,7 @@
       "status": "complete"
     },
     "square:seed23:x": {
-      "geometry_hash": "41b7cd041f011180",
+      "geometry_hash": "7f5c844d99d3814d",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -480,7 +480,7 @@
       "status": "complete"
     },
     "square:seed23:y": {
-      "geometry_hash": "638e3116f3d527fa",
+      "geometry_hash": "d980ee08ca98d70a",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -628,7 +628,7 @@
       "status": "complete"
     },
     "square:seed41:x": {
-      "geometry_hash": "893b0e3c501abb39",
+      "geometry_hash": "7ed49aee00e7911b",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -776,7 +776,7 @@
       "status": "complete"
     },
     "square:seed41:y": {
-      "geometry_hash": "2736898fd311d54a",
+      "geometry_hash": "ed2b306dadf4320a",
       "baseline": {
         "nodes": 112,
         "edges": 144,
@@ -924,7 +924,7 @@
       "status": "complete"
     },
     "hexagon:seed11:x": {
-      "geometry_hash": "5303da461d746583",
+      "geometry_hash": "1b94a32747915fea",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1072,7 +1072,7 @@
       "status": "complete"
     },
     "hexagon:seed11:y": {
-      "geometry_hash": "3fcda5230997ee2d",
+      "geometry_hash": "b668eec4c4fa1977",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1220,7 +1220,7 @@
       "status": "complete"
     },
     "hexagon:seed23:x": {
-      "geometry_hash": "7d1daa8471f1d97a",
+      "geometry_hash": "9a57fd468828ee47",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1368,7 +1368,7 @@
       "status": "complete"
     },
     "hexagon:seed23:y": {
-      "geometry_hash": "fb7c00fd2ebcfafe",
+      "geometry_hash": "e8b78ed39e82347d",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1516,7 +1516,7 @@
       "status": "complete"
     },
     "hexagon:seed41:x": {
-      "geometry_hash": "db8be180a464e0fb",
+      "geometry_hash": "228b087607438aca",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1664,7 +1664,7 @@
       "status": "complete"
     },
     "hexagon:seed41:y": {
-      "geometry_hash": "5379c97cc9ea3add",
+      "geometry_hash": "4ade1607b0f0f456",
       "baseline": {
         "nodes": 228,
         "edges": 288,
@@ -1812,7 +1812,7 @@
       "status": "complete"
     },
     "ring:seed11:x": {
-      "geometry_hash": "f730c1aa20bd54a9",
+      "geometry_hash": "6b722c6465b922a5",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -1960,7 +1960,7 @@
       "status": "complete"
     },
     "ring:seed11:y": {
-      "geometry_hash": "f12b41baaea6a1cb",
+      "geometry_hash": "40235f36bdc1a28f",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -2108,7 +2108,7 @@
       "status": "complete"
     },
     "ring:seed23:x": {
-      "geometry_hash": "2624e87da5235d1b",
+      "geometry_hash": "03a5733a95305fa5",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -2256,7 +2256,7 @@
       "status": "complete"
     },
     "ring:seed23:y": {
-      "geometry_hash": "1a27c5f2da9b75a3",
+      "geometry_hash": "6056d7c6083389f4",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -2404,7 +2404,7 @@
       "status": "complete"
     },
     "ring:seed41:x": {
-      "geometry_hash": "a2795e0dbd18963e",
+      "geometry_hash": "492bda1b5fedaed7",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -2552,7 +2552,7 @@
       "status": "complete"
     },
     "ring:seed41:y": {
-      "geometry_hash": "00e9db97c57f945b",
+      "geometry_hash": "9c018cc88ccff70e",
       "baseline": {
         "nodes": 348,
         "edges": 432,
@@ -2700,7 +2700,7 @@
       "status": "complete"
     },
     "kagome:seed11:x": {
-      "geometry_hash": "027ce8026e48a025",
+      "geometry_hash": "7aaf79f23d2e3a8f",
       "baseline": {
         "nodes": 436,
         "edges": 576,
@@ -2848,7 +2848,7 @@
       "status": "complete"
     },
     "kagome:seed11:y": {
-      "geometry_hash": "c1af2dfefb0b760a",
+      "geometry_hash": "6adbd54d7271f76c",
       "baseline": {
         "nodes": 436,
         "edges": 576,
@@ -2996,7 +2996,7 @@
       "status": "complete"
     },
     "kagome:seed23:x": {
-      "geometry_hash": "0e6beeb51e72ec80",
+      "geometry_hash": "dd588f480e2d4384",
       "baseline": {
         "nodes": 436,
         "edges": 576,
@@ -3144,7 +3144,7 @@
       "status": "complete"
     },
     "kagome:seed23:y": {
-      "geometry_hash": "4f35494cdd9a1e44",
+      "geometry_hash": "45bb3f6ac4885a69",
       "baseline": {
         "nodes": 436,
         "edges": 576,
@@ -3292,7 +3292,7 @@
       "status": "complete"
     },
     "kagome:seed41:x": {
-      "geometry_hash": "b23fb2b6eee48a17",
+      "geometry_hash": "6f0f9f02fdb3919f",
       "baseline": {
         "nodes": 436,
         "edges": 576,
@@ -3440,7 +3440,7 @@
       "status": "complete"
     },
     "kagome:seed41:y": {
-      "geometry_hash": "c2349a28e6abef5d",
+      "geometry_hash": "8aaf3edc360901b2",
       "baseline": {
         "nodes": 436,
         "edges": 576,

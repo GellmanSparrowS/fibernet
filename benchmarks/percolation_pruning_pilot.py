@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'FiberScope'))
@@ -85,7 +86,7 @@ class PruningPilot:
             'edges': int(graph.num_edges),
             'removed_length_fraction': float(removed_length / original_length),
             'final_raw_reaction': float(run.force_curve[-1]),
-            'work_proxy': float(np.trapz(run.force_curve, run.strain_levels)),
+            'work_proxy': float(trapezoid(run.force_curve, run.strain_levels)),
             'spanning_frame': int(percolation.perc_frame),
             'final_backbone_fraction': float(percolation.backbone_frac[-1]),
             'odd_nodes': int(health['odd']),

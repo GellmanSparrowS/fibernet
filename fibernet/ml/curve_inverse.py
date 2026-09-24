@@ -19,6 +19,7 @@ from dataclasses import dataclass
 import json
 
 import numpy as np
+from scipy.integrate import trapezoid
 
 from fibernet.sim.reduced_beam import ReducedBeamConfig, ReducedBeamSolver
 
@@ -74,7 +75,7 @@ def metrics_of(run) -> dict:
     t = (s - s0) / (s1 - s0)
     return dict(peak=float(F.max()),
                 stiff=float(np.interp(0.2, t, F) - F[0]),
-                tough=float(np.trapz(F, s)))
+                tough=float(trapezoid(F, s)))
 
 
 def distance(run, target: np.ndarray) -> float:

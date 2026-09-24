@@ -943,7 +943,7 @@
   "symbols": [
    "BeamFrameFEM"
   ],
-  "sha256": "d2a0e56066d5ec8ebb5755ca4e7d94a8f99418fd6dda787f510d970523109224"
+  "sha256": "fb8d65e802d9dc7affdede3e48ab52bebddfc0f25d01a3358d5a677bbafc61c6"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -951,7 +951,7 @@
   "symbols": [
    "SparseBeamFrameFEM"
   ],
-  "sha256": "d45779a57317c992623befd4c5691aea4f710655e3b1550ce2805d8b9fc69795"
+  "sha256": "0bb403900ef52284451dcfaae38e7e33fb32d521e245868fc46d7c0baeff4909"
  },
  "fibernet/ml/beam_frame_fem_v6.py": {
   "purpose": "Backward-compatibility shim. Use fibernet.ml.beam_frame_fem instead.",
@@ -3523,7 +3523,7 @@
    "PilotConfig",
    "PruningPilot"
   ],
-  "sha256": "d1cef9677579810eca94f5feab8987e7c0a570db90188cb44781e3e0468d3e70"
+  "sha256": "b4cb3e9253df078806caedeede77f521b6b9a03f134bd333f08bab8948b25a0b"
  },
  "fibernet/analysis/tensile_recruitment.py": {
   "purpose": "Thresholded tensile-strain recruitment on a network trajectory.",
@@ -3822,7 +3822,7 @@
    "SensitivityConfig",
    "RecruitmentSensitivity"
   ],
-  "sha256": "d5fa8261df213996bd23c2a88b82b5dcdd82d700bfabc0f553caaeaebd7494a7"
+  "sha256": "649ed28d7d7bd4740cb72a2a5ba654a4aa545ec70293bd93eaa483f5c115f564"
  },
  "tests/test_recruitment_fem_validation.py": {
   "purpose": "Validate the independent FEM checkpoint and recruitment protocol.",
@@ -3868,7 +3868,7 @@
    "test_surface_mapping_public_workflow",
    "test_surface_mapping_invalid_inputs"
   ],
-  "sha256": "dfc3fff4204d49fbc8e0a1ca952927b92b59d1619895b319d2f4a08a67f846f9"
+  "sha256": "d56fafd495b1bf7163497b2c5ee1957dc93dd1ea69e1ce23222d0ab90107753a"
  },
  "examples/surface_mapping_workflow.py": {
   "purpose": "Map repeated fiber cells to an OBJ surface with explicit seam stitches.",
@@ -3908,7 +3908,7 @@
    "test_public_learning_errors_are_clear",
    "test_physical_learning_workflow"
   ],
-  "sha256": "ac2e65fd795c6be01f65cf1da5f93377b4ce25bb5b8aa85cb59bdeb8f88b20ef"
+  "sha256": "6524ea6fed71d24e1243d4b6d9d24d8c27d4343bbe01dcf9cd36dba298eb49c8"
  },
  "examples/physical_learning_workflow.py": {
   "purpose": "Train the shared three-target physical surrogate from an NPZ dataset.",
@@ -3982,7 +3982,7 @@
    "save_log",
    "CurveInverseDesigner"
   ],
-  "sha256": "8ae8f913c1ee6bdb6311fa8c8ad7ced7c2a8224493617996aa0687d79ea35f44"
+  "sha256": "ad8cc197b1ba4fb6e998ab13445fdf6a397847742747551fbb7c655093c8e8f1"
  },
  "tests/test_curve_inverse_cross_end.py": {
   "purpose": "The desktop adapter and public inverse search choose the same candidates.",
@@ -4054,7 +4054,7 @@
    "ConstrainedCycleConfig",
    "ConstrainedCycleIntervention"
   ],
-  "sha256": "f5469833d9bb97dd01845dd1b22022d1365acb878f603e28e68ecb7ef8c4b379"
+  "sha256": "e07fc06eecb05f66cfb2cdd081f29b0f2d9c57c36b5fa3ed5ceb959a4fe9b06b"
  },
  "fibernet/analysis/snapshot_features.py": {
   "purpose": "Structure feature extraction for fiber networks (pure numpy).",
@@ -4098,7 +4098,7 @@
    "test_snapshot_feature_public_input_budgets",
    "test_public_graph_and_real_example_schema"
   ],
-  "sha256": "fae858a931d4524281addfeac863b5148daf57b8977c19ca85ce1d0380d2daa7"
+  "sha256": "29a49e3aa96e24e6f7d9e8f1b0d5010f280baf9a2ff8b1d4a64c835fd028ba97"
  },
  "scripts/make_intervention_media.py": {
   "purpose": "Render a source-backed route-preserving deletion comparison for the local homepage.",
@@ -4130,7 +4130,7 @@
   "symbols": [
    "AICycleSelector"
   ],
-  "sha256": "46baeaddb5867f5a85d7fb34df63e3ce0e6631f2b69342d203765bdd3df7072f"
+  "sha256": "f61881e50b30eef1d212f094e7d6092d3906c11f8d9c15f4a74aa6dcc6fc8a62"
  },
  "tests/test_fem_parallel_contract.py": {
   "purpose": "Public beam FEM retains parallel-fiber mechanics and honest summaries.",
@@ -4141,7 +4141,7 @@
    "test_fem_uses_actual_radius_and_signed_stretch",
    "test_direct_beam_stiffness_defaults_to_independent_edges"
   ],
-  "sha256": "6f03048b7cde1f1dda49fefacad0c52cf880ff93e33214c77afd3d8e444669fa"
+  "sha256": "d7498b575bfbe8e6b32cb43d85db22a71272aa66a82f10c5ca2760f1679b326c"
  },
  "tests/test_independent_fem_cycle_intervention.py": {
   "purpose": "Independent beam-FEM cycle screening is bounded and resumable.",
@@ -4149,7 +4149,7 @@
   "symbols": [
    "test_independent_fem_resume_and_matched_grips"
   ],
-  "sha256": "4a57f351109afe08ac00a546b94beaa045a2f8036f9f3c68293c0d74bb25bef0"
+  "sha256": "7778b4d55112ea26ace72121eded689a9bf69034af968cf59727d1ef3c920ee3"
  },
  "benchmarks/independent_fem_cycle_intervention.py": {
   "purpose": "Matched-grip, matched-stretch linear beam-FEM check of cycle deletions.",
@@ -4157,7 +4157,7 @@
   "symbols": [
    "IndependentFemCycleCheck"
   ],
-  "sha256": "fc05982c772f81338d956712b213ca73c151ae3a509ee83a6f8f8b0fa2913f51"
+  "sha256": "0e69f94aef79fd56bf680c9bd72929add5b8bd8a6464bf4f0b3ab9a1b1251486"
  },
  "fibernet/gen/custom_cells.py": {
   "purpose": "Portable, bounded custom-cell specifications compatible with FiberScope JSON.",
@@ -4192,7 +4192,7 @@
   "symbols": [
    "CycleCheckpointRefresh"
   ],
-  "sha256": "0f47218be832906cb8b1f606efb4b6026eca3fb8f34cbb5ac26522d644906fa0"
+  "sha256": "4ae51ae3eef450cbbb618ad168a7d27ac9edc7d1ba1095e6d6c4c12e2bb6da51"
  },
  "scripts/seal_local_candidate.py": {
   "purpose": "Record hashes for the tested local wheel and Windows APP folder.",
@@ -4225,5 +4225,13 @@
    "PublishPreflight"
   ],
   "sha256": "116922cbc7c8542ae124f81c88b1d64ef874a61fe9caf8db2ea0ddd1d91fa664"
+ },
+ "scripts/refresh_fem_checkpoint.py": {
+  "purpose": "Refresh the corrected independent FEM screen only after exact case comparison.",
+  "status": "active",
+  "symbols": [
+   "FemCheckpointRefresh"
+  ],
+  "sha256": "f14ae6ce3ef64cbb1f7c3b1201692ac09733cd3006c7e980f5bd38d5a6d52abc"
  }
 }

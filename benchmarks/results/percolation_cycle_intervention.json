@@ -23,7 +23,7 @@
   "engine_hash": "fc5e7bb3a08d",
   "source_sha256": "2c32b8761c63b0fe5968dba79a7b90b0c5238e6e05a2fccb2b2cde88d12f8822",
   "matched_source_sha256": "1fcfcf723b7d626634e8a40401dbe0920d46fcba4cf08dae97e995db3bbbe61b",
-  "pilot_source_sha256": "d1cef9677579810eca94f5feab8987e7c0a570db90188cb44781e3e0468d3e70",
+  "pilot_source_sha256": "b4cb3e9253df078806caedeede77f521b6b9a03f134bd333f08bab8948b25a0b",
   "analysis_source_sha256": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33",
   "cases": {
     "square": {

@@ -1,8 +1,5 @@
 """Public beam FEM retains parallel-fiber mechanics and honest summaries."""
 import numpy as np
-import pytest
-
-pytest.importorskip("torch")
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.easy import simulate

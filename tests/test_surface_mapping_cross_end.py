@@ -15,8 +15,8 @@ from fslab.surface_mapping import map_cells as app_map_cells
 
 
 @pytest.mark.parametrize("unit, expected", [
-    ("square", ((2461, 3), (3408, 2), "d66dad1f8c534833", "24103625862746e8")),
-    ("hexagon", ((3852, 3), (4704, 2), "34a30d33c3221c40", "0a2ed82276547217")),
+    ("square", ((2461, 3), (3408, 2), "d66dad1f8c534833", "3e9d2497fa8e1bde")),
+    ("hexagon", ((3852, 3), (4704, 2), "34a30d33c3221c40", "db0bbae331ed9aa5")),
 ])
 def test_surface_map_matches_app_and_old_output(unit, expected):
     path = ROOT / "FiberScope" / "assets" / "obj" / "demo_pyramid.obj"
@@ -31,7 +31,7 @@ def test_surface_map_matches_app_and_old_output(unit, expected):
     assert np.array_equal(edges, app_edges)
     assert (points.shape, edges.shape) == expected[:2]
     assert hashlib.sha256(points.tobytes()).hexdigest()[:16] == expected[2]
-    assert hashlib.sha256(np.asarray(edges, int).tobytes()).hexdigest()[:16] == expected[3]
+    assert hashlib.sha256(np.asarray(edges, dtype="<i8").tobytes()).hexdigest()[:16] == expected[3]
     assert config.source_faces == config.mapped_faces == 108
 
 

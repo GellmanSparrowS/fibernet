@@ -13,6 +13,7 @@ from pathlib import Path
 
 import networkx as nx
 import numpy as np
+from scipy.integrate import trapezoid
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -49,6 +50,13 @@ class ConstrainedCycleConfig:
 
 
 class ConstrainedCycleIntervention:
+    @staticmethod
+    def geometry_digest(positions, edges):
+        """Hash planar geometry with fixed little-endian float64/int64 dtypes."""
+        xy = np.ascontiguousarray(np.asarray(positions, dtype="<f8")[:, :2])
+        links = np.ascontiguousarray(np.asarray(edges, dtype="<i8"))
+        return hashlib.sha256(xy.tobytes() + links.tobytes()).hexdigest()[:16]
+
     def __init__(self, config=None):
         self.config = config or ConstrainedCycleConfig()
         cfg = self.config
@@ -101,7 +109,7 @@ class ConstrainedCycleIntervention:
             "edges": int(len(edges)),
             "removed_length_fraction": float(removed_length / original_total_length),
             "final_raw_reaction": float(run.force_curve[-1]),
-            "work_proxy": float(np.trapz(run.force_curve, run.strain_levels)),
+            "work_proxy": float(trapezoid(run.force_curve, run.strain_levels)),
             "first_spanning_frame": int(recruited.perc_frame),
             "final_axial_energy": float(run.energies["axial"][-1]),
             "final_bend_energy": float(run.energies["bend"][-1]),
@@ -200,7 +208,7 @@ class ConstrainedCycleIntervention:
         grips = np.union1d(baseline.left_nodes, baseline.right_nodes)
         basis_count, valid_count, length_class, options = self._candidates(
             graph, grips, lengths, early, late, alignment)
-        geometry = hashlib.sha256(xy.tobytes() + edges.tobytes()).hexdigest()[:16]
+        geometry = self.geometry_digest(xy, edges)
         result = {
             "geometry_hash": geometry,
             "baseline": self._measure(baseline, edges, float(lengths.sum()), 0),

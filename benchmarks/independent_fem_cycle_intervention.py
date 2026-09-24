@@ -120,8 +120,7 @@ class IndependentFemCycleCheck:
                     graph = self.study._graph(unit, seed, direction)
                     positions = np.asarray(graph.node_positions(), float)
                     edges = np.asarray(graph.edge_array(), int)
-                    digest = hashlib.sha256(
-                        positions.tobytes() + edges.tobytes()).hexdigest()[:16]
+                    digest = self.study.geometry_digest(positions, edges)
                     original = reference["cases"][key]
                     if (digest != original["geometry_hash"] or
                             original["max_material_class_spread"] > 1e-9):

@@ -3,7 +3,10 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple
-import torch
+try:
+    import torch
+except ImportError:  # NumPy/SciPy beam solvers also work in the base install.
+    torch = None
 
 class SparseBeamFrameFEM:
     """Sparse matrix implementation for beam frame FEM (scalable to large structures)"""
@@ -147,15 +150,15 @@ class SparseBeamFrameFEM:
             moments: (n_unique_edges, 2) bending moments at each end
         """
         # Convert to numpy if needed
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
-        if isinstance(fixed_nodes, torch.Tensor):
+        if torch is not None and isinstance(fixed_nodes, torch.Tensor):
             fixed_nodes = fixed_nodes.numpy().tolist()
         
         # Build stiffness matrix
@@ -241,15 +244,15 @@ class SparseBeamFrameFEM:
                  damping=1e-6, deduplicate=False):
         """Solve 3D beam frame problem (6 DOF per node)"""
         # Convert to numpy if needed
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
-        if isinstance(fixed_nodes, torch.Tensor):
+        if torch is not None and isinstance(fixed_nodes, torch.Tensor):
             fixed_nodes = fixed_nodes.numpy().tolist()
         
         # Deduplicate edges

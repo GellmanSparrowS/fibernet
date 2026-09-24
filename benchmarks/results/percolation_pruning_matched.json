@@ -21,7 +21,7 @@
   },
   "engine_version": "e2v12",
   "engine_hash": "fc5e7bb3a08d",
-  "study_source_sha256": "45098aa403301cf0cf2d622f623eb18a13262217ceeb2d5a864d066dcf2d2f61",
+  "study_source_sha256": "bfee91fe6ae70f5443dad8902cb288517f10f488507b14117aca8c533721b185",
   "cases": {
     "square": {
       "baseline": {

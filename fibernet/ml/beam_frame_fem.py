@@ -12,7 +12,10 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple, Optional
-import torch
+try:
+    import torch
+except ImportError:  # NumPy/SciPy beam solvers also work in the base install.
+    torch = None
 
 
 class BeamFrameFEM:
@@ -194,13 +197,13 @@ class BeamFrameFEM:
             node_stress: (n_nodes,) max stress at each node
             reactions: (n_nodes, 3) reaction forces/moments
         """
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if forces is not None and isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
         
         if fixed_nodes is None:
@@ -298,11 +301,11 @@ class BeamFrameFEM:
           3. Update node positions
           4. Repeat
         """
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy().copy()
         else:
             node_pos = node_pos.copy()
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index_np = edge_index.numpy()
         else:
             edge_index_np = edge_index
@@ -388,13 +391,13 @@ class BeamFrameFEM:
                  prescribed_disp=None,
                  damping=1e-6, deduplicate=False):
         """Solve 3D beam frame with corrected stress computation."""
-        if isinstance(edge_index, torch.Tensor):
+        if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
-        if isinstance(node_pos, torch.Tensor):
+        if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy()
-        if isinstance(radii, torch.Tensor):
+        if torch is not None and isinstance(radii, torch.Tensor):
             radii = radii.numpy()
-        if forces is not None and isinstance(forces, torch.Tensor):
+        if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
         
         if fixed_nodes is None:
