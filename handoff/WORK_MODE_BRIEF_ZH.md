@@ -1,6 +1,6 @@
 # FiberNet–FiberScope：Work 模式交接与拟投稿主线
 
-本文件供后续 Work 模式拼图、复跑、整理引用和撰文。它是任务书和证据索引，不是投稿手稿。当前代码属于原有 `fibernet` 仓库的 4.2.0 开发分支；FiberScope 为同仓库 APP。Python 3.10 库测试 368 通过、19 跳过，APP 本地及 GitHub Windows CI 测试均为 25/25；本地 wheel 隔离安装及冻结 APP 的 Windows 可携带性门槛通过。库端源码测试在 GitHub CI 的 Linux、macOS、Windows 与 Python 3.9–3.12 共 12 个组合通过。尚无第三方机器安装、Linux/macOS 冻结 APP、材料实验或打印后性能验证。研究数据与图不得超出这些条件解释。
+本文件供后续 Work 模式拼图、复跑、整理引用和撰文。它是任务书和证据索引，不是投稿手稿。当前代码基于原有 `fibernet` 仓库的 4.2.0 正式版本，FiberScope 为同仓库 APP；[PyPI 4.2.0](https://pypi.org/project/fibernet/4.2.0/) 与 [FiberScope 3.1.0 Windows EXE](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0) 已发布。Python 3.10 库测试 368 通过、19 跳过，APP 本地及 GitHub Windows CI 测试均为 25/25；已发布 wheel 的隔离安装及远端冻结 APP 的启动、依赖、可携带性门槛通过。库端源码测试在 GitHub CI 的 Linux、macOS、Windows 与 Python 3.9–3.12 共 12 个组合通过。尚无第三方机器安装、Linux/macOS 冻结 APP、材料实验或打印后性能验证。研究数据与图不得超出这些条件解释。
 
 ## 建议中心问题
 
@@ -22,8 +22,8 @@
 
 ## 主图建议与素材位置
 
-1. **共同数据对象与跨端任务。** 节点、独立平行边、半径、参考/实际坐标、Euler 路线和 APP 参数回读；展示四种结构及真实英文界面。素材：`manuscript/FiberNet_Methods_Figures_Working.pptx` 第 1 页、`docs/media/spectrum_four_topologies_peak.svg`。
-2. **可执行软件与一致性门槛。** API 任务矩阵、APP/库同参数测试、40 数值黄金数组、wheel/冻结 APP 验收；给出测试环境和排除范围。素材：PPT 第 2 页、`docs/CAPABILITY_AUDIT_2026-09-24.md`、`release_candidates/2026-09-24/manifest.json`（本地）。
+1. **共同数据对象与跨端任务。** 节点、独立平行边、半径、参考/实际坐标、Euler 路线和 APP 参数回读；展示四种平面结构、octet/diamond/gyroid 三维图及真实英文界面。素材：`manuscript/FiberNet_Methods_Figures_Working.pptx` 第 1 页、`docs/media/spectrum_four_topologies_peak.svg`、`docs/media/three_dimensional_topologies_final.svg`。三维画廊是固定图的相机旋转，不代表三维力学时序。
+2. **可执行软件与一致性门槛。** API 任务矩阵、APP/库同参数测试、40 数值黄金数组、wheel/冻结 APP 验收；给出测试环境和排除范围。素材：PPT 第 2 页、`docs/CAPABILITY_AUDIT_2026-09-24.md`、本 ZIP 中的 `validation/` 发行包与 `WORK_MODE_FILES_SHA256.json`。
 3. **动态招募的方向/阈值。** 复杂 3×3 网络、时序、阈值对照与不同方向；图注明确“应变阈值贯通”。素材：PPT 第 3 页、`docs/media/tensile_recruitment_kagome_final.svg`、`docs/media/directional_recruitment_hexagon_final.svg`。
 4. **受约束干预的模型边界。** 选环前后图、同长度预算、保留闭合路线，以及 24 配置逐点简化模型/独立梁配对；优先采用 PPT 第 5 页，旧第 4 页简化模型均值可作子图/补图。完整配对见 `benchmarks/results/independent_fem_cycle_intervention.json`。不要把“删边收益”作为标题。
 
@@ -32,11 +32,13 @@
 ## Work 模式执行顺序
 
 1. 解压后从仓库根安装 `python -m pip install -e .`；先跑 `python -m examples.custom_cell_workflow --output-dir demo_custom_cell` 和 `python -m examples.reduced_recruitment_workflow --output-dir demo_stretch`。长任务使用脚本已有原子检查点；不要把未完成 JSON 当成完整结果。
-2. 用 `python scripts/check_homepage_media.py` 审计七段主页动图。用 `python manuscript/scripts/build_figures_ppt.py` 重建五页 PPT，对照同名 JSON 的源文件 SHA；如需换算正式版心，直接修改生成脚本的字号和布局参数并在 PowerPoint 渲染检查。
+2. 用 `python scripts/check_homepage_media.py` 审计八段主页动图。用 `python manuscript/scripts/build_figures_ppt.py` 重建五页 PPT，对照同名 JSON 的源文件 SHA；如需换算正式版心，直接修改生成脚本的字号和布局参数并在 PowerPoint 渲染检查。
 3. 优先分析 `benchmarks/results/recruitment_sensitivity.json`、`constrained_cycle_intervention.json`、`ai_cycle_selector.json`、`independent_fem_cycle_intervention.json`。保留每配置的基几何 ID、方向、模型和策略，不要只画拓扑均值。补基几何聚类区间，并呈现负结果。
 4. 写作前逐句核查外部文献与原始链接；已有中文工作稿 `manuscript/ZH_METHODS_DRAFT.md` 可当旧材料索引，不直接作为最终手稿。代码方法定义见 `docs/METHODS_*.md`；引用只支持它实际描述的操作。
 5. 投稿前取得第三方机器/平台安装、独立结构外推、求解器收敛与力学参数敏感性、材料实验或可信外部求解器对照。没有这些数据时，结论限于软件计算一致性、可复算研究流程及模型敏感性。
 
+公开 EXE 的独立下载校验可运行 `python scripts/check_public_release.py`。脚本支持断点续传，校对 GitHub 资产摘要、`SHA256SUMS.txt`、ZIP CRC 与包内 EXE；下载约 102 MB，默认存于 `release_candidates/2026-09-27/`。
+
 ## 包内定位
 
-压缩包包含完整可运行源码、测试、示例、研究 JSON、方法文档、七段 GIF/SVG、五页可编辑 PPT、本交接文件和文件 SHA 清单。冻结 APP 的 266 MB 二进制留在本机已验收目录，压缩包只携带 APP 源码和资产；PyPI/APP 正式发布尚未执行。开源仓库保留原有 Git 历史，ZIP 用于 Work 模式移动，不作为版本控制替代。
+压缩包包含完整可运行源码、测试、示例、研究 JSON、方法文档、八段 GIF/SVG、五页可编辑 PPT、本交接文件、已发布 PyPI wheel/sdist 和文件 SHA 清单。冻结 APP 二进制由 [GitHub Release](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0) 单独分发，压缩包只携带 APP 源码和资产。开源仓库保留原有 Git 历史，ZIP 用于 Work 模式移动，不作为版本控制替代。

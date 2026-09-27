@@ -3,13 +3,13 @@
   "purpose": "FiberNet — Unified framework for fiber networks, lattices, and metamaterials.",
   "status": "active",
   "symbols": [],
-  "sha256": "baf32910115b6bca5fef23ababe32daeb468f2d886d8316ea4b7cf6861994fea"
+  "sha256": "8981f61b8080abc843cdf90513a5164f06654a0430e981fe6b19633388dbb244"
  },
  "fibernet/analysis/__init__.py": {
   "purpose": "Analysis tools for FiberNet.",
   "status": "active",
   "symbols": [],
-  "sha256": "53227ac285b028bde2bfbea0453b70bb49d9c1682aedec70a8597b3cc785f92f"
+  "sha256": "70c847e6ac99f7d5f2b7ad0a90a2da7c7fa44b11e6947c3660611e7f70edb4de"
  },
  "fibernet/analysis/_archived/advanced.py": {
   "purpose": "Advanced analysis tools for fiber networks.",
@@ -260,7 +260,7 @@
    "SEdge",
    "StructureGraph"
   ],
-  "sha256": "2e3d1207567ae50f4cacff2121b6b3515bebc71a214777273d9e74c1a232b1a8"
+  "sha256": "79004f2275787fee77668a4200cc0a41d900173ed5cc5d89569b9a5b96120d85"
  },
  "fibernet/core/tiling.py": {
   "purpose": "Tiling and welding engine for StructureGraph.",
@@ -337,7 +337,7 @@
    "train_rl",
    "batch_simulate_from_json"
   ],
-  "sha256": "c0cf9e06d192399949bf6f0fa0807c9ca1db19414a1ea4f53123009e6bacd745"
+  "sha256": "937180615f224dedf3e0eb8483df12ac7c60d3ab433626667398ba2a7b1b9f22"
  },
  "fibernet/examples/__init__.py": {
   "purpose": "__init__",
@@ -357,7 +357,7 @@
   "purpose": "Fiber network generators.",
   "status": "active",
   "symbols": [],
-  "sha256": "7aa22fbafe59018f8cff0716311e1d7da2f3d567a1e276e7f62e2c47e3b331e0"
+  "sha256": "3e6faf33a9f3f51e29e381b47e0bda847dd55eeb352647a9295d663f137b2839"
  },
  "fibernet/gen/_fixes.py": {
   "purpose": "Patches for known generator bugs.",
@@ -882,7 +882,7 @@
   "symbols": [
    "__getattr__"
   ],
-  "sha256": "c3e1dfcea7f98fd89badd6f9d9cdacc6a2eb77070aa5a866bd579efcf6d7ba6a"
+  "sha256": "2a6b5401ecc44e5beb84b65b681066cb3edb3bbb1eb5b920bbde8a7d888f7f35"
  },
  "fibernet/ml/_archived/dataset.py": {
   "purpose": "Dataset Generation and Management for ML Training",
@@ -943,7 +943,7 @@
   "symbols": [
    "BeamFrameFEM"
   ],
-  "sha256": "fb8d65e802d9dc7affdede3e48ab52bebddfc0f25d01a3358d5a677bbafc61c6"
+  "sha256": "1e34ab0e2a2a51612db8817416b7fbdeaa63c78318cedb02c1b8610feaf0639f"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -951,7 +951,7 @@
   "symbols": [
    "SparseBeamFrameFEM"
   ],
-  "sha256": "0bb403900ef52284451dcfaae38e7e33fb32d521e245868fc46d7c0baeff4909"
+  "sha256": "ea886b2cc6d16fe13f733f4b13a9d9baa38c887585ce5ce229c6dcfb8bfc529e"
  },
  "fibernet/ml/beam_frame_fem_v6.py": {
   "purpose": "Backward-compatibility shim. Use fibernet.ml.beam_frame_fem instead.",
@@ -1056,7 +1056,7 @@
   "symbols": [
    "_require_torch"
   ],
-  "sha256": "0da6906e197bf65a4fee6161d133b152fc085f5b8a267b28c3de1964215d002c"
+  "sha256": "fd12a80fb45dea59967133eee83dbaf8864aab48f95d0b705e2c7870bede0027"
  },
  "fibernet/ml/models.py": {
   "purpose": "PyTorch Model Zoo for FiberNet ML Pipeline.",
@@ -1308,7 +1308,7 @@
   "purpose": "Simulation engines for FiberNet.",
   "status": "active",
   "symbols": [],
-  "sha256": "21af5e7e9b621aac1fc2aacc7976f6b9c16887b06fbe4f3a4cb90866b8d5666a"
+  "sha256": "148434995951a1779488246dad2ba4196615c8fb2937a3e72324c9b998a78f01"
  },
  "fibernet/sim/_archived/acoustic.py": {
   "purpose": "Acoustic Wave Propagation Simulation",
@@ -1686,7 +1686,7 @@
    "_element_data",
    "TaichiEngine"
   ],
-  "sha256": "60b5145f4945cf9d60cf40493c93fd0b8dd61076030baec6d1c52bc1cea63daf"
+  "sha256": "c610d42339ed566c326bfbbc24796220211f582aa09a90518cbcf8413e43e82d"
  },
  "fibernet/sim/fem.py": {
   "purpose": "BeamFEM has been removed. All simulation now uses TaichiEngine (mass-spring dynamics).",
@@ -1854,7 +1854,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "f0cd487d64f94a97191b296737dbb18e9742a4bb14d08649b9a60ac6c69fcfa3"
+  "sha256": "d0ea0be8b12792020b3002d20796e4e6692f7570e746435afe19e56e040c791c"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -2842,7 +2842,7 @@
    "TestConservativeNN",
    "TestNewModuleIntegration"
   ],
-  "sha256": "65478929d4fd04545b21a34a531d4e3049c8d96fefe3be5dc1d526c98f03bc8c"
+  "sha256": "b483842b0fa5ea8d440699d04275aa07f7672792acbcb54c3584738bce139f72"
  },
  "tests/test_config.py": {
   "purpose": "Tests for YAML-based configuration system.",
@@ -2919,7 +2919,7 @@
    "test_default_deduplicates",
    "test_parallel_roundtrip"
   ],
-  "sha256": "781e2af47d80202f29f91cf9957a1f0a2cdd9a993394c2b2075f5c5d1089146e"
+  "sha256": "08622b4267687dc61b665009f3daa92f04705e54d3ef08a54046a3c07ec941ce"
  },
  "tests/test_units.py": {
   "purpose": "Tests for unit conversion utilities.",
@@ -3015,7 +3015,7 @@
   "symbols": [
    "CodeRegistry"
   ],
-  "sha256": "b0ceaa6e21837d9aa00d6ec58957ed1069b5db7846e394252b36378888ddddc1"
+  "sha256": "e2891711288e0652795a78af840c745152a424b827e20cce5bd30c556c0eeadb"
  },
  "scripts/verify_readme.py": {
   "purpose": "Verify all README code blocks work correctly.",
@@ -3506,7 +3506,7 @@
   "symbols": [
    "test_fem_quickstart"
   ],
-  "sha256": "e28ed965a69fa6cb8b2a5e6a797534ba11eecd3721ba27d0d2d11fd2837d7978"
+  "sha256": "ea8c5e9dcbc67544e9a084ae84b7dd17749d454706d255c8c8edcf99fc2b993e"
  },
  "tests/test_release_contract.py": {
   "purpose": "Check that the public package reports its packaged version.",
@@ -3514,7 +3514,7 @@
   "symbols": [
    "test_version_matches_package_metadata"
   ],
-  "sha256": "ffda958c28ac94cd9a376a10bc09bdb607ae14f9faf3ebbdddcb8a3f8ffab616"
+  "sha256": "9f4ce1bb254e68296884311cf46586a41bfde7f22f98d11455c83166798a9970"
  },
  "benchmarks/percolation_pruning_pilot.py": {
   "purpose": "Small, resumable intervention audit for thresholded tensile recruitment.",
@@ -3523,7 +3523,7 @@
    "PilotConfig",
    "PruningPilot"
   ],
-  "sha256": "b4cb3e9253df078806caedeede77f521b6b9a03f134bd333f08bab8948b25a0b"
+  "sha256": "b2ad3b060a908effa69f40e04022e8622060e1641edb788053e75d4359144544"
  },
  "fibernet/analysis/tensile_recruitment.py": {
   "purpose": "Thresholded tensile-strain recruitment on a network trajectory.",
@@ -3536,7 +3536,7 @@
    "analyze_tensile_recruitment",
    "compute_percolation"
   ],
-  "sha256": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33"
+  "sha256": "d07de49e170122e4e459d948ebd10509b3620831f2dc991e365bbd7710e12c89"
  },
  "tests/test_tensile_recruitment.py": {
   "purpose": "Public API and APP compatibility checks for tensile recruitment.",
@@ -3547,7 +3547,7 @@
    "test_invalid_input_is_rejected",
    "test_app_import_uses_same_calculation"
   ],
-  "sha256": "077169cd7cdb950152fe7c5e4180b2bba0775c994b7ec97608660aad5763c4dc"
+  "sha256": "3c77686fb605c6c9c85428b4e18192ad6ca3eb90a0d453fdf7879f7e963a4ee5"
  },
  "examples/tensile_recruitment_quickstart.py": {
   "purpose": "Library-only example: python -m examples.tensile_recruitment_quickstart.",
@@ -3555,7 +3555,7 @@
   "symbols": [
    "RecruitmentExample"
   ],
-  "sha256": "6bd1b2d3c4433a683797ab4bd582fde73ecf1f4d34b8ec2abcc03c41fac9f6d8"
+  "sha256": "e26d431bc567fc807845e3bfa517aa8f617c1999ccbfc1998bacd41063decb84"
  },
  "scripts/make_homepage_media.py": {
   "purpose": "Render reproducible local homepage media from the shared science core.",
@@ -3563,7 +3563,7 @@
   "symbols": [
    "HomepageMedia"
   ],
-  "sha256": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209"
+  "sha256": "c32f11677c5bb9c9bf685ad47a323e352a7785e58fdbc3f8c63fc6dcf0ff5012"
  },
  "tests/test_cycle_intervention.py": {
   "purpose": "Mechanical graph identity checks for compacted Euler-cycle deletions.",
@@ -3571,7 +3571,7 @@
   "symbols": [
    "test_ring_cycle_compaction_preserves_remaining_fibers"
   ],
-  "sha256": "0fb530d7bbfeb8de076f1bee37f99d0eddfc5a1af1e1b0336233e9c893430489"
+  "sha256": "926876b8ea21b765f6f0141faedb46d68c621a29479015a4ad4e2684819b459a"
  },
  "tests/test_pruning_matching.py": {
   "purpose": "Check that the intervention comparison matches physical edge length.",
@@ -3579,7 +3579,7 @@
   "symbols": [
    "test_ring_interventions_match_length_and_edge_count"
   ],
-  "sha256": "5c58cce7e87243db6fad2738497acad4598abbfd53f2b31b432db8ac39b2ea1b"
+  "sha256": "4c4e23471c3d501783b5f63c2d2d7307345947b472e48f9460898c98062212e8"
  },
  "benchmarks/percolation_cycle_intervention.py": {
   "purpose": "Screen and rerun even-degree cycle removals with compacted node IDs.",
@@ -3588,7 +3588,7 @@
    "CycleConfig",
    "CycleInterventionStudy"
   ],
-  "sha256": "2c32b8761c63b0fe5968dba79a7b90b0c5238e6e05a2fccb2b2cde88d12f8822"
+  "sha256": "410f8ff58a18f6aeda803066037f3205cb23028beece9806bb3353b9bb66374b"
  },
  "benchmarks/percolation_pruning_matched.py": {
   "purpose": "Length-stratified, resumable pruning screen with independent reruns.",
@@ -3597,7 +3597,7 @@
    "MatchedConfig",
    "MatchedPruningPilot"
   ],
-  "sha256": "1fcfcf723b7d626634e8a40401dbe0920d46fcba4cf08dae97e995db3bbbe61b"
+  "sha256": "4824a0cbfa18eb47eb6b9ddec6d9743604cab22e3a36bff1250209fed2f059bf"
  },
  "tests/test_import_order.py": {
   "purpose": "The desktop adapter and public package must coexist in one Python process.",
@@ -3607,7 +3607,7 @@
    "test_app_first",
    "test_library_first"
   ],
-  "sha256": "8d7a834b56ec420af427f8b76681ce16b7d570800bbfb94562c3c967e47a93a5"
+  "sha256": "c6bd7c45c5c44b6b7bd3d23e9470662185bc547d0c8cda1ab48ccfddeb22a966"
  },
  "fibernet/gen/spectrum.py": {
   "purpose": "Dimensionless reference-fiber displacement profiles for network design.",
@@ -3618,7 +3618,7 @@
    "fit_spectrum",
    "rotated_displacements"
   ],
-  "sha256": "6c0ad37a24c0d38671c06aa2149aab54cd6472d7bc0ca3ad2636edd154c55e19"
+  "sha256": "3b7d93171015fd6960ceed4ff762806d3679a55fe1699a506afde19a006825ab"
  },
  "tests/test_spectrum_profile.py": {
   "purpose": "Cross-interface reference-fiber displacement semantics.",
@@ -3628,7 +3628,7 @@
    "test_app_reexports_shared_profile_functions",
    "test_invalid_profile_rejected"
   ],
-  "sha256": "b56a78276fff7dab2369f4c713e285f5031c266c7fc0dee226aeebd1988b1d05"
+  "sha256": "03b0b867a858ba7491d4824543eeedc33820f49e5ef741ac52f1d0c33267df18"
  },
  "scripts/check_homepage_media.py": {
   "purpose": "Verify local animated homepage assets without displaying the images.",
@@ -3636,7 +3636,7 @@
   "symbols": [
    "MediaAudit"
   ],
-  "sha256": "d87c6bdbf90f4ca5e18b8a153e60af08ff53dd720f4123fdc812eaed14556aef"
+  "sha256": "4392a18fe3cada99ec46464dcc35a20de825e249954f576e0d1a341388ffc3c3"
  },
  "tests/test_open_source_workflow.py": {
   "purpose": "Verify the documented public API journey and its saved artifacts.",
@@ -3645,7 +3645,7 @@
    "test_documented_workflow",
    "test_batch_fem_columns_and_invalid_backend"
   ],
-  "sha256": "4234eb893635bf996e472ba20c41c994807a072cdb19212f2f2b2325d2520d5f"
+  "sha256": "de57aee065ffb00293ddbb3df69003d3b7f3bab326203219c3c8ebbce139701f"
  },
  "examples/open_source_workflow.py": {
   "purpose": "Runnable FiberNet workflow from graph generation to tensile recruitment.",
@@ -3653,7 +3653,7 @@
   "symbols": [
    "OpenSourceWorkflow"
   ],
-  "sha256": "ae2d6aaf594aa39c2a2329d8232df714c8e2444367271957797e4c5efb236db8"
+  "sha256": "969c949a03e37754024b49f1b966e75c8bb6e26511cc8f2d378db038f2b33f80"
  },
  "fibernet/gen/cell_cycles.py": {
   "purpose": "Reference-space closed fiber walks; geometric crossings never weld fibers.",
@@ -3661,7 +3661,7 @@
   "symbols": [
    "closed_cell_edges"
   ],
-  "sha256": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70"
+  "sha256": "4ff2415eef0a861737bce42f4e2a6be1abd6cae863ac5db100e4c618e4dba299"
  },
  "fibernet/gen/cell_rules.py": {
   "purpose": "Deterministic cell transforms and bounded graph assembly.",
@@ -3672,7 +3672,7 @@
    "expand_graph",
    "graph_health"
   ],
-  "sha256": "3935b24ee0048d8694f1f4737d991ab2e3b5a7a694bb6a3915e013a30c6d474d"
+  "sha256": "a62be7975472612b1d80a221272df64bf756ff3afe2581a5f0ba8fd3c2e2d141"
  },
  "fibernet/gen/manufacturing.py": {
   "purpose": "Canonical planar multigraph compilation and continuous Euler routes.",
@@ -3688,7 +3688,7 @@
    "manufacturable_graph",
    "compile_surface"
   ],
-  "sha256": "c8b9a5827456886b4a181ac000d3e818d32258a812e68285c256c3cb243badea"
+  "sha256": "2f54cab763cf528f03f166df63b1688d96ad8ef7e1e5860923131bac34c104c6"
  },
  "fibernet/gen/surface_geometry.py": {
   "purpose": "Pure quad mapping and bounded surface coarsening helpers.",
@@ -3699,7 +3699,7 @@
    "coarsen_quads",
    "reduce_triangles"
   ],
-  "sha256": "6194bc5ee501186d08c96554a0ec0b77e030346650d4632cc59789c217ce6668"
+  "sha256": "114bcd426632b5119c693106c377582d7d309e42a62f510f35eb5abc51c0a9d4"
  },
  "tests/test_manufacturing_cross_end.py": {
   "purpose": "Compare independent library and desktop manufacturing topology inputs.",
@@ -3710,7 +3710,7 @@
    "test_surface_rejects_invalid_indices",
    "test_documented_manufacturing_workflow"
   ],
-  "sha256": "54019c93d523f64a4f1e5b7652c53b515ad80a2073563e69bf9ea3a52de9f929"
+  "sha256": "221ede9b6319b2b0c1dae08529272ed2e6176bb6d7708929abc797fde9592059"
  },
  "scripts/refresh_study_checkpoints.py": {
   "purpose": "Recompute resumable study checkpoints and replace only identical case data.",
@@ -3718,7 +3718,7 @@
   "symbols": [
    "CheckpointRefresh"
   ],
-  "sha256": "cf41dafe489495bf9dcaab9b3791d761f4b5f8916ac9d891fd13ab6c2bb3e418"
+  "sha256": "c5ca6324077da0847bc6b3852eb937d93d8715b95d0460300ee611aa9832ac9c"
  },
  "examples/manufacturing_workflow.py": {
   "purpose": "Independent planar and curved-route example for FiberNet.",
@@ -3726,7 +3726,7 @@
   "symbols": [
    "ManufacturingWorkflow"
   ],
-  "sha256": "fb74c7c7d07af8f402aea2cd3f7f9222b0e3f0b9fb0c691231fa9a98462c295b"
+  "sha256": "57af296cb61819a5658de92ba919badf2351410de01acfb2e3f3af2ddcd7088f"
  },
  "fibernet/gen/solid_export.py": {
   "purpose": "Millimetre fiber solids, bounded meshing, atomic STL/3MF and route exports.",
@@ -3739,7 +3739,7 @@
    "export_solid",
    "export_route"
   ],
-  "sha256": "1140fdbeb084c22164dcbe5ec32e3aefefc7fec484ad0e326ad65ad426dd2cc8"
+  "sha256": "5b77e8d7d4760bd87e46f91f65c32d359505d608bdf8631b5283cb280a9f08a5"
  },
  "fibernet/gen/tube_solid.py": {
   "purpose": "Analytic polygonal cylinders and round joints with manifold Boolean union.",
@@ -3755,7 +3755,7 @@
   "symbols": [
    "test_library_stl_3mf_and_route"
   ],
-  "sha256": "7577cdfa77e88c2ff288b9007d390a4ba8b3bd0d2bf4060091d5f38d7980a636"
+  "sha256": "559b877313dad193088bd88f08b2cfa75ee4a437f558225f4d6ce00379fba1ad"
  },
  "examples/solid_export_workflow.py": {
   "purpose": "Generate a bounded fiber solid and export STL, 3MF, and route CSV.",
@@ -3763,7 +3763,7 @@
   "symbols": [
    "SolidExportWorkflow"
   ],
-  "sha256": "1ccf5ce323e62584a9d110aa4c76f11f69f2ff721c2969427682052f202adcd6"
+  "sha256": "595a0fcdf171dfd5bde18ae5f51f71d357235b77e560664697f47a47c348cc89"
  },
  "fibernet/gen/obj_import.py": {
   "purpose": "Bounded OBJ import for mapped manufacturing surfaces.",
@@ -3779,7 +3779,7 @@
   "symbols": [
    "triangulate"
   ],
-  "sha256": "2c8c724db16430e358b07c1c05b33fd0f23bde4c25326b7d3f34f9487165c2a0"
+  "sha256": "17855317c1e6326de7d7a319125e2335ef1a71620e3a2f2bf9795cd705a8e1b0"
  },
  "tests/test_surface_obj_import.py": {
   "purpose": "Public OBJ import should match the APP and reject invalid geometry.",
@@ -3789,7 +3789,7 @@
    "test_invalid_obj_indices",
    "test_obj_to_closed_route_workflow"
   ],
-  "sha256": "576907efe2fe8fd136b02bcd488de13885d79c51e99ef4967600d4895a28daa8"
+  "sha256": "86d12394c5fe6424af9a4563cde1e305839bd34d667f8b9abda5ae6370f4cba8"
  },
  "examples/obj_surface_workflow.py": {
   "purpose": "Import an OBJ and compile a continuous curved fiber route.",
@@ -3797,7 +3797,7 @@
   "symbols": [
    "ObjSurfaceWorkflow"
   ],
-  "sha256": "a854e496e1c764c79a8f9a3124fd40b356431a112ec859871357d6d4d22ba1fc"
+  "sha256": "8f0a90b044498a9e1b3c31fbfd4cbb1f985735c4134bb1650e4a7b04ab72784c"
  },
  "tests/test_recruitment_sensitivity.py": {
   "purpose": "Check case identity, loading direction and safe resumable output.",
@@ -3805,7 +3805,7 @@
   "symbols": [
    "test_sensitivity_resume_and_direction"
   ],
-  "sha256": "8582f9c0a924fd62cc9be7646df164f6aafc45df8c999eeea2bfea3f897ef6a0"
+  "sha256": "71ece24d63abfeacdc2c08b97137eb84e32c1e4a3258c07ae9c5ec73245eb5d7"
  },
  "benchmarks/recruitment_contact_control.py": {
   "purpose": "Run bowed chiral contact as a positive control for recruitment screens.",
@@ -3813,7 +3813,7 @@
   "symbols": [
    "ChiralContactControl"
   ],
-  "sha256": "cda84ab566cc53e1152520b2b2b9758a713721f9d23cffd291335c67682b281f"
+  "sha256": "491ae8c5d6716d11edd765d554f52dd242491ef172982c074c16ba251eaccd4e"
  },
  "benchmarks/recruitment_sensitivity.py": {
   "purpose": "Resumable multi-topology screen of strain-threshold recruitment.",
@@ -3822,7 +3822,7 @@
    "SensitivityConfig",
    "RecruitmentSensitivity"
   ],
-  "sha256": "649ed28d7d7bd4740cb72a2a5ba654a4aa545ec70293bd93eaa483f5c115f564"
+  "sha256": "ea039c48cbd14f62d750dff1424ae551991898e79fd37bffdf3d76efee5458f1"
  },
  "tests/test_recruitment_fem_validation.py": {
   "purpose": "Validate the independent FEM checkpoint and recruitment protocol.",
@@ -3830,7 +3830,7 @@
   "symbols": [
    "test_fem_validation_one_case_resume"
   ],
-  "sha256": "d360139d72dab39ee709b06ec31b4211841ba5e93a19f72b3c6a79f51e5ab92f"
+  "sha256": "8045e4038ccfedcaabb53d5c6d8db12ce2da6b3739b3a2730f3af438e0c6a7b8"
  },
  "benchmarks/recruitment_fem_validation.py": {
   "purpose": "Independent beam-frame FEM screen for directional tensile recruitment.",
@@ -3839,7 +3839,7 @@
    "FemValidationConfig",
    "FemRecruitmentValidation"
   ],
-  "sha256": "e3a1e6adf66b379c1bae41e154f74b48b69c2716e678f1cc281b45642b99636b"
+  "sha256": "8e7881e84001ca892317d1164887424ffae08bfdfb0363f002aa945bd46fb260"
  },
  "scripts/make_directional_recruitment_media.py": {
   "purpose": "Make an editable, source-backed x/y recruitment comparison for the local homepage.",
@@ -3847,7 +3847,7 @@
   "symbols": [
    "DirectionalRecruitmentMedia"
   ],
-  "sha256": "a425576ad5d27a85911875d38481d76a61746aa62952b651e11fd8484353f68b"
+  "sha256": "b67014d1b678bff189e0d3ee57ee7cf428a93afceb6cfd3721fafdb77b3d34ed"
  },
  "fibernet/gen/surface_mapping.py": {
   "purpose": "Actual cell topology mapped to bilinear patches with explicit seam stitches.",
@@ -3857,7 +3857,7 @@
    "bilinear",
    "map_cells"
   ],
-  "sha256": "643ade554b01064052d42adcc39b4aa264be2f560d2c80f9aa5ff650fdf42097"
+  "sha256": "4395a41a37f852f36673eb856accea305430a41ff4be32d135e34f7555fc6171"
  },
  "tests/test_surface_mapping_cross_end.py": {
   "purpose": "Verify the independent surface map preserves APP geometry and seam edges.",
@@ -3868,7 +3868,7 @@
    "test_surface_mapping_public_workflow",
    "test_surface_mapping_invalid_inputs"
   ],
-  "sha256": "d56fafd495b1bf7163497b2c5ee1957dc93dd1ea69e1ce23222d0ab90107753a"
+  "sha256": "3c8f1cca6a83d415beb2185b3d98f24f1e82a231b9da2065657865fc80180129"
  },
  "examples/surface_mapping_workflow.py": {
   "purpose": "Map repeated fiber cells to an OBJ surface with explicit seam stitches.",
@@ -3876,7 +3876,7 @@
   "symbols": [
    "SurfaceMappingWorkflow"
   ],
-  "sha256": "87c189a43a55036914ca8d077d3ff826b0293b1196748cfb6e3e10e251bd649a"
+  "sha256": "5e1cca6eff7ff1c8779445ebe5d4e162c100302cbfff28ebb4b59c004c538676"
  },
  "fibernet/ml/physical_learning.py": {
   "purpose": "Extensible supervised model and acquisition interfaces (contact-free v2).",
@@ -3887,7 +3887,7 @@
    "select_candidate",
    "Regressor"
   ],
-  "sha256": "4bad25bc7b5904e1f4cc1f34244ea2978e8b47743a9579b76ca7e64e9b757cd7"
+  "sha256": "f3a137bef505f4d0eaf9ebdc8aef13f648bc8d778f6152db3e6f4a34c7347102"
  },
  "fibernet/ml/physical_surrogate.py": {
   "purpose": "NumPy-only structural descriptors and three-target surrogate MLP.",
@@ -3897,7 +3897,7 @@
    "MLP",
    "r2_score"
   ],
-  "sha256": "52c8438a67343e486719e6ce7de34f4f9cdc6edf22c28dfd1591c91eb1a44f64"
+  "sha256": "b6af91e37fcdc50cbc1064a391bb29995324a40ca65582db8b9b2ee5d68c591e"
  },
  "tests/test_physical_learning_cross_end.py": {
   "purpose": "Shared APP physical surrogate keeps training and acquisition behavior.",
@@ -3908,7 +3908,7 @@
    "test_public_learning_errors_are_clear",
    "test_physical_learning_workflow"
   ],
-  "sha256": "6524ea6fed71d24e1243d4b6d9d24d8c27d4343bbe01dcf9cd36dba298eb49c8"
+  "sha256": "2de0a5129ad4882bd52b8bb039596ccfd82da5a4ce4428a914c181a028d5cc31"
  },
  "examples/physical_learning_workflow.py": {
   "purpose": "Train the shared three-target physical surrogate from an NPZ dataset.",
@@ -3916,7 +3916,7 @@
   "symbols": [
    "PhysicalLearningWorkflow"
   ],
-  "sha256": "113c3544dd05154986a4fa7e56dd3819f3e90ad3d3c0139c3acddb8e21014e94"
+  "sha256": "b4ebe6efd0b4c2a45248764c7604d51acab626f72b4e7ac8ef475801465d8ecf"
  },
  "fibernet/sim/reduced_beam.py": {
   "purpose": "engine2: numpy mass-spring core with bending + contact + energy bookkeeping.",
@@ -3929,7 +3929,7 @@
    "_excluded_pairs",
    "Engine2"
   ],
-  "sha256": "6195cd097841199f275b77df232c9495ee8b51d353d9ef3ae2af658fb4525714"
+  "sha256": "bdf554a0c1b096d2f88fbd4a6d7ed7f44ad6bdf9d41ecdc9ea511e40cbe6f1b7"
  },
  "tests/test_reduced_beam_cross_end.py": {
   "purpose": "Public reduced solver matches the APP and feeds recruitment directly.",
@@ -3938,7 +3938,7 @@
    "test_public_reduced_solver_matches_app",
    "test_public_stretch_workflow_saves_replayable_arrays"
   ],
-  "sha256": "1cd48fb84a3472dbd19db8d3f61f1a4acf34b89279017b8325121c290262906e"
+  "sha256": "dfff71bc6e36326546624f6a69f6e8e771b062180483fcb216db2b088a6b9380"
  },
  "scripts/refresh_recruitment_checkpoints.py": {
   "purpose": "Refresh recruitment screens only after exact case-level comparison.",
@@ -3946,7 +3946,7 @@
   "symbols": [
    "RecruitmentCheckpointRefresh"
   ],
-  "sha256": "c706e7034347f46c5940353566d0005b0bf06d5fa03fcb27980e30cc1485b77a"
+  "sha256": "7ca6a507a6ca75ab46cee04e4679aca8528f266295e2673ac5d8df6e16dea146"
  },
  "examples/reduced_recruitment_workflow.py": {
   "purpose": "Run the shared reduced stretch solver and save a recruitment trajectory.",
@@ -3954,7 +3954,7 @@
   "symbols": [
    "ReducedRecruitmentWorkflow"
   ],
-  "sha256": "060107f7908ea554df1d57cff6ecf7559590a1db1afd63034d4cfbdc78b270bb"
+  "sha256": "8dfa13268b9159679bc79927d819f2021a121a06351a7376361ab7aeb206212e"
  },
  "benchmarks/early_recruitment_prediction.py": {
   "purpose": "Topology-held-out early recruitment screen on the shared reduced solver.",
@@ -3963,7 +3963,7 @@
    "PredictionConfig",
    "EarlyRecruitmentPrediction"
   ],
-  "sha256": "a911c458d359cf1312c0c072068e56ecc37999199b585eb9d24e23f9e9478b3f"
+  "sha256": "8adcf66f6260db1585ffb235ed04a244b87cbe2ad4a29ea2e7ad5449ef376f04"
  },
  "fibernet/ml/curve_inverse.py": {
   "purpose": "Target-curve and scalar inverse search on the shared reduced solver.",
@@ -3982,7 +3982,7 @@
    "save_log",
    "CurveInverseDesigner"
   ],
-  "sha256": "ad8cc197b1ba4fb6e998ab13445fdf6a397847742747551fbb7c655093c8e8f1"
+  "sha256": "e800514d30210eb50c51730719d31d872bfa0cb99965c79ca5365dd62217c67d"
  },
  "tests/test_curve_inverse_cross_end.py": {
   "purpose": "The desktop adapter and public inverse search choose the same candidates.",
@@ -3994,7 +3994,7 @@
    "test_public_designer_requires_explicit_topology_scope",
    "test_inverse_solver_configuration_matches_app"
   ],
-  "sha256": "9b17a3b15ac92996991c26745c90449af9355bdcac5a7679438b1ada1ae79c2f"
+  "sha256": "f6aa07fdd3bcadf77d143dfecd985de75cff4a3f56f57318cf2d3c465b625068"
  },
  "examples/curve_inverse_workflow.py": {
   "purpose": "Search a target stretch-curve shape with the shared reduced solver.",
@@ -4002,7 +4002,7 @@
   "symbols": [
    "CurveInverseWorkflow"
   ],
-  "sha256": "3fb527fa74e017270622e9b8169f6e1d043fcee24da3f23bb7a0a9bced949413"
+  "sha256": "ed622b6527eb17471d8c988dd8ec6d61f04edf3955d8552e8c1331153984eec8"
  },
  "fibernet/ml/physical_dataset.py": {
   "purpose": "Callback-driven physical datasets with atomic, resumable checkpoints.",
@@ -4012,7 +4012,7 @@
    "_PlanarCandidate",
    "PlanarPhysicalDataset"
   ],
-  "sha256": "375a3510cfbb8aa5b15d207bd72c6fdcab847172e44ad939884492498b072bbc"
+  "sha256": "5e524777522229525fbf5fe98ab08bd9762f58bfefa35b5bdd1ac6da4c0f1c83"
  },
  "tests/test_physical_dataset_cross_end.py": {
   "purpose": "Resumable public physical labels agree with the desktop APP.",
@@ -4021,7 +4021,7 @@
    "test_library_physical_label_matches_app",
    "test_unlabeled_stream_is_explicit_and_bounded"
   ],
-  "sha256": "927cd487d736326914e4941ad6dd2044fddd1197cec09a8760d2f1af67277e1d"
+  "sha256": "3b3e877b53d5d89f588ca9f1b53ec178c523f6a9fb12ac534461b98eaa37e2db"
  },
  "examples/physical_dataset_workflow.py": {
   "purpose": "Build a resumable physical-label dataset using the library alone.",
@@ -4029,7 +4029,7 @@
   "symbols": [
    "PhysicalDatasetWorkflow"
   ],
-  "sha256": "d2f7297a73c545032060fbf69dafbf29a6d25ee19217877af46df79b231ca788"
+  "sha256": "fd9b811f629ce7a5c039f13d8c1ce07e2c429f4f1de51b534d7940e875e91ee9"
  },
  "manuscript/scripts/build_figures_ppt.py": {
   "purpose": "Build editable working figures for the FiberNet software Methods draft.",
@@ -4037,7 +4037,7 @@
   "symbols": [
    "FigureDeckBuilder"
   ],
-  "sha256": "221d689410482421d8cdab5a92a6f0c05b6736afb7b988c6f05e8ab925714921"
+  "sha256": "b4dd6b6831a31b8af554538095fc805af1c72a3f407d221fe217012b85a1774f"
  },
  "tests/test_constrained_cycle_intervention.py": {
   "purpose": "Matched cycle deletions preserve a complete route and checkpoint identity.",
@@ -4045,7 +4045,7 @@
   "symbols": [
    "test_matched_cycle_reruns_and_resume"
   ],
-  "sha256": "26cf2e2386cc02351cde343984e5c0d83e00e381899afa4aff2dacddbc2efe79"
+  "sha256": "4e59a39bf915c6e42fc5ae7e3ad6f7120f8a84df1441fd193bce4065499a4479"
  },
  "benchmarks/constrained_cycle_intervention.py": {
   "purpose": "Resumable, length-class-matched Euler-cycle removal and rerun study.",
@@ -4054,7 +4054,7 @@
    "ConstrainedCycleConfig",
    "ConstrainedCycleIntervention"
   ],
-  "sha256": "e07fc06eecb05f66cfb2cdd081f29b0f2d9c57c36b5fa3ed5ceb959a4fe9b06b"
+  "sha256": "21abf5cacc33b7ce51f800e96303ac53d41ce8360916cf56a9fe8faefd05ab58"
  },
  "fibernet/analysis/snapshot_features.py": {
   "purpose": "Structure feature extraction for fiber networks (pure numpy).",
@@ -4078,7 +4078,7 @@
    "compute_features",
    "SnapshotFeatureExtractor"
   ],
-  "sha256": "432f8e9a7b5d0e6fb39e5a2c5cef0bc2527ee53048be99fda97351862c7a73a6"
+  "sha256": "a7afe442ed2d5a80effbc065310e3b9f5bd02c7ef803019232266a6c66923fcd"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -4087,7 +4087,7 @@
    "candidate_pairs",
    "ContactConfig"
   ],
-  "sha256": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23"
+  "sha256": "6139c7aaebd82ab032f052cc64b30a2674155bf3c4a45981843a9914e55798f7"
  },
  "tests/test_snapshot_features_cross_end.py": {
   "purpose": "The desktop snapshot-feature contract remains numerically unchanged.",
@@ -4098,7 +4098,7 @@
    "test_snapshot_feature_public_input_budgets",
    "test_public_graph_and_real_example_schema"
   ],
-  "sha256": "29a49e3aa96e24e6f7d9e8f1b0d5010f280baf9a2ff8b1d4a64c835fd028ba97"
+  "sha256": "d86699f68de458fa4563effc128441854482be9c42b485882253e53cfb1072de"
  },
  "scripts/make_intervention_media.py": {
   "purpose": "Render a source-backed route-preserving deletion comparison for the local homepage.",
@@ -4106,7 +4106,7 @@
   "symbols": [
    "InterventionMedia"
   ],
-  "sha256": "bd83921ed481b98a893fd3abe516926da6a5e77e67d87fbb9930e435f16a07a4"
+  "sha256": "d4e2ebb6073a860a46698a7c4f58a2e0fc500b14c9e0a8e777217250013970c8"
  },
  "examples/snapshot_features_workflow.py": {
   "purpose": "Analyze a generated network snapshot without importing FiberScope.",
@@ -4114,7 +4114,7 @@
   "symbols": [
    "SnapshotFeatureWorkflow"
   ],
-  "sha256": "443a14f16d17fa68c5d503aa9ea3ac76baf3fa93b38dfc7755bc938a3a22ea2f"
+  "sha256": "b7bd9bf84c262bebc52a717d0bd4831b30774d556b3b528db040e0f1cd78cfc5"
  },
  "tests/test_ai_cycle_selector.py": {
   "purpose": "AI cycle study resumes candidate reruns and rejects stale checkpoints.",
@@ -4122,7 +4122,7 @@
   "symbols": [
    "test_ai_cycle_candidate_resume_and_signature"
   ],
-  "sha256": "379289cf5a83ddd93e9ea08dd7395dc6810dcf6f89e1bbf21ebef3e4c40e8687"
+  "sha256": "18dbaea394be0ec3cee95044effd384d1ff083a10e3e4ddd9ce2b06e16e8c3ba"
  },
  "benchmarks/ai_cycle_selector.py": {
   "purpose": "Topology-held-out, route-preserving cycle selection with actual reruns.",
@@ -4130,7 +4130,7 @@
   "symbols": [
    "AICycleSelector"
   ],
-  "sha256": "f61881e50b30eef1d212f094e7d6092d3906c11f8d9c15f4a74aa6dcc6fc8a62"
+  "sha256": "41dae098ff95ab8a1a8f64bebd8b7b3c74de7507927f60a71f9fe343960b0dbc"
  },
  "tests/test_fem_parallel_contract.py": {
   "purpose": "Public beam FEM retains parallel-fiber mechanics and honest summaries.",
@@ -4141,7 +4141,7 @@
    "test_fem_uses_actual_radius_and_signed_stretch",
    "test_direct_beam_stiffness_defaults_to_independent_edges"
   ],
-  "sha256": "d7498b575bfbe8e6b32cb43d85db22a71272aa66a82f10c5ca2760f1679b326c"
+  "sha256": "b640a3052115200df4fd8ac2d8fb1d6e877d0cb356b3c283218dd3032f38cb82"
  },
  "tests/test_independent_fem_cycle_intervention.py": {
   "purpose": "Independent beam-FEM cycle screening is bounded and resumable.",
@@ -4149,7 +4149,7 @@
   "symbols": [
    "test_independent_fem_resume_and_matched_grips"
   ],
-  "sha256": "7778b4d55112ea26ace72121eded689a9bf69034af968cf59727d1ef3c920ee3"
+  "sha256": "5ed6268403569ebfa30105cbde96ee9ed6808de48646d3920a67ef2fa9fbb8cb"
  },
  "benchmarks/independent_fem_cycle_intervention.py": {
   "purpose": "Matched-grip, matched-stretch linear beam-FEM check of cycle deletions.",
@@ -4157,7 +4157,7 @@
   "symbols": [
    "IndependentFemCycleCheck"
   ],
-  "sha256": "0e69f94aef79fd56bf680c9bd72929add5b8bd8a6464bf4f0b3ab9a1b1251486"
+  "sha256": "04b0669fcb4b994700a92b1b614199d02b93d0f3e5177fa2215ed807f3c117ed"
  },
  "fibernet/gen/custom_cells.py": {
   "purpose": "Portable, bounded custom-cell specifications compatible with FiberScope JSON.",
@@ -4166,7 +4166,7 @@
    "CustomCell",
    "CustomCellRegistry"
   ],
-  "sha256": "3ac34aa4384a5121fbc4606298550ba802ad2a7fe7375c482f969a03e4e1725e"
+  "sha256": "50acf198fd8290d847ed62d3e81308853ca904eb9e37aa635cd11984f8aeea34"
  },
  "tests/test_custom_cell_registry.py": {
   "purpose": "Custom cells share APP JSON and compile through the public library API.",
@@ -4176,7 +4176,7 @@
    "test_custom_cell_rejects_invalid_or_oversized_input",
    "test_registry_save_preserves_existing_app_entries"
   ],
-  "sha256": "4b4ba4b0c818fc79b00634f8917950b2b2aef8ad03289e75026417c4ebfc1712"
+  "sha256": "1749a06722a3797a5cf5e6ce708859e01884a490b81b6f4120e29734a4e384ab"
  },
  "scripts/promote_homepage.py": {
   "purpose": "Render the tested docs preview as the repository homepage.",
@@ -4184,7 +4184,7 @@
   "symbols": [
    "HomepagePromoter"
   ],
-  "sha256": "c1d999ef10aeaa639b2f7cf0b0511e304f22e4c13b426e14788e130034e0023b"
+  "sha256": "ab617c6544c285f7f38c0a826af1359bcdbae318ee6365d12661cb688d7c8cb1"
  },
  "scripts/refresh_cycle_study_checkpoints.py": {
   "purpose": "Recompute cycle studies and atomically accept only identical case results.",
@@ -4192,7 +4192,7 @@
   "symbols": [
    "CycleCheckpointRefresh"
   ],
-  "sha256": "4ae51ae3eef450cbbb618ad168a7d27ac9edc7d1ba1095e6d6c4c12e2bb6da51"
+  "sha256": "6d958180ba65c7818b1cb8f29b014e0bd84da55b77074ca742fe11e84755a956"
  },
  "scripts/seal_local_candidate.py": {
   "purpose": "Record hashes for the tested local wheel and Windows APP folder.",
@@ -4200,7 +4200,7 @@
   "symbols": [
    "CandidateSealer"
   ],
-  "sha256": "ad9a71d23632d50658cadf93dd0fa76f7697c592b2dae6435dcba0e6e60c71f3"
+  "sha256": "81628c7914e33284084804d1f6872607179c229cfbf24472273368676d557da9"
  },
  "examples/custom_cell_workflow.py": {
   "purpose": "Persist an APP-compatible custom unit and compile its closed planar route.",
@@ -4208,7 +4208,7 @@
   "symbols": [
    "CustomCellWorkflow"
   ],
-  "sha256": "5b9f387160fcb2c026266e695cbcd25c1dbbd94dbc269fc334314ae8da064d9c"
+  "sha256": "093d9c5e143a11db382ee1b1f9acb3e33bc39f36849aff77d4b82268ef8f9dc3"
  },
  "scripts/build_work_bundle.py": {
   "purpose": "Make one bounded, reproducible Work-mode handoff ZIP from committed source.",
@@ -4216,7 +4216,7 @@
   "symbols": [
    "WorkBundleBuilder"
   ],
-  "sha256": "17438f311e78efb68e3d25933807e51666a82b18dcd6e1a8f1faad278c6ac938"
+  "sha256": "f21e969a430e9cc078ab5d4ce96f01c9d962477ab1e10aa5e8b6de084c3d61e9"
  },
  "scripts/preflight_publish.py": {
   "purpose": "Check source file boundaries, common credential formats and homepage links.",
@@ -4224,7 +4224,7 @@
   "symbols": [
    "PublishPreflight"
   ],
-  "sha256": "116922cbc7c8542ae124f81c88b1d64ef874a61fe9caf8db2ea0ddd1d91fa664"
+  "sha256": "db6f9c03ad56157acac5146a5560405b755601800ee41380c6e117e51bf59508"
  },
  "scripts/refresh_fem_checkpoint.py": {
   "purpose": "Refresh the corrected independent FEM screen only after exact case comparison.",
@@ -4232,7 +4232,7 @@
   "symbols": [
    "FemCheckpointRefresh"
   ],
-  "sha256": "f14ae6ce3ef64cbb1f7c3b1201692ac09733cd3006c7e980f5bd38d5a6d52abc"
+  "sha256": "a013a6df2f61ebfdce2289ef49ccccb09e7b17f8d34e1986be4b8fa5bc827d2a"
  },
  "scripts/build_pypi_readme.py": {
   "purpose": "Render the GitHub homepage with versioned absolute links for PyPI.",
@@ -4240,7 +4240,7 @@
   "symbols": [
    "PyPIReadmeBuilder"
   ],
-  "sha256": "6f7ad0a5a8c4ac317ff5d40b54e269e7da75b7faa621db71f80e4479c3cec65b"
+  "sha256": "be3cc31b51331d727a1cc2b0cb8d718b3a11657fea1c9e39330e994276cf74cb"
  },
  "scripts/make_3d_homepage_media.py": {
   "purpose": "Render a bounded, source-backed 3D topology gallery for the homepage.",
@@ -4248,7 +4248,7 @@
   "symbols": [
    "ThreeDHomepageGallery"
   ],
-  "sha256": "c47af39fbbe06b7b4cbd76c5edc8b637370f6e26925d3767b1d34abbe85329ee"
+  "sha256": "e6ed5b5c3ed9ec32ddecad476c577564d8536dc7b547697b55e0b50f35b5e6f7"
  },
  "scripts/smoke_release_wheel.py": {
   "purpose": "Run installed-wheel API checks without importing the source checkout.",
@@ -4256,6 +4256,14 @@
   "symbols": [
    "ReleaseWheelSmoke"
   ],
-  "sha256": "01dab74af74364e5dc1678b489a07b9cee6655ec295f140e3a5b40abe531d834"
+  "sha256": "95f61d526414fbc0ce1642cce1aa738deca30bdbf94693201dc6d64e311cb41c"
+ },
+ "scripts/check_public_release.py": {
+  "purpose": "Download and verify the public FiberScope release archive.",
+  "status": "active",
+  "symbols": [
+   "PublicReleaseCheck"
+  ],
+  "sha256": "cd613e11d05e9cc2398c341be3b3f08c697cb71afeb80a47593b907997d33daf"
  }
 }
