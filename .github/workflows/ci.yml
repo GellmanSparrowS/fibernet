@@ -78,21 +78,12 @@ jobs:
         name: dist
         path: dist/
 
-  publish:
+  verify-pypi:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
 
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: dist
-        path: dist/
-
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Verify published package version
+      run: |
+        python -c "import json,urllib.request; data=json.load(urllib.request.urlopen('https://pypi.org/pypi/fibernet/4.2.0/json',timeout=20)); assert data['info']['version']=='4.2.0'; assert len(data['urls']) >= 2"

@@ -1,4 +1,4 @@
-name: FiberScope 3.0
+name: FiberScope 3.1
 on:
   push:
     branches: [main]

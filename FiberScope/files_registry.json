@@ -39,11 +39,8 @@
  "fslab/contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
   "status": "indexed",
-  "symbols": [
-   "candidate_pairs",
-   "ContactConfig"
-  ],
-  "sha256": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23"
+  "symbols": [],
+  "sha256": "cd5677f78af79d024d1b6436e0dd72cdaf5b1e0c70fc39a38f1c1aef7292d5da"
  },
  "fslab/dataset_stream.py": {
   "purpose": "Atomic bounded datasets with explicit label provenance and resumable seeds.",
@@ -81,25 +78,8 @@
  "fslab/features.py": {
   "purpose": "Structure feature extraction for fiber networks (pure numpy).",
   "status": "indexed",
-  "symbols": [
-   "feature_name",
-   "scalar_keys",
-   "_filter_region",
-   "_region_area",
-   "_nn_distances",
-   "_chain_straightness",
-   "_structure_features",
-   "_structure_extra",
-   "_segment_interactions",
-   "_planarize",
-   "_poly_area",
-   "_poly_perim",
-   "_faces",
-   "_pore_features",
-   "_contact_features",
-   "compute_features"
-  ],
-  "sha256": "9a0e2c6bf34ec05a00376cda0db5bc7c12813383dbf2cb6b67be38f19d7ff6e0"
+  "symbols": [],
+  "sha256": "d78d5d0f6f9b755a6e88de7c08cd5051eb18849baa5f9ec4c6bdc84e339cf7b8"
  },
  "fslab/fibernet_bridge.py": {
   "purpose": "Load fibernet.gen.pattern WITHOUT executing fibernet/__init__ (which pulls",
@@ -207,7 +187,7 @@
    "_downsample",
    "run_stretch"
   ],
-  "sha256": "a121684b087a8c02d26d2be75b94a5ae7ea395df9b15e521a4c5e5867f601fd4"
+  "sha256": "32419ff8b382d9d776a2fe2bb8375fb6925792f81ee4b6402c4616151bec7615"
  },
  "fslab/solid_process.py": {
   "purpose": "Isolated solid construction with atomic output and interruptible parent polling.",
@@ -248,7 +228,7 @@
    "chains_of",
    "StructureFactory"
   ],
-  "sha256": "7fd837da654ee0160c9810275f7a972f8be5a83cff83795c23d55e39794cb709"
+  "sha256": "f83fa72e6be345a77dedf5b22ac3cfc5cb6c0edba69e2cf71b7206fc288dad73"
  },
  "fslab/surface3d.py": {
   "purpose": "Drape a fiber network onto a quad OBJ surface (pure numpy).",
@@ -289,7 +269,7 @@
   "purpose": "Single source of truth for app identity.",
   "status": "indexed",
   "symbols": [],
-  "sha256": "0cad26def457d88a2f804970d1b540ac1493e84eb704ed19118f9cc594f5dd26"
+  "sha256": "1b6557c244cc848794328d03c0673fd978b3874de36fc7c6c5c267d613d2bda0"
  },
  "fslab/welding.py": {
   "purpose": "Bounded initial-geometry crosslinks for intersecting planar fiber segments.",
@@ -601,7 +581,7 @@
    "audit",
    "main"
   ],
-  "sha256": "267a8ad61bb93a1dd1b6ac9408a9109a3d16b80f37b99d767aecf8c91499b7ef"
+  "sha256": "54d5787962e9dd91f64c1574b4b920fb4adeb1761da197ad7ea729afdd490a66"
  },
  "scripts/bump_engine_version.py": {
   "purpose": "Keep the cache identity in sync with the numeric core.",

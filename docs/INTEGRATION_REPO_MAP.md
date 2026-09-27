@@ -1,17 +1,13 @@
-# Existing FiberNet repository: local integration map
+# Existing FiberNet repository: integration and release map
 
 The canonical upstream is `https://github.com/GellmanSparrowS/fibernet.git`.
-`E:/GOAI/FiberNetUnified` is a local checkout of that **same repository**, based
-on public commit `aeea216` and branch `codex/fibernet-unification`. The package
-keeps its existing `fibernet` name; this integration branch declares version
-4.2.0. No separate Python distribution or GitHub repository has been created.
+The 4.2.0 integration was merged into that repository's `main` through PR #18
+on 2026-09-27. The package retains its existing `fibernet` name. No separate
+Python distribution or GitHub repository has been created.
 
-The older `E:/GOAI/fibernet` directory is part of a different dirty local Git
-layout, so this isolated checkout prevents integration work from mixing with
-unrelated changes. `FiberScope/` in this checkout is the APP source used for
-cross-end validation. The user authorized publishing this integration source
-and homepage to the existing GitHub repository on 2026-09-24. A source push is
-separate from publishing a PyPI wheel or a new frozen APP release.
+`FiberScope/` is the APP source used for cross-end validation. The library
+wheel is distributed by PyPI, while the Windows executable belongs in a
+GitHub Release asset. Git-tracked source files do not include the frozen APP.
 
 The tested homepage source is `docs/README_VNEXT.md`; the root `README.md`
 is generated from it with corrected paths by `scripts/promote_homepage.py`.
