@@ -1,5 +1,17 @@
 # FiberNet v4 — Progress Log
 
+## 2026-09-27 · PyPI 4.2.0 正式发布与标签
+
+- 已完成：PR #19 在库端 12 组合、桌面与网页远端检查均通过后合并，main 提交 `aff88f8`。从此提交重建 wheel/sdist，`twine check`、归档敏感文件检查、隔离安装后的三维/招募/ML 烟测通过。已上传 PyPI 4.2.0，两文件官方 SHA256 与本地完全一致：wheel `7b526b8bf6a5e281a8ab07108236b8574f12cac6bfcfee70b5c581770bd4b4fd`；sdist `c924a466b463d0ad712c7655bcf7463884a944db5be9c13a365f985574ab6788`。已推送 `v4.2.0` 标签，远端 CI 与 Windows Release 正在运行。
+- 下一步：等待标签 CI 与 Windows 冻结包门槛通过，核查 GitHub Release ZIP/SHA256、主页下载链接及远端动图资源；最后整理交接和清理本地过程文件。
+- 问题：GitHub EXE 附件尚未公开验收；聊天中暴露的 PyPI token 发布后需要在 PyPI 撤销。
+
+## 2026-09-27 · 远端 Windows 编码修复
+
+- 已完成：标签 CI 12 组合、构建和 PyPI 核验通过，Windows Release 的 25 项桌面测试通过；冻结构建在依赖探针阶段因 runner `cp1252` 无法编码 Unicode 输出而中止。发布工作流已补 UTF-8 Python I/O 环境和手动重跑入口；相同环境下本地依赖探针 2/2 通过，应用源码与 4.2.0 标签保持一致。
+- 下一步：审核并合并此工作流修复，在合并后的 main 上重新运行 Windows Release，检查远端 ZIP 与 SHA256。
+- 问题：GitHub 仓库顶部 About 简介仍旧标 3.0；现有 PAT 对仓库元数据更新返回 404，仓库 README 已更新。EXE 尚未公开。本地第一次探针尝试受沙盒临时目录 ACL 阻拦，提升权限后 2/2 通过。
+
 ## 2026-09-27 · 发布 PR 与远端门槛
 
 - 已完成：三维 SVG 生成器清除行尾空白并重生成动图/矢量图/哈希清单；8 段动图、819 个发布源文件和主页发布前审计通过。候选提交 `c399e8a` 已推送到原仓库分支，PR #19 已创建；库与 APP 的 GitHub Actions 检查正在运行。

@@ -3,6 +3,11 @@ name: Release FiberScope Windows
 on:
   push:
     tags: ['v4.2.0']
+  workflow_dispatch:
+
+env:
+  PYTHONUTF8: '1'
+  PYTHONIOENCODING: 'utf-8'
 
 permissions:
   contents: write
