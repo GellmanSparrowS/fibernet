@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 def main():
     ap = argparse.ArgumentParser(description="FiberScope")
-    ap.add_argument("--lang", default="zh", choices=["zh", "en"])
+    ap.add_argument("--lang", default="en", choices=["zh", "en"])
     ap.add_argument("--theme", default="light", choices=["dark", "light"])
     ap.add_argument("--smoke", action="store_true",
                     help="offscreen smoke mode: quit after 1.5s")
@@ -64,7 +64,9 @@ def _smoke_checks(app, win):
     try:
         # 0) structure studio drives the shared spec
         ts = win.tab_struct
-        ts.unit_combo.setCurrentText(unit_display("reentrant"))
+        lang = "zh" if win.lang_combo.currentIndex() == 0 else "en"
+        ts.unit_combo.setCurrentText(unit_display("reentrant", lang))
+        assert ts.unit_combo.currentText() == unit_display("reentrant", lang)
         ts.grid_x.setValue(3); ts.grid_y.setValue(3)
         ts.pts.setValue(2); ts.seed.setValue(7)
         ts.push_spec()
@@ -89,7 +91,8 @@ def _smoke_checks(app, win):
         assert tab.perc.perc_frame >= 0, "expected percolation in smoke config"
 
         # 2) stretch: chiral rotation-induced contacts
-        ts.unit_combo.setCurrentText(unit_display("chiral"))
+        ts.unit_combo.setCurrentText(unit_display("chiral", lang))
+        assert ts.unit_combo.currentText() == unit_display("chiral", lang)
         ts.push_spec()
         app.processEvents()
         st = win.tab_stretch

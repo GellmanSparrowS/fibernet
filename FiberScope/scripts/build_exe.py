@@ -1,7 +1,7 @@
 """Build the FiberScope Windows exe (single file by default).
 
 Pipeline
-  1. vendor a LIGHT fibernet (core + gen only, thin __init__) so the bundle
+  1. vendor a LIGHT fibernet (core + gen + tensile analysis, thin __init__) so the bundle
      never pulls taichi/torch;
   2. write FiberScope.spec: Analysis with a broad exclude list, then an
      explicit binary/data filter that drops the unused Qt modules, the
@@ -38,13 +38,32 @@ VENDOR = os.path.join(ROOT, "build_vendor", "fibernet")
 SPEC = os.path.join(ROOT, "FiberScope.spec")
 VERFILE = os.path.join(ROOT, "build_version.txt")
 
-# ONLY the modules pattern_2d needs (module-level graph: numpy only).
+# Only the shared modules required by the APP runtime.
 HIDDEN = [
     "fibernet.core.material",
     "fibernet.core.structure_graph",
     "fibernet.core.transforms",
     "fibernet.core.tiling",
     "fibernet.gen.pattern",
+    "fibernet.gen.spectrum",
+    "fibernet.gen.cell_rules",
+    "fibernet.gen.cell_cycles",
+    "fibernet.gen.custom_cells",
+    "fibernet.gen.manufacturing",
+    "fibernet.gen.surface_geometry",
+    "fibernet.gen.surface_mapping",
+    "fibernet.gen.obj_import",
+    "fibernet.gen.obj_polygons",
+    "fibernet.ml.physical_surrogate",
+    "fibernet.ml.physical_learning",
+    "fibernet.ml.physical_dataset",
+    "fibernet.ml.curve_inverse",
+    "fibernet.sim.reduced_beam",
+    "fibernet.gen.solid_export",
+    "fibernet.gen.tube_solid",
+    "fibernet.analysis.tensile_recruitment",
+    "fibernet.analysis.snapshot_features",
+    "fibernet.analysis.width_contact",
     "sklearn.neural_network", "sklearn.linear_model", "sklearn.neighbors",
     "sklearn.ensemble",
     "fast_simplification", "manifold3d",
@@ -226,6 +245,30 @@ def vendor_fibernet():
     for sub in ("core", "gen"):
         shutil.copytree(os.path.join(SRC, sub), os.path.join(VENDOR, sub),
                         ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    ml = os.path.join(VENDOR, "ml")
+    os.makedirs(ml)
+    for module in ("physical_surrogate.py", "physical_learning.py",
+                   "physical_dataset.py",
+                   "curve_inverse.py"):
+        shutil.copy2(os.path.join(SRC, "ml", module),
+                     os.path.join(ml, module))
+    with open(os.path.join(ml, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write('"""Light physical surrogate workflow."""\n')
+    sim = os.path.join(VENDOR, "sim")
+    os.makedirs(sim)
+    shutil.copy2(os.path.join(SRC, "sim", "reduced_beam.py"),
+                 os.path.join(sim, "reduced_beam.py"))
+    with open(os.path.join(sim, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write('"""Light reduced solver."""\n')
+    analysis = os.path.join(VENDOR, "analysis")
+    os.makedirs(analysis)
+    shutil.copy2(os.path.join(SRC, "analysis", "tensile_recruitment.py"),
+                 os.path.join(analysis, "tensile_recruitment.py"))
+    for module in ("snapshot_features.py", "width_contact.py"):
+        shutil.copy2(os.path.join(SRC, "analysis", module),
+                     os.path.join(analysis, module))
+    with open(os.path.join(analysis, "__init__.py"), "w", encoding="utf-8") as fh:
+        fh.write('"""Light tensile recruitment analysis."""\n')
     runtime = os.path.join(ROOT, "build_vendor", "training_runtime")
     os.makedirs(os.path.join(runtime, "scripts"))
     for source, target in ((os.path.join(ROOT, "fslab"), "fslab"), (VENDOR, "fibernet")):
@@ -235,7 +278,7 @@ def vendor_fibernet():
     with open(os.path.join(runtime, "fibernet", "__init__.py"), "w", encoding="utf-8") as fh:
         fh.write('"""Light training runtime."""')
     with open(os.path.join(VENDOR, "__init__.py"), "w", encoding="utf-8") as fh:
-        fh.write('"""vendored light fibernet (core+gen) for FiberScope"""\n')
+        fh.write('"""vendored light fibernet for FiberScope"""\n')
 
 
 def system_icu():
@@ -371,9 +414,10 @@ def cleanroom_smoke(exe, timeout=900):
     """
     room = tempfile.mkdtemp(prefix="fsclean_")
     try:
-        if os.path.isdir(exe):
-            dst = os.path.join(room, os.path.basename(exe.rstrip("\\/")))
-            shutil.copytree(exe, dst)
+        bundle_dir = os.path.dirname(exe)
+        if os.path.isdir(os.path.join(bundle_dir, "_internal")):
+            dst = os.path.join(room, os.path.basename(bundle_dir))
+            shutil.copytree(bundle_dir, dst)
             target = os.path.join(dst, os.path.basename(exe))
         else:
             target = os.path.join(room, os.path.basename(exe))

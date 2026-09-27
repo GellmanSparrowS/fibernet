@@ -1,0 +1,36 @@
+{
+  "source": "same Engine2 trajectory as tensile_recruitment_kagome",
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "analysis_sha256": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33",
+  "render_script_sha256": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209",
+  "alphas": [
+    0.02,
+    0.05,
+    0.15
+  ],
+  "sampled_frame_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20
+  ],
+  "nodes": 436,
+  "edges": 576,
+  "gif_sha256": "c25496e1abbeb3a3f2a3ab66d95d34596e1ed9e6dc02fe24414d2a0bca2e92ae",
+  "svg_sha256": "53966900cfa9607c9b5336b5863a02bfd12d92c6a347b3b7bbcc2df490b4df4c"
+}

@@ -1,0 +1,180 @@
+{
+  "signature": "8e7b56e9d1d1b568",
+  "config": {
+    "units": [
+      "square",
+      "hexagon",
+      "ring",
+      "kagome"
+    ],
+    "seeds": [
+      11,
+      23,
+      41
+    ],
+    "directions": [
+      "x",
+      "y"
+    ],
+    "grid": 2,
+    "points_per_edge": 2,
+    "perturbation": 0.2,
+    "use_contact": true,
+    "target_stretch": 1.4,
+    "increments": 20,
+    "steps": 2000,
+    "early_last_frame": 2,
+    "future_min_strain": 0.1,
+    "max_nodes": 3000,
+    "max_edges": 5000
+  },
+  "case_geometry": {
+    "square:seed11:x": "7c4a8f6c02f5bb92",
+    "square:seed11:y": "242fbf263762643c",
+    "square:seed23:x": "b896b521eb76eb69",
+    "square:seed23:y": "09ffc40f1ec8f069",
+    "square:seed41:x": "54eca5617a906a1d",
+    "square:seed41:y": "4cdf2031f3cb56fa",
+    "hexagon:seed11:x": "6e4db9b4a91f70c9",
+    "hexagon:seed11:y": "f15c6e7c2278c949",
+    "hexagon:seed23:x": "8cca294ace6478e7",
+    "hexagon:seed23:y": "44f2c721043a1241",
+    "hexagon:seed41:x": "528877bf90d35a17",
+    "hexagon:seed41:y": "0e7a01e06d2e1070",
+    "ring:seed11:x": "00e6f360a9a47c24",
+    "ring:seed11:y": "a2c592a4614588bd",
+    "ring:seed23:x": "98f731848579085d",
+    "ring:seed23:y": "1356428f39f2e6e5",
+    "ring:seed41:x": "3460678edebfc6eb",
+    "ring:seed41:y": "08302eb2f9ef2c65",
+    "kagome:seed11:x": "7497ea379a7251d7",
+    "kagome:seed11:y": "426370fbcbb9ae36",
+    "kagome:seed23:x": "f7c2ac722ed72d5b",
+    "kagome:seed23:y": "8d10e7996984f4c2",
+    "kagome:seed41:x": "be7ea404228765ce",
+    "kagome:seed41:y": "ac634508525c7f42"
+  },
+  "folds": {
+    "square": {
+      "training_cases": 18,
+      "test_cases": 6,
+      "scores": {
+        "early_strain_rank": {
+          "n_edges": 432,
+          "positive_fraction": 0.5,
+          "average_precision": 1.0,
+          "roc_auc": 1.0
+        },
+        "static_logistic": {
+          "n_edges": 432,
+          "positive_fraction": 0.5,
+          "average_precision": 0.9999999999999998,
+          "roc_auc": 1.0
+        },
+        "early_logistic": {
+          "n_edges": 432,
+          "positive_fraction": 0.5,
+          "average_precision": 1.0,
+          "roc_auc": 0.9999999999999999
+        },
+        "early_forest": {
+          "n_edges": 432,
+          "positive_fraction": 0.5,
+          "average_precision": 1.0,
+          "roc_auc": 1.0
+        }
+      }
+    },
+    "hexagon": {
+      "training_cases": 18,
+      "test_cases": 6,
+      "scores": {
+        "early_strain_rank": {
+          "n_edges": 792,
+          "positive_fraction": 0.7575757575757576,
+          "average_precision": 0.9927862588676569,
+          "roc_auc": 0.976388888888889
+        },
+        "static_logistic": {
+          "n_edges": 792,
+          "positive_fraction": 0.7575757575757576,
+          "average_precision": 0.9544698460463474,
+          "roc_auc": 0.8964453125
+        },
+        "early_logistic": {
+          "n_edges": 792,
+          "positive_fraction": 0.7575757575757576,
+          "average_precision": 0.9903888992178579,
+          "roc_auc": 0.9692361111111112
+        },
+        "early_forest": {
+          "n_edges": 792,
+          "positive_fraction": 0.7575757575757576,
+          "average_precision": 0.9458582036547915,
+          "roc_auc": 0.9011111111111111
+        }
+      }
+    },
+    "ring": {
+      "training_cases": 18,
+      "test_cases": 6,
+      "scores": {
+        "early_strain_rank": {
+          "n_edges": 1152,
+          "positive_fraction": 0.7291666666666666,
+          "average_precision": 0.9960703287370918,
+          "roc_auc": 0.9902319902319903
+        },
+        "static_logistic": {
+          "n_edges": 1152,
+          "positive_fraction": 0.7291666666666666,
+          "average_precision": 0.7821663567239515,
+          "roc_auc": 0.5859050671550672
+        },
+        "early_logistic": {
+          "n_edges": 1152,
+          "positive_fraction": 0.7291666666666666,
+          "average_precision": 0.9128339254348752,
+          "roc_auc": 0.7396825396825396
+        },
+        "early_forest": {
+          "n_edges": 1152,
+          "positive_fraction": 0.7291666666666666,
+          "average_precision": 0.9835861698340939,
+          "roc_auc": 0.9537240537240537
+        }
+      }
+    },
+    "kagome": {
+      "training_cases": 18,
+      "test_cases": 6,
+      "scores": {
+        "early_strain_rank": {
+          "n_edges": 1584,
+          "positive_fraction": 0.7272727272727273,
+          "average_precision": 0.9744318181818181,
+          "roc_auc": 0.939670138888889
+        },
+        "static_logistic": {
+          "n_edges": 1584,
+          "positive_fraction": 0.7272727272727273,
+          "average_precision": 0.9927104437906368,
+          "roc_auc": 0.9763374485596708
+        },
+        "early_logistic": {
+          "n_edges": 1584,
+          "positive_fraction": 0.7272727272727273,
+          "average_precision": 0.9673814922807156,
+          "roc_auc": 0.8854166666666667
+        },
+        "early_forest": {
+          "n_edges": 1584,
+          "positive_fraction": 0.7272727272727273,
+          "average_precision": 0.9971590909090909,
+          "roc_auc": 0.9938030478395062
+        }
+      }
+    }
+  },
+  "scope": "future positive axial-strain threshold in reduced solver; not force flow"
+}

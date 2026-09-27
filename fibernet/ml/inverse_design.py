@@ -350,9 +350,12 @@ if HAS_TORCH:
                 inv_net = self.model
 
             candidates = []
+            if n_candidates < 1:
+                raise ValueError('n_candidates must be positive')
+            noise_scale = target.std(dim=0, unbiased=False).clamp(min=1e-6)
             with torch.no_grad():
                 for _ in range(n_candidates):
-                    noisy_target = target + torch.randn_like(target) * 0.01 * target.std(dim=0).clamp(min=1e-6)
+                    noisy_target = target + torch.randn_like(target) * 0.01 * noise_scale
                     features = inv_net(noisy_target)
                     candidates.append(features)
 

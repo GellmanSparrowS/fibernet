@@ -287,6 +287,7 @@ class TestInverseDesign:
         candidates = trainer.design(target, n_candidates=3)
         assert candidates.shape[0] == 3
         assert candidates.shape[1] == 8
+        assert np.isfinite(candidates).all()
 
 
 # ======================================================================

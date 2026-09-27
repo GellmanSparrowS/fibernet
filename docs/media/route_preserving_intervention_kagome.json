@@ -1,0 +1,33 @@
+{
+  "case": "kagome:seed23:x",
+  "frame_indices": [
+    0,
+    1,
+    2,
+    4,
+    5,
+    7,
+    8,
+    10,
+    11,
+    12,
+    14,
+    15,
+    17,
+    18,
+    20
+  ],
+  "removed_length_fraction": 0.010042,
+  "final_reaction_ratios": {
+    "Original": 1.0,
+    "Low early strain": 0.9999998277048975,
+    "Fixed random": 0.9999998277048975,
+    "High late strain": 0.8503648047280533
+  },
+  "source_results": "benchmarks/results/constrained_cycle_intervention.json",
+  "source_results_sha256": "d39fff1a4e4e028322f84fcb0a37c7f03e113be225d5d455f2c8065b01fc2989",
+  "render_script": "scripts/make_intervention_media.py",
+  "render_script_sha256": "bd83921ed481b98a893fd3abe516926da6a5e77e67d87fbb9930e435f16a07a4",
+  "gif_sha256": "0c43100356ff3b8310664178599374e8f1cd7ffd4bead42574612817332632ae",
+  "svg_sha256": "d76e23b63476323deb9bf97f1e89aa559eac0930147ac3a8eb23b061a272dd45"
+}

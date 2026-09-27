@@ -1,0 +1,82 @@
+{
+  "source": "FiberScope manufacturing topology and shared FiberNet spectrum",
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "units": [
+    "square",
+    "hexagon",
+    "ring",
+    "kagome"
+  ],
+  "grid": [
+    2,
+    2
+  ],
+  "points_per_edge": 3,
+  "topology": "topnet26",
+  "seed": 23,
+  "profile": "swirl",
+  "base_profile": [
+    [
+      -0.046,
+      -0.008
+    ],
+    [
+      -0.028,
+      0.022
+    ],
+    [
+      0.0,
+      0.038
+    ],
+    [
+      0.028,
+      0.022
+    ],
+    [
+      0.046,
+      -0.008
+    ]
+  ],
+  "amplitudes": [
+    0.0,
+    0.15224093497742647,
+    0.585786437626905,
+    1.2346331352698203,
+    2.0000000000000004,
+    2.7653668647301797,
+    3.414213562373095,
+    3.8477590650225735,
+    4.0,
+    3.8477590650225735,
+    3.414213562373095,
+    2.76536686473018,
+    2.0000000000000004,
+    1.2346331352698203,
+    0.5857864376269053,
+    0.15224093497742702,
+    5.99903913064743e-32
+  ],
+  "node_edge_counts": [
+    [
+      81,
+      96
+    ],
+    [
+      150,
+      176
+    ],
+    [
+      220,
+      256
+    ],
+    [
+      281,
+      344
+    ]
+  ],
+  "render_script_sha256": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209",
+  "spectrum_sha256": "6c0ad37a24c0d38671c06aa2149aab54cd6472d7bc0ca3ad2636edd154c55e19",
+  "gif_sha256": "2bf98832e4e1bd4c9efd9d16a75f39812ed89af2b3b192804815a86ec55994ec",
+  "svg_sha256": "569acb458eb80314cdd31d5c5bb35207d9ece6a8f34f596990a703e3b819e117"
+}

@@ -84,7 +84,7 @@ def main():
     print("[golden] engine version", ENGINE_VERSION)
     arrays, meta = collect()
     if args.check:
-        return 0
+        return compare_existing(arrays)
     arrays["meta"] = np.array(json.dumps(
         {"engine_version": ENGINE_VERSION, "cases": meta}))
     tmp = OUT + ".tmp.npz"
@@ -92,6 +92,28 @@ def main():
     _atomic_write(tmp, OUT)
     print("[golden] wrote %s (%.1f KB)" % (OUT, os.path.getsize(OUT) / 1024))
     return 0
+
+
+def compare_existing(arrays):
+    """Compare numerics with the prior reference before updating its version."""
+    if not os.path.isfile(OUT):
+        print('[golden] no reference file')
+        return 1
+    worst, worst_key = 0.0, ''
+    with np.load(OUT, allow_pickle=False) as previous:
+        old_version = json.loads(str(previous['meta']))['engine_version']
+        for key, current in arrays.items():
+            if key not in previous or current.shape != previous[key].shape:
+                print('[golden] missing or reshaped array:', key)
+                return 1
+            reference = np.asarray(previous[key], float)
+            scale = max(float(np.abs(reference).max()), 1e-12)
+            error = float(np.abs(np.asarray(current, float) - reference).max()) / scale
+            if error > worst:
+                worst, worst_key = error, key
+    print('[golden] %s -> %s: %d arrays, max rel dev %.3e (%s)'
+          % (old_version, ENGINE_VERSION, len(arrays), worst, worst_key))
+    return 0 if worst < 1e-9 else 1
 
 
 def _atomic_write(tmp, dst):

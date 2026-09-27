@@ -64,7 +64,7 @@ def show(
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches='tight',
                     facecolor=fig.get_facecolor())
-        print(f"✓ Saved to {save_path}")
+        print(f"Saved to {save_path}")
     return fig
 
 
@@ -76,7 +76,7 @@ def simulate(
     save_path: Optional[str] = None,
     **kwargs,
 ) -> SimResult:
-    """一行模拟：力学模拟。
+    """Run a stretch simulation with the spring or beam-frame FEM backend.
 
     Parameters
     ----------
@@ -85,10 +85,9 @@ def simulate(
     mode : str
         模拟模式: "stretch" (位移控制拉伸) 或 "dynamics" (自定义动力学)
     strain : float
-        FEM: 施加应变 (无量纲)
-        弹簧: target_stretch 倍数 (如 2.0 = 拉到两倍)
+        Target stretch ratio for both backends (1.01 = 1% extension).
     backend : str
-        "spring" (TaichiEngine 质点弹簧动力学)
+        "spring" or "fem". The FEM backend accepts E, nu, pct, and nonlinear.
     save_path : str, optional
         JSON 保存路径。
 
@@ -112,11 +111,22 @@ def simulate(
             result = engine.dynamics(graph, **kwargs)
         else:
             raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
+    elif backend == "fem":
+        if mode != "stretch":
+            raise ValueError("The FEM backend supports only mode='stretch'")
+        from fibernet.ml.beam_frame_fem import BeamFrameFEM
+        E = kwargs.pop("E", 1e9)
+        nu = kwargs.pop("nu", 0.3)
+        fem = BeamFrameFEM(E=E, nu=nu)
+        raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
+        result = fem.to_sim_result(raw, graph)
+    else:
+        raise ValueError("backend must be 'spring' or 'fem'")
 
 
     if save_path:
         result.save(save_path)
-        print(f"✓ Saved to {save_path}")
+        print(f"Saved to {save_path}")
 
     return result
 
@@ -127,7 +137,7 @@ def batch_simulate(
     mode: str = "stretch",
     strain: float = 2.0,
 ) -> str:
-    """一行批量模拟：输出 CSV。
+    """Run independent FEM stretch cases and write their measured outputs to CSV.
 
     Parameters
     ----------
@@ -175,31 +185,33 @@ def batch_simulate(
                 "grid_y": grid[1] if isinstance(grid, tuple) else grid,
                 "n_nodes": g.num_nodes,
                 "n_edges": g.num_edges,
-                "E_star": result.effective_youngs_modulus,
-                "nu_star": result.effective_poissons_ratio,
-                "energy": result.strain_energy,
+                "max_force": result.max_force,
+                "max_displacement": result.max_displacement,
+                "energy": result.energy,
                 "mode": mode,
                 "strain": strain,
             }
             rows.append(row)
-            print(f"  ✓ {i+1}/{len(configs)}: {unit} (E*={row['E_star']:.2e})")
+            print(f"{i+1}/{len(configs)}: {unit} (max_force={row['max_force']:.2e})")
 
         except Exception as e:
-            print(f"  ✗ {i+1}/{len(configs)}: {unit} — {e}")
+            print(f"{i+1}/{len(configs)}: {unit} failed: {e}")
 
     if rows:
         with open(output, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=rows[0].keys())
             writer.writeheader()
             writer.writerows(rows)
-        print(f"✓ Saved {len(rows)} results to {output}")
+        print(f"Saved {len(rows)} results to {output}")
+    else:
+        raise RuntimeError('All batch simulations failed; no CSV was written')
 
     return output
 
 
 def train_model(
     csv_path: str,
-    target: str = "E_star",
+    target: str = "max_force",
     features: Optional[List[str]] = None,
     model_type: str = "rf",
     test_size: float = 0.2,
@@ -230,7 +242,7 @@ def train_model(
     Examples
     --------
     >>> from fibernet import train_model
-    >>> metrics = train_model("results.csv", target="E_star")
+    >>> metrics = train_model("results.csv", target="max_force")
     >>> print(f"R² = {metrics['r2']:.3f}")
     """
     try:

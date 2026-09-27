@@ -1,0 +1,47 @@
+{
+  "source": "Engine2 trajectories and shared tensile recruitment API",
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "analysis_sha256": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33",
+  "render_script": "scripts/make_directional_recruitment_media.py",
+  "render_script_sha256": "a425576ad5d27a85911875d38481d76a61746aa62952b651e11fd8484353f68b",
+  "unit": "hexagon",
+  "grid": [
+    3,
+    3
+  ],
+  "seed": 11,
+  "directions": [
+    "x",
+    "y"
+  ],
+  "alpha": 0.05,
+  "min_active": 0.05,
+  "contact": false,
+  "onset_frames": {
+    "x": 4,
+    "y": 12
+  },
+  "sampled_frame_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    14,
+    15,
+    16,
+    17,
+    18,
+    20
+  ],
+  "gif_sha256": "dd76800542bf8b950b5c76a06a5a7ab062b70f35603a332e2a5675e2da1a45e6",
+  "svg_sha256": "6eaf0a4db8c14f7a866ce74a2579a4005e8d6fee0a695b9fba318d98ae6030a4"
+}

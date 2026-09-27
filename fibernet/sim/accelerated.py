@@ -29,7 +29,7 @@ from fibernet.core.structure_graph import StructureGraph
 
 @dataclass
 class SimResult:
-    """Unified result container for mass-spring simulations.
+    """Unified result container for spring and beam-frame simulations.
 
     Simple mode: basic displacements + energy
     Detailed mode: per-edge forces, max values, trajectory data
@@ -139,9 +139,21 @@ class SimResult:
     def save(self, path: str, detailed: bool = False):
         """Save to JSON file."""
         data = self.to_dict(detailed=detailed)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+        destination = Path(path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(destination.name + '.tmp')
+        def convert(value):
+            if isinstance(value, np.ndarray):
+                return value.tolist()
+            if isinstance(value, np.generic):
+                return value.item()
+            raise TypeError(f'Cannot serialize {type(value).__name__}')
+        try:
+            with open(temporary, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, default=convert)
+            temporary.replace(destination)
+        finally:
+            temporary.unlink(missing_ok=True)
 
     @staticmethod
     def load(path: str) -> "SimResult":

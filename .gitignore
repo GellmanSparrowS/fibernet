@@ -41,3 +41,8 @@ output_data/
 !output_data/deformation_test/**
 output_viz/
 datasets/
+
+# Local builds and work-mode handoff archive
+release_candidates/
+handoff/*.zip
+handoff/*.zip.tmp

@@ -1,0 +1,39 @@
+{
+  "source": "fibernet.gen.manufacturing.compile_planar",
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "unit": "kagome",
+  "grid": [
+    2,
+    2
+  ],
+  "points_per_edge": 2,
+  "seed": 23,
+  "nodes": 201,
+  "edges": 264,
+  "topology_id": "21241fe64962e493b4d2855312bf5cc5a45243b4eb2443268eab93f596e88bfa",
+  "sampled_edge_counts": [
+    0,
+    15,
+    31,
+    46,
+    62,
+    77,
+    93,
+    108,
+    124,
+    139,
+    155,
+    170,
+    186,
+    201,
+    217,
+    232,
+    248,
+    264
+  ],
+  "manufacturing_sha256": "c8b9a5827456886b4a181ac000d3e818d32258a812e68285c256c3cb243badea",
+  "render_script_sha256": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209",
+  "gif_sha256": "cb90b8262aa5873d01a1b3f8c323a782fb65eda02adda7c897588d1559f5dac7",
+  "svg_sha256": "32b5e0c45d702ceacf490ee5e2230decefef6930884ece17ecd8db74cc5b33c2"
+}

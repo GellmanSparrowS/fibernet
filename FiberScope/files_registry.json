@@ -7,7 +7,7 @@
    "_emit",
    "_smoke_checks"
   ],
-  "sha256": "86476fe962a589044f3cc986d1588d3772d080aa9415bd03901f1632f61128d6"
+  "sha256": "7285b8141d29a480432669438127359e35ef2c7b3732bba020e82498604eb8cc"
  },
  "fslab/__init__.py": {
   "purpose": "fslab: pure-numpy science core for FiberScope (no Qt imports here).",
@@ -27,21 +27,14 @@
  "fslab/cell_cycles.py": {
   "purpose": "Reference-space closed fiber walks; geometric crossings never weld fibers.",
   "status": "indexed",
-  "symbols": [
-   "closed_cell_edges"
-  ],
-  "sha256": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70"
+  "symbols": [],
+  "sha256": "4214f3b84bc48da2bcf15aed66d26c39a3f7911137114e02c30de1bdb9045980"
  },
  "fslab/cell_rules.py": {
   "purpose": "Deterministic cell transforms and bounded graph assembly.",
   "status": "indexed",
-  "symbols": [
-   "validate_rule",
-   "transform_cell",
-   "expand_graph",
-   "graph_health"
-  ],
-  "sha256": "3935b24ee0048d8694f1f4737d991ab2e3b5a7a694bb6a3915e013a30c6d474d"
+  "symbols": [],
+  "sha256": "e7c123fa6d79f0d8c70356d5dcc90cc01d1636ced460a88cc57c5f5e65c76aee"
  },
  "fslab/contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -61,20 +54,13 @@
    "DatasetStream",
    "generate_dataset"
   ],
-  "sha256": "59c9548741e4ccb953167596b1d421caf52931b66f17f7ae4a34d5761351be00"
+  "sha256": "9de802cb59bad35836864c88bff02e4d47c673ab31604be6c1c5b72ffa427863"
  },
  "fslab/engine2.py": {
   "purpose": "engine2: numpy mass-spring core with bending + contact + energy bookkeeping.",
   "status": "indexed",
-  "symbols": [
-   "Engine2Config",
-   "Engine2Result",
-   "_grips",
-   "_degree2_triplets",
-   "_excluded_pairs",
-   "Engine2"
-  ],
-  "sha256": "0074ae93c67194a3b0d566e8a20c913dc960bde8d94b82a4dc22cf06f9f26dbf"
+  "symbols": [],
+  "sha256": "87d9014d7c66c8368c49691ba49e1c9c184ebe256fc8a468ee9ab420bf87da9d"
  },
  "fslab/exporter.py": {
   "purpose": "Export helpers: structure as JSON/SVG, results as CSV.",
@@ -119,64 +105,40 @@
   "purpose": "Load fibernet.gen.pattern WITHOUT executing fibernet/__init__ (which pulls",
   "status": "indexed",
   "symbols": [
+   "_public_exports",
    "ensure_fibernet"
   ],
-  "sha256": "28de7e29820ab09718853f20611691f8c209f1bc8640dde42efa4d1c33a68619"
+  "sha256": "c050707b22dad029349761f007b7b06f7215d72517791ad63c6ba7b373805b3c"
  },
  "fslab/inverse.py": {
   "purpose": "Inverse design (two-stage, callback-driven for live GUI):",
   "status": "indexed",
   "symbols": [
-   "target_curve",
-   "loading_phase",
-   "curve_of",
-   "metrics_of",
-   "distance",
-   "objective_of",
    "fast_cfg",
-   "InverseRecord",
-   "decode_line_params",
-   "run_inverse",
-   "save_log"
+   "run_inverse"
   ],
-  "sha256": "52d58759d13b5d645231bdbb41d78f9df5382f2b9ee5a3add029d1ff26af1c32"
+  "sha256": "ca5387ad947f2bcaa92c33e2915c154a6d6180e14b641e06798c0fdaa17d83ff"
  },
  "fslab/learning.py": {
   "purpose": "Extensible supervised model and acquisition interfaces (contact-free v2).",
   "status": "indexed",
-  "symbols": [
-   "register_model",
-   "register_acquisition",
-   "select_candidate",
-   "Regressor"
-  ],
-  "sha256": "3b7f9e3401c51f0b6c7e4b8166025273abf664c5ac221096afcabc805c343c5d"
+  "symbols": [],
+  "sha256": "421df2450e7cd1b4c37ce4cebe27868c407c0518ff2017cb936a1d0f2c51e96b"
  },
  "fslab/manufacturing.py": {
   "purpose": "Canonical multigraph compilation and deformation-invariant continuous routes.",
   "status": "indexed",
-  "symbols": [
-   "_route",
-   "ManufacturingNetwork",
-   "_connect",
-   "_even_edges",
-   "_split_junctions",
-   "compile_planar",
-   "compile_surface"
-  ],
-  "sha256": "54329740d3065a2c7d1185cbf7c246efd732c23a8b6950c1ddd487874fed14dc"
+  "symbols": [],
+  "sha256": "dbd17590b4468985839977bde5c5d2a103ef76cf81ea7191c3d56bef42cd4e96"
  },
  "fslab/mlmodel.py": {
   "purpose": "Surrogate modeling: structure features -> mechanical properties.",
   "status": "indexed",
   "symbols": [
-   "light_features",
    "make_sample",
-   "gen_dataset",
-   "MLP",
-   "r2_score"
+   "gen_dataset"
   ],
-  "sha256": "b234ffb8acb3022b83235ca882b3b3f73614de75a1d95203afa6a396283b174f"
+  "sha256": "a659ef6a5861f03931e5391fce5682577511d0ceaad768b9447693d75c5fca35"
  },
  "fslab/model_inverse.py": {
   "purpose": "Learned scalar evaluation; never fabricate a physical force curve.",
@@ -201,27 +163,14 @@
  "fslab/percolation.py": {
   "purpose": "Load-path percolation analysis on stretch trajectories.",
   "status": "indexed",
-  "symbols": [
-   "PercolationResult",
-   "_UnionFind",
-   "_frame_analysis",
-   "_grip_prune",
-   "compute_percolation"
-  ],
-  "sha256": "2c43e8f1bfa48a20b39d36809119a2092eba1f07d744ec982b9a96025b2fdd1e"
+  "symbols": [],
+  "sha256": "48483549ec74f8ce0041ea734927688165e098bc26e4ff2a5e92e39549e4481a"
  },
  "fslab/print_export.py": {
   "purpose": "Millimetre fiber solids, bounded meshing, atomic STL/3MF and route exports.",
   "status": "indexed",
-  "symbols": [
-   "PrintSettings",
-   "FiberSolid",
-   "build_solid",
-   "build_voxel_solid",
-   "export_solid",
-   "export_route"
-  ],
-  "sha256": "5af0dede90ed17e7aff329257a71a3a28d1b88923ce6d5c672a69c6716af2db4"
+  "symbols": [],
+  "sha256": "50c4728a0c99ac94897d9843f48395ae28a9aecacf1f2422637cf984c55d003a"
  },
  "fslab/rl_process.py": {
   "purpose": "Launch a CPU-bounded optional training runtime without blocking Qt.",
@@ -258,7 +207,7 @@
    "_downsample",
    "run_stretch"
   ],
-  "sha256": "f78aeaa665f404d335f4431e5c8cd25fc4e9764c195ce3aeb682c6c47593c678"
+  "sha256": "a121684b087a8c02d26d2be75b94a5ae7ea395df9b15e521a4c5e5867f601fd4"
  },
  "fslab/solid_process.py": {
   "purpose": "Isolated solid construction with atomic output and interruptible parent polling.",
@@ -296,13 +245,10 @@
    "delete_custom_cell",
    "all_unit_keys",
    "n_intermediate_for",
-   "resample_spectrum",
-   "fit_spectrum",
-   "rotated_displacements",
    "chains_of",
    "StructureFactory"
   ],
-  "sha256": "6113c1d3571558fb4ffc3b48e8ac5190162eca29345a2781a7e361fb6c771aad"
+  "sha256": "7fd837da654ee0160c9810275f7a972f8be5a83cff83795c23d55e39794cb709"
  },
  "fslab/surface3d.py": {
   "purpose": "Drape a fiber network onto a quad OBJ surface (pure numpy).",
@@ -322,7 +268,6 @@
   "purpose": "Actual cell topology mapped to bilinear patches with explicit seam stitches.",
   "status": "indexed",
   "symbols": [
-   "MappingConfig",
    "bilinear",
    "map_cells",
    "front_basis",
@@ -332,15 +277,13 @@
    "reduce_triangles",
    "load_obj"
   ],
-  "sha256": "0fa7dec19352fc4956884660ec06461a1921e7813b98af67a42480a221a4a199"
+  "sha256": "81bc9114251ffa30fe59347212c48d058f9bee473bec9f942f7d58f6e9b43a1c"
  },
  "fslab/tube_solid.py": {
   "purpose": "Analytic polygonal cylinders and round joints with manifold Boolean union.",
   "status": "indexed",
-  "symbols": [
-   "tube_mesh"
-  ],
-  "sha256": "129eb464f8f01deec310f7d26194f5bb1f65c717078cff8f2120c4f80aa0b7f2"
+  "symbols": [],
+  "sha256": "f9543d56f0a5cd68f6920bae4d4abd193a97e1241fb98b33d801f5a709167a21"
  },
  "fslab/version.py": {
   "purpose": "Single source of truth for app identity.",
@@ -385,7 +328,7 @@
   "symbols": [
    "AlgorithmDialog"
   ],
-  "sha256": "95ddb4f2973e3b005265298f962ccc748e5886265327402e60ab19da6c66c65c"
+  "sha256": "1f38d16249494127f60bc3b6cf79d8a299ede489789479684939084d3396bf59"
  },
  "studio/cell_editor.py": {
   "purpose": "Authoring dialog for user-defined square-periodic base units (F8b).",
@@ -397,7 +340,7 @@
    "TilePreview",
    "CellEditorDialog"
   ],
-  "sha256": "60d92a60d40a66430207512514d61c80954966e3c6c02d0980df09ba731763e7"
+  "sha256": "5fabc293939aeadfd80e3d6fe226705bde478b9c2443a6ae8237d416ec1bbddd"
  },
  "studio/count_input.py": {
   "purpose": "Positive integer entry without a product-level iteration ceiling.",
@@ -405,7 +348,7 @@
   "symbols": [
    "CountInput"
   ],
-  "sha256": "1d4dcab84b057dfb705a3fe1db328550417a9d9b07583aae0ae4aa282ce684a3"
+  "sha256": "ef2215009beb7519aff2e4cd74921cbc500e2165b996df06ce64594e492bd117"
  },
  "studio/design_tab.py": {
   "purpose": "Inverse design tab: live two-stage optimizer (topology screen + CEM over",
@@ -426,7 +369,7 @@
    "unique_stem",
    "add_caption"
   ],
-  "sha256": "e08bdca977a0ffb738c29c6fa3c94bf24bd7be85fa68cce276077ab5b7dce74d"
+  "sha256": "de190c3b6edc7a6e2c6ae25a2bbf5e76244fa3544a7f7069ea3aa6222ef47822"
  },
  "studio/features_tab.py": {
   "purpose": "Feature analysis dashboard: card grid of scalar tiles and mini",
@@ -441,7 +384,7 @@
    "BatchWorker",
    "FeaturesTab"
   ],
-  "sha256": "db6edab76b2b51c65e7aba94188d3d0600a1c1c72233113dfb75b899c7fc1050"
+  "sha256": "6bc89fbb1bcda8d1aa6f6cd49ef966ec125550db944d01307cd5b896203e0922"
  },
  "studio/gif_export.py": {
   "purpose": "Bounded-memory, high-resolution GIF export driven by the Qt event loop.",
@@ -449,7 +392,7 @@
   "symbols": [
    "SimulationGif"
   ],
-  "sha256": "41f3f6dc2e50cd272067851d373b8c11b6c4e6749b66e888bc07119f01efa4bb"
+  "sha256": "7be458cd7d7ed9bc4f820a567f56ca01ccae89ec355aefcc73a9ff732286a73e"
  },
  "studio/i18n.py": {
   "purpose": "Single TEXT table for all static UI strings: key -> (zh, en).",
@@ -459,7 +402,7 @@
    "get_lang",
    "tr"
   ],
-  "sha256": "c1e1968a5e1ca1ecae99b7adf551885efd654ce850e27f479ff4218b91df15c0"
+  "sha256": "6eb36f33cb293429a64a8aae0ab4c8014caf7fc2d1de7c241ea9c1cb6c200072"
  },
  "studio/main.py": {
   "purpose": "MainWindow: branded header + tab container + shared structure wiring.",
@@ -468,7 +411,7 @@
    "_icon_path",
    "MainWindow"
   ],
-  "sha256": "490e94889462e029e64ca26344dad96bd785667bbb4adb741d0ea57cc8addb52"
+  "sha256": "5c733dab11853e8dfc61f85483280138f244fa40e9efbe84919f2e135dd16613"
  },
  "studio/manufacturing_dialog.py": {
   "purpose": "Separate 2D/3D fabrication views backed by one verified multigraph and solid.",
@@ -494,7 +437,7 @@
   "symbols": [
    "MeshDialog"
   ],
-  "sha256": "9fff965bc833666cc6fca7f44f574e530d653ac5b1fc018e31609858e8808d31"
+  "sha256": "758c70c4cd696439b424536e3f813984e96f3caab935e7f676f426afa56b78ff"
  },
  "studio/ml_tab.py": {
   "purpose": "Machine-learning tab: structure features -> mechanical properties.",
@@ -524,7 +467,7 @@
   "symbols": [
    "recording_options"
   ],
-  "sha256": "ca7ea627ba5031a630370062d75197ef77119d27f39342696169be0934c98a1c"
+  "sha256": "5f404a07931d8c81af1ae28c7a315377a15630b77e7d141dfa443888a562dcb0"
  },
  "studio/replay_tab.py": {
   "purpose": "Exploration replay tab: plays back the shipped exploration log",
@@ -534,7 +477,7 @@
    "load_log",
    "ReplayTab"
   ],
-  "sha256": "02260fdf1a23cedb8372130ee0b54ecb0946c56007fcff446efb784597f27b74"
+  "sha256": "3bc91c3a7bcbd4cb8e4038fc4758a69e21b104102ab4359b999ca1f715c3cff3"
  },
  "studio/rule_dialog.py": {
   "purpose": "Safe visual editor for periodic orientation rules; no executable expressions.",
@@ -543,7 +486,7 @@
    "ExpansionDialog",
    "RuleDialog"
   ],
-  "sha256": "9be7fa5e151b77916d078c26a82d377c6c0073292620dd3495c22cb269d04172"
+  "sha256": "53610c99c393999e0e5328a2f713b6f70ebcf978b5160cae380b88cacc44d83b"
  },
  "studio/sim_tab.py": {
   "purpose": "Unified live-simulation tab: one stretch run drives two synchronized",
@@ -553,7 +496,7 @@
    "SimWorker",
    "SimTab"
   ],
-  "sha256": "4f2d8301efd828cdea4168783ec7c0021b5de281b743d3565f33c9ed081e88ad"
+  "sha256": "92f89603b0fe74efe41e3b88388d149a608ad7d5c132a107da5e4c155273d4eb"
  },
  "studio/structure_tab.py": {
   "purpose": "Structure studio: standalone structure-generation panel.",
@@ -575,7 +518,7 @@
    "SurfaceCanvas",
    "SurfaceTab"
   ],
-  "sha256": "d13fe328e52827acdfc03520a494f45209847599824126cf0c4569025c916869"
+  "sha256": "816c51c233ef80ae3358504e7375d364009f18a2555d543f57114a48576f3c73"
  },
  "studio/theme.py": {
   "purpose": "Visual system: layered dark/light palettes + one comprehensive QSS.",
@@ -586,7 +529,7 @@
    "apply_plot_theme",
    "build_qss"
   ],
-  "sha256": "3ed133e3f8b3fff4874c035061a84d5c30388dc04f90d5f77a194831dbfcb446"
+  "sha256": "ddb87fe10e64d2336cece6b95d8a1dc435d1947b887b459c443cb1ca51a6b63d"
  },
  "studio/workflow.py": {
   "purpose": "Observable asynchronous UI workflow, with atomic per-stage journal.",
@@ -603,7 +546,7 @@
    "signature",
    "BundleAudit"
   ],
-  "sha256": "079d87251a20df6633587fa3ef609200791bdda5e5b2c60ae5bd6c51aeca3783"
+  "sha256": "e05153b10b8d2a4dd5d68f62de35ece7462dd4532967a1897bf1412adb7327ca"
  },
  "scripts/audit_dist.py": {
   "purpose": "Portability audit of the frozen build (onefile exe or onedir folder).",
@@ -615,7 +558,7 @@
    "analyze",
    "main"
   ],
-  "sha256": "85d3212e5442c727bc58651a07d5d91f3663702d02f6fe12b321c8a525be3aca"
+  "sha256": "ca1a71a5e24d574a5bff1f9b46818ed9db2d7ecd87f663786e5fb14cc75d684d"
  },
  "scripts/audit_ui_layout.py": {
   "purpose": "Repeatable offscreen layout audit; optional captures are local QA only.",
@@ -623,7 +566,7 @@
   "symbols": [
    "LayoutAudit"
   ],
-  "sha256": "275708103d5927f05245b4e5dedb7b2ae719ce8e1e7c31cfc4919fcaf93ad3be"
+  "sha256": "45877fe8b5c7ed2e6cc1a727fb8db5ff1a9b44078e654b456bf0bbef09f71b7c"
  },
  "scripts/bench_perf.py": {
   "purpose": "Performance baseline harness (before/after numbers for optimization work).",
@@ -637,7 +580,7 @@
    "bench_gui",
    "main"
   ],
-  "sha256": "9f88f03381be1f19ca8377ffb39ad96e88e94e09ee1fb73f388e56c4e4fa4862"
+  "sha256": "2fb944f7702a064456cf20af9682119b941bd0521154753f98363b590284cf82"
  },
  "scripts/build_exe.py": {
   "purpose": "Build the FiberScope Windows exe (single file by default).",
@@ -658,7 +601,7 @@
    "audit",
    "main"
   ],
-  "sha256": "826ebf6aba1a645b3f7fadacdb3e41c4adb1ebccbc2d062f9021bbd25c18c703"
+  "sha256": "267a8ad61bb93a1dd1b6ac9408a9109a3d16b80f37b99d767aecf8c91499b7ef"
  },
  "scripts/bump_engine_version.py": {
   "purpose": "Keep the cache identity in sync with the numeric core.",
@@ -666,7 +609,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "5dc03c3e6620f4a96245c7d6de756f3fb6029be62470c97e9cb6a0541dc005ee"
+  "sha256": "153c4da223afd882cbe017fd824edae0426a935bb3422b6a9aa76eac2225221b"
  },
  "scripts/check_runtime_deps.py": {
   "purpose": "Pre-build gate: prove the app never touches modules we plan to exclude.",
@@ -679,7 +622,7 @@
    "_child",
    "main"
   ],
-  "sha256": "855722c1026da6a930cfb1f043656a9199b78d826d02e4d22d54f92eecb8f1b7"
+  "sha256": "b5dad3fca515a03a377ebaea462d35e79afa1a94363995fe3473caa07b18e65f"
  },
  "scripts/check_unit_boundary.py": {
   "purpose": "Unit-cell boundary audit for fslab.structure.",
@@ -698,7 +641,7 @@
    "check_unit",
    "main"
   ],
-  "sha256": "b64c39855edf7940f5da089497714fa059a0513f7352793d69460014570c0476"
+  "sha256": "798539f360f1b813889d6e522a9f34227c930f2b72f56cd9f4cde360276e0741"
  },
  "scripts/collect_licenses.py": {
   "purpose": "Collect installed distribution license files into bundled assets.",
@@ -706,7 +649,7 @@
   "symbols": [
    "LicenseInventory"
   ],
-  "sha256": "bc3746a91c8a280639236175f3414ec1d3f778cfcfff6aeaf22c494a303c569b"
+  "sha256": "30068c861b1a443a97931e023aa865c0480a9c857720b05a33922a05fd388d0b"
  },
  "scripts/edit_sources.py": {
   "purpose": "Apply exact, bounded source replacements while preserving newline style.",
@@ -714,7 +657,7 @@
   "symbols": [
    "SourceEdits"
   ],
-  "sha256": "dd8a303e395ae30a4e1556ae987761792f64abadf1692f4a8c666e2c60d71dfc"
+  "sha256": "00411a83080d29a134d9fd8196ab16b2c08445d65af3cca0baadaa5f836e4124"
  },
  "scripts/generate_demo_meshes.py": {
   "purpose": "Generate original procedural quad assets; rerun with Python 3.10+.",
@@ -722,7 +665,7 @@
   "symbols": [
    "DemoMeshes"
   ],
-  "sha256": "412931dae0997eb436abf3defa0c85601bba9c7db39ee0355db4bfaf7e901861"
+  "sha256": "7fcd0712f32bb84fdd8ea8a3cd35f6083da38d54b2a4d998da51664f2da0c1f9"
  },
  "scripts/make_golden_engine.py": {
   "purpose": "Freeze reference engine2 outputs so any numerics change can be verified.",
@@ -731,9 +674,10 @@
    "run_case",
    "collect",
    "main",
+   "compare_existing",
    "_atomic_write"
   ],
-  "sha256": "e84ba74056f25c30cfdb786d62f1041c917c4c16b4b13b39df7a5402fd978df7"
+  "sha256": "ca01cb633da66bdbe67714fab4d994fc9457a686ff245b4fa767e99bdddd8640"
  },
  "scripts/prepare_demo27.py": {
   "purpose": "Prepare regular quad demos from preserved references; resume each asset.",
@@ -749,7 +693,7 @@
   "symbols": [
    "Publication"
   ],
-  "sha256": "fe4bc126a902bf65e50673e61d079a19370f5a94c1b61dae91f26b4a2e7de531"
+  "sha256": "2893db4474dad3408529afcedd3a460e841c024d5276674117098960bd1cb685"
  },
  "scripts/prepare_real_demos.py": {
   "purpose": "Download CC0 Khronos geometry and make bounded OBJ demos.",
@@ -757,7 +701,7 @@
   "symbols": [
    "DemoBuilder"
   ],
-  "sha256": "a1d800a5d12d9b78f37276fa2d61705641f272c55029c537bcdcfe95d07363e5"
+  "sha256": "bf87205e0faf8bc302beb14c40e9b8221c8509fa5356ce04cf1fd7231eb7cac6"
  },
  "scripts/prepare_reference_models26.py": {
   "purpose": "Resume lightweight reference OBJ preparation; originals are read-only.",
@@ -765,7 +709,7 @@
   "symbols": [
    "ReferenceModels"
   ],
-  "sha256": "4540f31e2d8674d4ae6c546ba15aae0bec8fee078833d5a21fcaf0c288743e1d"
+  "sha256": "f9101340d0bfcd8a14efa68c2e68e48be98afaaef0503425ac9d95e39cb5697b"
  },
  "scripts/reproduce_learning23.py": {
   "purpose": "Reproduce actual physical-data training and plot geometry. Run directly.",
@@ -773,7 +717,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "257831d85f690a044a743d650b618ff59400f73d15c75b55093873de1150750f"
+  "sha256": "8b0e0fed4c89844d4aef7de9f833a6df4cbec7397e6163de9f8a9912ae50aaea"
  },
  "scripts/review_geometry27.py": {
   "purpose": "Save local-only review views and a pyramid print demo; no printer job is sent.",
@@ -781,7 +725,7 @@
   "symbols": [
    "GeometryReview"
   ],
-  "sha256": "acefa588806ad8f6d47b58adf5b7f78a26405bcb9ff0f831c43e1b2293ead3e6"
+  "sha256": "7c381f4b15992f3ea41e5f52fba14ea3262119004926ee8bbde7a9fac99bae72"
  },
  "scripts/rl_worker.py": {
   "purpose": "Standalone resumable RL worker. Run: python scripts/rl_worker.py request.json.",
@@ -789,7 +733,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "366ee10ce1400516ffd15689b974fdd59938711329fdc28a2852db4b2f23b250"
+  "sha256": "ee74578ca272a7ce963fe2902284fb68abcebf7639521912ae25ef43c25a2c46"
  },
  "scripts/run_exploration.py": {
   "purpose": "Offline exploration run: novelty-search agent vs R0 uniform random,",
@@ -808,7 +752,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "b1c9c87d5349ca250c2133c45cad20f202306128cb2b61e8569e89f4e546c88a"
+  "sha256": "e8ec48a95056228969eb42ba7f3624e783210b2c1db8ab04d6c271a0f15e8220"
  },
  "scripts/tower_envelope27.py": {
   "purpose": "Regular quad tower envelope fitted to the reference's height and outline.",
@@ -816,7 +760,7 @@
   "symbols": [
    "TowerEnvelope"
   ],
-  "sha256": "eb30371da9c64c2f868b268c031252bb4ca00a97f1f8d037bc214687326e0734"
+  "sha256": "95ce4f933cb081a6c5633dce4530d8803d06c31e0d5a101fa88376d87a7ac911"
  },
  "scripts/update_code_registry.py": {
   "purpose": "Refresh code inventory without discarding curated notes.",
@@ -824,7 +768,7 @@
   "symbols": [
    "CodeRegistry"
   ],
-  "sha256": "7a574a28b9fc3cb1ff025b728c12f8f3cab05df97ad9f4367a705a6def229234"
+  "sha256": "e40600e11ce3f2f988ed9ee7a1abfc77c44a02e78551a432ef7dad96f3b827b3"
  },
  "scripts/validate_manufacturing25.py": {
   "purpose": "Resumable real-asset manufacturing matrix: python scripts/validate_manufacturing25.py.",
@@ -832,7 +776,7 @@
   "symbols": [
    "ManufacturingValidation"
   ],
-  "sha256": "6898042f34d94362ed35df98898bd52ce0c059e97d049733a5e4c8e360db53b2"
+  "sha256": "68c0f014d38f063331a02adee0b2001f5d6ce3e18c6b3101841766ea2c47efda"
  },
  "scripts/validate_manufacturing26.py": {
   "purpose": "Resumable real-asset manufacturing matrix: python scripts/validate_manufacturing26.py.",
@@ -849,7 +793,7 @@
    "PhysicalMatrix",
    "main"
   ],
-  "sha256": "1db9d2bb27ce95d8aea7aaec80ed835ccf8000207e63b5c519e89ce5ed248acd"
+  "sha256": "e12ed0dc37e4e1642762ab883529da7a3164f0a91e4cf1f3d41ac10219d1e896"
  },
  "scripts/validate_surface23.py": {
   "purpose": "Validate real demos and triangle import in the actual surface widget.",
@@ -857,7 +801,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "f6aa65323a3e3d15f4870e00bddcc2d51a4e59cd9a322818533e878ab5aa7123"
+  "sha256": "cde40c8af4c57c879d4741775c9766e0830d0fedbdb7708c7928c3800140fde3"
  },
  "scripts/validate_topnet_physics26.py": {
   "purpose": "Resumable finite-physics matrix for the new, explicitly versioned topology.",
@@ -865,7 +809,7 @@
   "symbols": [
    "PhysicsValidation"
   ],
-  "sha256": "2ab5ebbb50115ab88c172b5e7aae16bab8cc2209c8c16f17f289db8d67341187"
+  "sha256": "ccd32da44dae451e5791cbe2b28a3e9af55ba8c8c6ebc0a7cb2c14cd281201ec"
  },
  "scripts/verify_bambu27.py": {
   "purpose": "Verify installed Bambu reads STL/3MF and preserves geometry; never slice/send.",
@@ -881,7 +825,7 @@
   "symbols": [
    "FrozenRLCheck"
   ],
-  "sha256": "b402c0b91715cfa37d9f3e48a73bfb50558f3f78d09bbf48a77a0ff988ad13aa"
+  "sha256": "80a9fb15ec61837d3c30eecb5323f1848fb8a97687b6e3627a6a7b5f9e1e123f"
  },
  "scripts/verify_print_formats25.py": {
   "purpose": "Independent development-only STL/3MF reader check; requires trimesh.",
@@ -889,7 +833,7 @@
   "symbols": [
    "PrintFormatCheck"
   ],
-  "sha256": "9b819d3c37867d6761a36b832ed120da21adecb0cb52047fb8b9cac13f86c255"
+  "sha256": "8b90e0936493071a95719bc6a0f50b03299f7586182e6663ecef6f217cc430ad"
  },
  "tests/gui_final30.py": {
   "purpose": "Final interaction contract: visible parameters, automatic fabrication and traced navigation.",
@@ -905,7 +849,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "781bc917ce27c16b6e36783f955bb35ad3e44eab3be6930900fc8331eb7cbcda"
+  "sha256": "084e18cf1312ea3d22a99af161b044d10ce19b16c0d2b51f43d1cf7549a55246"
  },
  "tests/gui_geometry27.py": {
   "purpose": "Curved GUI identity, print orientation and hidden workflow controls.",
@@ -948,7 +892,7 @@
    "count_blue",
    "main"
   ],
-  "sha256": "434f8cbf50206092a0a7f2074330579e4a531357ebf6996207e190757f449bb5"
+  "sha256": "002e481e4b6d767e241aef6e53f6b3ee943d8bf537af35e7914b176de96adda3"
  },
  "tests/gui_upgrade.py": {
   "purpose": "2.2 end-to-end GUI flows using isolated datasets and asynchronous workers.",
@@ -956,7 +900,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "5a5b94e38741887096ca97fc35bb8cd8fb98544b0133ae6fdf1874851cdd9507"
+  "sha256": "0da3c4f11cbf2c3d1bf464a546802592cebc08f123cffe7cd0f1cd5bc4c52133"
  },
  "tests/gui_upgrade28.py": {
   "purpose": "UI type follow, trained unit lock, dark radar and recording command routing.",
@@ -993,7 +937,7 @@
    "main",
    "golden_check"
   ],
-  "sha256": "2a3d89229f8ad1a548f93eff5525d4089f2778b5ec5e3490c6c8ca4ee0430e36"
+  "sha256": "fc8d7f39a7a63777b76fc99f144707c06f5808ac0e604aea85b4155885cebaaa"
  },
  "tests/selftest_finals.py": {
   "purpose": "Finals regression suite. Run: python tests/selftest_finals.py.",
@@ -1025,7 +969,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "6add602b52bb38e191c6d41639df15769477138a735a85d7a85c0bdac4083365"
+  "sha256": "2b2c1b0e789671d574a406729f43bfc2601837679b8d1baaca576e9a10d0e029"
  },
  "tests/selftest_manufacturing.py": {
   "purpose": "Canonical topology/route matrix and real STL/3MF closed-solid verification.",
@@ -1042,7 +986,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "17cb2b15002da0496fcdd16ea64339928eb538cc41f43c58b1c0cd049ccb40b4"
+  "sha256": "603495a49f3a9131f02829f8fd329824f24e53a1a8570cb4239a3a5f7a74972e"
  },
  "tests/selftest_regression23.py": {
   "purpose": "Parameter limits, physical topology coverage, fresh and resumed jobs.",
@@ -1050,7 +994,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "84c3dc0413bbd867bbd8a47bc0961d0d84ff778a2082424f75d91730761f571c"
+  "sha256": "b37eecc3618a8238379089e4b18bb999defb3c489386e8d6ac7ab6e090afb23b"
  },
  "tests/selftest_search.py": {
   "purpose": "Actual RL adapter training, checkpoint restart and per-topology exploration.",
@@ -1058,7 +1002,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "4ad644faad39f8a1ab1aeab98c52f83fed04b778ba4f2081fafff6ba7b74f877"
+  "sha256": "72abaa6d68b15cc11e924dbef48739e4e9f077110840f5eb6a9e9f595ba4be34"
  },
  "tests/selftest_surface.py": {
   "purpose": "Verify topology mapping, seam connectivity, assets and safe import budgets.",
@@ -1066,7 +1010,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "c1c12d812ea16fb9a56848130937fb722730a396ea60f9058f54fa099a7fd409"
+  "sha256": "ed2e06759fdae8d0f4ef760f83c77258ee677154b667122a07fadcf8146c08e7"
  },
  "tests/selftest_topnet26.py": {
   "purpose": "Reference-derived degree, twin identity, and simulation/export consistency.",
@@ -1074,7 +1018,7 @@
   "symbols": [
    "main"
   ],
-  "sha256": "914aeb75293c8baffddaf31cdfd210754705639f9bae1c17ab5ed2775befc88e"
+  "sha256": "52f0ea9dacfcdb41fbdccd5231c6ddecc0cda2b3e5f0fa4704095af716966efc"
  },
  "tests/selftest_upgrade28.py": {
   "purpose": "New unit, initial welded intersections and adjustable quad resolution.",
@@ -1083,5 +1027,37 @@
    "main"
   ],
   "sha256": "217b93813671cb07b4c70ab7843348e4d4246d5f0950659cf6ab6e7e83365144"
+ },
+ "scripts/capture_public_pages.py": {
+  "purpose": "Capture populated Chinese/English desktop pages without exposing local settings.",
+  "status": "indexed",
+  "symbols": [
+   "PageCapture"
+  ],
+  "sha256": "9d1e09b07de5e1e103fd8f79ba3a1a17783f907632ee73aa8e2c099bffe94d61"
+ },
+ "tests/gui_default_language.py": {
+  "purpose": "Verify English startup and the explicit Chinese language switch.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "ad8aa503c003c20b67ecc84815fc85ba1632e787d64a36b3aa62d049ac754f88"
+ },
+ "tests/selftest_bridge.py": {
+  "purpose": "Check the shared generator in sibling and monorepo source layouts.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "6b5de310ecbb37598357b0d14c596c973bfd38b1fd8bb0fbf4dce16e87fa5d9b"
+ },
+ "tests/selftest_graph_contract.py": {
+  "purpose": "Verify that the APP graph retains every compiled manufacturing fiber.",
+  "status": "indexed",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "eb4123fd283a81d7b9760f383c85432e577e62f1b003534945ec107583f8c59b"
  }
 }

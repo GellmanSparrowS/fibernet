@@ -1,0 +1,1026 @@
+{
+  "config": {
+    "units": [
+      "square",
+      "hexagon",
+      "ring",
+      "kagome"
+    ],
+    "grid": 2,
+    "points_per_edge": 1,
+    "target_stretch": 1.4,
+    "increments": 20,
+    "steps": 2000,
+    "remove_fraction": 0.1,
+    "alpha": 0.05,
+    "seed": 23,
+    "max_nodes": 3000,
+    "max_edges": 5000,
+    "random_repeats": 5,
+    "length_round_decimals": 5
+  },
+  "engine_version": "e2v12",
+  "engine_hash": "fc5e7bb3a08d",
+  "study_source_sha256": "bfee91fe6ae70f5443dad8902cb288517f10f488507b14117aca8c533721b185",
+  "cases": {
+    "square": {
+      "baseline": {
+        "nodes": 33,
+        "edges": 48,
+        "removed_length_fraction": 0.0,
+        "final_raw_reaction": 300000.0,
+        "work_proxy": 60000.0,
+        "spanning_frame": 1,
+        "final_backbone_fraction": 0.5,
+        "odd_nodes": 0,
+        "connected_components": 1
+      },
+      "target_edge_count": 5,
+      "target_removed_length_fraction": 0.10416666666666667,
+      "length_class_quotas": {
+        "0": 5
+      },
+      "never_recruited_count": 24,
+      "interventions": {
+        "low_recruitment": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 300000.0,
+          "work_proxy": 60000.0,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.5581395626068115,
+          "odd_nodes": 8,
+          "connected_components": 1,
+          "removed_ids": [
+            2,
+            6,
+            10,
+            14,
+            18
+          ],
+          "never_recruited_removed": 5,
+          "budget_error_fraction": 0.0
+        },
+        "high_recruitment_matched": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 234402.765625,
+          "work_proxy": 47263.53515625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.3255814015865326,
+          "odd_nodes": 10,
+          "connected_components": 1,
+          "removed_ids": [
+            0,
+            4,
+            8,
+            12,
+            16
+          ],
+          "never_recruited_removed": 0,
+          "budget_error_fraction": 0.0
+        },
+        "random_00": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 282393.03125,
+          "work_proxy": 57020.8671875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.3255814015865326,
+          "odd_nodes": 8,
+          "connected_components": 1,
+          "removed_ids": [
+            0,
+            13,
+            21,
+            31,
+            41
+          ],
+          "never_recruited_removed": 1,
+          "budget_error_fraction": 0.0
+        },
+        "random_01": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 299440.375,
+          "work_proxy": 59934.0625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.5348837375640869,
+          "odd_nodes": 8,
+          "connected_components": 1,
+          "removed_ids": [
+            5,
+            6,
+            23,
+            34,
+            44
+          ],
+          "never_recruited_removed": 4,
+          "budget_error_fraction": 0.0
+        },
+        "random_02": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 234991.21875,
+          "work_proxy": 47332.1484375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.4883720874786377,
+          "odd_nodes": 8,
+          "connected_components": 1,
+          "removed_ids": [
+            10,
+            12,
+            14,
+            20,
+            46
+          ],
+          "never_recruited_removed": 2,
+          "budget_error_fraction": 0.0
+        },
+        "random_03": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 284711.40625,
+          "work_proxy": 57299.1796875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.5116279125213623,
+          "odd_nodes": 6,
+          "connected_components": 1,
+          "removed_ids": [
+            4,
+            23,
+            24,
+            31,
+            42
+          ],
+          "never_recruited_removed": 3,
+          "budget_error_fraction": 0.0
+        },
+        "random_04": {
+          "nodes": 33,
+          "edges": 43,
+          "removed_length_fraction": 0.10416666666666667,
+          "final_raw_reaction": 285852.96875,
+          "work_proxy": 57440.28125,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.5348837375640869,
+          "odd_nodes": 10,
+          "connected_components": 1,
+          "removed_ids": [
+            7,
+            18,
+            30,
+            37,
+            45
+          ],
+          "never_recruited_removed": 4,
+          "budget_error_fraction": 0.0
+        }
+      },
+      "cycle_screen": {
+        "basis_cycle_count": 16,
+        "topologically_feasible_count": 4,
+        "closest_candidates": [
+          {
+            "removed_ids": [
+              8,
+              9,
+              36,
+              37
+            ],
+            "removed_length_fraction": 0.08333333333333333,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.020833333333333332
+          },
+          {
+            "removed_ids": [
+              0,
+              1,
+              32,
+              33
+            ],
+            "removed_length_fraction": 0.08333333333333333,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.020833333333333332
+          },
+          {
+            "removed_ids": [
+              4,
+              5,
+              16,
+              17
+            ],
+            "removed_length_fraction": 0.08333333333333333,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.020833333333333332
+          }
+        ]
+      }
+    },
+    "hexagon": {
+      "baseline": {
+        "nodes": 62,
+        "edges": 88,
+        "removed_length_fraction": 0.0,
+        "final_raw_reaction": 306947.375,
+        "work_proxy": 60284.05859375,
+        "spanning_frame": 1,
+        "final_backbone_fraction": 0.8181818127632141,
+        "odd_nodes": 0,
+        "connected_components": 1
+      },
+      "target_edge_count": 9,
+      "target_removed_length_fraction": 0.09418740749314175,
+      "length_class_quotas": {
+        "0": 9
+      },
+      "never_recruited_count": 16,
+      "interventions": {
+        "low_recruitment": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306940.625,
+          "work_proxy": 60283.53125,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8987341523170471,
+          "odd_nodes": 18,
+          "connected_components": 1,
+          "removed_ids": [
+            2,
+            8,
+            14,
+            32,
+            38,
+            54,
+            60,
+            74,
+            80
+          ],
+          "never_recruited_removed": 8,
+          "budget_error_fraction": 0.0
+        },
+        "high_recruitment_matched": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306901.375,
+          "work_proxy": 60280.40625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8607594966888428,
+          "odd_nodes": 14,
+          "connected_components": 1,
+          "removed_ids": [
+            3,
+            8,
+            14,
+            20,
+            26,
+            32,
+            38,
+            45,
+            54
+          ],
+          "never_recruited_removed": 5,
+          "budget_error_fraction": 0.0
+        },
+        "random_00": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306918.46875,
+          "work_proxy": 60281.82421875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8607594966888428,
+          "odd_nodes": 12,
+          "connected_components": 1,
+          "removed_ids": [
+            2,
+            14,
+            21,
+            27,
+            39,
+            44,
+            54,
+            61,
+            74
+          ],
+          "never_recruited_removed": 5,
+          "budget_error_fraction": 0.0
+        },
+        "random_01": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306913.71875,
+          "work_proxy": 60281.375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8734177350997925,
+          "odd_nodes": 12,
+          "connected_components": 1,
+          "removed_ids": [
+            9,
+            15,
+            20,
+            26,
+            32,
+            45,
+            54,
+            60,
+            74
+          ],
+          "never_recruited_removed": 6,
+          "budget_error_fraction": 0.0
+        },
+        "random_02": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306940.625,
+          "work_proxy": 60283.53125,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8987341523170471,
+          "odd_nodes": 16,
+          "connected_components": 1,
+          "removed_ids": [
+            8,
+            15,
+            21,
+            32,
+            38,
+            54,
+            61,
+            75,
+            80
+          ],
+          "never_recruited_removed": 8,
+          "budget_error_fraction": 0.0
+        },
+        "random_03": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306911.4375,
+          "work_proxy": 60281.21484375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8607594966888428,
+          "odd_nodes": 18,
+          "connected_components": 1,
+          "removed_ids": [
+            3,
+            9,
+            21,
+            26,
+            39,
+            44,
+            61,
+            74,
+            81
+          ],
+          "never_recruited_removed": 5,
+          "budget_error_fraction": 0.0
+        },
+        "random_04": {
+          "nodes": 62,
+          "edges": 79,
+          "removed_length_fraction": 0.09418740749314175,
+          "final_raw_reaction": 306929.96875,
+          "work_proxy": 60282.6796875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8860759735107422,
+          "odd_nodes": 16,
+          "connected_components": 1,
+          "removed_ids": [
+            2,
+            9,
+            14,
+            26,
+            32,
+            39,
+            55,
+            60,
+            80
+          ],
+          "never_recruited_removed": 7,
+          "budget_error_fraction": 0.0
+        }
+      },
+      "cycle_screen": {
+        "basis_cycle_count": 27,
+        "topologically_feasible_count": 13,
+        "closest_candidates": [
+          {
+            "removed_ids": [
+              24,
+              25,
+              68,
+              69
+            ],
+            "removed_length_fraction": 0.046802098751143044,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.047385308741998707
+          },
+          {
+            "removed_ids": [
+              34,
+              35,
+              76,
+              77
+            ],
+            "removed_length_fraction": 0.046802098751143044,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.047385308741998707
+          },
+          {
+            "removed_ids": [
+              30,
+              31,
+              72,
+              73
+            ],
+            "removed_length_fraction": 0.046802098751143044,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.047385308741998707
+          }
+        ]
+      }
+    },
+    "ring": {
+      "baseline": {
+        "nodes": 92,
+        "edges": 128,
+        "removed_length_fraction": 0.0,
+        "final_raw_reaction": 151497.0,
+        "work_proxy": 34709.40234375,
+        "spanning_frame": 1,
+        "final_backbone_fraction": 0.9375,
+        "odd_nodes": 0,
+        "connected_components": 1
+      },
+      "target_edge_count": 13,
+      "target_removed_length_fraction": 0.04115030320379465,
+      "length_class_quotas": {
+        "0": 13
+      },
+      "never_recruited_count": 8,
+      "interventions": {
+        "low_recruitment": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 149269.765625,
+          "work_proxy": 34072.85546875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.9652174115180969,
+          "odd_nodes": 22,
+          "connected_components": 1,
+          "removed_ids": [
+            13,
+            17,
+            21,
+            33,
+            37,
+            38,
+            45,
+            61,
+            65,
+            69,
+            81,
+            85,
+            93
+          ],
+          "never_recruited_removed": 4,
+          "budget_error_fraction": 0.0
+        },
+        "high_recruitment_matched": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 120121.5625,
+          "work_proxy": 25778.75390625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8260869383811951,
+          "odd_nodes": 22,
+          "connected_components": 1,
+          "removed_ids": [
+            9,
+            10,
+            12,
+            16,
+            32,
+            36,
+            41,
+            57,
+            64,
+            68,
+            80,
+            89,
+            92
+          ],
+          "never_recruited_removed": 0,
+          "budget_error_fraction": 0.0
+        },
+        "random_00": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 149032.25,
+          "work_proxy": 34046.625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.9130434989929199,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            15,
+            20,
+            33,
+            40,
+            46,
+            59,
+            63,
+            66,
+            69,
+            70,
+            81,
+            84,
+            92
+          ],
+          "never_recruited_removed": 3,
+          "budget_error_fraction": 0.0
+        },
+        "random_01": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 148609.15625,
+          "work_proxy": 34004.23046875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.886956512928009,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            14,
+            21,
+            33,
+            36,
+            39,
+            57,
+            61,
+            67,
+            71,
+            82,
+            84,
+            91,
+            95
+          ],
+          "never_recruited_removed": 2,
+          "budget_error_fraction": 0.0
+        },
+        "random_02": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 135466.75,
+          "work_proxy": 30207.451171875,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.895652174949646,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            9,
+            14,
+            17,
+            23,
+            36,
+            43,
+            47,
+            56,
+            59,
+            60,
+            67,
+            83,
+            87
+          ],
+          "never_recruited_removed": 1,
+          "budget_error_fraction": 0.0
+        },
+        "random_03": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 134419.109375,
+          "work_proxy": 29897.234375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.904347836971283,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            14,
+            23,
+            35,
+            36,
+            38,
+            44,
+            60,
+            66,
+            70,
+            81,
+            86,
+            88,
+            92
+          ],
+          "never_recruited_removed": 2,
+          "budget_error_fraction": 0.0
+        },
+        "random_04": {
+          "nodes": 92,
+          "edges": 115,
+          "removed_length_fraction": 0.04115030320379465,
+          "final_raw_reaction": 149755.90625,
+          "work_proxy": 34324.30859375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.895652174949646,
+          "odd_nodes": 26,
+          "connected_components": 1,
+          "removed_ids": [
+            10,
+            15,
+            18,
+            20,
+            34,
+            39,
+            47,
+            63,
+            65,
+            84,
+            89,
+            91,
+            95
+          ],
+          "never_recruited_removed": 3,
+          "budget_error_fraction": 0.0
+        }
+      },
+      "cycle_screen": {
+        "basis_cycle_count": 37,
+        "topologically_feasible_count": 33,
+        "closest_candidates": [
+          {
+            "removed_ids": [
+              76,
+              77,
+              124,
+              125
+            ],
+            "removed_length_fraction": 0.04983836824498626,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.008688065041191611
+          },
+          {
+            "removed_ids": [
+              74,
+              75,
+              122,
+              123
+            ],
+            "removed_length_fraction": 0.04983836824498626,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.008688065041191611
+          },
+          {
+            "removed_ids": [
+              54,
+              55,
+              118,
+              119
+            ],
+            "removed_length_fraction": 0.04983836824498626,
+            "isolated_nodes": 2,
+            "budget_error_fraction": 0.008688065041191611
+          }
+        ]
+      }
+    },
+    "kagome": {
+      "baseline": {
+        "nodes": 121,
+        "edges": 184,
+        "removed_length_fraction": 0.0,
+        "final_raw_reaction": 464754.6875,
+        "work_proxy": 91409.171875,
+        "spanning_frame": 1,
+        "final_backbone_fraction": 0.739130437374115,
+        "odd_nodes": 0,
+        "connected_components": 1
+      },
+      "target_edge_count": 18,
+      "target_removed_length_fraction": 0.09578715731947315,
+      "length_class_quotas": {
+        "1": 18
+      },
+      "never_recruited_count": 48,
+      "interventions": {
+        "low_recruitment": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 464754.5,
+          "work_proxy": 91409.1640625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.8192771077156067,
+          "odd_nodes": 26,
+          "connected_components": 1,
+          "removed_ids": [
+            4,
+            8,
+            13,
+            20,
+            37,
+            40,
+            44,
+            52,
+            68,
+            72,
+            77,
+            84,
+            101,
+            104,
+            108,
+            116,
+            130,
+            134
+          ],
+          "never_recruited_removed": 18,
+          "budget_error_fraction": 0.0
+        },
+        "high_recruitment_matched": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 384723.40625,
+          "work_proxy": 78037.1171875,
+          "spanning_frame": 6,
+          "final_backbone_fraction": 0.6144578456878662,
+          "odd_nodes": 18,
+          "connected_components": 1,
+          "removed_ids": [
+            1,
+            6,
+            14,
+            33,
+            38,
+            51,
+            79,
+            82,
+            111,
+            114,
+            128,
+            133,
+            136,
+            139,
+            146,
+            149,
+            156,
+            159
+          ],
+          "never_recruited_removed": 0,
+          "budget_error_fraction": 0.0
+        },
+        "random_00": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 349412.1875,
+          "work_proxy": 68829.53125,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.7650602459907532,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            7,
+            14,
+            46,
+            51,
+            68,
+            72,
+            77,
+            85,
+            103,
+            109,
+            114,
+            128,
+            130,
+            132,
+            143,
+            151,
+            154,
+            156
+          ],
+          "never_recruited_removed": 9,
+          "budget_error_fraction": 0.0
+        },
+        "random_01": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 373361.78125,
+          "work_proxy": 74621.3984375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.7349397540092468,
+          "odd_nodes": 26,
+          "connected_components": 1,
+          "removed_ids": [
+            14,
+            32,
+            38,
+            69,
+            78,
+            96,
+            101,
+            103,
+            114,
+            128,
+            133,
+            139,
+            140,
+            149,
+            150,
+            153,
+            154,
+            158
+          ],
+          "never_recruited_removed": 6,
+          "budget_error_fraction": 0.0
+        },
+        "random_02": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 443082.3125,
+          "work_proxy": 87887.1953125,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.7650602459907532,
+          "odd_nodes": 26,
+          "connected_components": 1,
+          "removed_ids": [
+            4,
+            14,
+            33,
+            37,
+            38,
+            45,
+            69,
+            71,
+            77,
+            83,
+            85,
+            109,
+            134,
+            137,
+            141,
+            147,
+            149,
+            152
+          ],
+          "never_recruited_removed": 10,
+          "budget_error_fraction": 0.0
+        },
+        "random_03": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 426373.53125,
+          "work_proxy": 84949.734375,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.7710843086242676,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            6,
+            13,
+            21,
+            33,
+            37,
+            38,
+            40,
+            45,
+            64,
+            101,
+            108,
+            111,
+            115,
+            128,
+            131,
+            153,
+            154,
+            158
+          ],
+          "never_recruited_removed": 10,
+          "budget_error_fraction": 0.0
+        },
+        "random_04": {
+          "nodes": 121,
+          "edges": 166,
+          "removed_length_fraction": 0.09578715731947315,
+          "final_raw_reaction": 317081.59375,
+          "work_proxy": 61850.94140625,
+          "spanning_frame": 1,
+          "final_backbone_fraction": 0.759036123752594,
+          "odd_nodes": 24,
+          "connected_components": 1,
+          "removed_ids": [
+            0,
+            13,
+            45,
+            46,
+            64,
+            69,
+            71,
+            77,
+            103,
+            110,
+            116,
+            129,
+            130,
+            132,
+            134,
+            147,
+            153,
+            159
+          ],
+          "never_recruited_removed": 8,
+          "budget_error_fraction": 0.0
+        }
+      },
+      "cycle_screen": {
+        "basis_cycle_count": 64,
+        "topologically_feasible_count": 24,
+        "closest_candidates": [
+          {
+            "removed_ids": [
+              26,
+              27,
+              50,
+              51,
+              60,
+              61,
+              70,
+              71,
+              163,
+              164,
+              167,
+              177
+            ],
+            "removed_length_fraction": 0.05241009816208846,
+            "isolated_nodes": 4,
+            "budget_error_fraction": 0.04337705915738469
+          },
+          {
+            "removed_ids": [
+              26,
+              27,
+              60,
+              61,
+              70,
+              71,
+              96,
+              97,
+              163,
+              164,
+              167,
+              177
+            ],
+            "removed_length_fraction": 0.05241009816208846,
+            "isolated_nodes": 4,
+            "budget_error_fraction": 0.04337705915738469
+          },
+          {
+            "removed_ids": [
+              80,
+              81,
+              124,
+              125,
+              146,
+              147,
+              158,
+              159,
+              178,
+              179,
+              180,
+              183
+            ],
+            "removed_length_fraction": 0.05214441958901154,
+            "isolated_nodes": 4,
+            "budget_error_fraction": 0.04364273773046162
+          }
+        ]
+      }
+    }
+  }
+}
