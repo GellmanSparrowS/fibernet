@@ -1,5 +1,17 @@
 # FiberNet v4 — Progress Log
 
+## 2026-09-27 · GitHub EXE 正式发布验收
+
+- 已完成：修复后的 Windows Release 工作流成功完成 25 项桌面测试、冻结构建、启动/依赖/可携带性门槛和 ZIP 附件发布。公开资产 `FiberScope-3.1.0-Windows-x64.zip` 为 101,966,442 字节；实际下载的 SHA256 `be2c58d1efed9201e6c6c000b63ccb8879473914ce47c4a56dda4d259a0eb83d` 与 GitHub 资产摘要及 `SHA256SUMS.txt` 一致，950 条目 CRC 全通过，包内 EXE 文件版本 3.1.0。仓库 About 简介已同步为 4.2/3.1。
+- 下一步：提交可复跑的公开发行校验脚本与 Work 模式交接更新，重建最终 ZIP 并清理过程文件。
+- 问题：第三方机器实际用户安装和材料实验仍未完成；聊天中暴露的 PyPI/GitHub token 应由维护者撤销或轮换。
+
+## 2026-09-27 · Work 模式交接包刷新
+
+- 已完成：交接任务书从开发候选语义更新为已发布 PyPI 4.2.0，八段主页动图及当前发行证据路径同步；打包器改用最终发布 wheel/sdist，并给 ZIP 清单加入 PyPI 与 GitHub Release 入口。GitHub 仓库 About 简介已从 3.0 更新为 4.2/3.1。
+- 下一步：等待 Windows Release 验收后从最终提交生成并校验新的 Work 模式 ZIP，补充远端 EXE 附件信息。
+- 问题：Windows Release 重跑仍在执行；旧版 2026-09-24 ZIP 留作历史候选，新 ZIP 尚待最终重建。
+
 ## 2026-09-27 · PyPI 4.2.0 正式发布与标签
 
 - 已完成：PR #19 在库端 12 组合、桌面与网页远端检查均通过后合并，main 提交 `aff88f8`。从此提交重建 wheel/sdist，`twine check`、归档敏感文件检查、隔离安装后的三维/招募/ML 烟测通过。已上传 PyPI 4.2.0，两文件官方 SHA256 与本地完全一致：wheel `7b526b8bf6a5e281a8ab07108236b8574f12cac6bfcfee70b5c581770bd4b4fd`；sdist `c924a466b463d0ad712c7655bcf7463884a944db5be9c13a365f985574ab6788`。已推送 `v4.2.0` 标签，远端 CI 与 Windows Release 正在运行。

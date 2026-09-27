@@ -16,7 +16,7 @@ from preflight_publish import PublishPreflight
 class WorkBundleBuilder:
     def __init__(self, root=None):
         self.root = Path(root or Path(__file__).resolve().parents[1])
-        self.output = self.root / "handoff" / "FiberNet_Work_Mode_2026-09-24.zip"
+        self.output = self.root / "handoff" / "FiberNet_Work_Mode_2026-09-27.zip"
 
     @staticmethod
     def digest(path):
@@ -28,21 +28,31 @@ class WorkBundleBuilder:
 
     def run(self):
         PublishPreflight(self.root).run()
+        for args in (["git", "diff", "--quiet"],
+                     ["git", "diff", "--cached", "--quiet"]):
+            if subprocess.run(args, cwd=self.root).returncode:
+                raise RuntimeError("commit tracked changes before building the Work bundle")
         raw = subprocess.check_output(["git", "ls-files", "-z"], cwd=self.root)
         files = sorted({Path(item.decode("utf-8")) for item in raw.split(b"\0")
                         if item and (self.root / item.decode("utf-8")).is_file()})
-        candidate = self.root / "release_candidates" / "2026-09-24"
+        candidate = self.root / "release_candidates" / "2026-09-27" / "build_final"
         extras = {
-            "validation/local_candidate_manifest.json": candidate / "manifest.json",
             "validation/fibernet-4.2.0-py3-none-any.whl":
                 candidate / "fibernet-4.2.0-py3-none-any.whl",
+            "validation/fibernet-4.2.0.tar.gz":
+                candidate / "fibernet-4.2.0.tar.gz",
         }
         for path in extras.values():
             if not path.is_file():
                 raise FileNotFoundError(path)
         commit = subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=self.root, text=True).strip()
-        manifest = {"git_commit": commit, "files": {}}
+        manifest = {
+            "git_commit": commit,
+            "library_release": "https://pypi.org/project/fibernet/4.2.0/",
+            "desktop_release": "https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0",
+            "files": {},
+        }
         self.output.parent.mkdir(parents=True, exist_ok=True)
         temporary = self.output.with_suffix(".zip.tmp")
         try:
