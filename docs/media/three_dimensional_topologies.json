@@ -1,0 +1,25 @@
+{
+  "description": "Fixed 2x2x2 graphs; synchronized camera rotation only",
+  "units": {
+    "octet": {
+      "nodes": 35,
+      "edges": 118
+    },
+    "diamond_3d": {
+      "nodes": 63,
+      "edges": 144
+    },
+    "gyroid": {
+      "nodes": 203,
+      "edges": 531
+    }
+  },
+  "frames": 15,
+  "source_sha256": {
+    "fibernet/gen/pattern.py": "bcfa1962b9afe2bb0d49fd80fc80e13ede43b154b8274cc215d83896e836aa03",
+    "fibernet/core/structure_graph.py": "2e3d1207567ae50f4cacff2121b6b3515bebc71a214777273d9e74c1a232b1a8",
+    "scripts/make_3d_homepage_media.py": "c47af39fbbe06b7b4cbd76c5edc8b637370f6e26925d3767b1d34abbe85329ee"
+  },
+  "gif_sha256": "82e8f3fb7827bfa15975933ef6da75e0ce50d642b0a5644e5ea3e0c18e5ee86b",
+  "svg_sha256": "210e1d8d28bda971686a8918be78453e82d42603881d0cf5c9ccbca8a176e201"
+}

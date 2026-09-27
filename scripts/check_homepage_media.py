@@ -59,6 +59,7 @@ class MediaAudit:
             gif_path.stat().st_size / 1024))
 
     def run(self):
+        self.check_three_dimensional_gallery()
         self.check('spectrum_four_topologies', '_peak.svg', 'amplitudes')
         self.check('tensile_recruitment_kagome', '_final.svg',
                    'sampled_frame_indices')
@@ -74,7 +75,8 @@ class MediaAudit:
                    'frame_indices')
         readme = (self.root / 'docs' / 'README_VNEXT.md').read_text(
             encoding='utf-8')
-        for asset in ('spectrum_four_topologies.gif',
+        for asset in ('three_dimensional_topologies.gif',
+                      'spectrum_four_topologies.gif',
                       'tensile_recruitment_kagome.gif',
                       'tensile_threshold_sensitivity.gif',
                       'continuous_route_kagome.gif',
@@ -83,6 +85,29 @@ class MediaAudit:
                       'route_preserving_intervention_kagome.gif'):
             assert ('media/' + asset) in readme
         print('[media_audit] PASS')
+
+    def check_three_dimensional_gallery(self):
+        name = 'three_dimensional_topologies'
+        manifest = json.loads((self.media / (name + '.json')).read_text(
+            encoding='utf-8'))
+        gif_path = self.media / (name + '.gif')
+        svg_path = self.media / (name + '_final.svg')
+        assert self.digest(gif_path) == manifest['gif_sha256']
+        assert self.digest(svg_path) == manifest['svg_sha256']
+        for relative, expected in manifest['source_sha256'].items():
+            assert self.digest(self.root / relative) == expected
+        with Image.open(gif_path) as animation:
+            assert animation.n_frames == manifest['frames']
+            assert animation.size[0] >= 1200 and animation.size[1] >= 400
+            animation.seek(0)
+            first = animation.convert('RGB')
+            animation.seek(animation.n_frames // 2)
+            assert ImageChops.difference(first, animation.convert('RGB')).getbbox()
+        svg = svg_path.read_text(encoding='utf-8')
+        assert '<text' in svg and 'GYROID' in svg
+        assert len(manifest['units']) == 3
+        print('[media_audit] %s: %d frames, %.1f KB' % (
+            name, manifest['frames'], gif_path.stat().st_size / 1024))
 
 
 if __name__ == '__main__':

@@ -2,15 +2,15 @@
 
 **An open workflow for constructing, simulating, and studying fiber networks in Python and a desktop interface.**
 
-FiberNet supplies programmable graph, generation, analysis, and modeling tools. FiberScope is the interactive application built around fiber-network design workflows. The two are being unified so a scientific calculation can be configured, inspected, and reproduced across Python and the APP. This page documents the **4.2.0 development branch**; a new PyPI or desktop release has not yet been published.
+FiberNet supplies programmable graph, generation, analysis, and modeling tools. FiberScope is the interactive application built around fiber-network design workflows. Version 4.2.0 shares the core manufacturing, reduced simulation, physical learning, inverse-design, and recruitment calculations across Python and the APP. The published package and Windows desktop downloads are linked below; optional or experimental workflows are identified where they appear.
 
-[Start here](#start-here) · [Generation](#shape-one-profile-across-four-topologies) · [Stretch and recruitment](#see-the-network-respond) · [Python quick start](#python-quick-start) · [Route-preserving study](#reproduce-and-extend) · [Desktop application](#desktop-application) · [Methods](docs/METHODS_TENSILE_RECRUITMENT.md) · [Current coverage](docs/CAPABILITY_AUDIT_2026-09-24.md)
+[Start here](#start-here) · [3D generation](#explore-three-dimensional-networks) · [Planar generation](#shape-one-profile-across-four-topologies) · [Stretch and recruitment](#see-the-network-respond) · [Machine learning](#train-the-shared-physical-surrogate) · [Optimization and RL](#optimization-and-reinforcement-learning) · [Python quick start](#python-quick-start) · [Desktop application](#desktop-application) · [Methods](docs/METHODS_TENSILE_RECRUITMENT.md) · [Current coverage](docs/CAPABILITY_AUDIT_2026-09-24.md)
 
 ## Start here
 
-This preview belongs to the **existing `fibernet` repository and Python package**. Development uses a local branch of that repository; [repository and release status](docs/INTEGRATION_REPO_MAP.md) explains the layout. The current homepage is source-backed and distinguishes tested code from published releases.
+The library and desktop APP live in this **existing `fibernet` repository**. Install the 4.2.0 library with `python -m pip install fibernet==4.2.0`. Download the Windows APP from [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0); it does not require a local Python installation. The [repository and release map](docs/INTEGRATION_REPO_MAP.md) describes the shared and APP-only features.
 
-With Python 3.10, from the repository root, install the checkout with `python -m pip install -e .`. The [complete runnable workflow](examples/open_source_workflow.py) uses the library's beam-frame FEM and does not require the desktop APP. The animated 3×3 kagome stretch below uses the now shared reduced spring/bending/contact solver, also available without the APP through the [trajectory example](examples/reduced_recruitment_workflow.py). These are different models with different assumptions.
+With Python 3.10, from the repository root, install the checkout with `python -m pip install -e .`. The [complete runnable workflow](examples/open_source_workflow.py) uses the library's beam-frame FEM and does not require the desktop APP. The animated 3×3 kagome stretch below uses the shared reduced spring/bending/contact solver, also available without the APP through the [trajectory example](examples/reduced_recruitment_workflow.py). These are different models with different assumptions.
 
 | If you want to... | Start with | What you get |
 | --- | --- | --- |
@@ -25,7 +25,13 @@ With Python 3.10, from the repository root, install the checkout with `python -m
 | Create geometry files for inspection | `build_solid`, `export_solid`, `export_route` | Closed mesh, STL/3MF, and edge-ordered CSV with optional dependencies |
 | Use the visual manufacturing workspace | FiberScope desktop | Interactive configuration, path playback, and export tools |
 
-The [coverage audit](docs/CAPABILITY_AUDIT_2026-09-24.md) states which advanced APP capabilities still need a public library API. A locally built wheel has been installed into an isolated Python 3.10 target, where generation, reduced solver, and regressor calls passed. Solver forces need calibration against experiment before quantitative material claims.
+The [coverage audit](docs/CAPABILITY_AUDIT_2026-09-24.md) states which advanced APP capabilities still need a public library API. The 4.2.0 wheel passed isolated Python 3.10 API checks, and source tests passed in 12 Linux/macOS/Windows and Python 3.9–3.12 CI combinations. Solver forces need calibration against experiment before quantitative material claims.
+
+## Explore three-dimensional networks
+
+![Rotating octet, diamond and gyroid fiber networks](docs/media/three_dimensional_topologies.gif)
+
+The library generates these three fixed 2×2×2 graphs with `pattern_3d`; only the camera rotates. Octet, diamond and gyroid have 35/118, 63/144 and 203/531 nodes/edges in this example. The [editable vector keyframe](docs/media/three_dimensional_topologies_final.svg), [source and graph manifest](docs/media/three_dimensional_topologies.json), and `python scripts/make_3d_homepage_media.py` reproduce the gallery. Generate a network in Python with `g = fibernet.pattern_3d(unit="gyroid", box=(2, 2, 2), grid=(2, 2, 2))`; see the [generation API](fibernet/gen/pattern.py) for supported units. The APP's [English 3D surface workspace](FiberScope/docs/screenshots/surface-en.png) maps fibers to OBJ surfaces and provides interactive inspection. A generated 3D graph is not a calibrated simulation or a printable toolpath.
 
 ## Shape one profile across four topologies
 
@@ -56,16 +62,16 @@ The same 3×3 hexagon topology is stretched horizontally and vertically. With a 
 | Task | Python library | FiberScope desktop |
 | --- | --- | --- |
 | Basic 2D/3D patterns and graph operations | Available | Available |
-| Thresholded tensile-strain recruitment | Public analysis API in this development branch | Same shared calculation, visual playback |
+| Thresholded tensile-strain recruitment | Public analysis API in 4.2.0 | Same shared calculation, visual playback |
 | Reduced stretch/bending/contact solver | Public trajectory API and saved-array example | Same numeric core with interactive controls |
-| Continuous planar/curved route, OBJ input and solid export | Public geometry APIs in this development branch | Same shared geometry core plus interactive controls |
+| Continuous planar/curved route, OBJ input and solid export | Public geometry APIs in 4.2.0 | Same shared geometry core plus interactive controls |
 | Custom cell definitions and persistence | Shared bounded JSON registry and route compilation | Same registry core with visual editing |
 | Physical labels, three-target surrogate and active sampling | Shared resumable label stream, six-model workflow and public 14-feature API | Same stream, model and acquisition core with data-generation UI |
 | Target-curve inverse design | Shared curve/scalar objective search with a caller-supplied graph builder | Same search with interactive design controls |
 | FEM and general ML tools | Available, with solver-specific assumptions | Selected workflows available |
 | Structural, pore and finite-width contact snapshot cards | Shared bounded NumPy extractor; separate from the older 94-feature ML schema | Same calculation with interactive cards and region selection |
 
-The [capability audit](docs/CAPABILITY_AUDIT_2026-09-24.md) lists the exact gaps and release gates. A user should not assume that every APP tool is already callable from the installable library. Solver outputs require calibration before quantitative experimental prediction.
+The [capability audit](docs/CAPABILITY_AUDIT_2026-09-24.md) lists the exact gaps and release gates. The APP's external RL trainer, AI assistant, and printer handoff are not equivalent pure-library workflows. Solver outputs require calibration before quantitative experimental prediction.
 
 ## Python quick start
 
@@ -108,7 +114,7 @@ For the APP's structural, planar-pore and finite-width contact descriptors, run 
 
 ### Train the shared physical surrogate
 
-Install the optional ML dependencies with `python -m pip install -e ".[ml]"`, then run `python -m examples.physical_learning_workflow --output-dir demo_learning`. The [runnable workflow](examples/physical_learning_workflow.py) defaults to clearly labeled synthetic data for checking the API; pass `--data samples.npz` with `X` shaped `(N, 14)` and physical `Y` shaped `(N, 3)` for your own peak, stiffness, and work labels. It writes held-out predictions and a metric summary. In Python, `from fibernet.ml import light_features, PhysicalRegressor` gives the same descriptor and six-model adapter used by FiberScope; the [method and leakage controls](docs/METHODS_PHYSICAL_LEARNING_UNIFIED.md) describe training-only normalization and the limits of a random holdout split. The synthetic demo is not evidence of material prediction accuracy.
+Install the optional ML dependencies with `python -m pip install "fibernet[ml]==4.2.0"` or `python -m pip install -e ".[ml]"` from source, then run `python -m examples.physical_learning_workflow --output-dir demo_learning` from a checkout. The [runnable workflow](examples/physical_learning_workflow.py) defaults to clearly labeled synthetic data for checking the API; pass `--data samples.npz` with `X` shaped `(N, 14)` and physical `Y` shaped `(N, 3)` for your own peak, stiffness, and work labels. It writes held-out predictions and a metric summary. In Python, `from fibernet.ml import light_features, PhysicalRegressor` gives the same descriptor and six-model adapter used by FiberScope. The APP's [English learning workspace](FiberScope/docs/screenshots/learning-en.png) exposes data generation, training and prediction. The [method and leakage controls](docs/METHODS_PHYSICAL_LEARNING_UNIFIED.md) describe training-only normalization and the limits of a random holdout split. The synthetic demo is not evidence of material prediction accuracy.
 
 ### Generate resumable physical labels
 
@@ -117,6 +123,10 @@ To create the physical-label dataset used for a later regressor, run `python -m 
 ### Search a target stretch curve
 
 Run `python -m examples.curve_inverse_workflow --output-dir demo_inverse --budget 8` to search a J-shaped normalized force curve with the same reduced-solver inverse core used by the desktop application. The [library-only example](examples/curve_inverse_workflow.py) limits graph and evaluation budgets and saves the best numerical objective and design controls. `from fibernet.ml import CurveInverseDesigner` exposes the search to notebooks; supply a graph builder and either a fixed unit or explicit candidate units. The [method and objective definitions](docs/METHODS_CURVE_INVERSE_UNIFIED.md) distinguish normalized curve shape and raw scalar reaction objectives. Optimization results are numerical model outcomes, not material validation.
+
+### Optimization and reinforcement learning
+
+The bounded target-curve example above uses a two-stage cross-entropy method (CEM), which is a derivative-free search method. FiberNet also contains optional reinforcement-learning environments and algorithm adapters under `fibernet.rl`; install the `rl` extra for those dependencies. FiberScope can launch SAC, TD3 and DDPG training through an explicitly configured external Python runtime; the [APP inverse-design view](FiberScope/docs/screenshots/inverse-en.png) shows the interactive search controls. The 4.2.0 release does **not** claim that the APP's entire external RL training path is a stable, equivalent one-call library API. The [capability audit](docs/CAPABILITY_AUDIT_2026-09-24.md) identifies this gap, and the [research handoff](handoff/WORK_MODE_BRIEF_ZH.md) reports that the current AI cycle selector has not shown a stable advantage over a static rule.
 
 ### Generate a continuous planar and curved route
 
@@ -151,7 +161,7 @@ Install optional geometry dependencies with `python -m pip install -e ".[manufac
 
 ## Desktop application
 
-The [current FiberScope 3.0 release](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0) and [desktop guide](FiberScope/README.md) describe the published APP. This unified branch adds an English default interface and uses the library's shared recruitment calculation. A new executable has **not** been released from this branch. [English and Chinese interface screenshots](FiberScope/docs/screenshots/README.md) document existing workflows.
+The [FiberScope 3.1 Windows x64 download](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0) is a ZIP containing the tested desktop executable and its runtime files; extract the whole folder before starting `FiberScope.exe`. The [desktop guide](FiberScope/README.md) covers its English-default interface and shared recruitment workflow. The ZIP is a Windows build; the Python package is installed separately from PyPI. Optional SAC/TD3/DDPG training requires an external configured Python runtime and is not bundled into the executable. [English and Chinese interface screenshots](FiberScope/docs/screenshots/README.md) document the workflow pages.
 
 ## Reproduce and extend
 
@@ -165,7 +175,7 @@ The companion 3×3 perturbed ring uses a matched 2.22% removed edge length. Each
 
 The repository contains graph-level tests, numerical golden comparisons, APP workflow tests, source-index JSON, and Methods documents. The [route-preserving intervention study](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md) now compares five selection rules on 24 loading configurations, with strictly matched removed length, an explicitly reconstructed Euler route, and a separate reduced-solver run after each distinct deletion. Early low-strain selection did **not** consistently beat a static geometry rule or fixed random choice; this is a reproducible research example rather than a material optimization claim.
 
-To inspect the study from a source checkout, run `python benchmarks/constrained_cycle_intervention.py --output study_cycle.json --max-cases 1`; rerun without `--max-cases` to continue the same atomically saved checkpoint. The [script](benchmarks/constrained_cycle_intervention.py) rejects incompatible parameters or source signatures on resume. A complete default study uses four topologies, three base-geometry seeds and two loading directions; x and y share each base structure and must not be counted as independent material specimens. The [editable five-page paper work deck](manuscript/FiberNet_Methods_Figures_Working.pptx) contains measured intervention and cross-model summaries; it remains a working research artifact in this branch.
+To inspect the study from a source checkout, run `python benchmarks/constrained_cycle_intervention.py --output study_cycle.json --max-cases 1`; rerun without `--max-cases` to continue the same atomically saved checkpoint. The [script](benchmarks/constrained_cycle_intervention.py) rejects incompatible parameters or source signatures on resume. A complete default study uses four topologies, three base-geometry seeds and two loading directions; x and y share each base structure and must not be counted as independent material specimens. The [editable five-page paper work deck](manuscript/FiberNet_Methods_Figures_Working.pptx) contains measured intervention and cross-model summaries; it is a research work file, not a final publication figure set.
 
 The [topology-held-out AI cycle study](docs/AI_CYCLE_SELECTOR_2026-09-24.md) reruns all 408 eligible cycle deletions and compares an early-feature random forest with the non-trained rules on the **actual post-deletion response**. It is a research benchmark rather than a stable general-purpose API; `python benchmarks/ai_cycle_selector.py` resumes its atomically saved result and rejects stale source or reference data. Its AI and static-geometry selections have nearly identical average response in this numerical cohort, so the page does not present AI as a proven material improvement.
 

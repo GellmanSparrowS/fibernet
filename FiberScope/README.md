@@ -1,10 +1,10 @@
-# FiberScope 3.0
+# FiberScope 3.1
 
 纤维网络材料交互设计软件：结构生成 → 拉伸仿真 → 特征分析 → 机器学习 → 逆向设计 → 三维曲面 → 制造导出。
 
 ## 直接运行
 
-从 [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0) 下载 Windows x64 版，解压并运行 FiberScope.exe。无需安装 Python。AI 联网对话需自行配置服务；核心生成、仿真、学习和确定性录像流程可离线使用。
+从 [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0) 下载 FiberScope 3.1 Windows x64 压缩包，完整解压后运行 FiberScope.exe，无需安装 Python。AI 联网对话需自行配置服务；核心生成、仿真、学习和确定性录像流程可离线使用。SAC、TD3、DDPG 的外部训练依赖另行配置 Python 运行时，未打入桌面压缩包。
 
 [魔搭在线体验](https://modelscope.cn/studios/GellmanSparrow/FiberScope) · [决赛录像指令](docs/finals/AI_RECORDING_3_0.md)
 

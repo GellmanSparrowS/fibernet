@@ -3636,7 +3636,7 @@
   "symbols": [
    "MediaAudit"
   ],
-  "sha256": "f1ca5934c1a16ca17c937b07e15d7e6e5639481bbca9055143f7164cd3a90683"
+  "sha256": "d87c6bdbf90f4ca5e18b8a153e60af08ff53dd720f4123fdc812eaed14556aef"
  },
  "tests/test_open_source_workflow.py": {
   "purpose": "Verify the documented public API journey and its saved artifacts.",
@@ -4233,5 +4233,29 @@
    "FemCheckpointRefresh"
   ],
   "sha256": "f14ae6ce3ef64cbb1f7c3b1201692ac09733cd3006c7e980f5bd38d5a6d52abc"
+ },
+ "scripts/build_pypi_readme.py": {
+  "purpose": "Render the GitHub homepage with versioned absolute links for PyPI.",
+  "status": "active",
+  "symbols": [
+   "PyPIReadmeBuilder"
+  ],
+  "sha256": "6f7ad0a5a8c4ac317ff5d40b54e269e7da75b7faa621db71f80e4479c3cec65b"
+ },
+ "scripts/make_3d_homepage_media.py": {
+  "purpose": "Render a bounded, source-backed 3D topology gallery for the homepage.",
+  "status": "active",
+  "symbols": [
+   "ThreeDHomepageGallery"
+  ],
+  "sha256": "c47af39fbbe06b7b4cbd76c5edc8b637370f6e26925d3767b1d34abbe85329ee"
+ },
+ "scripts/smoke_release_wheel.py": {
+  "purpose": "Run installed-wheel API checks without importing the source checkout.",
+  "status": "active",
+  "symbols": [
+   "ReleaseWheelSmoke"
+  ],
+  "sha256": "01dab74af74364e5dc1678b489a07b9cee6655ec295f140e3a5b40abe531d834"
  }
 }

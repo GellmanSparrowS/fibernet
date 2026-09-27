@@ -4,8 +4,8 @@ Used by the UI version chip, the About dialog, the Windows exe resources
 (scripts/build_exe.py) and the docs, so the number can never drift apart.
 """
 APP_NAME = "FiberScope"
-APP_VERSION = "3.0.0"
-VERSION_TUPLE = (3, 0, 0, 0)
+APP_VERSION = "3.1.0"
+VERSION_TUPLE = (3, 1, 0, 0)
 VERSION_CHIP = "V" + ".".join(APP_VERSION.split(".")[:2])
 
 AUTHOR = "杨云浩"

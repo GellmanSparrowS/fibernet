@@ -1,4 +1,4 @@
-# FiberScope 3.0 · Desktop workspace / 桌面工作台
+# FiberScope 3.1 · Desktop workspace / 桌面工作台
 
 Actual computation results captured from the released desktop application. / 截图来自桌面版实际计算结果。
 
