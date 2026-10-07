@@ -1,0 +1,50 @@
+{
+  "schema": "fibernet-fracture-extraction-1",
+  "numerical_model": "linear-static-Timoshenko-stress-removal",
+  "numerics_schema": "lightweight-near-tie-v1",
+  "sources": [
+    {
+      "source": "tools/audit/spatial_linear_reference.py",
+      "sha256": "cac6282327d3c3839ec66dab1ff0a6c7c372c6de7245fe5739ccd99e9a7d21b8",
+      "functions": [
+        "positive",
+        "circular_properties",
+        "local_stiffness",
+        "triad",
+        "element_stiffness"
+      ]
+    },
+    {
+      "source": "tools/pla_frame_rigidity.py",
+      "sha256": "3afe8ab8e959c5d24944077d6e62a76e9065c0e88b4efe8274659e95e22471e7",
+      "functions": [
+        "number",
+        "identifier",
+        "canonical",
+        "study_profile",
+        "checked_network",
+        "components",
+        "allocation_forecast",
+        "assemble_sparse",
+        "solve_sparse"
+      ]
+    },
+    {
+      "source": "fracture3d/handoff_kit/lightweight.py",
+      "sha256": "647bd5704fc82aecafcc82fd866f5351cec7612eaac118cd1871b33f10cc59b0",
+      "functions": [
+        "require",
+        "same",
+        "topology",
+        "stress_envelope",
+        "equilibrium",
+        "advance"
+      ]
+    }
+  ],
+  "changes": [
+    "Module imports relocated; source functions extracted verbatim.",
+    "No process environment mutation, dynamic AST source loading, machine-specific paths or native binary loading.",
+    "Public StructureGraph adapter and bounded resumable driver are new and require independent regression."
+  ]
+}

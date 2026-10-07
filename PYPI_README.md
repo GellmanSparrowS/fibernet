@@ -1,3 +1,7 @@
+## Experimental fracture backend in 4.3.0
+
+The optional `fibernet[fracture]` extra adds a standalone linear-static Timoshenko member-removal API with explicit SI strengths, original node/edge IDs, pre-removal event traces and hash-bound resumable checkpoints. See [fracture methods, API, limits and provenance](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/FRACTURE_METHODS.md) and the synthetic `examples/fracture_quickstart.py`. Existing spring/FEM shortcuts keep their previous semantics. The backend rejects curved, parallel-edge or heterogeneous-beam inputs rather than silently simplifying them. It has no automatic contact or validated finite-fragment motion; path loss is topological, and energy outputs are not fracture toughness. No experimental calibration is claimed.
+
 # FiberNet + FiberScope
 
 **An open workflow for constructing, simulating, and studying fiber networks in Python and a desktop interface.**

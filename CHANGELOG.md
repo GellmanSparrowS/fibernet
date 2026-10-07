@@ -1,3 +1,13 @@
+## [4.3.0] - 2026-10-07
+
+- Add experimental `fibernet.sim.fracture` Config/Solver/Result API and dedicated material-complete JSON CLI
+- Preserve frozen linear Timoshenko, sparse equilibrium and near-tie removal kernels with source-hash provenance
+- Add explicit units/grips, strict geometry/material validation, pre-removal event traces, null free-fragment poses and hash-bound resumable equilibrated checkpoints
+- Add analytical/synthetic regression tests and a runnable public example; retain Python >=3.9 and old `simulate` semantics
+- Add optional `fracture` dependencies (psutil, threadpoolctl); do not bundle LAMMPS or private research inputs/results
+- Replace hard-coded 4.2.0 PyPI CI check with an explicit, version-parameterized post-publication verification workflow
+- Scope: uncalibrated small-displacement static software; no automatic contact, finite-separation proof or fracture-toughness claim
+
 ## [4.1.4] - 2026-07-23
 
 ### Changed
