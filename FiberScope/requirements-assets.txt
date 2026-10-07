@@ -1,4 +1,4 @@
 # Development-only preparation of real demo geometry.
 -r requirements.txt
-trimesh==3.23.5
+trimesh==5.1.0
 scikit-image==0.25.2
