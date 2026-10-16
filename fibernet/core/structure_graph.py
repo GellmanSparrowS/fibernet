@@ -761,15 +761,15 @@ class StructureGraph:
         for nid, node in other._nodes.items():
             new_nid = g.add_node(
                 node.position, boundary=tuple(node.boundary),
-                merge=False, **node.metadata,
+                merge=False, **copy.deepcopy(node.metadata),
             )
             id_map[nid] = new_nid
         for eid, edge in other._edges.items():
             g.add_edge(
                 id_map[edge.node_i], id_map[edge.node_j],
-                radius=edge.radius, material=edge.material,
-                internal_points=edge.internal_points,
-                segments=edge.segments, allow_parallel=True, **edge.metadata,
+                radius=edge.radius, material=copy.deepcopy(edge.material),
+                internal_points=edge.internal_points.copy() if edge.internal_points is not None else None,
+                segments=edge.segments, allow_parallel=True, **copy.deepcopy(edge.metadata),
             )
         return g
 

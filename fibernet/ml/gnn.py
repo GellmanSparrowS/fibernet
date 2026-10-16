@@ -666,3 +666,145 @@ else:
 
     def train_gnn(*a, **kw):
         _require_torch()
+
+
+def graphs_from_batch(batch, *, source_groups):
+    """Adapt GraphBatch v1 to CPU FiberGNN dictionaries with explicit provenance.
+
+    The new four-column schema is XYZ plus dimension, not the legacy five-column
+    schema. GCN consumes node features and adjacency only. Message-aligned edge
+    features/masks and physical identity are retained, not used by that model.
+    ``snapshot`` references the original detached float64 view; all tensors copy.
+    No splitting, fitted preprocessing, unit conversion or target inference occurs.
+    """
+    _require_torch()
+    from collections.abc import Mapping
+    from fibernet.ml.graph_data import GraphBatch
+
+    if not isinstance(batch, GraphBatch) or batch.schema_version != 'fibernet.graph_batch.v1':
+        raise ValueError('batch must be GraphBatch v1')
+
+    def array(name, kind, shape=None):
+        value = getattr(batch, name)
+        if np.ma.isMaskedArray(value) or not isinstance(value, np.ndarray):
+            raise ValueError(name + ' must be an unmasked NumPy array')
+        if value.dtype.kind not in kind or (shape is not None and value.shape != shape):
+            raise ValueError(name + ' has invalid dtype or shape')
+        if not np.isfinite(value).all():
+            raise ValueError(name + ' must be finite')
+        if value.dtype.kind in 'iu' and value.size and int(value.max()) > np.iinfo(np.int64).max:
+            raise ValueError(name + ' exceeds int64 range')
+        return value
+
+    def labels(value, count, name, unique=False):
+        if not isinstance(value, (tuple, list)) or len(value) != count:
+            raise ValueError(name + ' must have one string per graph')
+        if any(type(x) is not str or not x.strip() for x in value):
+            raise ValueError(name + ' must contain nonempty strings')
+        if unique and len(set(value)) != count:
+            raise ValueError(name + ' must be unique')
+
+    if not isinstance(batch.graph_ids, tuple) or not batch.graph_ids:
+        raise ValueError('batch must contain at least one graph')
+    b = len(batch.graph_ids)
+    labels(batch.graph_ids, b, 'graph_ids', unique=True)
+    labels(source_groups, b, 'source_groups')
+    for name in ('length_unit', 'coordinate_frame'):
+        if type(getattr(batch, name)) is not str or not getattr(batch, name).strip():
+            raise ValueError(name + ' must be explicit')
+    dims = array('dimensions', 'iu', (b,))
+    if not np.isin(dims, [2, 3]).all():
+        raise ValueError('dimension must be 2 or 3')
+    nids, eids = array('node_ids', 'iu'), array('edge_ids', 'iu')
+    if nids.ndim != 1 or eids.ndim != 1 or np.any(nids < 0) or np.any(eids < 0):
+        raise ValueError('IDs must be nonnegative one-dimensional integers')
+    n, e = len(nids), len(eids)
+    pos = array('positions', 'iuf', (n, 3))
+    points = array('internal_points', 'iuf')
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError('internal_points must have shape (M, 3)')
+
+    def pointer(name, count, end):
+        p = array(name, 'iu', (count + 1,))
+        if p[0] != 0 or p[-1] != end or np.any(p[1:] < p[:-1]):
+            raise ValueError(name + ' must be monotonic and span its rows')
+        return p
+
+    nptr, eptr = pointer('node_ptr', b, n), pointer('edge_ptr', b, e)
+    iptr = pointer('internal_ptr', e, len(points))
+    interior_available = array('internal_available', 'b', (e,))
+    if np.any((~interior_available) & (iptr[1:] != iptr[:-1])):
+        raise ValueError('unavailable internal geometry must have no points')
+    physical = array('edge_index', 'iu', (2, e))
+    messages = array('message_index', 'iu', (2, 2 * e))
+    parents = array('message_parent_rows', 'iu', (2 * e,))
+    parent_ids = array('message_parent_ids', 'iu', (2 * e,))
+    orientation = array('message_orientation', 'i', (2 * e,))
+    if (not np.array_equal(parents, np.repeat(np.arange(e), 2))
+            or not np.array_equal(parent_ids, np.repeat(eids, 2))
+            or not np.array_equal(orientation, np.tile([1, -1], e))
+            or not np.array_equal(messages[:, ::2], physical)
+            or not np.array_equal(messages[:, 1::2], physical[::-1])):
+        raise ValueError('messages must preserve physical parent and direction')
+    names = batch.edge_feature_names
+    if (not isinstance(names, tuple) or any(type(x) is not str or x not in
+            ('radius', 'chord_length', 'polyline_length') for x in names)
+            or len(set(names)) != len(names)):
+        raise ValueError('invalid edge feature names')
+    ef = array('edge_features', 'iuf', (e, len(names)))
+    masks = array('edge_feature_available', 'b', ef.shape)
+    if np.any(ef[~masks] != 0):
+        raise ValueError('unavailable edge features must use zero placeholders')
+    for name, count in (('graph_metadata', b), ('node_metadata', n), ('edge_metadata', e)):
+        records = getattr(batch, name)
+        if not isinstance(records, tuple) or len(records) != count or any(
+                not isinstance(record, Mapping) for record in records):
+            raise ValueError(name + ' must align with snapshot rows')
+    for i in range(b):
+        lo, hi, elo, ehi = map(int, (nptr[i], nptr[i+1], eptr[i], eptr[i+1]))
+        if lo == hi:
+            raise ValueError('FiberGNN cannot pool a zero-node graph')
+        if np.any(nids[lo+1:hi] <= nids[lo:hi-1]) or len(set(eids[elo:ehi])) != ehi-elo:
+            raise ValueError('node IDs must be sorted unique and edge IDs graph-local unique')
+        if np.any(physical[:, elo:ehi] < lo) or np.any(physical[:, elo:ehi] >= hi):
+            raise ValueError('physical endpoints must stay within their graph')
+
+    def float_tensor(value):
+        with np.errstate(over='ignore', under='ignore'):
+            converted = np.array(value, dtype=np.float32, copy=True)
+        if not np.isfinite(converted).all() or np.any((value != 0) & (converted == 0)):
+            raise ValueError('float32 range exceeded; explicitly rescale inputs before adapting')
+        return torch.tensor(converted, dtype=torch.float32)
+
+    # Check conversions before returning any graph; original float64 remains in snapshot.
+    positions = float_tensor(pos)
+    edge_values = float_tensor(ef)
+    result = []
+    for i in range(b):
+        lo, hi, elo, ehi = map(int, (nptr[i], nptr[i+1], eptr[i], eptr[i+1]))
+        mi = slice(2 * elo, 2 * ehi)
+        edge_index = torch.tensor(messages[:, mi].astype(np.int64) - lo, dtype=torch.long)
+        local_parents = torch.tensor(parents[mi].astype(np.int64) - elo, dtype=torch.long)
+        result.append({
+            'node_features': torch.cat((positions[lo:hi].clone(),
+                torch.full((hi-lo, 1), float(dims[i]), dtype=torch.float32)), dim=1),
+            'edge_index': edge_index,
+            'edge_features': edge_values[elo:ehi][local_parents].clone(),
+            'edge_feature_available': torch.tensor(masks[elo:ehi], dtype=torch.bool)[local_parents],
+            'adjacency': _build_normalized_adjacency(hi-lo, edge_index),
+            'n_nodes': hi-lo, 'n_edges': ehi-elo,
+            'input_schema': 'fibernet.fibergnn.xyz_dimension.v1',
+            'node_feature_names': ('x', 'y', 'z', 'dimension'),
+            'edge_feature_names': names, 'graph_id': batch.graph_ids[i],
+            'source_group': source_groups[i],
+            'node_ids': torch.tensor(nids[lo:hi].astype(np.int64), dtype=torch.long),
+            'physical_edge_ids': torch.tensor(eids[elo:ehi].astype(np.int64), dtype=torch.long),
+            'physical_edge_index': torch.tensor(physical[:, elo:ehi].astype(np.int64)-lo, dtype=torch.long),
+            'message_parent_rows': local_parents,
+            'message_parent_ids': torch.tensor(parent_ids[mi].astype(np.int64), dtype=torch.long),
+            'message_orientation': torch.tensor(orientation[mi], dtype=torch.int8),
+            'dimension': int(dims[i]), 'length_unit': batch.length_unit,
+            'coordinate_frame': batch.coordinate_frame,
+            'snapshot': batch, 'snapshot_graph_row': i,
+        })
+    return result
