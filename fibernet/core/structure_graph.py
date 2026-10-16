@@ -50,12 +50,82 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from numbers import Real
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from fibernet.core.material import Material
+
+
+def _material_record(data: Any) -> dict:
+    """Validate and detach the JSON-only material record in graph schema 3.1.
+
+    This is serialization validation, not a constitutive-model validity check.
+    Legacy graphs without a material record are handled by the graph reader.
+    """
+    if not isinstance(data, dict):
+        raise ValueError("edge material must be an object")
+    allowed = set(Material.__dataclass_fields__)
+    if any(not isinstance(key, str) or key not in allowed for key in data):
+        raise ValueError("edge material contains unknown fields")
+
+    def number(value, label):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+            raise ValueError(f"{label} must be a finite real number")
+        try:
+            value = float(value)
+        except (ValueError, OverflowError) as exc:
+            raise ValueError(f"{label} must be a finite real number") from exc
+        if not np.isfinite(value):
+            raise ValueError(f"{label} must be a finite real number")
+        return value
+
+    def json_value(value, depth=0):
+        if depth > 100:
+            raise ValueError('material extra is cyclic or exceeds 100 nesting levels')
+        if value is None or isinstance(value, (str, bool)):
+            return value
+        if isinstance(value, int):
+            return value
+        if isinstance(value, Real):
+            return number(value, 'material extra value')
+        if isinstance(value, list):
+            return [json_value(item, depth + 1) for item in value]
+        if isinstance(value, dict) and all(isinstance(key, str) for key in value):
+            return {key: json_value(item, depth + 1) for key, item in value.items()}
+        raise ValueError("material extra must contain only JSON data with string keys")
+
+    result = {}
+    required_numbers = {'density', 'youngs_modulus', 'poissons_ratio'}
+    for key, value in data.items():
+        if key == 'name':
+            if not isinstance(value, str):
+                raise ValueError('material name must be a string')
+            result[key] = value
+        elif key == 'extra':
+            if not isinstance(value, dict):
+                raise ValueError('material extra must be an object')
+            result[key] = json_value(value)
+        elif key == 'stiffness_tensor':
+            if value is None:
+                result[key] = None
+            else:
+                try:
+                    tensor = np.asarray(value)
+                    valid = (tensor.shape == (6, 6) and tensor.dtype.kind in 'iuf'
+                             and np.isfinite(tensor).all())
+                except (TypeError, ValueError):
+                    valid = False
+                if not valid:
+                    raise ValueError('material stiffness_tensor must be a finite 6x6 array')
+                result[key] = tensor.astype(float).tolist()
+        elif value is None and key not in required_numbers:
+            result[key] = None
+        else:
+            result[key] = number(value, f'material {key}')
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -854,11 +924,24 @@ class StructureGraph:
     # ------------------------------------------------------------------
 
     def to_dict(self) -> dict:
-        """Serialize to a JSON-compatible dict."""
+        """Serialize graph schema 3.1, including each edge's material.
+
+        Material records contain only JSON data, never serialized Python objects.
+        """
+        def material_record(material):
+            if not isinstance(material, Material):
+                raise ValueError('edge material must be a Material instance')
+            try:
+                return _material_record(material.to_dict())
+            except (AttributeError, TypeError) as exc:
+                raise ValueError('edge material cannot be serialized as JSON data') from exc
+
         return {
-            "version": "3.0",
+            "version": "3.1",
             "dimension": self._dimension,
             "tolerance": self._tolerance,
+            "next_node_id": self._next_node_id,
+            "next_edge_id": self._next_edge_id,
             "box_size": self._box_size.tolist() if self._box_size is not None else None,
             "metadata": self._metadata,
             "nodes": [
@@ -876,6 +959,7 @@ class StructureGraph:
                     "node_i": edge.node_i,
                     "node_j": edge.node_j,
                     "radius": edge.radius,
+                    "material": material_record(edge.material),
                     "segments": edge.segments,
                     "internal_points": edge.internal_points.tolist() if edge.internal_points is not None else None,
                     "metadata": edge.metadata,
@@ -886,30 +970,67 @@ class StructureGraph:
 
     @classmethod
     def from_dict(cls, data: dict) -> "StructureGraph":
-        """Deserialize from a dict (inverse of to_dict)."""
+        """Deserialize without renumbering nodes or parallel fibers.
+
+        Legacy records without IDs use their zero-based list positions.
+        Missing next-ID counters are inferred from the largest stored ID.
+        Legacy missing materials use a fresh generic Material. Versions 3.0,
+        3.1 and version-less records are accepted; unknown versions are rejected.
+        """
+        if data.get('version', '3.0') not in ('3.0', '3.1'):
+            raise ValueError('unsupported StructureGraph schema version')
         g = cls(
             dimension=data.get("dimension", 2),
             tolerance=data.get("tolerance", 1e-6),
             box_size=data.get("box_size"),
         )
-        g._metadata = data.get("metadata", {})
-        for nd in data.get("nodes", []):
+        def identifier(value, name):
+            if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
+                raise ValueError(f'{name} must be a nonnegative integer')
+            return int(value)
+
+        g._metadata = copy.deepcopy(data.get("metadata", {}))
+        for index, nd in enumerate(data.get("nodes", [])):
+            nid = identifier(nd.get("id", index), 'node ID')
+            if nid in g._nodes:
+                raise ValueError(f'duplicate node ID: {nid}')
+            g._next_node_id = nid
             g.add_node(
                 nd["position"],
                 boundary=tuple(nd.get("boundary", (False,) * 6)),
                 merge=False,
-                **nd.get("metadata", {}),
             )
-        for ed in data.get("edges", []):
+            g._nodes[nid].metadata = copy.deepcopy(nd.get("metadata", {}))
+        for index, ed in enumerate(data.get("edges", [])):
+            eid = identifier(ed.get("id", index), 'edge ID')
+            if eid in g._edges:
+                raise ValueError(f'duplicate edge ID: {eid}')
+            node_i = identifier(ed['node_i'], 'edge endpoint')
+            node_j = identifier(ed['node_j'], 'edge endpoint')
+            if node_i == node_j:
+                raise ValueError('serialized edges must have distinct endpoints')
+            g._next_edge_id = eid
             ip = np.array(ed["internal_points"]) if ed.get("internal_points") is not None else None
+            try:
+                material = (Material.from_dict(_material_record(ed['material']))
+                            if 'material' in ed else Material())
+            except (ValueError, TypeError, ZeroDivisionError) as exc:
+                raise ValueError(f'invalid material for edge {eid}: {exc}') from exc
             g.add_edge(
-                ed["node_i"], ed["node_j"],
+                node_i, node_j,
                 radius=ed.get("radius", 0.1),
+                material=material,
                 internal_points=ip,
                 segments=ed.get("segments", 4),
                 allow_parallel=True,
-                **ed.get("metadata", {}),
             )
+            g._edges[eid].metadata = copy.deepcopy(ed.get("metadata", {}))
+        for name, entries in (('node', g._nodes), ('edge', g._edges)):
+            minimum = max(entries, default=-1) + 1
+            counter = identifier(data.get(f'next_{name}_id', minimum), f'next {name} ID')
+            if counter < minimum:
+                raise ValueError(f'next {name} ID must exceed all stored IDs')
+            setattr(g, f'_next_{name}_id', counter)
         return g
 
     def save_json(self, path: str):

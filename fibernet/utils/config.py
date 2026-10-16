@@ -267,6 +267,12 @@ def create_template_config(
     >>> # Edit the file, then load it
     >>> config = ExperimentConfig.from_yaml('my_experiment.yaml')
     """
+    if template_type == 'thermal':
+        raise NotImplementedError(
+            "Legacy thermal configuration templates are unsupported; no file was written. "
+            "See examples/transient_thermal_explicit.py for a different explicit transient model; "
+            "it does not compute effective conductivity, CTE or thermal deformation."
+        )
     templates = {
         'mechanical': {
             'experiment': {
@@ -448,6 +454,13 @@ def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any
         else:
             config = ExperimentConfig.from_yaml(filepath)
     
+    if config.simulation and config.simulation.get('type') == 'thermal':
+        raise NotImplementedError(
+            "Legacy thermal configuration execution is unsupported; no network was generated. "
+            "See examples/transient_thermal_explicit.py for a different explicit transient model; "
+            "it does not compute effective conductivity, CTE or thermal deformation."
+        )
+
     # Validate
     errors = config.validate()
     if errors:

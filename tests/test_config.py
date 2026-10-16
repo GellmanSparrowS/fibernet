@@ -141,15 +141,19 @@ class TestTemplateConfigs:
         finally:
             Path(path).unlink(missing_ok=True)
     
-    def test_create_thermal_template(self):
-        pytest.importorskip('yaml')
-        path = _tmp_path('.yaml')
-        try:
-            config = create_template_config(path, template_type='thermal')
-            assert 'name' in config.experiment
-        finally:
-            Path(path).unlink(missing_ok=True)
-    
+    @pytest.mark.parametrize('existing', [False, True])
+    def test_create_thermal_template(self, tmp_path, existing):
+        path = tmp_path / 'thermal.yaml'
+        original = b'pre-existing configuration must survive'
+        if existing:
+            path.write_bytes(original)
+        with pytest.raises(NotImplementedError, match='Legacy thermal configuration templates are unsupported'):
+            create_template_config(path, template_type='thermal')
+        if existing:
+            assert path.read_bytes() == original
+        else:
+            assert not path.exists()
+
     def test_create_dma_template(self):
         pytest.importorskip('yaml')
         path = _tmp_path('.yaml')

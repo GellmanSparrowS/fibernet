@@ -1,3 +1,9 @@
+## [Unreleased] - runtime compatibility
+
+- Temporarily restrict TaichiEngine and accel/full/dev extras to Taichi 1.7.4 for the version-verified runtime-lifetime repair; other versions fail explicitly
+- Same-owner engines share the runtime; owning worker threads are supported, cross-owner use and unverifiable external initialization fail safely
+- Non-Taichi backends are unaffected; broader Taichi versions require explicit lifecycle matrix validation
+
 ## [4.3.0] - 2026-10-07
 
 - Add experimental `fibernet.sim.fracture` Config/Solver/Result API and dedicated material-complete JSON CLI

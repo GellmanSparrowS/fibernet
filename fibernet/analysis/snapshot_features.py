@@ -715,10 +715,25 @@ class SnapshotFeatureExtractor:
                                 include_contact=self.include_contact)
 
     def extract_graph(self, graph, rect=None):
-        """Analyze a graph exposing node_positions() and edge_array()."""
-        positions = np.asarray(graph.node_positions(), dtype=float)
+        """Analyze a StructureGraph or a legacy dense-row graph-like object.
+
+        StructureGraph IDs are mapped to sorted position rows by to_numpy().
+        Other objects must supply edge_array() endpoints as zero-based row
+        indices into node_positions(); arbitrary node identity is not inferred.
+        """
+        # Keep the core dependency local to this adapter, not module import.
+        from fibernet.core.structure_graph import StructureGraph
+
+        is_structure_graph = isinstance(graph, StructureGraph)
+        if is_structure_graph:
+            positions, edges, _ = graph.to_numpy()
+        else:
+            positions = graph.node_positions()
+        positions = np.asarray(positions, dtype=float)
         if positions.ndim == 2 and positions.shape[1] == 3:
             if len(positions) and np.ptp(positions[:, 2]) > 1e-9:
                 raise ValueError("snapshot features require a planar graph")
             positions = positions[:, :2]
-        return self.extract(positions, graph.edge_array(), rect=rect)
+        if not is_structure_graph:
+            edges = graph.edge_array()
+        return self.extract(positions, edges, rect=rect)

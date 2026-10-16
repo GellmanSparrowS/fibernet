@@ -726,16 +726,17 @@ def simulate_thermal(
     T_cold: float = 0,
     axis: int = 0,
 ) -> Dict:
-    """Run thermal simulation."""
-    from fibernet.sim.thermal import ThermalSolver
-    
-    solver = ThermalSolver(network)
-    result = solver.solve_steady_state(T_hot=T_hot, T_cold=T_cold, axis=axis)
-    
-    return {
-        'conductivity': result.effective_conductivity,
-        'temperatures': result.temperatures,
-    }
+    """Unsupported legacy steady-state/effective-conductivity interface.
+
+    Explicit transient lumped conduction is a different model, not a fallback.
+    CTE and thermal deformation are not provided by that replacement example.
+    """
+    raise NotImplementedError(
+        "Legacy steady-state/effective-conductivity thermal API is unsupported. "
+        "Explicit transient lumped conduction requires caller-supplied C/g/T0/Q "
+        "and a time grid; see examples/transient_thermal_explicit.py. "
+        "This is not an equivalent replacement and does not compute CTE or thermal deformation."
+    )
 
 
 def analyze(network: FiberNetwork) -> Dict:

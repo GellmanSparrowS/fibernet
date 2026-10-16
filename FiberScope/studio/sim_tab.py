@@ -187,7 +187,8 @@ class SimTab(QWidget):
         self.lbl_view = QLabel()
         self.lbl_view.setObjectName("hint")
         self.view_combo = QComboBox()
-        self.view_combo.setFixedWidth(150)
+        self.view_combo.setMinimumWidth(150)
+        self.view_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.view_combo.currentIndexChanged.connect(self._set_view)
         vrow.addWidget(self.lbl_view)
         vrow.addWidget(self.view_combo)
@@ -205,14 +206,15 @@ class SimTab(QWidget):
         self.speed_combo = QComboBox()
         self.speed_combo.addItems(["%d fps" % f for f in FPS])
         self.speed_combo.setCurrentIndex(FPS.index(48))
-        self.speed_combo.setFixedWidth(68)
+        self.speed_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.speed_combo.currentIndexChanged.connect(self._on_speed)
         self.loop_btn = QPushButton()
         self.loop_btn.setCheckable(True)
         self.loop_btn.setChecked(True)
-        self.loop_btn.setFixedWidth(52)
+        self.loop_btn.setMinimumWidth(52)
         self.loop_btn.setObjectName("loopbtn")
         self.slider = QSlider(Qt.Horizontal)
+        self.slider.setMinimumWidth(120)
         self.slider.valueChanged.connect(self._on_slider)
         self.lbl_frame = QLabel(); self.lbl_frame.setObjectName("chip")
         self.lbl_strain = QLabel(); self.lbl_strain.setObjectName("chip")
@@ -221,10 +223,16 @@ class SimTab(QWidget):
         transport.addWidget(self.speed_combo)
         transport.addWidget(self.loop_btn)
         transport.addWidget(self.slider, 1)
-        transport.addWidget(self.lbl_frame)
-        transport.addWidget(self.lbl_strain)
-        transport.addWidget(self.lbl_contacts)
         cv.addLayout(transport)
+        # Keep metadata off the transport row so the scrubber remains usable
+        # at the supported minimum window width and in either language.
+        frame_info = QHBoxLayout()
+        frame_info.setSpacing(8)
+        frame_info.addWidget(self.lbl_frame)
+        frame_info.addWidget(self.lbl_strain)
+        frame_info.addWidget(self.lbl_contacts)
+        frame_info.addStretch(1)
+        cv.addLayout(frame_info)
         body.addWidget(center)
 
         right_wrap = QScrollArea()
@@ -417,6 +425,8 @@ class SimTab(QWidget):
 
     # ---------------- views / playback ----------------
     def _set_view(self, idx):
+        self.view_combo.setToolTip(tr("explain_perc") if idx <= 0
+                                   else tr("explain_stretch"))
         if self.run is None:
             return
         if idx <= 0:
@@ -622,6 +632,8 @@ class SimTab(QWidget):
             self.view_combo.setItemText(1, tr("view_strain"))
         self.lbl_stretch.setText(tr("stretch"))
         self.lbl_quant.setText(tr("quantile"))
+        self.lbl_quant.setToolTip(tr("quantile_hint"))
+        self.quant.setToolTip(tr("quantile_hint"))
         self.lbl_grip.setText(tr("grip"))
         self.grip.setToolTip(tr("grip_hint"))
         self.chk_bend.setText(tr("phys_bending"))
@@ -629,7 +641,7 @@ class SimTab(QWidget):
         self.chk_weld.setText('焊接锚点' if get_lang()=='zh' else 'Weld intersections')
         self.lbl_phys.setText(tr("fixed_physics"))
         self.lbl_bc.setText(tr("fixed_bc"))
-        self.run_btn.setText(tr("run_btn"))
+        self.run_btn.setText(tr("run_btn").replace("&", "&&"))
         self.export_btn.setText(tr("export_btn"))
         self.act_gif.setText("导出 GIF · 48 FPS" if get_lang()=="zh" else "Export GIF · 48 FPS")
         self.act_force_png.setText(tr("ex_force_png"))

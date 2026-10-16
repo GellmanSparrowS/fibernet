@@ -1,3 +1,18 @@
+## Unreleased Taichi compatibility change
+
+This checkout's `TaichiEngine` currently supports **Taichi 1.7.4 only**. The
+runtime-lifetime safety repair relies on version-verified private runtime APIs;
+other versions fail with an actionable error. The `accel`, `full` and `dev`
+extras now pin that version. Non-Taichi backends remain unaffected. CPU lifecycle
+validation does not establish GPU or cross-platform support.
+
+Initialize, allocate and run on one owning thread, which may be a GUI worker.
+Same-owner engine instances share the runtime. Cross-owner calls are rejected;
+there is no implicit thread transfer when the owning worker exits. Unknown
+externally initialized runtimes are rejected safely. See the
+[runtime lifecycle contract](docs/architecture/taichi-lifecycle-audit.md).
+Wider version support requires a tested lifecycle/version matrix.
+
 ## Experimental fracture backend in 4.3.0
 
 The optional `fibernet[fracture]` extra adds a standalone linear-static Timoshenko member-removal API with explicit SI strengths, original node/edge IDs, pre-removal event traces and hash-bound resumable checkpoints. See [fracture methods, API, limits and provenance](docs/FRACTURE_METHODS.md) and the synthetic `examples/fracture_quickstart.py`. Existing spring/FEM shortcuts keep their previous semantics. The backend rejects curved, parallel-edge or heterogeneous-beam inputs rather than silently simplifying them. It has no automatic contact or validated finite-fragment motion; path loss is topological, and energy outputs are not fracture toughness. No experimental calibration is claimed.

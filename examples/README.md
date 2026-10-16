@@ -1,14 +1,29 @@
 # FiberNet Examples
 
-Research-ready examples demonstrating FiberNet capabilities.
+Examples have different support status. Historical scripts may depend on unavailable APIs; the index is not a blanket claim that every example runs.
 
-## Quick Start
+## Start here: explicit linear mechanics
 
 ```bash
-# Run any example
+python -m examples.linear_fem_quickstart --output-dir /a/new/private/linear-example
+```
+
+One four-node 2D square: declare nodal forces and full clamps, solve with the
+public beam-frame module, inspect numerical diagnostics, and save/read back the
+result. The figure shows the undeformed network with the actual loads and
+constraints. The output directory must be new. See the short
+[linear FEM guide](../docs/architecture/linear-fem-quickstart.md) for dependencies,
+units and the limits of the residual/status fields. No Torch/Taichi or ML fitting
+is needed. Reuse saved data without another solve with
+`python -m examples.linear_fem_quickstart --output-dir EXISTINGDIR --plot-only`.
+The PNG/SVG layout is A4 portrait. This does not validate the historical scripts below.
+
+## Historical quick-start commands
+
+```bash
+# Selected historical commands below require their own capability review
 python examples/01_mechanical_analysis.py
 python examples/02_structure_comparison.py
-python examples/03_thermal_analysis.py
 python examples/04_buckling_analysis.py
 python examples/05_chiral_braided_structures.py
 python examples/06_uncertainty_quantification.py
@@ -20,10 +35,30 @@ python examples/06_uncertainty_quantification.py
 |---------|-------------|-------------|
 | 01 | Mechanical analysis of random networks | `FiberFEM`, `MorphologyAnalyzer` |
 | 02 | Structure comparison (random vs lattice) | `TopologyAnalyzer`, generators |
-| 03 | Thermal analysis (CTE) | `ThermalAnalyzer` |
+| 03 | Historical CTE/thermal-deformation notice; unsupported | Original source archived; no current CTE backend |
 | 04 | Buckling analysis | `BucklingAnalyzer` |
 | 05 | Chiral & braided structures | `chiral_metamaterial`, `braided_rope` |
 | 06 | Uncertainty quantification | `monte_carlo_ensemble` |
+
+## Current explicit transient thermal example
+
+```bash
+python -m examples.transient_thermal_explicit
+```
+
+Run from the project root. The default 0.02-second interval is a quick entry-point demo, not full relaxation or new time-accuracy validation. This independent example supplies heat capacities (J/K), edge conductances (W/K), initial/fixed temperatures (K), sources (W), and time (s) explicitly. It uses the isolated current module; it is **not** a replacement for old steady-state conductivity or CTE calculations. No effective conductivity, thermal expansion or deformation is computed. See [thermal usage](../docs/integrations/TRANSIENT_THERMAL_USAGE.md) and [migration notes](../docs/integrations/THERMAL_MIGRATION.md).
+
+## Historical thermal callers
+
+`03_thermal_analysis.py` is now an import-safe unsupported notice; its byte-preserved original is in `_archived/03_thermal_analysis.py` and should not be executed.
+
+These four multi-feature scripts are unchanged this round, but contain unsupported historical thermal calls and are **not supported as complete runnable workflows**:
+- `research_case_study.py`: old `api.simulate_thermal` / effective-conductivity call
+- `comprehensive_demo.py`: unavailable root `simulate_thermal` call
+- `full_workflow.py`: unavailable root `simulate_thermal` call
+- `integration_examples.py`: unavailable `ThermalSolver` import/calls
+
+Their other paths have not been reviewed by this migration. Do not infer that skipping the thermal section makes the entire script valid. Old `api.simulate_thermal` and thermal configuration creation/execution fail explicitly without silently selecting a different model.
 
 ## Available Generators
 

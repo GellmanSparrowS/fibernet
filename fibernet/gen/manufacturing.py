@@ -144,6 +144,12 @@ def _route(edge_bytes, count):
 
 @dataclass
 class ManufacturingNetwork:
+    """Closed route with explicit (N, 3) coordinates and (M, 2) edges.
+
+    Arrays and nested sequences are accepted. Planar coordinates retain a
+    zero z column, as supplied by ``compile_planar``. Flat or differently
+    shaped inputs are rejected rather than regrouped into different nodes.
+    """
     reference: np.ndarray
     positions: np.ndarray
     edges: np.ndarray
@@ -151,12 +157,24 @@ class ManufacturingNetwork:
     bridges: int = 0
 
     def __post_init__(self):
-        self.reference = np.asarray(self.reference, float).reshape(-1, 3)
-        self.positions = np.asarray(self.positions, float).reshape(-1, 3)
-        self.edges = np.asarray(self.edges, np.int64).reshape(-1, 2)
+        self.reference = np.asarray(self.reference, float)
+        self.positions = np.asarray(self.positions, float)
+        for coordinates in (self.reference, self.positions):
+            if (coordinates.ndim != 2 or coordinates.shape[1] != 3 or
+                    not len(coordinates)):
+                raise ValueError('manufacturing coordinates require nonempty (N, 3) arrays')
+        raw_edges = np.asarray(self.edges)
+        if raw_edges.ndim != 2 or raw_edges.shape[1] != 2 or not len(raw_edges):
+            raise ValueError('manufacturing edges require a nonempty (M, 2) array')
+        if (not np.issubdtype(raw_edges.dtype, np.integer) or
+                np.any(raw_edges < 0) or np.any(raw_edges >= len(self.positions))):
+            raise ValueError('manufacturing edges require valid integer node indices')
+        self.edges = raw_edges.astype(np.int64)
         if len(self.positions) > MAX_MANUFACTURING_POINTS or len(self.edges) > MAX_MANUFACTURING_EDGES:
             raise MemoryError('manufacturing graph budget exceeded; reduce cells or surface faces')
-        if self.positions.shape != self.reference.shape or not np.isfinite(self.positions).all():
+        if (self.positions.shape != self.reference.shape or
+                not np.isfinite(self.positions).all() or
+                not np.isfinite(self.reference).all()):
             raise ValueError('invalid manufacturing coordinates')
         self.health = graph_health(self.positions, self.edges)
         if self.health['components'] != 1 or self.health['odd']:
@@ -277,7 +295,10 @@ def compile_planar(factory, boundary_twins=True):
                    line_displacements=None, wave=False, node_offsets=None,
                    perturbation=0., expansion_rule='translate', topology='legacy').build()
     nodes = np.asarray(base.node_positions(), float)
-    base_edges = closed_cell_edges(nodes, np.asarray(base.edge_array(), int)[:, :2])
+    node_index = {node_id: i for i, node_id in enumerate(sorted(base.nodes))}
+    indexed_edges = np.asarray([[node_index[a], node_index[b]]
+                                for a, b in base.edge_array()], int).reshape(-1, 2)
+    base_edges = closed_cell_edges(nodes, indexed_edges)
     if not len(base_edges):
         raise ValueError('cell has no fiber edges')
     if len(nodes)*factory.grid_x*factory.grid_y > MAX_NODES:

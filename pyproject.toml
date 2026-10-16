@@ -49,7 +49,7 @@ viz = ["pyvista>=0.37"]
 mesh = ["trimesh>=3.20"]
 manufacturing = ["manifold3d", "scikit-image>=0.19", "fast-simplification"]
 io = ["h5py>=3.7"]
-accel = ["taichi>=1.6"]
+accel = ["taichi==1.7.4"]
 ml = [
     "scikit-learn>=1.0",
     "pandas>=1.5",
@@ -67,7 +67,7 @@ full = [
     "pyvista>=0.37",
     "trimesh>=3.20",
     "h5py>=3.7",
-    "taichi>=1.6",
+    "taichi==1.7.4",
     "scikit-learn>=1.0",
     "pandas>=1.5",
     "networkx>=3.0",
@@ -96,7 +96,7 @@ dev = [
     "black>=23.0",
     "flake8>=6.0",
     "scikit-image>=0.19",
-    "taichi>=1.6",
+    "taichi==1.7.4",
 ]
 docs = [
     "sphinx>=7.0",

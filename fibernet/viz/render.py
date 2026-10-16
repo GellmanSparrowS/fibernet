@@ -85,6 +85,88 @@ THEMES = {
 }
 
 
+def _identity_order(ids, expected, name, *, full=True):
+    """Validate an explicit row map; return its target order and permutation."""
+    if ids is None:
+        return list(expected), np.arange(len(expected))
+    try:
+        ids = list(ids)
+    except TypeError as exc:
+        raise ValueError(f"{name} must be a sequence of integer IDs") from exc
+    if any(isinstance(i, (bool, np.bool_)) or not isinstance(i, (int, np.integer))
+           or i < 0 for i in ids):
+        raise ValueError(f"{name} must contain nonnegative integer IDs (not bools)")
+    id_set = set(ids)
+    if len(id_set) != len(ids):
+        raise ValueError(f"{name} contains duplicate IDs")
+    if not id_set.issubset(expected):
+        raise ValueError(f"{name} contains foreign graph IDs")
+    if full and id_set != set(expected):
+        raise ValueError(f"{name} coverage must include every graph ID")
+    target = [i for i in expected if i in id_set]
+    lookup = {i: row for row, i in enumerate(ids)}
+    return target, np.array([lookup[i] for i in target], dtype=int)
+
+
+def _aligned_array(value, order, name, *, vector=False):
+    array = np.asarray(value)
+    if array.ndim != (2 if vector else 1) or array.shape[0] != len(order):
+        raise ValueError(f"{name} array shape/length does not match its ID axis ({len(order)} rows)")
+    if vector and array.shape[1] not in (2, 3):
+        raise ValueError(f"{name} must have 2 or 3 coordinate columns")
+    if array.dtype.kind not in 'iuf' or not np.isfinite(array).all():
+        raise ValueError(f"{name} must contain finite numeric values")
+    return array[order].copy()
+
+
+def _align_result(graph, result, *, require_edges=False):
+    """Copy result into sorted-node / graph-edge order, validating every field.
+
+    Metadata-free historical results retain the 3D renderers' sorted-node and
+    insertion-edge assumptions. Their original identity cannot be reconstructed.
+    Partial mapped edges are allowed only for consumers that do not use them.
+    """
+    if result is None:
+        return None
+    from copy import deepcopy
+    aligned = deepcopy(result)
+    metadata = aligned.metadata
+    for name in ('node_ids', 'edge_ids'):
+        if name in metadata and metadata[name] is None:
+            raise ValueError(f"{name} must be an explicit sequence when present")
+    node_ids, nodes = _identity_order(metadata.get('node_ids'), sorted(graph.nodes), 'node_ids')
+    edge_ids, edges = _identity_order(metadata.get('edge_ids'), list(graph.edges),
+                                      'edge_ids', full=require_edges)
+    for name in ('displacements', 'deformed_positions'):
+        value = getattr(result, name)
+        if value is not None:
+            setattr(aligned, name, _aligned_array(value, nodes, name, vector=True))
+    aligned.positions_trajectory = [
+        _aligned_array(frame, nodes, f'positions_trajectory[{i}]', vector=True)
+        for i, frame in enumerate(result.positions_trajectory)]
+    for name in ('edge_forces', 'edge_stretches'):
+        value = getattr(result, name)
+        if value is not None:
+            setattr(aligned, name, _aligned_array(value, edges, name))
+    # FEM diagnostic metadata shares the same node/edge axes.
+    for name, order in [('reactions', nodes), ('beam_resultants', edges),
+                        ('sigma_axial', edges), ('sigma_bending', edges),
+                        ('sigma_total', edges)]:
+        value = metadata.get(name)
+        if value is not None:
+            array = np.asarray(value)
+            if array.ndim < 1 or array.shape[0] != len(order):
+                raise ValueError(f"{name} array length does not match its ID axis ({len(order)} rows)")
+            if array.dtype.kind not in 'iuf' or not np.isfinite(array).all():
+                raise ValueError(f"{name} must contain finite numeric real values")
+            metadata[name] = array[order].copy()
+    if 'node_ids' in metadata:
+        metadata['node_ids'] = node_ids
+    if 'edge_ids' in metadata:
+        metadata['edge_ids'] = edge_ids
+    return aligned
+
+
 def _get_theme(name: str) -> dict:
     if name not in THEMES:
         raise ValueError(f"Unknown theme '{name}'. Available: {list(THEMES.keys())}")
@@ -299,6 +381,7 @@ def render_deformation(
     theme: str = "dark",
     color_by: str = "displacement",
     displacement_data: Optional[np.ndarray] = None,
+    node_ids: Optional[Sequence[int]] = None,
     line_width: float = 1.5,
     title: str = "",
     save_path: Optional[str] = None,
@@ -316,7 +399,14 @@ def render_deformation(
         "displacement" or "stress" for the deformed view.
     displacement_data : np.ndarray, optional
         (N, 3) displacement vectors for coloring.
+    node_ids : sequence of int, optional
+        IDs in displacement row order. Without IDs, rows follow the deformed
+        graph node insertion order (the historical convention).
     """
+    # Legacy displacement arrays follow deformed graph node insertion order.
+    _, order = _identity_order(node_ids, list(deformed.nodes), "node_ids")
+    if displacement_data is not None:
+        displacement_data = _aligned_array(displacement_data, order, "displacement_data", vector=True)
     t = _get_theme(theme)
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=figsize)
@@ -368,6 +458,8 @@ def render_trajectory(
     positions_trajectory: List[np.ndarray],
     edge_stretches: np.ndarray,
     *,
+    node_ids: Optional[Sequence[int]] = None,
+    edge_ids: Optional[Sequence[int]] = None,
     n_frames: int = 6,
     figsize: Tuple[float, float] = (18, 4),
     theme: str = "dark",
@@ -388,6 +480,9 @@ def render_trajectory(
         List of (N, 3) position arrays per frame.
     edge_stretches : np.ndarray
         Edge stretch ratio for coloring (len = num_edges).
+    node_ids, edge_ids : sequence of int, optional
+        Original IDs in coordinate and edge-field row order. Without maps,
+        rows follow sorted node IDs and graph edge insertion order respectively.
     n_frames : int
         Number of frames to display.
     theme : str
@@ -405,6 +500,15 @@ def render_trajectory(
     from matplotlib.collections import LineCollection
     from matplotlib.colors import Normalize
 
+    # Without maps, coordinate rows follow sorted IDs; fields follow edge insertion.
+    target, nodes = _identity_order(node_ids, sorted(original.nodes), 'node_ids')
+    _, edges = _identity_order(edge_ids, list(original.edges), 'edge_ids')
+    positions_trajectory = [_aligned_array(frame, nodes, 'positions_trajectory', vector=True)
+                            for frame in positions_trajectory]
+    edge_stretches = _aligned_array(edge_stretches, edges, 'edge_stretches')
+    node_rows = {nid: row for row, nid in enumerate(target)}
+    if not positions_trajectory or n_frames < 1:
+        raise ValueError("trajectory and n_frames must be nonempty/positive")
     th = _get_theme(theme)
     n_traj = len(positions_trajectory)
     n_display = min(n_frames, n_traj)
@@ -422,7 +526,7 @@ def render_trajectory(
     fig.patch.set_facecolor(th['bg'])
 
     # Get edge topology from original
-    edge_pairs = [(e.node_i, e.node_j) for e in original.edges.values()]
+    edge_pairs = [(node_rows[e.node_i], node_rows[e.node_j]) for e in original.edges.values()]
 
     # Compute stress colors from edge_stretches
     min_stretch = float(np.percentile(edge_stretches, 1))
@@ -723,10 +827,12 @@ def render_deformation_3d(
     graph : StructureGraph
         Original 3D structure.
     sim_result : SimResult, optional
-        Simulation result with displacements.
+        Simulation result with displacements. Metadata node_ids identify rows;
+        historical results without maps assume sorted graph node IDs.
     displacement_scale : float
         Scale factor for displacement visualization.
     """
+    sim_result = _align_result(graph, sim_result, require_edges=False)
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -740,16 +846,15 @@ def render_deformation_3d(
     ax2 = fig.add_subplot(122, projection="3d")
     ax2.set_facecolor(t["bg"])
 
-    if sim_result is not None and hasattr(sim_result, 'displacements'):
+    if sim_result is not None and sim_result.displacements is not None:
         disp = sim_result.displacements
         # Create deformed graph
         deformed = graph.copy()
         node_ids = sorted(deformed.nodes.keys())
         for idx, nid in enumerate(node_ids):
-            if idx < len(disp):
-                pos = deformed.nodes[nid].position.copy()
-                pos += displacement_scale * disp[idx]
-                deformed.nodes[nid].position = pos
+            pos = deformed.nodes[nid].position.copy()
+            pos += displacement_scale * disp[idx]
+            deformed.nodes[nid].position = pos
 
         # Color by displacement magnitude
         disp_mags = np.linalg.norm(disp[:, :3], axis=1) if disp.shape[1] >= 3 else np.linalg.norm(disp, axis=1)
@@ -758,7 +863,7 @@ def render_deformation_3d(
         _render_3d_segments(ax2, graph, t, line_width, elevation, azimuth, "Deformed")
 
     # Add colorbar for displacement
-    if sim_result is not None and hasattr(sim_result, "displacements"):
+    if sim_result is not None and sim_result.displacements is not None:
         from matplotlib.cm import ScalarMappable
         from matplotlib.colors import Normalize as _Norm
         disp_mags = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
@@ -848,9 +953,9 @@ def _render_3d_colored(ax, graph, node_values, theme, line_width, elev, azim, ti
         pj = graph.nodes[edge.node_j].position
         pts = np.vstack([pi[None, :], pj[None, :]])
         
-        i_idx = node_to_idx.get(edge.node_i, 0)
-        j_idx = node_to_idx.get(edge.node_j, 0)
-        val = (node_values[i_idx] + node_values[j_idx]) / 2 if i_idx < len(node_values) and j_idx < len(node_values) else 0
+        i_idx = node_to_idx[edge.node_i]
+        j_idx = node_to_idx[edge.node_j]
+        val = (node_values[i_idx] + node_values[j_idx]) / 2
         color = cmap(norm(val))
         
         for k in range(len(pts) - 1):
@@ -885,6 +990,7 @@ def render_trajectory_3d(
     trajectory=None,
     *,
     sim_result=None,
+    node_ids=None,
     save_dir=None,
     save_path=None,
     n_frames=None,
@@ -906,7 +1012,12 @@ def render_trajectory_3d(
     trajectory : list of np.ndarray, or None
         Position arrays per frame. If None, uses sim_result.positions_trajectory.
     sim_result : SimResult, optional
-        If provided and trajectory is None, extracts positions_trajectory.
+        If provided and trajectory is None, extracts positions_trajectory and
+        uses its metadata row maps. Historical results without maps assume
+        sorted graph node order.
+    node_ids : sequence of int, optional
+        Row IDs for an explicitly supplied trajectory only. Direct arrays use
+        sorted IDs by default and never inherit sim_result metadata.
     save_dir : str, optional
         If given, also save individual frames to this directory.
     save_path : str, optional
@@ -925,6 +1036,15 @@ def render_trajectory_3d(
     plt.Figure
         One combined figure with all frames as subplots.
     """
+    # Direct arrays have their own map, never an unrelated result's metadata.
+    if trajectory is not None:
+        _, order = _identity_order(node_ids, sorted(graph.nodes), 'node_ids')
+        trajectory = [_aligned_array(frame, order, 'trajectory', vector=True)
+                      for frame in trajectory]
+    else:
+        if node_ids is not None:
+            raise ValueError("node_ids applies only to an explicitly supplied trajectory")
+        sim_result = _align_result(graph, sim_result)
     t = _get_theme(theme)
 
     # Build frame list
@@ -972,9 +1092,8 @@ def render_trajectory_3d(
     all_disp_mags = []
     for frame_idx in indices:
         cur_pos = frames[frame_idx]
-        if isinstance(cur_pos, np.ndarray) and cur_pos.shape[0] == len(node_ids):
-            dm = np.linalg.norm(cur_pos - pos_orig, axis=1)
-            all_disp_mags.extend(dm.tolist())
+        dm = np.linalg.norm(cur_pos - pos_orig, axis=1)
+        all_disp_mags.extend(dm.tolist())
     global_vmax = max(all_disp_mags) if all_disp_mags else 1.0
     if global_vmax < 1e-12:
         global_vmax = 1.0
@@ -990,12 +1109,9 @@ def render_trajectory_3d(
 
         # Build deformed graph
         deformed = graph.copy()
-        if isinstance(cur_pos, np.ndarray) and cur_pos.shape[0] == len(node_ids):
-            for idx, nid in enumerate(node_ids):
-                deformed.nodes[nid].position = cur_pos[idx].copy()
-            disp_mags = np.linalg.norm(cur_pos - pos_orig, axis=1)
-        else:
-            disp_mags = np.zeros(len(node_ids))
+        for idx, nid in enumerate(node_ids):
+            deformed.nodes[nid].position = cur_pos[idx].copy()
+        disp_mags = np.linalg.norm(cur_pos - pos_orig, axis=1)
 
         # Render with global color scale
         _render_3d_colored_global(ax, deformed, disp_mags, norm, t, line_width,
@@ -1055,11 +1171,9 @@ def _render_3d_colored_global(ax, graph, node_values, norm, theme, line_width, e
         pj = graph.nodes[edge.node_j].position
         pts = np.vstack([pi[None, :], pj[None, :]])
 
-        i_idx = node_to_idx.get(edge.node_i, 0)
-        j_idx = node_to_idx.get(edge.node_j, 0)
-        val = (node_values[i_idx] + node_values[j_idx]) / 2 if (
-            i_idx < len(node_values) and j_idx < len(node_values)
-        ) else 0
+        i_idx = node_to_idx[edge.node_i]
+        j_idx = node_to_idx[edge.node_j]
+        val = (node_values[i_idx] + node_values[j_idx]) / 2
         color = cmap_obj(norm(val))
 
         for k in range(len(pts) - 1):
@@ -1166,6 +1280,7 @@ def render_stress_3d(
     cmap : str
         Matplotlib colormap name.
     """
+    sim_result = _align_result(graph, sim_result, require_edges=color_by in ("force", "stretch"))
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -1198,8 +1313,7 @@ def render_stress_3d(
     if sim_result.deformed_positions is not None:
         deformed = graph.copy()
         for idx, nid in enumerate(node_ids):
-            if idx < len(sim_result.deformed_positions):
-                deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
+            deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
     else:
         deformed = graph
 
@@ -1216,11 +1330,11 @@ def render_stress_3d(
         else:
             pts = np.vstack([pi[None, :], pj[None, :]])
 
-        if edge_values is not None and ei < len(edge_values):
+        if edge_values is not None:
             val = edge_values[ei]
         elif sim_result.displacements is not None:
-            i_idx = node_to_idx.get(edge.node_i, 0)
-            j_idx = node_to_idx.get(edge.node_j, 0)
+            i_idx = node_to_idx[edge.node_i]
+            j_idx = node_to_idx[edge.node_j]
             di = np.linalg.norm(sim_result.displacements[i_idx, :3])
             dj = np.linalg.norm(sim_result.displacements[j_idx, :3])
             val = (di + dj) / 2
@@ -1303,6 +1417,7 @@ def render_comparison_3d(
     displacement_scale : float
         Scale factor for deformed view (1.0 = actual deformation).
     """
+    sim_result = _align_result(graph, sim_result, require_edges=sim_result.edge_forces is not None)
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -1319,11 +1434,10 @@ def render_comparison_3d(
         deformed = graph.copy()
         node_ids = sorted(graph.nodes.keys())
         for idx, nid in enumerate(node_ids):
-            if idx < len(sim_result.deformed_positions):
-                orig = graph.nodes[nid].position
-                new = sim_result.deformed_positions[idx]
-                # Scale displacement
-                deformed.nodes[nid].position = orig + displacement_scale * (new - orig)
+            orig = graph.nodes[nid].position
+            new = sim_result.deformed_positions[idx]
+            # Scale displacement
+            deformed.nodes[nid].position = orig + displacement_scale * (new - orig)
 
         disp_mags = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
         _render_3d_colored(ax2, deformed, disp_mags, t, line_width, elevation, azimuth,
@@ -1350,8 +1464,7 @@ def render_comparison_3d(
         node_ids = sorted(graph.nodes.keys())
         if sim_result.deformed_positions is not None:
             for idx, nid in enumerate(node_ids):
-                if idx < len(sim_result.deformed_positions):
-                    deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
+                deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
 
         edges_list = list(deformed.edges.values())
         segments_3d = []
@@ -1359,7 +1472,7 @@ def render_comparison_3d(
         for ei, edge in enumerate(edges_list):
             pi = deformed.nodes[edge.node_i].position
             pj = deformed.nodes[edge.node_j].position
-            val = edge_forces[ei] if ei < len(edge_forces) else 0
+            val = edge_forces[ei]
             c = colormap(norm(val))
             segments_3d.append([pi, pj])
             seg_colors.append(c)
@@ -1421,6 +1534,7 @@ def render_multi_angle_3d(
     angles : list of (elevation, azimuth), optional
         Viewing angles. Default: 6 views (front, back, left, right, top, iso).
     """
+    sim_result = _align_result(graph, sim_result, require_edges=False)
     t = _get_theme(theme)
 
     if angles is None:
@@ -1447,8 +1561,7 @@ def render_multi_angle_3d(
     if sim_result is not None and sim_result.deformed_positions is not None:
         deformed = graph.copy()
         for idx, nid in enumerate(node_ids):
-            if idx < len(sim_result.deformed_positions):
-                deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
+            deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
         disp_mags = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
     else:
         deformed = graph

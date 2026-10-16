@@ -1,0 +1,105 @@
+{
+  "schema": "thermal-pilot-contract-1",
+  "model": "constant explicit lumped C/g, nonnegative constant Q, constant Dirichlet, backward Euler",
+  "units": {
+    "temperature": "K",
+    "time": "s",
+    "capacity": "J/K",
+    "conductance": "W/K",
+    "source_and_oriented_heat_rate": "W",
+    "stored_heat_change": "J"
+  },
+  "node_residual": {
+    "formula_J": "r_i=C_i*(Tnew_i-Told_i)+dt*sum_outward_qnew_i-dt*Q_i, free nodes only",
+    "local_scale_J": "s_i=abs(C_i*(Tnew_i-Told_i))+dt*sum_incident_abs(qnew)+dt*abs(Q_i)",
+    "rounding_bound_J": "b_i=8*eps64*C_i*(abs(Told_i)+abs(Tnew_i))",
+    "accept": "abs(r_i)<=1e-10*s_i+b_i AND b_i<=1e-6*s_i for active rows; no dimensional atol",
+    "inactive_exact": "s_i==0 requires r_i==0 and proposed increment==0; assign b_i=0 only for this exact inactive row",
+    "fixed_rows": "not free equilibrium errors; reservoir injection=sum_outward_q-Q"
+  },
+  "component_energy": {
+    "components": "positive-conductance undirected components, including singleton nodes",
+    "formula_J": "R_k=sum_i C_i*(Tnew_i-Told_i)-dt*sum_i(Q_i+reservoir_i)",
+    "scale_J": "S_k=sum_i abs(C_i*(Tnew_i-Told_i))+dt*sum_i(abs(Q_i)+abs(reservoir_i))",
+    "rounding_bound_J": "B_k=sum of active free-node b_i; fixed nodes have exactly zero increment",
+    "accept": "abs(R_k)<=1e-10*S_k+B_k and B_k<=1e-6*S_k; S_k==0 requires R_k==0 and B_k==0",
+    "sums": "math.fsum; component checks never share scales across disconnected components"
+  },
+  "representability": {
+    "temperature": "reconstruct Tnew from increment then recompute ALL physics from returned absolute temperatures; if nonzero proposed increment is lost entirely reject; if rounding budget exceeds local relative cap reject",
+    "underflow": "reject nonzero g and nonzero returned temperature drop producing zero q; reject nonzero C and represented nonzero increment producing zero energy; reject nonzero dt and nonzero q or Q producing zero step heat; reject nonfinite matrix, solve, temperature, flux, energy or scale; also reject positive dt*g underflow or overflow before assembly; reject nonzero driving products before exact-zero RHS shortcut",
+    "zero_physics": "zero-g edges exactly zero; exact zero RHS skips solve and keeps state; no clamps, regularization, grounding or inferred parameters"
+  },
+  "input_validation": {
+    "ids": "nonnegative int64, not bool; exact node/edge coverage; unknown/missing keys reject; duplicate conflicting boundary entries reject, equal duplicates coalesce",
+    "values": "C finite >0; g finite >=0; T0/fixed finite >=0 K; Q finite >=0; no temperature clipping",
+    "fixed_initial": "exact float64 equality required, no silent initial reset",
+    "time": "finite 1D float64 grid starts exactly 0, >=2 points, strictly increasing; abs(diff-dt)<=32*eps64*max(abs(time_end),dt); actual each interval used, refactor if interval differs; no silently rounded requested timestamps"
+  },
+  "failure": {
+    "input": "ValueError before solving",
+    "numerical": "ThermalSolveError with detached last-accepted result prefix, attempted step/time and diagnostic reason; invalid trial arrays never in accepted prefix",
+    "t0": "temperature and instantaneous edge rates available; interval residual/energy balance unavailable: NaN plus explicit availability mask false",
+    "json": "NaN array diagnostics serialize only as null plus availability mask, strict JSON allow_nan=false"
+  },
+  "time_reference_gates": {
+    "finest_max_temperature_error_over_10K": 0.001,
+    "successive_halving_error_ratio_min": 1.8,
+    "successive_halving_error_ratio_max": 2.2,
+    "continuous_and_BE_discrete_references": "separate; discrete match alone cannot pass continuum gate"
+  },
+  "benchmark": {
+    "node_ids": [
+      101,
+      907
+    ],
+    "edge_ids": [
+      11,
+      31
+    ],
+    "endpoints": [
+      [
+        101,
+        907
+      ],
+      [
+        101,
+        907
+      ]
+    ],
+    "C_J_per_K": [
+      2,
+      1
+    ],
+    "g_W_per_K": [
+      0.2,
+      0.3
+    ],
+    "T0_K": [
+      300,
+      310
+    ],
+    "fixed_K": {
+      "907": 310
+    },
+    "Q_W": [
+      0,
+      0
+    ],
+    "tau_s": 4,
+    "end_s": 20,
+    "dt_s": [
+      0.04,
+      0.02,
+      0.01
+    ]
+  },
+  "resource_cap": {
+    "first_benchmark_total_wall_s": 30,
+    "peak_RSS_MiB": 256,
+    "evidence_bytes": 1000000,
+    "new_dependencies": 0
+  },
+  "status": "frozen_before_first_run_pending_architecture_approval",
+  "reported_tolerance": "relative algebraic term 1e-10 plus explicit representation allowance capped at 1e-6 of local scale; never advertise total acceptance as 1e-10 alone"
+}

@@ -7,8 +7,48 @@ import struct
 import zipfile
 import numpy as np
 import os
+import stat
+import tempfile
+import warnings
+from contextlib import contextmanager
 
 atomic_replace = os.replace
+
+
+def _export_file_mode(path):
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError('export destination must be a regular file, not a symlink or nonregular target')
+    mode = stat.S_IMODE(info.st_mode)
+    if mode & 0o7000:
+        raise ValueError('export destination has unsupported special mode bits')
+    return mode
+
+
+@contextmanager
+def _owned_export_file(path):
+    """Stage only in an exclusively created sibling; never touch path+'.tmp'."""
+    mode = _export_file_mode(path)
+    fd, name = tempfile.mkstemp(prefix='.' + path.name + '.export-', dir=path.parent)
+    temporary = Path(name)
+    try:
+        os.close(fd)
+        yield temporary
+        os.chmod(temporary, 0o600 if mode is None else mode)
+        atomic_replace(temporary, path)
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except Exception as exc:
+            # A warning filter must not replace a write exception or undo success.
+            try:
+                warnings.warn(f'Export cleanup failed for owned temporary {temporary}: {exc!r}; '
+                              'the export outcome is unchanged', RuntimeWarning, stacklevel=3)
+            except Exception:
+                pass
 
 
 @dataclass
@@ -68,8 +108,18 @@ class FiberSolid:
     settings: PrintSettings
 
     def validate(self):
-        if not len(self.faces) or not np.isfinite(self.vertices).all():
-            raise ValueError('empty or non-finite solid')
+        vertices = np.asarray(self.vertices)
+        faces = np.asarray(self.faces)
+        if (vertices.ndim != 2 or vertices.shape[1] != 3 or
+                not len(vertices) or not np.isfinite(vertices).all()):
+            raise ValueError('solid vertices must be finite (N, 3) coordinates')
+        if (faces.ndim != 2 or faces.shape[1] != 3 or not len(faces) or
+                not np.issubdtype(faces.dtype, np.integer) or
+                np.any(faces < 0) or np.any(faces >= len(vertices))):
+            raise ValueError('solid faces must contain valid integer vertex indices')
+        if np.any(np.diff(np.sort(faces, axis=1), axis=1) == 0):
+            raise ValueError('solid faces must contain three distinct vertices')
+        self.vertices, self.faces = vertices, faces
         edges = np.sort(np.concatenate([self.faces[:, [0,1]], self.faces[:, [1,2]], self.faces[:, [2,0]]]), axis=1)
         _, count = np.unique(edges, axis=0, return_counts=True)
         if np.any(count != 2):
@@ -163,9 +213,10 @@ def build_voxel_solid(network, settings=None, progress=None, stop_cb=None):
 def export_solid(path, solid):
     """Write closed geometry atomically. 3MF declares millimetres explicitly."""
     path = Path(path)
-    temporary = path.with_name(path.name+'.tmp')
+    if path.suffix.lower() not in ('.stl', '.3mf'):
+        raise ValueError('solid export requires .stl or .3mf')
     solid.validate()
-    try:
+    with _owned_export_file(path) as temporary:
         if path.suffix.lower() == '.stl':
             dtype = np.dtype([('normal','<f4',(3,)),('vertices','<f4',(3,3)),('attribute','<u2')])
             with temporary.open('wb') as stream:
@@ -190,22 +241,37 @@ def export_solid(path, solid):
                     for a,b,c in solid.faces:
                         stream.write(('<triangle v1="%d" v2="%d" v3="%d"/>'%(a,b,c)).encode())
                     stream.write(b'</triangles></mesh></object></resources><build><item objectid="1"/></build></model>')
-        else:
-            raise ValueError('solid export requires .stl or .3mf')
-        atomic_replace(temporary,path)
-    finally:
-        temporary.unlink(missing_ok=True)
 
 
 def export_route(path, network, centers):
+    """Write finite millimetre centers in a verified closed all-edge route."""
+    centers = np.asarray(centers, dtype=float)
+    nodes = np.asarray(network.route_nodes)
+    route = np.asarray(network.route_edges)
+    edges = np.asarray(network.edges)
+    if (centers.shape != (len(network.positions), 3) or
+            not np.isfinite(centers).all()):
+        raise ValueError('route centers must be finite (N, 3) coordinates')
+    if (edges.ndim != 2 or edges.shape[1] != 2 or not len(edges) or
+            not np.issubdtype(edges.dtype, np.integer) or
+            np.any(edges < 0) or np.any(edges >= len(centers))):
+        raise ValueError('route edges must contain valid integer node indices')
+    if (nodes.ndim != 1 or route.ndim != 1 or
+            not np.issubdtype(nodes.dtype, np.integer) or
+            not np.issubdtype(route.dtype, np.integer) or
+            len(nodes) != len(edges) + 1 or len(route) != len(edges) or
+            np.any(nodes < 0) or np.any(nodes >= len(centers)) or
+            not np.array_equal(np.sort(route), np.arange(len(edges)))):
+        raise ValueError('route must cover every independent edge exactly once')
+    steps = np.column_stack((nodes[:-1], nodes[1:]))
+    if (nodes[0] != nodes[-1] or
+            not np.array_equal(np.sort(steps, axis=1),
+                               np.sort(edges[route], axis=1))):
+        raise ValueError('route must be closed and follow its edge identities')
     path = Path(path)
-    temporary = path.with_name(path.name+'.tmp')
-    try:
+    with _owned_export_file(path) as temporary:
         with temporary.open('w',encoding='utf-8',newline='') as stream:
             writer = csv.writer(stream)
             writer.writerow(['step','incoming_edge_id','node_id','x_mm','y_mm','z_mm'])
             for step,node in enumerate(network.route_nodes):
                 writer.writerow([step,-1 if step == 0 else int(network.route_edges[step-1]),int(node),*centers[node]])
-        atomic_replace(temporary,path)
-    finally:
-        temporary.unlink(missing_ok=True)

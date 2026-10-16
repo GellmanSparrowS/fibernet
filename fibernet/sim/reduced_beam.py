@@ -111,7 +111,15 @@ class Engine2:
     def __init__(self, graph, cfg: Engine2Config = None):
         self.cfg = cfg or Engine2Config()
         pos = np.asarray(graph.node_positions(), dtype=np.float64)[:, :2]
-        edges = np.asarray(graph.edge_array(), dtype=np.int64)[:, :2]
+        # Graph endpoints are node IDs; array rows follow sorted node IDs.
+        # Deleting a node need not renumber the remaining graph.
+        self.node_ids = sorted(graph.nodes)
+        self.edge_ids = list(graph.edges)
+        node_index = {node_id: i for i, node_id in enumerate(self.node_ids)}
+        edges = np.searchsorted(self.node_ids, graph.edge_array()).astype(
+            np.int64, copy=False).reshape(-1, 2)
+        if len(pos) < 2 or not len(edges):
+            raise ValueError('simulation requires at least two nodes and one fiber')
         self.n = pos.shape[0]
         self.pos0 = pos
         self.edges = edges
@@ -121,8 +129,16 @@ class Engine2:
             raise ValueError('simulation requires finite, nonzero fiber segments')
         self.trips = _degree2_triplets(edges, self.n)
         extra = graph.metadata.get('weld_triplets', [])
-        if extra:
-            self.trips = np.unique(np.concatenate([self.trips,np.asarray(extra,dtype=np.int64)]),axis=0)
+        if len(extra):
+            extra = np.asarray(extra)
+            if extra.ndim != 2 or extra.shape[1] != 3:
+                raise ValueError('weld_triplets must contain three existing node IDs per row')
+            try:
+                mapped = np.asarray([[node_index[node] for node in trip]
+                                     for trip in extra], dtype=np.int64)
+            except (KeyError, TypeError) as exc:
+                raise ValueError('weld_triplets must reference existing node IDs') from exc
+            self.trips = np.unique(np.concatenate([self.trips, mapped]), axis=0)
         if len(self.trips):
             chord = np.linalg.norm(pos[self.trips[:,2]]-pos[self.trips[:,0]],axis=1)
             # Coincident independent return fibers do not define a bending chord.
@@ -144,7 +160,8 @@ class Engine2:
         self._right_disp0 = pos[self.right].copy()
         # pairs already in contact in the as-printed state never count as
         # NEW contact events (they are part of the manufactured structure)
-        all_cand = self._contact_candidates(pos)
+        all_cand = (self._contact_candidates(pos) if self.cfg.use_contact
+                    else np.empty((0, 2), dtype=np.int64))
         if len(all_cand):
             d0 = np.linalg.norm(pos[all_cand[:, 1]] - pos[all_cand[:, 0]],
                                 axis=1)
@@ -406,6 +423,7 @@ class Engine2:
         frames = np.array(rec["frames"], dtype=np.float32)
         span0 = self.pos0[self.right, 0].max() - self.pos0[self.left, 0].min()
         meta = {"engine": "engine2", "num_steps": cfg.num_steps,
+                "node_ids": self.node_ids, "edge_ids": self.edge_ids,
                 "dt": cfg.dt, "target_stretch": cfg.target_stretch,
                 "use_bending": cfg.use_bending, "use_contact": cfg.use_contact,
                 "n_increments": cfg.n_increments,

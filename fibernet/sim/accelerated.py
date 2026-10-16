@@ -11,6 +11,11 @@ Both accept StructureGraph directly via high-level test methods.
 from __future__ import annotations
 
 import time
+import os
+import stat
+import tempfile
+import threading
+import warnings
 import json
 from pathlib import Path
 from dataclasses import dataclass, field
@@ -33,6 +38,11 @@ class SimResult:
 
     Simple mode: basic displacements + energy
     Detailed mode: per-edge forces, max values, trajectory data
+
+    metadata['node_ids'] identifies displacement, deformed-position and trajectory
+    rows; metadata['edge_ids'] identifies edge-force and stretch rows. Producers
+    preserve solver row order. Old results may omit these maps, so consumers must
+    use their documented historical ordering rather than infer identity.
     """
     # Basic fields
     displacements: np.ndarray = None
@@ -59,15 +69,15 @@ class SimResult:
     # Metadata
     metadata: Dict = field(default_factory=dict)
 
-    def compute_detailed(self, graph, stiffness: float = None):
+    def compute_detailed(self, graph, stiffness: Union[float, np.ndarray] = None):
         """Compute detailed metrics from deformed positions.
 
         Parameters
         ----------
         graph : StructureGraph
             Original (undeformed) graph.
-        stiffness : float, optional
-            Spring stiffness for force computation.
+        stiffness : float or (number of edges,) array, optional
+            Coefficients in F = k * strain and E = 0.5 * k * L0 * strain**2.
         """
         from fibernet.sim.accelerated import _graph_to_arrays, _element_data
 
@@ -88,12 +98,15 @@ class SimResult:
 
             # Per-edge forces (F = k * (L - L0) / L0)
             if stiffness is not None:
-                self.edge_forces = stiffness * (final_lengths / lengths - 1.0)
+                spring_coefficients = _normalize_spring_stiffness(
+                    stiffness, len(elements)
+                )
+                strain = final_lengths / lengths - 1.0
+                self.edge_forces = spring_coefficients * strain
                 self.max_force = float(np.max(np.abs(self.edge_forces)))
-
-                # Total elastic energy: E = 0.5 * k * sum((L/L0 - 1)^2 * L0)
-                strain = (final_lengths / lengths - 1.0)
-                self.energy = float(0.5 * stiffness * np.sum(strain ** 2 * lengths))
+                self.energy = float(
+                    0.5 * np.sum(spring_coefficients * strain ** 2 * lengths)
+                )
 
         # Max displacement
         if self.displacements is not None:
@@ -121,7 +134,10 @@ class SimResult:
             "std_stretch": self.std_stretch,
             "max_displacement": self.max_displacement,
         }
-        d.update(self.metadata)
+        # Metadata shares the historical flat JSON namespace. Never let it
+        # replace result fields (or smuggle detailed arrays into a summary).
+        d.update({key: value for key, value in self.metadata.items()
+                  if key not in self.__dataclass_fields__})
         if detailed:
             if self.edge_forces is not None:
                 d["edge_forces"] = self.edge_forces.tolist()
@@ -137,28 +153,68 @@ class SimResult:
         return d
 
     def save(self, path: str, detailed: bool = False):
-        """Save to JSON file."""
+        """Atomically save JSON via an exclusively owned sibling temporary.
+
+        Existing ordinary file permissions are retained; new files are private
+        (0600). Symlinks, nonregular targets and special mode bits are rejected.
+        This is replacement atomicity, not crash durability or writer locking.
+        """
         data = self.to_dict(detailed=detailed)
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
-        temporary = destination.with_name(destination.name + '.tmp')
+        try:
+            info = destination.lstat()
+        except FileNotFoundError:
+            mode = 0o600
+        else:
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("result destination must be a regular file, not a symlink or nonregular target")
+            mode = stat.S_IMODE(info.st_mode)
+            if mode & 0o7000:
+                raise ValueError("result destination has unsupported special mode bits")
         def convert(value):
             if isinstance(value, np.ndarray):
                 return value.tolist()
             if isinstance(value, np.generic):
                 return value.item()
             raise TypeError(f'Cannot serialize {type(value).__name__}')
+        fd, name = tempfile.mkstemp(prefix="." + destination.name + ".result-",
+                                    dir=destination.parent)
+        temporary = Path(name)
         try:
-            with open(temporary, "w", encoding="utf-8") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                fd = None  # The stream now owns the descriptor, including on error.
                 json.dump(data, f, indent=2, default=convert)
+            os.chmod(temporary, mode)
             temporary.replace(destination)
         finally:
-            temporary.unlink(missing_ok=True)
+            # Cleanup must not mask a serialization/replace error or report a
+            # committed save as failed, even when warnings are treated as errors.
+            for cleanup in ((lambda: os.close(fd)) if fd is not None else None,
+                            lambda: temporary.unlink(missing_ok=True)):
+                if cleanup is None:
+                    continue
+                try:
+                    cleanup()
+                except Exception as exc:
+                    try:
+                        warnings.warn(f"Result cleanup failed for owned temporary {temporary}: {exc!r}; "
+                                      "the save outcome is unchanged", RuntimeWarning, stacklevel=2)
+                    except Exception:
+                        pass
 
     @staticmethod
     def load(path: str) -> "SimResult":
         with open(path) as f:
             data = json.load(f)
+        # Older FEM summary files stored [axial, shear, moment] resultants
+        # under the canonical one-dimensional edge_forces name. Recover the
+        # axial forces while retaining the original resultants separately.
+        if data.get("mode") == "fem_beam_frame" and data.get("edge_forces") is not None:
+            legacy_forces = np.asarray(data["edge_forces"])
+            if legacy_forces.ndim == 2 and legacy_forces.shape[1] == 3:
+                data.setdefault("beam_resultants", data["edge_forces"])
+                data["edge_forces"] = legacy_forces[:, 0].tolist()
         r = SimResult(
             mode=data.get("mode", ""),
             energy=data.get("energy", 0),
@@ -176,7 +232,8 @@ class SimResult:
                                    "max_force", "max_stretch", "mean_stretch", "std_stretch",
                                    "max_displacement", "history",
                                    "edge_forces", "edge_stretches",
-                                   "displacements", "deformed_positions"}},
+                                   "displacements", "deformed_positions",
+                                   "positions_trajectory"}},
         )
         for key in ("edge_forces", "edge_stretches", "displacements", "deformed_positions"):
             if data.get(key) is not None:
@@ -186,19 +243,77 @@ class SimResult:
         return r
 
 
-def _ensure_taichi(arch: str = "cpu", num_threads: int = 4):
+# Runtime ownership is process-wide because Taichi fields and kernels are global.
+# Strong references avoid recycled Python/native thread IDs masquerading as owners.
+_taichi_runtime = None
+_taichi_program = None
+_taichi_owner = None
+_taichi_lifecycle_lock = threading.RLock()
+
+
+def _taichi_runtime_state():
+    """Narrow private-API adapter, source-verified against Taichi 1.7.4."""
     if not HAS_TAICHI:
-        raise ImportError("Taichi required: pip install taichi")
+        raise ImportError("Taichi required: pip install taichi==1.7.4")
+    if tuple(getattr(ti, "__version__", ())) != (1, 7, 4):
+        raise RuntimeError(
+            "FiberNet runtime lifecycle support is verified for Taichi 1.7.4; "
+            "install taichi==1.7.4 before using TaichiEngine."
+        )
     try:
-        if not ti.is_initialized():
-            pass
-    except AttributeError:
-        pass
-    try:
-        arch_map = {"cpu": ti.cpu, "gpu": ti.gpu}
-        ti.init(arch=arch_map.get(arch, ti.cpu), cpu_max_num_threads=num_threads)
-    except RuntimeError:
-        pass
+        runtime = ti.lang.impl.get_runtime()
+        program = runtime.prog
+    except AttributeError as exc:
+        raise RuntimeError("Unsupported Taichi runtime API; expected Taichi 1.7.4") from exc
+    return runtime, program
+
+
+def _check_taichi_owner():
+    if _taichi_owner is not None and threading.current_thread() is not _taichi_owner:
+        raise RuntimeError(
+            "TaichiEngine must run on its runtime-initializing thread "
+            "(which may be a worker thread); cross-thread engine/cache use is unsupported."
+        )
+
+
+def _discard_taichi_caches():
+    # Never inspect old fields: even querying their shape after reset can segfault.
+    TaichiEngine._field_cache.clear()
+    TaichiEngine._compute_forces_cache.clear()
+
+
+def _ensure_taichi(arch: str = "cpu", num_threads: int = 4):
+    global _taichi_runtime, _taichi_program, _taichi_owner
+    if arch not in ("cpu", "gpu"):
+        raise ValueError("arch must be 'cpu' or 'gpu'")
+    with _taichi_lifecycle_lock:
+        _check_taichi_owner()
+        runtime, program = _taichi_runtime_state()
+        if runtime is not _taichi_runtime or program is not _taichi_program:
+            _discard_taichi_caches()
+            if program is not None:
+                raise RuntimeError(
+                    "Taichi was initialized outside FiberNet; runtime thread ownership "
+                    "cannot be verified. On the intended runtime-owning thread, call "
+                    "ti.reset() and then construct/use TaichiEngine."
+                )
+        if program is None:
+            if os.environ.get("TI_ARCH") is not None:
+                raise RuntimeError("Remove TI_ARCH before TaichiEngine initialization; use arch= explicitly")
+            ti.init(arch=ti.cpu if arch == "cpu" else ti.gpu,
+                    cpu_max_num_threads=num_threads, enable_fallback=False)
+            runtime, program = _taichi_runtime_state()
+            if program is None:
+                raise RuntimeError("Taichi initialization did not create a runtime")
+            _taichi_runtime, _taichi_program = runtime, program
+            _taichi_owner = threading.current_thread()
+        actual_arch = ti.cfg.arch
+        compatible = actual_arch == ti.cpu if arch == "cpu" else actual_arch in ti.gpu
+        if not compatible:
+            raise RuntimeError(
+                f"Requested Taichi architecture {arch!r} conflicts with active "
+                f"{actual_arch}; use the existing backend or reset on its owning thread."
+            )
 
 
 def _graph_to_arrays(graph: StructureGraph):
@@ -268,11 +383,77 @@ def _element_data(pos, elements):
 # ======================================================================
 
 
+def _normalize_spring_stiffness(stiffness, num_edges):
+    """Return one finite, nonnegative spring coefficient per edge.
+
+    Convention: F = k * strain; energy = 0.5 * k * L0 * strain**2.
+    k therefore has force units, not force/length units.
+    """
+    values = np.asarray(stiffness, dtype=np.float64)
+    if values.ndim == 0:
+        values = np.full(num_edges, float(values), dtype=np.float64)
+    elif values.shape != (num_edges,):
+        raise ValueError("stiffness must be scalar or have shape (num_edges,)")
+    else:
+        values = values.copy()
+    if not np.all(np.isfinite(values)) or np.any(values < 0):
+        raise ValueError("stiffness must be finite and nonnegative")
+    return values
+
+
+def _prepare_displacement_schedule(schedule, num_nodes, dim):
+    """Normalize schedules expressed in integration-step coordinates.
+
+    Empty schedules impose no constraint. Input order is immaterial.
+    Duplicate timestamps are ambiguous and rejected. A single waypoint
+    represents a constant displacement. Values outside the waypoint
+    range are held at the nearest endpoint.
+    """
+    prepared = {}
+    if schedule is None:
+        return prepared
+    for node, waypoints in schedule.items():
+        if (
+            isinstance(node, (bool, np.bool_))
+            or not isinstance(node, (int, np.integer))
+            or not 0 <= node < num_nodes
+        ):
+            raise ValueError("Schedule node must be a valid node-array index")
+        rows = []
+        for waypoint in waypoints:
+            if len(waypoint) != 2:
+                raise ValueError("Each waypoint must be (step, displacement)")
+            step, displacement = waypoint
+            step = float(step)
+            vector = np.asarray(displacement, dtype=np.float64)
+            if not np.isfinite(step) or step < 0:
+                raise ValueError("Schedule steps must be finite and nonnegative")
+            if vector.shape != (dim,) or not np.all(np.isfinite(vector)):
+                raise ValueError(
+                    f"Schedule displacements must be finite vectors of length {dim}"
+                )
+            rows.append((step, vector.copy()))
+        if not rows:
+            continue
+        rows.sort(key=lambda row: row[0])
+        if any(a[0] == b[0] for a, b in zip(rows, rows[1:])):
+            raise ValueError("Schedule steps must be unique")
+        prepared[int(node)] = rows
+    return prepared
+
+
 class TaichiEngine:
     """Mass-spring dynamics with Taichi parallel force computation.
 
     Axial spring model: F = k * (L - L0) / L0 * direction
     Explicit Verlet integration with damping.
+
+    Runtime lifetime: sequential engines share one backend on the thread that
+    first initializes FiberNet's runtime (including a worker thread). Other
+    threads are rejected before field access. External reset between calls is
+    supported on the owner; external init requires an explicit reset before
+    reuse. External reset/init during a solve is unsupported. Taichi 1.7.4 is
+    required by the version-tested private runtime-generation adapter.
     """
 
     # Cache Taichi fields and kernels to avoid SNode exhaustion
@@ -282,15 +463,25 @@ class TaichiEngine:
 
     @classmethod
     def clear_field_cache(cls):
-        """Clear all cached Taichi fields to free memory.
-        Does NOT free Taichi SNodes (Taichi limitation), but prevents
-        accumulating new cache entries on next calls.
+        """Drop cached field/kernel references on the runtime-owning thread.
+
+        This does not destroy native Taichi SNodes. Subsequent simulations
+        allocate new cache entries; this is not a native-memory reclamation API.
         """
-        cls._field_cache.clear()
-        cls._compute_forces_cache.clear()
+        with _taichi_lifecycle_lock:
+            _check_taichi_owner()
+            _discard_taichi_caches()
 
     def __init__(self, arch: str = "cpu", num_threads: int = 4):
         _ensure_taichi(arch, num_threads)
+        self.arch = arch
+        self.num_threads = num_threads
+        if arch == "cpu" and ti.cfg.cpu_max_num_threads != num_threads:
+            warnings.warn(
+                "TaichiEngine shares the active runtime's CPU thread count; "
+                "num_threads only configures the first initialization.",
+                RuntimeWarning, stacklevel=2,
+            )
 
     def compute_forces(
         self,
@@ -300,6 +491,7 @@ class TaichiEngine:
         edges: np.ndarray,
     ) -> np.ndarray:
         """Compute spring forces in parallel (fields cached to avoid SNode leak)."""
+        _ensure_taichi(self.arch, self.num_threads)
         num_nodes = positions.shape[0]
         num_edges = edges.shape[0]
         dim = positions.shape[1]
@@ -393,18 +585,41 @@ class TaichiEngine:
         Parameters
         ----------
         graph : StructureGraph
-        fixed_nodes : list of node indices to fix
-        displacement_schedule : dict mapping node_idx → [(step, displacement), ...]
+        fixed_nodes : list of node-array indices to fix
+            Indices follow graph.nodes insertion order, not graph node IDs.
+        displacement_schedule : dict mapping node-array index to waypoints
+            Waypoints are (step, displacement) pairs, linearly interpolated and
+            held outside their range. Keys follow graph.nodes insertion order.
+            Displacements have pos_orig.shape[1] components (XYZ for StructureGraph).
         external_force : (N, 3) array
-        stiffness : global spring stiffness (overridden by spring_k if given)
+        stiffness : float
+            Global force-like axial coefficient k in F = k * strain, overridden
+            by spring_k. With consistent SI units k is in N (like EA), not N/m.
+            Neither k nor node inertia is inferred from edge Material.
         damping : dashpot damping coefficient
         dt : time step
         num_steps : total integration steps
         save_interval : save trajectory every N steps
-        spring_k : per-edge spring stiffness array (overrides stiffness)
+        spring_k : scalar or (number of edges,) stiffness array (overrides stiffness)
+            Finite, nonnegative force-like coefficients in F = k * strain.
+            Element energy is 0.5 * k * strain**2 * rest_length. A conventional
+            force/extension spring constant is k / rest_length; no automatic
+            conversion from Young's modulus or graph radius is performed.
         dashpot : dashpot damping coefficient
         drag : air drag coefficient
         """
+        _check_taichi_owner()
+        for name, value in (
+            ("num_steps", num_steps),
+            ("save_interval", save_interval),
+        ):
+            if (
+                isinstance(value, (bool, np.bool_))
+                or not isinstance(value, (int, np.integer))
+                or value <= 0
+            ):
+                raise ValueError(f"{name} must be a positive integer")
+
         # Memory guard: warn by default, hard block if FIBERNET_STRICT_MEMORY=1
         if graph.num_nodes > max_nodes:
             import os as _os
@@ -424,15 +639,18 @@ class TaichiEngine:
         num_nodes = len(node_ids)
         num_edges = len(elements)
 
+        schedules = _prepare_displacement_schedule(
+            displacement_schedule, num_nodes, dim
+        )
+
         lengths, _ = _element_data(pos_orig, elements)
         rest_lengths_np = lengths.copy()
 
-        # Spring stiffness
-        if spring_k is not None:
-            stiff_np = np.asarray(spring_k, dtype=np.float64)
-        else:
-            stiff_np = np.full(num_edges, stiffness)
+        stiff_np = _normalize_spring_stiffness(
+            spring_k if spring_k is not None else stiffness, num_edges
+        )
 
+        _ensure_taichi(self.arch, self.num_threads)
         # Taichi fields and kernel (cached to avoid SNode exhaustion and kernel recompilation)
         cache_key = (dim, num_nodes, num_edges)
         if cache_key not in TaichiEngine._field_cache:
@@ -536,18 +754,17 @@ class TaichiEngine:
         ext_f = external_force if external_force is not None else np.zeros((num_nodes, dim))
         ti_ext.from_numpy(ext_f.astype(np.float64)[:, :dim])
 
-        # Schedule fields
-        schedule_nodes = []
-        schedule_targets = np.zeros((num_nodes, dim))
-        if displacement_schedule:
-            for ni, sched in displacement_schedule.items():
-                schedule_nodes.append(ni)
-                schedule_targets[ni] = np.array(sched[-1][1])[:dim]
+        # Per-node, piecewise-linear schedules. Reset on every call,
+        # including calls reusing fields from a previous simulation.
+        schedule_targets = np.zeros((num_nodes, dim), dtype=np.float64)
         sched_mask = np.zeros(num_nodes, dtype=np.int32)
-        for ni in schedule_nodes:
+        for ni in schedules:
             sched_mask[ni] = 1
-        ti_sched.from_numpy(schedule_targets.astype(np.float64))
+        ti_sched.from_numpy(schedule_targets)
         ti_sched_mask.from_numpy(sched_mask)
+
+        # The kernel consumes absolute scheduled displacements.
+        ti_ramp[None] = 1.0
 
         # Run loop
         ti_dt[None] = dt
@@ -558,8 +775,12 @@ class TaichiEngine:
         max_stretch_history = []
 
         for step in range(num_steps):
-            ramp = min(1.0, (step + 1) / num_steps)
-            ti_ramp[None] = ramp
+            if schedules:
+                for ni, schedule in schedules.items():
+                    schedule_targets[ni] = self._interpolate_schedule(
+                        schedule, step + 1, num_steps
+                    )
+                ti_sched.from_numpy(schedule_targets)
             substep()
 
             if (step + 1) % save_interval == 0:
@@ -582,10 +803,11 @@ class TaichiEngine:
             positions_trajectory=trajectory,
             history=[{"step": (i+1)*save_interval, "max_stretch": ms}
                      for i, ms in enumerate(max_stretch_history)],
-            metadata={"stiffness": float(stiffness), "damping": float(damping),
+            metadata={"node_ids": list(node_ids), "edge_ids": list(graph.edges),
+                      "stiffness": float(stiffness), "damping": float(damping),
                       "dt": float(dt), "num_steps": int(num_steps)},
         )
-        result.compute_detailed(graph, stiffness=stiffness)
+        result.compute_detailed(graph, stiffness=stiff_np)
         return result
     def stretch_test(
         self,
@@ -610,7 +832,10 @@ class TaichiEngine:
         target_stretch : float
             Target stretch ratio (e.g., 2.0 = double the length)
         stiffness : float
-            Spring stiffness (higher = stiffer springs)
+            Force-like axial coefficient k in F = k * strain. With a consistent
+            physical unit system this has force units (N in SI), not N/m.
+            Energy is 0.5 * k * strain**2 * rest_length. Edge Material properties
+            are not used to determine this coefficient.
         damping : float
             Velocity damping coefficient (0-1)
         num_steps : int, optional
@@ -627,6 +852,16 @@ class TaichiEngine:
         SimResult
             Result with deformed_positions and trajectory
         """
+        _check_taichi_owner()
+        if not np.isfinite(ramp_fraction) or not 0 <= ramp_fraction <= 1:
+            raise ValueError("ramp_fraction must be finite and between 0 and 1")
+        if num_steps is not None and (
+            isinstance(num_steps, (bool, np.bool_))
+            or not isinstance(num_steps, (int, np.integer))
+            or num_steps <= 0
+        ):
+            raise ValueError("num_steps must be a positive integer")
+
         import networkx as nx
 
         pos, elements, _, _ = _graph_to_arrays(graph)
@@ -664,15 +899,17 @@ class TaichiEngine:
         elif num_steps is None:
             num_steps = 5000
 
-        # Displacement schedule: ramp phase + hold phase
         ramp_steps = int(num_steps * ramp_fraction)
         schedule = {}
+        target = np.array([target_disp, 0.0, 0.0])
         for ni in bnd["right"]:
-            schedule[ni] = [
-                (0, np.array([0.0, 0.0, 0.0])),
-                (ramp_steps, np.array([target_disp, 0.0, 0.0])),
-                (num_steps, np.array([target_disp, 0.0, 0.0]))  # hold
-            ]
+            if ramp_steps == 0:
+                schedule[ni] = [(0, target.copy())]
+            else:
+                schedule[ni] = [
+                    (0, np.zeros(3)),
+                    (ramp_steps, target.copy()),
+                ]
 
         fixed = bnd["left"] + (bnd.get("bottom", [])[:1] if bnd.get("bottom") else [])
 
@@ -702,7 +939,7 @@ class TaichiEngine:
             s0, d0 = schedule[i]
             s1, d1 = schedule[i + 1]
             if s0 <= step <= s1:
-                t = (step - s0) / max(1, s1 - s0)
+                t = (step - s0) / (s1 - s0)
                 return np.array(d0) * (1 - t) + np.array(d1) * t
         return np.array(schedule[-1][1])
 

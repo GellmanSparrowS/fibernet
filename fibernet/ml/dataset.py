@@ -29,7 +29,14 @@ import json
 import os
 import time
 import hashlib
+import logging
+import shutil
+import stat
+import tempfile
+import warnings
 from pathlib import Path
+from numbers import Real
+from collections.abc import Mapping
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass, field
 
@@ -193,21 +200,56 @@ class FiberNetDataset:
     def n_features(self) -> int:
         return len(self.feature_names)
 
+    def _selected_matrix(self, attribute: str, names: Sequence[str]) -> np.ndarray:
+        """Validate the current selection without inventing missing values."""
+        kind = "feature" if attribute == "features" else "target"
+        if isinstance(names, (str, bytes)) or not isinstance(names, Sequence):
+            raise ValueError(f"Selected {kind} names must be a sequence of names")
+        seen = set()
+        for column, name in enumerate(names):
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(
+                    f"Invalid selected {kind} name at column {column}: {name!r}; "
+                    "expected a nonempty string")
+            if name in seen:
+                raise ValueError(f"Duplicate selected {kind} name: {name!r}")
+            seen.add(name)
+
+        values = np.empty((self.n_samples, len(names)), dtype=np.float64)
+        for row, sample in enumerate(self.samples):
+            mapping = getattr(sample, attribute)
+            if names and not isinstance(mapping, Mapping):
+                raise ValueError(
+                    f"sample {sample.sample_id!r} (row {row}): selected {kind} "
+                    "values must be a mapping")
+            for column, name in enumerate(names):
+                context = f"sample {sample.sample_id!r} (row {row}), {kind} {name!r}"
+                if name not in mapping:
+                    raise ValueError(f"{context}: missing selected value")
+                value = mapping[name]
+                if value is None:
+                    raise ValueError(f"{context}: selected value is None")
+                # Preserve binary features represented by Python or NumPy bool.
+                if not isinstance(value, (Real, np.bool_)):
+                    raise ValueError(f"{context}: selected value must be a real numeric scalar")
+                try:
+                    value = float(value)
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise ValueError(f"{context}: selected value must be finite") from exc
+                if not np.isfinite(value):
+                    raise ValueError(f"{context}: selected value must be finite")
+                values[row, column] = value
+        return values
+
     @property
     def features(self) -> np.ndarray:
-        """Feature matrix (n_samples, n_features)."""
-        rows = []
-        for s in self.samples:
-            rows.append([s.features.get(f, 0.0) for f in self.feature_names])
-        return np.array(rows, dtype=np.float64)
+        """Finite feature matrix (n_samples, n_features); missing values fail."""
+        return self._selected_matrix("features", self.feature_names)
 
     @property
     def all_labels(self) -> np.ndarray:
-        """Label matrix (n_samples, n_targets)."""
-        rows = []
-        for s in self.samples:
-            rows.append([s.labels.get(t, 0.0) for t in self.target_names])
-        return np.array(rows, dtype=np.float64)
+        """Finite label matrix (n_samples, n_targets); missing values fail."""
+        return self._selected_matrix("labels", self.target_names)
 
     def labels(self, target: str) -> np.ndarray:
         """Single-target label vector."""
@@ -253,36 +295,58 @@ class FiberNetDataset:
         return _sub(train_idx), _sub(val_idx), _sub(test_idx)
 
     def to_csv(self, path: str) -> None:
-        """Export to CSV."""
+        """Stage a complete CSV before replacing a regular destination file.
+
+        A write or replacement exception preserves the previous destination.
+        Existing ordinary permission bits are retained; new files are private.
+        This does not promise crash durability or concurrent-writer safety.
+        """
         import csv
+        # Check both matrices before creating a temporary file.
+        self.features
+        self.all_labels
+        out = Path(path)
+        mode = _dataset_file_mode(out)
         fieldnames = ["sample_id", "unit", "grid_x", "grid_y"]
         fieldnames += [f"feat_{f}" for f in self.feature_names]
         fieldnames += [f"label_{t}" for t in self.target_names]
 
-        with open(path, "w", newline="") as fh:
-            writer = csv.DictWriter(fh, fieldnames=fieldnames)
-            writer.writeheader()
-            for s in self.samples:
-                row = {
-                    "sample_id": s.sample_id,
-                    "unit": s.unit,
-                    "grid_x": s.grid[0],
-                    "grid_y": s.grid[1],
-                }
-                for f in self.feature_names:
-                    row[f"feat_{f}"] = s.features.get(f, 0.0)
-                for t in self.target_names:
-                    row[f"label_{t}"] = s.labels.get(t, 0.0)
-                writer.writerow(row)
+        fd, temporary = tempfile.mkstemp(prefix=f".{out.name}.save-", dir=out.parent)
+        temporary = Path(temporary)
+        try:
+            with os.fdopen(fd, "w", newline="") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                for s in self.samples:
+                    row = {
+                        "sample_id": s.sample_id,
+                        "unit": s.unit,
+                        "grid_x": s.grid[0],
+                        "grid_y": s.grid[1],
+                    }
+                    for f in self.feature_names:
+                        row[f"feat_{f}"] = s.features[f]
+                    for t in self.target_names:
+                        row[f"label_{t}"] = s.labels[t]
+                    writer.writerow(row)
+            os.chmod(temporary, 0o600 if mode is None else mode)
+            os.replace(temporary, out)
+        finally:
+            try:
+                temporary.unlink(missing_ok=True)
+            except Exception as exc:
+                _warn_dataset_cleanup(temporary, exc)
 
     def save(self, directory: str) -> None:
-        """Save as numpy arrays + metadata JSON."""
-        out = Path(directory)
-        out.mkdir(parents=True, exist_ok=True)
+        """Save the legacy NPY/JSON format with staged writes and rollback.
 
-        np.save(out / "features.npy", self.features)
-        np.save(out / "labels.npy", self.all_labels)
-
+        Ordinary exceptions preserve the old destination when rollback succeeds.
+        If recovery also fails, a RuntimeError identifies retained originals and
+        the destination must not be loaded until recovered. Unrelated files and
+        checkpoints are left alone. No crash-atomic multi-file or concurrent
+        reader/writer guarantee is provided.
+        """
+        X, Y = self.features, self.all_labels
         meta = {
             "feature_names": self.feature_names,
             "target_names": self.target_names,
@@ -298,26 +362,75 @@ class FiberNetDataset:
                 for s in self.samples
             ],
         }
-        with open(out / "metadata.json", "w") as fh:
-            json.dump(meta, fh, indent=2)
+        # Preserve the existing conversion/JSON semantics, but fail before writes.
+        metadata = json.dumps(meta, indent=2)
+        _save_dataset_files(Path(directory), X, Y, metadata)
 
     @classmethod
     def load(cls, directory: str) -> "FiberNetDataset":
-        """Load from saved directory."""
-        d = Path(directory)
-        X = np.load(d / "features.npy")
-        Y = np.load(d / "labels.npy")
+        """Load a structurally consistent, finite real legacy NPY/JSON dataset.
 
+        Historical zero-row ``(0,)`` arrays remain supported. Validation does
+        not establish common-generation provenance or scientific validity.
+        """
+        d = Path(directory)
         with open(d / "metadata.json") as fh:
             meta = json.load(fh)
 
+        if not isinstance(meta, dict):
+            raise ValueError("metadata.json: expected an object")
+        for key in ("feature_names", "target_names", "n_samples", "samples"):
+            if key not in meta:
+                raise ValueError(f"metadata.json: missing required field {key!r}")
+
         feature_names = meta["feature_names"]
         target_names = meta["target_names"]
+        for kind, names in (("feature", feature_names), ("target", target_names)):
+            if not isinstance(names, list):
+                raise ValueError(f"metadata.json: {kind} names must be an array")
+            seen = set()
+            for column, name in enumerate(names):
+                if not isinstance(name, str) or not name.strip():
+                    raise ValueError(
+                        f"metadata.json: invalid {kind} name at column {column}: "
+                        f"{name!r}; expected a nonempty string")
+                if name in seen:
+                    raise ValueError(
+                        f"metadata.json: duplicate {kind} name {name!r} at column {column}")
+                seen.add(name)
+
+        n_samples = meta["n_samples"]
+        if isinstance(n_samples, bool) or not isinstance(n_samples, int) or n_samples < 0:
+            raise ValueError("metadata.json: n_samples must be a nonnegative integer (not bool)")
+        records = meta["samples"]
+        if not isinstance(records, list):
+            raise ValueError("metadata.json: samples must be an array")
+        if len(records) != n_samples:
+            raise ValueError(
+                f"metadata.json: n_samples={n_samples} does not match samples length {len(records)}")
+        for row, record in enumerate(records):
+            if not isinstance(record, dict):
+                raise ValueError(f"metadata.json: samples[{row}] must be an object")
+            for key in ("id", "unit", "grid"):
+                if key not in record:
+                    raise ValueError(
+                        f"metadata.json: samples[{row}] is missing required field {key!r}")
+            if not isinstance(record["grid"], list):
+                raise ValueError(f"metadata.json: samples[{row}].grid must be an array")
+
+        X = _load_dataset_matrix(d / "features.npy", (n_samples, len(feature_names)))
+        Y = _load_dataset_matrix(d / "labels.npy", (n_samples, len(target_names)))
 
         samples = []
-        for i, sm in enumerate(meta["samples"]):
-            feat = {fn: float(X[i, j]) for j, fn in enumerate(feature_names)}
-            lbl = {tn: float(Y[i, j]) for j, tn in enumerate(target_names)}
+        for i, sm in enumerate(records):
+            feat = {
+                fn: _load_dataset_value(X[i, j], "features.npy", sm["id"], i, "feature", fn)
+                for j, fn in enumerate(feature_names)
+            }
+            lbl = {
+                tn: _load_dataset_value(Y[i, j], "labels.npy", sm["id"], i, "target", tn)
+                for j, tn in enumerate(target_names)
+            }
             samples.append(DatasetSample(
                 sample_id=sm["id"],
                 unit=sm["unit"],
@@ -579,6 +692,188 @@ class FiberNetDataset:
 # ============================================================
 # Internal helpers
 # ============================================================
+
+
+def _load_dataset_matrix(path: Path, shape: Tuple[int, int]) -> np.ndarray:
+    """Validate a saved matrix without coercing or copying its data."""
+    values = np.load(path, allow_pickle=False)
+    if isinstance(values, np.lib.npyio.NpzFile):
+        values.close()
+        raise ValueError(f"{path.name}: expected a single NPY array, got an NPZ archive")
+    if not isinstance(values, np.ndarray):
+        raise ValueError(f"{path.name}: expected a single NPY array")
+    if values.dtype.kind not in "biuf":
+        raise ValueError(
+            f"{path.name}: expected a real numeric or boolean dtype, got {values.dtype}")
+    # The original writer used np.array([]), even with declared column names.
+    legacy_empty = shape[0] == 0 and values.shape == (0,)
+    if values.shape != shape and not legacy_empty:
+        raise ValueError(f"{path.name}: expected shape {shape}, got {values.shape}")
+    return values
+
+
+def _load_dataset_value(value, filename: str, sample_id, row: int,
+                        kind: str, name: str) -> float:
+    """Check representability after the loader's existing float conversion."""
+    try:
+        converted = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(
+            f"{filename}: sample {sample_id!r} (row {row}), {kind} {name!r}: "
+            "value must be finite after float conversion") from exc
+    if not np.isfinite(converted):
+        raise ValueError(
+            f"{filename}: sample {sample_id!r} (row {row}), {kind} {name!r}: "
+            "value must be finite after float conversion")
+    return converted
+
+_DATASET_FILES = ("features.npy", "labels.npy", "metadata.json")
+
+
+class _DatasetSaveRecoveryError(RuntimeError):
+    """A publication exception was followed by an incomplete rollback."""
+
+    def __init__(self, destination, recovery_directory, original, rollback_errors):
+        self.destination = str(destination)
+        self.recovery_directory = str(recovery_directory)
+        self.original_error = original
+        self.rollback_errors = rollback_errors
+        super().__init__(
+            f"Dataset save failed and rollback was incomplete. Do not load "
+            f"{destination} until recovered. Original files and recovery.json "
+            f"are retained at {recovery_directory}. Original error: {original!r}; "
+            f"rollback errors: {rollback_errors!r}")
+
+
+def _dataset_file_mode(path):
+    """Inspect only; reject unsafe managed targets before staging/publication."""
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(info.st_mode):
+        raise ValueError(f"Dataset destination must be a regular file, not a "
+                         f"symlink or nonregular target: {path}")
+    mode = stat.S_IMODE(info.st_mode)
+    if mode & 0o7000:
+        raise ValueError(f"Dataset destination has unsupported special mode bits: {path}")
+    return mode
+
+
+def _dataset_private_file(path):
+    """Create an owned private workspace file without touching existing paths."""
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    os.close(fd)
+
+
+def _dataset_file_hash(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for block in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _warn_dataset_cleanup(path, error):
+    message = (f"Dataset persistence cleanup failed; private temporary data remain "
+               f"at {path}: {error!r}. The save/rollback outcome is unchanged.")
+    try:
+        warnings.warn(message, RuntimeWarning, stacklevel=3)
+    except Exception:
+        # Treating warnings as errors must not turn a committed save into failure.
+        try:
+            logging.getLogger(__name__).warning(message)
+        except Exception:
+            pass  # A custom logging handler must not replace the save outcome.
+
+
+def _save_dataset_files(out, X, Y, metadata):
+    """Publish this class's three owned files; no general transaction API."""
+    try:
+        info = out.lstat()
+    except FileNotFoundError:
+        existed = False
+    else:
+        if not stat.S_ISDIR(info.st_mode):
+            raise ValueError(f"Dataset destination must be a real directory, not "
+                             f"a symlink or non-directory: {out}")
+        existed = True
+    modes = {name: _dataset_file_mode(out / name) for name in _DATASET_FILES}
+    out.parent.mkdir(parents=True, exist_ok=True)
+    workspace = Path(tempfile.mkdtemp(prefix=f".{out.name}.save-", dir=out.parent))
+    new, original = workspace / "new", workspace / "original"
+    published = []
+    created = False
+    retain = False
+    try:
+        new.mkdir()
+        original.mkdir()
+        for name in _DATASET_FILES:
+            _dataset_private_file(new / name)
+        np.save(new / "features.npy", X)
+        np.save(new / "labels.npy", Y)
+        with open(new / "metadata.json", "w") as fh:
+            fh.write(metadata)
+        for name in _DATASET_FILES:
+            # Only generated private files receive chmod, never original targets.
+            os.chmod(new / name, 0o600 if modes[name] is None else modes[name])
+            if modes[name] is not None:
+                _dataset_private_file(original / name)
+                shutil.copyfile(out / name, original / name)
+        recovery = {
+            "destination": str(out.resolve()),
+            "destination_existed": existed,
+            "managed_files": list(_DATASET_FILES),
+            "original_present": {name: modes[name] is not None for name in _DATASET_FILES},
+            "original_modes": modes,
+            "original_sha256": {name: _dataset_file_hash(original / name)
+                                for name in _DATASET_FILES if modes[name] is not None},
+        }
+        with open(workspace / "recovery.json", "w") as fh:
+            json.dump(recovery, fh, indent=2)
+        # Keep originals across interruptions once publication can begin. This
+        # also covers interruption between os.replace and recording its result,
+        # or an interruption during rollback. It is not crash recovery.
+        retain = True
+        if not existed:
+            out.mkdir()
+            created = True
+        for name in _DATASET_FILES:
+            os.replace(new / name, out / name)
+            published.append(name)
+        retain = False
+    except Exception as error:
+        rollback_errors = []
+        for name in reversed(published):
+            try:
+                if modes[name] is None:
+                    (out / name).unlink()
+                else:
+                    restore = workspace / ("restore-" + name)
+                    _dataset_private_file(restore)
+                    shutil.copyfile(original / name, restore)
+                    os.chmod(restore, modes[name])
+                    os.replace(restore, out / name)
+            except Exception as rollback_error:
+                rollback_errors.append((name, repr(rollback_error)))
+        if created and not rollback_errors:
+            try:
+                out.rmdir()  # Never recursively delete the destination.
+            except Exception as rollback_error:
+                rollback_errors.append(("directory", repr(rollback_error)))
+        if rollback_errors:
+            retain = True
+            raise _DatasetSaveRecoveryError(out, workspace, error,
+                                            rollback_errors) from error
+        retain = False
+        raise
+    finally:
+        if not retain:
+            try:
+                shutil.rmtree(workspace)  # Only the workspace this call created.
+            except Exception as cleanup_error:
+                _warn_dataset_cleanup(workspace, cleanup_error)
+
 
 def _make_id(params: dict) -> str:
     """Deterministic sample ID from params."""

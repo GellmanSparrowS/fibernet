@@ -3,13 +3,25 @@ Integration tests for 3D unit types and GraphFeatureExtractor3D.
 Tests generation, tiling, simulation, feature extraction, and visualization.
 """
 
+import importlib.util
+
 import pytest
 import numpy as np
 import fibernet as fn
 from fibernet.analysis.graph_features_3d import GraphFeatureExtractor3D
 
-# Skip all tests if scikit-image not installed (required for TPMS generation)
-pytest.importorskip("skimage")
+# Optional dependencies gate only the cases that actually use them. A base
+# installation must still exercise lattice generation, analysis and rendering.
+HAS_SKIMAGE = importlib.util.find_spec("skimage") is not None
+HAS_TAICHI = importlib.util.find_spec("taichi") is not None
+TPMS_UNITS = {"gyroid", "schwarz_p", "schwarz_d", "iwp", "neovius", "lidinoid"}
+requires_taichi = pytest.mark.skipif(not HAS_TAICHI, reason="requires optional taichi")
+requires_skimage = pytest.mark.skipif(not HAS_SKIMAGE, reason="TPMS requires optional scikit-image")
+
+
+def unit_cases(units):
+    return [pytest.param(unit, marks=requires_skimage if unit in TPMS_UNITS else (),
+                         id=unit) for unit in units]
 
 
 # All available 3D unit types
@@ -45,7 +57,7 @@ class TestListUnits3D:
 class TestPattern3DGeneration:
     """Test pattern_3d generates valid StructureGraph for each unit type."""
 
-    @pytest.mark.parametrize("unit", ALL_3D_UNITS)
+    @pytest.mark.parametrize("unit", unit_cases(ALL_3D_UNITS))
     def test_generates_3d_graph(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(1, 1, 1), unit_kwargs=ukw)
@@ -53,7 +65,7 @@ class TestPattern3DGeneration:
         assert g.num_nodes > 0
         assert g.num_edges > 0
 
-    @pytest.mark.parametrize("unit", ALL_3D_UNITS)
+    @pytest.mark.parametrize("unit", unit_cases(ALL_3D_UNITS))
     def test_tiling(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g1 = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(1, 1, 1), unit_kwargs=ukw)
@@ -61,7 +73,7 @@ class TestPattern3DGeneration:
         assert g2.num_nodes > g1.num_nodes
         assert g2.num_edges > g1.num_edges
 
-    @pytest.mark.parametrize("unit", ALL_3D_UNITS)
+    @pytest.mark.parametrize("unit", unit_cases(ALL_3D_UNITS))
     def test_n_pts_per_side(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g0 = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(1, 1, 1), unit_kwargs=ukw)
@@ -82,7 +94,8 @@ class TestPattern3DGeneration:
 class TestSimulation3D:
     """Test simulation interfaces with 3D structures."""
 
-    @pytest.mark.parametrize("unit", ["cubic", "octet", "bcc", "gyroid"])
+    @pytest.mark.parametrize("unit", unit_cases(["cubic", "octet", "bcc", "gyroid"]))
+    @requires_taichi
     def test_stretch_test(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(2, 2, 2), unit_kwargs=ukw)
@@ -91,6 +104,7 @@ class TestSimulation3D:
         assert result.displacements is not None
         assert result.displacements.shape[0] == g.num_nodes
 
+    @requires_taichi
     def test_dynamics_simulation(self):
         g = fn.pattern_3d(unit="cubic", box=(10, 10, 10), grid=(2, 2, 2))
         engine = fn.TaichiEngine()
@@ -116,7 +130,7 @@ class TestGraphFeatureExtractor3D:
         ext = GraphFeatureExtractor3D()
         assert len(ext.get_feature_names()) == 60
 
-    @pytest.mark.parametrize("unit", ["cubic", "bcc", "gyroid", "chiral_3d"])
+    @pytest.mark.parametrize("unit", unit_cases(["cubic", "bcc", "gyroid", "chiral_3d"]))
     def test_extract_returns_dict(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(2, 2, 2), unit_kwargs=ukw)
@@ -125,7 +139,7 @@ class TestGraphFeatureExtractor3D:
         assert isinstance(features, dict)
         assert len(features) == 60
 
-    @pytest.mark.parametrize("unit", ["cubic", "bcc", "gyroid", "chiral_3d"])
+    @pytest.mark.parametrize("unit", unit_cases(["cubic", "bcc", "gyroid", "chiral_3d"]))
     def test_extract_no_nan(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(2, 2, 2), unit_kwargs=ukw)
@@ -165,6 +179,7 @@ class TestVisualization3D:
         import matplotlib.pyplot as plt
         plt.close(fig)
 
+    @requires_taichi
     def test_render_deformation_3d(self):
         import matplotlib
         matplotlib.use('Agg')
@@ -188,6 +203,7 @@ class TestVisualization3D:
         import matplotlib.pyplot as plt
         plt.close(fig)
 
+    @requires_taichi
     def test_render_stress_3d(self):
         import matplotlib
         matplotlib.use('Agg')
@@ -200,6 +216,7 @@ class TestVisualization3D:
             import matplotlib.pyplot as plt
             plt.close(fig)
 
+    @requires_taichi
     def test_render_comparison_3d(self):
         import matplotlib
         matplotlib.use('Agg')
@@ -220,6 +237,7 @@ class TestVisualization3D:
         import matplotlib.pyplot as plt
         plt.close(fig)
 
+    @requires_taichi
     def test_render_trajectory_3d_from_sim_result(self):
         import matplotlib
         matplotlib.use('Agg')
@@ -237,6 +255,7 @@ class TestVisualization3D:
         plt.close(fig)
 
 
+@requires_taichi
 class TestEnergyComputation:
     """Test that elastic energy is computed correctly."""
 
@@ -263,9 +282,11 @@ class TestEnergyComputation:
 
 
 
+@requires_taichi
 class TestOOMGuard:
     """Test memory guard behavior."""
 
+    @requires_skimage
     def test_warn_by_default(self):
         import warnings
         g = fn.pattern_3d(unit="gyroid", box=(10, 10, 10), grid=(3, 3, 3))
@@ -276,6 +297,7 @@ class TestOOMGuard:
             assert len(w) > 0
             assert "nodes" in str(w[-1].message)
 
+    @requires_skimage
     def test_strict_mode_blocks(self):
         import os
         g = fn.pattern_3d(unit="gyroid", box=(10, 10, 10), grid=(3, 3, 3))

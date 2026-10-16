@@ -49,6 +49,151 @@ class BeamFrameFEM:
                 f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
             )
 
+    @staticmethod
+    def _validate_force_shape(forces, n_nodes, dim):
+        """Reject omitted or extra load components before stiffness assembly."""
+        expected_shape = (n_nodes, dim)
+        actual_shape = getattr(forces, 'shape', None)
+        if actual_shape != expected_shape:
+            raise ValueError(
+                f"forces must have shape {expected_shape}: one row per node "
+                f"and {dim} translational force components; got {actual_shape}. "
+                "Applied nodal moments/rotational columns are not supported. "
+                "Use forces=None for zero loads."
+            )
+
+    @staticmethod
+    def _linear_numerical_diagnostics(reactions, free_dofs, damping):
+        """Copy physical free-DOF residuals; this is not a stability verdict."""
+        if np.ndim(reactions) != 2 or reactions.shape[1] not in (3, 6):
+            raise ValueError('numerical_diagnostics requires 3 or 6 DOFs per node')
+        components = ('ux', 'uy', 'rz') if reactions.shape[1] == 3 else (
+            'ux', 'uy', 'uz', 'rx', 'ry', 'rz')
+        ndof = len(components)
+        coefficient = float(damping)
+        regularization = {
+            'status': 'available', 'method': 'diagonal_identity',
+            'coefficient': coefficient,
+            'interpretation': 'numerical_not_physical_support',
+        }
+        if not np.isfinite(coefficient):
+            regularization.update(
+                status='unavailable', coefficient=None,
+                reason='nonfinite_regularization_coefficient')
+        values = np.asarray(reactions).ravel()[free_dofs]
+        residual = {
+            'status': 'available',
+            'definition': 'K_physical_u_minus_applied_load',
+            'index_kind': 'input_node_row',
+            'node_rows': [int(dof // ndof) for dof in free_dofs],
+            'dof_components': [components[int(dof % ndof)] for dof in free_dofs],
+            'values': [float(value) for value in values],
+        }
+        if not np.isfinite(values).all():
+            residual.update(status='unavailable', values=None,
+                            reason='nonfinite_recovered_residual')
+        return {
+            'schema_version': 1, 'model': 'linear_beam_frame',
+            'regularization': regularization,
+            'physical_free_residual': residual,
+            'physical_equilibrium': 'not_evaluated',
+            'load_compatibility': 'not_evaluated',
+            'solution_uniqueness': 'not_evaluated',
+        }
+
+    @staticmethod
+    def _copy_numerical_diagnostics(diagnostics, n_nodes, ndof, node_ids=None):
+        """Validate v1 metadata and, when mapped, replace row indices with IDs."""
+        from copy import deepcopy
+        import json
+
+        def invalid(message):
+            raise ValueError(f"numerical_diagnostics {message}")
+
+        def finite_number(value):
+            return (not isinstance(value, (bool, np.bool_))
+                    and isinstance(value, (int, float, np.integer, np.floating))
+                    and np.isfinite(value))
+
+        if ndof not in (3, 6):
+            invalid('requires 3 or 6 DOFs per node')
+        diagnostic = deepcopy(diagnostics)
+        if (not isinstance(diagnostic, dict)
+                or type(diagnostic.get('schema_version')) is not int
+                or diagnostic['schema_version'] != 1):
+            invalid('requires schema_version 1')
+        for name in ('physical_equilibrium', 'load_compatibility', 'solution_uniqueness'):
+            if diagnostic.get(name) != 'not_evaluated':
+                invalid(f'{name} must remain not_evaluated')
+        regularization = diagnostic.get('regularization')
+        if (not isinstance(regularization, dict)
+                or regularization.get('method') != 'diagonal_identity'
+                or regularization.get('interpretation') != 'numerical_not_physical_support'):
+            invalid('requires diagonal_identity regularization metadata')
+        if regularization.get('status') == 'available':
+            if not finite_number(regularization.get('coefficient')) or 'reason' in regularization:
+                invalid('available regularization requires a finite coefficient and no reason')
+        elif regularization.get('status') == 'unavailable':
+            if (regularization.get('coefficient', object()) is not None
+                    or regularization.get('reason') != 'nonfinite_regularization_coefficient'):
+                invalid('unavailable regularization requires null coefficient and its reason')
+        else:
+            invalid('has an invalid regularization status')
+        residual = diagnostic.get('physical_free_residual')
+        if (not isinstance(residual, dict)
+                or residual.get('definition') != 'K_physical_u_minus_applied_load'):
+            invalid('requires the physical free residual definition')
+        nonlinear = diagnostic.get('model') == 'incremental_updated_geometry_linear_solves'
+        if nonlinear:
+            if (residual.get('status') != 'unavailable'
+                    or residual.get('reason') != 'final_nonlinear_equilibrium_residual_not_recovered'
+                    or residual.get('values', object()) is not None
+                    or any(key in residual for key in ('index_kind', 'node_rows', 'node_ids', 'dof_components'))
+                    or regularization.get('scope') != 'inner_linear_solves'):
+                invalid('final nonlinear residual must be unavailable without increment indices')
+        else:
+            if (diagnostic.get('model') != 'linear_beam_frame'
+                    or residual.get('index_kind') != 'input_node_row'
+                    or 'node_ids' in residual):
+                invalid('linear raw residuals require input_node_row indices')
+            rows = residual.get('node_rows')
+            components = residual.get('dof_components')
+            allowed = ('ux', 'uy', 'rz') if ndof == 3 else ('ux', 'uy', 'uz', 'rx', 'ry', 'rz')
+            if (not isinstance(rows, list) or not isinstance(components, list)
+                    or len(rows) != len(components)
+                    or any(type(row) is not int or row < 0 or row >= n_nodes for row in rows)
+                    or any(type(component) is not str or component not in allowed
+                           for component in components)):
+                invalid('row/component arrays must have equal lengths and valid input DOFs')
+            if len(set(zip(rows, components))) != len(rows):
+                invalid('free DOF records must not contain duplicate row/component pairs')
+            if residual.get('status') == 'available':
+                values = residual.get('values')
+                if (not isinstance(values, list) or len(values) != len(rows)
+                        or not all(finite_number(value) for value in values)
+                        or 'reason' in residual):
+                    invalid('available residual requires equally sized finite values and no reason')
+            elif residual.get('status') == 'unavailable':
+                if (residual.get('values', object()) is not None
+                        or residual.get('reason') != 'nonfinite_recovered_residual'):
+                    invalid('unavailable residual requires null values and its reason')
+            else:
+                invalid('has an invalid physical residual status')
+            if node_ids is not None:
+                if (len(node_ids) != n_nodes or len(set(node_ids)) != n_nodes
+                        or any(isinstance(nid, (bool, np.bool_))
+                               or not isinstance(nid, (int, np.integer)) or nid < 0
+                               for nid in node_ids)):
+                    invalid('resolved node map must cover all input node rows')
+                residual['node_ids'] = [int(node_ids[row]) for row in rows]
+                del residual['node_rows']
+                residual['index_kind'] = 'stable_node_id'
+        try:
+            json.dumps(diagnostic, allow_nan=False)
+        except (TypeError, ValueError) as exc:
+            raise ValueError('numerical_diagnostics must contain JSON-native finite values or null') from exc
+        return diagnostic
+
     def _deduplicate_edges(self, edge_index: np.ndarray) -> np.ndarray:
         seen = set()
         unique = []
@@ -115,11 +260,21 @@ class BeamFrameFEM:
         K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
         return K, edge_list
     
+    @staticmethod
+    def _hermite_endpoint_curvatures(length, transverse_dofs):
+        """Return v'' at x=0,L for Hermite DOFs [v_i, v'_i, v_j, v'_j]."""
+        L = length
+        second_derivatives = np.array([
+            [-6/L**2, -4/L, 6/L**2, -2/L],
+            [6/L**2, 2/L, -6/L**2, 4/L],
+        ])
+        return second_derivatives @ transverse_dofs
+
     def _compute_element_stress_2d(self, node_pos, u, edge_index, edge_list, radii):
-        """Compute stresses using shape function 2nd derivatives (correct formula).
-        
-        M(ξ) = EI * N''(ξ) * d_local
-        where N'' are second derivatives of Hermite shape functions.
+        """Recover linear stresses from cubic Hermite curvature.
+
+        The scalar convention M=-EI*v'' gives M_i=q_local[2],
+        M_j=-q_local[5], and (M_j-M_i)/L=q_local[1].
         """
         n_edges = len(edge_list)
         sigma_axial = np.zeros(n_edges)
@@ -152,21 +307,11 @@ class BeamFrameFEM:
             eps_axial = (uj_local[0] - ui_local[0]) / L
             sigma_axial[idx] = self.E * eps_axial
             
-            # Bending moment from shape function 2nd derivatives
-            # M(ξ=0) = EI * N''(0) * d_local
-            # N''(0) = [12/L², 6/L, -12/L², 6/L]
-            # M(ξ=1) = EI * N''(1) * d_local
-            # N''(1) = [12/L², -6/L, -12/L², -6/L]
+            # Rotational DOFs are the transverse slopes in the local plane.
             d_trans = np.array([v_i, th_i, v_j, th_j])
-            
-            Npp_left = np.array([12/L**2, 6/L, -12/L**2, 6/L])
-            Npp_right = np.array([12/L**2, -6/L, -12/L**2, -6/L])
-            
-            # Sign convention: M = -EI * v'' for standard beam
-            # But for internal moment, use: M = EI * N'' * d (positive = sagging)
-            M_i = -self.E * I_val * np.dot(Npp_left, d_trans)
-            M_j = -self.E * I_val * np.dot(Npp_right, d_trans)
-            
+            curvature = self._hermite_endpoint_curvatures(L, d_trans)
+            M_i, M_j = -self.E * I_val * curvature
+
             moments[idx] = [M_i, M_j]
             
             # Bending stress at outer fiber
@@ -189,6 +334,9 @@ class BeamFrameFEM:
                  prescribed_disp=None,
                  damping=1e-6, deduplicate=False):
         """Solve 2D beam frame with force and/or displacement BCs.
+
+        forces: None (zero loads), or an exact (n_nodes, 2) array [Fx, Fy].
+        Applied nodal moments are unsupported; extra columns raise ValueError.
         
         Returns dict with:
             u: (n_nodes, 3) [ux, uy, theta]
@@ -212,6 +360,8 @@ class BeamFrameFEM:
             prescribed_disp = {}
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 2))
+
+        self._validate_force_shape(forces, node_pos.shape[0], 2)
         
         self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
@@ -286,14 +436,19 @@ class BeamFrameFEM:
             'edge_forces': edge_forces, 'node_stress': node_stress,
             'node_moment': node_moment, 'reactions': reactions,
             'edge_list': edge_list, 'K': K,
-            'n_nodes': n_nodes, 'n_edges': len(edge_list)
+            'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            'numerical_diagnostics': self._linear_numerical_diagnostics(
+                reactions, free_dofs, damping),
         }
     
     def solve_2d_nonlinear(self, edge_index, node_pos, radii,
                            prescribed_disp, fixed_nodes=None,
                            forces=None, n_steps=10, tol=1e-6, max_iter=20,
                            damping=1e-6, deduplicate=False):
-        """Geometrically nonlinear solver using incremental co-rotational approach.
+        """Incremental updated-geometry linear solves (equilibrium unverified).
+
+        Final stress/resultant recovery is a linear-reference approximation.
+        Final K, reactions and node_moment are unavailable, not physical zeros.
         
         For each increment:
           1. Apply fraction of total prescribed displacement
@@ -301,6 +456,15 @@ class BeamFrameFEM:
           3. Update node positions
           4. Repeat
         """
+        for name, value in (('n_steps', n_steps), ('max_iter', max_iter)):
+            if (isinstance(value, (bool, np.bool_))
+                    or not isinstance(value, (int, np.integer)) or value <= 0):
+                raise ValueError(f"{name} must be a positive integer (not bool)")
+        if (isinstance(tol, (bool, np.bool_))
+                or not isinstance(tol, (int, float, np.integer, np.floating))
+                or not np.isfinite(tol) or tol < 0):
+            raise ValueError("tol must be a finite nonnegative real number (not bool)")
+
         if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy().copy()
         else:
@@ -347,7 +511,9 @@ class BeamFrameFEM:
                 total_u[:, 1] += u_step[:, 1]
                 total_u[:, 2] += u_step[:, 2]
                 
-                if du_norm < tol * (1.0 + np.linalg.norm(total_u[:, :2])):
+                update_threshold = tol * (1.0 + np.linalg.norm(total_u[:, :2]))
+                update_criterion_met = bool(du_norm < update_threshold)
+                if update_criterion_met:
                     break
                 
                 step_prescribed = {}
@@ -357,7 +523,12 @@ class BeamFrameFEM:
             
             history.append({
                 'step': step, 'max_disp': float(max_disp),
-                'max_stress': float(max_stress), 'iterations': iteration + 1
+                'max_stress': float(max_stress), 'iterations': iteration + 1,
+                'update_norm': float(du_norm),
+                'update_threshold': float(update_threshold),
+                'update_criterion_met': update_criterion_met,
+                'iteration_limit_reached': bool(
+                    not update_criterion_met and iteration + 1 == max_iter),
             })
         
         # Final stress computation from total displacement on original geometry
@@ -383,14 +554,70 @@ class BeamFrameFEM:
         result['edge_forces'] = edge_forces
         result['node_stress'] = node_stress
         result['history'] = history
-        
+
+        # The last inner solve describes an increment on updated geometry, not
+        # the total state above. Do not expose its diagnostics as final fields.
+        model = 'incremental_updated_geometry_linear_solves'
+        result['numerical_diagnostics'] = {
+            'schema_version': 1, 'model': model,
+            'regularization': {
+                **result['numerical_diagnostics']['regularization'],
+                'scope': 'inner_linear_solves',
+            },
+            'physical_free_residual': {
+                'status': 'unavailable',
+                'definition': 'K_physical_u_minus_applied_load',
+                'reason': 'final_nonlinear_equilibrium_residual_not_recovered',
+                'values': None,
+            },
+            'physical_equilibrium': 'not_evaluated',
+            'load_compatibility': 'not_evaluated',
+            'solution_uniqueness': 'not_evaluated',
+        }
+        result['field_status'] = {}
+        for field, reason in (
+            ('K', 'final_nonlinear_stiffness_not_recovered'),
+            ('reactions', 'final_nonlinear_equilibrium_reactions_not_recovered'),
+            ('node_moment', 'final_total_nodal_moments_not_recovered'),
+        ):
+            result[field] = None
+            result['field_status'][field] = {
+                'status': 'not_supported', 'reason': reason, 'model': model,
+            }
+        for field in ('sigma_axial', 'sigma_bending', 'sigma_total',
+                      'moments', 'edge_forces', 'node_stress'):
+            result['field_status'][field] = {
+                'status': 'approximate',
+                'approximation': 'original_geometry_total_displacement_linear_reference',
+                'model': model,
+            }
+        result['solver_status'] = {
+            'model': model,
+            'equilibrium': 'unverified',
+            'history_field_scope': {
+                'max_disp': 'accumulated_total_translation',
+                'max_stress': 'last_inner_linear_increment',
+            },
+            'update_criterion': 'translation_increment_norm',
+            'update_criterion_is_equilibrium_check': False,
+            'max_iter': max_iter,
+            'steps': [{key: entry[key] for key in (
+                'step', 'iterations', 'update_norm', 'update_threshold',
+                'update_criterion_met', 'iteration_limit_reached')}
+                for entry in history],
+        }
+
         return result
     
     def solve_3d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
                  damping=1e-6, deduplicate=False):
-        """Solve 3D beam frame with corrected stress computation."""
+        """Solve 3D beam frame with corrected stress computation.
+
+        forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
+        Applied nodal moments are unsupported; extra columns raise ValueError.
+        """
         if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
         if torch is not None and isinstance(node_pos, torch.Tensor):
@@ -406,6 +633,8 @@ class BeamFrameFEM:
             prescribed_disp = {}
         if forces is None:
             forces = np.zeros((node_pos.shape[0], 3))
+
+        self._validate_force_shape(forces, node_pos.shape[0], 3)
         
         self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
@@ -513,14 +742,18 @@ class BeamFrameFEM:
             th_yi = np.dot(e2, u[i,3:6]); th_yj = np.dot(e2, u[j,3:6])
             th_zi = np.dot(e3, u[i,3:6]); th_zj = np.dot(e3, u[j,3:6])
             
-            d_v = np.array([vi, th_yi, vj, th_yj])
-            d_w = np.array([wi, th_zi, wj, th_zj])
-            Npp_left = np.array([12/L**2, 6/L, -12/L**2, 6/L])
-            
-            M_z = abs(self.E * I_val * np.dot(Npp_left, d_v))
-            M_y = abs(self.E * I_val * np.dot(Npp_left, d_w))
-            sigma_bending[idx] = (M_z + M_y) * r / I_val
-        
+            # In the right-handed local frame, theta x e1 = theta_z*e2
+            # - theta_y*e3, so v'=theta_z and w'=-theta_y.
+            d_v = np.array([vi, th_zi, vj, th_zj])
+            d_w = np.array([wi, -th_yi, wj, -th_yj])
+            curvature_v = self._hermite_endpoint_curvatures(L, d_v)
+            curvature_w = self._hermite_endpoint_curvatures(L, d_w)
+
+            # Circular-section peak normal stress uses the moment norm at
+            # each endpoint, then the maximum; the curvature is linear in x.
+            moment_norms = self.E * I_val * np.hypot(curvature_v, curvature_w)
+            sigma_bending[idx] = np.max(moment_norms) * r / I_val
+
         sigma_total = np.abs(sigma_axial) + sigma_bending
         node_stress = np.zeros(n_nodes)
         for idx, e in enumerate(edge_list):
@@ -529,7 +762,7 @@ class BeamFrameFEM:
             node_stress[j] = max(node_stress[j], sigma_total[idx])
         
         # Reactions: R = K*u - f
-        reactions = (K_damped @ u_full - f_global).reshape(n_nodes, 6)
+        reactions = (K @ u_full - f_global).reshape(n_nodes, 6)
         
         # Edge forces [axial_N, shear_V_y, shear_V_z]
         edge_forces = np.zeros((len(edge_list), 3))
@@ -553,7 +786,9 @@ class BeamFrameFEM:
             'sigma_total': sigma_total, 'node_stress': node_stress,
             'reactions': reactions, 'edge_forces': edge_forces,
             'edge_list': edge_list, 'K': K,
-            'n_nodes': n_nodes, 'n_edges': len(edge_list)
+            'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            'numerical_diagnostics': self._linear_numerical_diagnostics(
+                reactions, free_dofs, damping),
         }
 
     # ═══════════════════════════════════════════════════════
@@ -663,15 +898,32 @@ class BeamFrameFEM:
         result['max_displacement'] = float(np.linalg.norm(displacement, axis=1).max())
         return result
 
-    def to_sim_result(self, fem_result, graph=None):
+    def to_sim_result(self, fem_result, graph=None, *, node_ids=None, edge_ids=None):
         """Convert FEM dict result to SimResult for backend compatibility.
+
+        ``edge_forces`` contains signed axial forces. The solver's full
+        three-column force/resultant array is retained as the distinct
+        ``metadata['beam_resultants']`` value, including in summary exports.
+        Present numerical diagnostics are independently copied; input-row
+        residual records become stable-node-ID records only with a graph map.
         
         Parameters
         ----------
         fem_result : dict
             Result from solve_2d, solve_3d, or stretch_test.
         graph : StructureGraph, optional
-            Original graph for metadata.
+            Original graph for geometry and metadata. Without explicit maps,
+            raw rows retain the legacy graph_to_fem_input / _graph_to_arrays
+            insertion-order assumption. Without graph, ID maps are omitted.
+        node_ids, edge_ids : sequence of int, optional, keyword-only
+            IDs of the INPUT node and element rows supplied to the raw solve,
+            before deduplication. Supply both maps and graph together; each
+            map must cover its graph entities exactly. Output edge IDs are
+            edge_ids[fem_result['edge_list']]. For graph.to_numpy() inputs use
+            sorted(graph.nodes) and list(graph.edges), respectively (and apply
+            any input-row permutations to the maps too).
+            These maps assert caller provenance; they cannot verify that
+            arbitrary raw geometry, connectivity or materials match graph.
         
         Returns
         -------
@@ -681,7 +933,68 @@ class BeamFrameFEM:
         
         u = fem_result['u']
         n_nodes = fem_result['n_nodes']
-        
+        explicit_ids = node_ids is not None or edge_ids is not None
+        if explicit_ids and (graph is None or node_ids is None or edge_ids is None):
+            raise ValueError("Explicit node_ids and edge_ids require both maps and graph")
+
+        def validate_ids(values, expected, name):
+            try:
+                values = list(values)
+            except TypeError as exc:
+                raise ValueError(f"{name} must be a sequence of integer IDs") from exc
+            if any(isinstance(v, (bool, np.bool_)) or
+                   not isinstance(v, (int, np.integer)) or v < 0 for v in values):
+                raise ValueError(f"{name} must contain nonnegative integer IDs, not bools")
+            values = [int(v) for v in values]
+            if len(set(values)) != len(values):
+                raise ValueError(f"{name} must contain unique IDs")
+            if set(values) != set(expected):
+                raise ValueError(f"{name} must have exact graph coverage")
+            return values
+
+        edge_list = fem_result.get('edge_list', np.array([]))
+        identity = {}
+        if graph is not None:
+            if explicit_ids:
+                node_ids = validate_ids(node_ids, graph.nodes, 'node_ids')
+                graph_edge_ids = validate_ids(edge_ids, graph.edges, 'edge_ids')
+                if (np.ndim(u) != 2 or len(node_ids) != u.shape[0]
+                        or len(node_ids) != n_nodes):
+                    raise ValueError("node_ids length must match raw u rows and n_nodes")
+            else:
+                node_ids = list(graph.nodes)
+                graph_edge_ids = list(graph.edges)
+            # Validate before any retained-row indexing or geometric calculation.
+            # Check Python values first so mixed bool/int lists cannot coerce bools.
+            try:
+                selected = np.asarray(edge_list)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("FEM edge_list must contain unique valid input edge row indices") from exc
+            if (selected.ndim != 1 or selected.dtype.kind not in 'iu'
+                    or any(isinstance(v, (bool, np.bool_)) for v in edge_list)
+                    or np.any(selected < 0) or np.any(selected >= len(graph_edge_ids))
+                    or len(set(selected.tolist())) != len(selected)):
+                raise ValueError("FEM edge_list must contain unique valid input edge row indices")
+            if explicit_ids:
+                pos = np.array([graph.nodes[nid].position for nid in node_ids])
+                node_rows = {nid: i for i, nid in enumerate(node_ids)}
+                edge_vals = [graph.edges[eid] for eid in graph_edge_ids]
+                elements = np.array([[node_rows[e.node_i], node_rows[e.node_j]]
+                                     for e in edge_vals], dtype=int).reshape(-1, 2)
+            else:
+                pos, elements, _, _ = _graph_to_arrays(graph)
+                edge_vals = list(graph.edges.values())
+            identity = {'node_ids': list(node_ids),
+                        'edge_ids': [graph_edge_ids[int(i)] for i in selected]}
+
+        numerical = {}
+        if 'numerical_diagnostics' in fem_result:
+            if np.ndim(u) != 2 or u.shape[0] != n_nodes or u.shape[1] not in (3, 6):
+                raise ValueError('numerical_diagnostics requires matching raw u rows and n_nodes')
+            numerical['numerical_diagnostics'] = self._copy_numerical_diagnostics(
+                fem_result['numerical_diagnostics'], n_nodes, u.shape[1],
+                node_ids if graph is not None else None)
+
         # Displacement magnitude
         if u.shape[1] == 3 and fem_result.get('edge_list') is not None:
             # 2D: u is (n, 3) = [ux, uy, theta]
@@ -696,7 +1009,6 @@ class BeamFrameFEM:
         
         # Deformed positions
         if graph is not None:
-            pos, _, _, _ = _graph_to_arrays(graph)
             deformed = pos + np.column_stack([disp_3d, np.zeros(pos.shape[1] - disp_3d.shape[1])]) if pos.shape[1] > disp_3d.shape[1] else pos + disp_3d
         else:
             deformed = disp_3d  # Just the displacement
@@ -704,7 +1016,6 @@ class BeamFrameFEM:
         # Energy (axial-stress proxy over the assembled beam elements)
         sigma_axial = fem_result.get('sigma_axial', np.array([]))
         sigma_bending = fem_result.get('sigma_bending', np.array([]))
-        edge_list = fem_result.get('edge_list', np.array([]))
         beam_forces = np.asarray(fem_result.get('edge_forces', np.empty((0, 3))))
         axial_forces = (beam_forces[:, 0].copy()
                         if beam_forces.ndim == 2 and beam_forces.shape[1] >= 1
@@ -714,7 +1025,6 @@ class BeamFrameFEM:
         # Approximate energy from stresses
         energy = 0.0
         if graph is not None and len(sigma_axial) > 0:
-            pos, elements, _, _ = _graph_to_arrays(graph)
             selected = elements[np.asarray(edge_list, dtype=int)]
             lengths = np.linalg.norm(pos[selected[:, 1]] - pos[selected[:, 0]], axis=1)
             final_lengths = np.linalg.norm(deformed[selected[:, 1]] -
@@ -725,7 +1035,6 @@ class BeamFrameFEM:
                 L = np.linalg.norm(pos[i] - pos[j])
                 r = 0.05
                 try:
-                    edge_vals = list(graph.edges.values())
                     if 0 <= e < len(edge_vals):
                         r = edge_vals[e].radius
                 except Exception:
@@ -734,6 +1043,19 @@ class BeamFrameFEM:
                 strain = sigma_axial[idx] / self.E if self.E > 0 else 0
                 energy += 0.5 * self.E * strain**2 * A * L
         
+        # Do not invent validity for legacy/linear dictionaries. Only nonlinear
+        # producers currently emit this availability contract.
+        availability = {key: fem_result[key] for key in
+                        ('field_status', 'solver_status') if key in fem_result}
+        if 'field_status' in fem_result:
+            availability['field_status'] = dict(fem_result['field_status'])
+            if 'edge_forces' in fem_result['field_status']:
+                availability['field_status']['beam_resultants'] = dict(
+                    fem_result['field_status']['edge_forces'])
+            for key in ('K', 'node_moment'):
+                if key in fem_result['field_status'] and fem_result.get(key) is None:
+                    availability[key] = None
+
         return SimResult(
             displacements=disp_3d,
             deformed_positions=deformed,
@@ -749,11 +1071,14 @@ class BeamFrameFEM:
             n_edges=fem_result.get('n_edges', 0),
             mode='fem_beam_frame',
             metadata={
+                **identity,
+                **availability,
+                **numerical,
                 'sigma_axial': sigma_axial,
                 'sigma_bending': sigma_bending,
                 'sigma_total': fem_result.get('sigma_total', np.array([])),
                 'reactions': fem_result.get('reactions'),
-                'edge_forces': fem_result.get('edge_forces'),
+                'beam_resultants': fem_result.get('edge_forces'),
                 'energy_kind': 'axial_stress_proxy',
             },
         )

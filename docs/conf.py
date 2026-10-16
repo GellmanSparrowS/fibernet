@@ -1,12 +1,16 @@
 import os
 import sys
+import runpy
+from pathlib import Path
 sys.path.insert(0, os.path.abspath('..'))
 
 project = 'FiberNet'
 copyright = '2026, FiberNet Contributors'
 author = 'FiberNet Contributors'
-version = '1.5'
-release = '1.5.1'
+# Read metadata without importing optional numerical or GUI dependencies.
+release = runpy.run_path(str(Path(__file__).resolve().parents[1] /
+                            'fibernet' / 'version.py'))['__version__']
+version = '.'.join(release.split('.')[:2])
 
 extensions = [
     'sphinx.ext.autodoc',

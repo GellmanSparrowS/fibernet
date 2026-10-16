@@ -66,6 +66,7 @@ from fibernet.gen.solid_export import (PrintSettings, FiberSolid, build_solid,
 
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
+from fibernet.sim.linear_transport import solve_linear_transport
 from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
                                        ReducedBeamSolver)
 
@@ -81,7 +82,7 @@ from fibernet.viz.render import (
 )
 
 # --- Easy API ---
-from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl
+from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl, predict_named
 
 # --- PyVista 3D Rendering (optional) ---
 try:
@@ -142,7 +143,7 @@ __all__ = [
     "PrintSettings", "FiberSolid", "build_solid", "build_voxel_solid",
     "export_solid", "export_route",
     # Simulation
-    "TaichiEngine", "SimResult",
+    "TaichiEngine", "SimResult", "solve_linear_transport",
     "ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
@@ -152,7 +153,7 @@ __all__ = [
     "render_fem_stress",
     "THEMES",
     # Easy API
-    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",
+    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl", "predict_named",
     # Analysis
     "GraphFeatureExtractor",
     "GraphFeatureExtractor3D",
