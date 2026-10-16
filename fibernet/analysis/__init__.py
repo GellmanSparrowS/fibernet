@@ -23,3 +23,7 @@ __all__ = [
 from fibernet.analysis.topology_metrics import TopologyMetricsV1, analyze_topology
 
 __all__ += ["TopologyMetricsV1", "analyze_topology"]
+
+from fibernet.analysis.geometry_paths import GeometryPathMetricsV1, analyze_geometry_paths
+
+__all__ += ["GeometryPathMetricsV1", "analyze_geometry_paths"]

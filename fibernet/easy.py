@@ -246,7 +246,8 @@ def train_model(
         Native selections default to stored feature_names in order and reject
         every declared target name, without applying CSV prefix rules.
     model_type : str
-        模型: "rf" (随机森林), "lr" (线性回归), "gb" (梯度提升)。
+        模型: "rf" (随机森林), "lr" (线性回归), "gb" (梯度提升),
+        "xgb" (optional CPU XGBoost scalar regression).
     test_size : float
         Held-out row fraction for CSV/native row mode, or group fraction for
         native group mode. Group sizes determine the realized row fraction.
@@ -406,11 +407,15 @@ def train_model(
         model = LinearRegression()
     elif model_type == "gb":
         model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+    elif model_type == "xgb":
+        model = _new_xgb_regressor()
     else:
-        raise ValueError(f"Unknown model_type '{model_type}'. Use: rf, lr, gb")
+        raise ValueError(f"Unknown model_type '{model_type}'. Use: rf, lr, gb, xgb")
 
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
+    if model_type == "xgb":
+        y_pred = _xgb_point_predictions(y_pred, len(X_test))
 
     r2 = r2_score(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
@@ -454,8 +459,8 @@ def _train_native_dataset(dataset, *, target, features, model_type, test_size,
     forbidden = [name for name in selected if name in declared_targets]
     if forbidden:
         raise ValueError(f"features must not contain any declared target name: {forbidden}")
-    if not isinstance(model_type, str) or model_type not in ("rf", "lr", "gb"):
-        raise ValueError(f"Unknown model_type {model_type!r}. Use: rf, lr, gb")
+    if not isinstance(model_type, str) or model_type not in ("rf", "lr", "gb", "xgb"):
+        raise ValueError(f"Unknown model_type {model_type!r}. Use: rf, lr, gb, xgb")
     if not isinstance(split, str) or split not in ("row", "group"):
         raise ValueError("Native training requires explicit split='row' or split='group', groups=[...]")
     if isinstance(test_size, (bool, np.bool_)) or not isinstance(test_size, Real):
@@ -568,10 +573,14 @@ def _train_native_dataset(dataset, *, target, features, model_type, test_size,
         model = RandomForestRegressor(n_estimators=100, random_state=42)
     elif model_type == "lr":
         model = LinearRegression()
+    elif model_type == "xgb":
+        model = _new_xgb_regressor()
     else:
         model = GradientBoostingRegressor(n_estimators=100, random_state=42)
     model.fit(X[train], y[train])
     predictions = model.predict(X[test])
+    if model_type == "xgb":
+        predictions = _xgb_point_predictions(predictions, len(test))
     r2 = float(r2_score(y[test], predictions))
     rmse = float(np.sqrt(mean_squared_error(y[test], predictions)))
     metrics = {"r2": r2, "rmse": rmse, "n_samples": dataset.n_samples,
@@ -583,6 +592,34 @@ def _train_native_dataset(dataset, *, target, features, model_type, test_size,
                                       "target": target})
         print(f"OK: Model saved to {save_path}")
     return metrics
+
+
+def _new_xgb_regressor():
+    """Import the optional scalar CPU backend only when explicitly selected."""
+    try:
+        from xgboost import XGBRegressor
+    except ImportError as exc:
+        raise ImportError(
+            "model_type='xgb' requires optional XGBoost; install a compatible "
+            "xgboost or xgboost-cpu package in your environment"
+        ) from exc
+    return XGBRegressor(
+        objective="reg:squarederror", tree_method="hist", device="cpu",
+        n_estimators=32, max_depth=3, learning_rate=0.1,
+        n_jobs=1, random_state=42, verbosity=0,
+    )
+
+
+def _xgb_point_predictions(raw, n_rows):
+    """Reject missing/distribution outputs before scalar point scoring."""
+    if np.ma.isMaskedArray(raw):
+        raise ValueError("XGBoost predictions must not be a MaskedArray")
+    values = np.asarray(raw)
+    if values.shape != (n_rows,) or values.dtype.kind not in "iuf":
+        raise ValueError("XGBoost predictions must be a real scalar vector of shape (n_rows,)")
+    if not np.isfinite(values).all():
+        raise ValueError("XGBoost predictions must be finite")
+    return values
 
 
 def _save_model_artifact(path, artifact):
