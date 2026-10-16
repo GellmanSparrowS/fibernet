@@ -3,6 +3,7 @@
 These tests validate persistence and resume behavior, not simulation physics.
 """
 import csv
+import json
 import os
 from pathlib import Path
 from types import SimpleNamespace
@@ -49,13 +50,13 @@ def batch(tmp_path, monkeypatch):
 
     monkeypatch.setattr(easy, "TaichiEngine", Engine)
     monkeypatch.setattr(
-        easy.StructureGraph, "load_json",
-        lambda path: SimpleNamespace(name=Path(path).name, num_nodes=4, num_edges=3),
+        easy.StructureGraph, "from_dict",
+        lambda data: SimpleNamespace(name=data["name"], num_nodes=4, num_edges=3),
     )
 
     def add(*names):
         for name in names:
-            (inputs / name).write_text("{}")
+            (inputs / name).write_text(json.dumps({"name": name}))
 
     def run(**kwargs):
         return Path(easy.batch_simulate_from_json(str(inputs), str(output), **kwargs))

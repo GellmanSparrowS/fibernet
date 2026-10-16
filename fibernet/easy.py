@@ -811,6 +811,148 @@ def train_rl(
     print(f"✓ Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")
     return stats
 
+_BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
+_BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
+_BATCH_SOURCE_FILES = (
+    "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/core/structure_graph.py", "fibernet/core/material.py",
+)
+
+
+def _batch_canonical_json(value):
+    """The v1 binding encoding; never accept nonfinite or repr-based values."""
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _batch_value_sha256(value):
+    import hashlib
+    return hashlib.sha256(_batch_canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def _batch_parameters(mode, backend, target_stretch, stiffness, damping,
+                      num_steps, save_interval):
+    """Normalize only supported scalar types and the solver's effective None."""
+    from numbers import Integral, Real
+    import math
+
+    parameters = {"mode": mode, "backend": backend, "auto_steps": False}
+    for name, value in (("target_stretch", target_stretch),
+                        ("stiffness", stiffness), ("damping", damping)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+            raise ValueError(f"{name} must be a finite real scalar")
+        try:
+            scalar = float(value)
+        except (ValueError, OverflowError) as exc:
+            raise ValueError(f"{name} must be a finite real scalar") from exc
+        if not math.isfinite(scalar):
+            raise ValueError(f"{name} must be a finite real scalar")
+        parameters[name] = scalar
+    for name, value in (("num_steps", 5000 if num_steps is None else num_steps),
+                        ("save_interval", save_interval)):
+        if (isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral)
+                or value <= 0):
+            raise ValueError(f"{name} must be a positive integer")
+        parameters[name] = int(value)
+    return parameters
+
+
+def _batch_input_sha256(path):
+    """Bounded-memory preflight: do not retain an entire directory's bytes."""
+    import hashlib
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _batch_implementation_binding():
+    """Conservative source recipe; inspect distribution metadata, never engines."""
+    from importlib import metadata
+    import platform
+
+    root = Path(__file__).resolve().parent.parent
+    try:
+        sources = {name: _batch_input_sha256(root / name)
+                   for name in _BATCH_SOURCE_FILES}
+    except OSError as exc:
+        raise ValueError("Batch implementation source unavailable; cannot verify resume") from exc
+
+    def distribution_version(name):
+        try:
+            return metadata.version(name)
+        except metadata.PackageNotFoundError:
+            return None  # Explicitly absent distribution; not an invented version.
+
+    return {"recipe": _BATCH_SOURCE_RECIPE, "sources": sources,
+            "runtime": {"python": platform.python_version(),
+                        "numpy": distribution_version("numpy"),
+                        "taichi": distribution_version("taichi")}}
+
+
+def _batch_binding(input_sha256, parameters, implementation):
+    return {"schema": _BATCH_BINDING_SCHEMA, "input_sha256": input_sha256,
+            "parameters": parameters,
+            "parameters_sha256": _batch_value_sha256(parameters),
+            "implementation": implementation,
+            "implementation_sha256": _batch_value_sha256(implementation)}
+
+
+def _batch_validate_binding(raw, filename, parameters, implementation):
+    """Validate the complete v1 envelope, then compare this invocation's run."""
+    import re
+
+    def fail(reason):
+        raise ValueError(f"CSV run binding for {filename!r}: {reason}; "
+                         "choose a fresh output directory")
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("duplicate binding key")
+            result[key] = value
+        return result
+
+    def reject_constant(value):
+        raise ValueError("nonfinite binding number")
+
+    try:
+        saved = json.loads(raw, object_pairs_hook=unique_object,
+                           parse_constant=reject_constant)
+        if (not isinstance(saved, dict) or set(saved) != {
+                "schema", "input_sha256", "parameters", "parameters_sha256",
+                "implementation", "implementation_sha256"}):
+            fail("missing or malformed binding")
+        if saved["schema"] != _BATCH_BINDING_SCHEMA:
+            fail("unsupported binding schema")
+        for key in ("input_sha256", "parameters_sha256", "implementation_sha256"):
+            if not isinstance(saved[key], str) or not re.fullmatch(r"[0-9a-f]{64}", saved[key]):
+                fail(f"invalid {key}")
+        for key in ("parameters", "implementation"):
+            if not isinstance(saved[key], dict):
+                fail(f"malformed {key}")
+            if _batch_value_sha256(saved[key]) != saved[key + "_sha256"]:
+                fail(f"inconsistent {key} digest")
+    except (TypeError, ValueError, OverflowError, RecursionError) as exc:
+        if isinstance(exc, ValueError) and str(exc).startswith("CSV run binding for "):
+            raise
+        fail("missing or malformed binding")
+    # Canonical comparison distinguishes booleans, integers and other JSON types.
+    if _batch_canonical_json(saved["parameters"]) != _batch_canonical_json(parameters):
+        fail("parameters mismatch")
+    if _batch_canonical_json(saved["implementation"]) != _batch_canonical_json(implementation):
+        fail("implementation mismatch")
+    return saved
+
+
+def _batch_graph_from_bytes(raw):
+    """Match load_json's default text decoding, parsing the captured bytes only."""
+    import io
+    with io.TextIOWrapper(io.BytesIO(raw)) as stream:
+        return StructureGraph.from_dict(json.load(stream))
+
+
 def batch_simulate_from_json(
     json_dir: str,
     output_dir: str = "simulation_results",
@@ -837,9 +979,9 @@ def batch_simulate_from_json(
     target_stretch : float
         Target stretch ratio for stretch mode.
     stiffness : float
-        Spring stiffness for spring backend.
+        Force-like axial rigidity k in F = k * strain for the spring backend.
     damping : float
-        Damping ratio.
+        Velocity damping coefficient.
     num_steps : int
         Number of simulation steps.
     save_interval : int
@@ -865,16 +1007,23 @@ def batch_simulate_from_json(
     
     Notes
     -----
-    - Automatically parses JSON files in various formats (StructureGraph, networkx, custom)
+    - Reads native StructureGraph JSON files using StructureGraph.from_dict.
     - Saves trajectory data for visualization
-    - Supports checkpoint resume (skips already simulated files)
+    - Resume requires matching input bytes, effective parameters and implementation
+      identity recorded in the reserved CSV run_binding column. Legacy unbound
+      rows and mismatches raise ValueError; use a fresh output directory.
     - Output CSV uses a union schema: filename, n_nodes, n_edges, max_force,
       max_stretch, mean_stretch, std_stretch, time_seconds, success, error,
-      plus any existing columns. Missing values are blank.
+      run_binding, plus any existing columns. Missing values are blank.
     - Resume retains all existing rows, including failures, and skips their files.
       Existing CSV success values must be "True" or "False".
     - Each CSV checkpoint is replaced atomically after serialization succeeds.
       Malformed existing CSV files raise ValueError and are left unchanged.
+    - Inputs must remain unchanged during a call. Preflight streams file hashes;
+      pending files are captured one at a time, rechecked and parsed from those
+      exact bytes. Concurrent input modification is unsupported.
+    - A matching hit reuses the CSV outcome; it does not verify result JSON files
+      or make result JSON and CSV publication a single transaction.
     """
     import csv
     import os
@@ -885,6 +1034,8 @@ def batch_simulate_from_json(
         raise ValueError(f"Unsupported backend: {backend!r}; expected 'spring'")
     if mode != "stretch":
         raise ValueError(f"Unsupported mode: {mode!r}; expected 'stretch'")
+    parameters = _batch_parameters(mode, backend, target_stretch, stiffness,
+                                   damping, num_steps, save_interval)
 
     json_path = Path(json_dir)
     output_path = Path(output_dir)
@@ -892,6 +1043,7 @@ def batch_simulate_from_json(
     fieldnames = [
         "filename", "n_nodes", "n_edges", "max_force", "max_stretch",
         "mean_stretch", "std_stretch", "time_seconds", "success", "error",
+        "run_binding",
     ]
     results = []
     existing = set()
@@ -920,14 +1072,25 @@ def batch_simulate_from_json(
             raise ValueError(f"Invalid existing CSV: {exc}") from exc
 
     json_files = sorted(json_path.glob("*.json"))
+    if json_files or results:
+        implementation = _batch_implementation_binding()
+        bindings = {row["filename"]: _batch_validate_binding(
+            row.get("run_binding", ""), row["filename"], parameters, implementation)
+            for row in results}
     if not json_files:
         print(f"No JSON files found in {json_dir}")
         return ""
 
     print(f"Found {len(json_files)} JSON files in {json_dir}")
+    # Keep only digests, not the whole input directory in memory. All overlapping
+    # filenames are checked before constructing the engine or processing a new file.
+    input_hashes = {path.name: _batch_input_sha256(path) for path in json_files}
     pending = []
     for json_file in json_files:
         if json_file.name in existing:
+            if input_hashes[json_file.name] != bindings[json_file.name]["input_sha256"]:
+                raise ValueError(f"CSV run binding for {json_file.name!r}: input bytes mismatch; "
+                                 "choose a fresh output directory")
             print(f"  [{json_file.name}] Already simulated, skipping")
         else:
             pending.append(json_file)
@@ -957,8 +1120,18 @@ def batch_simulate_from_json(
 
     for json_file in pending:
         fname = json_file.name
+        # Abort unreadable/changed inputs outside the per-file failure handler:
+        # they cannot become authenticated reusable outcomes. Earlier committed
+        # rows remain committed; this is not a concurrent-writer transaction.
+        import hashlib
+        raw = json_file.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != input_hashes[fname]:
+            raise ValueError(f"Input {fname!r} changed after batch preflight; "
+                             "inputs must remain unchanged during the call")
+        binding = _batch_canonical_json(_batch_binding(input_hashes[fname],
+                                                       parameters, implementation))
         try:
-            g = StructureGraph.load_json(str(json_file))
+            g = _batch_graph_from_bytes(raw)
             r = engine.stretch_test(
                 g,
                 target_stretch=target_stretch,
@@ -984,6 +1157,9 @@ def batch_simulate_from_json(
         except Exception as e:
             row = {"filename": fname, "success": False, "error": str(e)}
             print(f"  [{fname}] FAILED: {e}")
+        finally:
+            del raw
+        row["run_binding"] = binding
         results.append(row)
         # Persistence failures propagate; they are not simulation failures.
         write_checkpoint()
