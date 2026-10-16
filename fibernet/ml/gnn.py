@@ -545,6 +545,8 @@ if HAS_TORCH:
         val_split: float = 0.2,
         early_stopping: int = 15,
         verbose: bool = True,
+        split=None,
+        groups=None,
     ) -> Dict[str, Any]:
         """Train a GNN model on graph data.
 
@@ -568,6 +570,12 @@ if HAS_TORCH:
             Patience for early stopping.
         verbose : bool
             Print progress.
+        split : {None, "group"}, optional
+            None preserves unmarked legacy row splitting. Schema-tagged inputs
+            require explicit group mode, which preflights CPU scalar inputs.
+        groups : list or tuple of str, optional
+            Caller-supplied source labels required for group mode. Validation
+            groups guide early stopping; they are not a final test set.
 
         Returns
         -------
@@ -576,13 +584,22 @@ if HAS_TORCH:
         """
         from fibernet.ml.training import TrainingHistory
 
-        n = len(graphs)
-        labels = np.asarray(labels, dtype=np.float32)
-        rng = np.random.RandomState(42)
-        idx = rng.permutation(n)
-        n_val = int(n * val_split)
-        val_idx = idx[:n_val]
-        train_idx = idx[n_val:]
+        tagged = any(isinstance(g, dict) and 'input_schema' in g for g in graphs)
+        training_data = None
+        if split == 'group':
+            labels, train_idx, val_idx, training_data = _gnn_group_preflight(
+                model, graphs, labels, groups, epochs, lr, batch_size,
+                val_split, early_stopping)
+        else:
+            if split is not None or groups is not None or tagged:
+                raise ValueError("Schema-tagged inputs require explicit split='group' and groups")
+            n = len(graphs)
+            labels = np.asarray(labels, dtype=np.float32)
+            rng = np.random.RandomState(42)
+            idx = rng.permutation(n)
+            n_val = int(n * val_split)
+            val_idx = idx[:n_val]
+            train_idx = idx[n_val:]
 
         train_graphs = [graphs[i] for i in train_idx]
         train_labels = labels[train_idx]
@@ -640,6 +657,10 @@ if HAS_TORCH:
             if verbose and (epoch % max(epochs // 10, 1) == 0 or epoch == epochs - 1):
                 print(f"Epoch {epoch:3d} | train_loss={train_loss:.4f} | val_loss={val_loss:.4f}")
 
+        if training_data is not None:
+            training_data['training']['epochs_run'] = len(history.train_losses)
+            return {"history": history, "best_val_loss": best_val_loss,
+                    "training_data": training_data}
         return {"history": history, "best_val_loss": best_val_loss}
 
 
@@ -808,3 +829,140 @@ def graphs_from_batch(batch, *, source_groups):
             'snapshot': batch, 'snapshot_graph_row': i,
         })
     return result
+
+
+def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
+                         val_split, early_stopping):
+    """Validate explicit CPU scalar group mode before creating an optimizer."""
+    from numbers import Integral, Real
+    if type(model) is not FiberGNN:
+        raise ValueError('group mode requires the supported FiberGNN class')
+    for name, value, minimum in (('epochs', epochs, 1), ('batch_size', batch_size, 1),
+                                 ('early_stopping', early_stopping, 0)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
+            raise ValueError(name + ' must be a nonbool integer in the supported range')
+    for name, value in (('lr', lr), ('val_split', val_split)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) or not math.isfinite(value) or value <= 0:
+            raise ValueError(name + ' must be a finite positive real')
+    if val_split >= 1:
+        raise ValueError('group val_split must be between zero and one')
+    if not isinstance(graphs, (list, tuple)) or not graphs or any(type(g) is not dict for g in graphs):
+        raise ValueError('group mode requires a nonempty list/tuple of graph dictionaries')
+    n = len(graphs)
+    if (not isinstance(groups, (list, tuple)) or len(groups) != n
+            or any(type(g) is not str or not g.strip() for g in groups)
+            or len(set(groups)) < 2):
+        raise ValueError('groups must name every graph and include at least two source groups')
+    if any(p.device.type != 'cpu' or p.dtype != torch.float32 or not torch.isfinite(p).all()
+           for p in model.parameters()):
+        raise ValueError('group mode requires finite CPU float32 model parameters')
+    width = model.input_proj.in_features
+    hidden = model.input_proj.out_features
+    if model.head[-1].out_features != 1:
+        raise ValueError('group mode requires scalar model output width=1')
+    if (model.layer_type not in ('gcn', 'gat', 'sage') or model.pooling not in ('mean', 'max', 'attention')
+            or len(model.layers) != model.n_layers or len(model.norms) != model.n_layers or model.n_layers < 1):
+        raise ValueError('unsupported FiberGNN layer configuration')
+    layer_configs = []
+    expected = {'gcn': GraphConvLayer, 'gat': GraphAttentionLayer, 'sage': GraphSAGELayer}[model.layer_type]
+    for i, (layer, norm) in enumerate(zip(model.layers, model.norms)):
+        if type(layer) is not expected or tuple(norm.normalized_shape) != (hidden,):
+            raise ValueError('unsupported FiberGNN layer configuration')
+        conf = {'class': type(layer).__name__}
+        if model.layer_type == 'gat':
+            if layer.n_heads < 1 or (model.n_layers > 1 and hidden % layer.n_heads):
+                raise ValueError('multi-layer GAT hidden width must be divisible by n_heads')
+            actual_width = layer.out_dim * layer.n_heads if layer.concat else layer.out_dim
+            if actual_width != hidden:
+                raise ValueError('GAT layer output width must equal hidden width')
+            conf.update(n_heads=int(layer.n_heads), attention_dropout=float(layer.dropout.p),
+                        concat=bool(layer.concat), out_dim=int(layer.out_dim))
+        elif model.layer_type == 'sage':
+            if layer.aggregator not in ('mean', 'sum', 'max'):
+                raise ValueError('unsupported SAGE aggregator')
+            conf['aggregator'] = layer.aggregator
+        layer_configs.append(conf)
+    schema = 'fibernet.fibergnn.xyz_dimension.v1'
+    marked = ['input_schema' in g for g in graphs]
+    tagged = any(marked)
+    if tagged and (not all(marked) or any(g['input_schema'] != schema for g in graphs)):
+        raise ValueError('group mode requires homogeneous supported input schemas')
+    graph_ids = None
+    names = None
+    unit = frame = None
+    if tagged:
+        if width != 4:
+            raise ValueError('XYZ+dimension schema requires node_dim=4')
+        graph_ids = [g.get('graph_id') for g in graphs]
+        if (any(type(x) is not str or not x.strip() for x in graph_ids)
+                or len(set(graph_ids)) != n):
+            raise ValueError('graph IDs must be nonempty and unique within this training collection')
+        names = ['x', 'y', 'z', 'dimension']
+        for g, group in zip(graphs, groups):
+            if g.get('source_group') != group or g.get('node_feature_names') != tuple(names):
+                raise ValueError('groups and feature names must match adapted inputs')
+        unit, frame = graphs[0].get('length_unit'), graphs[0].get('coordinate_frame')
+        for name, value in (('length_unit', unit), ('coordinate_frame', frame)):
+            if type(value) is not str or not value.strip() or any(g.get(name) != value for g in graphs):
+                raise ValueError(name + ' must be consistent and explicit')
+    for g in graphs:
+        x, ei, adj = g.get('node_features'), g.get('edge_index'), g.get('adjacency')
+        if (not isinstance(x, torch.Tensor) or x.layout != torch.strided or x.device.type != 'cpu'
+                or x.dtype != torch.float32 or x.ndim != 2 or x.shape[1] != width
+                or x.shape[0] == 0 or not torch.isfinite(x).all()):
+            raise ValueError('node_features must be finite nonempty CPU float32 tensors of model width')
+        if (not isinstance(ei, torch.Tensor) or ei.layout != torch.strided or ei.device.type != 'cpu'
+                or ei.dtype != torch.int64 or ei.ndim != 2 or ei.shape[0] != 2
+                or torch.any(ei < 0) or torch.any(ei >= x.shape[0])):
+            raise ValueError('edge_index must contain CPU int64 graph-local rows')
+        if model.layer_type == 'gcn':
+            if (not isinstance(adj, torch.Tensor) or adj.layout != torch.sparse_coo
+                    or adj.device.type != 'cpu' or adj.dtype != torch.float32
+                    or tuple(adj.shape) != (x.shape[0], x.shape[0])
+                    or not torch.isfinite(adj._values()).all()
+                    or torch.any(adj._indices() < 0) or torch.any(adj._indices() >= x.shape[0])):
+                raise ValueError('GCN adjacency must be finite CPU float32 sparse COO with local indices')
+        elif 'adjacency' not in g:
+            raise ValueError('graph dictionary must include adjacency key')
+    if np.ma.isMaskedArray(labels):
+        raise ValueError('labels must not be a MaskedArray')
+    raw = np.asarray(labels)
+    if raw.shape != (n,) or raw.dtype.kind not in 'iuf' or not np.isfinite(raw).all():
+        raise ValueError('labels must be finite scalar targets with shape (n_graphs,)')
+    with np.errstate(over='ignore', under='ignore'):
+        targets = np.array(raw, dtype=np.float32, copy=True)
+    if not np.isfinite(targets).all() or np.any((raw != 0) & (targets == 0)):
+        raise ValueError('labels must remain finite and nonzero values must not underflow in float32')
+    try:
+        from sklearn.model_selection import GroupShuffleSplit
+    except ImportError as exc:
+        raise ImportError('scikit-learn is required for train_gnn group splitting') from exc
+    try:
+        train, val = next(GroupShuffleSplit(n_splits=1, test_size=float(val_split), random_state=42)
+                          .split(np.arange(n), groups=groups))
+    except ValueError as exc:
+        raise ValueError('group split cannot produce usable train and validation sets') from exc
+    train_groups = sorted({groups[i] for i in train})
+    val_groups = sorted({groups[i] for i in val})
+    if len(train) == 0 or len(val) == 0 or set(train_groups) & set(val_groups):
+        raise ValueError('group split requires nonempty disjoint train and validation groups')
+    record = {
+        'schema': 'fibernet.gnn_group_training.v1',
+        'input_schema': schema if tagged else 'caller-legacy',
+        'feature_names': names, 'graph_ids': graph_ids,
+        'length_unit': unit, 'coordinate_frame': frame,
+        'split': {'method': 'group', 'random_state': 42, 'validation_role': 'validation',
+                  'requested_group_fraction': float(val_split), 'groups': list(groups),
+                  'train_indices': train.tolist(), 'validation_indices': val.tolist(),
+                  'train_groups': train_groups, 'validation_groups': val_groups,
+                  'train_count': len(train), 'validation_count': len(val)},
+        'training': {'epochs_requested': int(epochs), 'batch_size': int(batch_size),
+                     'lr': float(lr), 'early_stopping': int(early_stopping),
+                     'optimizer': 'AdamW', 'weight_decay': 1e-4, 'gradient_clip': 1.0,
+                     'best_state_restored': False},
+        'model': {'class': 'FiberGNN', 'node_dim': int(width), 'hidden': int(hidden),
+                  'n_outputs': 1, 'n_layers': int(model.n_layers), 'layer_type': model.layer_type,
+                  'pooling': model.pooling, 'dropout': float(model.dropout.p),
+                  'head_dropout': float(model.head[2].p), 'layers': layer_configs},
+    }
+    return targets, train, val, record
