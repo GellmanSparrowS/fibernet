@@ -26,12 +26,11 @@ Examples
 
 from __future__ import annotations
 
-import copy
 from typing import Callable, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
-from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
+from fibernet.core.structure_graph import StructureGraph
 
 
 # ---------------------------------------------------------------------------
@@ -66,35 +65,23 @@ def _apply_transform_to_graph(
     transform_internal: Callable[[np.ndarray], np.ndarray],
     boundary_transform: Callable[[tuple], tuple],
 ) -> StructureGraph:
-    """Apply a node-position transform + boundary transform to create new graph."""
-    g = StructureGraph(
-        dimension=graph.dimension,
-        tolerance=graph.tolerance,
-        box_size=graph.box_size,
-    )
-    g._metadata = copy.deepcopy(graph.metadata)
+    """Transform a detached copy without welding or reallocating stable IDs."""
+    g = graph.copy()
+    # StructureGraph.copy currently shares its private box array; preserve the
+    # functional transform's detached box ownership via the public copy getter.
+    g.box_size = graph.box_size
+    g._spatial_hash = {}
+    for nid, node in g._nodes.items():
+        node.position = transform_node(node.position.copy())
+        node.boundary = boundary_transform(node.boundary)
+        key = g._pos_key(node.position)
+        g._spatial_hash.setdefault(key, []).append(nid)
 
-    id_map = {}
-    for nid in sorted(graph.nodes.keys()):
-        node = graph.nodes[nid]
-        new_pos = transform_node(node.position.copy())
-        new_bnd = boundary_transform(node.boundary)
-        new_nid = g.add_node(new_pos, boundary=new_bnd, merge=False, **node.metadata)
-        id_map[nid] = new_nid
-
-    for eid in sorted(graph.edges.keys()):
-        edge = graph.edges[eid]
-        new_ip = None
-        if edge.internal_points is not None:
-            new_ip = np.array([transform_internal(pt.copy()) for pt in edge.internal_points])
-        g.add_edge(
-            id_map[edge.node_i], id_map[edge.node_j],
-            radius=edge.radius,
-            material=copy.deepcopy(edge.material),
-            internal_points=new_ip,
-            segments=edge.segments,
-            **edge.metadata,
-        )
+    for edge in g._edges.values():
+        if edge.internal_points is not None and len(edge.internal_points):
+            edge.internal_points = np.array([
+                transform_internal(pt.copy()) for pt in edge.internal_points
+            ])
     return g
 
 

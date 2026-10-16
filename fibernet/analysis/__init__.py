@@ -27,3 +27,7 @@ __all__ += ["TopologyMetricsV1", "analyze_topology"]
 from fibernet.analysis.geometry_paths import GeometryPathMetricsV1, analyze_geometry_paths
 
 __all__ += ["GeometryPathMetricsV1", "analyze_geometry_paths"]
+
+from fibernet.analysis.spectrum_metrics import LaplacianSpectrumV1, analyze_spectrum
+
+__all__ += ["LaplacianSpectrumV1", "analyze_spectrum"]
