@@ -19,3 +19,7 @@ __all__ = [
     "SnapshotFeatureExtractor",
     "ContactConfig",
 ]
+
+from fibernet.analysis.topology_metrics import TopologyMetricsV1, analyze_topology
+
+__all__ += ["TopologyMetricsV1", "analyze_topology"]

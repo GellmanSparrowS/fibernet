@@ -824,6 +824,25 @@ class StructureGraph:
             )
         return g
 
+    def to_networkx_lossless(self):
+        """Export a detached native-v1 MultiGraph, preserving IDs and ordering.
+
+        Native records live under ``_fibernet``; arbitrary NetworkX topology
+        edits are not supported by this complete-record interchange protocol.
+        """
+        from fibernet.io.networkx_adapter import _to_networkx_lossless
+        return _to_networkx_lossless(self)
+
+    @classmethod
+    def from_networkx_lossless(cls, G) -> "StructureGraph":
+        """Import current native-v1 records with strict identity validation.
+
+        The stored dimension/tolerance are authoritative. Use ``from_networkx``
+        for the existing projection importer and its configuration overrides.
+        """
+        from fibernet.io.networkx_adapter import _from_networkx_lossless
+        return _from_networkx_lossless(G, cls)
+
     def to_numpy(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Export to numpy arrays for simulation.
 

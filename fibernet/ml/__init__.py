@@ -93,6 +93,9 @@ __all__ = [
 def __getattr__(name):
     """Lazy import for optional heavy submodules."""
     _submodules = {
+        # Detached NumPy graph data (no learning backend)
+        "GraphBatch": "fibernet.ml.graph_data",
+        "graph_batch": "fibernet.ml.graph_data",
         # Models
         "FiberMLP": "fibernet.ml.models",
         "FiberResNet": "fibernet.ml.models",
