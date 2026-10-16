@@ -111,3 +111,38 @@ Torch raises ImportError; no alternate model is selected silently.
 Backend semantics: [Torch 2.7 sparse tensors](https://docs.pytorch.org/docs/2.7/sparse.html).
 A future PyG adapter also needs explicit identity-field batching rules:
 [PyG batching](https://pytorch-geometric.readthedocs.io/en/latest/notes/batching.html).
+
+## Existing GAT and SAGE modes
+
+The same four-column adapter also has CPU float32 integration coverage for
+`FiberGNN(node_dim=4, hidden=8, n_heads=4, n_layers=2, n_outputs=1,
+dropout=0, layer_type='gat')` and the same configuration with `layer_type='sage'`.
+These are existing implementations, with unchanged model and artifact semantics.
+They consume message endpoints directly; they do not use GCN adjacency or its
+computational self-loops. Edge features, availability masks and physical IDs
+remain attribution data rather than learned inputs in these modes too.
+
+Parallel message occurrences remain present. SAGE averages incoming occurrences
+before its L2 normalization; GAT normalizes attention across incoming occurrences.
+Duplicating one source message can change its relative influence. Duplicating
+all incoming messages equally can leave the result unchanged. Preserving physical
+IDs does not make either model distinguish identical members by ID.
+
+Two existing GAT configuration limits matter:
+
+- With two or more layers, use a positive head count dividing the hidden width.
+  For example hidden=7, heads=4 constructs but fails later at LayerNorm. This
+  test extension documents that behavior rather than changing the constructor.
+- `FiberGNN(dropout=0)` does not propagate that setting into the attention layers;
+  their effective training attention dropout remains 0.1. `eval()` disables it.
+  Reproducible training requires resetting seeds before the full run. Do not
+  interpret the configuration as disabling every dropout during training.
+
+Nonempty edge-free graphs execute; zero-node graphs remain rejected by the
+adapter. GPU/arbitrary dtype support is not established by these CPU checks.
+The regression fixtures exercise finite forward/gradients, relabeling and order
+consistency, analytic duplicate-message aggregation, and edge-feature
+nonconsumption. Each mode also has a bounded two-step train-only source-group
+fixture, held-out-label perturbation invariance and an own-bundle same-runtime
+roundtrip. They add no new trainer, accuracy claim or physics validation. Existing
+checkpoint trust, schema-checking and non-atomic-write caveats above still apply.

@@ -34,7 +34,7 @@ def main():
     run=run_stretch(CrossingFactory(),RunConfig(weld_intersections=True,target_stretch=1.1,num_steps=1000,n_increments=8),use_cache=False)
     assert run.frames_xy.shape[1]==5 and np.isfinite(run.frames_xy).all()
     assert run.metadata['weld_intersections']
-    assert cache_tag(factory,RunConfig())!=cache_tag(factory,RunConfig(weld_intersections=True))
+    assert cache_tag(factory,RunConfig(),graph=graph)!=cache_tag(factory,RunConfig(weld_intersections=True),graph=welded)
     for unit in all_unit_keys():
         sample=StructureFactory(unit=unit,grid_x=2,grid_y=2,n_pts_per_side=2,perturbation=.15)
         result=run_stretch(sample,RunConfig(weld_intersections=True,target_stretch=1.1,num_steps=800,n_increments=8),use_cache=False)

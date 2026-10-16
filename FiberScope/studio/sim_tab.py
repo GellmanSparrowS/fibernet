@@ -4,8 +4,6 @@ views (load-path percolation / strain+contact) plus three curves
 
 Red dots = fiber-fiber contact events (strain view); amber = grips.
 """
-import os
-
 import numpy as np
 import pyqtgraph as pg
 from PySide6.QtCore import Qt, QThread, QTimer, Signal
@@ -17,7 +15,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDoubleSpinBox,
 
 from fslab import StructureFactory, RunConfig, run_stretch, compute_percolation
 from fslab.exporter import export_run_csv
-from fslab.simcache import cache_tag, default_cache_dir
+from fslab.simcache import default_cache_dir
 from .exports import (add_caption, ask_save, save_plot_png, save_widget_png,
                       unique_stem)
 from .i18n import tr, get_lang
@@ -51,15 +49,12 @@ class SimWorker(QThread):
 
     def run(self):
         try:
-            hit = bool(CACHE_DIR) and os.path.exists(os.path.join(
-                CACHE_DIR, f"run_{cache_tag(self.factory, self.cfg)}.npz"))
-
             def cb(done, total):
                 self.progress.emit(int(100 * done // max(int(total), 1)))
             run = run_stretch(self.factory, self.cfg, cache_dir=CACHE_DIR,
                               progress_cb=cb)
             perc = compute_percolation(run, alpha=self.quantile)
-            self.finished_ok.emit(run, perc, hit)
+            self.finished_ok.emit(run, perc, run.cache_hit)
         except Exception as e:
             self.failed.emit(f"{e.__class__.__name__}: {e}")
 
