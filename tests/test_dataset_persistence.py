@@ -276,9 +276,11 @@ def test_saved_format_matches_legacy_bytes_and_loads(tmp_path, kind):
         "n_samples": ds.n_samples, "samples": [{"id": s.sample_id, "unit": s.unit,
             "grid": list(s.grid), "params": {k: module._json_safe(v) for k, v in s.params.items()},
             "metadata": {k: module._json_safe(v) for k, v in s.metadata.items()}} for s in ds.samples]}
-    legacy_json = io.StringIO()
-    json.dump(meta, legacy_json, indent=2)
-    assert (out / "metadata.json").read_bytes() == legacy_json.getvalue().encode()
+    # Reproduce the historical text writer, including platform newline/encoding.
+    legacy_json = tmp_path / "legacy.json"
+    with legacy_json.open("w") as handle:
+        json.dump(meta, handle, indent=2)
+    assert (out / "metadata.json").read_bytes() == legacy_json.read_bytes()
     loaded = FiberNetDataset.load(out)
     np.testing.assert_array_equal(loaded.features, ds.features)
     np.testing.assert_array_equal(loaded.all_labels, ds.all_labels)
@@ -431,16 +433,18 @@ def test_csv_quoted_multiline_and_unicode_match_legacy_writer(tmp_path):
     ds = dataset()
     ds.samples[0].sample_id = 'sample,"quoted"\nnext line'
     ds.samples[0].unit = 'unit,\r\nµ'
-    expected = io.StringIO(newline="")
-    writer = csv.DictWriter(expected, fieldnames=["sample_id", "unit", "grid_x", "grid_y", "feat_x", "label_y"])
-    writer.writeheader()
-    for sample in ds.samples:
-        writer.writerow({"sample_id": sample.sample_id, "unit": sample.unit,
-            "grid_x": sample.grid[0], "grid_y": sample.grid[1],
-            "feat_x": sample.features["x"], "label_y": sample.labels["y"]})
+    expected = tmp_path / "legacy.csv"
+    # Match the original CSV writer: no newline translation, locale encoding.
+    with expected.open("w", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=["sample_id", "unit", "grid_x", "grid_y", "feat_x", "label_y"])
+        writer.writeheader()
+        for sample in ds.samples:
+            writer.writerow({"sample_id": sample.sample_id, "unit": sample.unit,
+                "grid_x": sample.grid[0], "grid_y": sample.grid[1],
+                "feat_x": sample.features["x"], "label_y": sample.labels["y"]})
     path = tmp_path / "quoted.csv"
     ds.to_csv(path)
-    assert path.read_bytes() == expected.getvalue().encode()
+    assert path.read_bytes() == expected.read_bytes()
     with path.open(newline="") as handle:
         rows = list(csv.DictReader(handle))
     assert rows[0]["sample_id"] == ds.samples[0].sample_id

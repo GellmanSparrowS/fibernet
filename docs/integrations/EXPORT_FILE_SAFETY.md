@@ -2,7 +2,9 @@
 
 `export_solid` (STL/3MF) and `export_route` (CSV) stage output in an exclusively created, uniquely named sibling file, then replace the requested destination with the existing `atomic_replace` hook. A pre-existing `destination.tmp` is unrelated and is never consumed or cleaned up. Supported format/input checks occur before staging. Parent directories must already exist, as before.
 
-For an existing ordinary regular file, ordinary permission bits are copied onto the staging file before replacement. A newly created destination is private (0600). Symbolic links, nonregular destinations and special mode bits are rejected before writing. The exporter does not chmod/chown the original target or alter its ACL; replacement does not promise to reproduce ownership, ACLs, extended attributes or timestamps on the new file.
+On POSIX, for an existing ordinary regular file, ordinary permission bits are copied onto the staging file before replacement. A newly created destination is private (0600). Symbolic links, nonregular destinations and special mode bits are rejected before writing. The exporter does not chmod/chown the original target or alter its ACL; replacement does not promise to reproduce ownership, ACLs, extended attributes or timestamps on the new file.
+
+On Windows, `chmod` supports the read-only flag rather than POSIX `rwx` or special bits; `0600` does not establish a private Windows ACL. Exclusively owned staging and nonregular/symlink rejection still apply. Access is governed by the directory and inherited ACLs; no private-ACL guarantee is made.
 
 Ordinary validation, writing or replace failures preserve the old destination bytes (or its absence). Cleanup only addresses the temporary file created by that invocation. Cleanup failure is warned about without replacing the original exception or converting an already committed export into a failure; a retained private temporary may need manual removal. Warning filters do not change this outcome contract.
 

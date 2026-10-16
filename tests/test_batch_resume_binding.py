@@ -9,6 +9,7 @@ import csv
 import hashlib
 import importlib.metadata
 import inspect
+import io
 import json
 import os
 import platform
@@ -671,7 +672,12 @@ def test_captured_decoder_matches_historical_default_text_loader(batch, encoding
     elif encoding in {"utf16", "utf32"}:
         raw = raw.decode("utf-8").encode(encoding)
     elif encoding == "invalid_utf8":
-        raw = b'{"metadata":{"label":"\xff"}}'
+        # Keep a complete graph, including the stub engine's required name.
+        # 0xff is invalid UTF-8 but valid cp1252: decoding success must not
+        # accidentally turn into an unrelated engine KeyError.
+        data = json.loads(raw)
+        data["metadata"]["label"] = "ENCODING_SENTINEL"
+        raw = json.dumps(data).encode("ascii").replace(b"ENCODING_SENTINEL", b"\xff")
     elif encoding == "malformed_json":
         raw = b'{"nodes": [}'
     path = batch.add(raw=raw)
@@ -719,3 +725,43 @@ def test_same_input_bytes_in_a_different_directory_can_reuse_outcome(batch, tmp_
     assert Path(fn.batch_simulate_from_json(str(other), str(batch.output))) == batch.csv
     assert batch.calls == []
     assert snapshot_output(batch) == before
+
+
+@pytest.mark.parametrize("text_encoding,accepted", [("utf-8", False), ("cp1252", True)])
+def test_invalid_utf8_graph_against_explicit_disk_decoder(batch, monkeypatch,
+                                                         text_encoding, accepted):
+    """Exercise both decoding policies without changing the process locale.
+
+    Explicit cp1252 injection is a unit test, not a Windows execution claim.
+    The independent oracle reads a real disk file with an explicit codec.
+    """
+    data = json.loads(graph_bytes())
+    data["metadata"]["label"] = "ENCODING_SENTINEL"
+    raw = json.dumps(data).encode("ascii").replace(b"ENCODING_SENTINEL", b"\xff")
+    path = batch.add(raw=raw)
+    wrapper = io.TextIOWrapper
+
+    def codec_wrapper(buffer, *args, **kwargs):
+        kwargs.setdefault("encoding", text_encoding)
+        return wrapper(buffer, *args, **kwargs)
+
+    monkeypatch.setattr(io, "TextIOWrapper", codec_wrapper)
+    if accepted:
+        with path.open(encoding=text_encoding) as stream:
+            expected = StructureGraph.from_dict(json.load(stream))
+        assert expected.metadata["name"] == "a.json"
+        assert expected.metadata["label"] == "ÿ"
+        assert easy._batch_graph_from_bytes(raw).to_dict() == expected.to_dict()
+    else:
+        with pytest.raises(UnicodeDecodeError):
+            with path.open(encoding=text_encoding) as stream:
+                json.load(stream)
+        with pytest.raises(UnicodeDecodeError):
+            easy._batch_graph_from_bytes(raw)
+    batch.run()
+    row = read_rows(batch.csv)[0]
+    assert row["success"] == str(accepted)
+    assert len(batch.solves) == int(accepted)
+    if accepted:
+        assert batch.solves[0][0] == expected.to_dict()
+    assert_binding(row, raw)

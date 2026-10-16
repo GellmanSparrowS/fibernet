@@ -153,8 +153,16 @@ def test_failures_preserve_exact_old_artifact_or_absence(trainer, tmp_path, monk
         assert restored["features"] == ["z", "x"]
 
 
+@pytest.fixture
+def short_socket_directory():
+    # macOS sun_path is limited to 104 bytes; pytest's nested path can exceed it.
+    # Use an owned, automatically cleaned directory only for this socket fixture.
+    with tempfile.TemporaryDirectory(prefix="fn-", dir="/tmp" if os.name == "posix" else None) as directory:
+        yield Path(directory)
+
+
 @pytest.mark.parametrize("kind", ["symlink", "dangling", "directory", "fifo", "socket"])
-def test_nonregular_targets_reject_before_stage_or_pickle(trainer, tmp_path, monkeypatch, kind):
+def test_nonregular_targets_reject_before_stage_or_pickle(trainer, tmp_path, monkeypatch, kind, request):
     destination = tmp_path / "model.pkl"
     other = tmp_path / "other.pkl"
     other.write_bytes(b"leave other bytes")
@@ -176,7 +184,12 @@ def test_nonregular_targets_reject_before_stage_or_pickle(trainer, tmp_path, mon
             sock = socket.socket(socket.AF_UNIX)
         except PermissionError:
             pytest.skip("Runtime disallows Unix socket creation")
-        sock.bind(str(destination))
+        destination = request.getfixturevalue("short_socket_directory") / "s"
+        try:
+            sock.bind(str(destination))
+        except BaseException:
+            sock.close()
+            raise
     info = destination.lstat()
 
     def forbidden(*args, **kwargs):

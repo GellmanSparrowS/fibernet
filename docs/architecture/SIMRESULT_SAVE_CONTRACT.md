@@ -5,12 +5,17 @@ and recursive parent-directory creation. It stages through an exclusively create
 random sibling file and atomically replaces the destination after serialization
 and close succeed. A pre-existing `<destination>.tmp` is never used or removed.
 
-Existing regular-file ordinary permission bits are retained. New files use 0600
+On POSIX, existing regular-file ordinary permission bits are retained. New files use 0600
 (private), rather than the former umask-dependent open default. Symlinks (including
 dangling links), directories, FIFOs and other nonregular targets are rejected, as
 are targets carrying setuid, setgid or sticky mode bits. These checks occur before
 staging. This does not preserve inode identity, hardlink aliases, ownership, ACLs,
 extended attributes or timestamps.
+
+On Windows, `chmod` only supports the read-only flag, not POSIX access or special
+bits. `0600` does not establish a private Windows ACL; directory/inherited ACLs
+govern access. Exclusive staging and nonregular/symlink rejection still apply.
+JSON retains the historical UTF-8 encoding and native text-mode line endings.
 
 Serialization, write, permission-setting or replacement failure leaves the old
 result intact (or the new destination absent). Cleanup only attempts this call's

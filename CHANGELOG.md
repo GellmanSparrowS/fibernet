@@ -1,5 +1,9 @@
 ## [Unreleased] - runtime compatibility
 
+- Use ASCII status labels in easy training and batch helpers so decorative symbols do not break narrow redirected consoles; no locale or stream configuration is changed
+- Read UTF-8 Python source fixtures explicitly in documentation/exporter tests; keep graph JSON loading on its historical default text codec
+- Test invalid UTF-8 batch input with a complete graph and independent UTF-8/cp1252 disk-decoding oracles, separating decoder failures from stub-engine failures
+
 - Temporarily restrict TaichiEngine and accel/full/dev extras to Taichi 1.7.4 for the version-verified runtime-lifetime repair; other versions fail explicitly
 - Same-owner engines share the runtime; owning worker threads are supported, cross-owner use and unverifiable external initialization fail safely
 - Non-Taichi backends are unaffected; broader Taichi versions require explicit lifecycle matrix validation

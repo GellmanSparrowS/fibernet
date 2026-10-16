@@ -49,7 +49,7 @@ def test_docs_version_matches_library():
 
 def test_recruitment_ui_describes_strain_not_force_flow():
     # Inspect the static translation table without importing Qt or the app.
-    tree = ast.parse((ROOT / "FiberScope" / "studio" / "i18n.py").read_text())
+    tree = ast.parse((ROOT / "FiberScope" / "studio" / "i18n.py").read_text(encoding="utf-8"))
     table = next(node.value for node in tree.body if isinstance(node, ast.Assign)
                  and any(isinstance(target, ast.Name) and target.id == "TEXT"
                          for target in node.targets))

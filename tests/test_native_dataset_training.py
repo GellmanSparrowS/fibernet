@@ -1,6 +1,7 @@
 """Native easy-training names, selection, split intent, and retained assertions."""
 import copy
 import json
+import io
 import os
 from pathlib import Path
 import pickle
@@ -310,3 +311,23 @@ print('NATIVE_OPTIONAL_IMPORTS_OK')
     run=subprocess.run([sys.executable,'-c',script],cwd=tmp_path,env=env,capture_output=True,text=True,timeout=90)
     assert run.returncode==0,run.stdout+run.stderr
     assert 'NATIVE_OPTIONAL_IMPORTS_OK' in run.stdout
+
+
+@pytest.mark.parametrize("console_encoding", ["ascii", "cp1252"])
+def test_native_training_status_supports_strict_narrow_console(dataset, tmp_path,
+                                                              monkeypatch, console_encoding):
+    """A status message must not fail an otherwise successful fit or save."""
+    buffer = io.BytesIO()
+    console = io.TextIOWrapper(buffer, encoding=console_encoding, errors="strict")
+    monkeypatch.setattr(sys, "stdout", console)
+    path = tmp_path / "model.pkl"
+    result = native(dataset, save_path=path)
+    console.flush()
+    output = buffer.getvalue().decode(console_encoding)
+    assert "OK: R^2=" in output
+    assert "OK: Model saved to" in output
+    assert path.is_file()
+    with path.open("rb") as handle:
+        artifact = pickle.load(handle)
+    assert predict_named(artifact, [dataset.samples[0].features])["target"] == "force_N"
+    assert result["n_samples"] == dataset.n_samples

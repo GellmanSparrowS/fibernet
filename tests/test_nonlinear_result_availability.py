@@ -130,7 +130,7 @@ def test_research_exporter_real_nonlinear_null_path():
     # Compile the actual function without executing module-level output-directory
     # creation or its batch runner. The solver and export function are real.
     path = Path(__file__).parents[1] / 'scripts/deformation_test/run_large_deformation_fem.py'
-    tree = ast.parse(path.read_text())
+    tree = ast.parse(path.read_text(encoding="utf-8"))
     function = next(node for node in tree.body
                     if isinstance(node, ast.FunctionDef) and node.name == 'run_fem_2d')
     namespace = dict(np=np, time=time, traceback=traceback, E_MODULUS=1000.,

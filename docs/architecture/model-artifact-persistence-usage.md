@@ -57,7 +57,10 @@ permission to replace its directory entry; such replacement errors are surfaced.
   replaces only that directory entry; it does not update its other hard links
 
 Mode checks and exact `0600`/`rwx` behavior are tested on POSIX. Other platforms
-may implement permission modes differently. This intentionally changes the old
+may implement permission modes differently. In particular, Windows `chmod` only
+supports the read-only flag; `0600` does not establish a private Windows ACL.
+Directory/inherited ACLs govern access. Exclusive staging and target validation
+still apply. This intentionally changes the old
 writer's behavior for symlink/special-mode destinations and new-file permissions.
 The caller must control the destination directory: ancestor symlinks and path
 replacement races are not secured by this helper.

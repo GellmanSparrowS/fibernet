@@ -1,8 +1,7 @@
 # BeamFrameFEM recovery correction: dependency and impact boundary
 
-Source audit: 2026-10-16, current working tree. This is a call-path audit and one
-bounded downstream smoke, not a regeneration or validation of historical results.
-All existing result files and checkpoints were preserved.
+The call-path analysis and bounded downstream smoke below do not regenerate
+or validate historical results.
 
 ## Corrected producer and directly affected fields
 
@@ -130,10 +129,7 @@ Executed exactly one successful downstream numerical case with
 This confirms the real pruning-comparison call path and its current equilibrium
 check, not nonzero bending accuracy, agreement between constitutive models,
 3D correctness, fracture events, learned-model quality, or a full deletion study.
-A first harness invocation used a positional `pattern_2d` argument and failed
-before simulation; retry used the keyword-only API. No production/test code,
-dependency, stored scientific output, or checkpoint was modified. All other
-routes above are source-only evidence.
+All other routes above are source-only evidence.
 
 ## Not implemented or established by this audit
 

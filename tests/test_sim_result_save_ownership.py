@@ -26,20 +26,25 @@ def test_success_owns_private_unique_temporary(tmp_path, monkeypatch, existing, 
     sentinel = seed(path, existing)
     original = Path.replace
     seen = []
+    # Windows exposes read/write flags; chmod does not establish a private ACL.
+    expected_mode = (0o640 if existing else 0o600) if os.name == "posix" else 0o666
     def replace(source, target):
         assert source.parent == path.parent and source not in (path, sentinel)
-        assert source.stat().st_mode & 0o7777 == (0o640 if existing else 0o600)
+        assert source.stat().st_mode & 0o7777 == expected_mode
         seen.append(source)
         return original(source, target)
     monkeypatch.setattr(Path, 'replace', replace)
     result = m.SimResult(mode='synthetic', energy=1.5)
     result.save(path, detailed=detailed)
     assert sentinel.read_bytes() == b'unrelated sentinel'
-    assert path.stat().st_mode & 0o7777 == (0o640 if existing else 0o600)
+    assert path.stat().st_mode & 0o7777 == expected_mode
     assert len(seen) == 1 and not seen[0].exists()
     assert sorted(p.name for p in tmp_path.iterdir()) == ['result.json', 'result.json.tmp']
     if not detailed:
-        assert hashlib.sha256(path.read_bytes()).hexdigest() == '6fe01d8892260c9a12c428973f8361bb556b2d09109dd85088830f8aadc2e8c1'
+        # Keep the frozen LF reference while checking native text-mode bytes.
+        reference = json.dumps(result.to_dict(), indent=2).encode('utf-8')
+        assert hashlib.sha256(reference).hexdigest() == '6fe01d8892260c9a12c428973f8361bb556b2d09109dd85088830f8aadc2e8c1'
+        assert path.read_bytes() == reference.replace(b'\n', os.linesep.encode('ascii'))
     assert path.read_text() == json.dumps(result.to_dict(detailed=detailed), indent=2)
 
 
@@ -71,7 +76,9 @@ def test_failures_preserve_originals(tmp_path, monkeypatch, existing, stage):
     assert not list(tmp_path.glob('.*.result-*'))
 
 
-@pytest.mark.parametrize('kind', ['symlink', 'dangling', 'directory', 'fifo', 'special'])
+@pytest.mark.parametrize('kind', ['symlink', 'dangling', 'directory',
+    pytest.param('fifo', marks=pytest.mark.skipif(not hasattr(os, 'mkfifo'), reason='FIFO creation unavailable')),
+    pytest.param('special', marks=pytest.mark.skipif(os.name != 'posix', reason='POSIX special permission bits'))])
 def test_nonordinary_targets_rejected(tmp_path, kind):
     path = tmp_path / 'result.json'
     sentinel = seed(path, False)

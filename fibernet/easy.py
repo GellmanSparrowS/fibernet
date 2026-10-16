@@ -274,7 +274,7 @@ def train_model(
     >>> from fibernet import train_model
     >>> metrics = train_model("results.csv", target="max_force",
     ...                       features=["grid_x", "grid_y", "strain"])
-    >>> print(f"R² = {metrics['r2']:.3f}")
+    >>> print(f"R^2 = {metrics['r2']:.3f}")
     """
     from fibernet.ml.dataset import FiberNetDataset
 
@@ -416,13 +416,13 @@ def train_model(
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
 
     metrics = {"r2": r2, "rmse": rmse, "n_samples": len(df), "features": features}
-    print(f"✓ R²={r2:.3f}, RMSE={rmse:.2e}, samples={len(df)}")
+    print(f"OK: R^2={r2:.3f}, RMSE={rmse:.2e}, samples={len(df)}")
 
     if save_path:
         _save_model_artifact(save_path, {"model": model, "features": features,
                                       "metrics": metrics, "artifact_version": 1,
                                       "target": target})
-        print(f"✓ Model saved to {save_path}")
+        print(f"OK: Model saved to {save_path}")
 
     return metrics
 
@@ -576,12 +576,12 @@ def _train_native_dataset(dataset, *, target, features, model_type, test_size,
     rmse = float(np.sqrt(mean_squared_error(y[test], predictions)))
     metrics = {"r2": r2, "rmse": rmse, "n_samples": dataset.n_samples,
                "features": selected, "target": target, "training_data": training_data}
-    print(f"✓ R²={r2:.3f}, RMSE={rmse:.2e}, samples={dataset.n_samples}")
+    print(f"OK: R^2={r2:.3f}, RMSE={rmse:.2e}, samples={dataset.n_samples}")
     if save_path:
         _save_model_artifact(save_path, {"model": model, "features": selected,
                                       "metrics": metrics, "artifact_version": 1,
                                       "target": target})
-        print(f"✓ Model saved to {save_path}")
+        print(f"OK: Model saved to {save_path}")
     return metrics
 
 
@@ -806,9 +806,9 @@ def train_rl(
     if save_path:
         with open(save_path, "w") as f:
             json.dump(stats, f, indent=2)
-        print(f"✓ Stats saved to {save_path}")
+        print(f"OK: Stats saved to {save_path}")
 
-    print(f"✓ Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")
+    print(f"OK: Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")
     return stats
 
 _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
@@ -1165,6 +1165,6 @@ def batch_simulate_from_json(
         write_checkpoint()
 
     ok = sum(row["success"] in (True, "True") for row in results)
-    print(f"\n✓ Simulated {ok}/{len(results)} successfully")
+    print(f"\nOK: Simulated {ok}/{len(results)} successfully")
     print(f"  Results: {csv_file}")
     return str(csv_file)

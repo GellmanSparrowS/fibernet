@@ -40,6 +40,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
 
+    - name: Verify core-only macOS Python 3.9 dependency contract
+      if: runner.os == 'macOS' && matrix.python-version == '3.9'
+      run: |
+        python -c "import importlib.util; assert importlib.util.find_spec('taichi') is None"
+        pytest tests/test_architecture_api_journeys.py::test_default_spring_dependency_is_explicit_when_unavailable -v
+
+    - name: Diagnose portable generation equivalence
+      run: pytest tests/test_voronoi_owned_bridge.py -q -rP -o addopts=""
+
     - name: Run tests (Unix)
       if: runner.os != 'Windows'
       run: pytest tests/ -v --tb=short

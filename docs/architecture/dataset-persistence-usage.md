@@ -143,5 +143,14 @@ coordinate exclusive access externally. Publishing metadata last does not remove
 that window. No `fsync` durability or snapshot-isolation claim is made.
 
 Coverage lives in `tests/test_dataset_persistence.py`, alongside the existing
-selected-value and reference-journey tests. The earlier proposal and disposable
-failure evidence remain historical, unchanged records of the pre-fix behavior.
+selected-value and reference-journey tests.
+
+### Platform text and permission behavior
+
+Metadata JSON retains the historical default text encoding and native line endings.
+CSV retains the historical default text encoding with `newline=""`, preserving the
+CSV writer's record terminators and embedded newlines. These are not new UTF-8/LF
+normalization guarantees. Exact `0600`/`rwx` mode semantics apply on POSIX. On
+Windows, `chmod` supports the read-only flag and does not establish a private ACL;
+directory/inherited ACLs govern access. Exclusive staging and target validation
+still apply.

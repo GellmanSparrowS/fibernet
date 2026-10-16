@@ -28,12 +28,11 @@ Three prior fixed small profiles in one CPU environment found full graph copying
 inside bridging to be a hotspot. An isolated candidate had median wall times
 0.02535/0.08765/0.21122 s against saved baseline 0.03335/0.11784/0.37688 s for
 20/80/200 seed fixtures. These were separate batches, with timing noise; they are
-small-scale signals, not a universal speedup guarantee. The original profile
-and isolated candidate are preserved separately from this implementation stage.
+small-scale signals, not a universal speedup guarantee.
 
-Before editing production code, 13 additional small option-branch outputs were
-frozen from the old source. Regression checks compare complete serialized graphs
-plus insertion order: default/explicit seeds, mirrors, rotation, boundary modes,
+Regression checks compare 13 additional small option-branch outputs against
+the previous implementation, including complete serialized graphs and insertion
+order: default/explicit seeds, mirrors, rotation, boundary modes,
 internal/intermediate points, factory kwargs overrides, mixed-case unit spelling
 and custom points. Separate tests cover registered factories, explicit Material
 subclasses and deepcopy calls, mutable alias topology and mutation propagation,

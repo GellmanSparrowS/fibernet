@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 import importlib.util
 import sys
+import os
 import zipfile
 import warnings
 import numpy as np
@@ -26,13 +27,15 @@ def seed(path,existing=True):
 @pytest.mark.parametrize('existing',[False,True])
 def test_success_owns_unique_private_temp(tmp_path,fixture,monkeypatch,suffix,existing):
  dst=tmp_path/('mesh'+suffix);sentinel=seed(dst,existing);original=m.atomic_replace;seen=[]
+ # Windows chmod only supports the read-only flag, not POSIX access bits/ACLs.
+ expected_mode = (0o640 if existing else 0o600) if os.name == "posix" else 0o666
  def inspect(src,target):
   src=Path(src);assert src.parent==dst.parent and src!=sentinel and src!=dst
-  assert src.stat().st_mode&0o777==(0o640 if existing else 0o600)
+  assert src.stat().st_mode&0o777==expected_mode
   seen.append(src);original(src,target)
  monkeypatch.setattr(m,'atomic_replace',inspect);export(dst,fixture)
  assert sentinel.read_bytes()==b'untouched sentinel';assert len(seen)==1 and not seen[0].exists()
- assert dst.stat().st_mode&0o777==(0o640 if existing else 0o600)
+ assert dst.stat().st_mode&0o777==expected_mode
  assert sorted(p.name for p in tmp_path.iterdir())==sorted([dst.name,sentinel.name])
 
 @pytest.mark.parametrize('suffix',['.stl','.3mf','.csv'])
@@ -57,7 +60,8 @@ def test_invalid_before_temp_creation(tmp_path,fixture,monkeypatch,kind):
  assert dst.read_bytes()==b'old destination' and sentinel.read_bytes()==b'untouched sentinel'
 
 @pytest.mark.parametrize('suffix',['.stl','.3mf','.csv'])
-@pytest.mark.parametrize('kind',['symlink','directory','special'])
+@pytest.mark.parametrize('kind',['symlink','directory',
+ pytest.param('special', marks=pytest.mark.skipif(os.name != 'posix', reason='POSIX special permission bits'))])
 def test_unsafe_target_rejected(tmp_path,fixture,suffix,kind):
  dst=tmp_path/('mesh'+suffix);sentinel=seed(dst,False)
  if kind=='symlink':

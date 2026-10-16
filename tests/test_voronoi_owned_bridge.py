@@ -11,12 +11,79 @@ import fibernet.gen.pattern as pattern
 # Frozen from unmodified source, before applying the owned-helper change.
 BASELINES = [({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}}, '86a0abcba247ff575115882f84270c04ea80bbcca10270286004209b109f2906'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'seed': None}, '86a0abcba247ff575115882f84270c04ea80bbcca10270286004209b109f2906'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'seed': 7}, 'e880b51982601abac395438ea41b6732c96a5552242473d688e97ac245882be5'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'mirror_x': True}, 'ebc293463f5192b5348b337dcddf334831038ca7f82d8a80bf58322186d20b58'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'mirror_y': True}, 'c72f3a44abf03d6469689b571c5e7e6c9eb314b04929e8d3fdebe1964ce2110e'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'rotation': 27}, '42ae8ccf4ef9c6d7a9b22bf66e66870d98d8d51c42d2816180882f38c3c16d8f'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'boundary_mode': 'extend'}, 'da2c3ad2f5934e476593826f55ef0449b61a8155ddbac8687a787241fd600466'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'boundary_mode': 'error'}, '86a0abcba247ff575115882f84270c04ea80bbcca10270286004209b109f2906'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'n_internal': 2}, '9b72705caaddb723066de7fc22b0fa7c4415fac0a0c1fb5b48c7f57ef0a1ab4b'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'n_pts_per_side': 1, 'perturbation': 0.04}, '20ad7d3d7d534198430e5cf23eba5d2c0f7ea9c818c34209b7dd147ffb639265'), ({'unit': 'voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5, 'seed': None, 'radius': 0.2, 'n_internal': 1}, 'seed': 7}, 'a11895d103f238d15548e63520dabc80ca255ff5e49833736da2aef3f8831c3d'), ({'unit': 'Voronoi', 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}}, '186730ea2777dab124093f883a0d0f1a20b9e01755b30eb09db5aa771f0fa302'), ({'unit': None, 'box': [3, 2], 'grid': [2, 1], 'unit_kwargs': {'n_seeds': 5}, 'points': [[0, 0], [1, 0], [1, 1]], 'fit_to_box': True}, 'ed24c62d5f0a8dd07477faf1e2fab4c41dda1e00f682529017a2c6c715ab89c2')]
 
+# Historical JSON remains byte-for-byte unchanged. Hashes are only a contract
+# for the verified reference numerical stack, not every SciPy/QHull build.
+from pathlib import Path
+import platform
+import runpy
+import scipy
+
+_FIXTURES = Path(__file__).parent / "fixtures"
+_FROZEN = json.loads((_FIXTURES / "voronoi_pre_owned_baselines.json").read_text())
+_ORIGINAL_BRIDGE = runpy.run_path(str(_FIXTURES / "voronoi_pre_owned_bridge.py"))["_bridge_small_components"]
+_REFERENCE_STACK = (platform.system(), platform.machine(), platform.python_version(),
+                    np.__version__, scipy.__version__) == (
+                        "Linux", "x86_64", "3.12.14", "2.3.5", "1.17.0")
+
+
+def _value(g):
+    return {"graph": g.to_dict(), "node_order": list(g.nodes), "edge_order": list(g.edges)}
+
+
+def _raw(value):
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+
+
+def _compare_frozen(actual, expected, path="$", differences=None):
+    """Exact schema, IDs, order, metadata; bounded roundoff for float leaves."""
+    if isinstance(expected, dict):
+        assert actual.keys() == expected.keys(), path
+        for key in expected:
+            _compare_frozen(actual[key], expected[key], path + "." + key, differences)
+    elif isinstance(expected, list):
+        assert len(actual) == len(expected), path
+        for i, (a, b) in enumerate(zip(actual, expected)):
+            _compare_frozen(a, b, f"{path}[{i}]", differences)
+    elif isinstance(expected, float):
+        assert isinstance(actual, float), path
+        # This does not replace the zero-tolerance original-vs-owned comparison.
+        assert np.isfinite(actual) and np.isclose(actual, expected, rtol=1e-12, atol=1e-12), (path, actual, expected)
+        if actual != expected:
+            differences.append((path, actual, expected, abs(actual - expected)))
+    else:
+        assert type(actual) is type(expected) and actual == expected, (path, actual, expected)
+
+
 @pytest.mark.parametrize("kwargs,expected", BASELINES)
-def test_public_options_frozen_equivalence(kwargs, expected):
+def test_public_options_frozen_equivalence(kwargs, expected, monkeypatch):
     g = pattern.pattern_2d(**kwargs)
-    value = {"graph": g.to_dict(), "node_order": list(g.nodes), "edge_order": list(g.edges)}
-    raw = json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
-    assert hashlib.sha256(raw).hexdigest() == expected
+    value = _value(g)
+    # Force the actual pre-optimization copy implementation, independent of the
+    # refactored common in-place helper. Never change seed, IDs or factory.
+    calls = []
+    def original(*args, **options):
+        calls.append(True)
+        return _ORIGINAL_BRIDGE(*args, **options)
+    monkeypatch.setattr(pattern, "_bridge_owned_components", original)
+    monkeypatch.setattr(pattern, "_bridge_small_components", original)
+    reference = _value(pattern.pattern_2d(**kwargs))
+    assert bool(calls) == (kwargs["unit"] == "voronoi")
+    assert value == reference  # Every parsed field, including numerical leaves.
+    assert _raw(value) == _raw(reference)  # Strict same-environment bytes.
+    assert _raw(value) == _raw(_value(pattern.pattern_2d(**kwargs)))
+    record = next(r for r in _FROZEN if r["kwargs"] == kwargs)
+    assert record["sha256"] == expected
+    assert hashlib.sha256(_raw(record["value"])).hexdigest() == expected
+    differences = []
+    _compare_frozen(value, record["value"], differences=differences)
+    print("Voronoi reference comparison:", platform.platform(), platform.python_version(),
+          "numpy", np.__version__, "scipy", scipy.__version__,
+          "float differences", len(differences),
+          "max absolute delta", max((d[3] for d in differences), default=0.),
+          "first differences", differences[:3])
+    if _REFERENCE_STACK or kwargs["unit"] is None:
+        assert hashlib.sha256(_raw(value)).hexdigest() == expected
+
 
 class CountingMaterial(Material):
     calls = 0
