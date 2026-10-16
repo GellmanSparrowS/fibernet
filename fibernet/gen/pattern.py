@@ -1097,7 +1097,9 @@ def list_units() -> List[str]:
 
 
 def register_unit(name: str, factory):
-    """Register a custom unit factory."""
+    """Register a callable custom unit factory; valid names may be replaced."""
+    if not callable(factory):
+        raise TypeError("unit factory must be callable")
     _UNIT_FACTORIES[name.lower()] = factory
 
 # ======================================================================
@@ -1851,7 +1853,9 @@ def list_units_3d():
 
 
 def register_unit_3d(name, factory):
-    """Register a custom 3D unit factory."""
+    """Register a callable custom 3D factory; valid names may be replaced."""
+    if not callable(factory):
+        raise TypeError("unit factory must be callable")
     _UNIT_FACTORIES_3D[name.lower()] = factory
 
 
