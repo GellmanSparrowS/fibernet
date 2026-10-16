@@ -491,7 +491,10 @@ class FiberNetDataset:
         """Generate a labeled dataset by sweeping over structure parameters.
 
         Supports checkpoint/resume — if save_dir exists and has partial
-        results, generation continues from where it stopped.
+        results with the exact versioned run binding, generation continues from
+        where it stopped. Legacy/unbound checkpoints and changed sampling plans
+        are rejected. Sampling v2 uses one unchanged base seed across radii;
+        historical radius-count/seed sweeps are not silently migrated.
 
         Parameters
         ----------
@@ -500,7 +503,7 @@ class FiberNetDataset:
         grid_range : list of (nx, ny)
             Grid sizes. Defaults to [(3,3), (5,5)].
         radius_range : list of float
-            Beam radii. Defaults to [0.05, 0.1, 0.2].
+            Sampling v2: explicit Cartesian radius dimension; default [0.05, 0.1, 0.2].
         n_internal_range : list of int
             Internal points per edge. Defaults to [0, 2, 4].
         box : (w, h)
@@ -528,67 +531,53 @@ class FiberNetDataset:
         -------
         FiberNetDataset
         """
-        from fibernet.gen.pattern import pattern_2d, list_units
-        from fibernet.sim.accelerated import TaichiEngine
+        from fibernet.gen import pattern
+        from . import _generate_contract as contract
 
-        if units is None:
-            units = ["honeycomb", "square", "triangle"]
-        if grid_range is None:
-            grid_range = [(3, 3), (5, 5)]
-        if radius_range is None:
-            radius_range = [0.05, 0.1, 0.2]
-        if n_internal_range is None:
-            n_internal_range = [0, 2, 4]
-
-        # Build parameter grid
-        param_combos = []
-        for unit in units:
-            for grid in grid_range:
-                for n_int in n_internal_range:
-                    for s in range(seed, seed + max(len(radius_range), 1)):
-                        param_combos.append({
-                            "unit": unit,
-                            "grid": grid,
-                            "n_internal": n_int,
-                            "seed": s % 10000,
-                        })
-
-        if max_samples:
-            rng = np.random.RandomState(seed)
-            rng.shuffle(param_combos)
-            param_combos = param_combos[:max_samples]
-
-        # Checkpoint resume
+        declaration, solver, param_combos = contract.make_plan(
+            units=units, grid_range=grid_range, radius_range=radius_range,
+            n_internal_range=n_internal_range, box=box, target_stretch=target_stretch,
+            stiffness=stiffness, damping=damping, num_steps=num_steps,
+            max_samples=max_samples, seed=seed, checkpoint_every=checkpoint_every)
+        if any(u.lower() not in pattern._UNIT_FACTORIES for u in declaration['units']):
+            raise ValueError('unknown generation unit')
+        run_binding = None
         existing_samples = []
         existing_ids = set()
-        if save_dir:
+        checkpoint_loaded = False
+        if save_dir is not None:
+            recipe = contract.implementation_recipe(pattern, declaration['units'])
+            run_binding = contract.binding(declaration, solver, param_combos, recipe)
             ckpt_path = Path(save_dir) / "checkpoint.json"
+            _dataset_file_mode(ckpt_path)
             if ckpt_path.exists():
-                with open(ckpt_path) as fh:
-                    ckpt = json.load(fh)
-                for s in ckpt.get("samples", []):
+                rows = contract.read_checkpoint(ckpt_path, run_binding, param_combos)
+                checkpoint_loaded = True
+                for row in rows:
                     sample = DatasetSample(
-                        sample_id=s["id"],
-                        unit=s["unit"],
-                        grid=tuple(s["grid"]),
-                        params=s.get("params", {}),
-                        features=s["features"],
-                        labels=s["labels"],
-                        metadata=s.get("metadata", {}),
-                    )
+                        sample_id=row['id'], unit=row['unit'], grid=tuple(row['grid']),
+                        params=row['params'], features=row['features'], labels=row['labels'],
+                        metadata=row.get('metadata', {}))
                     existing_samples.append(sample)
                     existing_ids.add(sample.sample_id)
                 if verbose:
                     print(f"Resumed {len(existing_samples)} samples from checkpoint")
 
-        engine = TaichiEngine()
+            elif any((Path(save_dir) / name).exists()
+                     for name in ('features.npy', 'labels.npy', 'metadata.json')):
+                raise ValueError('existing Dataset has no bound checkpoint; use a new save_dir')
+        complete_resume = checkpoint_loaded and all(
+            contract.sample_id(p) in existing_ids for p in param_combos)
+
+        # Optional engine is imported/constructed only for a genuinely pending job.
+        engine = None
         samples = list(existing_samples)
         n_total = len(param_combos)
         n_done = 0
         n_failed = 0
 
         for i, params in enumerate(param_combos):
-            sample_id = _make_id(params)
+            sample_id = contract.sample_id(params)
             if sample_id in existing_ids:
                 n_done += 1
                 continue
@@ -599,18 +588,21 @@ class FiberNetDataset:
             sd = params["seed"]
 
             try:
-                g = pattern_2d(
-                    unit=unit, box=box, grid=grid,
+                if engine is None:
+                    from fibernet.sim.accelerated import TaichiEngine
+                    engine = TaichiEngine()
+                g = pattern.pattern_2d(
+                    unit=unit, box=params['box'], grid=grid, radius=params['radius'],
                     n_internal=n_int, seed=sd,
                 )
 
                 result = engine.stretch_test(
                     g,
-                    target_stretch=target_stretch,
-                    stiffness=stiffness,
-                    damping=damping,
-                    num_steps=num_steps,
-                    save_interval=num_steps,
+                    target_stretch=solver['target_stretch'],
+                    stiffness=solver['stiffness'],
+                    damping=solver['damping'],
+                    num_steps=solver['num_steps'],
+                    save_interval=solver['save_interval'],
                     auto_steps=False,
                 )
 
@@ -645,7 +637,13 @@ class FiberNetDataset:
                     labels=labels,
                     metadata={"time_s": float(getattr(result, "time_seconds", 0))},
                 )
+                # Reject nonfinite accepted rows before they enter a checkpoint.
+                contract.validate_rows([{
+                    'id': sample_id, 'unit': unit, 'grid': list(grid), 'params': params,
+                    'features': feat, 'labels': labels, 'metadata': sample.metadata,
+                }], param_combos)
                 samples.append(sample)
+                existing_ids.add(sample_id)
                 n_done += 1
 
                 if verbose:
@@ -659,12 +657,12 @@ class FiberNetDataset:
                     print(f"  [{n_done}/{n_total}] FAILED ({unit} grid={grid}): {exc}")
 
             # Checkpoint
-            if save_dir and (len(samples) - len(existing_samples)) % checkpoint_every == 0:
-                _save_checkpoint(save_dir, samples)
+            if save_dir is not None and (len(samples) - len(existing_samples)) % checkpoint_every == 0:
+                _save_checkpoint(save_dir, samples, run_binding)
 
         # Final checkpoint
-        if save_dir:
-            _save_checkpoint(save_dir, samples)
+        if save_dir is not None and not complete_resume:
+            _save_checkpoint(save_dir, samples, run_binding)
 
         # Auto-detect feature/target names
         feature_names = None
@@ -681,7 +679,7 @@ class FiberNetDataset:
                   f"{len(ds.target_names)} targets, "
                   f"{n_failed} failed")
 
-        if save_dir:
+        if save_dir is not None and not complete_resume:
             ds.save(save_dir)
             if verbose:
                 print(f"Saved to {save_dir}")
@@ -894,7 +892,7 @@ def _json_safe(val):
     return val
 
 
-def _save_checkpoint(directory: str, samples: List[DatasetSample]) -> None:
+def _save_checkpoint(directory: str, samples: List[DatasetSample], run_binding: dict) -> None:
     """Save checkpoint."""
     out = Path(directory)
     out.mkdir(parents=True, exist_ok=True)
@@ -915,8 +913,27 @@ def _save_checkpoint(directory: str, samples: List[DatasetSample]) -> None:
             for s in samples
         ],
     }
-    tmp_path = out / "checkpoint.json.tmp"
+    from . import _generate_contract as contract
+    contract.validate_rows(ckpt['samples'], run_binding['ordered_plan'])
+    ckpt.update(checkpoint_schema=contract.SCHEMA, run_binding=run_binding,
+                run_binding_sha256=contract.digest(run_binding),
+                samples_digest=contract.digest(ckpt['samples']))
+    payload = json.dumps(ckpt, indent=2, allow_nan=False)
     final_path = out / "checkpoint.json"
-    with open(tmp_path, "w") as fh:
-        json.dump(ckpt, fh, indent=2)
-    os.replace(tmp_path, final_path)
+    mode = _dataset_file_mode(final_path)
+    fd, name = tempfile.mkstemp(prefix='.checkpoint-', suffix='.tmp', dir=out)
+    os.close(fd)
+    tmp_path = Path(name)
+    try:
+        tmp_path.write_text(payload)
+        os.chmod(tmp_path, 0o600 if mode is None else mode)
+        os.replace(tmp_path, final_path)
+    finally:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception as exc:
+            # Cleanup cannot mask the primary failure or reverse a committed save.
+            try:
+                logging.getLogger(__name__).warning('checkpoint cleanup failed: %s', exc)
+            except Exception:
+                pass
