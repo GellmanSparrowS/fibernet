@@ -1,5 +1,7 @@
 """Pure-data fixtures, not physical simulations or learning benchmarks."""
+import math
 import os
+import struct
 import subprocess
 import sys
 from dataclasses import FrozenInstanceError
@@ -229,17 +231,27 @@ def test_radius_must_remain_finite_in_float64():
         batch(g, edge_features=['radius'])
 
 
-@pytest.mark.parametrize('scale', [1e-200, 1e200, np.nextafter(0., 1.)])
+@pytest.mark.parametrize('scale', [1e-200, 1e200, struct.unpack('>d', bytes.fromhex('0000000000000001'))[0]])
 def test_distance_preserves_representable_tiny_and_large_lengths(scale):
     # Change coordinates after construction: no generator tolerance/merging involved.
     g = StructureGraph(3)
     a, b = g.add_node([0, 0, 0]), g.add_node([1, 0, 0])
     g.add_edge(a, b)
     g.nodes[b].position[:] = [scale, 0, 0]
-    v = batch(g, edge_features=['chord_length', 'polyline_length'])
-    assert v.edge_feature_available.all()
-    assert v.edge_features.tolist() == [[scale, scale]]
-    assert g.nodes[b].position[0] == scale
+    packed = struct.pack('>d', scale)
+    assert struct.pack('>d', g.nodes[b].position[0]) == packed
+    # Probe these exact platform operations, not float equality (DAZ can hide loss).
+    distance = math.dist(g.nodes[a].position, g.nodes[b].position)
+    total = math.fsum([distance])
+    if any(struct.pack('>d', x) in (bytes(8), bytes.fromhex('8000000000000000'))
+           for x in (distance, total)):
+        with pytest.raises(ValueError, match='lost a nonzero'):
+            batch(g, edge_features=['chord_length', 'polyline_length'])
+    else:
+        v = batch(g, edge_features=['chord_length', 'polyline_length'])
+        assert v.edge_feature_available.all()
+        assert [struct.pack('>d', x) for x in v.edge_features[0]] == [packed, packed]
+    assert struct.pack('>d', g.nodes[b].position[0]) == packed
 
 
 @pytest.mark.parametrize('scale', [1e-200, 1e200])

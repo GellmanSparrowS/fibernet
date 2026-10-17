@@ -96,3 +96,105 @@ def test_import_process_audit_is_narrow():
         else:
             raise AssertionError('unapproved real launch was permitted')
     ''')
+
+
+def test_file_probe_requires_exact_target_environment_and_caller():
+    run_python('''
+        import os
+        import sys
+        # Synthetic events also exercise the Unix branch on Windows hosts.
+        sys.platform = 'darwin'
+        probes = install_import_process_audit()
+        import platform
+        argv = ['file', '-b', platform._follow_symlinks(sys.executable)]
+        env = dict(os.environ, LC_ALL='C')
+        namespace = {'__name__': 'platform', 'sys': sys}
+        exec('def _syscmd_file(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
+        call = namespace['_syscmd_file']
+        def refuse(args, caller=call):
+            prior = list(probes)
+            try:
+                caller(args)
+            except AssertionError as exc:
+                assert str(exc) == 'unexpected import process: subprocess.Popen'
+            else:
+                raise AssertionError('altered file probe was permitted')
+            assert probes == prior
+        for args in [
+            ('file', argv, '.', env),
+            ('file', argv, None, None),
+            ('file', argv, None, dict(env, LC_ALL='en_US.UTF-8')),
+            ('file', argv, None, dict(env, EXTRA_PROBE_VALUE='1')),
+            ('/different/file', argv, None, env),
+            ('file', ['file', '-b', '/another/interpreter'], None, env),
+            ('file', argv + ['extra'], None, env),
+        ]:
+            refuse(args)
+        valid = ('file', argv, None, env)
+        refuse(valid, lambda args: sys.audit('subprocess.Popen', *args))
+        call(valid)
+        assert probes == [tuple(argv)]
+        refuse(valid)
+    ''')
+
+
+@pytest.mark.parametrize('old_executable', [False, True])
+def test_windows_ver_probe_is_exact_once_only(old_executable):
+    run_python('''
+        import os
+        import sys
+        sys.platform = 'win32'
+        os.environ['SystemRoot'] = 'C:/Windows'
+        os.environ['ComSpec'] = 'C:/Windows/System32/cmd.exe'
+        probes = install_import_process_audit()
+        shell = os.environ['ComSpec']
+        argv = shell + ' /c "ver"'
+        namespace = {'__name__': 'platform', 'sys': sys}
+        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
+        call = namespace['_syscmd_ver']
+        def refuse(args, caller=call):
+            prior = list(probes)
+            try:
+                caller(args)
+            except AssertionError as exc:
+                assert str(exc) == 'unexpected import process: subprocess.Popen'
+            else:
+                raise AssertionError('altered shell probe was permitted')
+            assert probes == prior
+        for args in [
+            (shell, argv, '.', None),
+            (shell, argv, None, {}),
+            ('C:/other/cmd.exe', argv, None, None),
+            (shell, shell + ' /c "ver & echo changed"', None, None),
+            (shell, shell + ' /c "command /c ver"', None, None),
+            (None, 'cmd.exe /c "ver"', None, None),
+            (shell, [argv], None, None),
+        ]:
+            refuse(args)
+        valid = (None if OLD_EXECUTABLE else shell, argv, None, None)
+        refuse(valid, lambda args: sys.audit('subprocess.Popen', *args))
+        call(valid)
+        assert probes == [('windows-ver',)]
+        refuse(valid)
+        refuse((shell if OLD_EXECUTABLE else None, argv, None, None))
+    '''.replace('OLD_EXECUTABLE', repr(old_executable)))
+
+
+def test_windows_ver_probe_refuses_non_system_comspec():
+    run_python('''
+        import os
+        import sys
+        sys.platform = 'win32'
+        os.environ['SystemRoot'] = 'C:/Windows'
+        os.environ['ComSpec'] = 'C:/other/cmd.exe'
+        probes = install_import_process_audit()
+        namespace = {'__name__': 'platform', 'sys': sys}
+        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
+        try:
+            namespace['_syscmd_ver'](('C:/other/cmd.exe', 'C:/other/cmd.exe /c "ver"', None, None))
+        except AssertionError as exc:
+            assert str(exc) == 'unexpected import process: subprocess.Popen'
+        else:
+            raise AssertionError('non-system COMSPEC was permitted')
+        assert probes == []
+    ''')

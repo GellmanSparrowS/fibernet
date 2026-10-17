@@ -56,7 +56,7 @@ class TestLazyPlotImports(unittest.TestCase):
             assert env.gym is gymnasium
             assert issubclass(env.FiberStructureEnv, gymnasium.Env)
             assert not attempts, attempts
-            assert len(probes) <= 2, probes
+            assert len(probes) <= 4, probes
             assert not any(name.split('.')[0] in {'matplotlib', 'mpl_toolkits', 'plotly', 'pyvista', 'torch', 'sklearn'} for name in set(sys.modules) - initial_modules)
             assert 'fibernet.viz.render' not in sys.modules
             assert 'fibernet.viz.renderer' not in sys.modules

@@ -1,6 +1,7 @@
 """Fresh-child controls for source-only checks; no production imports."""
 import importlib.abc
 import os
+import ntpath
 from pathlib import Path
 import runpy
 import subprocess
@@ -19,13 +20,34 @@ def run_source_check(path, *controls):
 
 
 def install_import_process_audit():
-    """Permit only two known dependency CPU queries, with caller provenance.
+    """Permit four exact dependency/platform queries, once per caller.
 
-    This is an import regression assertion, not a sandbox. NumPy 2.0's
-    check_support_sve runs lscpu; CPython platform._Processor runs uname -p.
+    This is an import regression assertion, not a sandbox. NumPy 2.0 probes
+    SVE with lscpu. CPython platform uses uname -p, file -b on the resolved
+    interpreter, and (on Windows) the system command interpreter's ver builtin.
     Import blockers must be installed before this hook or any dependency.
     """
     probes = []
+    # Match platform._follow_symlinks: resolve the file's links, not parent dirs.
+    interpreter = os.path.abspath(sys.executable)
+    while os.path.islink(interpreter):
+        interpreter = os.path.normpath(os.path.join(
+            os.path.dirname(interpreter), os.readlink(interpreter)))
+    file_command = ('file', '-b', interpreter)
+    file_environment = dict(os.environ, LC_ALL='C')
+    windows_command = None
+    windows_executable = None
+    if sys.platform == 'win32':
+        root = os.environ.get('SystemRoot', '')
+        comspec = os.environ.get('ComSpec', '')
+        expected = ntpath.join(root, 'System32', 'cmd.exe')
+        # Do not allow an arbitrary COMSPEC override, PATH search or shell text.
+        if (ntpath.isabs(root) and ntpath.isabs(comspec)
+                and ntpath.normcase(ntpath.normpath(comspec))
+                == ntpath.normcase(ntpath.normpath(expected))):
+            windows_executable = comspec
+            windows_command = comspec + ' /c "ver"'
+
     def audit(event, args):
         if event not in {'subprocess.Popen', 'os.system', 'os.posix_spawn'}:
             return
@@ -37,13 +59,27 @@ def install_import_process_audit():
             ('uname', '-p'): ('platform', 'from_subprocess'),
             ('lscpu',): ('numpy.testing._private.utils', 'check_support_sve'),
         }
+        probe = None
         if event == 'subprocess.Popen':
             executable, argv, cwd, env = args
             command = tuple(argv) if isinstance(argv, (list, tuple)) else (argv,)
             if (command in allowed and caller == allowed[command]
-                    and executable == command[0] and cwd is None and env is None
-                    and command not in probes):
-                probes.append(command)
+                    and executable == command[0] and cwd is None and env is None):
+                probe = command
+            elif (sys.platform != 'win32' and command == file_command
+                    and caller == ('platform', '_syscmd_file')
+                    and executable == 'file' and cwd is None
+                    and env == file_environment):
+                probe = file_command
+            elif (windows_command is not None and argv == windows_command
+                    and caller == ('platform', '_syscmd_ver')
+                    and executable in (None, windows_executable)
+                    and cwd is None and env is None):
+                # Older CPython leaves executable=None; newer versions supply
+                # the same absolute COMSPEC. Both represent this one query.
+                probe = ('windows-ver',)
+            if probe is not None and probe not in probes:
+                probes.append(probe)
                 return
         raise AssertionError('unexpected import process: ' + event)
     sys.addaudithook(audit)

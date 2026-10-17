@@ -4,7 +4,7 @@ A separate optional Linux stdio adapter exposing five bounded native graph and a
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 216 native Python source hashes must match core_manifest.json. The matched native source tree is 4bed6f1e58b31f183753f03a9766a2694ad5003d. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 216 native Python source hashes must match core_manifest.json. The matched native source tree is e03ef284b0301e68fa60d59ce2f468240fe463df. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -22,7 +22,7 @@ The first install is the native core from this checkout, not a PyPI version assu
 Create an operator-owned JSON file such as manifest.json. Paths must be absolute regular-file paths without symlink components. Replace the placeholder path and SHA with your chosen graph's actual bytes; for the included fixture, use the SHA below.
 
 ```json
-{"source_tree":"4bed6f1e58b31f183753f03a9766a2694ad5003d","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
+{"source_tree":"e03ef284b0301e68fa60d59ce2f468240fe463df","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
 ```
 
 ```sh

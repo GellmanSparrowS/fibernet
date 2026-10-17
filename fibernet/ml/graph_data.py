@@ -4,6 +4,7 @@ No backend imports, graph editing, physical-unit inference or training occurs he
 Read-only flags prevent ordinary accidental writes, not adversarial mutation.
 """
 import math
+import struct
 
 from dataclasses import dataclass
 from numbers import Integral, Real
@@ -11,6 +12,21 @@ from types import MappingProxyType
 from typing import Mapping, Tuple
 
 import numpy as np
+
+
+
+def _float64_identity(value):
+    """Compare stored finite binary64 values without DAZ; signed zeros agree."""
+    bits = struct.unpack('>Q', struct.pack('>d', value))[0]
+    return bits if bits & ((1 << 63)-1) else 0
+
+
+def _distance(a, b, name):
+    value = math.dist(a, b)
+    if not _float64_identity(value) and any(
+            _float64_identity(x) != _float64_identity(y) for x, y in zip(a, b)):
+        raise ValueError(name + ' lost a nonzero endpoint distance in float64 arithmetic')
+    return value
 
 
 def _array(value, dtype, shape=None):
@@ -119,6 +135,8 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
     None/missing radius uses zero with availability=False; NaN/inf are errors.
     Polyline length follows stored internal points from node_i to node_j; absent
     internal points yield endpoint length (not an assertion about a smooth curve).
+    Distance features reject a computed zero for distinct stored endpoints or
+    a zero polyline sum of nonzero segments; caller floating-point mode is unchanged.
     Metadata must be JSON-native finite values; lists become tuples and dictionaries
     read-only mappings. Material/BC/target features are deliberately not inferred.
     """
@@ -201,11 +219,14 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
                     elif isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
                         raise ValueError('radius must be a finite real number or None')
                 elif name == 'chord_length':
-                    value = math.dist(local_positions[ni], local_positions[nj])
+                    value = _distance(local_positions[ni], local_positions[nj], name)
                 else:
                     path = np.vstack((local_positions[ni], interior, local_positions[nj]))
                     try:
-                        value = math.fsum(math.dist(a, b) for a, b in zip(path[:-1], path[1:]))
+                        segments = [_distance(a, b, name) for a, b in zip(path[:-1], path[1:])]
+                        value = math.fsum(segments)
+                        if not _float64_identity(value) and any(_float64_identity(x) for x in segments):
+                            raise ValueError('polyline_length lost a nonzero segment sum in float64 arithmetic')
                     except OverflowError as exc:
                         raise ValueError('polyline_length exceeds finite float64 range') from exc
                 if not np.isfinite(value):
