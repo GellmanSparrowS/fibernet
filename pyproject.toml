@@ -123,3 +123,4 @@ include = ["fibernet*"]
 
 [tool.setuptools.package-data]
 "fibernet.sim.fracture" = ["PROVENANCE.json", "NOTICE.md"]
+"fibernet.integrations" = ["LAMMPS_NOTICE.md"]

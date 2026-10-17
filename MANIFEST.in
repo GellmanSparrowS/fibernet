@@ -16,3 +16,4 @@ prune docs/_build
 prune build
 prune dist
 prune *.egg-info
+include examples/data/lammps_braced_network_si.json

@@ -30,7 +30,8 @@ try:
 except ImportError:
     _MDANALYSIS_AVAILABLE = False
 
-# LAMMPS integration (GPL v2 license)
+# Legacy LAMMPS integration (GPL v2 engine). This flag means adapter
+# importability only; it does not verify an installed native runtime.
 try:
     from .lammps_integration import (
         LAMMPSBridge, LAMMPSResult,
@@ -75,3 +76,16 @@ if _OVITO_AVAILABLE:
         "OVITOBridge", "OVITOAnalysisResult",
         "render_network_ovito"
     ])
+
+# Bounded explicit CG backend. Importing these does not import or
+# initialize native LAMMPS; execution requires an explicit pinned RuntimeSpec.
+from .lammps_backend import (
+    HarmonicBond, RunSpec, PreparedRun, RuntimeSpec, ResourceLimits,
+    LAMMPSTask, TaskState, LAMMPSRunResult, LAMMPSContractError,
+    prepare_harmonic_beads, parse_outputs,
+)
+__all__.extend([
+    'HarmonicBond', 'RunSpec', 'PreparedRun', 'RuntimeSpec', 'ResourceLimits',
+    'LAMMPSTask', 'TaskState', 'LAMMPSRunResult', 'LAMMPSContractError',
+    'prepare_harmonic_beads', 'parse_outputs',
+])
