@@ -138,20 +138,62 @@ def test_file_probe_requires_exact_target_environment_and_caller():
     ''')
 
 
-@pytest.mark.parametrize('old_executable', [False, True])
-def test_windows_ver_probe_is_exact_once_only(old_executable):
+@pytest.mark.parametrize('separator', ['/', chr(92)])
+@pytest.mark.parametrize('version,old_executable', [('3.9.13', True), ('3.10.11', False), ('3.11.9', False)])
+def test_windows_ver_probe_is_exact_once_per_ancestry(version, old_executable, separator):
     run_python('''
         import os
         import sys
         sys.platform = 'win32'
-        os.environ['SystemRoot'] = 'C:/Windows'
-        os.environ['ComSpec'] = 'C:/Windows/System32/cmd.exe'
+        os.environ['SystemRoot'] = 'C:' + SEPARATOR + 'Windows'
+        os.environ['ComSpec'] = os.environ['SystemRoot'] + SEPARATOR + 'System32' + SEPARATOR + 'cmd.exe'
         probes = install_import_process_audit()
         shell = os.environ['ComSpec']
         argv = shell + ' /c "ver"'
         namespace = {'__name__': 'platform', 'sys': sys}
-        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
-        call = namespace['_syscmd_ver']
+        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)\\ndef win32_ver(args):\\n    return _syscmd_ver(args)\\ndef uname(args):\\n    return win32_ver(args)\\ndef platform(args):\\n    return win32_ver(args)', namespace)
+        valid = (None if OLD_EXECUTABLE else shell, argv, None, None)
+        def refuse(args, call):
+            prior = list(probes)
+            try:
+                call(args)
+            except AssertionError as exc:
+                assert str(exc) == 'unexpected import process: subprocess.Popen'
+            else:
+                raise AssertionError('altered shell probe was permitted')
+            assert probes == prior
+        for wrong in ('_syscmd_ver', 'win32_ver'):
+            refuse(valid, namespace[wrong])
+        refuse(valid, lambda args: sys.audit('subprocess.Popen', *args))
+        for entry in ('uname', 'platform'):
+            call = namespace[entry]
+            for args in [
+                (shell, argv, '.', None),
+                (shell, argv, None, {}),
+                ('C:/other/cmd.exe', argv, None, None),
+                (shell, shell + ' /c "ver & echo changed"', None, None),
+                (shell, shell + ' /c "command /c ver"', None, None),
+                (None, 'cmd.exe /c "ver"', None, None),
+                (shell, [argv], None, None),
+            ]:
+                refuse(args, call)
+            call(valid)
+            refuse(valid, call)
+            refuse((shell if OLD_EXECUTABLE else None, argv, None, None), call)
+        assert probes == [('windows-ver', 'uname'), ('windows-ver', 'platform')]
+    '''.replace('OLD_EXECUTABLE', repr(old_executable)).replace('SEPARATOR', repr(separator)))
+
+
+@pytest.mark.parametrize('version', ['3.9.13', '3.10.11', '3.11.9'])
+def test_windows_lscpu_audit_string_with_no_executable(version):
+    run_python('''
+        import sys
+        sys.platform = 'win32'
+        probes = install_import_process_audit()
+        namespace = {'__name__': 'numpy.testing._private.utils', 'sys': sys}
+        exec('def check_support_sve(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
+        call = namespace['check_support_sve']
+        valid = (None, 'lscpu', None, None)
         def refuse(args, caller=call):
             prior = list(probes)
             try:
@@ -159,25 +201,18 @@ def test_windows_ver_probe_is_exact_once_only(old_executable):
             except AssertionError as exc:
                 assert str(exc) == 'unexpected import process: subprocess.Popen'
             else:
-                raise AssertionError('altered shell probe was permitted')
+                raise AssertionError('altered Windows lscpu probe was permitted')
             assert probes == prior
-        for args in [
-            (shell, argv, '.', None),
-            (shell, argv, None, {}),
-            ('C:/other/cmd.exe', argv, None, None),
-            (shell, shell + ' /c "ver & echo changed"', None, None),
-            (shell, shell + ' /c "command /c ver"', None, None),
-            (None, 'cmd.exe /c "ver"', None, None),
-            (shell, [argv], None, None),
-        ]:
+        for args in [(None, 'lscpu --extra', None, None), (None, ['lscpu'], None, None),
+                     (None, 'lscpu', '.', None), (None, 'lscpu', None, {}),
+                     ('other.exe', 'lscpu', None, None)]:
             refuse(args)
-        valid = (None if OLD_EXECUTABLE else shell, argv, None, None)
         refuse(valid, lambda args: sys.audit('subprocess.Popen', *args))
         call(valid)
-        assert probes == [('windows-ver',)]
+        assert probes == [('lscpu',)]
         refuse(valid)
-        refuse((shell if OLD_EXECUTABLE else None, argv, None, None))
-    '''.replace('OLD_EXECUTABLE', repr(old_executable)))
+        refuse(('lscpu', 'lscpu', None, None))
+    ''')
 
 
 def test_windows_ver_probe_refuses_non_system_comspec():
@@ -189,12 +224,40 @@ def test_windows_ver_probe_refuses_non_system_comspec():
         os.environ['ComSpec'] = 'C:/other/cmd.exe'
         probes = install_import_process_audit()
         namespace = {'__name__': 'platform', 'sys': sys}
-        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)', namespace)
+        exec('def _syscmd_ver(args):\\n    sys.audit("subprocess.Popen", *args)\\ndef win32_ver(args):\\n    return _syscmd_ver(args)\\ndef uname(args):\\n    return win32_ver(args)', namespace)
         try:
-            namespace['_syscmd_ver'](('C:/other/cmd.exe', 'C:/other/cmd.exe /c "ver"', None, None))
+            namespace['uname'](('C:/other/cmd.exe', 'C:/other/cmd.exe /c "ver"', None, None))
         except AssertionError as exc:
             assert str(exc) == 'unexpected import process: subprocess.Popen'
         else:
             raise AssertionError('non-system COMSPEC was permitted')
+        assert probes == []
+    ''')
+
+
+def test_import_process_diagnostics_do_not_disclose_arguments_or_environment():
+    run_python('''
+        import contextlib
+        import io
+        import json
+        import sys
+        probes = install_import_process_audit()
+        output = io.StringIO()
+        with contextlib.redirect_stderr(output):
+            try:
+                sys.audit('subprocess.Popen', '/private/executable',
+                          ['private-argument'], '/private/cwd', {'PRIVATE_SECRET': 'secret-value'})
+            except AssertionError as exc:
+                assert str(exc) == 'unexpected import process: subprocess.Popen'
+            else:
+                raise AssertionError('unexpected process accepted')
+        diagnostic = output.getvalue()
+        assert not any(value in diagnostic for value in
+                       ('/private/', 'private-argument', 'PRIVATE_SECRET', 'secret-value'))
+        record = json.loads(diagnostic.removeprefix('import process audit: '))
+        assert record['reason'] == 'unmatched'
+        assert record['event'] == 'subprocess.Popen'
+        assert record['argv_form'] == 'list'
+        assert record['default_cwd'] is False and record['default_env'] is False
         assert probes == []
     ''')

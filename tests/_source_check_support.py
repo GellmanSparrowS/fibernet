@@ -1,5 +1,6 @@
 """Fresh-child controls for source-only checks; no production imports."""
 import importlib.abc
+import json
 import os
 import ntpath
 from pathlib import Path
@@ -20,7 +21,7 @@ def run_source_check(path, *controls):
 
 
 def install_import_process_audit():
-    """Permit four exact dependency/platform queries, once per caller.
+    """Permit exact dependency/platform queries once per defined call path.
 
     This is an import regression assertion, not a sandbox. NumPy 2.0 probes
     SVE with lscpu. CPython platform uses uname -p, file -b on the resolved
@@ -54,7 +55,12 @@ def install_import_process_audit():
         frame = sys._getframe(1)
         while frame and frame.f_globals.get('__name__') == 'subprocess':
             frame = frame.f_back
-        caller = (frame.f_globals.get('__name__'), frame.f_code.co_name) if frame else None
+        chain = []
+        ancestor = frame
+        while ancestor and len(chain) < 3:
+            chain.append((ancestor.f_globals.get('__name__'), ancestor.f_code.co_name))
+            ancestor = ancestor.f_back
+        caller = chain[0] if chain else None
         allowed = {
             ('uname', '-p'): ('platform', 'from_subprocess'),
             ('lscpu',): ('numpy.testing._private.utils', 'check_support_sve'),
@@ -66,21 +72,36 @@ def install_import_process_audit():
             if (command in allowed and caller == allowed[command]
                     and executable == command[0] and cwd is None and env is None):
                 probe = command
+            elif (sys.platform == 'win32' and argv == 'lscpu'
+                    and executable is None and cwd is None and env is None
+                    and caller == ('numpy.testing._private.utils', 'check_support_sve')):
+                # Windows Popen keeps executable=None for this non-shell string.
+                probe = ('lscpu',)
             elif (sys.platform != 'win32' and command == file_command
                     and caller == ('platform', '_syscmd_file')
                     and executable == 'file' and cwd is None
                     and env == file_environment):
                 probe = file_command
             elif (windows_command is not None and argv == windows_command
-                    and caller == ('platform', '_syscmd_ver')
+                    and len(chain) == 3
+                    and chain[:2] == [('platform', '_syscmd_ver'), ('platform', 'win32_ver')]
+                    and chain[2] in [('platform', 'uname'), ('platform', 'platform')]
                     and executable in (None, windows_executable)
                     and cwd is None and env is None):
-                # Older CPython leaves executable=None; newer versions supply
-                # the same absolute COMSPEC. Both represent this one query.
-                probe = ('windows-ver',)
+                # platform.platform() queries win32_ver both through uname and
+                # directly. Permit each exact ancestry once, not arbitrary repeats.
+                # Older CPython leaves executable=None; newer versions set COMSPEC.
+                probe = ('windows-ver', chain[2][1])
             if probe is not None and probe not in probes:
                 probes.append(probe)
                 return
+        # Diagnostics contain shapes and fixed caller names, never paths or env.
+        diagnostic = {'event': event, 'reason': 'duplicate' if probe in probes else 'unmatched',
+                      'caller_chain': chain}
+        if event == 'subprocess.Popen':
+            diagnostic.update(argv_form=type(argv).__name__, executable_is_none=executable is None,
+                              default_cwd=cwd is None, default_env=env is None)
+        print('import process audit: ' + json.dumps(diagnostic), file=sys.stderr)
         raise AssertionError('unexpected import process: ' + event)
     sys.addaudithook(audit)
     return probes
