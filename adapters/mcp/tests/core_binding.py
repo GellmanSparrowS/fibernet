@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 216
+assert len(manifest) == 217
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -63,6 +63,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                      '__init__.py', 'api.py', 'easy.py', 'viz/__init__.py',
                      'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py')]
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
+    cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))
     for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
@@ -71,7 +72,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                 changed = saved + b'\n# Deliberate test-only core drift.\n'
             else:
                 assert saved.count(material_unit) == 1
-                changed = saved.replace(material_unit, b"'youngs_modulus': 'MPa'")
+                replacement = (b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v0'"
+                               if relative == 'ml/edge_gine.py' else b"'youngs_modulus': 'MPa'")
+                changed = saved.replace(material_unit, replacement)
             target.write_bytes(changed)
             with patch.object(importlib.util, 'find_spec', return_value=SimpleNamespace(origin=str(core / '__init__.py'))):
                 try:
@@ -90,7 +93,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
             records.append({'module': relative,
-                            'case': 'material_feature_unit_drift' if material_unit else 'source_drift',
+                            'case': ('gine_material_profile_drift' if relative == 'ml/edge_gine.py'
+                                     else 'material_feature_unit_drift' if material_unit else 'source_drift'),
                             'exact_hash_boundary_refusal': True,
                             'real_startup_refusal': True})
         finally:
