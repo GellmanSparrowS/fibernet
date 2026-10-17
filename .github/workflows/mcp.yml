@@ -22,8 +22,6 @@ jobs:
       MKL_NUM_THREADS: '1'
       NUMEXPR_NUM_THREADS: '1'
       PYTHONDONTWRITEBYTECODE: '1'
-      MPLCONFIGDIR: ${{ runner.temp }}/mcp-mpl
-      XDG_CACHE_HOME: ${{ runner.temp }}/mcp-cache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,9 +39,14 @@ jobs:
           adapter_wheel=$(find "$RUNNER_TEMP/mcp-wheels" -maxdepth 1 -name 'fibernet_mcp-*.whl')
           python -m pip install "${adapter_wheel}[test]"
       - name: Check installed SDK binding and wheel copyright notice
+        env:
+          MPLCONFIGDIR: ${{ runner.temp }}/mcp-mpl
+          XDG_CACHE_HOME: ${{ runner.temp }}/mcp-cache
         working-directory: ${{ runner.temp }}
         run: timeout --kill-after=15s 45s python "$GITHUB_WORKSPACE/adapters/mcp/tests/distribution.py" --wheels "$RUNNER_TEMP/mcp-wheels"
       - name: Run bounded complete adapter suite
         env:
+          MPLCONFIGDIR: ${{ runner.temp }}/mcp-mpl
+          XDG_CACHE_HOME: ${{ runner.temp }}/mcp-cache
           PYTHONPATH: ${{ github.workspace }}/adapters/mcp/src
         run: timeout --kill-after=15s 315s python adapters/mcp/tests/bounded_suite.py
