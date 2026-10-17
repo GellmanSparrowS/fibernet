@@ -10,6 +10,7 @@ import os
 import stat
 import tempfile
 import warnings
+import sys
 from contextlib import contextmanager
 
 atomic_replace = os.replace
@@ -99,6 +100,75 @@ class PrintSettings:
         return points
 
 
+def _coordinate_layout(dtype):
+    """Qualify stored real coordinates without silently narrowing their values."""
+    dtype = np.dtype(dtype)
+    if dtype.kind in 'iu' and dtype.itemsize in (1, 2, 4, 8):
+        return None
+    if dtype.kind == 'f' and dtype.itemsize in (2, 4, 8):
+        info = np.finfo(dtype)
+        layout = {2: (5, 10, 15), 4: (8, 23, 127), 8: (11, 52, 1023)}[dtype.itemsize]
+        exponent_bits, fraction_bits, bias = layout
+        byteorder = sys.byteorder if dtype.byteorder in ('=', '|') else (
+            'little' if dtype.byteorder == '<' else 'big')
+        # Names such as longdouble do not identify a storage representation.
+        if ((info.bits, info.iexp, info.nmant, info.maxexp, info.minexp) ==
+                (dtype.itemsize * 8, exponent_bits, fraction_bits, bias + 1, 1 - bias)
+                and int.from_bytes(np.array(1, dtype=dtype).tobytes(), byteorder) == bias << fraction_bits
+                and int.from_bytes(np.array(-0., dtype=dtype).tobytes(), byteorder) ==
+                1 << (dtype.itemsize * 8 - 1)):
+            return layout
+    raise ValueError('solid coordinates require integer storage up to 64 bits or '
+                     'qualified IEEE binary16, binary32 or binary64; unsupported dtype: '
+                     + str(dtype))
+
+
+def _first_zero_area_face(vertices, faces):
+    """Return the first exactly collinear face in the stored coordinate values.
+
+    Only nine scalars are decoded per face. Python integer subtraction and cross
+    products avoid floating overflow, underflow and FTZ/DAZ arithmetic. This does
+    not certify the later floating volume calculation or pre-rounded geometry.
+    """
+    dtype = vertices.dtype
+    layout = _coordinate_layout(dtype)
+    width = dtype.itemsize
+    byteorder = sys.byteorder if dtype.byteorder in ('=', '|') else (
+        'little' if dtype.byteorder == '<' else 'big')
+    for row, face in enumerate(faces):
+        raw = vertices[face].tobytes(order='C')
+        if layout is None:
+            coordinates = [int.from_bytes(raw[i:i + width], byteorder, signed=dtype.kind == 'i')
+                           for i in range(0, 9 * width, width)]
+        else:
+            exponent_bits, fraction_bits, bias = layout
+            values = []
+            for i in range(0, 9 * width, width):
+                bits = int.from_bytes(raw[i:i + width], byteorder)
+                exponent = (bits >> fraction_bits) & ((1 << exponent_bits) - 1)
+                coefficient = bits & ((1 << fraction_bits) - 1)
+                if exponent == (1 << exponent_bits) - 1:
+                    raise ValueError('solid vertices must be finite (N, 3) coordinates')
+                if exponent:
+                    coefficient |= 1 << fraction_bits
+                if bits >> (width * 8 - 1):
+                    coefficient = -coefficient
+                values.append((coefficient, (exponent or 1) - bias - fraction_bits))
+            nonzero_exponents = [exponent for coefficient, exponent in values if coefficient]
+            if not nonzero_exponents:
+                return row
+            minimum = min(nonzero_exponents)
+            coordinates = [coefficient << (exponent - minimum) if coefficient else 0
+                           for coefficient, exponent in values]
+        u = [coordinates[i + 3] - coordinates[i] for i in range(3)]
+        v = [coordinates[i + 6] - coordinates[i] for i in range(3)]
+        if (u[1] * v[2] == u[2] * v[1] and
+                u[2] * v[0] == u[0] * v[2] and
+                u[0] * v[1] == u[1] * v[0]):
+            return row
+    return None
+
+
 @dataclass
 class FiberSolid:
     vertices: np.ndarray
@@ -108,8 +178,15 @@ class FiberSolid:
     settings: PrintSettings
 
     def validate(self):
+        """Validate stored triangles, closure and the existing signed-volume rule.
+
+        Coordinates support real integer storage through 64 bits and qualified
+        IEEE binary16/32/64. Wider or non-real dtypes are explicitly refused.
+        Exactly zero-area triangles are rejected without a size tolerance.
+        """
         vertices = np.asarray(self.vertices)
         faces = np.asarray(self.faces)
+        _coordinate_layout(vertices.dtype)
         if (vertices.ndim != 2 or vertices.shape[1] != 3 or
                 not len(vertices) or not np.isfinite(vertices).all()):
             raise ValueError('solid vertices must be finite (N, 3) coordinates')
@@ -119,6 +196,9 @@ class FiberSolid:
             raise ValueError('solid faces must contain valid integer vertex indices')
         if np.any(np.diff(np.sort(faces, axis=1), axis=1) == 0):
             raise ValueError('solid faces must contain three distinct vertices')
+        zero_area = _first_zero_area_face(vertices, faces)
+        if zero_area is not None:
+            raise ValueError(f'solid face {zero_area} has exactly zero area')
         self.vertices, self.faces = vertices, faces
         edges = np.sort(np.concatenate([self.faces[:, [0,1]], self.faces[:, [1,2]], self.faces[:, [2,0]]]), axis=1)
         _, count = np.unique(edges, axis=0, return_counts=True)
