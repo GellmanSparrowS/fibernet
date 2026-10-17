@@ -1,0 +1,49 @@
+name: MCP adapter
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'adapters/mcp/**'
+      - 'fibernet/**'
+      - 'pyproject.toml'
+      - '.github/workflows/mcp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  linux-stdio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      OPENBLAS_NUM_THREADS: '1'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      MPLCONFIGDIR: ${{ runner.temp }}/mcp-mpl
+      XDG_CACHE_HOME: ${{ runner.temp }}/mcp-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build separate core and adapter wheels
+        run: |
+          python -m pip install 'setuptools>=61' wheel
+          python -m pip wheel --no-deps --no-build-isolation --wheel-dir "$RUNNER_TEMP/mcp-wheels" . ./adapters/mcp
+      - name: Install the exact wheels with adapter test dependencies
+        run: |
+          python -m pip install "$RUNNER_TEMP"/mcp-wheels/fibernet-*.whl
+          adapter_wheel=$(find "$RUNNER_TEMP/mcp-wheels" -maxdepth 1 -name 'fibernet_mcp-*.whl')
+          python -m pip install "${adapter_wheel}[test]"
+      - name: Check installed SDK binding and wheel copyright notice
+        working-directory: ${{ runner.temp }}
+        run: timeout --kill-after=15s 45s python "$GITHUB_WORKSPACE/adapters/mcp/tests/distribution.py" --wheels "$RUNNER_TEMP/mcp-wheels"
+      - name: Run bounded complete adapter suite
+        env:
+          PYTHONPATH: ${{ github.workspace }}/adapters/mcp/src
+        run: timeout --kill-after=15s 315s python adapters/mcp/tests/bounded_suite.py
