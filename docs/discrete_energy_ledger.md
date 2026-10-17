@@ -80,6 +80,14 @@ repair or certify existing physical K/U evaluation for subnormal trajectories.
 
 ## Saving, provenance and cost
 
+For a ledger-bearing result, the save writer derives decimal numeric tokens from
+stored binary64 bits, preserving subnormal ledger bounds under flushing arithmetic.
+Nonfinite values anywhere in that saved document are rejected before the owned
+temporary replaces its destination. Results without a ledger retain the existing
+JSON writer. This guarantee concerns the ledger-bearing save writer and exact
+ledger reader, not earlier coercions, arbitrary external JSON calls, float-valued
+dictionary keys or restoration of the caller's floating-point environment.
+
 `result.save(path, detailed=True)` includes cumulative rows on exactly the saved
 state step/time axis. Summary output includes final channels, initial/final K/U/H,
 provenance, interpretation and witness, without inventing intermediate samples.

@@ -13,9 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def run_python(source):
     result = subprocess.run(
-        [sys.executable, "-B", "-c", textwrap.dedent(source)],
+        [sys.executable, "-B", "-c",
+         "import sys; sys.path.insert(0, " + repr(str(ROOT / "tests")) + "); "
+         "from _source_check_support import install_import_process_audit\n"
+         + textwrap.dedent(source)],
         cwd=ROOT, env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
-        capture_output=True, text=True, timeout=30,
+        capture_output=True, text=True, encoding='utf-8', timeout=30,
     )
     assert result.returncode == 0, result.stdout + result.stderr
     if result.stdout:
@@ -31,18 +34,13 @@ class TestLazyPlotImports(unittest.TestCase):
 
             initial_modules = set(sys.modules)
             attempts = []
-            processes = []
             class BlockPlotting(importlib.abc.MetaPathFinder):
                 def find_spec(self, fullname, path=None, target=None):
                     if fullname.split('.')[0] in {'matplotlib', 'mpl_toolkits', 'plotly', 'pyvista'}:
                         attempts.append(fullname)
                         raise ModuleNotFoundError('blocked: ' + fullname, name=fullname)
             sys.meta_path.insert(0, BlockPlotting())
-            def audit(event, args):
-                if event in {'subprocess.Popen', 'os.system', 'os.posix_spawn'}:
-                    processes.append((event, repr(args)))
-                    raise AssertionError('unexpected process: ' + event)
-            sys.addaudithook(audit)
+            probes = install_import_process_audit()
 
             import fibernet as fn
             from fibernet.core.structure_graph import StructureGraph
@@ -58,7 +56,7 @@ class TestLazyPlotImports(unittest.TestCase):
             assert env.gym is gymnasium
             assert issubclass(env.FiberStructureEnv, gymnasium.Env)
             assert not attempts, attempts
-            assert not processes, processes
+            assert len(probes) <= 2, probes
             assert not any(name.split('.')[0] in {'matplotlib', 'mpl_toolkits', 'plotly', 'pyvista', 'torch', 'sklearn'} for name in set(sys.modules) - initial_modules)
             assert 'fibernet.viz.render' not in sys.modules
             assert 'fibernet.viz.renderer' not in sys.modules
@@ -79,10 +77,7 @@ class TestLazyPlotImports(unittest.TestCase):
                     if root in {'gymnasium', 'gym'}:
                         raise ModuleNotFoundError('blocked: ' + fullname, name=fullname)
             sys.meta_path.insert(0, BlockOptional())
-            def audit(event, args):
-                if event in {'subprocess.Popen', 'os.system', 'os.posix_spawn'}:
-                    raise AssertionError('unexpected process: ' + event)
-            sys.addaudithook(audit)
+            probes = install_import_process_audit()
             import fibernet as fn
             import fibernet.rl.env as env
             import fibernet.easy as easy

@@ -26,7 +26,7 @@ from .safety import (ContractError, MAX_BYTES, canonical, graph_preflight,
                      open_directory, read_at, read_file, sha, strict_json, write_at, verify_core)
 
 VERSION = 'fibernet.mcp/1'
-TREE = '03241ba2c75fb1da3cef17fea7d0058bca132bc4'
+TREE = '4bed6f1e58b31f183753f03a9766a2694ad5003d'
 MAX_SESSION = 48 * 1024 * 1024
 ID = re.compile(r'^[a-f0-9]{32}$')
 

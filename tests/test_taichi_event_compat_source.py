@@ -15,6 +15,8 @@ import pickle
 import sys
 import types
 import unittest
+import weakref
+from _source_check_support import run_source_check
 from unittest.mock import patch
 import numpy as np
 
@@ -26,7 +28,7 @@ WANTED={'_native_axial_event_dataclass','NativeAxialObserverEvent','_emit_axial_
  '_validate_dynamics_state','_validate_result_state','_dynamics_state_summary','SimResult'}
 
 def isolated(legacy=False):
-    tree=ast.parse(SOURCE.read_text())
+    tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
     selected=[n for n in tree.body if getattr(n,'name',None) in WANTED]
     module=types.ModuleType('_taichi_event_compat_legacy' if legacy else '_taichi_event_compat_current')
     sys.modules[module.__name__]=module
@@ -65,7 +67,8 @@ class EventCompatibility(unittest.TestCase):
             self.assertEqual(tuple(c.__dataclass_fields__),expected)
             self.assertEqual(tuple(c.__slots__),expected)
             self.assertFalse(hasattr(e,'__dict__'))
-            self.assertFalse(hasattr(e,'__weakref__'))
+            with self.assertRaises(TypeError):
+                weakref.ref(e)
             signatures.append(str(inspect.signature(c)))
         self.assertEqual(signatures[0],signatures[1])
 
@@ -118,6 +121,9 @@ class EventCompatibility(unittest.TestCase):
             self.assertIs(caught.exception,failure)
 
     def test_native_imports_absent(self):
+        if not getattr(sys, '_fibernet_source_check_child', False):
+            run_source_check(__file__)
+            return
         self.assertNotIn('taichi',sys.modules)
         self.assertFalse(any(n=='fibernet' or n.startswith('fibernet.') for n in sys.modules))
 
@@ -171,7 +177,7 @@ class LazyFacade(unittest.TestCase):
     def test_lazy_name_resolution_identity_and_failure(self):
         import importlib
         for relative,name in [('fibernet/__init__.py','render_graph'),('fibernet/easy.py','render_deformation'),('fibernet/viz/__init__.py','render_network_2d')]:
-            tree=ast.parse((ROOT/relative).read_text());selected=[]
+            tree=ast.parse((ROOT/relative).read_text(encoding='utf-8'));selected=[]
             for n in tree.body:
                 if getattr(n,'name',None) in {'__getattr__','__dir__'}:selected.append(n)
                 if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_RENDER_EXPORTS','_LAZY_EXPORTS'} for t in n.targets):selected.append(n)
@@ -202,6 +208,22 @@ def ast_sha(value):
     import hashlib
     return hashlib.sha256(json.dumps(canonical_ast(value),sort_keys=True,separators=(',',':')).encode()).hexdigest()
 
+def restore_historical_save(result_node):
+    """Seal the reviewed writer change before checking the historical remainder."""
+    import hashlib
+    fixture=json.loads((ROOT/'tests/fixtures/taichi_public_source_contract.json').read_text(encoding='utf-8'))
+    repair=fixture['ledger_writer_repair']
+    node=copy.deepcopy(result_node)
+    save=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+    assert ast_sha(save)==repair['simresult_save_ast_sha256']
+    baseline=(ROOT/'tests/fixtures/observer_prior71_accelerated.txt').read_bytes()
+    assert hashlib.sha256(baseline).hexdigest()==repair['historical_engine_fixture_sha256']
+    old_result=next(n for n in ast.parse(baseline.decode('utf-8')).body if getattr(n,'name',None)=='SimResult')
+    old_save=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+    node.body[node.body.index(save)]=old_save
+    return node
+
+
 def remaining_module(text,ignored_functions=(),ignored_assignments=(),ignored_imports=()):
     tree=ast.parse(text);tree.body=[n for n in tree.body if not (
         isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in ignored_functions or
@@ -211,30 +233,51 @@ def remaining_module(text,ignored_functions=(),ignored_assignments=(),ignored_im
     return tree
 
 class SourceShape(unittest.TestCase):
-    def fixture(self):return json.loads((ROOT/'tests/fixtures/taichi_public_source_contract.json').read_text())
+    def fixture(self):return json.loads((ROOT/'tests/fixtures/taichi_public_source_contract.json').read_text(encoding='utf-8'))
     def test_engine_normalized_equals_accepted_private_source(self):
-        tree=ast.parse(SOURCE.read_text())
+        tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
         tree.body=[n for n in tree.body if not (getattr(n,'name',None)=='_native_axial_event_dataclass' or
             isinstance(n,ast.Import) and len(n.names)==1 and n.names[0].name=='sys')]
         event=next(n for n in tree.body if getattr(n,'name',None)=='NativeAxialObserverEvent')
         event.decorator_list=ast.parse('@dataclass(frozen=True, slots=True)\nclass E: pass').body[0].decorator_list
+        result=next(n for n in tree.body if getattr(n,'name',None)=='SimResult')
+        tree.body[tree.body.index(result)]=restore_historical_save(result)
         self.assertEqual(ast_sha(tree),self.fixture()['private_engine_normalized_ast_sha256'])
     def test_public_modules_only_allowlisted_ast_changes(self):
         for path,record in self.fixture()['public_remaining_module'].items():
-            tree=remaining_module((ROOT/path).read_text(),**record['ignore'])
+            tree=remaining_module((ROOT/path).read_text(encoding='utf-8'),**record['ignore'])
             self.assertEqual(ast_sha(tree),record['sha256'],path)
     def test_lazy_easy_all_extension(self):
-        tree=ast.parse((ROOT/'fibernet/easy.py').read_text())
+        tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
         extra=[n for n in tree.body if isinstance(n,ast.AugAssign) and isinstance(n.target,ast.Name) and n.target.id=='__all__']
         self.assertEqual(len(extra),1)
         self.assertEqual(ast.literal_eval(extra[0].value),['render_graph','render_deformation'])
     def test_exact_energy_helper_and_lazy_viz(self):
         import hashlib
-        for path,expected in self.fixture()['exact_private_files'].items():
-            self.assertEqual(hashlib.sha256((ROOT/path).read_bytes()).hexdigest(),expected,path)
+        fixture=self.fixture();repair=fixture['ledger_writer_repair']
+        for path,expected in fixture['exact_private_files'].items():
+            raw=(ROOT/path).read_bytes()
+            if path!='fibernet/sim/_energy_accounting.py':
+                self.assertEqual(hashlib.sha256(raw).hexdigest(),expected,path)
+                continue
+            self.assertEqual(expected,repair['historical_energy_accounting_sha256'])
+            self.assertEqual(hashlib.sha256(raw).hexdigest(),repair['energy_accounting_sha256'])
+            tree=ast.parse(raw.decode('utf-8'))
+            # Only these separately sealed writer helpers/imports are new.
+            for name in ('_binary64_json_number','dump_binary64_json'):
+                helper=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name==name)
+                self.assertEqual(ast_sha(helper),repair['writer_helper_ast_sha256'][name])
+            tree.body=[n for n in tree.body if not (
+                isinstance(n,ast.FunctionDef) and n.name in {'_binary64_json_number','dump_binary64_json'} or
+                isinstance(n,ast.Import) and ast.dump(n)==ast.dump(ast.parse('import json').body[0]))]
+            decimal=next(n for n in tree.body if isinstance(n,ast.ImportFrom) and n.module=='decimal')
+            self.assertEqual(ast.dump(decimal),ast.dump(ast.parse(
+                'from decimal import Context, Decimal, InvalidOperation, ROUND_HALF_EVEN').body[0]))
+            tree.body[tree.body.index(decimal)]=ast.parse('from decimal import Decimal, InvalidOperation').body[0]
+            self.assertEqual(ast_sha(tree),repair['historical_energy_accounting_ast_sha256'])
     def test_python39_syntax(self):
         # This does not replace running the 3.9 decorator/import path in 3.9 CI.
         for path in self.fixture()['runtime_paths']:
-            ast.parse((ROOT/path).read_text(),filename=path,feature_version=(3,9))
+            ast.parse((ROOT/path).read_text(encoding='utf-8'),filename=path,feature_version=(3,9))
 
 if __name__=='__main__':unittest.main()

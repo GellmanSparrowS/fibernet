@@ -496,7 +496,11 @@ class SimResult:
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
                 fd = None  # The stream now owns the descriptor, including on error.
-                json.dump(data, f, indent=2, default=convert)
+                if self.algorithmic_energy_ledger is not None:
+                    from ._energy_accounting import dump_binary64_json
+                    dump_binary64_json(data, f, default=convert)
+                else:
+                    json.dump(data, f, indent=2, default=convert)
             os.chmod(temporary, mode)
             temporary.replace(destination)
         finally:

@@ -27,7 +27,7 @@ class FakeBool:
 
 
 def extract(relative, name, namespace, base=False):
-    tree = ast.parse((BASE_WRAPPERS if base else ROOT / relative).read_text())
+    tree = ast.parse((BASE_WRAPPERS if base else ROOT / relative).read_text(encoding='utf-8'))
     fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == name)
     module = ast.Module(body=[ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0), fn], type_ignores=[])
     ast.fix_missing_locations(module)

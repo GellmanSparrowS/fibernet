@@ -4,10 +4,11 @@ The closure certifies scalar accounting only. It does not certify the force law,
 continuous-time work, or the numerical accuracy of endpoint energy evaluation.
 """
 import copy
+import json
 import math
 import struct
 from fractions import Fraction
-from decimal import Decimal, InvalidOperation
+from decimal import Context, Decimal, InvalidOperation, ROUND_HALF_EVEN
 from numbers import Real
 
 SCHEMA = 'native_axial_discrete_ledger/1'
@@ -92,6 +93,105 @@ def parse_binary64(value):
     if not -324 <= decimal.adjusted() <= 308:
         raise ValueError('ledger JSON number is outside finite nonzero binary64 range')
     return nearest(Fraction(decimal))
+
+
+def _binary64_json_number(value):
+    """A finite JSON number that round-trips binary64 without FP arithmetic.
+
+    Decode the payload before any comparison or decimal conversion. Seventeen
+    significant decimal digits suffice for nearest/ties-even binary64 recovery;
+    Decimal's integer arithmetic is independent of native FTZ/DAZ settings.
+    """
+    bits = _bits(value)
+    sign, exponent, significand = bits >> 63, (bits >> 52) & 2047, bits & ((1 << 52)-1)
+    if exponent == 2047:
+        raise ValueError('ledger JSON numbers must be finite')
+    if not exponent and not significand:
+        return '-0.0' if sign else '0.0'
+    if exponent:
+        significand += 1 << 52
+        power = exponent-1075
+    else:
+        power = -1074
+    coefficient = significand << power if power >= 0 else significand * 5**(-power)
+    if sign:
+        coefficient = -coefficient
+    context = Context(prec=17, rounding=ROUND_HALF_EVEN,
+                      Emin=-999999, Emax=999999, clamp=0)
+    decimal = Decimal(coefficient).scaleb(min(power, 0), context=context)
+    return format(decimal, 'E')
+
+
+def dump_binary64_json(value, stream, default=None):
+    """Write the ledger-bearing result as finite JSON, preserving float bits.
+
+    This narrow writer retains the save path's two-space indentation, standard
+    string escaping, insertion order, basic JSON key types and default converter.
+    It does not alter the caller's floating-point or Decimal context. Cycles and
+    nonfinite numbers fail before the owned temporary can replace its target.
+    """
+    active = set()
+
+    def key_text(key):
+        if isinstance(key, str):
+            return key
+        if key is None:
+            return 'null'
+        if key is True:
+            return 'true'
+        if key is False:
+            return 'false'
+        if isinstance(key, int):
+            return int.__repr__(key)
+        if isinstance(key, float):
+            if (_bits(key) >> 52) & 2047 == 2047:
+                raise ValueError('ledger JSON keys must be finite')
+            # Keys are JSON strings, not numeric tokens. Retain the historical
+            # stdlib key spelling; ledger schema keys themselves are strings.
+            return float.__repr__(key)
+        raise TypeError('JSON object keys must be str, int, float, bool or None')
+
+    def emit(item, depth):
+        if item is None:
+            yield 'null'
+        elif item is True:
+            yield 'true'
+        elif item is False:
+            yield 'false'
+        elif isinstance(item, str):
+            yield json.dumps(item)
+        elif isinstance(item, int):
+            yield int.__repr__(item)
+        elif isinstance(item, float):
+            yield _binary64_json_number(item)
+        else:
+            identity = id(item)
+            if identity in active:
+                raise ValueError('Circular reference detected')
+            active.add(identity)
+            try:
+                if isinstance(item, (list, tuple, dict)):
+                    mapping = isinstance(item, dict)
+                    opening, closing = ('{', '}') if mapping else ('[', ']')
+                    yield opening
+                    if item:
+                        for index, entry in enumerate(item.items() if mapping else item):
+                            yield (',\n' if index else '\n') + '  '*(depth+1)
+                            if mapping:
+                                key, entry = entry
+                                yield json.dumps(key_text(key)) + ': '
+                            yield from emit(entry, depth+1)
+                        yield '\n' + '  '*depth
+                    yield closing
+                elif default is not None:
+                    yield from emit(default(item), depth)
+                else:
+                    raise TypeError(f'Cannot serialize {type(item).__name__}')
+            finally:
+                active.remove(identity)
+
+    for chunk in emit(value, 0):
+        stream.write(chunk)
 
 
 def upward(value):

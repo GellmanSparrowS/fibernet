@@ -143,9 +143,21 @@ class TestNativeMassState:
                    dict(external_force=np.ones((2,2))),dict(external_force=np.full((2,3),np.nan))]:
             with pytest.raises(ValueError):run(engine,g,nodal_masses=[1,2],**kw)
         assert set(TaichiEngine._field_cache)==before
-        # Positive subnormal masses do not require an overflowing reciprocal.
-        r=run(engine,g,nodal_masses=[np.nextafter(0.,1.),1.],num_steps=1,record_state=True)
-        assert np.isfinite(r.dynamics_state['positions']).all()
+        # Native initialization may enable subnormal flushing. Preserve the
+        # stored binary64 witness independently of nextafter/arithmetic.
+        normal=run(engine,g,nodal_masses=[1.,1.],num_steps=1,record_state=True)
+        assert np.isfinite(normal.dynamics_state['positions']).all()
+        masses=np.array([1,0x3ff0000000000000],dtype=np.uint64).view(np.float64)
+        assert int(masses.view(np.uint64)[0])==1
+        before=set(TaichiEngine._field_cache)
+        if not bool((masses>0).all()):
+            with pytest.raises(ValueError,match='^nodal_masses must be strictly positive$'):
+                run(engine,g,nodal_masses=masses,num_steps=1,record_state=True)
+            assert set(TaichiEngine._field_cache)==before
+        else:
+            # Supported gradual arithmetic retains the original success case.
+            r=run(engine,g,nodal_masses=masses,num_steps=1,record_state=True)
+            assert np.isfinite(r.dynamics_state['positions']).all()
 
     def test_numpy_200_node_recurrence(self,engine):
         g=graph(200);x=np.array([n.position for n in g.nodes.values()]);v=np.zeros_like(x)
