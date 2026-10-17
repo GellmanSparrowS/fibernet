@@ -17,7 +17,7 @@ model = FiberGNN(node_dim=4, hidden=8, n_layers=1, n_outputs=1,
 result = train_gnn(model, inputs, scalar_targets,
                    split='group', groups=source_groups,
                    val_split=0.25, epochs=20, batch_size=32,
-                   early_stopping=5)
+                   early_stopping=5, restore_best=True)
 record = result['training_data']
 save_model_bundle(model, 'own-model.pt',
                   feature_names=record['feature_names'], target_names=['property'],
@@ -38,8 +38,9 @@ graph IDs must be unique within the training collection. Separately constructed
 GraphBatches may reuse graph IDs: choose collection-unique IDs when creating those
 snapshots. Graph ID uniqueness does not prove independent scientific origin.
 
-Unmarked legacy dictionaries with `split=None, groups=None` keep the historical
-fixed-seed row-permutation algorithm, numerical behavior and two-key return value.
+Unmarked legacy dictionaries with `split=None, groups=None, restore_best=False`
+keep the historical fixed-seed row-permutation algorithm, numerical behavior and
+two-key return value. `restore_best` defaults to `False` and must be a bool.
 They may opt into group mode with explicit groups, but the trainer records their
 feature semantics as `caller-legacy` rather than guessing names. Providing groups
 without explicit group mode is an error.
@@ -62,11 +63,57 @@ without gradients, but their losses drive early stopping. They therefore influen
 model selection and are not an untouched final test set. Evaluate final-test source
 groups only after choosing the model/configuration, outside this training call.
 
-`best_val_loss` is the minimum observed validation loss. The supplied model remains
-the last trained state, not a restored best checkpoint. The metadata explicitly
-records `best_state_restored=False`. With early_stopping=0 and a fixed full-run
-seed, changing validation labels does not affect trained parameters; validation
-history still changes. That invariance is not promised when early stopping is on.
+By default, `best_val_loss` is the minimum observed validation loss and the supplied
+model remains at the last executed epoch. Group metadata records
+`best_state_restored=False`. With `restore_best=False`, `early_stopping=0` and a
+fixed full-run seed, changing validation labels does not affect trained parameters;
+validation history still changes. That invariance is not promised with early
+stopping or best-state restoration enabled.
+
+### Opt-in best-state restoration
+
+Pass `restore_best=True` to restore an independently deep-copied `model.state_dict()`
+from this invocation's first minimum finite, nonnegative validation MSE. This uses
+the same snapshot mechanism as the existing generic `train_model`, including model
+parameters, buffers, non-tensor extra state and state-dictionary metadata. Selection
+uses only validation rows already supplied to the trainer; no final-test data should
+be included in the call. Tied losses retain the earliest epoch.
+
+The opt-in result adds `model_selection` with schema
+`fibernet.gnn_model_selection.v1`. Its `best_epoch` is zero-based, `best_val_loss`
+is the selected usable MSE, and `best_state_restored` reports whether loading actually
+succeeded. `model_state_epoch` identifies the selected epoch after restoration or
+the last executed epoch otherwise; it is null when no epoch ran. The record also
+names the criterion, tie rule, eligible/invalid validation-epoch counts and actual
+epochs run. Group mode copies this record into `training_data.model_selection` and
+updates `training_data.training.best_state_restored`, so the existing bundle example
+above keeps the selection provenance.
+
+Without a usable validation observation, no snapshot is restored: `best_epoch` and
+the selection record's `best_val_loss` are null, `best_state_restored` is false, and
+`no_restore_reason` is `no_epochs`, `no_validation`, or
+`no_finite_nonnegative_validation_loss` (in that precedence order). A successful
+restoration has a null reason. NaN, infinity and negative MSE observations are not
+eligible. Group mode still rejects zero epochs and absent validation during its
+existing preflight; legacy row mode still permits zero epochs. No old snapshot is
+reused across calls. Snapshot/load errors propagate; there is no promised rollback
+after an arbitrary runtime failure or partially completed load.
+
+For compatibility, the existing history, top-level `best_val_loss` and early-stopping
+counter are unchanged even in opt-in mode. In legacy row mode without validation,
+each executed epoch still records synthetic validation loss 0.0 and the old patience
+logic can stop the loop. Invalid losses can also affect that old bookkeeping. Thus
+the opt-in `model_selection` record, rather than those legacy fields, is the authority
+for which usable validation observation selected the restored model. This option does
+not repair invalid data or establish numerical/scientific quality.
+
+Restoration is model-state-only. It does not restore optimizer moments, scheduler,
+RNG, gradients or train/eval mode, and does not create a resumable training checkpoint.
+The trainer's existing final mode is unchanged; call `model.eval()` explicitly for
+inference. Continuing optimization requires a separately designed consistent
+checkpoint/restart workflow. Use the existing model bundle for trusted same-runtime
+inference, and retain its identity separately; this selection record is not a model
+digest or durable cross-version artifact format.
 
 ## Supported inputs and preflight
 
@@ -113,7 +160,13 @@ not automatic. Load only your own trusted same-runtime bundles; no cross-version
 portability is established. Existing torch.save is non-atomic and does not promise
 to preserve an old file on failure. Bundle format and trust behavior are unchanged.
 
-Synthetic tests verify source-group isolation, every-epoch train/eval states,
+Existing synthetic tests verify source-group isolation, every-epoch train/eval states,
 train-target alignment, fixed-epoch validation-label perturbation invariance and
 same-runtime checkpoint predictions. They establish integration behavior, not
 predictive superiority or physical validation.
+
+The best-state contract also has stdlib-only tests that execute the actual trainer
+function AST with deterministic protocol doubles. They check non-monotonic losses,
+independent state copies, ties, no/invalid validation, zero epochs, errors and default
+return compatibility without importing a learning backend or fitting a model. They
+do not establish Torch integration or predictive accuracy.

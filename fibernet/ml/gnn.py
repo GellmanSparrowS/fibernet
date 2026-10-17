@@ -34,6 +34,7 @@ Examples
 
 from __future__ import annotations
 
+import copy
 import math
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -547,6 +548,7 @@ if HAS_TORCH:
         verbose: bool = True,
         split=None,
         groups=None,
+        restore_best: bool = False,
     ) -> Dict[str, Any]:
         """Train a GNN model on graph data.
 
@@ -576,13 +578,25 @@ if HAS_TORCH:
         groups : list or tuple of str, optional
             Caller-supplied source labels required for group mode. Validation
             groups guide early stopping; they are not a final test set.
+        restore_best : bool, optional
+            Restore an independent copy of the model state at the first minimum
+            finite, nonnegative validation MSE from this call. Default False
+            preserves the existing final-epoch model and return shape. True adds
+            model_selection metadata; no usable validation means no restoration.
+            Optimizer, scheduler, RNG and training/evaluation mode are not restored.
 
         Returns
         -------
         dict
-            Training history.
+            Training history and legacy best_val_loss; group mode also includes
+            training_data. With restore_best=True, model_selection describes the
+            actual state selection/restoration. Legacy loss bookkeeping and early
+            stopping are unchanged, including synthetic zero loss without validation.
         """
         from fibernet.ml.training import TrainingHistory
+
+        if type(restore_best) is not bool:
+            raise ValueError("restore_best must be a bool")
 
         tagged = any(isinstance(g, dict) and 'input_schema' in g for g in graphs)
         training_data = None
@@ -610,6 +624,17 @@ if HAS_TORCH:
         history = TrainingHistory()
         patience_counter = 0
         best_val_loss = float("inf")
+        best_state = None
+        if restore_best:
+            selection = {
+                'schema': 'fibernet.gnn_model_selection.v1',
+                'criterion': 'minimum_finite_nonnegative_validation_mse',
+                'validation_role': 'validation', 'epoch_index_base': 0,
+                'tie_break': 'first', 'best_epoch': None, 'best_val_loss': None,
+                'restore_best_requested': True, 'best_state_restored': False,
+                'eligible_validation_epochs': 0, 'invalid_validation_epochs': 0,
+                'optimizer_state_restored': False, 'scheduler_state_restored': False,
+            }
 
         for epoch in range(epochs):
             # Train
@@ -643,6 +668,21 @@ if HAS_TORCH:
             history.update(epoch, train_loss, val_loss,
                           lr=optimizer.param_groups[0]["lr"])
 
+            # This opt-in selection is independent of legacy loss bookkeeping:
+            # an absent validation set or an invalid MSE cannot select a state.
+            if restore_best and val_graphs:
+                if math.isfinite(val_loss) and val_loss >= 0:
+                    selection['eligible_validation_epochs'] += 1
+                    if (selection['best_val_loss'] is None
+                            or val_loss < selection['best_val_loss']):
+                        selection['best_val_loss'] = val_loss
+                        selection['best_epoch'] = epoch
+                        # Same snapshot mechanism as the existing train_model.
+                        # Includes buffers, non-tensor extra state and metadata.
+                        best_state = copy.deepcopy(model.state_dict())
+                else:
+                    selection['invalid_validation_epochs'] += 1
+
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 patience_counter = 0
@@ -657,11 +697,32 @@ if HAS_TORCH:
             if verbose and (epoch % max(epochs // 10, 1) == 0 or epoch == epochs - 1):
                 print(f"Epoch {epoch:3d} | train_loss={train_loss:.4f} | val_loss={val_loss:.4f}")
 
+        if restore_best:
+            epochs_run = len(history.train_losses)
+            selection['epochs_run'] = epochs_run
+            selection['model_state_epoch'] = epochs_run - 1 if epochs_run else None
+            if best_state is not None:
+                model.load_state_dict(best_state)
+                selection['best_state_restored'] = True
+                selection['model_state_epoch'] = selection['best_epoch']
+                selection['no_restore_reason'] = None
+            else:
+                selection['no_restore_reason'] = (
+                    'no_epochs' if not epochs_run else
+                    'no_validation' if not val_graphs else
+                    'no_finite_nonnegative_validation_loss'
+                )
+
+        result = {"history": history, "best_val_loss": best_val_loss}
+        if restore_best:
+            result['model_selection'] = selection
         if training_data is not None:
             training_data['training']['epochs_run'] = len(history.train_losses)
-            return {"history": history, "best_val_loss": best_val_loss,
-                    "training_data": training_data}
-        return {"history": history, "best_val_loss": best_val_loss}
+            if restore_best:
+                training_data['training']['best_state_restored'] = selection['best_state_restored']
+                training_data['model_selection'] = copy.deepcopy(selection)
+            result['training_data'] = training_data
+        return result
 
 
 else:
