@@ -1,0 +1,60 @@
+{
+  "source_only": true,
+  "public_base_tree": "5e483d9669897276c12207103a99f141a2987071",
+  "private_engine_sha256": "2eda3cf0d906ab515d6f07a2d2e0dd49c29ff93e1a6acc4ebe7bc0d2280677c3",
+  "private_engine_normalized_ast_sha256": "78c94e217d0269c9a156d8c0906fa52cfcd727aded837b0dc4044a83fe83f520",
+  "public_remaining_module": {
+    "fibernet/easy.py": {
+      "ignore": {
+        "ignored_functions": [
+          "show",
+          "simulate",
+          "__getattr__",
+          "__dir__"
+        ],
+        "ignored_assignments": [
+          "__all__"
+        ],
+        "ignored_imports": [
+          "fibernet.viz.render"
+        ]
+      },
+      "sha256": "025cd126ab1e67dc5d330884df5556e726a70e6c520d6001ab4e0d41e7ab4fe2"
+    },
+    "fibernet/api.py": {
+      "ignore": {
+        "ignored_functions": [
+          "simulate_dynamics"
+        ]
+      },
+      "sha256": "122d77c526fd4c93f7ecefda4aedcf4203b554ff8bffae94bf88b0fa7264da1d"
+    },
+    "fibernet/__init__.py": {
+      "ignore": {
+        "ignored_functions": [
+          "__getattr__",
+          "__dir__"
+        ],
+        "ignored_assignments": [
+          "_RENDER_EXPORTS"
+        ],
+        "ignored_imports": [
+          "fibernet.viz.render"
+        ]
+      },
+      "sha256": "1ec8c69efff5c42c493df54d91f370580d1b2ccea66475777b33547c0fafcbf3"
+    }
+  },
+  "exact_private_files": {
+    "fibernet/viz/__init__.py": "c64befa58239e6a8f9e90da2751c9879721d9d56f04e2816d4a86e6be4dc9098",
+    "fibernet/sim/_energy_accounting.py": "41c3cb7c5ec09af8fec10ea9e4db5dd29787b089622e58e4cf89cbeebb2b5d6a"
+  },
+  "runtime_paths": [
+    "fibernet/__init__.py",
+    "fibernet/easy.py",
+    "fibernet/api.py",
+    "fibernet/viz/__init__.py",
+    "fibernet/sim/accelerated.py",
+    "fibernet/sim/_energy_accounting.py"
+  ]
+}

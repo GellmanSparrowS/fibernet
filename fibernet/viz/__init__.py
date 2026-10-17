@@ -22,17 +22,9 @@ from .visualization import (
     visualize_3d_pyvista,
     plot_network_2d,
     plot_network_3d,
-    render_network_3d,
     visualize_damage_evolution,
     visualize_deformation,
     save_figure,
-)
-
-# Graph plotting (NetworkX)
-from .graph_plot import (
-    plot_graph,
-    plot_graph_comparison,
-    plot_structure_stats,
 )
 
 __all__ = [
@@ -83,16 +75,20 @@ try:
 except ImportError:
     pass
 
-# Publication-quality renderer
-from .renderer import (
-    render_network_2d,
-    render_network_3d,
-    render_comparison_grid,
-    render_parametric_study,
-    BG_COLOR,
-    FIBER_COLOR_2D,
-    FIBER_COLOR_3D,
-)
+# Plotting backends are loaded only on explicit access to these exports.
+# render_network_3d historically resolves to renderer, not visualization.
+_LAZY_EXPORTS = {
+    "plot_graph": "fibernet.viz.graph_plot",
+    "plot_graph_comparison": "fibernet.viz.graph_plot",
+    "plot_structure_stats": "fibernet.viz.graph_plot",
+    "render_network_2d": "fibernet.viz.renderer",
+    "render_network_3d": "fibernet.viz.renderer",
+    "render_comparison_grid": "fibernet.viz.renderer",
+    "render_parametric_study": "fibernet.viz.renderer",
+    "BG_COLOR": "fibernet.viz.renderer",
+    "FIBER_COLOR_2D": "fibernet.viz.renderer",
+    "FIBER_COLOR_3D": "fibernet.viz.renderer",
+}
 
 __all__ += [
     'render_network_2d',
@@ -103,3 +99,16 @@ __all__ += [
     'FIBER_COLOR_2D',
     'FIBER_COLOR_3D',
 ]
+
+
+def __getattr__(name):
+    if name in _LAZY_EXPORTS:
+        from importlib import import_module
+        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))

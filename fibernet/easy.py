@@ -29,7 +29,6 @@ import numpy as np
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, pattern_3d
 from fibernet.sim.accelerated import TaichiEngine, SimResult
-from fibernet.viz.render import render_graph, render_deformation
 
 
 def show(
@@ -60,6 +59,8 @@ def show(
     >>> show(g)
     >>> show(g, theme="light", save_path="honeycomb.png")
     """
+    from fibernet.viz.render import render_graph
+
     fig = render_graph(graph, theme=theme, title=title, **kwargs)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches='tight',
@@ -76,7 +77,7 @@ def simulate(
     save_path: Optional[str] = None,
     **kwargs,
 ) -> SimResult:
-    """Run a stretch simulation with the spring or beam-frame FEM backend.
+    """Run spring stretch/dynamics or a beam-frame stretch simulation.
 
     Parameters
     ----------
@@ -87,16 +88,34 @@ def simulate(
     strain : float
         Target stretch ratio for both backends (1.01 = 1% extension).
     backend : str
-        "spring" or "fem". The FEM backend accepts E, nu, pct, and nonlinear.
+        "spring" (default), "taichi" (an alias for the same spring engine),
+        or "fem". The FEM backend accepts E, nu, pct, and nonlinear.
         Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
         overrides this selection.
     save_path : str, optional
         JSON 保存路径。
+    **kwargs
+        For spring/taichi, arch="cpu" or "gpu" and a positive integer
+        num_threads (default 4) configure the engine; remaining keywords go
+        to the selected method. The active runtime's ownership and thread
+        settings still apply. GPU requests never silently fall back to CPU.
 
     Returns
     -------
     SimResult
-        模拟结果。
+        The engine's result, with its node/edge identity and state metadata.
+        Native dynamics velocities are available only when record_state=True,
+        in dynamics_state["final"]["velocities"]. For the spring backend,
+        edge_forces are signed per-edge axial forces and energy is axial
+        potential energy. Neither is
+        a nodal force array or a replacement for velocity/total energy.
+
+    Notes
+    -----
+    The spring engine does not infer coefficients, masses or units from edge
+    Material. Use explicit spring_k, nodal_masses_by_id and state_units for
+    physical dynamics; spring_k is force-like (EA), not force/length (EA/L).
+    See docs/TAICHI_API_DISPATCH.md for supported calls and legacy limitations.
 
     Examples
     --------
@@ -105,14 +124,23 @@ def simulate(
     >>> r = simulate(g, mode="stretch", strain=2.0)  # 质点弹簧拉伸2倍
     >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
-    if backend == "spring":
-        engine = TaichiEngine()
+    if not isinstance(backend, str) or backend not in ("spring", "taichi", "fem"):
+        raise ValueError("backend must be 'spring', 'taichi', or 'fem'")
+    if backend in ("spring", "taichi"):
+        if not isinstance(mode, str) or mode not in ("stretch", "dynamics"):
+            raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
+        arch = kwargs.pop("arch", "cpu")
+        num_threads = kwargs.pop("num_threads", 4)
+        if not isinstance(arch, str) or arch not in ("cpu", "gpu"):
+            raise ValueError("arch must be 'cpu' or 'gpu'")
+        if (isinstance(num_threads, (bool, np.bool_)) or
+                not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
+            raise ValueError("num_threads must be a positive integer")
+        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
-        elif mode == "dynamics":
-            result = engine.dynamics(graph, **kwargs)
         else:
-            raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
+            result = engine.dynamics(graph, **kwargs)
     elif backend == "fem":
         if mode != "stretch":
             raise ValueError("The FEM backend supports only mode='stretch'")
@@ -125,9 +153,6 @@ def simulate(
         fem = BeamFrameFEM(E=E, nu=nu)
         raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
         result = fem.to_sim_result(raw, graph)
-    else:
-        raise ValueError("backend must be 'spring' or 'fem'")
-
 
     if save_path:
         result.save(save_path)
@@ -1205,3 +1230,24 @@ def batch_simulate_from_json(
     print(f"\nOK: Simulated {ok}/{len(results)} successfully")
     print(f"  Results: {csv_file}")
     return str(csv_file)
+
+
+def __getattr__(name):
+    # Preserve the historical easy-module re-exports without loading plotting
+    # for simulate(), training helpers, or importing the top-level package.
+    if name in {"render_graph", "render_deformation"}:
+        from importlib import import_module
+        value = getattr(import_module("fibernet.viz.render"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | {"render_graph", "render_deformation"})
+
+
+# Preserve the historical wildcard surface, including incidental public imports.
+# A wildcard explicitly requests the renderers; importing this module does not.
+__all__ = [name for name in globals() if not name.startswith("_")]
+__all__ += ["render_graph", "render_deformation"]

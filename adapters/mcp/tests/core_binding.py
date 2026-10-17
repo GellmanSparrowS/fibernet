@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 215
+assert len(manifest) == 216
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -59,7 +59,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
     for relative in ('sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
-                     'integrations/lammps_backend.py', 'integrations/_lammps_worker.py'):
+                     'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
+                     '__init__.py', 'api.py', 'easy.py', 'viz/__init__.py',
+                     'sim/accelerated.py', 'sim/_energy_accounting.py'):
         target = core / relative
         saved = target.read_bytes()
         try:
