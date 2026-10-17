@@ -26,6 +26,7 @@ Examples
 from __future__ import annotations
 
 import math
+from numbers import Integral
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -368,36 +369,60 @@ if HAS_TORCH:
             x : torch.Tensor
                 Input features.
             n_mc : int
-                Number of MC forward passes.
+                Number of MC forward passes, at least 2. Booleans and
+                non-integral values are rejected.
 
             Returns
             -------
             mu : (batch, n_outputs) mean prediction
             sigma : (batch, n_outputs) total uncertainty (std)
+
+            Notes
+            -----
+            This is an inference-only helper: gradients are disabled, BatchNorm
+            uses its stored statistics, and only Dropout layers are active.
+            Every module's prior training flag is restored, including on errors.
+            Epistemic variance uses the sample estimator with denominator
+            ``n_mc - 1``; total variance adds the mean predicted aleatoric
+            variance. Sampling consumes the usual PyTorch random state and does
+            not establish that the resulting uncertainty is calibrated.
+
+            Raises
+            ------
+            TypeError
+                If ``n_mc`` is not an integer or is a boolean.
+            ValueError
+                If ``n_mc`` is less than 2.
             """
-            self.train()  # keep dropout active
-            mus = []
-            vars_ = []
-            for _ in range(n_mc):
-                out = self.forward(x)
-                mu = out[:, :self.n_outputs]
-                log_var = out[:, self.n_outputs:]
-                mus.append(mu)
-                vars_.append(torch.exp(log_var))
+            if isinstance(n_mc, bool) or not isinstance(n_mc, Integral):
+                raise TypeError("n_mc must be an integer greater than or equal to 2")
+            if n_mc < 2:
+                raise ValueError("n_mc must be an integer greater than or equal to 2")
 
-            mus = torch.stack(mus)      # (n_mc, batch, n_outputs)
-            vars_ = torch.stack(vars_)
+            training_states = [(module, module.training) for module in self.modules()]
+            try:
+                self.eval()
+                for module in self.modules():
+                    if isinstance(module, nn.Dropout):
+                        module.train()
 
-            # Epistemic: variance of means
-            epistemic = mus.var(dim=0)
-            # Aleatoric: mean of variances
-            aleatoric = vars_.mean(dim=0)
-            # Total uncertainty
-            sigma = torch.sqrt(epistemic + aleatoric)
-            mu = mus.mean(dim=0)
+                with torch.no_grad():
+                    mus = []
+                    vars_ = []
+                    for _ in range(n_mc):
+                        out = self.forward(x)
+                        mus.append(out[:, :self.n_outputs])
+                        vars_.append(torch.exp(out[:, self.n_outputs:]))
 
-            self.eval()
-            return mu, sigma
+                    mus = torch.stack(mus)  # (n_mc, batch, n_outputs)
+                    vars_ = torch.stack(vars_)
+                    epistemic = mus.var(dim=0, unbiased=True)
+                    aleatoric = vars_.mean(dim=0)
+                    return mus.mean(dim=0), torch.sqrt(epistemic + aleatoric)
+            finally:
+                # Recursive train() calls would overwrite mixed child modes.
+                for module, was_training in training_states:
+                    module.training = was_training
 
 
     class FiberMultiTaskNet(nn.Module):

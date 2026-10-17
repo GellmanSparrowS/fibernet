@@ -17,31 +17,27 @@ Quick Start
 
    import fibernet as fn
 
-   # Create a random 2D fiber network
-   net = fn.create('random_2d', num_fibers=100, fiber_length=10.0, 
-                   box_size=(30, 30), seed=42)
+   graph = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(2, 2),
+                         radius=0.05, seed=23)
+   result = fn.simulate(graph, backend="fem", mode="stretch", strain=1.01)
+   print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
-   # Analyze the network
-   stats = fn.analyze(net)
-   print(f"Order: {stats['nematic_order']:.3f}")
-
-   # Run a mechanical simulation
-   result = fn.simulate_mechanics(net, strain=0.01)
-
-   # Visualize
-   fn.plot(net)
+Here ``strain=1.01`` means a stretch ratio of 1.01 (1% extension).
+Follow :doc:`quickstart` to save a figure and reload the simulation result.
+Read :doc:`getting_started` before choosing a different mechanical model.
 
 Installation
 ------------
 
 .. code-block:: bash
 
-   pip install fibernet                    # Basic (numpy + scipy only)
-   pip install fibernet[full]              # All optional features
-   pip install fibernet[viz]               # + matplotlib/pyvista
-   pip install fibernet[graph]             # + networkx
-   pip install fibernet[ml]                # + scikit-learn/tqdm
-   pip install fibernet[accel]             # + taichi (GPU)
+   python -m pip install fibernet            # NumPy, SciPy, NetworkX, Matplotlib
+   python -m pip install "fibernet[viz]"      # Optional PyVista rendering
+   python -m pip install "fibernet[ml]"       # Optional ML dependencies
+
+The Python library and the FiberScope desktop application have separate
+installation steps. See :doc:`getting_started` for source installation,
+optional extras, and the Windows desktop download.
 
 Features Overview
 -----------------
@@ -67,6 +63,7 @@ Features Overview
    :caption: Contents:
 
    getting_started
+   quickstart
    api/index
    tutorials
    changelog

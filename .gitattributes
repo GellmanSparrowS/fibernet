@@ -1,2 +1,8 @@
 # The numerical cache identity hashes exact source bytes.
 FiberScope/fslab/*.py -text
+
+# Source-contract and native-core bindings require byte-identical checkouts.
+fibernet/sim/accelerated.py -text
+fibernet/sim/_energy_accounting.py -text
+fibernet/viz/__init__.py -text
+tests/fixtures/observer_prior71_accelerated.txt -text

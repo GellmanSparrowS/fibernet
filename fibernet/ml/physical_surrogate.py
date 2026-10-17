@@ -74,16 +74,22 @@ class MLP:
 
         Returns a history dict (train/val loss lists, epochs_run,
         best_epoch, early_stopped); best weights are restored at the end.
+        Fresh instances with the same seed use the same holdout regardless
+        of hidden width. A zero fraction or fewer than five rows disables
+        validation; otherwise at least two rows remain in each partition.
         """
         X = np.asarray(X, float)
         Y = np.asarray(Y, float)
         n, d = X.shape
-        if self.W1 is None or self.W1.shape[0] != d:
-            self._init_weights(d)
+        if not np.isfinite(val_frac) or not 0 <= val_frac < 1:
+            raise ValueError('val_frac must be finite and in [0, 1)')
+        # Split before initialization consumes a width-dependent amount of RNG.
         idx = self.rng.permutation(n)
-        nv = int(n * val_frac) if n >= 5 else 0
+        nv = max(2, min(n - 2, int(n * val_frac))) if n >= 5 and val_frac > 0 else 0
         vi, ti = idx[:nv], idx[nv:]
         self.val_indices, self.train_indices = vi, ti
+        if self.W1 is None or self.W1.shape[0] != d:
+            self._init_weights(d)
         self.x_mean = X[ti].mean(axis=0)
         self.x_std = X[ti].std(axis=0)
         self.x_std[self.x_std < 1e-12] = 1.0

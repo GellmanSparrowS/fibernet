@@ -26,6 +26,7 @@ Examples
 
 from __future__ import annotations
 
+import copy
 import json
 import time
 from pathlib import Path
@@ -43,12 +44,95 @@ except ImportError:
     HAS_TORCH = False
 
 
+def _regression_metrics(y_true, y_pred):
+    """Score tabular point predictions without broadcasting output axes.
+
+    R² is the uniform average of per-output scores. Constant outputs score
+    one for exact predictions and zero otherwise; fewer than two rows yield
+    NaN R². Only scalar (N,) and column (N, 1) shapes are interchangeable.
+    """
+    targets = np.asarray(y_true)
+    preds = np.asarray(y_pred)
+    if targets.ndim not in (1, 2) or preds.ndim not in (1, 2):
+        raise ValueError("regression metrics require (N,) or (N, K) arrays")
+    if targets.ndim == 1:
+        targets = targets[:, None]
+    if preds.ndim == 1:
+        preds = preds[:, None]
+    if targets.shape != preds.shape:
+        raise ValueError(
+            f"prediction shape {preds.shape} does not match target shape {targets.shape}"
+        )
+    if not targets.shape[0] or not targets.shape[1]:
+        raise ValueError("regression metrics require nonempty arrays")
+    residual = targets - preds
+    rmse = float(np.sqrt(np.mean(residual ** 2)))
+    if len(targets) < 2:
+        r2 = float("nan")
+    else:
+        ss_res = np.sum(residual ** 2, axis=0)
+        ss_tot = np.sum((targets - targets.mean(axis=0)) ** 2, axis=0)
+        scores = np.ones_like(ss_res, dtype=float)
+        varying = ss_tot != 0
+        scores[varying] = 1.0 - ss_res[varying] / ss_tot[varying]
+        scores[~varying & (ss_res != 0)] = 0.0
+        r2 = float(np.mean(scores))
+    return {"r2": r2, "rmse": rmse}
+
+
 def _require_torch():
     if not HAS_TORCH:
         raise ImportError("PyTorch required: pip install torch")
 
 
 if HAS_TORCH:
+
+    def _point_prediction(raw, target, adapter):
+        """Validate declared point predictions before any array broadcasting."""
+        if adapter is not None:
+            # Clone also isolates loss inputs from an adapter's in-place edits.
+            with torch.no_grad():
+                try:
+                    point = adapter(raw.detach().clone())
+                except Exception as exc:
+                    raise ValueError("metric_prediction adapter failed") from exc
+            if not isinstance(point, torch.Tensor):
+                raise TypeError("metric_prediction must return a torch.Tensor")
+            if point.device != raw.device:
+                raise ValueError("metric_prediction must preserve the input device")
+        else:
+            point = raw
+        if point.is_complex() or point.dtype == torch.bool:
+            if adapter is not None:
+                raise ValueError("metric_prediction must return real numeric predictions")
+            reason = "unsupported_prediction_dtype"
+            return None, {"status": "unavailable", "reason": reason,
+                          "r2": reason, "rmse": reason}
+        shape = tuple(point.shape)
+        target_shape = tuple(target.shape)
+        normalized = shape if len(shape) == 2 else shape + (1,)
+        normalized_target = target_shape if len(target_shape) == 2 else target_shape + (1,)
+        valid = (point.ndim in (1, 2) and target.ndim in (1, 2)
+                 and normalized == normalized_target and all(normalized))
+        if not valid:
+            if adapter is not None:
+                raise ValueError(
+                    f"metric_prediction shape {shape} does not match tabular "
+                    f"target shape {target_shape}; expected (N,) or (N, K)"
+                )
+            return None, {
+                "status": "unavailable", "reason": "prediction_shape_mismatch",
+                "prediction_shape": list(shape), "target_shape": list(target_shape),
+                "r2": "prediction_shape_mismatch", "rmse": "prediction_shape_mismatch",
+            }
+        if adapter is not None and not torch.isfinite(point).all():
+            raise ValueError("metric_prediction must return finite point predictions")
+        if not torch.isfinite(point).all() or not torch.isfinite(target).all():
+            reason = "nonfinite_prediction_or_target"
+            return None, {"status": "unavailable", "reason": reason,
+                          "r2": reason, "rmse": reason}
+        return point.detach(), None
+
 
     class TrainingHistory:
         """Training history tracker.
@@ -60,7 +144,11 @@ if HAS_TORCH:
             self.train_losses: List[float] = []
             self.val_losses: List[float] = []
             self.train_metrics: Dict[str, List[float]] = {}
-            self.val_metrics: Dict[str, List[float]] = {}
+            self.val_metrics: Dict[str, List[Optional[float]]] = {}
+            self.history_schema_version: Optional[int] = None
+            self.metric_definition: Optional[str] = None
+            self.metric_prediction: Optional[str] = None
+            self.val_metric_status: List[Dict[str, Any]] = []
             self.lr_history: List[float] = []
             self.epoch_times: List[float] = []
             self.best_val_loss: float = float("inf")
@@ -72,7 +160,7 @@ if HAS_TORCH:
             train_loss: float,
             val_loss: Optional[float] = None,
             train_metrics: Optional[Dict[str, float]] = None,
-            val_metrics: Optional[Dict[str, float]] = None,
+            val_metrics: Optional[Dict[str, Optional[float]]] = None,
             lr: float = 0.0,
             epoch_time: float = 0.0,
         ):
@@ -93,7 +181,7 @@ if HAS_TORCH:
                     self.val_metrics.setdefault(k, []).append(v)
 
         def to_dict(self) -> Dict[str, Any]:
-            return {
+            data = {
                 "train_losses": self.train_losses,
                 "val_losses": self.val_losses,
                 "train_metrics": self.train_metrics,
@@ -103,6 +191,16 @@ if HAS_TORCH:
                 "best_val_loss": self.best_val_loss,
                 "best_epoch": self.best_epoch,
             }
+
+            # Generic and legacy histories must not acquire point semantics.
+            if self.metric_definition is not None:
+                data.update(
+                    history_schema_version=self.history_schema_version,
+                    metric_definition=self.metric_definition,
+                    metric_prediction=self.metric_prediction,
+                    val_metric_status=self.val_metric_status,
+                )
+            return data
 
         def save(self, path: str):
             with open(path, "w") as fh:
@@ -121,6 +219,10 @@ if HAS_TORCH:
             hist.epoch_times = data.get("epoch_times", [])
             hist.best_val_loss = data.get("best_val_loss", float("inf"))
             hist.best_epoch = data.get("best_epoch", 0)
+            hist.history_schema_version = data.get("history_schema_version")
+            hist.metric_definition = data.get("metric_definition")
+            hist.metric_prediction = data.get("metric_prediction")
+            hist.val_metric_status = data.get("val_metric_status", [])
             return hist
 
         def plot(self, save_path: Optional[str] = None, show: bool = False):
@@ -234,6 +336,7 @@ if HAS_TORCH:
         lr: float = 1e-3,
         weight_decay: float = 1e-4,
         loss_fn: Optional[Callable] = None,
+        metric_prediction: Optional[Callable] = None,
         optimizer: Optional[optim.Optimizer] = None,
         scheduler_type: str = "warmup_cosine",
         warmup_epochs: int = 5,
@@ -254,7 +357,7 @@ if HAS_TORCH:
         X_train, y_train : array-like
             Training data.
         X_val, y_val : array-like, optional
-            Validation data.
+            Validation data; supply both arrays with at least one row.
         epochs : int
             Maximum training epochs.
         batch_size : int
@@ -265,6 +368,10 @@ if HAS_TORCH:
             L2 regularization.
         loss_fn : callable, optional
             Loss function. Default: MSELoss.
+        metric_prediction : callable, optional
+            Detached raw output Tensor -> tabular point Tensor on the same
+            device. Used only for metrics, never loss. See ml-metric-usage.md.
+            Without an adapter incompatible outputs have unavailable metrics.
         optimizer : Optimizer, optional
             Custom optimizer. Default: AdamW.
         scheduler_type : str
@@ -272,13 +379,15 @@ if HAS_TORCH:
         warmup_epochs : int
             Warmup epochs for warmup_cosine schedule.
         early_stopping_patience : int
-            Stop after N epochs without improvement. 0 = disabled.
+            Stop after N validation epochs without improvement. 0 = disabled.
+            Without validation, all requested epochs run.
         early_stopping_min_delta : float
             Minimum improvement to count as progress.
         gradient_clip : float
             Max gradient norm. 0 = disabled.
         checkpoint_path : str, optional
-            Save best model here.
+            Save this run's best validation model here. Best weights are also
+            restored in memory without a path; existing files are never read.
         verbose : bool
             Print epoch progress.
         device : str, optional
@@ -290,6 +399,8 @@ if HAS_TORCH:
         -------
         TrainingHistory
         """
+        if metric_prediction is not None and not callable(metric_prediction):
+            raise TypeError("metric_prediction must be callable or None")
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         device = torch.device(device)
@@ -305,6 +416,8 @@ if HAS_TORCH:
         )
 
         # Build DataLoaders
+        if (X_val is None) != (y_val is None):
+            raise ValueError("X_val and y_val must be supplied together")
         X_t = torch.as_tensor(X_train, dtype=torch.float32)
         y_t = torch.as_tensor(y_train, dtype=torch.float32)
         train_loader = DataLoader(
@@ -316,14 +429,20 @@ if HAS_TORCH:
         if X_val is not None and y_val is not None:
             X_v = torch.as_tensor(X_val, dtype=torch.float32)
             y_v = torch.as_tensor(y_val, dtype=torch.float32)
+            if len(X_v) == 0:
+                raise ValueError("Validation data must contain at least one row")
             val_loader = DataLoader(
                 TensorDataset(X_v, y_v),
                 batch_size=batch_size, shuffle=False, num_workers=num_workers,
             )
 
         history = TrainingHistory()
+        history.history_schema_version = 2
+        history.metric_definition = "point_regression_uniform_output_v1"
+        history.metric_prediction = "explicit_callable" if metric_prediction is not None else "identity"
         patience_counter = 0
         best_val_loss = float("inf")
+        best_state = None
 
         for epoch in range(epochs):
             t0 = time.time()
@@ -353,17 +472,23 @@ if HAS_TORCH:
 
             # Validate
             val_loss = None
-            val_metrics = {}
-            if val_loader:
+            val_metrics = {"r2": None, "rmse": None}
+            metric_status = {
+                "status": "unavailable", "reason": "validation_unavailable",
+                "r2": "validation_unavailable", "rmse": "validation_unavailable",
+            }
+            if val_loader is not None:
                 model.eval()
                 v_loss = 0.0
                 v_n = 0
                 all_preds = []
                 all_targets = []
+                unavailable = None
                 with torch.no_grad():
                     for xb, yb in val_loader:
                         xb, yb = xb.to(device), yb.to(device)
                         pred = model(xb)
+                        raw_pred, raw_target = pred, yb
                         if pred.dim() > yb.dim() and pred.shape[-1] == 1:
                             pred = pred.squeeze(-1)
                         elif yb.dim() > pred.dim() and yb.shape[-1] == 1:
@@ -371,19 +496,35 @@ if HAS_TORCH:
                         loss = loss_fn(pred, yb)
                         v_loss += loss.item()
                         v_n += 1
-                        all_preds.append(pred.cpu())
-                        all_targets.append(yb.cpu())
+                        point, reason = _point_prediction(raw_pred, raw_target, metric_prediction)
+                        if reason is not None:
+                            unavailable = reason
+                        else:
+                            all_preds.append(point.cpu().reshape(len(yb), -1))
+                            all_targets.append(raw_target.cpu().reshape(len(yb), -1))
 
                 val_loss = v_loss / max(v_n, 1)
 
-                # Compute R²
-                preds = torch.cat(all_preds).numpy()
-                targets = torch.cat(all_targets).numpy()
-                ss_res = np.sum((targets - preds) ** 2)
-                ss_tot = np.sum((targets - targets.mean()) ** 2)
-                r2 = 1 - ss_res / max(ss_tot, 1e-12)
-                val_metrics["r2"] = float(r2)
-                val_metrics["rmse"] = float(np.sqrt(np.mean((targets - preds) ** 2)))
+                if unavailable is not None:
+                    metric_status = unavailable
+                else:
+                    preds = torch.cat(all_preds).numpy()
+                    targets = torch.cat(all_targets).numpy()
+                    val_metrics = _regression_metrics(targets, preds)
+                    metric_status = {"status": "available", "r2": "available", "rmse": "available"}
+                    if len(targets) < 2:
+                        val_metrics["r2"] = None
+                        metric_status.update(status="partial", r2="insufficient_samples")
+                    for name, value in val_metrics.items():
+                        if value is not None and not np.isfinite(value):
+                            val_metrics[name] = None
+                            metric_status[name] = "nonfinite_metric"
+                    if any(value is None for value in val_metrics.values()):
+                        metric_status["status"] = (
+                            "unavailable" if all(value is None for value in val_metrics.values())
+                            else "partial"
+                        )
+            history.val_metric_status.append(metric_status)
 
             # LR schedule
             current_lr = optimizer.param_groups[0]["lr"]
@@ -396,37 +537,40 @@ if HAS_TORCH:
             history.update(epoch, train_loss, val_loss, val_metrics=val_metrics,
                           lr=current_lr, epoch_time=epoch_time)
 
-            # Checkpoint
-            if val_loss is not None and val_loss < best_val_loss - early_stopping_min_delta:
-                best_val_loss = val_loss
-                patience_counter = 0
-                if checkpoint_path:
-                    Path(checkpoint_path).parent.mkdir(parents=True, exist_ok=True)
-                    torch.save({
-                        "model_state_dict": model.state_dict(),
-                        "optimizer_state_dict": optimizer.state_dict(),
-                        "epoch": epoch,
-                        "val_loss": val_loss,
-                    }, checkpoint_path)
-            else:
-                patience_counter += 1
+            # Select only a validation state produced during this invocation.
+            if val_loss is not None:
+                if val_loss < best_val_loss - early_stopping_min_delta:
+                    best_val_loss = val_loss
+                    patience_counter = 0
+                    best_state = copy.deepcopy(model.state_dict())
+                    if checkpoint_path:
+                        Path(checkpoint_path).parent.mkdir(parents=True, exist_ok=True)
+                        torch.save({
+                            "model_state_dict": best_state,
+                            "optimizer_state_dict": optimizer.state_dict(),
+                            "epoch": epoch,
+                            "val_loss": val_loss,
+                        }, checkpoint_path)
+                else:
+                    patience_counter += 1
 
-            # Early stopping
-            if early_stopping_patience > 0 and patience_counter >= early_stopping_patience:
-                if verbose:
-                    print(f"Early stopping at epoch {epoch} (patience={early_stopping_patience})")
-                break
+                if early_stopping_patience > 0 and patience_counter >= early_stopping_patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch} (patience={early_stopping_patience})")
+                    break
 
             if verbose and (epoch % max(epochs // 10, 1) == 0 or epoch == epochs - 1):
-                val_str = f", val_loss={val_loss:.4f}" if val_loss else ""
-                val_str += f", R²={val_metrics.get('r2', 0):.3f}" if val_metrics else ""
+                val_str = f", val_loss={val_loss:.4f}" if val_loss is not None else ""
+                if val_loss is not None:
+                    r2 = val_metrics["r2"]
+                    val_str += (f", R²={r2:.3f}" if r2 is not None
+                                else f", R²=unavailable ({metric_status['r2']})")
                 print(f"Epoch {epoch:3d} | loss={train_loss:.4f}{val_str} "
                       f"| lr={current_lr:.2e} | {epoch_time:.1f}s")
 
-        # Load best checkpoint
-        if checkpoint_path and Path(checkpoint_path).exists():
-            ckpt = torch.load(checkpoint_path, weights_only=False)
-            model.load_state_dict(ckpt["model_state_dict"])
+        # Deepcopy preserves tensor values, non-tensor extra state, and metadata.
+        if best_state is not None:
+            model.load_state_dict(best_state)
 
         return history
 
@@ -441,10 +585,18 @@ if HAS_TORCH:
         batch_size: int = 64,
         lr: float = 1e-3,
         random_state: int = 42,
+        metric_prediction: Optional[Callable] = None,
         verbose: bool = False,
         **train_kwargs,
     ) -> Dict[str, Any]:
-        """K-fold cross-validation with PyTorch models.
+        """K-fold cross-validation for tabular point-regression models.
+
+        Scores use uniform-average per-output R², with exact constant outputs
+        scoring one and other constant outputs zero. R² is NaN for validation
+        folds with fewer than two rows. Scalar (N,) and (N, 1) shapes are
+        interchangeable. Distribution Tensors require an explicit
+        metric_prediction adapter; incompatible identity predictions are rejected.
+        The adapter runs both during training and on restored-model scoring.
 
         Parameters
         ----------
@@ -477,7 +629,7 @@ if HAS_TORCH:
                 model, X[train_idx], y[train_idx],
                 X_val=X[val_idx], y_val=y[val_idx],
                 epochs=epochs, batch_size=batch_size, lr=lr,
-                verbose=verbose, **train_kwargs,
+                verbose=verbose, metric_prediction=metric_prediction, **train_kwargs,
             )
 
             # Evaluate on val fold
@@ -486,12 +638,19 @@ if HAS_TORCH:
             with torch.no_grad():
                 X_v = torch.tensor(X[val_idx], dtype=torch.float32).to(device)
                 y_v = y[val_idx]
-                preds = model(X_v).cpu().numpy()
+                raw = model(X_v)
+                if metric_prediction is not None:
+                    point, reason = _point_prediction(
+                        raw, torch.as_tensor(y_v, device=device), metric_prediction
+                    )
+                    if reason is not None:
+                        raise ValueError(f"CV point metrics unavailable: {reason['reason']}")
+                else:
+                    point = raw
+                preds = point.detach().cpu().numpy()
 
-            ss_res = np.sum((y_v - preds) ** 2)
-            ss_tot = np.sum((y_v - y_v.mean()) ** 2)
-            r2 = 1 - ss_res / max(ss_tot, 1e-12)
-            rmse = float(np.sqrt(np.mean((y_v - preds) ** 2)))
+            metrics = _regression_metrics(y_v, preds)
+            r2, rmse = metrics["r2"], metrics["rmse"]
 
             fold_r2s.append(float(r2))
             fold_rmses.append(rmse)

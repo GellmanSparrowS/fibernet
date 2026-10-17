@@ -6,6 +6,7 @@ the solver. Cache files are written atomically (tmp + os.replace).
 from dataclasses import dataclass, asdict
 import hashlib
 import json
+from numbers import Integral
 import os
 import shutil
 import tempfile
@@ -23,7 +24,7 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
 ENGINE_VERSION = "e2v12"
-ENGINE_SRC_HASH = "30cb3ada6337"
+ENGINE_SRC_HASH = "4c5a851d3c61"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -118,12 +119,89 @@ def default_cache_dir():
     return None
 
 
-def cache_tag(factory, cfg) -> str:
-    """Cache key = engine version + structure spec + run config + frame cap."""
+def _engine_input_digest(graph) -> str:
+    """Versioned, exact Engine2 input identity (not a full graph fingerprint).
+
+    Node rows are sorted by stable ID; physical edges retain insertion order
+    and direction. Unused Z, radius, material and curve data are not included.
+    Validate before coercion so masks, fractional IDs and overflow cannot alias.
+    """
+    def identity(value):
+        if (isinstance(value, (bool, np.bool_)) or
+                not isinstance(value, Integral) or
+                not -(2**63) <= int(value) < 2**63):
+            raise ValueError("Engine2 cache IDs must be signed int64 integers")
+        return int(value)
+
+    def reject_masks(value):
+        if np.ma.isMaskedArray(value) or value is np.ma.masked:
+            raise ValueError("Engine2 cache inputs must not be masked")
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                reject_masks(item)
+        elif isinstance(value, np.ndarray) and value.dtype.kind == "O":
+            for item in value.flat:
+                reject_masks(item)
+
+    node_ids = sorted(identity(node) for node in graph.nodes)
+    node_index = {node: row for row, node in enumerate(node_ids)}
+    edge_ids = [identity(edge) for edge in graph.edges]
+    # node_positions() and edge_array() can otherwise discard masks/coerce IDs.
+    for node in graph.nodes.values():
+        reject_masks(node.position)
+    positions = graph.node_positions()
+    if np.ma.isMaskedArray(positions):
+        raise ValueError("Engine2 cache positions must not be masked")
+    positions = np.asarray(positions)
+    if (positions.ndim != 2 or positions.shape[0] != len(node_ids) or
+            positions.shape[1] < 2 or positions.dtype.kind not in "iuf"):
+        raise ValueError("Engine2 cache positions must be numeric (N, >=2)")
+    xy = np.asarray(positions[:, :2], dtype="<f8")
+    if not np.isfinite(xy).all():
+        raise ValueError("Engine2 cache XY must be finite")
+    endpoints = []
+    for edge in graph.edges.values():
+        pair = [identity(edge.node_i), identity(edge.node_j)]
+        if any(node not in node_index for node in pair):
+            raise ValueError("Engine2 cache edges must reference existing nodes")
+        endpoints.append([node_index[node] for node in pair])
+    extra = graph.metadata.get("weld_triplets", [])
+    reject_masks(extra)
+    # Object conversion preserves individual integer types (including bool).
+    trips = np.asarray(extra, dtype=object)
+    if trips.shape == (0,):
+        trips = trips.reshape(0, 3)
+    if trips.ndim != 2 or trips.shape[1] != 3:
+        raise ValueError("Engine2 cache weld_triplets must have shape (T, 3)")
+    mapped = []
+    for trip in trips:
+        ids = [identity(node) for node in trip]
+        if any(node not in node_index for node in ids):
+            raise ValueError("Engine2 cache weld_triplets must reference existing nodes")
+        mapped.append([node_index[node] for node in ids])
+    h = hashlib.sha256(b"fiberscope-engine2-input-v1\0")
+    for name, array in (
+            ("node_ids", np.asarray(node_ids, dtype="<i8")),
+            ("xy", xy),
+            ("edge_ids", np.asarray(edge_ids, dtype="<i8")),
+            ("endpoint_rows", np.asarray(endpoints, dtype="<i8").reshape(-1, 2)),
+            ("weld_triplet_rows", np.asarray(mapped, dtype="<i8").reshape(-1, 3))):
+        header = json.dumps([name, array.dtype.str, array.shape],
+                            separators=(",", ":")).encode("ascii")
+        h.update(len(header).to_bytes(8, "little"))
+        h.update(header)
+        h.update(array.tobytes(order="C"))
+    return h.hexdigest()
+
+
+def cache_tag(factory, cfg, *, graph) -> str:
+    """Key for an already built, post-weld graph; never invokes the builder."""
     raw = json.dumps({"v": ENGINE_VERSION, "h": ENGINE_SRC_HASH,
                       "s": factory.key(), "c": asdict(cfg),
-                      "mf": MAX_FRAMES}, sort_keys=True, default=str)
-    return hashlib.sha1(raw.encode()).hexdigest()[:16]
+                      "mf": MAX_FRAMES, "input_v1": _engine_input_digest(graph)},
+                     sort_keys=True, default=str)
+    # Explicit namespace prevents an old configuration-only filename hit.
+    return "g1_" + hashlib.sha256(raw.encode()).hexdigest()
 
 
 def _load_cache(path):
@@ -223,6 +301,8 @@ class StretchRun:
     contact_frames: list
     contact_counts: np.ndarray
     metadata: dict
+    cache_hit: bool = False     # runtime only, never persisted in NPZ
+    cache_key: str = ""         # empty when no cache path is selected
 
     @property
     def n_frames(self):
@@ -259,16 +339,20 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
     n_nodes = len(graph.node_positions())
 
     path = None
+    key = ""
     if cache_dir:
         try:
             os.makedirs(cache_dir, exist_ok=True)
         except OSError:
             cache_dir = None      # read-only location -> run without cache
     if cache_dir:
-        path = os.path.join(cache_dir, f"run_{cache_tag(factory, cfg)}.npz")
+        key = cache_tag(factory, cfg, graph=graph)
+        path = os.path.join(cache_dir, f"run_{key}.npz")
         if use_cache and os.path.exists(path):
             cached = _load_cache(path)
             if cached is not None:
+                cached.cache_hit = True
+                cached.cache_key = key
                 return cached
 
     res = Engine2(graph, cfg.engine_cfg(n_nodes)).run(progress_cb=progress_cb)
@@ -282,6 +366,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
                      res.right_nodes, res.energies, res.contact_pairs_last,
                      res.contact_frames, res.contact_counts, res.metadata)
 
+    run.cache_key = key
     if path:
         _save_cache(path, run)
     return run

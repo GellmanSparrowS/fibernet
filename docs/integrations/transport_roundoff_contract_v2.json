@@ -1,0 +1,41 @@
+{
+  "schema": "transport-roundoff-2",
+  "amends": "thermal-pilot-contract-1 numerical acceptance formulas only",
+  "historical_contract": "thermal_frozen_contract.json",
+  "arithmetic": {
+    "precision": "IEEE binary64, round to nearest",
+    "eps": "numpy.finfo(float).eps",
+    "u": "eps/2",
+    "R": "full math.ulp(x) for nonzero computed values, zero for exact zero operations; nonzero-product underflow rejected separately",
+    "upper_operations": "Every nonnegative budget product and sum rounded toward +infinity using math.nextafter; subnormal products cannot silently become zero",
+    "runtime_requirement": "Physical scalar inputs converted to nonzero subnormal binary64 values are checked by their stored bits before sign/zero decisions and require gradual underflow in the current thread. Arithmetic involving subnormal budget inputs, products or ulps has the same requirement. Flush-to-zero or denormals-are-zero modes cause explicit refusal for these cases. Normal values and genuine signed-zero operations remain supported. No process floating-point mode is changed.",
+    "lost_difference_guard": "An active edge whose stored endpoint values differ but whose computed voltage/temperature difference is zero fails explicitly. These guards cover the stated scalar inputs, differences and budget operations; they are not a general guarantee for every floating-point environment or solver operation. Information already lost before or during conversion to binary64 is outside these guards."
+  },
+  "electrical": {
+    "solve_coordinates": "actual absolute V, not reference-shifted V",
+    "solve_allowance_A": "32*eps*sum_incident g_e*(abs(V_a)+abs(V_b))",
+    "edge_evaluation_A": "g_e*R(dV_e)+R(q_e)",
+    "node_evaluation_A": "sum_incident edge_evaluation_A + gamma_degree*sum_incident abs(q_e), gamma_k=k*u/(1-k*u)",
+    "node_limit_A": "current_atol_A + rtol*sum_incident abs(q_e) + solve_allowance_A + node_evaluation_A",
+    "component_checks": "Existing component-current and reference-shifted component-power checks unchanged",
+    "limitations": "32*eps is an existing engineering backward-residual margin, not a universal sparse-LU theorem or forward-accuracy certificate. At arbitrary voltage offsets, smaller-than-budget imbalance cannot be certified; component checks can reject unresolved driven drops."
+  },
+  "thermal": {
+    "rho_K": "upper half-ulp(Tnew_i) if inc_i != 0; zero otherwise, including fixed nodes",
+    "capacity_allowance_J": "8*eps*C_i*(abs(Told_i)+abs(Tnew_i)) for active free rows, zero fixed/exact inactive rows",
+    "node_conduction_representation_J": "dt*sum_incident g_e*(rho_a+rho_b)",
+    "edge_evaluation_W": "g_e*R(Tnew_a-Tnew_b)+R(qnew_e)",
+    "step_edge_evaluation_J": "dt*edge_evaluation_W+R(dt*qnew_e)",
+    "energy_evaluation_J": "C_i*R(Tnew_i-Told_i)+R(C_i*(Tnew_i-Told_i))",
+    "source_evaluation_J": "R(dt*Q_i)",
+    "node_evaluation_J": "energy_evaluation_J+source_evaluation_J+sum_incident step_edge_evaluation_J+R(node_residual)",
+    "node_bound_J": "1e-10*local_scale_J+capacity_allowance_J+node_conduction_representation_J+node_evaluation_J",
+    "component_representation_J": "sum_free capacity_allowance_J + sum_free_fixed_cut_edges dt*g_e*rho_free; free/free flux perturbations cancel",
+    "component_evaluation_J": "sum_all energy_evaluation_J+sum_all source_evaluation_J+sum_fixed reservoir_step_evaluation_J+R(component_residual)",
+    "reservoir_step_evaluation_J": "dt*(sum_incident edge_evaluation_W+R(outward)+R(reservoir))+R(dt*reservoir)",
+    "component_bound_J": "1e-10*component_scale_J+component_representation_J+component_evaluation_J",
+    "cap": "Complete representation+evaluation allowance must be <=1e-6 of respective local/component scale; nonfinite budgets rejected",
+    "unchanged": "Residual/scale formulas, loss-of-increment guard, physical inputs, sparse solver, backward Euler, partial-result API, and all rtol/atol/constants unchanged",
+    "scope": "Only current-step reconstruction relative to previous accepted stored temperature; no invented historical uncertainty. Discrete equation acceptance does not establish time-discretization accuracy."
+  }
+}

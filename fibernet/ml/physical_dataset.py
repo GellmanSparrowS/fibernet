@@ -7,6 +7,7 @@ import json
 import os
 import tempfile
 import hashlib
+import warnings
 from dataclasses import asdict, dataclass
 from pathlib import Path
 import numpy as np
@@ -33,6 +34,8 @@ class DatasetStream:
         self.sample_fn = sample_fn
         self.spec_fn = spec_fn
         self.pool_size = max(1, min(int(pool_size), 128))
+        self.acquisition_pool_size = (1 if config['acquisition'] == 'random'
+                                      else self.pool_size)
         self.X, self.Y, self.specs = [], [], []
         self.next_seed = int(config['seed0'])
         self.failures = []
@@ -48,12 +51,33 @@ class DatasetStream:
                 meta = json.loads(str(z['meta']))
                 if meta.get('config') != config:
                     raise ValueError('dataset configuration/schema mismatch; use a new cache path')
-                self.X, self.Y = list(z['X']), list(z['Y'])
+                saved_pool = meta.get('acquisition_pool_size')
+                if saved_pool is not None and saved_pool != self.acquisition_pool_size:
+                    raise ValueError('dataset acquisition pool size mismatch; use a new cache path')
+                if saved_pool is None and config['acquisition'] != 'random':
+                    warnings.warn(
+                        'Legacy checkpoint does not record acquisition pool size; '
+                        'resuming with the requested size, but sampling sequence '
+                        'compatibility cannot be verified.', RuntimeWarning, stacklevel=2)
+                X, Y = np.asarray(z['X'], float), np.asarray(z['Y'], float)
+                if (X.ndim != 2 or X.shape[1] != 14 or
+                        Y.shape != (len(X), 3) or not np.isfinite(X).all() or
+                        (config['mode'] != 'generate' and not np.isfinite(Y).all()) or
+                        (config['mode'] == 'generate' and not np.isnan(Y).all())):
+                    raise ValueError('invalid dataset checkpoint arrays')
+                self.X, self.Y = list(X), list(Y)
                 self.specs = json.loads(str(z['specs']))
                 self.next_seed = int(meta['next_seed'])
                 self.failures = meta.get('failures', [])
-                if len(self.X) != len(self.Y) or len(self.X) != len(self.specs):
+                if not isinstance(self.specs, list) or len(self.X) != len(self.specs):
                     raise ValueError('incomplete dataset checkpoint')
+
+    @staticmethod
+    def _feature_row(x):
+        x = np.array(x, dtype=float, copy=True)
+        if x.shape != (14,) or not np.isfinite(x).all():
+            raise ValueError('features must be a finite 14-element vector')
+        return x
 
     def _save(self):
         if not self.path:
@@ -66,6 +90,7 @@ class DatasetStream:
             np.savez_compressed(tmp, X=self.arrays()[0], Y=self.arrays()[1],
                                 specs=json.dumps(self.specs),
                                 meta=json.dumps(dict(config=self.config, next_seed=self.next_seed,
+                                                     acquisition_pool_size=self.acquisition_pool_size,
                                                      failures=self.failures[-100:])))
             os.replace(tmp, self.path)
         finally:
@@ -85,7 +110,7 @@ class DatasetStream:
             if stop_cb and stop_cb():
                 break
             candidates, features = [], []
-            count = self.pool_size if cfg['acquisition'] != 'random' else 1
+            count = self.acquisition_pool_size
             for _ in range(count):
                 seed = self.next_seed
                 self.next_seed += 1
@@ -93,9 +118,8 @@ class DatasetStream:
                 factory = self.factory_builder(seed, cfg, rng)
                 try:
                     graph = factory.build()
-                    x = self.feature_fn(graph.node_positions(), graph.edge_array())
-                    if not np.isfinite(x).all():
-                        raise ValueError('non-finite features')
+                    x = self._feature_row(
+                        self.feature_fn(graph.node_positions(), graph.edge_array()))
                     candidates.append(factory)
                     features.append(x)
                 except (ValueError, MemoryError) as exc:
@@ -117,10 +141,20 @@ class DatasetStream:
                     y = self.model.predict(x)
                 else:
                     y = np.full(3, np.nan)
+                # Stage every callback result before committing any part of a row.
+                # Own the arrays: callbacks may reuse mutable working buffers.
+                x = self._feature_row(x)
+                y = np.array(y, dtype=float, copy=True)
+                if y.shape != (3,) or (cfg['mode'] != 'generate' and
+                                       not np.isfinite(y).all()):
+                    raise ValueError('labels must be a finite 3-element vector')
+                spec = self.spec_fn(factory)
+                # Check serializability now, rather than after changing the dataset.
+                spec = json.loads(json.dumps(spec, allow_nan=False))
                 self.X.append(x)
                 self.Y.append(y)
-                self.specs.append(self.spec_fn(factory))
-            except (ValueError, FloatingPointError) as exc:
+                self.specs.append(spec)
+            except (TypeError, ValueError, FloatingPointError) as exc:
                 self.failures.append(dict(seed=factory.seed, error=str(exc)))
             self._save()
             attempts += 1

@@ -37,7 +37,7 @@ TEXT = {
                     'Nodes %d · Edges %d\nComponents %d · Odd nodes %d · Max degree %d\nSingle path requires connectivity and 0 or 2 odd nodes. Process limits need separate checks.'),
     'cell_workbench': ('单元工作台', 'Cell workbench'),
     "app_title": ("FiberScope · 纤维网络超材料探索台", "FiberScope · Fibrous Metamaterial Explorer"),
-    "tab_percolation": ("载荷路径渗流", "Load-path percolation"),
+    "tab_percolation": ("拉伸招募连通", "Tensile recruitment"),
     "tab_more": ("后续模块", "More modules"),
     "tab_more_body": ("拉伸原位的、模式分解、AI 逆设计、探索回放等模块开发中。",
                       "Live stretch, mode decomposition, AI inverse design and exploration replay are under development."),
@@ -50,7 +50,9 @@ TEXT = {
     "perturbation": ("节点扰动", "Node jitter"),
     "seed": ("随机种子", "Seed"),
     "stretch": ("目标拉伸比", "Target stretch"),
-    "quantile": ("张力阈值 \u03b1", "Tension threshold \u03b1"),
+    "quantile": ("应变阈值 \u03b1", "Strain threshold \u03b1"),
+    "quantile_hint": ("α 为每帧最大正轴向应变的比例；阈值至少为 0.0001。已招募边使用迟滞阈值。α=0.05 不代表固定 5% 应变。",
+                      "α scales each frame's maximum positive axial strain, with a minimum threshold of 0.0001. Recruited edges use hysteresis. α=0.05 is not a fixed 5% strain."),
     "grip": ("夹持带宽 %", "Grip band %"),
     "grip_hint": ("两端按跨度百分比整列夹持：左端固定、右端加载。带宽越大边界层越硬。",
                   "Whole columns within this fraction of the span are clamped at each end: left fixed, right displaced. Wider bands stiffen the boundary layer."),
@@ -63,11 +65,11 @@ TEXT = {
     "strain": ("拉伸比", "Stretch"),
     "perc_curve_card": ("渗流曲线", "Percolation curve"),
     "perc_order": ("渗流序参量 P", "Order parameter P"),
-    "backbone": ("骨架边占比", "Backbone fraction"),
+    "backbone": ("贯通边占比", "Spanning edge fraction"),
     "perc_at": ("渗流时刻", "Percolation at"),
     "never": ("窗口内未渗流", "not percolated in window"),
-    "legend_active": ("承载边", "load-bearing"),
-    "legend_span": ("渗流骨架", "spanning backbone"),
+    "legend_active": ("招募边", "recruited"),
+    "legend_span": ("贯通分量", "spanning component"),
     "tab_replay": ("探索回放 · 参照系", "Exploration replay · reference"),
     "tab_features": ("特征分析", "Feature analysis"),
     "tab_surface": ("三维曲面", "3D surface"),
@@ -134,8 +136,8 @@ TEXT = {
                 "fibrous metamaterials · a computable exploration environment"),
     "version_chip": (VERSION_CHIP, VERSION_CHIP),
     "legend_inactive": ("未激活", "inactive"),
-    "legend_load": ("承载边", "load-bearing"),
-    "legend_span": ("渗流骨架", "spanning backbone"),
+    "legend_load": ("招募边", "recruited"),
+    "legend_span": ("贯通分量", "spanning component"),
     "legend_grip": ("夹持端", "grip"),
     "legend_comp": ("压缩", "compression"),
     "legend_neutral": ("近零", "near zero"),
@@ -156,13 +158,12 @@ TEXT = {
     "loop_hint": ("播放到末帧后自动回到首帧继续播放",
                   "wrap to the first frame after the last one"),
     "explain_card": ("图例说明", "LEGEND"),
-    "explain_perc": ("灰 = 未激活；浅蓝 = 与夹持端连通的承载边（力只沿连续路径传导）；"
-                     "蓝→青 = 渗流骨架（颜色深浅表示距两端深度）；琥珀 = 夹持端。"
-                     "仿真完成后从第 0 帧自动播放；迟滞阈值防止载荷路径闪烁。",
-                     "gray = inactive; dim blue = load-bearing edges anchored at the grips "
-                     "(force flows along continuous paths only); blue->cyan = spanning backbone "
-                     "(shade = depth from the grips); amber = grips. Autoplays from frame 0; "
-                     "hysteresis keeps the load path stable."),
+    "explain_perc": ("灰 = 未招募；浅蓝 = 超过拉伸应变阈值且与夹持端连通的边；"
+                     "蓝→青 = 连接两端夹持区的招募分量（颜色深浅表示距两端深度）；琥珀 = 夹持端。"
+                     "这是应变阈值连通统计，并非完整力传递。迟滞阈值减少闪烁。",
+                     "gray = not recruited; dim blue = strain-thresholded edges connected to a grip; "
+                     "blue->cyan = recruited components spanning both grips (shade = depth); amber = grips. "
+                     "Thresholded connectivity is not complete force flow. Hysteresis reduces flicker."),
     "explain_stretch": ("红 = 拉伸 / 青 = 压缩（线宽 ∝ 应变）；红点 = 纤维间接触事件"
                         "（亮红 = 本帧新接触，淡红 = 历史接触）；琥珀 = 夹持端。"
                         "右列为力-拉伸曲线与 拉伸/弯曲/接触 三通道能量占比。",
@@ -205,7 +206,7 @@ TEXT = {
     "ai_fallback": ("已执行: ", "Executed: "),
     "tab_sim": ("原位仿真 · 渗流与拉伸", "Live sim · percolation & stretch"),
     "view_label": ("视图", "View"),
-    "view_perc": ("载荷路径渗流", "Load-path percolation"),
+    "view_perc": ("拉伸招募连通", "Tensile recruitment"),
     "view_strain": ("应变 · 接触", "Strain · contacts"),
     "replay_load": ("载入此结构到仿真", "Load this structure into sim"),
     "replay_toggle": ("探索回放 ▾", "Exploration replay ▾"),

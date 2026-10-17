@@ -75,7 +75,7 @@ pip install networkx           # Graph analysis
 pip install MDAnalysis         # MD trajectory analysis
 pip install lammps             # MD simulations
 pip install ovito              # Visualization
-pip install taichi             # GPU acceleration
+pip install taichi==1.7.4      # Version-verified optional runtime
 ```
 
 ## Citation

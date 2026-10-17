@@ -38,10 +38,18 @@ print(fn.__version__)
 The simulation engine uses Taichi for GPU-accelerated dynamics. Taichi is included in `fibernet[full]`, or install separately:
 
 ```bash
-pip install taichi
+pip install taichi==1.7.4
 ```
 
-Taichi automatically detects available GPUs (CUDA, Metal, Vulkan).
+This checkout temporarily supports TaichiEngine with Taichi 1.7.4 only because
+its runtime-lifetime guard uses version-verified private APIs. Other versions
+fail explicitly; non-Taichi backends are unaffected. CPU lifecycle validation
+does not establish GPU availability or cross-platform support. Request the
+backend explicitly with arch="cpu" or arch="gpu"; there is no silent CPU fallback.
+
+Construct and run engines on the same owning thread (a GUI worker is allowed).
+Cross-owner use and unknown externally initialized runtimes fail safely. See
+[the lifecycle contract](../architecture/taichi-lifecycle-audit.md).
 
 ## Troubleshooting
 

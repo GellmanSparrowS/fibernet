@@ -63,9 +63,10 @@ print(fn.__version__)
 <h2>GPU acceleration</h2>
 <p>The simulation engine uses Taichi for GPU-accelerated dynamics. Taichi is included in <code>fibernet[full]</code>, or install separately:</p>
 <pre><code>
-pip install taichi
+pip install taichi==1.7.4
 </code></pre>
-<p>Taichi automatically detects available GPUs (CUDA, Metal, Vulkan).</p>
+<p>This checkout temporarily supports TaichiEngine with Taichi 1.7.4 only: its runtime-lifetime guard uses version-verified private APIs. Other versions fail explicitly; non-Taichi backends are unaffected. CPU validation does not establish GPU or cross-platform support. Request arch="cpu" or arch="gpu" explicitly; there is no silent CPU fallback.</p>
+<p>Construct and run engines on one owning thread, which may be a GUI worker. Cross-owner use and unknown externally initialized runtimes fail safely. See the <a href="../architecture/taichi-lifecycle-audit.md">lifecycle contract</a>.</p>
 <h2>Troubleshooting</h2>
 <p>If you see import errors, ensure the full installation is up to date:</p>
 <pre><code>

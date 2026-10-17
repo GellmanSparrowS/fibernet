@@ -1,0 +1,3151 @@
+{
+  "status": "private-candidate-implemented",
+  "tools": [
+    {
+      "name": "fibernet_catalog",
+      "description": "fibernet catalog",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false,
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "graphs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Graph"
+                },
+                "maxItems": 32
+              },
+              "limits": {
+                "type": "object",
+                "properties": {
+                  "max_nodes": {
+                    "const": 10000
+                  },
+                  "max_edges": {
+                    "const": 30000
+                  },
+                  "max_graph_bytes": {
+                    "const": 16777216
+                  },
+                  "max_reply_bytes": {
+                    "const": 65536
+                  }
+                },
+                "required": [
+                  "max_nodes",
+                  "max_edges",
+                  "max_graph_bytes",
+                  "max_reply_bytes"
+                ],
+                "additionalProperties": false
+              },
+              "capabilities": {
+                "const": [
+                  "validate_structure",
+                  "analyze_topology",
+                  "read_artifact"
+                ]
+              }
+            },
+            "required": [
+              "schema_version",
+              "graphs",
+              "limits",
+              "capabilities"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$ref": "#/$defs/Failure"
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "fibernet_validate",
+      "description": "fibernet validate",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "graph_id": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "required": [
+          "graph_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "validation_status": {
+                "type": "string",
+                "enum": [
+                  "valid",
+                  "invalid"
+                ]
+              },
+              "scope": {
+                "const": "serialization_and_topology"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/$defs/Issue"
+                },
+                "maxItems": 100
+              },
+              "issues_truncated": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "schema_version",
+              "graph_id",
+              "source_sha256",
+              "validation_status",
+              "scope",
+              "node_count",
+              "edge_count",
+              "issues",
+              "issues_truncated"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$ref": "#/$defs/Failure"
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "fibernet_analyze_topology",
+      "description": "fibernet analyze topology",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "graph_id": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "required": [
+          "graph_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "metrics": {
+                "$ref": "#/$defs/Metrics"
+              },
+              "artifact": {
+                "$ref": "#/$defs/Artifact"
+              }
+            },
+            "required": [
+              "schema_version",
+              "graph_id",
+              "source_sha256",
+              "metrics",
+              "artifact"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$ref": "#/$defs/Failure"
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "fibernet_artifact_info",
+      "description": "fibernet artifact info",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "$ref": "#/$defs/Id"
+          }
+        },
+        "required": [
+          "artifact_id"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "artifact": {
+                "$ref": "#/$defs/Artifact"
+              }
+            },
+            "required": [
+              "schema_version",
+              "artifact"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$ref": "#/$defs/Failure"
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "fibernet_artifact_read",
+      "description": "fibernet artifact read",
+      "inputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "$ref": "#/$defs/Id"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "length": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 32768,
+            "default": 32768
+          }
+        },
+        "required": [
+          "artifact_id",
+          "offset"
+        ],
+        "additionalProperties": false,
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "next_offset": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "eof": {
+                "type": "boolean"
+              },
+              "encoding": {
+                "const": "base64"
+              },
+              "data": {
+                "type": "string",
+                "maxLength": 43692,
+                "contentEncoding": "base64"
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "total_bytes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              }
+            },
+            "required": [
+              "schema_version",
+              "artifact_id",
+              "offset",
+              "next_offset",
+              "eof",
+              "encoding",
+              "data",
+              "sha256",
+              "total_bytes"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "$ref": "#/$defs/Failure"
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ]
+}

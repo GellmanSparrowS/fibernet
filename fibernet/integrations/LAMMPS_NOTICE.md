@@ -1,0 +1,13 @@
+# External LAMMPS engine: license and provider notice
+
+LAMMPS is a separate optional engine, distributed by its upstream project under GNU GPL version 2. The pinned upstream `stable_22Jul2025_update4` contains the [GPLv2 license text](https://raw.githubusercontent.com/lammps/lammps/stable_22Jul2025_update4/LICENSE). Its copyright and license notices must not be removed from redistributed engine files.
+
+This proposed FiberNet change contains original adapter/test/documentation code and a synthetic mechanical fixture. It does not copy LAMMPS physics implementations, engine source files, native binaries, wheels or MPI libraries. FiberNet's existing repository license is not changed by this notice. No blanket licensing clearance is asserted for linked or bundled distributions.
+
+Upstream's [open-source license guidance](https://docs.lammps.org/Intro_opensource.html) explicitly says that “code that provides the interface must be licensed GPLv2” when discussing interfaces to differently licensed libraries. The scope of an actual distribution therefore needs review; optionality alone is not a license exemption. The unqualified direct Python-library route is excluded from this proposal. Any future linked interface, copied engine code, bundled wheel/native library or combined distribution requires a specific license review, notices and applicable corresponding-source compliance. Do not assume a README link alone satisfies binary-redistribution obligations.
+
+The CLI runtime used in bounded qualification was the **unofficial PyPI distribution** [lammps 2025.7.22.4.0](https://pypi.org/project/lammps/2025.7.22.4.0/), whose metadata names [njzjz/lammps-wheel](https://github.com/njzjz/lammps-wheel) as its packaging repository and [lammps/lammps](https://github.com/lammps/lammps) as upstream. Packaging provenance, native executable/shared-library hashes and the official source tag were tracked separately. It was paired with an existing MPICH 5.0.2 runtime. These are external dependencies, not FiberNet-owned physics or bundled assets.
+
+Current official documentation identifies 30Sep2026, while the tested engine identifies 22 Jul 2025 Update 4. These are deliberately distinct. No automatic upgrade, engine installation or provider-discovery feature is supplied by this adapter. Users selecting a different trusted runtime need their own identity, package/style, scientific and resource checks.
+
+This notice records the source-backed release boundary for maintainer review; it is not individualized legal advice or an assertion that every possible interoperability arrangement has the same licensing treatment.

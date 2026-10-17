@@ -107,21 +107,24 @@ def main():
                      save_interval=400)
     small = StructureFactory(unit="square", grid_x=2, grid_y=2,
                              n_pts_per_side=1, seed=7).clamped()
-    tag = cache_tag(small, scfg)
+    graph = small.build()
+    tag = cache_tag(small, scfg, graph=graph)
     assert cache_tag(small, RunConfig(target_stretch=1.8, num_steps=1200,
                                       n_increments=12,
-                                      save_interval=400)) != tag, \
+                                      save_interval=400), graph=graph) != tag, \
         "cache tag ignores run config"
     other = StructureFactory(unit="square", grid_x=2, grid_y=2,
                              n_pts_per_side=1, seed=8).clamped()
-    assert cache_tag(other, scfg) != tag, "cache tag ignores structure spec"
+    assert cache_tag(other, scfg, graph=other.build()) != tag, "cache tag ignores structure spec"
 
     d = tempfile.mkdtemp(prefix="fscache")
     try:
         fresh = run_stretch(small, scfg, cache_dir=d)
-        assert os.path.exists(os.path.join(d, "run_%s.npz" % tag)), \
+        assert os.path.exists(os.path.join(d, "run_%s.npz" % fresh.cache_key)), \
             "cache file not written"
+        assert not fresh.cache_hit and fresh.cache_key == tag
         cached = run_stretch(small, scfg, cache_dir=d)
+        assert cached.cache_hit and cached.cache_key == fresh.cache_key
         assert np.array_equal(fresh.force_curve, cached.force_curve), \
             "cached run differs from fresh run"
         blocker = os.path.join(d, "blocker")

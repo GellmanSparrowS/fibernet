@@ -49,7 +49,7 @@ viz = ["pyvista>=0.37"]
 mesh = ["trimesh>=3.20"]
 manufacturing = ["manifold3d", "scikit-image>=0.19", "fast-simplification"]
 io = ["h5py>=3.7"]
-accel = ["taichi>=1.6"]
+accel = ["taichi==1.7.4"]
 ml = [
     "scikit-learn>=1.0",
     "pandas>=1.5",
@@ -67,7 +67,7 @@ full = [
     "pyvista>=0.37",
     "trimesh>=3.20",
     "h5py>=3.7",
-    "taichi>=1.6",
+    "taichi==1.7.4",
     "scikit-learn>=1.0",
     "pandas>=1.5",
     "networkx>=3.0",
@@ -96,7 +96,8 @@ dev = [
     "black>=23.0",
     "flake8>=6.0",
     "scikit-image>=0.19",
-    "taichi>=1.6",
+    # PyPI 1.7.4 has macOS arm64 wheels only for CPython 3.10-3.13.
+    "taichi==1.7.4; implementation_name == 'cpython' and python_version >= '3.9' and python_version < '3.14' and ((sys_platform == 'linux' and platform_machine == 'x86_64') or (sys_platform == 'win32' and platform_machine == 'AMD64') or (sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.10'))",
 ]
 docs = [
     "sphinx>=7.0",
@@ -122,3 +123,4 @@ include = ["fibernet*"]
 
 [tool.setuptools.package-data]
 "fibernet.sim.fracture" = ["PROVENANCE.json", "NOTICE.md"]
+"fibernet.integrations" = ["LAMMPS_NOTICE.md"]

@@ -415,13 +415,14 @@ def simulate_dynamics(
     backend: str = "taichi",
     **kwargs,
 ) -> Dict:
-    """Run mass-spring dynamics simulation.
-    
-    Models the fiber network as a spring-mass system where:
-    - Crosslinks become point masses
-    - Fibers become springs with stiffness derived from Young's modulus
-    - Spring rest length = fiber segment length
-    - Spring stiffness k = E * A / L (axial rigidity)
+    """Run the explicit legacy NumPy mass-spring path.
+
+    The historical default backend="taichi" is retained in the signature but
+    rejects before conversion. Its crosslink topology and mixed unit/coefficient
+    conventions have no validated mapping to the current StructureGraph engine.
+    Use fibernet.simulate with a prepared StructureGraph for native dynamics.
+    The explicit NumPy implementation is preserved; this dispatch repair does
+    not validate or correct its physical units or integration conventions.
     
     Parameters
     ----------
@@ -440,7 +441,9 @@ def simulate_dynamics(
     save_interval : int
         Save trajectory every N steps.
     backend : str
-        ``"taichi"`` for GPU/CPU parallel, ``"numpy"`` for pure Python.
+        Explicit "numpy" selects the unchanged legacy implementation.
+        "taichi" raises NotImplementedError with migration guidance; unknown
+        names raise ValueError. No backend is selected as a fallback.
     
     Returns
     -------
@@ -452,19 +455,21 @@ def simulate_dynamics(
     --------
     simulate_mechanics : Static FEM analysis.
     
-    Examples
-    --------
-    >>> net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
-    >>> traj = fn.simulate_dynamics(net, dt=1e-7, steps=5000, damping=0.05)
-    >>> print(f"Final energy: {traj['energy']:.2e} J")
+    Notes
+    -----
+    See docs/TAICHI_API_DISPATCH.md. Legacy NumPy output semantics are unchanged;
+    do not treat this wrapper as a unit-consistent native-backend adapter.
     """
-    from fibernet.sim.accelerated import TaichiEngine, HAS_TAICHI
-    
-    if backend == "taichi" and not HAS_TAICHI:
-        raise ImportError(
-            "Taichi required for GPU/CPU parallel dynamics. "
-            "Install: pip install taichi\n"
-            "Or use backend='numpy' for pure Python."
+    if not isinstance(backend, str) or backend not in ("taichi", "numpy"):
+        raise ValueError("backend must be 'taichi' or 'numpy'")
+    if backend == "taichi":
+        raise NotImplementedError(
+            "Legacy FiberNetwork Taichi dynamics has no validated crosslink-topology "
+            "and unit mapping to StructureGraph (EA/L versus EA; mm versus physical "
+            "length units). Prepare a StructureGraph with explicit coefficients, "
+            "masses and units, then use fibernet.simulate(graph, mode='dynamics', "
+            "backend='taichi', ...). Endpoint-only conversion is not equivalent. "
+            "See docs/TAICHI_API_DISPATCH.md."
         )
     
     # Build spring-mass system from network
@@ -478,41 +483,12 @@ def simulate_dynamics(
     if external_force is not None:
         velocities = velocities  # placeholder
     
-    if backend == "taichi":
-        engine = TaichiEngine(arch=kwargs.get("arch", "cpu"))
-        result = engine.parallel_dynamics(
-            positions=positions,
-            velocities=velocities,
-            masses=masses,
-            rest_lengths=rest_lengths,
-            stiffness=stiffness,
-            edges=edges,
-            dt=dt,
-            damping=damping,
-            num_steps=steps,
-            save_interval=save_interval,
-            fixed_nodes=fixed_nodes,
-            external_force=external_force,
-        )
-        return {
-            'positions': result.positions[-1] if result.positions else positions,
-            'trajectory': result.positions or [],
-            'velocities': result.forces if result.forces is not None else np.zeros_like(positions),
-            'energy': result.energy,
-            'time_seconds': result.time_seconds,
-            'edges': edges,
-            'rest_lengths': rest_lengths,
-            'stiffness': stiffness,
-            'initial_positions': positions,
-        }
-    else:
-        # Pure numpy fallback
-        return _numpy_dynamics(
-            positions, velocities, masses, edges, rest_lengths, stiffness,
-            dt=dt, steps=steps, damping=damping,
-            fixed_nodes=fixed_nodes, external_force=external_force,
-            save_interval=save_interval,
-        )
+    return _numpy_dynamics(
+        positions, velocities, masses, edges, rest_lengths, stiffness,
+        dt=dt, steps=steps, damping=damping,
+        fixed_nodes=fixed_nodes, external_force=external_force,
+        save_interval=save_interval,
+    )
 
 
 def _build_mass_spring_system(network: FiberNetwork):
@@ -726,16 +702,17 @@ def simulate_thermal(
     T_cold: float = 0,
     axis: int = 0,
 ) -> Dict:
-    """Run thermal simulation."""
-    from fibernet.sim.thermal import ThermalSolver
-    
-    solver = ThermalSolver(network)
-    result = solver.solve_steady_state(T_hot=T_hot, T_cold=T_cold, axis=axis)
-    
-    return {
-        'conductivity': result.effective_conductivity,
-        'temperatures': result.temperatures,
-    }
+    """Unsupported legacy steady-state/effective-conductivity interface.
+
+    Explicit transient lumped conduction is a different model, not a fallback.
+    CTE and thermal deformation are not provided by that replacement example.
+    """
+    raise NotImplementedError(
+        "Legacy steady-state/effective-conductivity thermal API is unsupported. "
+        "Explicit transient lumped conduction requires caller-supplied C/g/T0/Q "
+        "and a time grid; see examples/transient_thermal_explicit.py. "
+        "This is not an equivalent replacement and does not compute CTE or thermal deformation."
+    )
 
 
 def analyze(network: FiberNetwork) -> Dict:

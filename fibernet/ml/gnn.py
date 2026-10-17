@@ -34,6 +34,7 @@ Examples
 
 from __future__ import annotations
 
+import copy
 import math
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
@@ -545,6 +546,9 @@ if HAS_TORCH:
         val_split: float = 0.2,
         early_stopping: int = 15,
         verbose: bool = True,
+        split=None,
+        groups=None,
+        restore_best: bool = False,
     ) -> Dict[str, Any]:
         """Train a GNN model on graph data.
 
@@ -568,21 +572,48 @@ if HAS_TORCH:
             Patience for early stopping.
         verbose : bool
             Print progress.
+        split : {None, "group"}, optional
+            None preserves unmarked legacy row splitting. Schema-tagged inputs
+            require explicit group mode, which preflights CPU scalar inputs.
+        groups : list or tuple of str, optional
+            Caller-supplied source labels required for group mode. Validation
+            groups guide early stopping; they are not a final test set.
+        restore_best : bool, optional
+            Restore an independent copy of the model state at the first minimum
+            finite, nonnegative validation MSE from this call. Default False
+            preserves the existing final-epoch model and return shape. True adds
+            model_selection metadata; no usable validation means no restoration.
+            Optimizer, scheduler, RNG and training/evaluation mode are not restored.
 
         Returns
         -------
         dict
-            Training history.
+            Training history and legacy best_val_loss; group mode also includes
+            training_data. With restore_best=True, model_selection describes the
+            actual state selection/restoration. Legacy loss bookkeeping and early
+            stopping are unchanged, including synthetic zero loss without validation.
         """
         from fibernet.ml.training import TrainingHistory
 
-        n = len(graphs)
-        labels = np.asarray(labels, dtype=np.float32)
-        rng = np.random.RandomState(42)
-        idx = rng.permutation(n)
-        n_val = int(n * val_split)
-        val_idx = idx[:n_val]
-        train_idx = idx[n_val:]
+        if type(restore_best) is not bool:
+            raise ValueError("restore_best must be a bool")
+
+        tagged = any(isinstance(g, dict) and 'input_schema' in g for g in graphs)
+        training_data = None
+        if split == 'group':
+            labels, train_idx, val_idx, training_data = _gnn_group_preflight(
+                model, graphs, labels, groups, epochs, lr, batch_size,
+                val_split, early_stopping)
+        else:
+            if split is not None or groups is not None or tagged:
+                raise ValueError("Schema-tagged inputs require explicit split='group' and groups")
+            n = len(graphs)
+            labels = np.asarray(labels, dtype=np.float32)
+            rng = np.random.RandomState(42)
+            idx = rng.permutation(n)
+            n_val = int(n * val_split)
+            val_idx = idx[:n_val]
+            train_idx = idx[n_val:]
 
         train_graphs = [graphs[i] for i in train_idx]
         train_labels = labels[train_idx]
@@ -593,6 +624,17 @@ if HAS_TORCH:
         history = TrainingHistory()
         patience_counter = 0
         best_val_loss = float("inf")
+        best_state = None
+        if restore_best:
+            selection = {
+                'schema': 'fibernet.gnn_model_selection.v1',
+                'criterion': 'minimum_finite_nonnegative_validation_mse',
+                'validation_role': 'validation', 'epoch_index_base': 0,
+                'tie_break': 'first', 'best_epoch': None, 'best_val_loss': None,
+                'restore_best_requested': True, 'best_state_restored': False,
+                'eligible_validation_epochs': 0, 'invalid_validation_epochs': 0,
+                'optimizer_state_restored': False, 'scheduler_state_restored': False,
+            }
 
         for epoch in range(epochs):
             # Train
@@ -626,6 +668,21 @@ if HAS_TORCH:
             history.update(epoch, train_loss, val_loss,
                           lr=optimizer.param_groups[0]["lr"])
 
+            # This opt-in selection is independent of legacy loss bookkeeping:
+            # an absent validation set or an invalid MSE cannot select a state.
+            if restore_best and val_graphs:
+                if math.isfinite(val_loss) and val_loss >= 0:
+                    selection['eligible_validation_epochs'] += 1
+                    if (selection['best_val_loss'] is None
+                            or val_loss < selection['best_val_loss']):
+                        selection['best_val_loss'] = val_loss
+                        selection['best_epoch'] = epoch
+                        # Same snapshot mechanism as the existing train_model.
+                        # Includes buffers, non-tensor extra state and metadata.
+                        best_state = copy.deepcopy(model.state_dict())
+                else:
+                    selection['invalid_validation_epochs'] += 1
+
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 patience_counter = 0
@@ -640,7 +697,32 @@ if HAS_TORCH:
             if verbose and (epoch % max(epochs // 10, 1) == 0 or epoch == epochs - 1):
                 print(f"Epoch {epoch:3d} | train_loss={train_loss:.4f} | val_loss={val_loss:.4f}")
 
-        return {"history": history, "best_val_loss": best_val_loss}
+        if restore_best:
+            epochs_run = len(history.train_losses)
+            selection['epochs_run'] = epochs_run
+            selection['model_state_epoch'] = epochs_run - 1 if epochs_run else None
+            if best_state is not None:
+                model.load_state_dict(best_state)
+                selection['best_state_restored'] = True
+                selection['model_state_epoch'] = selection['best_epoch']
+                selection['no_restore_reason'] = None
+            else:
+                selection['no_restore_reason'] = (
+                    'no_epochs' if not epochs_run else
+                    'no_validation' if not val_graphs else
+                    'no_finite_nonnegative_validation_loss'
+                )
+
+        result = {"history": history, "best_val_loss": best_val_loss}
+        if restore_best:
+            result['model_selection'] = selection
+        if training_data is not None:
+            training_data['training']['epochs_run'] = len(history.train_losses)
+            if restore_best:
+                training_data['training']['best_state_restored'] = selection['best_state_restored']
+                training_data['model_selection'] = copy.deepcopy(selection)
+            result['training_data'] = training_data
+        return result
 
 
 else:
@@ -666,3 +748,282 @@ else:
 
     def train_gnn(*a, **kw):
         _require_torch()
+
+
+def graphs_from_batch(batch, *, source_groups):
+    """Adapt GraphBatch v1 to CPU FiberGNN dictionaries with explicit provenance.
+
+    The new four-column schema is XYZ plus dimension, not the legacy five-column
+    schema. GCN consumes node features and adjacency only. Message-aligned edge
+    features/masks and physical identity are retained, not used by that model.
+    ``snapshot`` references the original detached float64 view; all tensors copy.
+    No splitting, fitted preprocessing, unit conversion or target inference occurs.
+    """
+    _require_torch()
+    from collections.abc import Mapping
+    from fibernet.ml.graph_data import GraphBatch
+
+    if not isinstance(batch, GraphBatch) or batch.schema_version != 'fibernet.graph_batch.v1':
+        raise ValueError('batch must be GraphBatch v1')
+
+    def array(name, kind, shape=None):
+        value = getattr(batch, name)
+        if np.ma.isMaskedArray(value) or not isinstance(value, np.ndarray):
+            raise ValueError(name + ' must be an unmasked NumPy array')
+        if value.dtype.kind not in kind or (shape is not None and value.shape != shape):
+            raise ValueError(name + ' has invalid dtype or shape')
+        if not np.isfinite(value).all():
+            raise ValueError(name + ' must be finite')
+        if value.dtype.kind in 'iu' and value.size and int(value.max()) > np.iinfo(np.int64).max:
+            raise ValueError(name + ' exceeds int64 range')
+        return value
+
+    def labels(value, count, name, unique=False):
+        if not isinstance(value, (tuple, list)) or len(value) != count:
+            raise ValueError(name + ' must have one string per graph')
+        if any(type(x) is not str or not x.strip() for x in value):
+            raise ValueError(name + ' must contain nonempty strings')
+        if unique and len(set(value)) != count:
+            raise ValueError(name + ' must be unique')
+
+    if not isinstance(batch.graph_ids, tuple) or not batch.graph_ids:
+        raise ValueError('batch must contain at least one graph')
+    b = len(batch.graph_ids)
+    labels(batch.graph_ids, b, 'graph_ids', unique=True)
+    labels(source_groups, b, 'source_groups')
+    for name in ('length_unit', 'coordinate_frame'):
+        if type(getattr(batch, name)) is not str or not getattr(batch, name).strip():
+            raise ValueError(name + ' must be explicit')
+    dims = array('dimensions', 'iu', (b,))
+    if not np.isin(dims, [2, 3]).all():
+        raise ValueError('dimension must be 2 or 3')
+    nids, eids = array('node_ids', 'iu'), array('edge_ids', 'iu')
+    if nids.ndim != 1 or eids.ndim != 1 or np.any(nids < 0) or np.any(eids < 0):
+        raise ValueError('IDs must be nonnegative one-dimensional integers')
+    n, e = len(nids), len(eids)
+    pos = array('positions', 'iuf', (n, 3))
+    points = array('internal_points', 'iuf')
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError('internal_points must have shape (M, 3)')
+
+    def pointer(name, count, end):
+        p = array(name, 'iu', (count + 1,))
+        if p[0] != 0 or p[-1] != end or np.any(p[1:] < p[:-1]):
+            raise ValueError(name + ' must be monotonic and span its rows')
+        return p
+
+    nptr, eptr = pointer('node_ptr', b, n), pointer('edge_ptr', b, e)
+    iptr = pointer('internal_ptr', e, len(points))
+    interior_available = array('internal_available', 'b', (e,))
+    if np.any((~interior_available) & (iptr[1:] != iptr[:-1])):
+        raise ValueError('unavailable internal geometry must have no points')
+    physical = array('edge_index', 'iu', (2, e))
+    messages = array('message_index', 'iu', (2, 2 * e))
+    parents = array('message_parent_rows', 'iu', (2 * e,))
+    parent_ids = array('message_parent_ids', 'iu', (2 * e,))
+    orientation = array('message_orientation', 'i', (2 * e,))
+    if (not np.array_equal(parents, np.repeat(np.arange(e), 2))
+            or not np.array_equal(parent_ids, np.repeat(eids, 2))
+            or not np.array_equal(orientation, np.tile([1, -1], e))
+            or not np.array_equal(messages[:, ::2], physical)
+            or not np.array_equal(messages[:, 1::2], physical[::-1])):
+        raise ValueError('messages must preserve physical parent and direction')
+    names = batch.edge_feature_names
+    if (not isinstance(names, tuple) or any(type(x) is not str or x not in
+            ('radius', 'chord_length', 'polyline_length') for x in names)
+            or len(set(names)) != len(names)):
+        raise ValueError('invalid edge feature names')
+    ef = array('edge_features', 'iuf', (e, len(names)))
+    masks = array('edge_feature_available', 'b', ef.shape)
+    if np.any(ef[~masks] != 0):
+        raise ValueError('unavailable edge features must use zero placeholders')
+    for name, count in (('graph_metadata', b), ('node_metadata', n), ('edge_metadata', e)):
+        records = getattr(batch, name)
+        if not isinstance(records, tuple) or len(records) != count or any(
+                not isinstance(record, Mapping) for record in records):
+            raise ValueError(name + ' must align with snapshot rows')
+    for i in range(b):
+        lo, hi, elo, ehi = map(int, (nptr[i], nptr[i+1], eptr[i], eptr[i+1]))
+        if lo == hi:
+            raise ValueError('FiberGNN cannot pool a zero-node graph')
+        if np.any(nids[lo+1:hi] <= nids[lo:hi-1]) or len(set(eids[elo:ehi])) != ehi-elo:
+            raise ValueError('node IDs must be sorted unique and edge IDs graph-local unique')
+        if np.any(physical[:, elo:ehi] < lo) or np.any(physical[:, elo:ehi] >= hi):
+            raise ValueError('physical endpoints must stay within their graph')
+
+    def float_tensor(value):
+        with np.errstate(over='ignore', under='ignore'):
+            converted = np.array(value, dtype=np.float32, copy=True)
+        if not np.isfinite(converted).all() or np.any((value != 0) & (converted == 0)):
+            raise ValueError('float32 range exceeded; explicitly rescale inputs before adapting')
+        return torch.tensor(converted, dtype=torch.float32)
+
+    # Check conversions before returning any graph; original float64 remains in snapshot.
+    positions = float_tensor(pos)
+    edge_values = float_tensor(ef)
+    result = []
+    for i in range(b):
+        lo, hi, elo, ehi = map(int, (nptr[i], nptr[i+1], eptr[i], eptr[i+1]))
+        mi = slice(2 * elo, 2 * ehi)
+        edge_index = torch.tensor(messages[:, mi].astype(np.int64) - lo, dtype=torch.long)
+        local_parents = torch.tensor(parents[mi].astype(np.int64) - elo, dtype=torch.long)
+        result.append({
+            'node_features': torch.cat((positions[lo:hi].clone(),
+                torch.full((hi-lo, 1), float(dims[i]), dtype=torch.float32)), dim=1),
+            'edge_index': edge_index,
+            'edge_features': edge_values[elo:ehi][local_parents].clone(),
+            'edge_feature_available': torch.tensor(masks[elo:ehi], dtype=torch.bool)[local_parents],
+            'adjacency': _build_normalized_adjacency(hi-lo, edge_index),
+            'n_nodes': hi-lo, 'n_edges': ehi-elo,
+            'input_schema': 'fibernet.fibergnn.xyz_dimension.v1',
+            'node_feature_names': ('x', 'y', 'z', 'dimension'),
+            'edge_feature_names': names, 'graph_id': batch.graph_ids[i],
+            'source_group': source_groups[i],
+            'node_ids': torch.tensor(nids[lo:hi].astype(np.int64), dtype=torch.long),
+            'physical_edge_ids': torch.tensor(eids[elo:ehi].astype(np.int64), dtype=torch.long),
+            'physical_edge_index': torch.tensor(physical[:, elo:ehi].astype(np.int64)-lo, dtype=torch.long),
+            'message_parent_rows': local_parents,
+            'message_parent_ids': torch.tensor(parent_ids[mi].astype(np.int64), dtype=torch.long),
+            'message_orientation': torch.tensor(orientation[mi], dtype=torch.int8),
+            'dimension': int(dims[i]), 'length_unit': batch.length_unit,
+            'coordinate_frame': batch.coordinate_frame,
+            'snapshot': batch, 'snapshot_graph_row': i,
+        })
+    return result
+
+
+def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
+                         val_split, early_stopping):
+    """Validate explicit CPU scalar group mode before creating an optimizer."""
+    from numbers import Integral, Real
+    if type(model) is not FiberGNN:
+        raise ValueError('group mode requires the supported FiberGNN class')
+    for name, value, minimum in (('epochs', epochs, 1), ('batch_size', batch_size, 1),
+                                 ('early_stopping', early_stopping, 0)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
+            raise ValueError(name + ' must be a nonbool integer in the supported range')
+    for name, value in (('lr', lr), ('val_split', val_split)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) or not math.isfinite(value) or value <= 0:
+            raise ValueError(name + ' must be a finite positive real')
+    if val_split >= 1:
+        raise ValueError('group val_split must be between zero and one')
+    if not isinstance(graphs, (list, tuple)) or not graphs or any(type(g) is not dict for g in graphs):
+        raise ValueError('group mode requires a nonempty list/tuple of graph dictionaries')
+    n = len(graphs)
+    if (not isinstance(groups, (list, tuple)) or len(groups) != n
+            or any(type(g) is not str or not g.strip() for g in groups)
+            or len(set(groups)) < 2):
+        raise ValueError('groups must name every graph and include at least two source groups')
+    if any(p.device.type != 'cpu' or p.dtype != torch.float32 or not torch.isfinite(p).all()
+           for p in model.parameters()):
+        raise ValueError('group mode requires finite CPU float32 model parameters')
+    width = model.input_proj.in_features
+    hidden = model.input_proj.out_features
+    if model.head[-1].out_features != 1:
+        raise ValueError('group mode requires scalar model output width=1')
+    if (model.layer_type not in ('gcn', 'gat', 'sage') or model.pooling not in ('mean', 'max', 'attention')
+            or len(model.layers) != model.n_layers or len(model.norms) != model.n_layers or model.n_layers < 1):
+        raise ValueError('unsupported FiberGNN layer configuration')
+    layer_configs = []
+    expected = {'gcn': GraphConvLayer, 'gat': GraphAttentionLayer, 'sage': GraphSAGELayer}[model.layer_type]
+    for i, (layer, norm) in enumerate(zip(model.layers, model.norms)):
+        if type(layer) is not expected or tuple(norm.normalized_shape) != (hidden,):
+            raise ValueError('unsupported FiberGNN layer configuration')
+        conf = {'class': type(layer).__name__}
+        if model.layer_type == 'gat':
+            if layer.n_heads < 1 or (model.n_layers > 1 and hidden % layer.n_heads):
+                raise ValueError('multi-layer GAT hidden width must be divisible by n_heads')
+            actual_width = layer.out_dim * layer.n_heads if layer.concat else layer.out_dim
+            if actual_width != hidden:
+                raise ValueError('GAT layer output width must equal hidden width')
+            conf.update(n_heads=int(layer.n_heads), attention_dropout=float(layer.dropout.p),
+                        concat=bool(layer.concat), out_dim=int(layer.out_dim))
+        elif model.layer_type == 'sage':
+            if layer.aggregator not in ('mean', 'sum', 'max'):
+                raise ValueError('unsupported SAGE aggregator')
+            conf['aggregator'] = layer.aggregator
+        layer_configs.append(conf)
+    schema = 'fibernet.fibergnn.xyz_dimension.v1'
+    marked = ['input_schema' in g for g in graphs]
+    tagged = any(marked)
+    if tagged and (not all(marked) or any(g['input_schema'] != schema for g in graphs)):
+        raise ValueError('group mode requires homogeneous supported input schemas')
+    graph_ids = None
+    names = None
+    unit = frame = None
+    if tagged:
+        if width != 4:
+            raise ValueError('XYZ+dimension schema requires node_dim=4')
+        graph_ids = [g.get('graph_id') for g in graphs]
+        if (any(type(x) is not str or not x.strip() for x in graph_ids)
+                or len(set(graph_ids)) != n):
+            raise ValueError('graph IDs must be nonempty and unique within this training collection')
+        names = ['x', 'y', 'z', 'dimension']
+        for g, group in zip(graphs, groups):
+            if g.get('source_group') != group or g.get('node_feature_names') != tuple(names):
+                raise ValueError('groups and feature names must match adapted inputs')
+        unit, frame = graphs[0].get('length_unit'), graphs[0].get('coordinate_frame')
+        for name, value in (('length_unit', unit), ('coordinate_frame', frame)):
+            if type(value) is not str or not value.strip() or any(g.get(name) != value for g in graphs):
+                raise ValueError(name + ' must be consistent and explicit')
+    for g in graphs:
+        x, ei, adj = g.get('node_features'), g.get('edge_index'), g.get('adjacency')
+        if (not isinstance(x, torch.Tensor) or x.layout != torch.strided or x.device.type != 'cpu'
+                or x.dtype != torch.float32 or x.ndim != 2 or x.shape[1] != width
+                or x.shape[0] == 0 or not torch.isfinite(x).all()):
+            raise ValueError('node_features must be finite nonempty CPU float32 tensors of model width')
+        if (not isinstance(ei, torch.Tensor) or ei.layout != torch.strided or ei.device.type != 'cpu'
+                or ei.dtype != torch.int64 or ei.ndim != 2 or ei.shape[0] != 2
+                or torch.any(ei < 0) or torch.any(ei >= x.shape[0])):
+            raise ValueError('edge_index must contain CPU int64 graph-local rows')
+        if model.layer_type == 'gcn':
+            if (not isinstance(adj, torch.Tensor) or adj.layout != torch.sparse_coo
+                    or adj.device.type != 'cpu' or adj.dtype != torch.float32
+                    or tuple(adj.shape) != (x.shape[0], x.shape[0])
+                    or not torch.isfinite(adj._values()).all()
+                    or torch.any(adj._indices() < 0) or torch.any(adj._indices() >= x.shape[0])):
+                raise ValueError('GCN adjacency must be finite CPU float32 sparse COO with local indices')
+        elif 'adjacency' not in g:
+            raise ValueError('graph dictionary must include adjacency key')
+    if np.ma.isMaskedArray(labels):
+        raise ValueError('labels must not be a MaskedArray')
+    raw = np.asarray(labels)
+    if raw.shape != (n,) or raw.dtype.kind not in 'iuf' or not np.isfinite(raw).all():
+        raise ValueError('labels must be finite scalar targets with shape (n_graphs,)')
+    with np.errstate(over='ignore', under='ignore'):
+        targets = np.array(raw, dtype=np.float32, copy=True)
+    if not np.isfinite(targets).all() or np.any((raw != 0) & (targets == 0)):
+        raise ValueError('labels must remain finite and nonzero values must not underflow in float32')
+    try:
+        from sklearn.model_selection import GroupShuffleSplit
+    except ImportError as exc:
+        raise ImportError('scikit-learn is required for train_gnn group splitting') from exc
+    try:
+        train, val = next(GroupShuffleSplit(n_splits=1, test_size=float(val_split), random_state=42)
+                          .split(np.arange(n), groups=groups))
+    except ValueError as exc:
+        raise ValueError('group split cannot produce usable train and validation sets') from exc
+    train_groups = sorted({groups[i] for i in train})
+    val_groups = sorted({groups[i] for i in val})
+    if len(train) == 0 or len(val) == 0 or set(train_groups) & set(val_groups):
+        raise ValueError('group split requires nonempty disjoint train and validation groups')
+    record = {
+        'schema': 'fibernet.gnn_group_training.v1',
+        'input_schema': schema if tagged else 'caller-legacy',
+        'feature_names': names, 'graph_ids': graph_ids,
+        'length_unit': unit, 'coordinate_frame': frame,
+        'split': {'method': 'group', 'random_state': 42, 'validation_role': 'validation',
+                  'requested_group_fraction': float(val_split), 'groups': list(groups),
+                  'train_indices': train.tolist(), 'validation_indices': val.tolist(),
+                  'train_groups': train_groups, 'validation_groups': val_groups,
+                  'train_count': len(train), 'validation_count': len(val)},
+        'training': {'epochs_requested': int(epochs), 'batch_size': int(batch_size),
+                     'lr': float(lr), 'early_stopping': int(early_stopping),
+                     'optimizer': 'AdamW', 'weight_decay': 1e-4, 'gradient_clip': 1.0,
+                     'best_state_restored': False},
+        'model': {'class': 'FiberGNN', 'node_dim': int(width), 'hidden': int(hidden),
+                  'n_outputs': 1, 'n_layers': int(model.n_layers), 'layer_type': model.layer_type,
+                  'pooling': model.pooling, 'dropout': float(model.dropout.p),
+                  'head_dropout': float(model.head[2].p), 'layers': layer_configs},
+    }
+    return targets, train, val, record
