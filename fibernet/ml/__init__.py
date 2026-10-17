@@ -95,6 +95,7 @@ def __getattr__(name):
     _submodules = {
         # Detached NumPy graph data (no learning backend)
         "GraphBatch": "fibernet.ml.graph_data",
+        "GraphBatchProvenance": "fibernet.ml.graph_data",
         "graph_batch": "fibernet.ml.graph_data",
         # Models
         "FiberMLP": "fibernet.ml.models",

@@ -102,6 +102,78 @@ Read-only mapping proxies are not a persistence format. Persist the authoritativ
 graph and explicit declarations; this view has no checkpoint serializer.
 Concurrent source mutation during snapshot creation is outside the contract.
 
+## Opt-in stored provenance (v2)
+
+The default remains v1. To retain additional authoritative source records:
+
+```python
+view = graph_batch(
+    [graph_a], graph_ids=['specimen-a'], length_unit='mm',
+    coordinate_frame='specimen-local', include_provenance=True,
+)
+stored = view.provenance
+material = stored.edge_material_records[0]  # immutable mapping, or None
+```
+
+`include_provenance` must be an actual bool. True selects
+`fibernet.graph_batch.v2`; the attached frozen `GraphBatchProvenance` record uses
+`fibernet.graph_batch.provenance.v1`. The same GraphBatch, IDs, row ordering,
+geometry, messages and metadata are retained. This is a detached view extension,
+not another graph owner. The current `graphs_from_batch` GNN adapter accepts only
+v1 and explicitly rejects v2; no model automatically consumes this provenance.
+`GraphBatchProvenance` is also available through the lazy `fibernet.ml` export.
+
+The payload aligns with the enclosing view's node/physical-edge rows and ptrs:
+
+- `node_boundary_face_flags`: readonly bool `(N,6)`, in the exact order
+  x_min, x_max, y_min, y_max, z_min, z_max
+- `node_boundary_face_available`: bool `(N,)`; absent/None uses six false
+  placeholders with availability=False. A present all-false record is available
+- `edge_material_records`: tuple of immutable authoritative Material JSON
+  records, or None when missing. `edge_material_available` is bool `(E,)`
+- `edge_segments`: readonly int64 `(E,)` meshing counts, with a separate
+  `edge_segments_available` mask. Missing/None uses zero with availability=False;
+  present values must be positive nonbool int64-range integers
+- `node_boundary_face_origin`, `edge_material_origin`, `edge_segments_origin`:
+  tuples containing `stored_origin_unknown` or `missing`
+
+Boundary-face flags describe geometric cell membership used for periodic
+welding. They are **not mechanical boundary conditions**, displacement/rotation
+constraints, forces or loads. Those require explicit separate caller records,
+DOF/frame definitions and units; none are inferred here. Segments are FEM
+discretization provenance, not a constitutive or curve-shape feature.
+
+Material records use the existing StructureGraph schema 3.1 serialization
+validation and are detached/frozen recursively, including stiffness tensors and
+extra metadata. A material name or metadata material_id is not a guessed source
+of constitutive parameters. This initial profile accepts the native Material
+class, not custom subclasses/serializers. Unsupported objects, nonfinite or
+malformed records and cyclic extra data fail; no missing material is replaced
+with a generic Material. Serialization validation does not certify a supported
+physical law, tensor symmetry/positivity, units or a model's consumption.
+
+The records describe values already stored in the graph. A constructor-assigned
+default or derived shear modulus may be indistinguishable from an explicit input;
+`stored_origin_unknown` makes no claim about that history. Optional properties
+omitted by Material.to_dict remain absent; a retained null is unavailable, while
+an explicit numeric zero remains zero. No per-property numeric feature matrix,
+normalization or conversion is added. The graph's existing unit declarations and
+original internal-point geometry are unchanged.
+
+With `include_provenance=False` or the default, the three optional source fields
+are not inspected or validated, preserving v1 behavior even for records not
+supported by the opt-in profile. The GraphBatch dataclass has one new trailing
+optional field, `provenance=None`, so existing positional construction still
+works. Dataclass field introspection gains that field. Neither dataclasses.asdict
+nor pickle was or is a GraphBatch persistence contract: persist StructureGraph
+and explicit declarations instead. StructureGraph JSON serialization is unchanged.
+
+All new arrays are detached and marked non-writeable, with the same ordinary
+write-protection limits as v1. Direct dataclass construction still bypasses
+validation. Tests cover heterogeneous records with identical material names,
+parallel/reversed edges, repeated local IDs across graphs, empty/missing records,
+source mutation, default behavior and strict v2 adapter refusal without Torch.
+
 ## Holdout boundary and validation
 
 This API does not split datasets and does not infer independent source groups
