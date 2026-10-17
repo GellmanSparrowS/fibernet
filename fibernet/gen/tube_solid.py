@@ -3,7 +3,15 @@ import numpy as np
 
 
 def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
+    """Return owned float64 positions and int32 faces from binary64 extraction.
+
+    The optional provider must expose ``Manifold.to_mesh64`` (verified with
+    manifold3d 3.5.1). Triangle counts/order and coordinates are not a stable
+    serialization contract. Callers must validate the resulting geometry.
+    """
     import manifold3d as m
+    if not callable(getattr(m.Manifold, 'to_mesh64', None)):
+        raise RuntimeError('solid meshing requires Manifold.to_mesh64 (verified with manifold3d 3.5.1)')
     unique,inverse=np.unique(np.round(points,8),axis=0,return_inverse=True)
     edges=np.unique(np.sort(inverse[np.asarray(edges,int)],axis=1),axis=0)
     edges=edges[edges[:,0]!=edges[:,1]]
@@ -65,16 +73,24 @@ def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
         if progress: progress(85+int(10*level/levels))
     result=batches[0]
     result=result.as_original().simplify(max(radius*1e-3,1e-5))
-    for _ in range(2):
-        raw=result.to_mesh()
-        cleaned=m.Mesh(np.array(np.round(raw.vert_properties,4),dtype=np.float32,order="C"),np.array(raw.tri_verts,dtype=np.uint32,order="C"),tolerance=1e-4)
-        result=m.Manifold(cleaned).as_original().simplify(max(radius*1e-3,1e-5))
-    mesh=result.to_mesh()
+    mesh=result.to_mesh64()
     if stop_cb and stop_cb(): raise InterruptedError('solid export cancelled')
     if result.status()!=m.Error.NoError:
         raise ValueError('cylinder union failed: '+str(result.status()))
-    vertices=np.asarray(mesh.vert_properties[:,:3],float)
-    faces=np.array(mesh.tri_verts,dtype=np.int32,copy=True)
+    properties=np.asarray(mesh.vert_properties)
+    if properties.ndim!=2 or properties.shape[1]<3 or properties.dtype.kind!='f' or properties.dtype.itemsize!=8:
+        raise ValueError('mesh positions must be a binary64 array with at least three columns')
+    if not np.isfinite(properties[:,:3]).all():
+        raise ValueError('mesh positions must be finite')
+    indices=np.asarray(mesh.tri_verts)
+    if indices.ndim!=2 or indices.shape[1]!=3 or indices.dtype.kind not in 'iu':
+        raise ValueError('mesh faces must be an integer array with three columns')
+    if np.any(indices<0) or np.any(indices>=len(properties)) or np.any(indices>np.iinfo(np.int32).max):
+        raise ValueError('mesh face index is outside the vertex table or int32 range')
+    # Mesh64 exposes const provider-owned views. Both contact separation below
+    # and build_solid's coordinate transform require independent writable data.
+    vertices=np.array(properties[:,:3],dtype=np.float64,order='C',copy=True)
+    faces=np.array(indices,dtype=np.int32,order='C',copy=True)
     # Separate zero-thickness contacts that STL readers would weld into non-manifold edges.
     for attempt in range(3):
         _,inverse,counts=np.unique(np.round(vertices,5),axis=0,return_inverse=True,return_counts=True)
@@ -89,4 +105,6 @@ def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
         vertices[touching]-=normals[touching]/lengths[:,None]*max(radius*1e-3,1e-4)*(attempt+1)
     if len(np.unique(np.round(vertices,5),axis=0))!=len(vertices):
         raise ValueError('unresolved coincident solid vertices')
+    if not np.isfinite(vertices).all():
+        raise ValueError('solid contact separation produced non-finite vertices')
     return vertices,faces
