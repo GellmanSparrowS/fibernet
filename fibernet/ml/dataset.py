@@ -35,7 +35,8 @@ import stat
 import tempfile
 import warnings
 from pathlib import Path
-from numbers import Real
+from numbers import Integral, Real
+from fractions import Fraction
 from collections.abc import Mapping
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass, field
@@ -149,6 +150,70 @@ def _extract_graph_features(g) -> Dict[str, float]:
     return features
 
 
+def _source_group_split_indices(n_samples, ratios, random_state, groups):
+    """Validated three-way indices using the existing sklearn group splitter."""
+    if (not isinstance(groups, (list, tuple)) or len(groups) != n_samples
+            or any(not isinstance(group, str) or not group.strip() for group in groups)):
+        raise ValueError("groups must be a list/tuple of nonempty string labels, one per Dataset row")
+    groups = tuple(groups)
+    n_groups = len(set(groups))
+    if n_groups < 3:
+        raise ValueError("Group splitting requires at least three distinct source groups")
+    if (not isinstance(ratios, (list, tuple)) or len(ratios) != 3
+            or any(isinstance(value, (bool, np.bool_)) or not isinstance(value, Real)
+                   for value in ratios)):
+        raise ValueError("Group ratios must be three positive finite fractions summing to 1")
+    try:
+        fractions = tuple(float(value) for value in ratios)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError("Group ratios must be three positive finite fractions summing to 1") from exc
+    if (not all(np.isfinite(value) and 0 < value < 1 for value in fractions)
+            or not np.isclose(sum(fractions), 1.0, rtol=0.0, atol=1e-12)):
+        raise ValueError("Group ratios must be three positive finite fractions summing to 1")
+    if (isinstance(random_state, (bool, np.bool_))
+            or not isinstance(random_state, Integral)
+            or not 0 <= random_state <= 2**32 - 1):
+        raise ValueError("Group random_state must be an integer in [0, 2**32 - 1]")
+    # Exact arithmetic over the validated floats' shortest decimal spellings
+    # avoids adding a group for intermediate roundoff (e.g. 2.0000000000000004).
+    weights = tuple(Fraction(str(value)) for value in fractions)
+    def ceiling(value):
+        return -(-value.numerator // value.denominator)
+    n_test = ceiling(n_groups * weights[2])
+    n_remaining = n_groups - n_test
+    n_val = ceiling(n_remaining * weights[1] / (weights[0] + weights[1]))
+    if n_test < 1 or n_val < 1 or n_remaining - n_val < 1:
+        raise ValueError("Group ratios require more source groups for nonempty train/validation/test")
+
+    try:
+        from sklearn.model_selection import GroupShuffleSplit
+    except ImportError as exc:
+        raise ImportError("Group dataset splitting requires optional scikit-learn; row mode does not") from exc
+    # NumPy string coercion can merge distinct labels such as "source" and
+    # "source\0". Sorted exact string identities give deterministic integer
+    # codes, independent of row order, without exposing strings to the backend.
+    code_by_group = {group: code for code, group in enumerate(sorted(set(groups)))}
+    group_codes = np.asarray([code_by_group[group] for group in groups], dtype=np.int64)
+    rng = np.random.RandomState(int(random_state))
+    indices = np.arange(n_samples)
+    development, test = next(GroupShuffleSplit(
+        n_splits=1, test_size=n_test, random_state=rng).split(indices, groups=group_codes))
+    local_train, local_val = next(GroupShuffleSplit(
+        n_splits=1, test_size=n_val, random_state=rng).split(
+            development, groups=group_codes[development]))
+    train, val = development[local_train], development[local_val]
+    parts = (train, val, test)
+    rows = [int(index) for part in parts for index in part]
+    if any(len(part) == 0 for part in parts) or sorted(rows) != list(range(n_samples)):
+        raise ValueError("Group split must exactly partition all rows into three nonempty sets")
+    sets = [{groups[index] for index in part} for part in parts]
+    if any(sets[i] & sets[j] for i in range(3) for j in range(i + 1, 3)):
+        raise ValueError("Source groups overlap across train/validation/test")
+    if tuple(len(part) for part in sets) != (n_remaining - n_val, n_val, n_test):
+        raise ValueError("Group split does not match the requested group counts")
+    return parts
+
+
 @dataclass
 class DatasetSample:
     """Single dataset sample."""
@@ -260,30 +325,61 @@ class FiberNetDataset:
         self,
         ratios: Tuple[float, float, float] = (0.7, 0.15, 0.15),
         random_state: int = 42,
+        *,
+        method: str = "row",
+        groups: Optional[Sequence[str]] = None,
     ) -> Tuple["FiberNetDataset", "FiberNetDataset", "FiberNetDataset"]:
-        """Split into train/val/test.
+        """Split into train/validation/test with explicit row or source-group intent.
 
         Parameters
         ----------
         ratios : (train, val, test)
-            Must sum to 1.0.
+            Requested fractions, summing to 1.0. Group mode requires three
+            positive finite fractions and rounds by group count, not row count:
+            reserve ceil(n_groups * test), then ceil(remaining_groups *
+            val / (train + val)), using exact arithmetic on the validated floats'
+            shortest decimal spellings. No near-integer snapping is performed.
+            Infeasible nonempty partitions are rejected.
         random_state : int
-            Random seed.
+            Random seed. Group mode requires an integer in [0, 2**32 - 1].
+        method : {"row", "group"}, keyword-only
+            "row" preserves the historical row-random behavior, including its
+            rounding and validation behavior; it is not source-group-safe.
+            "group" uses optional scikit-learn GroupShuffleSplit twice and
+            preserves input row order inside each returned partition.
+        groups : list or tuple of str, keyword-only
+            Required only for group mode: one nonempty source label per row.
+            All related material/scale/geometry variants must share their parent
+            source label. Labels are caller assertions, not inferred or verified
+            from metadata; unique sample IDs do not establish independence.
+            Exact string identities are preserved, with no trimming or Unicode
+            normalization. Sorted labels are encoded as integers for splitting.
 
         Returns
         -------
         (train, val, test) : tuple of FiberNetDataset
+            Samples and their metadata are retained as in the historical method.
+            No exposure history is reset: calling a partition "test" does not
+            make previously evaluated data untouched.
         """
-        rng = np.random.RandomState(random_state)
-        n = len(self.samples)
-        indices = rng.permutation(n)
+        if not isinstance(method, str) or method not in ("row", "group"):
+            raise ValueError("method must be 'row' or 'group'")
+        if method == "group":
+            train_idx, val_idx, test_idx = _source_group_split_indices(
+                len(self.samples), ratios, random_state, groups)
+        else:
+            if groups is not None:
+                raise ValueError("groups requires method='group'; row mode is not group-safe")
+            rng = np.random.RandomState(random_state)
+            n = len(self.samples)
+            indices = rng.permutation(n)
 
-        n_train = int(n * ratios[0])
-        n_val = int(n * ratios[1])
+            n_train = int(n * ratios[0])
+            n_val = int(n * ratios[1])
 
-        train_idx = indices[:n_train]
-        val_idx = indices[n_train:n_train + n_val]
-        test_idx = indices[n_train + n_val:]
+            train_idx = indices[:n_train]
+            val_idx = indices[n_train:n_train + n_val]
+            test_idx = indices[n_train + n_val:]
 
         def _sub(idxs):
             return FiberNetDataset(

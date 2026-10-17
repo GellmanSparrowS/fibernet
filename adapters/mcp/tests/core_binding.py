@@ -61,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     for relative in ('sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
                      '__init__.py', 'api.py', 'easy.py', 'viz/__init__.py',
-                     'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py'):
+                     'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py'):
         target = core / relative
         saved = target.read_bytes()
         try:
