@@ -20,6 +20,8 @@ from scipy.sparse import coo_matrix, diags
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import MatrixRankWarning, spsolve
 
+from ._roundoff import upper_sum, upper_product, evaluation_ulp
+
 
 class FloatingComponentError(ValueError):
     """At least one conducting component has no prescribed voltage."""
@@ -241,18 +243,35 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     residual = float(np.max(np.abs(injection[free]))) if len(free) else 0.
     balance = float(np.sum(injection))
     incident_current = np.asarray(abs(B).T @ np.abs(q))
-    # Local roundoff allowance uses only incident conductances and voltages
-    # relative to this component's reference, never another node/component's
-    # high-current scale. It is a backward-error allowance, not a voltage bound.
-    local_voltage = np.zeros(n)
-    for members in component_rows:
-        reference = v[np.intersect1d(members, fixed)[0]]
-        local_voltage[members] = np.abs(v[members] - reference)
-    with np.errstate(over='ignore', invalid='ignore'):
-        local_roundoff_scale = np.asarray(abs(B).T @ (g * (abs(B) @ local_voltage)))
-        node_limits = current_atol_A + rtol * incident_current + 32*np.finfo(float).eps*local_roundoff_scale
-    if not np.isfinite(node_limits).all():
-        raise TransportSolveError('local conservation scale overflowed')
+    # The sparse solve uses ABSOLUTE voltages. The existing 32*eps factor is
+    # an engineering backward-residual margin, not a sparse-LU theorem or a
+    # forward-accuracy certificate at arbitrarily large voltage offsets.
+    # Separately account for evaluation on the actual returned float fields.
+    try:
+        edge_evaluation = [upper_sum([upper_product(float(g[j]), evaluation_ulp(dv[j])),
+                                     evaluation_ulp(q[j])]) if g[j] else 0.0 for j in range(e)]
+        node_limits = np.zeros(n)
+        solve_allowance = np.zeros(n)
+        evaluation_allowance = np.zeros(n)
+        u = np.finfo(float).eps / 2
+        incident_rows = [[] for _ in range(n)]
+        for j, (a, b) in enumerate(conn):
+            incident_rows[a].append(j); incident_rows[b].append(j)
+        for i, incident in enumerate(incident_rows):
+            local_scale = upper_sum(upper_product(float(g[j]), upper_sum([abs(float(v[a])), abs(float(v[b]))]))
+                                    for j in incident for a, b in [conn[j]])
+            solve_allowance[i] = upper_product(32*np.finfo(float).eps, local_scale)
+            ku = upper_product(len(incident), u)
+            if ku >= 1:
+                raise ArithmeticError('nodal accumulation budget is not representable')
+            gamma = math.nextafter(ku/math.nextafter(1-ku, -math.inf), math.inf) if ku else 0.0
+            current_scale = upper_sum(abs(float(q[j])) for j in incident)
+            evaluation_allowance[i] = upper_sum([upper_sum(edge_evaluation[j] for j in incident),
+                upper_product(gamma, current_scale)])
+            node_limits[i] = upper_sum([current_atol_A, upper_product(rtol, current_scale),
+                                       solve_allowance[i], evaluation_allowance[i]])
+    except ArithmeticError as exc:
+        raise TransportSolveError('local conservation scale overflowed') from exc
     if np.any(np.abs(injection[free]) > node_limits[free]):
         raise TransportSolveError('node-local current conservation tolerance failed')
     component_checks = []
@@ -285,6 +304,7 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                    coordinates=positions.tolist(), length_unit=length_unit)
     fingerprint = hashlib.sha256(json.dumps(binding, sort_keys=True, allow_nan=False).encode()).hexdigest()
     provenance = dict(model_kind='steady-linear-electrical-conductance',
+                      validation_contract='transport-roundoff-2',
                       assumptions=['ideal equipotential junctions', 'supplied constant edge conductance',
                                    'no distributed sources or transient storage'],
                       conductance_source='caller supplied; no geometry or material inference',
@@ -296,7 +316,11 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                       tolerances=dict(rtol=rtol, current_atol_A=current_atol_A,
                                       power_atol_W=power_atol_W),
                       achieved_limits=dict(node_current_A=node_limits.tolist(), components=component_checks,
-                                           roundoff_factor=32*np.finfo(float).eps),
+                                           roundoff_factor=32*np.finfo(float).eps,
+                                           solve_roundoff_A=solve_allowance.tolist(),
+                                           field_evaluation_roundoff_A=evaluation_allowance.tolist(),
+                                           roundoff_coordinates='absolute solved voltage',
+                                           roundoff_scope='engineering backward-residual margin; not forward accuracy'),
                       model_metadata=meta)
     return LinearTransportResult(
         _readonly(node_ids, np.int64), _readonly(edge_ids, np.int64),

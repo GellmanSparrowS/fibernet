@@ -6,7 +6,7 @@ Supply a `StructureGraph`, complete stable-node-ID maps for `capacity_J_per_K` a
 
 Units are K, J/K, W/K, s and W. Inputs are explicit constant physical parameters, not inferred from material or geometry. Every node needs positive capacity, including fixed nodes. Zero heat conductance is allowed. Sources are nonnegative in this minimal model. Fixed temperatures equal initial values exactly. Disconnected/unanchored components are legal; their initial-value evolution is defined without artificial grounding. The time grid starts at zero and is uniform within the frozen floating-point tolerance; actual interval values are used, not silently rounded.
 
-The method is backward Euler, solving increments and checking the fields reconstructed from returned absolute temperatures. A lost nonzero increment, nonrepresentable heat product, nonfinite result, excessive temperature-rounding allowance, local residual or component energy imbalance is an explicit failure. The local algebraic term is 1e-10 times a node-local energy scale, plus a representation allowance capped at 1e-6 of that scale. There is no universal dimensional absolute floor. See `thermal_frozen_contract.json` for exact formulas.
+The method is backward Euler, solving increments and checking the fields reconstructed from returned absolute temperatures. A lost nonzero increment, nonrepresentable heat product, nonfinite result, excessive temperature-rounding allowance, local residual or component energy imbalance is an explicit failure. The local algebraic term is 1e-10 times a node-local energy scale, plus a representation allowance capped at 1e-6 of that scale. There is no universal dimensional absolute floor. See [transport-roundoff-2](transport_roundoff_contract_v2.json) for current numerical acceptance formulas. `thermal_frozen_contract.json` is retained unchanged as the historical capacity-only acceptance contract; its representation formulas are superseded by this amendment.
 
 ## Result interpretation
 
@@ -32,3 +32,14 @@ A conservative representability refusal does not mean the physical system is inv
 ## Validation scope
 
 The saved two-node, two-parallel-edge reservoir fixture has an independent continuous exponential reference and a separate discrete recurrence. Step refinement is checked against the continuous reference; exact discrete energy accounting alone is insufficient. Dedicated tests exercise floating components, isolated heating, boundary signs, sparse/parallel IDs, invalid inputs, bias loss, underflow and deliberately wrong solves. There are no claims for thermo-mechanics, phase change, radiation, convection, temperature-dependent properties, changing topology or effective conductivity.
+
+
+## Numerical validation amendment: transport-roundoff-2
+
+Both transport solvers identify this validation contract in provenance. Physical parameters, public arguments/results, sparse solver, backward Euler, algebraic tolerance constants and the thermal 1e-6 representation cap are unchanged.
+
+Thermal allowances now include the effect of rounding each returned absolute temperature on its incident conductive heat transfers. Only the current reconstruction from the previous accepted state is budgeted. Capacity, endpoint reconstruction, flux/product evaluation and accumulation errors are accounted for separately. Component bounds cancel internal free/free reconstruction fluxes and retain only free/fixed cut-edge transfers, plus capacity and actual component diagnostic evaluation. Nonnegative budget arithmetic is rounded conservatively upward, including subnormal products. This correction does not turn discrete balance acceptance into a time-convergence claim.
+
+The related electrical check now evaluates its existing 32*eps solve-residual margin in the absolute voltage coordinates actually solved, with separate returned-field evaluation error. The coefficient is an engineering backward-residual margin, not a universal sparse-LU or forward-accuracy guarantee. An arbitrarily large voltage offset can make small physical differences unresolved; component current/power checks remain unchanged and may reject such cases. Do not interpret acceptance as certification of imbalances below the stated local numerical budget. No dimensional absolute tolerance was added.
+
+The prior rejected real-network trial remains rejected evidence from its original source. A corrected candidate requires separate representative network reruns and independent export/balance checks; a small unit test suite alone is insufficient.

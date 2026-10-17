@@ -17,6 +17,8 @@ from scipy.sparse import coo_matrix, diags
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
+from ._roundoff import upper_sum, upper_product, evaluation_ulp
+
 
 class ThermalSolveError(RuntimeError):
     """Numerical failure; partial_result contains accepted frames only.
@@ -170,10 +172,12 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
     members=[np.flatnonzero(labels==i) for i in range(nc)]
     n,e=len(ids),len(eids)
     histories={k:[] for k in ('T','q','reservoir','stored','residual','energy','nbound','cbound')}
-    provenance=json.dumps({'model':'constant_lumped_thermal','method':'backward_euler','quadrature':'right_endpoint',
+    provenance=json.dumps({'validation_contract':'transport-roundoff-2','model':'constant_lumped_thermal','method':'backward_euler','quadrature':'right_endpoint',
          'units':{'T':'K','C':'J/K','g':'W/K','q':'W','Q':'W','stored':'J','residual':'J'},
          'length_unit':length_unit,'geometry_inference':False,'scipy_version':scipy.__version__,
-         'time_accuracy_verified':False,'relative_algebraic_term':1e-10,'relative_representation_cap':1e-6,'metadata':metadata},sort_keys=True)
+         'time_accuracy_verified':False,'relative_algebraic_term':1e-10,'relative_representation_cap':1e-6,
+         'representation_budget':'capacity plus endpoint reconstruction conduction; component cut edges only; explicit field evaluation',
+         'metadata':metadata},sort_keys=True)
     def result(completed=False):
         if not histories['T']:return None
         h=histories;nt=len(h['T'])
@@ -193,6 +197,7 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
         if not all(np.isfinite(a).all() for a in (q,outward,reservoir)):
             raise ArithmeticError('initial/trial heat field not representable: reservoir overflow')
         return q,outward,reservoir
+    is_free=np.ones(n,dtype=bool);is_free[fix]=False
     attempted=0
     try:
         q,outward,reservoir=fields(T)
@@ -220,23 +225,55 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
             stepq=_product(dt,qnew,'new edge step heat')
             energy=_product(C,delta,'stored step heat')
             stored=_product(C,new-initial,'cumulative stored heat')
-            res=np.full(n,np.nan);nb=np.full(n,np.nan);rounding=np.zeros(n)
+            # Previous accepted T is the physical step input. Only this step's
+            # new=T+inc reconstruction contributes endpoint uncertainty.
+            rho=np.array([upper_product(.5, math.ulp(float(new[i]))) if inc[i]!=0 else 0.0 for i in range(n)])
+            capacity_budget=np.array([upper_product(8*eps,float(C[i]),upper_sum([abs(float(T[i])),abs(float(new[i]))]))
+                                      if is_free[i] else 0.0 for i in range(n)])
+            difference=new[conn[:,0]]-new[conn[:,1]]
+            flux_eval=[upper_sum([upper_product(float(g[j]),evaluation_ulp(difference[j])),evaluation_ulp(qnew[j])])
+                       if g[j] else 0.0 for j in range(e)]
+            step_eval=[upper_sum([upper_product(float(dt),flux_eval[j]),evaluation_ulp(stepq[j])]) for j in range(e)]
+            energy_eval=[upper_sum([upper_product(float(C[i]),evaluation_ulp(delta[i])),evaluation_ulp(energy[i])]) for i in range(n)]
+            source_eval=[evaluation_ulp(x) for x in dtQ]
+            res=np.full(n,np.nan);nb=np.full(n,np.nan)
             for i in free:
                 signed=[float(stepq[j] if a==i else -stepq[j]) for j,(a,b) in enumerate(conn) if a==i or b==i]
                 scale=math.fsum([abs(energy[i]),abs(dtQ[i])]+[abs(x) for x in signed])
                 r=math.fsum([energy[i],-dtQ[i]]+signed)
-                b=8*eps*C[i]*(abs(T[i])+abs(new[i])) if scale!=0 else 0.
+                conduction=upper_sum(upper_product(float(dt),float(g[j]),upper_sum([rho[a],rho[b]]))
+                                     for j,(a,b) in enumerate(conn) if a==i or b==i)
+                evaluation=upper_sum([energy_eval[i],source_eval[i],evaluation_ulp(r)]+
+                                     [step_eval[j] for j,(a,b) in enumerate(conn) if a==i or b==i])
+                if scale==0: capacity_budget[i]=0.0
+                b=upper_sum([capacity_budget[i],conduction,evaluation])
                 if not all(math.isfinite(x) for x in (scale,r,b)):raise ArithmeticError('residual scale overflow')
                 if b>1e-6*scale:raise ArithmeticError('temperature precision budget exceeds local heat scale')
-                bound=1e-10*scale+b
+                bound=upper_sum([upper_product(1e-10,scale),b])
                 if abs(r)>bound or (scale==0 and inc[i]!=0):raise ArithmeticError('free-node discrete energy residual failed')
-                res[i],nb[i],rounding[i]=r,bound,b
+                res[i],nb[i]=r,bound
             cr=[];cb=[]
             reservoir_step=_product(dt,resnew,'reservoir step heat')
             for ix in members:
                 r=math.fsum([float(energy[i]) for i in ix]+[-float(dtQ[i]) for i in ix]+[-float(reservoir_step[i]) for i in ix])
                 scale=math.fsum([abs(float(energy[i]))+abs(float(dtQ[i]))+abs(float(reservoir_step[i])) for i in ix])
-                b=math.fsum(float(rounding[i]) for i in ix);bound=1e-10*scale+b
+                # Internal free/free reconstruction flux cancels. Only cut
+                # edges to fixed reservoirs enter the component allowance.
+                member_set=set(map(int,ix)); fixed_set=set(map(int,fix))
+                cut=upper_sum(upper_product(float(dt),float(g[j]),rho[b if a in fixed_set else a])
+                              for j,(a,b) in enumerate(conn)
+                              if a in member_set and ((a in fixed_set)!=(b in fixed_set)))
+                reservoir_eval=[]
+                for i in ix:
+                    if i in fixed_set:
+                        outward_error=upper_sum([evaluation_ulp(outnew[i])]+
+                            [flux_eval[j] for j,(a,b) in enumerate(conn) if a==i or b==i])
+                        reservoir_eval.append(upper_sum([upper_product(float(dt),upper_sum([outward_error,evaluation_ulp(resnew[i])])),
+                                                         evaluation_ulp(reservoir_step[i])]))
+                b=upper_sum([upper_sum(capacity_budget[i] for i in ix),cut,
+                             upper_sum(energy_eval[i] for i in ix),upper_sum(source_eval[i] for i in ix),
+                             upper_sum(reservoir_eval),evaluation_ulp(r)])
+                bound=upper_sum([upper_product(1e-10,scale),b])
                 if not all(math.isfinite(v) for v in (r,scale,b,bound)) or b>1e-6*scale or abs(r)>bound:raise ArithmeticError('component energy balance failed')
                 cr.append(r);cb.append(bound)
             for k,v in {'T':new.copy(),'q':qnew,'reservoir':resnew,'stored':stored,'residual':res,'energy':cr,'nbound':nb,'cbound':cb}.items():histories[k].append(v)
