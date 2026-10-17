@@ -58,14 +58,21 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
         assert Path(verify_core()) == core
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
-    for relative in ('sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
+    cases = [(relative, None) for relative in ('sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
                      '__init__.py', 'api.py', 'easy.py', 'viz/__init__.py',
-                     'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py'):
+                     'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py')]
+    cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
+    for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
         try:
-            target.write_bytes(saved + b'\n# Deliberate test-only core drift.\n')
+            if material_unit is None:
+                changed = saved + b'\n# Deliberate test-only core drift.\n'
+            else:
+                assert saved.count(material_unit) == 1
+                changed = saved.replace(material_unit, b"'youngs_modulus': 'MPa'")
+            target.write_bytes(changed)
             with patch.object(importlib.util, 'find_spec', return_value=SimpleNamespace(origin=str(core / '__init__.py'))):
                 try:
                     verify_core()
@@ -82,7 +89,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.returncode == 2 and result.stdout == b''
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
-            records.append({'module': relative, 'exact_hash_boundary_refusal': True,
+            records.append({'module': relative,
+                            'case': 'material_feature_unit_drift' if material_unit else 'source_drift',
+                            'exact_hash_boundary_refusal': True,
                             'real_startup_refusal': True})
         finally:
             target.write_bytes(saved)

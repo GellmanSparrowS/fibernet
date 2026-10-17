@@ -156,8 +156,8 @@ The records describe values already stored in the graph. A constructor-assigned
 default or derived shear modulus may be indistinguishable from an explicit input;
 `stored_origin_unknown` makes no claim about that history. Optional properties
 omitted by Material.to_dict remain absent; a retained null is unavailable, while
-an explicit numeric zero remains zero. No per-property numeric feature matrix,
-normalization or conversion is added. The graph's existing unit declarations and
+an explicit numeric zero remains zero. This provenance snapshot itself adds no
+per-property numeric feature matrix, normalization or conversion. The graph's existing unit declarations and
 original internal-point geometry are unchanged.
 
 With `include_provenance=False` or the default, the three optional source fields
@@ -173,6 +173,115 @@ write-protection limits as v1. Direct dataclass construction still bypasses
 validation. Tests cover heterogeneous records with identical material names,
 parallel/reversed edges, repeated local IDs across graphs, empty/missing records,
 source mutation, default behavior and strict v2 adapter refusal without Torch.
+
+## Explicit stored material scalar features
+
+`material_features_from_batch` in `fibernet.ml.graph_data` derives a frozen,
+non-Mapping `MaterialFeatureView` from an existing v2 snapshot. Both names also
+have lazy `fibernet.ml` exports. The view references that same snapshot; it is
+not another graph owner, topology copy, persistence format or FiberGNN input.
+The default `graph_batch` v1 behavior and `graphs_from_batch` are unchanged.
+
+```python
+from fibernet.ml.graph_data import material_features_from_batch
+
+# Caller assertion: these stored property values use the units declared below.
+features = material_features_from_batch(
+    view,
+    fields=('youngs_modulus', 'shear_modulus', 'density', 'poissons_ratio'),
+    units={'youngs_modulus': 'Pa', 'shear_modulus': 'Pa',
+           'density': 'kg/m^3', 'poissons_ratio': '1'},
+    scales={'youngs_modulus': 1e9, 'shear_modulus': 1e9,
+            'density': 1000., 'poissons_ratio': 1.},
+    material_assumption='isotropic_scalar',
+    origin_policy='retain_stored_origin_unknown',
+)
+physical_values = features.values       # readonly float64 (physical edges, fields)
+physical_available = features.available # readonly bool, same shape
+assert features.snapshot is view
+```
+
+Select a nonempty, duplicate-free ordered subset of exactly those four fields.
+Each units/scales dict must contain exactly the selected keys. Only the shown
+native base-unit declarations are supported; no units are converted or inferred
+from geometry length_unit or a material name. A single declaration cannot prove
+that historical records used consistent units. Per-edge/per-graph mixed-unit
+declarations are unsupported; normalize and verify the source records explicitly
+before snapshotting. Geometry with unknown length units stays unknown, so this
+material-only table is not a unit-resolved physical model input.
+
+Each finite, strictly positive scale is a fixed divisor in the corresponding
+property unit. No fitting, centering, clipping, imputation or G derivation occurs.
+Any externally fitted scale must be fitted only on training sources and then
+frozen; the function cannot certify that external procedure. Explicit stored G
+remains independent of E/nu. The isotropic assumption is the caller's assertion,
+not a check of physical isotropy, stability, ranges or E/G consistency. Finite
+negative values and genuine zeros can be represented; a future constitutive
+consumer must define its own physically valid domain.
+
+`schema_version` is `fibernet.material_feature_view.v1`. `feature_names`,
+`property_units` and `scales` preserve the exact selected column order. Physical
+rows follow the existing edge_ptr/edge_ids ordering. Parallel/reversed members
+stay distinct; local IDs may repeat across graphs. A stable edge identity is the
+graph ID plus local edge ID. `snapshot.message_parent_rows` maps both directed
+messages to their physical edge's values/masks/status; no duplicate message
+table is stored and no members are merged.
+An empty canonical graph collection, or graphs without edges, yields `(0, F)`
+value/mask arrays. This data-only conversion does not impose a model's pooling
+requirement for nonempty graphs.
+
+`property_status` is an immutable tuple of row tuples with four possible states:
+
+- `material_missing`: no Material record; unavailable with +0 placeholder
+- `property_missing`: the record lacks this key; unavailable with +0 placeholder
+- `property_null`: an allowed stored null; unavailable with +0 placeholder
+- `stored_origin_unknown`: an available stored value, including genuine signed zero
+
+The available mask and the cellwise null-status mask have different meanings.
+Null E/density/nu is malformed; null G is allowed without recomputation. Missing
+keys never construct Material defaults. A constructor default or derived G
+remains `stored_origin_unknown`, even if its value equals a known default/formula.
+Serialization may already have omitted optional nulls or rounded/coerced numbers;
+the view cannot recover or certify information lost before the snapshot.
+
+Conversion/division uses ordinary binary64 rounding. Packed-bit checks reject
+new nonfinite results, loss of a nonzero value to either signed zero, and sign
+loss; genuine signed zero is retained. Scales must remain positive and nonzero.
+No floating-point mode is changed. This is not exact rational normalization or
+a general guarantee of FTZ/DAZ arithmetic accuracy, and no float32/Torch device
+conversion is provided.
+
+Non-null stiffness tensors, nonempty custom extra, unknown keys and unsupported
+types fail closed. A finite 6x6 tensor is not a validated anisotropic law. Known
+unselected native strengths/thermal/electromagnetic fields remain provenance
+only, with serialization-form checks. Names are identifiers, not feature values
+or a source of guessed properties. Geometric boundary-face flags, meshing
+segments, curves, coordinates, IDs and metadata remain in the snapshot and are
+not appended to this numeric table. Mechanical conditions still require explicit
+caller records with units, frames, DOFs and stable IDs.
+
+The accepted declaration types are exact built-in list/tuple for fields, dict
+for units/scales, str names and int/float scalars (not bool, NumPy scalar wrappers
+or custom subclasses). Canonical snapshot records already contain built-in
+serialized values. Relevant identity arrays must be exact base ndarrays with
+canonical dtype/shape and read-only flags; custom array/coercion hooks are not
+accepted. Exact GraphBatch/GraphBatchProvenance types and schema tags are required.
+
+Use a factory-produced or equivalently trusted canonical snapshot. Direct
+construction receives schema/alignment/value checks, not factory-origin
+authentication or hostile-object isolation. MappingProxyType alone cannot prove
+that its backing mapping is safe; a deliberately forged custom-backed proxy is
+outside this trust boundary. Frozen/read-only data prevents ordinary accidental
+mutation, not intentional re-enabling of array writes. There is no new serializer.
+
+Current FiberGNN does not consume these material values or masks. Passing this
+typed view to it is unsupported; `graphs_from_batch` still rejects v2. A later
+model bridge requires explicit profile/schema guards and tested mask-aware edge
+feature consumption, rather than adding dictionary keys that a model ignores.
+Stored material features also do not make current quick FEM/Taichi/reduced or
+transport backends consume per-edge Material automatically; see
+[material consumption](material-consumption-contract.md). No physical labels,
+predictions, training or performance evidence are produced by this conversion.
 
 ## Holdout boundary and validation
 

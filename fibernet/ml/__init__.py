@@ -97,6 +97,8 @@ def __getattr__(name):
         "GraphBatch": "fibernet.ml.graph_data",
         "GraphBatchProvenance": "fibernet.ml.graph_data",
         "graph_batch": "fibernet.ml.graph_data",
+        "MaterialFeatureView": "fibernet.ml.graph_data",
+        "material_features_from_batch": "fibernet.ml.graph_data",
         # Models
         "FiberMLP": "fibernet.ml.models",
         "FiberResNet": "fibernet.ml.models",

@@ -348,3 +348,229 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
         _array(features, np.float64, (e, len(names))),
         _array(masks, bool, (e, len(names))), tuple(gm), tuple(nm), tuple(em),
         _stored_provenance(graphs) if include_provenance else None)
+
+
+@dataclass(frozen=True)
+class MaterialFeatureView:
+    """Read-only scalar features referring to one existing GraphBatch snapshot.
+
+    This is not a graph owner, Mapping, persistence format or FiberGNN input.
+    Rows are physical edges; snapshot.message_parent_rows maps directed messages
+    to them. Availability and property_status distinguish missing/null from zero.
+    Stored origin, units and constitutive validity cannot be inferred here.
+    """
+    schema_version: str
+    snapshot: GraphBatch
+    feature_names: Tuple[str, ...]
+    property_units: Tuple[str, ...]
+    scales: Tuple[float, ...]
+    material_assumption: str
+    origin_policy: str
+    values: np.ndarray
+    available: np.ndarray
+    property_status: Tuple[Tuple[str, ...], ...]
+
+
+_MATERIAL_UNITS = MappingProxyType({
+    'youngs_modulus': 'Pa', 'shear_modulus': 'Pa',
+    'density': 'kg/m^3', 'poissons_ratio': '1',
+})
+_MATERIAL_OPTIONAL_SCALARS = (
+    'yield_strength', 'tensile_strength', 'fracture_toughness',
+    'thermal_conductivity', 'specific_heat', 'thermal_expansion',
+    'electrical_conductivity', 'permittivity', 'permeability',
+)
+
+
+def _material_bits(value):
+    return struct.unpack('>Q', struct.pack('>d', value))[0]
+
+
+def _material_number(value, label, positive=False):
+    """Convert only built-in scalars; classify zeros/signs without FP compares."""
+    if type(value) not in (int, float):
+        raise ValueError(label + ' must be a built-in int or float, not bool')
+    if type(value) is int:
+        nonzero, sign = value != 0, int(value < 0)
+    else:
+        original = _material_bits(value)
+        nonzero, sign = bool(original & ((1 << 63) - 1)), original >> 63
+    try:
+        result = float(value)
+    except (OverflowError, ValueError) as exc:
+        raise ValueError(label + ' exceeds finite float64 range') from exc
+    bits = _material_bits(result)
+    if (bits >> 52) & 0x7ff == 0x7ff:
+        raise ValueError(label + ' must be finite')
+    if nonzero and not bits & ((1 << 63) - 1) or sign != bits >> 63:
+        raise ValueError(label + ' lost a nonzero value or sign in float64 conversion')
+    if positive and (sign or not bits & ((1 << 63) - 1)):
+        raise ValueError(label + ' must be strictly positive')
+    return result
+
+
+def _material_normalize(value, scale):
+    before = _material_bits(value)
+    try:
+        result = value / scale
+    except (OverflowError, ZeroDivisionError) as exc:
+        raise ValueError('material normalization exceeds finite float64 arithmetic') from exc
+    after = _material_bits(result)
+    if ((after >> 52) & 0x7ff == 0x7ff
+            or (before & ((1 << 63) - 1) and not after & ((1 << 63) - 1))
+            or before >> 63 != after >> 63):
+        raise ValueError('material normalization lost finite range, a nonzero value or sign')
+    return result
+
+
+def _material_identity(batch):
+    """Validate the existing identity maps used by the material table only."""
+    if (type(batch) is not GraphBatch
+            or type(batch.schema_version) is not str
+            or batch.schema_version != 'fibernet.graph_batch.v2'
+            or type(batch.provenance) is not GraphBatchProvenance
+            or type(batch.provenance.schema_version) is not str
+            or batch.provenance.schema_version != 'fibernet.graph_batch.provenance.v1'):
+        raise ValueError('material features require GraphBatch v2 with provenance v1')
+
+    def array(value, dtype, shape, label):
+        if (type(value) is not np.ndarray or value.dtype != np.dtype(dtype)
+                or value.shape != shape or value.flags.writeable):
+            raise ValueError(label + ' must be a read-only base ndarray with canonical dtype/shape')
+        return value
+
+    gids = batch.graph_ids
+    if (type(gids) is not tuple or any(type(x) is not str or not x.strip() for x in gids)
+            or len(set(gids)) != len(gids)):
+        raise ValueError('graph_ids must be unique nonempty strings')
+    b = len(gids)
+    if type(batch.node_ids) is not np.ndarray or type(batch.edge_ids) is not np.ndarray:
+        raise ValueError('IDs must be base ndarrays')
+    n, e = batch.node_ids.size, batch.edge_ids.size
+    nids = array(batch.node_ids, np.int64, (n,), 'node_ids')
+    eids = array(batch.edge_ids, np.int64, (e,), 'edge_ids')
+    if np.any(nids < 0) or np.any(eids < 0):
+        raise ValueError('IDs must be nonnegative')
+    dims = array(batch.dimensions, np.int64, (b,), 'dimensions')
+    if not np.isin(dims, [2, 3]).all():
+        raise ValueError('dimensions must be 2 or 3')
+
+    def pointer(value, end, label):
+        p = array(value, np.int64, (b + 1,), label)
+        if p[0] != 0 or p[-1] != end or np.any(p[1:] < p[:-1]):
+            raise ValueError(label + ' must span its rows monotonically')
+        return p
+
+    nptr, eptr = pointer(batch.node_ptr, n, 'node_ptr'), pointer(batch.edge_ptr, e, 'edge_ptr')
+    physical = array(batch.edge_index, np.int64, (2, e), 'edge_index')
+    messages = array(batch.message_index, np.int64, (2, 2 * e), 'message_index')
+    parents = array(batch.message_parent_rows, np.int64, (2 * e,), 'message_parent_rows')
+    ids = array(batch.message_parent_ids, np.int64, (2 * e,), 'message_parent_ids')
+    orientation = array(batch.message_orientation, np.int8, (2 * e,), 'message_orientation')
+    if (not np.array_equal(parents, np.repeat(np.arange(e, dtype=np.int64), 2))
+            or not np.array_equal(ids, np.repeat(eids, 2))
+            or not np.array_equal(orientation, np.tile([1, -1], e))
+            or not np.array_equal(messages[:, ::2], physical)
+            or not np.array_equal(messages[:, 1::2], physical[::-1])):
+        raise ValueError('messages must preserve physical parent and direction')
+    for g in range(b):
+        lo, hi, elo, ehi = map(int, (nptr[g], nptr[g+1], eptr[g], eptr[g+1]))
+        if ((hi - lo > 1 and np.any(nids[lo+1:hi] <= nids[lo:hi-1]))
+                or len(set(eids[elo:ehi])) != ehi-elo):
+            raise ValueError('IDs must be sorted unique for nodes and graph-local unique for edges')
+        if np.any(physical[:, elo:ehi] < lo) or np.any(physical[:, elo:ehi] >= hi):
+            raise ValueError('physical endpoints must stay within their graph')
+    p = batch.provenance
+    available = array(p.edge_material_available, bool, (e,), 'edge_material_available')
+    if (type(p.edge_material_records) is not tuple or len(p.edge_material_records) != e
+            or type(p.edge_material_origin) is not tuple or len(p.edge_material_origin) != e):
+        raise ValueError('material records and origins must align with physical edges')
+    for row, record in enumerate(p.edge_material_records):
+        present = record is not None
+        origin = p.edge_material_origin[row]
+        if (bool(available[row]) != present or type(origin) is not str
+                or origin != ('stored_origin_unknown' if present else 'missing')):
+            raise ValueError('material availability/origin must agree with its record')
+    return e
+
+
+def material_features_from_batch(batch, *, fields, units, scales,
+                                 material_assumption, origin_policy):
+    """Derive read-only physical-edge material scalars from a trusted v2 snapshot.
+
+    Select an ordered subset of youngs_modulus/shear_modulus/density/poissons_ratio
+    with explicit Pa/Pa/kg/m^3/1 declarations and positive fixed division scales.
+    material_assumption='isotropic_scalar' is the caller's assertion, not physical
+    validation. origin_policy='retain_stored_origin_unknown' preserves the inability
+    to distinguish supplied, defaulted and derived stored values. No G is inferred.
+
+    Non-null tensors, custom extra/unknown fields, unsupported types and new
+    nonfinite/nonzero/sign losses fail closed. Missing/null uses unavailable +0;
+    genuine signed zero stays available. Binary64 rounding applies; earlier
+    serialization losses and general FTZ/DAZ accuracy cannot be certified.
+
+    GraphBatch v1 and the Torch adapter are unchanged. This is not FiberGNN input.
+    Geometric face flags, meshing segments and geometry remain provenance only.
+    Input must be a factory-produced or equivalently trusted canonical snapshot;
+    MappingProxyType does not authenticate its backing mapping. Shape/value checks
+    are not hostile-object isolation. Readonly means ordinary accidental writes.
+    """
+    if type(material_assumption) is not str or material_assumption != 'isotropic_scalar':
+        raise ValueError("material_assumption must be 'isotropic_scalar'")
+    if type(origin_policy) is not str or origin_policy != 'retain_stored_origin_unknown':
+        raise ValueError("origin_policy must be 'retain_stored_origin_unknown'")
+    if (type(fields) not in (list, tuple) or not fields
+            or any(type(x) is not str or x not in _MATERIAL_UNITS for x in fields)
+            or len(set(fields)) != len(fields)):
+        raise ValueError('fields must be a nonempty unique sequence of supported names')
+    names = tuple(fields)
+    for value, label in ((units, 'units'), (scales, 'scales')):
+        if (type(value) is not dict or any(type(k) is not str for k in value)
+                or set(value) != set(names)):
+            raise ValueError(label + ' must be a built-in dict with exactly the selected keys')
+    if any(type(units[name]) is not str or units[name] != _MATERIAL_UNITS[name] for name in names):
+        raise ValueError('units must explicitly match the supported native property units')
+    factors = tuple(_material_number(scales[name], name + ' scale', positive=True) for name in names)
+    e = _material_identity(batch)
+    allowed = set(_MATERIAL_UNITS) | set(_MATERIAL_OPTIONAL_SCALARS) | {'name', 'extra', 'stiffness_tensor'}
+    rows, masks, states = [], [], []
+    for record in batch.provenance.edge_material_records:
+        if record is not None:
+            if type(record) is not MappingProxyType:
+                raise ValueError('material record must be a canonical read-only mapping')
+            if any(type(k) is not str or k not in allowed for k in record):
+                raise ValueError('material record contains unknown fields')
+            for key, value in record.items():
+                if key == 'name':
+                    if type(value) is not str:
+                        raise ValueError('material name must be a built-in string')
+                elif key == 'extra':
+                    if type(value) is not MappingProxyType or len(value):
+                        raise ValueError('custom material extra is unsupported')
+                elif key == 'stiffness_tensor':
+                    if value is not None:
+                        raise ValueError('anisotropic stiffness_tensor is unsupported')
+                elif value is None:
+                    if key in ('density', 'youngs_modulus', 'poissons_ratio'):
+                        raise ValueError(key + ' cannot be null')
+                else:
+                    _material_number(value, key)
+        row, mask, status = [], [], []
+        for name, factor in zip(names, factors):
+            state = ('material_missing' if record is None else
+                     'property_missing' if name not in record else
+                     'property_null' if record[name] is None else 'stored_origin_unknown')
+            present = state == 'stored_origin_unknown'
+            row.append(_material_normalize(_material_number(record[name], name), factor) if present else 0.0)
+            mask.append(present)
+            status.append(state)
+        rows.append(row)
+        masks.append(mask)
+        states.append(tuple(status))
+    values = _array(rows, np.float64, (e, len(names)))
+    if values.tobytes() != b''.join(struct.pack('=d', x) for row in rows for x in row):
+        raise ValueError('material array conversion changed stored binary64 values')
+    return MaterialFeatureView(
+        'fibernet.material_feature_view.v1', batch, names,
+        tuple(units[name] for name in names), factors, material_assumption, origin_policy,
+        values, _array(masks, bool, (e, len(names))), tuple(states))
