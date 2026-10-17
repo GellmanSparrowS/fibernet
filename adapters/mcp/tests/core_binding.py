@@ -64,6 +64,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                      'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py')]
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
     cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))
+    cases.append(('io/mesh_export.py', b'vertex_offset = 0  # Convert to one-based OBJ indices only when writing.'))
     for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
@@ -72,8 +73,11 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                 changed = saved + b'\n# Deliberate test-only core drift.\n'
             else:
                 assert saved.count(material_unit) == 1
-                replacement = (b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v0'"
-                               if relative == 'ml/edge_gine.py' else b"'youngs_modulus': 'MPa'")
+                if relative == 'io/mesh_export.py':
+                    replacement = material_unit.replace(b'vertex_offset = 0', b'vertex_offset = 1')
+                else:
+                    replacement = (b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v0'"
+                                   if relative == 'ml/edge_gine.py' else b"'youngs_modulus': 'MPa'")
                 changed = saved.replace(material_unit, replacement)
             target.write_bytes(changed)
             with patch.object(importlib.util, 'find_spec', return_value=SimpleNamespace(origin=str(core / '__init__.py'))):
@@ -93,7 +97,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
             records.append({'module': relative,
-                            'case': ('gine_material_profile_drift' if relative == 'ml/edge_gine.py'
+                            'case': ('obj_index_origin_drift' if relative == 'io/mesh_export.py'
+                                     else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'
                                      else 'material_feature_unit_drift' if material_unit else 'source_drift'),
                             'exact_hash_boundary_refusal': True,
                             'real_startup_refusal': True})
