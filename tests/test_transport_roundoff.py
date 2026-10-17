@@ -1,5 +1,7 @@
 """Local representation contracts, not representative-network substitutes."""
 import math
+import struct
+import sys
 from fractions import Fraction
 import numpy as np
 import pytest
@@ -18,14 +20,118 @@ def graph(edges, rename=None, reverse=False):
 
 
 def test_upward_budget_operations_and_negative_ulp():
-    tiny=math.ulp(0.)
-    assert upper_product(tiny,.5)>0
-    for a,b in [(tiny,.5),(1e-300,1e-20),(.1,.2),(1e150,1e150)]:
+    # math.ulp(0) can itself become zero when a native runtime enables FTZ.
+    tiny=struct.unpack('>d',bytes.fromhex('0000000000000001'))[0]
+    gradual=tiny>0. and tiny+tiny>0.
+    for a,b in [(.1,.2),(1e150,1e150)]:
         assert Fraction(upper_product(a,b))>=Fraction(a)*Fraction(b)
         assert Fraction(upper_sum([a,b]))>=Fraction(a)+Fraction(b)
+    if gradual:
+        assert upper_product(tiny,.5)>0
+        for a,b in [(tiny,.5),(1e-300,1e-20)]:
+            assert Fraction(upper_product(a,b))>=Fraction(a)*Fraction(b)
+            assert Fraction(upper_sum([a,b]))>=Fraction(a)+Fraction(b)
+        assert Fraction(evaluation_ulp(tiny))>=Fraction(tiny)
+    else:
+        for operation in [lambda: upper_product(tiny,.5),
+                          lambda: upper_product(1e-300,1e-20),
+                          lambda: upper_sum([tiny,tiny]),
+                          lambda: evaluation_ulp(tiny),
+                          lambda: evaluation_ulp(1e-300)]:
+            with pytest.raises(ArithmeticError,match='^subnormal roundoff arithmetic is unavailable$'):
+                operation()
     assert evaluation_ulp(-300.)==math.ulp(300.)
     assert upper_product(0.,1e308)==0 and upper_sum([])==0
     with pytest.raises(ArithmeticError):upper_product(1e308,1e308)
+
+
+@pytest.mark.parametrize('value',[-1.,float('inf'),float('-inf'),float('nan'),
+                                 struct.unpack('>d',bytes.fromhex('8000000000000001'))[0]])
+def test_budget_rejects_invalid_values_before_arithmetic(value):
+    with pytest.raises(ArithmeticError,match='^nonfinite roundoff budget$'):
+        upper_product(value,1.)
+    with pytest.raises(ArithmeticError,match='^nonfinite roundoff budget$'):
+        upper_sum([value])
+
+
+def test_budget_exact_signed_zero_and_normal_values():
+    assert upper_product(-0.,1e308)==0.
+    assert upper_sum([0.,-0.])==0.
+    assert evaluation_ulp(-0.)==0.
+    assert Fraction(upper_product(1e-150,1e-150))>=Fraction(1e-150)**2
+
+
+@pytest.mark.parametrize('bits',['0000000000000001','8000000000000001',
+                                '0000000000000000','8000000000000000'])
+def test_subnormal_input_boundary_and_true_signed_zero(bits):
+    value=struct.unpack('>d',bytes.fromhex(bits))[0]
+    magnitude=int(bits,16)&0x7fffffffffffffff
+    tiny=struct.unpack('>d',bytes.fromhex('0000000000000001'))[0]
+    gradual=tiny>0. and tiny+tiny>0.
+    g=graph([(0,1)])
+    if magnitude and not gradual:
+        with pytest.raises(ValueError,match='^conductance: nonzero subnormal input requires gradual underflow$'):
+            el.solve_linear_transport(g,{0:value},{0:1.,1:0.},length_unit='m')
+        with pytest.raises(ValueError,match='^nonzero subnormal physical input requires gradual underflow$'):
+            th.solve_transient_thermal(g,{0:1.,1:1.},{0:value},{0:300.,1:310.},[0.,1.],
+                                      fixed_temperature_K={0:300.,1:310.},length_unit='m')
+    elif magnitude and bits.startswith('8'):
+        with pytest.raises(ValueError,match='must be finite and nonnegative'):
+            el._number(value,'conductance',True)
+        with pytest.raises(ValueError,match='physical inputs must be finite nonnegative'):
+            th._num(value)
+    elif magnitude:
+        assert struct.pack('>d',el._number(value,'conductance',True)).hex()==bits
+        assert struct.pack('>d',th._num(value)).hex()==bits
+    else:
+        electrical=el.solve_linear_transport(g,{0:value},{0:1.,1:0.},length_unit='m')
+        thermal=th.solve_transient_thermal(g,{0:1.,1:1.},{0:value},{0:300.,1:310.},[0.,1.],
+                                          fixed_temperature_K={0:300.,1:310.},length_unit='m')
+        assert electrical.status=='converged' and np.all(electrical.current_A==0.)
+        assert thermal.completed and np.all(thermal.edge_heat_rate_W==0.)
+
+
+def test_lost_nonzero_endpoint_difference_and_equal_endpoint_control():
+    g=graph([(0,1)])
+    a=sys.float_info.min
+    b=math.nextafter(a,math.inf)
+    tiny=struct.unpack('>d',bytes.fromhex('0000000000000001'))[0]
+    gradual=tiny>0. and tiny+tiny>0.
+    if not gradual:
+        with pytest.raises(el.TransportSolveError,match='^nonzero voltage difference is not representable$'):
+            el.solve_linear_transport(g,{0:1e308},{0:a,1:b},length_unit='m')
+        with pytest.raises(th.ThermalSolveError,match='^nonzero temperature difference is not representable$') as err:
+            th.solve_transient_thermal(g,{0:1.,1:1.},{0:1e308},{0:a,1:b},[0.,1.],
+                                      fixed_temperature_K={0:a,1:b},length_unit='m')
+        assert err.value.partial_result is None and err.value.attempted_step==0
+    else:
+        # In gradual mode the original strict power-underflow guard remains.
+        with pytest.raises(el.TransportSolveError,match='^power underflow:'):
+            el.solve_linear_transport(g,{0:1e308},{0:a,1:b},length_unit='m')
+    electrical=el.solve_linear_transport(g,{0:1e308},{0:a,1:a},length_unit='m')
+    thermal=th.solve_transient_thermal(g,{0:1.,1:1.},{0:1e308},{0:a,1:a},[0.,1.],
+                                      fixed_temperature_K={0:a,1:a},length_unit='m')
+    assert electrical.status=='converged' and np.all(electrical.current_A==0.)
+    assert thermal.completed and np.all(thermal.edge_heat_rate_W==0.)
+
+
+def test_stored_subnormal_solver_output_difference(monkeypatch):
+    tiny=struct.unpack('>d',bytes.fromhex('0000000000000001'))[0]
+    gradual=tiny>0. and tiny+tiny>0.
+    # A native solver can return stored bits that DAZ compares equal to zero.
+    monkeypatch.setattr(el,'spsolve',lambda *args,**kwargs: np.array([tiny]))
+    reason='current underflow: nonzero driven current is not normally representable' if gradual else 'nonzero voltage difference is not representable'
+    with pytest.raises(el.TransportSolveError,match='^'+reason+'$'):
+        el.solve_linear_transport(graph([(0,1),(1,2)]),{0:1.,1:1.},{0:0.,2:1.},length_unit='m')
+
+
+def test_true_signed_zero_endpoints_are_equal():
+    g=graph([(0,1)])
+    electrical=el.solve_linear_transport(g,{0:1.},{0:0.,1:-0.},length_unit='m')
+    thermal=th.solve_transient_thermal(g,{0:1.,1:1.},{0:1.},{0:0.,1:-0.},[0.,1.],
+                                      fixed_temperature_K={0:0.,1:-0.},length_unit='m')
+    assert electrical.status=='converged' and np.all(electrical.current_A==0.)
+    assert thermal.completed and np.all(thermal.edge_heat_rate_W==0.)
 
 
 @pytest.mark.parametrize('offset',[-1e6,0.,.02,1e6,1e14])
@@ -40,9 +146,16 @@ def test_electrical_gauges_scales_and_resolved_bad_solver(monkeypatch,offset,sca
         with pytest.raises(el.TransportSolveError,match='component-local'):
             el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
     else:
-        clean=el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
-        assert clean.status=='converged'
-        assert clean.provenance['achieved_limits']['roundoff_coordinates']=='absolute solved voltage'
+        try:
+            clean=el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
+        except el.TransportSolveError as exc:
+            # These ill-resolved negative-gauge cases depend on the numeric
+            # stack. Only the unchanged conservative component guard is valid.
+            assert offset==-1e6 and scale in (1e-150,1e150)
+            assert str(exc)=='component-local current conservation or power balance tolerance failed'
+        else:
+            assert clean.status=='converged'
+            assert clean.provenance['achieved_limits']['roundoff_coordinates']=='absolute solved voltage'
     # Deliberately perturb above the stated engineering resolution at this
     # gauge. A fixed tiny perturbation is not resolvable at arbitrary offset.
     perturb=max(.01,512*np.finfo(float).eps*max(1,abs(offset)))

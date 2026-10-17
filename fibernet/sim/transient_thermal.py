@@ -18,6 +18,7 @@ from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
 from ._roundoff import upper_sum, upper_product, evaluation_ulp
+from ._roundoff import _require_gradual_for_subnormal, _SubnormalRoundoffError
 
 
 class ThermalSolveError(RuntimeError):
@@ -73,9 +74,16 @@ def _id(v):
 
 
 def _num(v):
-    if isinstance(v, (bool, np.bool_)) or not isinstance(v, numbers.Real) or not math.isfinite(v) or v < 0:
+    if isinstance(v, (bool, np.bool_)) or not isinstance(v, numbers.Real) or not math.isfinite(v):
         raise ValueError('physical inputs must be finite nonnegative real numbers')
-    return float(v)
+    value = float(v)
+    try:
+        _require_gradual_for_subnormal(value)
+    except _SubnormalRoundoffError as exc:
+        raise ValueError('nonzero subnormal physical input requires gradual underflow') from exc
+    if value < 0:
+        raise ValueError('physical inputs must be finite nonnegative real numbers')
+    return value
 
 
 def _mapping(values, ids, name, positive=False):
@@ -186,7 +194,13 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
             _ro(times[:nt]),_ro(h['T']),_ro(h['q']),_ro(h['reservoir']),_ro(h['stored']),_ro(h['residual']),
             _ro(h['energy']),_ro(h['nbound']),_ro(h['cbound']),_ro([False]+[True]*(nt-1),bool),completed,digest,provenance)
     def fields(temp):
-        q=_product(g,temp[conn[:,0]]-temp[conn[:,1]],'edge heat rate')
+        difference=temp[conn[:,0]]-temp[conn[:,1]]
+        endpoint_bits=temp[conn].view(np.uint64)
+        distinct=((endpoint_bits[:,0]!=endpoint_bits[:,1]) &
+                  (((endpoint_bits[:,0]|endpoint_bits[:,1])&0x7fffffffffffffff)!=0))
+        if np.any((g>0)&(difference==0)&distinct):
+            raise ArithmeticError('nonzero temperature difference is not representable')
+        q=_product(g,difference,'edge heat rate')
         outward=np.array([math.fsum((q[j] if a==i else -q[j]) for j,(a,b) in enumerate(conn) if a==i or b==i) for i in range(n)])
         if not np.isfinite(outward).all():raise ArithmeticError('nodal sum overflow')
         reservoir=np.zeros(n)

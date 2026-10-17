@@ -231,6 +231,13 @@ def test_default_controls_reject_wrong_tiny_solution(monkeypatch, scale):
                                         (1e-200, 1e-100, 'power underflow'),
                                         (1e-310, 1., 'current underflow')])
 def test_nonrepresentable_fields_rejected(g, drop, error):
+    import struct
+    tiny = struct.unpack('>d', bytes.fromhex('0000000000000001'))[0]
+    magnitude = struct.unpack('>Q', struct.pack('>d', g))[0] & 0x7fffffffffffffff
+    if 0 < magnitude < 0x0010000000000000 and not (tiny > 0. and tiny + tiny > 0.):
+        with pytest.raises(ValueError, match='^conductance: nonzero subnormal input requires gradual underflow$'):
+            solve(network([(0, 1)]), {0: g}, [(0, drop), (1, 0)])
+        return
     with pytest.raises(TransportSolveError, match=error):
         solve(network([(0, 1)]), {0: g}, [(0, drop), (1, 0)])
 

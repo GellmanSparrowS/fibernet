@@ -7,7 +7,9 @@
     "eps": "numpy.finfo(float).eps",
     "u": "eps/2",
     "R": "full math.ulp(x) for nonzero computed values, zero for exact zero operations; nonzero-product underflow rejected separately",
-    "upper_operations": "Every nonnegative budget product and sum rounded toward +infinity using math.nextafter; subnormal products cannot silently become zero"
+    "upper_operations": "Every nonnegative budget product and sum rounded toward +infinity using math.nextafter; subnormal products cannot silently become zero",
+    "runtime_requirement": "Physical scalar inputs converted to nonzero subnormal binary64 values are checked by their stored bits before sign/zero decisions and require gradual underflow in the current thread. Arithmetic involving subnormal budget inputs, products or ulps has the same requirement. Flush-to-zero or denormals-are-zero modes cause explicit refusal for these cases. Normal values and genuine signed-zero operations remain supported. No process floating-point mode is changed.",
+    "lost_difference_guard": "An active edge whose stored endpoint values differ but whose computed voltage/temperature difference is zero fails explicitly. These guards cover the stated scalar inputs, differences and budget operations; they are not a general guarantee for every floating-point environment or solver operation. Information already lost before or during conversion to binary64 is outside these guards."
   },
   "electrical": {
     "solve_coordinates": "actual absolute V, not reference-shifted V",

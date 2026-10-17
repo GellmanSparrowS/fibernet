@@ -21,6 +21,7 @@ from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import MatrixRankWarning, spsolve
 
 from ._roundoff import upper_sum, upper_product, evaluation_ulp
+from ._roundoff import _require_gradual_for_subnormal, _SubnormalRoundoffError
 
 
 class FloatingComponentError(ValueError):
@@ -43,7 +44,13 @@ def _number(value, label, nonnegative=False):
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, numbers.Real):
         raise ValueError(f'{label} must be a real number, not bool')
     value = float(value)
-    if not np.isfinite(value) or (nonnegative and value < 0):
+    if not np.isfinite(value):
+        raise ValueError(f'{label} must be finite' + (' and nonnegative' if nonnegative else ''))
+    try:
+        _require_gradual_for_subnormal(value)
+    except _SubnormalRoundoffError as exc:
+        raise ValueError(f'{label}: nonzero subnormal input requires gradual underflow') from exc
+    if nonnegative and value < 0:
         raise ValueError(f'{label} must be finite' + (' and nonnegative' if nonnegative else ''))
     return value
 
@@ -222,6 +229,11 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
             raise TransportSolveError('sparse transport solve failed') from exc
     with np.errstate(over='ignore', invalid='ignore'):
         dv = B @ v
+        endpoint_bits = v[conn].view(np.uint64)
+        distinct = ((endpoint_bits[:, 0] != endpoint_bits[:, 1]) &
+                    (((endpoint_bits[:, 0] | endpoint_bits[:, 1]) & 0x7fffffffffffffff) != 0))
+        if np.any((g > 0) & (dv == 0) & distinct):
+            raise TransportSolveError('nonzero voltage difference is not representable')
         q = np.zeros(e, dtype=np.float64)
         q[g > 0] = g[g > 0] * dv[g > 0]
         edge_power = np.zeros(e, dtype=np.float64)
@@ -270,6 +282,8 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                 upper_product(gamma, current_scale)])
             node_limits[i] = upper_sum([current_atol_A, upper_product(rtol, current_scale),
                                        solve_allowance[i], evaluation_allowance[i]])
+    except _SubnormalRoundoffError as exc:
+        raise TransportSolveError(str(exc)) from exc
     except ArithmeticError as exc:
         raise TransportSolveError('local conservation scale overflowed') from exc
     if np.any(np.abs(injection[free]) > node_limits[free]):
