@@ -179,6 +179,13 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
     nc,labels=connected_components(adj,directed=False)
     members=[np.flatnonzero(labels==i) for i in range(nc)]
     n,e=len(ids),len(eids)
+    # Preserve edge insertion order exactly while avoiding repeated full-edge
+    # scans for each node. Parallel/inactive edges retain their own rows.
+    incident=[[] for _ in range(n)]
+    component_edges=[[] for _ in range(nc)]
+    for j,(a,b) in enumerate(conn):
+        incident[a].append((j,a,b));incident[b].append((j,a,b))
+        component_edges[int(labels[a])].append((j,a,b))
     histories={k:[] for k in ('T','q','reservoir','stored','residual','energy','nbound','cbound')}
     provenance=json.dumps({'validation_contract':'transport-roundoff-2','model':'constant_lumped_thermal','method':'backward_euler','quadrature':'right_endpoint',
          'units':{'T':'K','C':'J/K','g':'W/K','q':'W','Q':'W','stored':'J','residual':'J'},
@@ -201,7 +208,7 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
         if np.any((g>0)&(difference==0)&distinct):
             raise ArithmeticError('nonzero temperature difference is not representable')
         q=_product(g,difference,'edge heat rate')
-        outward=np.array([math.fsum((q[j] if a==i else -q[j]) for j,(a,b) in enumerate(conn) if a==i or b==i) for i in range(n)])
+        outward=np.array([math.fsum((q[j] if a==i else -q[j]) for j,a,b in incident[i]) for i in range(n)])
         if not np.isfinite(outward).all():raise ArithmeticError('nodal sum overflow')
         reservoir=np.zeros(n)
         with np.errstate(over='ignore', invalid='ignore'):
@@ -252,13 +259,13 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
             source_eval=[evaluation_ulp(x) for x in dtQ]
             res=np.full(n,np.nan);nb=np.full(n,np.nan)
             for i in free:
-                signed=[float(stepq[j] if a==i else -stepq[j]) for j,(a,b) in enumerate(conn) if a==i or b==i]
+                signed=[float(stepq[j] if a==i else -stepq[j]) for j,a,b in incident[i]]
                 scale=math.fsum([abs(energy[i]),abs(dtQ[i])]+[abs(x) for x in signed])
                 r=math.fsum([energy[i],-dtQ[i]]+signed)
                 conduction=upper_sum(upper_product(float(dt),float(g[j]),upper_sum([rho[a],rho[b]]))
-                                     for j,(a,b) in enumerate(conn) if a==i or b==i)
+                                     for j,a,b in incident[i])
                 evaluation=upper_sum([energy_eval[i],source_eval[i],evaluation_ulp(r)]+
-                                     [step_eval[j] for j,(a,b) in enumerate(conn) if a==i or b==i])
+                                     [step_eval[j] for j,a,b in incident[i]])
                 if scale==0: capacity_budget[i]=0.0
                 b=upper_sum([capacity_budget[i],conduction,evaluation])
                 if not all(math.isfinite(x) for x in (scale,r,b)):raise ArithmeticError('residual scale overflow')
@@ -268,20 +275,20 @@ def solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
                 res[i],nb[i]=r,bound
             cr=[];cb=[]
             reservoir_step=_product(dt,resnew,'reservoir step heat')
-            for ix in members:
+            for component,ix in enumerate(members):
                 r=math.fsum([float(energy[i]) for i in ix]+[-float(dtQ[i]) for i in ix]+[-float(reservoir_step[i]) for i in ix])
                 scale=math.fsum([abs(float(energy[i]))+abs(float(dtQ[i]))+abs(float(reservoir_step[i])) for i in ix])
                 # Internal free/free reconstruction flux cancels. Only cut
                 # edges to fixed reservoirs enter the component allowance.
-                member_set=set(map(int,ix)); fixed_set=set(map(int,fix))
+                fixed_set=set(map(int,fix))
                 cut=upper_sum(upper_product(float(dt),float(g[j]),rho[b if a in fixed_set else a])
-                              for j,(a,b) in enumerate(conn)
-                              if a in member_set and ((a in fixed_set)!=(b in fixed_set)))
+                              for j,a,b in component_edges[component]
+                              if ((a in fixed_set)!=(b in fixed_set)))
                 reservoir_eval=[]
                 for i in ix:
                     if i in fixed_set:
                         outward_error=upper_sum([evaluation_ulp(outnew[i])]+
-                            [flux_eval[j] for j,(a,b) in enumerate(conn) if a==i or b==i])
+                            [flux_eval[j] for j,a,b in incident[i]])
                         reservoir_eval.append(upper_sum([upper_product(float(dt),upper_sum([outward_error,evaluation_ulp(resnew[i])])),
                                                          evaluation_ulp(reservoir_step[i])]))
                 b=upper_sum([upper_sum(capacity_budget[i] for i in ix),cut,
