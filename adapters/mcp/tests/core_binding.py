@@ -67,6 +67,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('io/mesh_export.py', b'vertex_offset = 0  # Convert to one-based OBJ indices only when writing.'))
     cases.append(('gen/solid_export.py', b'zero_area = _first_zero_area_face(vertices, faces)'))
     cases.append(('gen/tube_solid.py', b'mesh=result.to_mesh64()'))
+    cases.append(('gen/tube_solid.py', b'first_index=int(indices.min())'))
     for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
@@ -76,7 +77,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             else:
                 assert saved.count(material_unit) == 1
                 if relative == 'gen/tube_solid.py':
-                    replacement = b'mesh=result.to_mesh()'
+                    replacement = (b'first_index=0'
+                                   if material_unit == b'first_index=int(indices.min())'
+                                   else b'mesh=result.to_mesh()')
                 elif relative == 'gen/solid_export.py':
                     replacement = b'zero_area = None'
                 elif relative == 'io/mesh_export.py':
@@ -103,7 +106,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
             records.append({'module': relative,
-                            'case': ('tube_mesh64_output_drift' if relative == 'gen/tube_solid.py'
+                            'case': ('tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
+                                     else 'tube_mesh64_output_drift' if relative == 'gen/tube_solid.py'
                                      else 'solid_zero_area_guard_drift' if relative == 'gen/solid_export.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'
                                      else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'

@@ -85,8 +85,13 @@ def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
     indices=np.asarray(mesh.tri_verts)
     if indices.ndim!=2 or indices.shape[1]!=3 or indices.dtype.kind not in 'iu':
         raise ValueError('mesh faces must be an integer array with three columns')
-    if np.any(indices<0) or np.any(indices>=len(properties)) or np.any(indices>np.iinfo(np.int32).max):
-        raise ValueError('mesh face index is outside the vertex table or int32 range')
+    if indices.size:
+        # Compare exact Python integers, avoiding array/scalar promotion for
+        # non-native-endian and narrow unsigned provider index arrays.
+        first_index=int(indices.min())
+        last_index=int(indices.max())
+        if first_index<0 or last_index>=len(properties) or last_index>np.iinfo(np.int32).max:
+            raise ValueError('mesh face index is outside the vertex table or int32 range')
     # Mesh64 exposes const provider-owned views. Both contact separation below
     # and build_solid's coordinate transform require independent writable data.
     vertices=np.array(properties[:,:3],dtype=np.float64,order='C',copy=True)

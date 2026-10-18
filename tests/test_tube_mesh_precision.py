@@ -318,7 +318,8 @@ def test_bad_face_arrays_refuse_before_indexing_or_narrowing(tube, monkeypatch, 
         tube.tube_mesh(POINTS, EDGES, .25)
 
 
-@pytest.mark.parametrize('dtype', ['i1', 'u1', '<i2', '>u2', '<i4', '>u4', '<i8', '>u8'])
+@pytest.mark.parametrize('dtype', ['i1', 'u1', '<i2', '>i2', '<u2', '>u2',
+                                  '<i4', '>i4', '<u4', '>u4', '<i8', '>i8', '<u8', '>u8'])
 def test_signed_unsigned_integer_faces_are_copied(tube, monkeypatch, dtype):
     incoming = FACES.astype(dtype)
     Provider(faces=incoming).install(monkeypatch)
@@ -327,6 +328,25 @@ def test_signed_unsigned_integer_faces_are_copied(tube, monkeypatch, dtype):
     assert faces.flags.owndata and faces.flags.c_contiguous
     assert not np.shares_memory(faces, incoming)
     np.testing.assert_array_equal(faces, FACES)
+
+
+@pytest.mark.parametrize('dtype,value', [
+    ('<i2', -1), ('>i2', -1), ('<i8', -(2**63)), ('>i8', -(2**63)),
+    ('<u2', 4), ('>u2', 4), ('<u2', 2**16-1), ('>u2', 2**16-1),
+    ('<i4', 2**31-1), ('>i4', 2**31-1),
+    ('<u4', 2**31), ('>u4', 2**31),
+    ('<u8', 2**64-1), ('>u8', 2**64-1),
+])
+def test_index_extrema_refuse_exactly_before_narrowing(tube, monkeypatch, dtype, value):
+    storage = np.zeros((2, 6), dtype=dtype)
+    incoming = storage[:, ::2]
+    incoming[:] = [[0, 1, 2], [0, 1, value]]
+    incoming.setflags(write=False)
+    before = storage.tobytes()
+    Provider(faces=incoming).install(monkeypatch)
+    with pytest.raises(ValueError, match='^mesh face index is outside the vertex table or int32 range$'):
+        tube.tube_mesh(POINTS, EDGES, .25)
+    assert storage.tobytes() == before
 
 
 def test_empty_and_degenerate_faces_are_not_repaired_or_validated(tube, monkeypatch):
