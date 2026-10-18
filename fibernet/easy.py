@@ -89,7 +89,10 @@ def simulate(
         Target stretch ratio for both backends (1.01 = 1% extension).
     backend : str
         "spring" (default), "taichi" (an alias for the same spring engine),
-        or "fem". The FEM backend accepts E, nu, pct, and nonlinear.
+        "fem", or explicit "lammps" dynamics. LAMMPS requires preparation
+        options plus runtime, workdir and limits; record_state is opt-in.
+        Its geometry-facing arrays retain graph units; native state is SI.
+        The FEM backend accepts E, nu, pct, and nonlinear.
         Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
         overrides this selection.
     save_path : str, optional
@@ -124,9 +127,12 @@ def simulate(
     >>> r = simulate(g, mode="stretch", strain=2.0)  # 质点弹簧拉伸2倍
     >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
-    if not isinstance(backend, str) or backend not in ("spring", "taichi", "fem"):
-        raise ValueError("backend must be 'spring', 'taichi', or 'fem'")
-    if backend in ("spring", "taichi"):
+    if not isinstance(backend, str) or backend not in ("spring", "taichi", "fem", "lammps"):
+        raise ValueError("backend must be 'spring', 'taichi', 'fem', or 'lammps'")
+    if backend == "lammps":
+        from fibernet.sim._lammps_result import simulate_lammps
+        result = simulate_lammps(graph, mode, strain, **kwargs)
+    elif backend in ("spring", "taichi"):
         if not isinstance(mode, str) or mode not in ("stretch", "dynamics"):
             raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
         arch = kwargs.pop("arch", "cpu")

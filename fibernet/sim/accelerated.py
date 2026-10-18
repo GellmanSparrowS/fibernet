@@ -295,6 +295,9 @@ def _validate_dynamics_state(value, n_nodes=None, node_ids=None):
 
 
 def _validate_result_state(result):
+    if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") == "lammps_harmonic_state/1":
+        from ._lammps_result import validate_result
+        return validate_result(result)
     record = _validate_dynamics_state(result.dynamics_state, result.n_nodes,
                                       result.metadata.get('node_ids'))
     if not np.isclose(result.energy, record['final']['potential_energy'], rtol=1e-12, atol=0):
@@ -322,6 +325,9 @@ def _validate_result_state(result):
 
 
 def _dynamics_state_summary(value):
+    if isinstance(value, dict) and value.get("schema") == "lammps_harmonic_state/1":
+        from ._lammps_result import state_summary
+        return state_summary(value)
     record = _validate_dynamics_state(value)
     if record['representation'] == 'summary':
         return record
@@ -379,6 +385,9 @@ class SimResult:
         stiffness : float or (number of edges,) array, optional
             Coefficients in F = k * strain and E = 0.5 * k * L0 * strain**2.
         """
+        if self.metadata.get('backend') == 'lammps':
+            raise ValueError('LAMMPS results use explicit equilibrium lengths; geometric-rest recomputation is unsupported')
+
         from fibernet.sim.accelerated import _graph_to_arrays, _element_data
 
         pos_orig, elements, _, _ = _graph_to_arrays(graph)

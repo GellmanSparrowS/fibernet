@@ -114,3 +114,49 @@ not route the legacy LAMMPSBridge API into this backend.
 `expected_banner` is checked against native output. `expected_version` remains
 range-validated metadata, not an independent query of the engine version; bind
 the date, update and required capabilities to the binary in preflight evidence.
+
+## Explicit high-level dynamics
+
+`fibernet.simulate(graph, mode="dynamics", backend="lammps", **model,
+runtime=runtime, workdir=new_workdir, limits=limits, record_state=False)`
+uses the same `prepare_harmonic_beads` options and existing `LAMMPSTask`.
+All five model inputs (`length_unit`, `maximum_bond_length_m`, `masses_kg`,
+`bonds`, `run`) and the runtime/workdir/limits are explicit. Optional model
+inputs are `fixed_node_ids`, `forces_N`, and `velocities_m_s`. No material
+calibration, default runtime discovery, installation, or solver fallback occurs.
+Only dynamics is accepted; nondefault `strain` and spring-only options fail.
+The historical default `strain=2.0` is ignored because the unchanged signature
+cannot distinguish an omitted value from an explicitly supplied default.
+
+The returned existing `SimResult` keeps geometry-facing `displacements`,
+`deformed_positions`, `positions_trajectory`, and `max_displacement` in the
+input graph's declared length unit. The graph is never modified. Stable node
+and edge row IDs are retained. `field_units` declares these units; edge forces
+are N, stretch is dimensionless, and `energy` is final potential energy in J.
+`time_seconds` is elapsed task wall time, not physical integration time.
+Signed edge forces are derived as `k * (length - equilibrium_length)`, positive
+in tension, from explicit SI bonds, never from parsed nodal forces or assumed
+geometric rest lengths. The geometric-rest-length
+`compute_detailed` helper rejects LAMMPS results before mutation. The direct
+StructureGraph PyVista renderer uses the existing stable-ID alignment helper.
+
+`record_state=True` opts into `dynamics_state` schema `lammps_harmonic_state/1`:
+all integration steps, physical seconds, SI positions/velocities, native net
+nodal forces, PE/KE/total energy, and global box pressure (Pa, compression
+positive, components xx/yy/zz/xy/xz/yz). Pressure is not material stress; net
+nodal forces are not general support reactions. Stress, reactions and work
+are explicitly unavailable. The native-axial algorithmic ledger is unavailable.
+Model/source identity and the runtime inventory receipt are separate.
+
+`result.save(path, detailed=True)` retains state. Ordinary `save_path` and
+`result.save(path)` retain only summary scalars; loading a summary never
+reconstructs missing positions, velocities, forces, or pressure tensors.
+`record_state=False` retains no native state or trajectory arrays.
+
+This convenience call is synchronous. For asynchronous cancellation use the
+existing direct `LAMMPSTask` API. Terminal failures never become a successful
+`SimResult`. The wrapper requests cancel/reap on exceptions; this does not
+establish additional guarantees beyond the underlying task lifecycle.
+Source capabilities in the adapter describe supported profiles and restrictions,
+not installed-provider readiness or physical equivalence to another backend.
+Source/mocked dispatch checks do not constitute native physics qualification.

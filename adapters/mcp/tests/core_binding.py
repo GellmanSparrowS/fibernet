@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 217
+assert len(manifest) == 218
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -76,6 +76,16 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('integrations/lammps_backend.py', b'if self.state == TaskState.CREATED and self._process is None:'))
     cases.append(('gen/solid_export.py', b'<vertex x="%.17g" y="%.17g" z="%.17g"/>'))
     cases.append(('gen/solid_export.py', b"packed = _binary_stl_vertices(solid) if path.suffix.lower() == '.stl' else None"))
+    high_level_mutations = {
+        ('sim/_lammps_result.py', None): (None, 'high_level_adapter_source_drift'),
+        ('sim/_lammps_result.py', b"SCHEMA = 'lammps_harmonic_state/1'"): (b"SCHEMA = 'native_axial_state/1'", 'high_level_backend_state_schema_drift'),
+        ('sim/_lammps_result.py', b'displacements=displacement/scale, deformed_positions=positions/scale'): (b'displacements=displacement, deformed_positions=positions', 'high_level_graph_units_drift'),
+        ('sim/_lammps_result.py', b'ids, edges = list(prepared.node_ids), list(prepared.edge_ids)'): (b'ids, edges = list(reversed(prepared.node_ids)), list(reversed(prepared.edge_ids))', 'high_level_stable_ids_drift'),
+        ('sim/_lammps_result.py', b'coefficients[:,0]*(lengths-coefficients[:,1])'): (b'coefficients[:,0]*lengths', 'high_level_equilibrium_force_law_drift'),
+        ('sim/_lammps_result.py', b'if set(kwargs)-allowed:'): (b'if False:', 'high_level_strict_options_drift'),
+        ('sim/accelerated.py', b"if self.metadata.get('backend') == 'lammps':"): (b'if False:', 'high_level_recompute_guard_drift'),
+    }
+    cases.extend(high_level_mutations)
     for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
@@ -84,7 +94,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                 changed = saved + b'\n# Deliberate test-only core drift.\n'
             else:
                 assert saved.count(material_unit) == (2 if material_unit == b'mesh=result.to_mesh64()' else 1)
-                if relative == 'gen/tube_solid.py':
+                if (relative, material_unit) in high_level_mutations:
+                    replacement = high_level_mutations[(relative, material_unit)][0]
+                elif relative == 'gen/tube_solid.py':
                     replacement = (b'result=result' if material_unit == b'result=m.Manifold(mesh)'
                                    else b'first_index=0'
                                    if material_unit == b'first_index=int(indices.min())'
@@ -126,7 +138,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
             records.append({'module': relative,
-                            'case': ('tube_native_cleanup_drift' if material_unit == b'result=m.Manifold(mesh)'
+                            'case': (high_level_mutations.get((relative, material_unit), (None, None))[1] or ('tube_native_cleanup_drift' if material_unit == b'result=m.Manifold(mesh)'
                                      else 'tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
                                      else 'tube_mesh64_output_drift' if relative == 'gen/tube_solid.py'
                                      else 'binary_stl_serialization_guard_drift' if material_unit and material_unit.startswith(b'packed = ')
@@ -139,7 +151,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                      else 'serial_worker_rehash_drift' if material_unit and relative == 'integrations/_lammps_worker.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'
                                      else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'
-                                     else 'material_feature_unit_drift' if material_unit else 'source_drift'),
+                                     else 'material_feature_unit_drift' if material_unit else 'source_drift')),
                             'exact_hash_boundary_refusal': True,
                             'real_startup_refusal': True})
         finally:
