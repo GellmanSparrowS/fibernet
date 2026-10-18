@@ -4,7 +4,7 @@ A separate optional Linux stdio adapter exposing five bounded native graph and a
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 217 native Python source hashes must match core_manifest.json. The matched native source tree is 3b1c2e98599ddea3923abba6a762e8cd5651bfb1. This label identifies the native-only repository projection, excluding the MCP adapter and its workflow; it is not the enclosing combined source tree or commit. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 217 native Python source hashes must match core_manifest.json. The matched native source tree is 82234e8588fb0fc587d9f2f31134aa351671fee4. This label identifies the native-only repository projection, excluding the MCP adapter and its workflow; it is not the enclosing combined source tree or commit. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -22,7 +22,7 @@ The first install is the native core from this checkout, not a PyPI version assu
 Create an operator-owned JSON file such as manifest.json. Paths must be absolute regular-file paths without symlink components. Replace the placeholder path and SHA with your chosen graph's actual bytes; for the included fixture, use the SHA below.
 
 ```json
-{"source_tree":"3b1c2e98599ddea3923abba6a762e8cd5651bfb1","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
+{"source_tree":"82234e8588fb0fc587d9f2f31134aa351671fee4","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
 ```
 
 ```sh

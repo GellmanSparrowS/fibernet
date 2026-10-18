@@ -290,12 +290,44 @@ def build_voxel_solid(network, settings=None, progress=None, stop_cb=None):
     return solid
 
 
+def _binary_stl_vertices(solid):
+    """Check the exact binary32 triangle soup before creating an output file.
+
+    STL has no vertex indices. Equal serialized coordinates are therefore
+    welded for validation only; emitted coordinates and face order are unchanged.
+    Promotion to binary64 is exact and avoids binary32 volume arithmetic overflow.
+    """
+    with np.errstate(over='ignore', invalid='ignore'):
+        packed = solid.vertices.astype('<f4')
+    if not np.isfinite(packed).all():
+        raise ValueError('binary STL coordinates overflow or are not finite')
+    vertices, inverse = np.unique(packed, axis=0, return_inverse=True)
+    faces = inverse[solid.faces]
+    checked = FiberSolid(vertices.astype(np.float64), faces, solid.centers,
+                         solid.resolution, solid.settings)
+    try:
+        volume = checked.validate()
+    except ValueError as exc:
+        raise ValueError(f'binary STL serialization is invalid: {exc}') from exc
+    if not np.isfinite(volume):
+        raise ValueError('binary STL serialized volume is not finite')
+    if not np.array_equal(checked.faces, faces):
+        raise ValueError('binary STL serialization reverses solid orientation')
+    return packed
+
+
 def export_solid(path, solid):
-    """Write closed geometry atomically. 3MF declares millimetres explicitly."""
+    """Write closed geometry atomically. 3MF declares millimetres explicitly.
+
+    Binary STL additionally validates exact serialized coordinates after welding
+    equal positions. Refusal preserves any existing destination. This is not a
+    self-intersection, manufacturing suitability or 3MF serialization certificate.
+    """
     path = Path(path)
     if path.suffix.lower() not in ('.stl', '.3mf'):
         raise ValueError('solid export requires .stl or .3mf')
     solid.validate()
+    packed = _binary_stl_vertices(solid) if path.suffix.lower() == '.stl' else None
     with _owned_export_file(path) as temporary:
         if path.suffix.lower() == '.stl':
             dtype = np.dtype([('normal','<f4',(3,)),('vertices','<f4',(3,3)),('attribute','<u2')])
@@ -303,9 +335,15 @@ def export_solid(path, solid):
                 stream.write(b'FiberScope; coordinates in millimetres'.ljust(80,b' '))
                 stream.write(struct.pack('<I',len(solid.faces)))
                 for start in range(0,len(solid.faces),65536):
-                    triangles=solid.vertices[solid.faces[start:start+65536]].astype('<f4')
-                    normal=np.cross(triangles[:,1]-triangles[:,0],triangles[:,2]-triangles[:,0])
+                    triangles=packed[solid.faces[start:start+65536]]
+                    # Calculate normals from the exact emitted positions in binary64.
+                    # Binary32 cross products can overflow for finite STL coordinates.
+                    normal_vertices=triangles.astype(np.float64)
+                    normal=np.cross(normal_vertices[:,1]-normal_vertices[:,0],
+                                    normal_vertices[:,2]-normal_vertices[:,0])
                     normal/=np.maximum(np.linalg.norm(normal,axis=1,keepdims=True),1e-15)
+                    if not np.isfinite(normal).all():
+                        raise ValueError('binary STL normals are not finite')
                     data=np.zeros(len(triangles),dtype=dtype)
                     data['normal'],data['vertices']=normal,triangles
                     stream.write(data.tobytes())
