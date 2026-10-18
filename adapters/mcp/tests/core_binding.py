@@ -70,6 +70,10 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('gen/tube_solid.py', b'first_index=int(indices.min())'))
     cases.append(('gen/tube_solid.py', b'result=m.Manifold(mesh)'))
     cases.append(('integrations/lammps_integration.py', b'raise self._lammps_import_error'))
+    cases.append(('integrations/lammps_backend.py', b'if not required <= set(pins):'))
+    cases.append(('integrations/_lammps_worker.py', b'if h.hexdigest() != expected:'))
+    cases.append(('integrations/lammps_backend.py', b'except BaseException as exc:'))
+    cases.append(('integrations/lammps_backend.py', b'if self.state == TaskState.CREATED and self._process is None:'))
     cases.append(('gen/solid_export.py', b'<vertex x="%.17g" y="%.17g" z="%.17g"/>'))
     cases.append(('gen/solid_export.py', b"packed = _binary_stl_vertices(solid) if path.suffix.lower() == '.stl' else None"))
     for relative, material_unit in cases:
@@ -90,6 +94,12 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                    if material_unit.startswith(b'packed = ')
                                    else material_unit.replace(b'%.17g', b'%.9g')
                                    if material_unit.startswith(b'<vertex x=') else b'zero_area = None')
+                elif relative == 'integrations/lammps_backend.py':
+                    replacement = (b'except Exception as exc:' if material_unit == b'except BaseException as exc:'
+                                   else b'if self.state == TaskState.CREATED:' if material_unit.startswith(b'if self.state == TaskState.CREATED')
+                                   else b'if False:')
+                elif relative == 'integrations/_lammps_worker.py':
+                    replacement = b'if False:'
                 elif relative == 'integrations/lammps_integration.py':
                     replacement = b'return LAMMPSResult()'
                 elif relative == 'io/mesh_export.py':
@@ -123,6 +133,10 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                      else 'three_mf_coordinate_precision_drift' if material_unit and material_unit.startswith(b'<vertex x=')
                                      else 'solid_zero_area_guard_drift' if relative == 'gen/solid_export.py'
                                      else 'legacy_lammps_failure_semantics_drift' if relative == 'integrations/lammps_integration.py'
+                                     else 'lammps_start_baseexception_ownership_drift' if material_unit == b'except BaseException as exc:'
+                                     else 'lammps_created_owned_cancel_drift' if material_unit and material_unit.startswith(b'if self.state == TaskState.CREATED')
+                                     else 'serial_runtime_required_pins_drift' if material_unit and relative == 'integrations/lammps_backend.py'
+                                     else 'serial_worker_rehash_drift' if material_unit and relative == 'integrations/_lammps_worker.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'
                                      else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'
                                      else 'material_feature_unit_drift' if material_unit else 'source_drift'),

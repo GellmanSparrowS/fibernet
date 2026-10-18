@@ -85,3 +85,32 @@ From a source checkout, `python examples/22_lammps_harmonic_network.py` compiles
 Pure CI tests need only FiberNet's existing dependencies and test tools. They use synthetic parser fixtures and mocked process lifecycle; no LAMMPS download, credentials, network access or persistent service is required. POSIX-specific lifecycle tests are skipped on Windows; compilation, mapping, parsing and unsupported-runtime errors remain portable. Source parses under Python 3.9 grammar, but grammar checks do not replace actual Python 3.9 CI. The worker's former `entry_points(group=...)` incompatibility is removed with the unqualified linked-engine route.
 
 See [LAMMPS license and provider notice](LAMMPS_LICENSE_NOTICE.md) before distributing an engine or a linked interface.
+
+## Explicit serial-static CLI profile
+
+`RuntimeSpec(mode='cli_serial_static', ...)` admits a separately verified Linux
+x86_64 static CLI executable without the MPI wheel layout required by `cli`.
+Provide existing canonical absolute executable paths (no symlink aliases) for the
+supervisor Python and native CLI, canonical resolved-path SHA256 pins for both, `package_dir=''` and
+`environment=()`. Every additional supplied pin is checked; duplicates, malformed
+or nonhex pins are refused. This profile does not install or discover a runtime. Resolve supervisor paths
+explicitly, for example `str(Path(sys.executable).resolve())`. Canonical paths and
+launch-time rehashing do not eliminate arbitrary filesystem replacement races;
+keep the pinned runtime in a controlled workspace.
+
+The nonexecuting ELF filter accepts only little-endian ELF64 System V x86_64
+ET_EXEC with bounded standard header tables, file-backed executable entry code,
+and LOAD/TLS/GNU_STACK/GNU_RELRO segments. It rejects interpreters, dynamic
+tables, executable stacks and unsupported layouts. It is deliberately narrower
+than general static ELF support and does not establish trust, native capabilities
+or physical correctness. Use independently verified artifact provenance, license
+and capability evidence tied to the exact native executable hash.
+
+The existing `cli` MPI validation and all compiler, task lifecycle, limits,
+output parsing and result contracts are unchanged. The worker rechecks the
+provided hashes before the same fixed no-shell native launch. Serial mode does
+not route the legacy LAMMPSBridge API into this backend.
+
+`expected_banner` is checked against native output. `expected_version` remains
+range-validated metadata, not an independent query of the engine version; bind
+the date, update and required capabilities to the binary in preflight evidence.

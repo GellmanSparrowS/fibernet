@@ -10,7 +10,7 @@ def main():
         raise RuntimeError('native LAMMPS execution requires Linux')
     import resource
     config = json.loads(sys.argv[1])
-    if config['mode'] != 'cli':
+    if config['mode'] not in ('cli', 'cli_serial_static'):
         raise ValueError('only CLI execution is supported')
     cpu = config['cpu_seconds']
     resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))

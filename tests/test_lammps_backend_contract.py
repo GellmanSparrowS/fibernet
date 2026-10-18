@@ -1,6 +1,8 @@
 """Pure protocol tests. Synthetic parser fixtures are NOT native evidence."""
 from dataclasses import replace
 import json
+import hashlib
+import struct
 import os
 from pathlib import Path
 import subprocess
@@ -218,6 +220,7 @@ class FakeProcess:
 
 @unittest.skipUnless(os.name == 'posix', 'process-group lifecycle tests require POSIX')
 class LifecycleTests(unittest.TestCase):
+    mode = 'cli'
     def setUp(self):
         # Never send a real signal from a pure lifecycle fixture.
         group_patch=patch('os.killpg')
@@ -226,7 +229,7 @@ class LifecycleTests(unittest.TestCase):
 
     def make_task(self,root):
         with patch.object(RuntimeSpec,'checked',lambda self:self):
-            return LAMMPSTask(prepared(),RuntimeSpec('cli',sys.executable,'/fake/native',expected_banner='LAMMPS (test fixture)'),Path(root)/'run')
+            return LAMMPSTask(prepared(),RuntimeSpec(self.mode,sys.executable,'/fake/native',expected_banner='LAMMPS (test fixture)'),Path(root)/'run')
 
     def test_cancel_before_start_writes_nothing(self):
         with tempfile.TemporaryDirectory() as root:
@@ -312,6 +315,172 @@ class LifecycleTests(unittest.TestCase):
                 with self.assertRaises(RuntimeError):task.start()
                 self.assertEqual(kill.call_count,2)
                 self.assertEqual(task.wait(),TaskState.FAILED)
+
+
+def static_elf(**changes):
+    """Tiny non-executable test bytes; no native program is invoked."""
+    fields = dict(ident=b'\x7fELF\x02\x01\x01'+b'\0'*9, kind=2, machine=62,
+                  version=1, entry=0x400078, phoff=64, shoff=0, flags=0,
+                  ehsize=64, phsize=56, phnum=1, shsize=0, shnum=0, shstr=0)
+    fields.update(changes)
+    header = struct.pack('<16sHHIQQQIHHHHHH', *fields.values())
+    segment = struct.pack('<IIQQQQQQ', 1, 5, 0, 0x400000, 0, 128, 128, 4096)
+    return header+segment+b'\0'*8
+
+
+def runtime_fixture(root, mode='cli_serial_static'):
+    root = Path(root).resolve()
+    python = root/'python'; python.write_bytes(b'not a real supervisor'); python.chmod(0o700)
+    native = root/'lmp'; native.write_bytes(static_elf()); native.chmod(0o700)
+    files = [python, native]
+    options = {}
+    if mode == 'cli':
+        package = root/'lammps'; package.mkdir()
+        native.rename(package/'lmp'); native=package/'lmp'
+        files = [python, native]
+        for name in ('liblammps.so', 'liblammps.so.0', 'libmpi.so.12'):
+            path=package/name; path.write_bytes(name.encode()); files.append(path)
+        options = dict(package_dir=str(package), environment=(('LD_LIBRARY_PATH',str(package)),))
+    return RuntimeSpec(mode, str(python), str(native), expected_version=20250722,
+                       expected_banner='LAMMPS (22 Jul 2025)',
+                       file_sha256=tuple((str(p),hashlib.sha256(p.read_bytes()).hexdigest()) for p in files), **options)
+
+
+class SerialAdmissionTests(unittest.TestCase):
+    def setUp(self):
+        self.area=tempfile.TemporaryDirectory(); self.addCleanup(self.area.cleanup)
+        self.runtime=runtime_fixture(self.area.name)
+        for name, value in [('sys.platform','linux'),('platform.machine',lambda:'x86_64')]:
+            context=patch(name,value);context.start();self.addCleanup(context.stop)
+
+    def check_bytes(self, data):
+        path=Path(self.runtime.lammps_executable);path.write_bytes(data)
+        pins=tuple((p,hashlib.sha256(Path(p).read_bytes()).hexdigest()) for p,_ in self.runtime.file_sha256)
+        return replace(self.runtime,file_sha256=pins).checked()
+
+    def test_serial_profile_accepted_without_execution(self):
+        with patch('subprocess.Popen',side_effect=AssertionError('no execution')),patch('os.execve',side_effect=AssertionError('no execution')):
+            self.assertIs(self.runtime.checked(),self.runtime)
+
+    @unittest.skipUnless(os.name == 'posix', 'existing MPI layout uses POSIX library paths')
+    def test_old_cli_layout_stays_valid_and_required(self):
+        with tempfile.TemporaryDirectory() as folder:
+            old=runtime_fixture(folder,'cli')
+            self.assertIs(old.checked(),old)
+            for changes in [dict(environment=()),dict(package_dir=''),dict(file_sha256=()),dict(mode='cli_serial_static')]:
+                with self.subTest(changes=changes),self.assertRaises(ValueError):replace(old,**changes).checked()
+        with self.assertRaises(ValueError):replace(self.runtime,mode='cli').checked()
+
+    def test_serial_rejects_unknown_modes_platform_and_environment(self):
+        for changes in [dict(mode='python'),dict(mode='serial'),dict(mode=''),dict(package_dir=self.area.name),
+                        dict(environment=(('LD_LIBRARY_PATH',self.area.name),)),dict(environment=(('UCX_TLS','tcp'),)),
+                        dict(environment=[]),dict(expected_version=0),dict(expected_banner='wrong')]:
+            with self.subTest(changes=changes),self.assertRaises(ValueError):replace(self.runtime,**changes).checked()
+        for target,value in [('sys.platform','darwin'),('platform.machine',lambda:'aarch64')]:
+            with patch(target,value),self.assertRaises(ValueError):self.runtime.checked()
+
+    def test_executables_must_exist_be_absolute_and_executable(self):
+        for changes in [dict(python_executable='python'),dict(lammps_executable='lmp'),dict(lammps_executable=self.area.name),dict(lammps_executable='/missing/native')]:
+            with self.subTest(changes=changes),self.assertRaises(ValueError):replace(self.runtime,**changes).checked()
+        with patch('os.access',return_value=False),self.assertRaises(ValueError):self.runtime.checked()
+
+    def test_launch_paths_must_match_canonical_pin_targets(self):
+        for field in ('python_executable', 'lammps_executable'):
+            original = getattr(self.runtime, field)
+            alias = str(Path(original).parent) + '/./' + Path(original).name
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, 'canonical'):
+                replace(self.runtime, **{field: alias}).checked()
+        if os.name == 'posix':
+            alias = Path(self.area.name)/'native-alias'
+            alias.symlink_to(self.runtime.lammps_executable)
+            with self.assertRaisesRegex(ValueError, 'canonical'):
+                replace(self.runtime, lammps_executable=str(alias)).checked()
+
+    def test_pin_shape_duplicates_canonical_hex_missing_and_mismatch(self):
+        p,h=self.runtime.file_sha256[0]
+        for pins in [(),self.runtime.file_sha256[:1],self.runtime.file_sha256+(self.runtime.file_sha256[0],),
+                     ((p,'g'*64),),((p,h.upper()),),((p,'0'*63),),((p,),),('broken',),[(p,h)],
+                     ((p+'/../python',h),),((p,'0'*64),)+self.runtime.file_sha256[1:]]:
+            with self.subTest(pins=pins),self.assertRaises(ValueError):replace(self.runtime,file_sha256=pins).checked()
+        extra=Path(self.area.name).resolve()/'extra';extra.write_bytes(b'extra')
+        pins=self.runtime.file_sha256+((str(extra),hashlib.sha256(b'extra').hexdigest()),)
+        self.assertIsNotNone(replace(self.runtime,file_sha256=pins).checked())
+        extra.write_bytes(b'changed')
+        with self.assertRaises(ValueError):replace(self.runtime,file_sha256=pins).checked()
+
+    def test_bad_elf_header_and_bounded_tables(self):
+        changes=[dict(ident=b'X'*16),dict(ident=b'\x7fELF\x01\x01\x01'+b'\0'*9),
+                 dict(ident=b'\x7fELF\x02\x02\x01'+b'\0'*9),dict(kind=3),dict(machine=183),
+                 dict(version=0),dict(flags=1),dict(ehsize=63),dict(phoff=0),dict(phoff=2**64-1),
+                 dict(phsize=55),dict(phnum=0),dict(phnum=65),dict(phnum=65535),
+                 dict(shoff=64),dict(shnum=1),dict(shoff=64,shsize=64,shnum=4097),
+                 dict(shoff=64,shsize=64,shnum=1,shstr=1)]
+        for change in changes:
+            with self.subTest(change=change),self.assertRaises(ValueError):self.check_bytes(static_elf(**change))
+        for data in (b'',static_elf()[:63],static_elf()[:100]):
+            with self.subTest(length=len(data)),self.assertRaises(ValueError):self.check_bytes(data)
+
+    def test_dynamic_interpreter_and_malformed_segments_rejected(self):
+        for index,value in [(0,2),(0,3),(0,0),(0,0x6474e553),(1,8),(1,4),(2,129),
+                            (2,2**64-1),(3,2**64-64),(5,129),(6,127),(7,3),(3,0x400001)]:
+            data=bytearray(static_elf());values=list(struct.unpack_from('<IIQQQQQQ',data,64));values[index]=value
+            struct.pack_into('<IIQQQQQQ',data,64,*values)
+            with self.subTest(index=index,value=value),self.assertRaises(ValueError):self.check_bytes(data)
+        with self.assertRaises(ValueError):self.check_bytes(static_elf(entry=0x400080))
+
+    def test_observed_static_segment_types_and_stack_guard(self):
+        data=bytearray(static_elf(phnum=5,entry=0x400158));data.extend(b'\0'*(344-len(data)))
+        rows=[(1,5,0,0x400000,0,344,344,4096),(1,6,0,0x500000,0,344,400,4096),
+              (7,4,0,0x500000,0,5,32,8),(0x6474e551,6,0,0,0,0,0,16),
+              (0x6474e552,4,0,0x500000,0,8,8,1)]
+        for i,row in enumerate(rows):struct.pack_into('<IIQQQQQQ',data,64+56*i,*row)
+        # Entry must fall inside bytes of an executable segment, not one past it.
+        struct.pack_into('<Q',data,24,0x400157)
+        self.check_bytes(data)
+        struct.pack_into('<I',data,64+56*3+4,7)
+        with self.assertRaises(ValueError):self.check_bytes(data)
+
+
+@unittest.skipUnless(os.name == 'posix', 'worker resource-limit mocks require POSIX')
+class WorkerProfileTests(unittest.TestCase):
+    def setUp(self):
+        linux = patch.object(sys, 'platform', 'linux')
+        linux.start()
+        self.addCleanup(linux.stop)
+
+    def test_non_linux_refused_before_limits_hashing_or_exec(self):
+        import resource
+        from fibernet.integrations import _lammps_worker as worker
+        for platform_name in ('darwin', 'win32'):
+            with self.subTest(platform=platform_name), patch.object(sys, 'platform', platform_name), patch.object(resource, 'setrlimit') as limits, patch.object(os, 'execve') as execute, patch('builtins.open') as opened:
+                with self.assertRaisesRegex(RuntimeError, 'requires Linux'):
+                    worker.main()
+                limits.assert_not_called()
+                opened.assert_not_called()
+                execute.assert_not_called()
+
+    def test_modes_hash_before_exec_and_fixed_argv(self):
+        import resource
+        from fibernet.integrations import _lammps_worker as worker
+        with tempfile.TemporaryDirectory() as folder:
+            runtime=runtime_fixture(folder)
+            config=dict(executable=runtime.lammps_executable,file_sha256=runtime.file_sha256,
+                        cpu_seconds=1,memory_bytes=64*1024**2,file_size_bytes=1024)
+            for mode in ('cli','cli_serial_static'):
+                with self.subTest(mode=mode),patch.object(sys,'platform','linux'),patch.object(sys,'argv',['worker',json.dumps(dict(config,mode=mode))]),patch.object(resource,'setrlimit') as limits,patch.object(os,'execve') as execute:
+                    worker.main()
+                    self.assertEqual(limits.call_count,4)
+                    execute.assert_called_once_with(runtime.lammps_executable,[runtime.lammps_executable,'-in','in.model','-log','log.lammps','-screen','none'],os.environ)
+                bad=dict(config,mode=mode,file_sha256=((runtime.lammps_executable,'0'*64),))
+                with patch.object(sys,'argv',['worker',json.dumps(bad)]),patch.object(resource,'setrlimit'),patch.object(os,'execve') as execute,self.assertRaises(RuntimeError):worker.main()
+                execute.assert_not_called()
+            for mode in ('python','serial','unknown'):
+                with patch.object(sys,'argv',['worker',json.dumps(dict(config,mode=mode))]),patch.object(resource,'setrlimit') as limits,patch.object(os,'execve') as execute,self.assertRaises(ValueError):worker.main()
+                limits.assert_not_called();execute.assert_not_called()
+
+
+class SerialLifecycleTests(LifecycleTests):
+    mode = 'cli_serial_static'
 
 
 if __name__=='__main__':unittest.main()

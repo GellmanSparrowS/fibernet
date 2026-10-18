@@ -17,6 +17,7 @@ import platform
 from pathlib import Path
 import signal
 import subprocess
+import struct
 import sys
 import threading
 import time
@@ -451,9 +452,100 @@ class ResourceLimits:
         return self
 
 
+def _check_serial_static_elf(path):
+    """Admit only the bounded ELF64 x86_64 static executable layout.
+
+    This is an admission filter, not a general ELF loader or a capability probe.
+    In particular, dynamic tables and interpreters are never admitted.
+    """
+    with open(path, 'rb') as stream:
+        size = os.fstat(stream.fileno()).st_size
+        header = stream.read(64)
+        if len(header) != 64:
+            raise LAMMPSContractError('truncated serial ELF header')
+        fields = struct.unpack('<16sHHIQQQIHHHHHH', header)
+        ident, kind, machine, version, entry, phoff, shoff, flags, ehsize, phsize, phnum, shsize, shnum, shstr = fields
+        if (ident != b'\x7fELF\x02\x01\x01' + b'\0'*9 or
+                (kind, machine, version, flags, ehsize) != (2, 62, 1, 0, 64)):
+            raise LAMMPSContractError('unsupported serial ELF identity/header')
+        if not (phoff >= 64 and phsize == 56 and 1 <= phnum <= 64 and
+                phoff + phsize*phnum <= size):
+            raise LAMMPSContractError('invalid or unbounded serial ELF program table')
+        # Section contents are not interpreted. Reject extended numbering and
+        # malformed table extents; dynamic execution is rejected by segments.
+        if shnum == 0:
+            if shoff != 0 or shstr != 0 or shsize not in (0, 64):
+                raise LAMMPSContractError('unsupported serial ELF section numbering')
+        elif not (1 <= shnum <= 4096 and shsize == 64 and shoff >= 64 and
+                  shoff + shsize*shnum <= size and shstr < shnum):
+            raise LAMMPSContractError('invalid or unbounded serial ELF section table')
+        stream.seek(phoff)
+        table = stream.read(phsize*phnum)
+        if len(table) != phsize*phnum:
+            raise LAMMPSContractError('truncated serial ELF program table')
+        executable_entry = False
+        for index in range(phnum):
+            segment, permissions, offset, address, _, filesz, memsz, alignment = struct.unpack_from('<IIQQQQQQ', table, index*56)
+            if segment not in (1, 7, 0x6474e551, 0x6474e552):
+                raise LAMMPSContractError('unsupported or dynamic serial ELF segment')
+            if (offset > size or filesz > size-offset or filesz > memsz or
+                    address + memsz > 2**64 or permissions & ~7 or
+                    (alignment not in (0, 1) and alignment & (alignment-1))):
+                raise LAMMPSContractError('malformed serial ELF segment')
+            if segment == 0x6474e551 and permissions & 1:
+                raise LAMMPSContractError('executable serial ELF stack is not admitted')
+            if segment == 1:
+                if alignment > 1 and address % alignment != offset % alignment:
+                    raise LAMMPSContractError('misaligned serial ELF load segment')
+                if permissions & 1 and address <= entry < address+filesz:
+                    executable_entry = True
+        if not executable_entry:
+            raise LAMMPSContractError('serial ELF entry is not file-backed executable code')
+
+
+def _check_serial_static_runtime(runtime):
+    if sys.platform != 'linux' or platform.machine() != 'x86_64':
+        raise LAMMPSContractError('native execution requires the qualified Linux x86_64 runtime layout')
+    paths = (runtime.python_executable, runtime.lammps_executable)
+    if any(not isinstance(p, str) or not p or not Path(p).is_absolute() or
+           str(Path(p).resolve()) != p or not Path(p).is_file() or
+           not os.access(p, os.X_OK) for p in paths):
+        raise LAMMPSContractError('serial runtime requires existing canonical absolute executable files')
+    if runtime.package_dir != '' or runtime.environment != ():
+        raise LAMMPSContractError('serial static runtime requires no package directory or environment overrides')
+    _integer(runtime.expected_version, 'expected_version', 20000101, 21000101)
+    if (not isinstance(runtime.expected_banner, str) or
+            not runtime.expected_banner.startswith('LAMMPS (') or '\n' in runtime.expected_banner):
+        raise LAMMPSContractError('exact preflight-verified native log banner required')
+    pins = {}
+    if not isinstance(runtime.file_sha256, tuple):
+        raise LAMMPSContractError('serial runtime identity pins must be explicit pairs')
+    for pin in runtime.file_sha256:
+        if not isinstance(pin, tuple) or len(pin) != 2:
+            raise LAMMPSContractError('invalid serial runtime identity pin')
+        path, expected = pin
+        if (not isinstance(path, str) or not Path(path).is_absolute() or
+                str(Path(path).resolve()) != path or not Path(path).is_file() or
+                path in pins or not isinstance(expected, str) or len(expected) != 64 or
+                any(c not in '0123456789abcdef' for c in expected)):
+            raise LAMMPSContractError('invalid or duplicate serial runtime identity pin')
+        pins[path] = expected
+    required = {str(Path(p).resolve()) for p in paths}
+    if not required <= set(pins):
+        raise LAMMPSContractError('serial native/Python identity pins incomplete')
+    for path, expected in pins.items():
+        with open(path, 'rb') as stream:
+            digest = hashlib.sha256()
+            for chunk in iter(lambda: stream.read(1024*1024), b''): digest.update(chunk)
+        if digest.hexdigest() != expected:
+            raise LAMMPSContractError('runtime identity mismatch: ' + path)
+    _check_serial_static_elf(runtime.lammps_executable)
+    return runtime
+
+
 @dataclass(frozen=True)
 class RuntimeSpec:
-    mode: str  # cli only; linked Python-engine execution is not admitted
+    mode: str  # cli or cli_serial_static; linked Python-engine execution is not admitted
     python_executable: str  # runs the isolated stdlib resource-limit worker
     lammps_executable: Optional[str] = None
     package_dir: str = ''
@@ -463,6 +555,8 @@ class RuntimeSpec:
     environment: Tuple[Tuple[str, str], ...] = ()
 
     def checked(self):
+        if self.mode == 'cli_serial_static':
+            return _check_serial_static_runtime(self)
         if self.mode != 'cli':
             raise LAMMPSContractError('only CLI execution is supported; linked Python-engine mode is not admitted')
         if sys.platform != 'linux' or platform.machine() != 'x86_64':
@@ -557,12 +651,21 @@ class LAMMPSTask:
                 self._started = time.monotonic()
                 self._thread = threading.Thread(target=self._watch, daemon=True)
                 self._thread.start()
-            except Exception as exc:
-                if self._process is not None:
-                    self.state = TaskState.RUNNING
-                    self._stop(TaskState.FAILED, str(exc))
-                self.state, self.error = TaskState.FAILED, f'{type(exc).__name__}: {exc}'
-                if self._stream is not None: self._stream.close()
+            except BaseException as exc:
+                message = f'{type(exc).__name__}: {exc}'
+                try:
+                    if self._process is not None:
+                        # A stored handle is owned even before RUNNING was assigned.
+                        self.state = TaskState.RUNNING
+                        self._stop(TaskState.FAILED, message)
+                    else:
+                        self.state, self.error = TaskState.FAILED, message
+                    if self._stream is not None: self._stream.close()
+                except BaseException as cleanup_exc:
+                    self.error = message + f'; cleanup incomplete: {type(cleanup_exc).__name__}: {cleanup_exc}'
+                    # RUNNING retains retriable ownership until group cleanup and wait finish.
+                    if self.state != TaskState.RUNNING: self._done.set()
+                    raise exc from cleanup_exc
                 self._done.set()
                 raise
         return self
@@ -570,7 +673,6 @@ class LAMMPSTask:
     def _stop(self, state, message):
         with self._lock:
             if self.state != TaskState.RUNNING: return
-            self.state, self.error = state, message
             try: os.killpg(self._process.pid, signal.SIGTERM)
             except ProcessLookupError: pass
             try: self._process.wait(timeout=0.25)
@@ -579,18 +681,29 @@ class LAMMPSTask:
             try: os.killpg(self._process.pid, signal.SIGKILL)
             except ProcessLookupError: pass
             self._process.wait()
+            self.state, self.error = state, message
 
     def cancel(self):
         with self._lock:
-            if self.state == TaskState.CREATED:
+            if self.state == TaskState.CREATED and self._process is None:
                 self.state, self.error = TaskState.CANCELLED, 'cancelled before start'
                 self._done.set()
                 return
-        self._stop(TaskState.CANCELLED, 'cancelled by caller')
+            if self.state == TaskState.CREATED:
+                self.state = TaskState.RUNNING
+            self._stop(TaskState.CANCELLED, 'cancelled by caller')
+            if self._thread is None or not self._thread.is_alive():
+                # An interrupted start may own a child without an active watchdog.
+                try:
+                    if self._stream is not None: self._stream.close()
+                finally:
+                    if self.state != TaskState.RUNNING: self._done.set()
 
     def wait(self, timeout=None):
         if not self._done.wait(timeout):
-            raise TimeoutError('task still running; its independent watchdog remains active')
+            if self._thread is not None and self._thread.is_alive():
+                raise TimeoutError('task still running; its independent watchdog remains active')
+            raise TimeoutError('task still pending with no active watchdog; inspect state and retry cleanup if needed')
         return self.state
 
     def _artifact_bytes(self):
