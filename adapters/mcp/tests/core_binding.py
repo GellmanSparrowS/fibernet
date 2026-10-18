@@ -68,6 +68,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('gen/solid_export.py', b'zero_area = _first_zero_area_face(vertices, faces)'))
     cases.append(('gen/tube_solid.py', b'mesh=result.to_mesh64()'))
     cases.append(('gen/tube_solid.py', b'first_index=int(indices.min())'))
+    cases.append(('gen/tube_solid.py', b'result=m.Manifold(mesh)'))
     for relative, material_unit in cases:
         target = core / relative
         saved = target.read_bytes()
@@ -75,9 +76,10 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             if material_unit is None:
                 changed = saved + b'\n# Deliberate test-only core drift.\n'
             else:
-                assert saved.count(material_unit) == 1
+                assert saved.count(material_unit) == (2 if material_unit == b'mesh=result.to_mesh64()' else 1)
                 if relative == 'gen/tube_solid.py':
-                    replacement = (b'first_index=0'
+                    replacement = (b'result=result' if material_unit == b'result=m.Manifold(mesh)'
+                                   else b'first_index=0'
                                    if material_unit == b'first_index=int(indices.min())'
                                    else b'mesh=result.to_mesh()')
                 elif relative == 'gen/solid_export.py':
@@ -87,7 +89,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                 else:
                     replacement = (b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v0'"
                                    if relative == 'ml/edge_gine.py' else b"'youngs_modulus': 'MPa'")
-                changed = saved.replace(material_unit, replacement)
+                changed = saved.replace(material_unit, replacement, 1)
             target.write_bytes(changed)
             with patch.object(importlib.util, 'find_spec', return_value=SimpleNamespace(origin=str(core / '__init__.py'))):
                 try:
@@ -106,7 +108,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
             records.append({'module': relative,
-                            'case': ('tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
+                            'case': ('tube_native_cleanup_drift' if material_unit == b'result=m.Manifold(mesh)'
+                                     else 'tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
                                      else 'tube_mesh64_output_drift' if relative == 'gen/tube_solid.py'
                                      else 'solid_zero_area_guard_drift' if relative == 'gen/solid_export.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'

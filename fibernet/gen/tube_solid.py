@@ -3,11 +3,13 @@ import numpy as np
 
 
 def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
-    """Return owned float64 positions and int32 faces from binary64 extraction.
+    """Return owned float64 positions and int32 faces after native Mesh64 cleanup.
 
     The optional provider must expose ``Manifold.to_mesh64`` (verified with
     manifold3d 3.5.1). Triangle counts/order and coordinates are not a stable
-    serialization contract. Callers must validate the resulting geometry.
+    serialization contract. Native cleanup can change topology and face properties.
+    Halfedge tangents are unsupported by this cleanup path. Callers must
+    independently validate the resulting geometry and fidelity.
     """
     import manifold3d as m
     if not callable(getattr(m.Manifold, 'to_mesh64', None)):
@@ -77,6 +79,19 @@ def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
     if stop_cb and stop_cb(): raise InterruptedError('solid export cancelled')
     if result.status()!=m.Error.NoError:
         raise ValueError('cylinder union failed: '+str(result.status()))
+    # Keep the native Mesh64 object intact so its merge/provenance data and
+    # native tolerance reach the provider without Python re-encoding.
+    # Tangent semantics through native degenerate cleanup are not qualified.
+    if np.asarray(mesh.halfedge_tangent).size:
+        raise ValueError('full-precision mesh cleanup requires empty halfedge tangents')
+    result=m.Manifold(mesh)
+    if stop_cb and stop_cb(): raise InterruptedError('solid export cancelled')
+    if result.status()!=m.Error.NoError:
+        raise ValueError('full-precision mesh cleanup failed: '+str(result.status()))
+    if result.num_tri()==0:
+        raise ValueError('full-precision mesh cleanup returned empty geometry')
+    mesh=result.to_mesh64()
+    if stop_cb and stop_cb(): raise InterruptedError('solid export cancelled')
     properties=np.asarray(mesh.vert_properties)
     if properties.ndim!=2 or properties.shape[1]<3 or properties.dtype.kind!='f' or properties.dtype.itemsize!=8:
         raise ValueError('mesh positions must be a binary64 array with at least three columns')

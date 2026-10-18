@@ -1,4 +1,4 @@
-"""Mesh64 adapter contract, using pure provider doubles and leaf-module loading.
+"""Mesh64 cleanup adapter contract, using provider doubles and leaf-module loading.
 
 No test imports the optional native provider, constructs native geometry, or
 calls FiberSolid.validate. These tests do not qualify a whole-mesh benchmark.
@@ -47,14 +47,19 @@ class Provider:
         self.mesh_refs = []
         self.sphere_triangles = 8
         self.union_triangles = 8
+        self.cleanup_triangles = 8
+        self.cleanup_status = status
         owner = self
 
         class MeshView:
             pass
 
         class Manifold:
-            def __init__(self, *args, **kwargs):
-                raise AssertionError('native-style reconstruction is forbidden')
+            def __init__(self, native_mesh):
+                owner.calls.append(('cleanup', id(native_mesh)))
+                assert owner.mesh_refs[-1]() is native_mesh
+                assert native_mesh.halfedge_tangent.size == 0
+                self.kind = 'cleanup'
 
             @staticmethod
             def _shape(kind):
@@ -87,7 +92,9 @@ class Provider:
 
             def num_tri(self):
                 owner.calls.append(('num_tri', self.kind))
-                return owner.sphere_triangles if self.kind == 'sphere' else owner.union_triangles
+                if self.kind == 'sphere':
+                    return owner.sphere_triangles
+                return owner.cleanup_triangles if self.kind == 'cleanup' else owner.union_triangles
 
             def as_original(self):
                 owner.calls.append(('as_original',))
@@ -102,6 +109,7 @@ class Provider:
                 mesh = MeshView()
                 mesh.vert_properties = owner.vertices
                 mesh.tri_verts = owner.faces
+                mesh.halfedge_tangent = np.empty((0, 4))
                 owner.mesh_refs.append(weakref.ref(mesh))
                 return mesh
 
@@ -110,7 +118,7 @@ class Provider:
 
             def status(self):
                 owner.calls.append(('status',))
-                return owner.status
+                return owner.cleanup_status if self.kind == 'cleanup' else owner.status
 
         def reject_mesh(*args, **kwargs):
             raise AssertionError('Mesh reconstruction is forbidden')
@@ -163,11 +171,12 @@ def test_missing_mesh64_capability_refuses_before_primitive(tube, monkeypatch, c
     assert provider.calls == []
 
 
-def test_source_contains_one_mesh64_and_no_surface_roundtrip():
+def test_source_contains_two_mesh64_calls_and_one_native_cleanup():
     tree = ast.parse(SOURCE.read_text())
     calls = [node for node in ast.walk(tree) if isinstance(node, ast.Call)]
     attributes = [node.func.attr for node in calls if isinstance(node.func, ast.Attribute)]
-    assert attributes.count('to_mesh64') == 1
+    assert attributes.count('to_mesh64') == 2
+    assert attributes.count('Manifold') == 1
     assert attributes.count('as_original') == 1
     assert attributes.count('simplify') == 1
     assert 'to_mesh' not in attributes
@@ -180,7 +189,7 @@ def test_source_contains_one_mesh64_and_no_surface_roundtrip():
                        and node.args[1].value == 4) for node in round_calls)
 
 
-def test_single_extraction_order_and_unchanged_progress(tube, monkeypatch):
+def test_two_extractions_cleanup_order_and_unchanged_progress(tube, monkeypatch):
     provider = Provider().install(monkeypatch)
     progress = []
     round_digits = []
@@ -194,7 +203,8 @@ def test_single_extraction_order_and_unchanged_progress(tube, monkeypatch):
     vertices, faces = tube.tube_mesh(POINTS, EDGES, .25, progress=progress.append, sides=12)
     assert provider.names() == ['sphere', 'num_tri', 'cylinder', 'transform', 'translate',
                                 'translate', 'batch_boolean', 'num_tri', 'as_original',
-                                'simplify', 'to_mesh64', 'status']
+                                'simplify', 'to_mesh64', 'status', 'cleanup',
+                                'status', 'num_tri', 'to_mesh64']
     assert provider.calls[0] == ('sphere', .25, 12)
     assert provider.calls[2] == ('cylinder', 1., .25, 12)
     assert provider.calls[6] == ('batch_boolean', ('cylinder', 'joint', 'joint'), 'Add')
@@ -243,7 +253,7 @@ def test_bounded_batches_union_tree_and_progress_remain(tube, monkeypatch):
     assert batches[-1][1] == ('union', 'union')
     assert progress == [0, 17, 34, 51, 68, 85, 95]
     assert provider.names().count('as_original') == 1
-    assert provider.names().count('to_mesh64') == 1
+    assert provider.names().count('to_mesh64') == 2
 
 
 @pytest.mark.parametrize('dtype', ['<f8', '>f8'])
@@ -349,7 +359,9 @@ def test_index_extrema_refuse_exactly_before_narrowing(tube, monkeypatch, dtype,
     assert storage.tobytes() == before
 
 
-def test_empty_and_degenerate_faces_are_not_repaired_or_validated(tube, monkeypatch):
+def test_empty_adapter_arrays_and_degenerate_faces_are_not_python_repaired(tube, monkeypatch):
+    # Native emptiness is separately checked via num_tri; this deliberately
+    # inconsistent double retains empty-array adapter coverage without min/max.
     Provider(vertices=np.empty((0, 3)), faces=np.empty((0, 3), dtype=int)).install(monkeypatch)
     vertices, faces = tube.tube_mesh(POINTS, EDGES, .25)
     assert vertices.shape == faces.shape == (0, 3)
