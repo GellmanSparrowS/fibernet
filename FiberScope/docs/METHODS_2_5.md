@@ -84,3 +84,29 @@ condition, manufacturing suitability, or a slicer's tolerance-based welding.
 Disconnected closed components are not rejected solely for their count. The
 STL preflight does not certify the separate 3MF decimal serialization or the
 legacy FiberNetwork mesh exporters; no alternate format is selected on failure.
+
+
+### 3MF coordinate serialization precision
+
+The 3MF writer emits coordinates with 17 significant decimal digits. Finite
+stored binary64 coordinates roundtrip to the same binary64 values when the XML
+coordinate attributes are parsed as binary64. This preserves the stored values,
+not a claim about their physical accuracy. The [3MF Core specification, vertex
+coordinates and ST_Number schema](https://github.com/3MFConsortium/spec_core/blob/master/3MF%20Core%20Specification.md#4131-vertex)
+allows decimal coordinates and scientific notation with this precision.
+
+The guarantee is scoped to binary64 values (and binary16/binary32 values exactly
+representable in binary64). The existing exporter also accepts real integer
+storage through 64 bits; its floating decimal formatter can lose integer
+precision beyond binary64 exactness, including some integers above 2^53. Wider
+floating types remain rejected by validation. No new integer or wider-float
+precision contract is introduced.
+
+Vertex order and integer face references are retained after the existing
+validation step, which can reverse all triangle windings for negative aggregate
+signed volume. Disconnected index components remain in the single mesh object;
+no component labels, centerline graph, settings or provenance metadata are added.
+Millimeter units and the existing package/build structure remain unchanged.
+A consumer, including a slicer or a reader exposing binary32 vertex arrays, can
+still reduce precision. XML coordinate fidelity does not certify self-intersection
+freedom, arbitrary mesh validity, printer readiness or manufacturing suitability.

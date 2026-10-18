@@ -8,6 +8,8 @@ import struct
 import sys
 import tempfile
 import unittest
+import zipfile
+import xml.etree.ElementTree as ET
 from unittest.mock import patch
 
 import numpy as np
@@ -133,6 +135,103 @@ class BinaryStlTests(unittest.TestCase):
             with patch.object(exporter, '_binary_stl_vertices', side_effect=AssertionError('STL-only')):
                 exporter.export_solid(path, tetra())
             self.assertTrue(path.read_bytes().startswith(b'PK'))
+
+
+class ThreeMfPrecisionTests(unittest.TestCase):
+    NS = '{http://schemas.microsoft.com/3dmanufacturing/core/2015/02}'
+
+    def roundtrip(self, solid):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'mesh.3mf'
+            exporter.export_solid(path, solid)
+            with zipfile.ZipFile(path) as archive:
+                self.assertEqual(set(archive.namelist()),
+                                 {'[Content_Types].xml', '_rels/.rels', '3D/3dmodel.model'})
+                self.assertIsNone(archive.testzip())
+                model = ET.fromstring(archive.read('3D/3dmodel.model'))
+                relationships = ET.fromstring(archive.read('_rels/.rels'))
+                self.assertEqual(relationships[0].get('Target'), '/3D/3dmodel.model')
+                types = ET.fromstring(archive.read('[Content_Types].xml'))
+                self.assertTrue(any(item.get('Extension') == 'model' and
+                                    item.get('ContentType') ==
+                                    'application/vnd.ms-package.3dmanufacturing-3dmodel+xml'
+                                    for item in types))
+        ns = self.NS
+        self.assertEqual(model.get('unit'), 'millimeter')
+        objects = model.findall(ns + 'resources/' + ns + 'object')
+        self.assertEqual(len(objects), 1)
+        self.assertEqual(objects[0].get('id'), '1')
+        self.assertEqual(objects[0].get('type'), 'model')
+        items = model.findall(ns + 'build/' + ns + 'item')
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0].get('objectid'), '1')
+        self.assertIsNone(items[0].get('transform'))
+        self.assertEqual(model.findall('.//' + ns + 'metadata'), [])
+        vertices = objects[0].findall(ns + 'mesh/' + ns + 'vertices/' + ns + 'vertex')
+        faces = objects[0].findall(ns + 'mesh/' + ns + 'triangles/' + ns + 'triangle')
+        coordinates = np.array([[float(v.get(k)) for k in ('x', 'y', 'z')]
+                                for v in vertices], dtype=np.float64)
+        indices = np.array([[int(f.get(k)) for k in ('v1', 'v2', 'v3')]
+                            for f in faces], dtype=np.int64)
+        np.testing.assert_array_equal(coordinates.view(np.uint64),
+                                      solid.vertices.astype(np.float64).view(np.uint64))
+        np.testing.assert_array_equal(indices, solid.faces)
+        return coordinates, indices, vertices
+
+    def test_binary64_distinct_vertices_collide_under_nine_digits(self):
+        solid = tetra([[1.0000000001, 0., 0.], [1.0000000002, 0., 0.],
+                       [1., 100., 0.], [1., 0., 100.]])
+        self.assertEqual('%.9g' % solid.vertices[0, 0],
+                         '%.9g' % solid.vertices[1, 0])
+        coordinates, _, _ = self.roundtrip(solid)
+        self.assertNotEqual(coordinates[0, 0], coordinates[1, 0])
+
+    def test_binary64_signed_zero_exponents_and_adjacent_values(self):
+        solid = tetra([[0., -0., 1e-100], [np.nextafter(1., 2.), 0., 0.],
+                       [0., 1., 0.], [0., 0., np.pi]])
+        _, _, vertices = self.roundtrip(solid)
+        self.assertIn('e', vertices[0].get('z'))
+        self.assertEqual(vertices[0].get('y'), '-0')
+
+    def test_narrow_float_and_exact_integer_storage(self):
+        for dtype in (np.float16, np.float32, np.int64, np.uint64):
+            with self.subTest(dtype=dtype):
+                solid = tetra()
+                solid.vertices = solid.vertices.astype(dtype)
+                self.roundtrip(solid)
+
+    def test_existing_negative_volume_orientation_semantics(self):
+        solid = tetra()
+        solid.faces = solid.faces[:, [0, 2, 1]]
+        original = solid.faces.copy()
+        _, indices, _ = self.roundtrip(solid)
+        np.testing.assert_array_equal(indices, original[:, [0, 2, 1]])
+
+    def test_two_disconnected_index_components_remain_separate(self):
+        first, second = tetra(), tetra()
+        second.vertices += 3.
+        solid = exporter.FiberSolid(np.vstack([first.vertices, second.vertices]),
+                                    np.vstack([first.faces, second.faces + 4]),
+                                    np.zeros((0, 3)), .1, exporter.PrintSettings())
+        _, indices, _ = self.roundtrip(solid)
+        adjacency = {i: set() for i in range(len(solid.vertices))}
+        for face in indices:
+            for vertex in face:
+                adjacency[int(vertex)].update(map(int, face))
+        components = []
+        unseen = set(adjacency)
+        while unseen:
+            pending = [min(unseen)]
+            component = set()
+            while pending:
+                vertex = pending.pop()
+                if vertex in component:
+                    continue
+                component.add(vertex)
+                pending.extend(adjacency[vertex] - component)
+            unseen -= component
+            components.append(component)
+        self.assertEqual(components, [set(range(4)), set(range(4, 8))])
 
 
 if __name__ == '__main__':

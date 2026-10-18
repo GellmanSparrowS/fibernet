@@ -69,6 +69,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('gen/tube_solid.py', b'mesh=result.to_mesh64()'))
     cases.append(('gen/tube_solid.py', b'first_index=int(indices.min())'))
     cases.append(('gen/tube_solid.py', b'result=m.Manifold(mesh)'))
+    cases.append(('gen/solid_export.py', b'<vertex x="%.17g" y="%.17g" z="%.17g"/>'))
     cases.append(('gen/solid_export.py', b"packed = _binary_stl_vertices(solid) if path.suffix.lower() == '.stl' else None"))
     for relative, material_unit in cases:
         target = core / relative
@@ -85,7 +86,9 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                    else b'mesh=result.to_mesh()')
                 elif relative == 'gen/solid_export.py':
                     replacement = (b"packed = solid.vertices.astype('<f4') if path.suffix.lower() == '.stl' else None"
-                                   if material_unit.startswith(b'packed = ') else b'zero_area = None')
+                                   if material_unit.startswith(b'packed = ')
+                                   else material_unit.replace(b'%.17g', b'%.9g')
+                                   if material_unit.startswith(b'<vertex x=') else b'zero_area = None')
                 elif relative == 'io/mesh_export.py':
                     replacement = material_unit.replace(b'vertex_offset = 0', b'vertex_offset = 1')
                 else:
@@ -114,6 +117,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                      else 'tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
                                      else 'tube_mesh64_output_drift' if relative == 'gen/tube_solid.py'
                                      else 'binary_stl_serialization_guard_drift' if material_unit and material_unit.startswith(b'packed = ')
+                                     else 'three_mf_coordinate_precision_drift' if material_unit and material_unit.startswith(b'<vertex x=')
                                      else 'solid_zero_area_guard_drift' if relative == 'gen/solid_export.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'
                                      else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'

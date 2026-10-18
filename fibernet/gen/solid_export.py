@@ -321,7 +321,10 @@ def export_solid(path, solid):
 
     Binary STL additionally validates exact serialized coordinates after welding
     equal positions. Refusal preserves any existing destination. This is not a
-    self-intersection, manufacturing suitability or 3MF serialization certificate.
+    self-intersection or manufacturing suitability certificate. 3MF decimal
+    coordinates roundtrip stored binary64 values through a binary64 XML parser;
+    downstream readers may use lower precision. Integer storage beyond binary64
+    exactness is not covered by that coordinate-fidelity guarantee.
     """
     path = Path(path)
     if path.suffix.lower() not in ('.stl', '.3mf'):
@@ -354,7 +357,7 @@ def export_solid(path, solid):
                 with archive.open('3D/3dmodel.model','w') as stream:
                     stream.write(b'<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><resources><object id="1" type="model"><mesh><vertices>')
                     for x,y,z in solid.vertices:
-                        stream.write(('<vertex x="%.9g" y="%.9g" z="%.9g"/>'%(x,y,z)).encode())
+                        stream.write(('<vertex x="%.17g" y="%.17g" z="%.17g"/>'%(x,y,z)).encode())
                     stream.write(b'</vertices><triangles>')
                     for a,b,c in solid.faces:
                         stream.write(('<triangle v1="%d" v2="%d" v3="%d"/>'%(a,b,c)).encode())
