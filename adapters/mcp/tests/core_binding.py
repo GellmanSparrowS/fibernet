@@ -69,6 +69,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('gen/tube_solid.py', b'mesh=result.to_mesh64()'))
     cases.append(('gen/tube_solid.py', b'first_index=int(indices.min())'))
     cases.append(('gen/tube_solid.py', b'result=m.Manifold(mesh)'))
+    cases.append(('integrations/lammps_integration.py', b'raise self._lammps_import_error'))
     cases.append(('gen/solid_export.py', b'<vertex x="%.17g" y="%.17g" z="%.17g"/>'))
     cases.append(('gen/solid_export.py', b"packed = _binary_stl_vertices(solid) if path.suffix.lower() == '.stl' else None"))
     for relative, material_unit in cases:
@@ -89,6 +90,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                    if material_unit.startswith(b'packed = ')
                                    else material_unit.replace(b'%.17g', b'%.9g')
                                    if material_unit.startswith(b'<vertex x=') else b'zero_area = None')
+                elif relative == 'integrations/lammps_integration.py':
+                    replacement = b'return LAMMPSResult()'
                 elif relative == 'io/mesh_export.py':
                     replacement = material_unit.replace(b'vertex_offset = 0', b'vertex_offset = 1')
                 else:
@@ -119,6 +122,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                                      else 'binary_stl_serialization_guard_drift' if material_unit and material_unit.startswith(b'packed = ')
                                      else 'three_mf_coordinate_precision_drift' if material_unit and material_unit.startswith(b'<vertex x=')
                                      else 'solid_zero_area_guard_drift' if relative == 'gen/solid_export.py'
+                                     else 'legacy_lammps_failure_semantics_drift' if relative == 'integrations/lammps_integration.py'
                                      else 'obj_index_origin_drift' if relative == 'io/mesh_export.py'
                                      else 'gine_material_profile_drift' if relative == 'ml/edge_gine.py'
                                      else 'material_feature_unit_drift' if material_unit else 'source_drift'),
