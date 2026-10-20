@@ -15,8 +15,10 @@ import json
 import math
 from pathlib import Path
 import sys
+import struct
 import types
 import unittest
+from unittest.mock import patch
 from _source_check_support import run_source_check
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -170,8 +172,36 @@ class JouleSourceTests(unittest.TestCase):
     def test_underflow_allocation_refuses(self):
         graph,data,weights=fixture(voltage=1e-50,conductances=(1e-200,3e-200,0.))
         for w in weights.values():w.update({101:1e-100,907:1.})
-        with self.assertRaisesRegex(ArithmeticError,'Joule allocation'):
+        # Earlier native tests may leave this thread in FTZ/DAZ mode. The
+        # allocator must still fail closed, but its roundoff budget can reject
+        # unsupported subnormal arithmetic before reaching the allocation.
+        tiny = struct.unpack('>d', bytes.fromhex('0000000000000001'))[0]
+        gradual = tiny > 0. and tiny + tiny > 0.
+        roundoff = sys.modules[self.api.__package__ + '._roundoff']
+        error = ArithmeticError if gradual else roundoff._SubnormalRoundoffError
+        message = ('^Joule allocation is not representable$' if gradual else
+                   '^subnormal roundoff arithmetic is unavailable$')
+        with self.assertRaisesRegex(error, message):
             self.run_load(graph,data,weights)
+
+    def test_allocation_product_underflow_refuses_in_either_mode(self):
+        # Both inputs are normal; their nonzero product is unrepresentable
+        # even with gradual underflow. This check is independent of FTZ/DAZ.
+        with self.assertRaisesRegex(ArithmeticError, '^Joule allocation is not representable$'):
+            self.api._product(1e-300, 1e-100, 'Joule allocation')
+
+    def test_unavailable_subnormal_capability_refuses_explicitly(self):
+        graph,data,weights=fixture(voltage=1e-50,conductances=(1e-200,3e-200,0.))
+        for w in weights.values():w.update({101:1e-100,907:1.})
+        roundoff = sys.modules[self.api.__package__ + '._roundoff']
+        failure = roundoff._SubnormalRoundoffError('subnormal roundoff arithmetic is unavailable')
+        # Inject only the capability refusal; do not change the process FP mode
+        # or substitute the allocator. Its exact exception must propagate.
+        with patch.object(roundoff, '_require_gradual_underflow', side_effect=failure):
+            with self.assertRaisesRegex(roundoff._SubnormalRoundoffError,
+                    '^subnormal roundoff arithmetic is unavailable$') as caught:
+                self.run_load(graph,data,weights)
+        self.assertIs(caught.exception, failure)
 
     def test_real_conversion_underflow_refuses(self):
         for value in (Fraction(1,10**400), Fraction(-1,10**400)):
