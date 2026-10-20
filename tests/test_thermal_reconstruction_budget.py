@@ -4,10 +4,12 @@ Negative-Q cooling/cancellation fixtures stress internal evaluator algebra only;
 they do not assert that public nonnegative-source APIs support negative Q.
 """
 import math
+import struct
 from fractions import Fraction as F
 
 import numpy as np
 import pytest
+from fibernet.sim import _roundoff
 from fibernet.sim._thermal_step import evaluate_thermal_step, ThermalResidualRejection
 
 
@@ -65,15 +67,41 @@ PASS_CASES=[
  ('binade_down',dict(T=[256.],inc=[-2.**-20])),
  ('capacity_small',dict(T=[300.],inc=[2.**-24],C=[2.**-500],Q=[2.**-524])),
  ('capacity_large',dict(T=[300.],inc=[2.**-24],C=[2.**500],Q=[2.**476])),
- ('subnormal_previous',dict(T=[2.**-1074],inc=[2.**-1022])),
+ ('subnormal_previous',dict(
+     # Decode stored IEEE bits; arithmetic construction may flush to zero.
+     T=[struct.unpack('>d', bytes.fromhex('0000000000000001'))[0]],
+     inc=[2.**-1022])),
  ('fixed_reservoir',dict(T=[300.,301.],inc=[.25,0.],Q=[-.5,0.],edges=[(0,1)],fix=[1])),
  ('free_free_cancellation',dict(T=[300.,302.],inc=[.5,-.5],Q=[-.5,.5],edges=[(0,1)])),
  ('zero_increment_conduction',dict(T=[300.,301.],inc=[0.,0.],Q=[-1.,0.],edges=[(0,1)],fix=[1])),
 ]
 
+def runtime_preserves_subnormal_arithmetic():
+    """Independent live probe, without invoking or patching production guards."""
+    smallest=struct.unpack('>d', bytes.fromhex('0000000000000001'))[0]
+    # Comparison detects discarded inputs; exact result bits detect flushed
+    # arithmetic output, without relying on a subnormal result comparison.
+    return (smallest > 0.0 and
+            struct.pack('>d', smallest+smallest)==bytes.fromhex('0000000000000002'))
+
+
+def assert_subnormal_refusal(a):
+    with pytest.raises(_roundoff._SubnormalRoundoffError) as caught:
+        evaluate_thermal_step(**a)
+    assert type(caught.value) is _roundoff._SubnormalRoundoffError
+    assert str(caught.value)=='subnormal roundoff arithmetic is unavailable'
+
+
 @pytest.mark.parametrize('name,kw',PASS_CASES,ids=[x[0] for x in PASS_CASES])
 def test_pure_evaluator_acceptance(name,kw):
-    a=arguments(**kw); result=evaluate_thermal_step(**a)
+    a=arguments(**kw)
+    if name=='subnormal_previous':
+        assert struct.pack('>d', float(a['T'][0]))==bytes.fromhex('0000000000000001')
+        # Probe this thread immediately before evaluator entry, not at import.
+        if not runtime_preserves_subnormal_arithmetic():
+            assert_subnormal_refusal(a)
+            return
+    result=evaluate_thermal_step(**a)
     assert_exact_certificate(a,result)
     if name=='binary_exact_witness':
         _,_,rows=exact_equations(a)
@@ -102,3 +130,14 @@ REJECT_CASES=[
 @pytest.mark.parametrize('name,kw,kind,match',REJECT_CASES,ids=[x[0] for x in REJECT_CASES])
 def test_pure_evaluator_refusal(name,kw,kind,match):
     with pytest.raises(kind,match=match): evaluate_thermal_step(**arguments(**kw))
+
+
+def test_pure_evaluator_subnormal_runtime_unavailable(monkeypatch):
+    # Preserve the same nonzero stored fixture on every hardware FP mode.
+    kw=dict(PASS_CASES)['subnormal_previous']
+    a=arguments(**kw)
+    assert struct.pack('>d', float(a['T'][0]))==bytes.fromhex('0000000000000001')
+    # Force the existing live guard's input check to fail, not a replacement
+    # exception/evaluator. No FP mode change and no production-source edit.
+    monkeypatch.setattr(_roundoff, '_MIN_SUBNORMAL', 0.0)
+    assert_subnormal_refusal(a)
