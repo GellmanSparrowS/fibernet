@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
         assert Path(verify_core()) == core
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
-    cases = [(relative, None) for relative in ('sim/electrothermal.py', 'sim/_thermal_step.py', 'sim/_taichi_viscoelastic.py', 'integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
+    cases = [(relative, None) for relative in ('rl/algorithms.py', 'sim/electrothermal.py', 'sim/_thermal_step.py', 'sim/_taichi_viscoelastic.py', 'integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
                      '__init__.py', 'gen/__init__.py', 'gen/manufacturing_bridge.py',
                      'gen/manufacturing_trails.py', 'api.py', 'easy.py', 'viz/__init__.py',

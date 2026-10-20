@@ -21,6 +21,8 @@ Examples
 
 from __future__ import annotations
 
+import warnings
+from types import GetSetDescriptorType
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -88,6 +90,84 @@ ALGORITHM_REGISTRY = {
 }
 
 
+def _check_eval_env_isolation(env, eval_env) -> None:
+    """Reject known local aliases, without stepping or probing remote workers."""
+    message = "eval_env must not share an environment object with the training env."
+    if env is eval_env:
+        raise ValueError(message)
+
+    # Optional dependencies are loaded only for explicitly requested evaluation.
+    from gymnasium import Wrapper
+    from stable_baselines3.common.vec_env import DummyVecEnv, VecEnvWrapper
+
+    def object_ids(root):
+        pending = [root]
+        seen = set()
+        references = 1
+        while pending:
+            current = pending.pop()
+            identity = id(current)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            current_type = type(current)
+            if issubclass(current_type, Wrapper):
+                link = "env"
+            elif issubclass(current_type, VecEnvWrapper):
+                link = "venv"
+            elif issubclass(current_type, DummyVecEnv):
+                link = "envs"
+            else:
+                continue
+
+            # Read known stored links, never unwrapped/get_attr/env_method or
+            # arbitrary properties. Custom delegation and external resources
+            # still require caller-managed isolation.
+            for cls in type.__getattribute__(current_type, "__mro__"):
+                namespace = type.__getattribute__(cls, "__dict__")
+                if "__dict__" in namespace:
+                    descriptor = namespace["__dict__"]
+                    if type(descriptor) is not GetSetDescriptorType:
+                        raise ValueError(
+                            "Cannot inspect a known environment wrapper with "
+                            "custom __dict__ storage."
+                        )
+                    state = descriptor.__get__(current, current_type)
+                    break
+            else:
+                raise ValueError("Cannot inspect known environment wrapper storage.")
+            if type(state) is not dict:
+                raise ValueError(
+                    "Cannot inspect a known environment wrapper with "
+                    "custom __dict__ storage."
+                )
+            child = state.get(link)
+            if child is None or (
+                link == "envs" and (
+                    type(child) not in (list, tuple) or not child
+                )
+            ):
+                raise ValueError(
+                    f"Cannot inspect known environment wrapper link {link!r}."
+                )
+            children = child if link == "envs" else (child,)
+            references += len(children)
+            if references > 1024:
+                raise ValueError(
+                    "Known environment graph exceeds the inspection limit "
+                    "of 1024 object references."
+                )
+            if any(item is None for item in children):
+                raise ValueError(
+                    f"Cannot inspect known environment wrapper link {link!r}."
+                )
+            pending.extend(children)
+        return seen
+
+    if object_ids(env) & object_ids(eval_env):
+        raise ValueError(message)
+
+
 def train_rl(
     env,
     *,
@@ -100,6 +180,7 @@ def train_rl(
     callback: Optional[Any] = None,
     save_path: Optional[str] = None,
     save_freq: Optional[int] = None,
+    eval_env: Optional[Any] = None,
     seed: int = 42,
     **kwargs,
 ) -> Tuple[Any, Dict[str, Any]]:
@@ -120,9 +201,18 @@ def train_rl(
     verbose : int
         0=silent, 1=info, 2=debug.
     save_path : str, optional
-        Path to save best model (.zip).
+        Output directory for the final model and optional checkpoints.
+        Best-model and evaluation logs require an independent eval_env.
     save_freq : int, optional
-        Save checkpoint every N steps.
+        Save checkpoint every N callback calls when save_path is supplied.
+    eval_env : gym.Env or SB3 VecEnv, optional
+        Independent evaluation environment. Enables automatic evaluation even
+        without save_path; then no automatic best-model/evaluation-file output
+        is requested. User callbacks or SB3 loggers may still write elsewhere.
+        Direct aliases and shared known in-process wrapper/member objects are
+        rejected before model construction. Remote resources and custom wrapper
+        delegation cannot be proven independent; isolation is the caller's duty.
+        This function does not clone or close either environment.
     seed : int
         Random seed.
     **kwargs
@@ -134,12 +224,23 @@ def train_rl(
         Trained model.
     info : dict
         Training metadata.
+
+    Notes
+    -----
+    A save_path without eval_env warns and disables automatic evaluation, while
+    retaining checkpoint/final saves. It no longer evaluates on the training
+    environment. Known Gymnasium Wrapper, SB3 VecEnvWrapper and DummyVecEnv
+    links are inspected with a limit of 1024 object references per environment.
+    See docs/architecture/rl-evaluation-isolation.md for migration and limits.
     """
     try:
         import stable_baselines3 as sb3
         from stable_baselines3.common.callbacks import EvalCallback, CheckpointCallback
     except ImportError:
         raise ImportError("stable-baselines3 required: pip install stable-baselines3")
+
+    if eval_env is not None:
+        _check_eval_env_isolation(env, eval_env)
 
     algo_info = ALGORITHM_REGISTRY.get(algorithm.upper())
     if algo_info is None:
@@ -160,6 +261,15 @@ def train_rl(
     if "buffer_size" in algo_kwargs and total_timesteps < algo_kwargs["buffer_size"]:
         algo_kwargs["buffer_size"] = max(total_timesteps, 1000)
 
+    if save_path and eval_env is None:
+        warnings.warn(
+            "Automatic evaluation and best-model saving are disabled because "
+            "eval_env was not supplied. Pass an independent eval_env to enable "
+            "them; checkpoint and final-model saving remain enabled.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     model = algo_cls(
         policy=policy,
         env=env,
@@ -174,10 +284,11 @@ def train_rl(
         callbacks.append(CheckpointCallback(
             save_freq=save_freq, save_path=save_path, name_prefix="rl_model",
         ))
-    if save_path:
-        callbacks.append(sb3.common.callbacks.EvalCallback(
-            env, best_model_save_path=save_path,
-            log_path=save_path, eval_freq=max(total_timesteps // 10, 100),
+    if eval_env is not None:
+        eval_path = save_path if save_path else None
+        callbacks.append(EvalCallback(
+            eval_env, best_model_save_path=eval_path,
+            log_path=eval_path, eval_freq=max(total_timesteps // 10, 100),
             n_eval_episodes=3, deterministic=True,
         ))
 

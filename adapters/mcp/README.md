@@ -4,7 +4,7 @@ A separate optional Linux stdio adapter exposing five bounded native graph and a
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 231 native Python source hashes must match core_manifest.json. The required native core snapshot is d04536e2261c9898b8b1eca91cb33d887cab977d. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 231 bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 231 native Python source hashes must match core_manifest.json. The required native core snapshot is ded2bb73377b1e473b1219bfa884137dab15f55b. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 231 bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -17,14 +17,14 @@ python -m pip install ./adapters/mcp
 
 The first install is the native core from this checkout, not a PyPI version assumption. The second installs this independent distribution and its fixed SDK dependency. Native optional physics/ML dependencies are not required. Use a matching Python interpreter for the MCP client process. No server tool installs dependencies. No base FiberNet dependency or Python-version requirement is changed.
 
-Earlier adapter builds used snapshot label `195494f987805cc14dcf66f4713565e2e5c53b08`. That label remains historical; it does not identify this core. Operator manifests must use the snapshot label for their matching adapter build. A label mismatch is an explicit compatibility error, not permission to bypass core hash verification.
+Earlier adapter builds used snapshot labels `195494f987805cc14dcf66f4713565e2e5c53b08` and `d04536e2261c9898b8b1eca91cb33d887cab977d`. Those labels remain historical; they do not identify this core. Operator manifests must use the snapshot label for their matching adapter build. A label mismatch is an explicit compatibility error, not permission to bypass core hash verification.
 
 ## Configure and launch locally
 
 Create an operator-owned JSON file such as manifest.json. Paths must be absolute regular-file paths without symlink components. Replace the placeholder path and SHA with your chosen graph's actual bytes; for the included fixture, use the SHA below.
 
 ```json
-{"source_tree":"d04536e2261c9898b8b1eca91cb33d887cab977d","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
+{"source_tree":"ded2bb73377b1e473b1219bfa884137dab15f55b","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
 ```
 
 ```sh
@@ -104,3 +104,8 @@ The paired core supports small-strain dynamic axial viscoelasticity using the
 existing Taichi integrator and explicit material history. The existing five MCP
 graph/topology/artifact tools are unchanged; no dynamic-material execution tool
 is exposed by this adapter.
+
+The paired core separates automatic SB3 evaluation from its training environment
+and clarifies the distinct root random-rollout helper. This refresh changes the
+whole-core source binding, not the five MCP tools: no RL execution tool or new
+optional native dependency is added.

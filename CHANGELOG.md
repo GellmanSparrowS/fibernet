@@ -1,3 +1,11 @@
+## [Unreleased] - RL evaluation isolation
+
+- Add keyword-only `eval_env` to `fibernet.rl.algorithms.train_rl`, enabling automatic evaluation independently of model saving.
+- Reject shared known in-process training/evaluation environment objects before model or callback construction. Remote resources and custom wrappers still require caller-managed isolation.
+- Save-only calls now warn and skip unsafe automatic evaluation on the training environment, while retaining checkpoint/final saves. Provide an independent `eval_env` to restore best-model selection.
+- Document migration and bounded validation in `docs/architecture/rl-evaluation-isolation.md`; add inert contract regressions without real model training or simulation.
+- Correct root/easy `train_rl` documentation to identify random-policy rollout statistics, not policy learning, and clarify batch damping's existing metadata-only behavior. Runtime and exports are unchanged; source-bound batch resume may require a fresh output directory after this documentation change.
+
 ## [Unreleased] - thermal reconstruction budget
 
 - Bound thermal capacity reconstruction with outward-rounded `C*rho`, where `rho` is the current returned-temperature reconstruction radius; retain separate field-evaluation allowances and unchanged algebraic/precision thresholds.
