@@ -13,10 +13,11 @@ from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple, Optional
 import sys
+import warnings
 
 
 class BeamFrameFEM:
-    """Corrected beam frame FEM with welded joints, displacement BCs, nonlinear solver."""
+    """Beam frames with welded joints: 2-D incremental geometry, 3-D linear only."""
     
     def __init__(self, E: float = 1e9, nu: float = 0.3):
         self.E = E
@@ -877,8 +878,11 @@ class BeamFrameFEM:
         pct : float
             Boundary percentage.
         nonlinear : bool or None
-            If None, auto-selects nonlinear for |stretch-1| > 0.3.
-            If True, always use nonlinear solver.
+            In 2-D, None auto-selects incremental updated-geometry solves for
+            |stretch-1| > 0.3; True selects this path explicitly.
+            In 3-D, only the linear solver exists: True is unsupported, while
+            None and False retain the linear solve. Large 3-D stretches warn
+            because this small-deformation model is not a nonlinear solution.
         deduplicate : bool
             False preserves independent parallel fibers. True is available
             only for reproducing legacy simple-graph calculations.
@@ -887,6 +891,19 @@ class BeamFrameFEM:
         -------
         dict : FEM result with u, stresses, reactions, etc.
         """
+        if isinstance(dim, (bool, np.bool_)) or not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
+            raise ValueError('dim must be 2 or 3')
+        if nonlinear is not None and not isinstance(nonlinear, (bool, np.bool_)):
+            raise TypeError('nonlinear must be bool or None')
+        if dim == 3 and nonlinear is not None and bool(nonlinear):
+            raise NotImplementedError('3-D beam-frame stretch is linear-only; nonlinear=True is unsupported')
+        if (isinstance(target_stretch, (bool, np.bool_))
+                or not isinstance(target_stretch, (int, float, np.integer, np.floating))
+                or not np.isfinite(target_stretch)):
+            raise ValueError('target_stretch must be a finite real stretch ratio')
+        if dim == 3 and abs(target_stretch - 1.0) > 0.3:
+            warnings.warn('3-D beam-frame stretch uses a small-deformation linear solver even at large stretch; '
+                          'no 3-D nonlinear solver is available', UserWarning, stacklevel=2)
         inp = self.graph_to_fem_input(graph, dim=dim, pct=pct)
         
         left = inp['boundaries'].get('left', [])

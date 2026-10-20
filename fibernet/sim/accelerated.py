@@ -386,6 +386,106 @@ def _dynamics_state_summary(value):
             'final': {k: v for k, v in record['final'].items() if k not in ('positions', 'velocities')}}
 
 
+_DAMPING_UNSET = None
+
+
+def _legacy_damping(value):
+    if value is _DAMPING_UNSET:
+        return 0.3
+    warnings.warn(
+        "damping is a legacy metadata-only parameter in dynamics and stretch_test; "
+        "it does not change the simulation. Use dynamics dashpot/drag for numerical "
+        "damping (not material viscosity).", UserWarning, stacklevel=3)
+    return value
+
+
+def _validate_mechanical_json(data):
+    """Recognize historical mechanical exports without inventing a new schema."""
+    if not isinstance(data, dict):
+        raise ValueError('SimResult.load requires a mechanical result JSON object')
+    schema = data.get('schema')
+    if 'schema' in data:
+        if isinstance(schema, str) and schema.startswith('fibernet.viscoelastic_result/'):
+            raise ValueError('Use ViscoelasticResult.load for viscoelastic history results')
+        if isinstance(schema, str) and schema.startswith('fibernet-linear-conductance-'):
+            raise ValueError('Electrical JSON is not SimResult; no electrical reconstruction loader is provided')
+        raise ValueError('Unsupported result schema for SimResult.load')
+    core = {'mode', 'energy', 'n_nodes', 'n_edges'}
+    if not core.issubset(data):
+        raise ValueError('JSON is not a recognizable mechanical SimResult export')
+    if 'mode' in data and not isinstance(data['mode'], str):
+        raise ValueError('mode must be a string')
+    for name in ('energy', 'time_seconds', 'max_force', 'max_stretch',
+                 'mean_stretch', 'std_stretch', 'max_displacement'):
+        if name in data:
+            value = data[name]
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+                raise ValueError(name + ' must be a finite real number')
+    for name in ('n_nodes', 'n_edges'):
+        if name in data and (type(data[name]) is not int or data[name] < 0):
+            raise ValueError(name + ' must be a nonnegative integer')
+
+    def array(value, name):
+        def reject_bool(item):
+            if isinstance(item, bool):
+                raise ValueError(name + ' must contain real numbers, not booleans')
+            if isinstance(item, list):
+                for child in item:
+                    reject_bool(child)
+        reject_bool(value)
+        return _finite_real_array(value, name)
+
+    node_shape = None
+
+    def nodes(value, name):
+        nonlocal node_shape
+        a = array(value, name)
+        # Empty JSON lists lose their original (0, 2/3) shape.
+        if a.shape == (0,) and data.get('n_nodes') == 0:
+            return
+        if a.ndim != 2 or a.shape[1] not in (2, 3):
+            raise ValueError(name + ' must have shape (n_nodes, 2 or 3)')
+        if 'n_nodes' in data and len(a) != data['n_nodes']:
+            raise ValueError(name + ' count does not match n_nodes')
+        if node_shape is not None and a.shape != node_shape:
+            raise ValueError(name + ' shape disagrees with other node arrays')
+        node_shape = a.shape
+
+    for name in ('displacements', 'deformed_positions'):
+        if data.get(name) is not None:
+            nodes(data[name], name)
+    trajectory = data.get('positions_trajectory', [])
+    if not isinstance(trajectory, list):
+        raise ValueError('positions_trajectory must be a list of node arrays')
+    for frame in trajectory:
+        nodes(frame, 'positions_trajectory frame')
+    edge_count = None
+    for name in ('edge_forces', 'edge_stretches'):
+        if data.get(name) is not None:
+            a = array(data[name], name)
+            legacy = name == 'edge_forces' and data.get('mode') == 'fem_beam_frame' and a.ndim == 2 and a.shape[1] == 3
+            if a.ndim != 1 and not legacy:
+                raise ValueError(name + ' must have shape (n_edges,)')
+            # Raw FEM conversions without a graph historically encode unavailable
+            # stretches as []; preserve that absence, never fabricate values.
+            if name == 'edge_stretches' and data.get('mode') == 'fem_beam_frame' and a.shape == (0,):
+                continue
+            if 'n_edges' in data and len(a) != data['n_edges']:
+                raise ValueError(name + ' count does not match n_edges')
+            if edge_count is not None and len(a) != edge_count:
+                raise ValueError('edge array counts disagree')
+            edge_count = len(a)
+    for name, count in (('node_ids', data.get('n_nodes')), ('edge_ids', data.get('n_edges'))):
+        if name in data:
+            ids = data[name]
+            if (not isinstance(ids, list) or any(type(i) is not int for i in ids)
+                    or len(set(ids)) != len(ids) or (count is not None and len(ids) != count)):
+                raise ValueError(name + ' must contain unique integer IDs matching the result count')
+    if 'history' in data and (not isinstance(data['history'], list)
+                             or any(not isinstance(row, dict) for row in data['history'])):
+        raise ValueError('history must be a list of records')
+
+
 @dataclass
 class SimResult:
     """Unified result container for spring and beam-frame simulations.
@@ -482,7 +582,9 @@ class SimResult:
         Parameters
         ----------
         detailed : bool
-            If True, include per-edge arrays (large).
+            If True, include node/edge arrays, history and available trajectory.
+            False (default) exports summary metrics only. Neither is a general
+            restart checkpoint; detailed export cannot recreate missing state.
         """
         if 'native_axial_viscoelastic' in self.metadata:
             from ._taichi_viscoelastic import validate_result as validate_material_result
@@ -542,6 +644,10 @@ class SimResult:
     def save(self, path: str, detailed: bool = False):
         """Atomically save JSON via an exclusively owned sibling temporary.
 
+        By default this saves summary metrics, not displacement arrays or history.
+        Use detailed=True for available arrays and trajectory, not a guaranteed
+        restart checkpoint.
+
         Existing ordinary file permissions are retained; new files are private
         (0600). Symlinks, nonregular targets and special mode bits are rejected.
         This is replacement atomicity, not crash durability or writer locking.
@@ -596,6 +702,11 @@ class SimResult:
 
     @staticmethod
     def load(path: str, *, profile=None) -> "SimResult":
+        """Load a mechanical summary/detailed export, not other result families.
+
+        Missing historical fields remain unavailable/defaulted; this is not a
+        simulation restart API. Viscoelastic history uses ViscoelasticResult.load.
+        """
         from fibernet.integrations import _harmonic_profile as hp
         from fibernet.integrations import _cg_network_profile as network
         requested = network.select(profile) if profile in network.NAMES else hp.select(profile)
@@ -610,6 +721,7 @@ class SimResult:
                 del payload
             else:
                 data = json.load(f)
+            _validate_mechanical_json(data)
             if 'algorithmic_energy_ledger' in data:
                 if requested:
                     raise ValueError('harmonic profile does not support algorithmic_energy_ledger')
@@ -1001,7 +1113,7 @@ class TaichiEngine:
         displacement_schedule: Dict[int, List[Tuple[float, np.ndarray]]] = None,
         external_force: np.ndarray = None,
         stiffness: float = 1e5,
-        damping: float = 0.3,
+        damping: Optional[float] = None,
         dt: float = 1e-4,
         num_steps: int = 5000,
         save_interval: int = 500,
@@ -1046,7 +1158,9 @@ class TaichiEngine:
             Global force-like axial coefficient k in F = k * strain, overridden
             by spring_k. With consistent SI units k is in N (like EA), not N/m.
             Neither k nor node inertia is inferred from edge Material.
-        damping : legacy metadata parameter; does not control the velocity update
+        damping : legacy metadata-only parameter (effective default 0.3)
+            Does not control the velocity update. Explicit use emits a warning.
+            Use dashpot/drag for numerical damping, not material viscosity.
         dt : time step
         num_steps : total integration steps
         save_interval : save trajectory every N steps
@@ -1064,6 +1178,7 @@ class TaichiEngine:
             the call. Ledger and nonempty schedules are initially unsupported.
             None adds no snapshot exports and leaves sampling/results unchanged.
         """
+        damping = _legacy_damping(damping)
         material_mode = material is not None
         if material_mode:
             if spring_k is not None:
@@ -1572,7 +1687,7 @@ class TaichiEngine:
         graph: StructureGraph,
         target_stretch: float = 2.0,
         stiffness: float = 1e5,
-        damping: float = 0.3,
+        damping: Optional[float] = None,
         num_steps: int = None,
         save_interval: int = 1000,
         ramp_fraction: float = 0.2,
@@ -1594,8 +1709,11 @@ class TaichiEngine:
             physical unit system this has force units (N in SI), not N/m.
             Energy is 0.5 * k * strain**2 * rest_length. Edge Material properties
             are not used to determine this coefficient.
-        damping : float
-            Velocity damping coefficient (0-1)
+        damping : float, optional
+            Legacy metadata-only parameter (effective default 0.3); it does not
+            change the simulation. Explicit use warns. For active numerical
+            damping controls use dynamics with dashpot/drag; this wrapper retains
+            their historical defaults and does not reinterpret damping.
         num_steps : int, optional
             Total simulation steps. If None and auto_steps=True, calculated from graph diameter
         save_interval : int

@@ -4,7 +4,13 @@ LAMMPS is a separate optional engine, distributed by its upstream project under 
 
 This proposed FiberNet change contains original adapter/test/documentation code and a synthetic mechanical fixture. It does not copy LAMMPS physics implementations, engine source files, native binaries, wheels or MPI libraries. FiberNet's existing repository license is not changed by this notice. No blanket licensing clearance is asserted for linked or bundled distributions.
 
-Upstream's [open-source license guidance](https://docs.lammps.org/Intro_opensource.html) explicitly says that “code that provides the interface must be licensed GPLv2” when discussing interfaces to differently licensed libraries. The scope of an actual distribution therefore needs review; optionality alone is not a license exemption. The unqualified direct Python-library route is excluded from this proposal. Any future linked interface, copied engine code, bundled wheel/native library or combined distribution requires a specific license review, notices and applicable corresponding-source compliance. Do not assume a README link alone satisfies binary-redistribution obligations.
+Upstream's [open-source license guidance](https://docs.lammps.org/Intro_opensource.html) explicitly says that “code that provides the interface must be licensed GPLv2” when discussing interfaces to differently licensed libraries. The scope of an actual distribution therefore needs review; optionality alone is not a license exemption. The existing public compatibility symbols `LAMMPSBridge`, `LAMMPSResult` and
+`run_lammps_md` remain in `fibernet.integrations`. `LAMMPSBridge` accepts a
+`FiberNetwork` and its `run_simulation` directly instantiates the Python
+`lammps()` interface. It does not delegate to the bounded `RuntimeSpec` /
+`LAMMPSTask` backend. This legacy Python-library route is unvalidated and
+outside the current bounded CLI qualification scope; it is not absent from the
+package. Import availability does not qualify its runtime or licensing scope. Any future linked interface, copied engine code, bundled wheel/native library or combined distribution requires a specific license review, notices and applicable corresponding-source compliance. Do not assume a README link alone satisfies binary-redistribution obligations.
 
 The CLI runtime used in bounded qualification was the **unofficial PyPI distribution** [lammps 2025.7.22.4.0](https://pypi.org/project/lammps/2025.7.22.4.0/), whose metadata names [njzjz/lammps-wheel](https://github.com/njzjz/lammps-wheel) as its packaging repository and [lammps/lammps](https://github.com/lammps/lammps) as upstream. Packaging provenance, native executable/shared-library hashes and the official source tag were tracked separately. It was paired with an existing MPICH 5.0.2 runtime. These are external dependencies, not FiberNet-owned physics or bundled assets.
 

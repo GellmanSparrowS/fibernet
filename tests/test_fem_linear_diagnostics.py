@@ -151,7 +151,8 @@ def test_legacy_absence_is_not_reinterpreted(tmp_path):
     del raw['numerical_diagnostics']
     assert 'numerical_diagnostics' not in fem.to_sim_result(raw).metadata
     path = tmp_path / 'old.json'
-    path.write_text(json.dumps({'mode': 'fem_beam_frame', 'reactions': [[0, 0, 0]]}))
+    path.write_text(json.dumps({'mode': 'fem_beam_frame', 'energy': 0., 'n_nodes': 1, 'n_edges': 0,
+                                'reactions': [[0, 0, 0]]}))
     loaded = SimResult.load(path)
     assert 'numerical_diagnostics' not in loaded.metadata
     loaded.save(path)

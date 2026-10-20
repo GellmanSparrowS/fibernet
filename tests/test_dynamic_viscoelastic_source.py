@@ -13,6 +13,7 @@ import pathlib
 import sys
 import time
 import types
+import warnings
 import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -65,7 +66,7 @@ def run_checks():
         return base_import(name, globals, locals, fromlist, level)
 
     ntree = ast.parse(native_source)
-    helpers = {'_finite_real_array', '_strict_state_ids', '_state_units', '_native_axial_event_dataclass',
+    helpers = {'_legacy_damping', '_finite_real_array', '_strict_state_ids', '_state_units', '_native_axial_event_dataclass',
         'NativeAxialObserverEvent', '_emit_axial_observation', '_validated_fixed_rows',
         '_resolve_nodal_masses', '_resolve_initial_velocities', '_canonical_rest_lengths',
         '_resolve_rest_lengths', '_validate_mass_inputs', '_normalize_spring_stiffness', '_prepare_displacement_schedule', '_checked_kinetic_energy'}
@@ -86,14 +87,15 @@ def run_checks():
         for value in vars(cls).values():
             if hasattr(value, '__builtins__'):
                 value.__builtins__['__import__'] = imports
-    ns = dict(np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
+    ns = dict(warnings=warnings, np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
         __builtins__=dict(vars(builtins), __import__=imports), SimResult=Result,
         _material_options=mod.material_options, _check_taichi_owner=lambda: None,
         _ensure_taichi=lambda *a: None, _prepare_force_feedback=lambda *a: None,
         _feedback_sampling=types.SimpleNamespace(observe_run=lambda f:f),
         _element_data=lambda x,e:(np.linalg.norm(x[e[:,1]]-x[e[:,0]], axis=1), None))
     nodes = [ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0)]
-    nodes += [n for n in ntree.body if getattr(n, 'name', None) in helpers] + [method]
+    nodes += [n for n in ntree.body if getattr(n, 'name', None) in helpers
+              or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '_DAMPING_UNSET' for t in n.targets))] + [method]
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])), '<actual dynamics AST, cached fake native fields>', 'exec'), ns)
     class Field:
         def __init__(self):

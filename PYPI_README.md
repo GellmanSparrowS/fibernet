@@ -12,6 +12,8 @@ FiberNet supplies programmable graph, generation, analysis, and modeling tools. 
 
 ## Start here
 
+See [API layers and simulation modes (development branch)](https://github.com/GellmanSparrowS/fibernet/blob/work/verified-fibernet-20261016/docs/API_LAYERS.md) for backend, mode, material and result boundaries.
+
 The library and desktop APP live in this **existing `fibernet` repository**. Install the 4.2.0 library with `python -m pip install fibernet==4.2.0`. Download the Windows APP from [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0); it does not require a local Python installation. The [repository and release map](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/docs/INTEGRATION_REPO_MAP.md) describes the shared and APP-only features.
 
 With Python 3.10, from the repository root, install the checkout with `python -m pip install -e .`. The [complete runnable workflow](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/examples/open_source_workflow.py) uses the library's beam-frame FEM and does not require the desktop APP. The animated 3×3 kagome stretch below uses the shared reduced spring/bending/contact solver, also available without the APP through the [trajectory example](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/examples/reduced_recruitment_workflow.py). These are different models with different assumptions.

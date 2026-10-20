@@ -1,11 +1,18 @@
 """
-LAMMPS Integration for FiberNet
+Legacy LAMMPS Python-library integration for FiberNet
 
 Provides integration with LAMMPS for molecular dynamics simulations:
 - Convert FiberNetwork to LAMMPS data file
 - Run MD simulations with various force fields
 - Extract trajectories and properties
 - Coarse-grained fiber models
+
+This public compatibility route uses FiberNetwork and directly instantiates
+Python lammps() in run_simulation. It does not delegate to the bounded
+RuntimeSpec/LAMMPSTask CLI backend. It is unvalidated and outside the current
+bounded CLI qualification scope; importability is not runtime qualification.
+For the explicit CLI route see docs/API_LAYERS.md. Preserve the upstream and
+provider notices in LAMMPS_NOTICE.md; optionality is not a license exemption.
 
 LAMMPS is GPL v2 licensed: https://github.com/lammps/lammps
 """
@@ -41,7 +48,10 @@ class LAMMPSResult:
 
 
 class LAMMPSBridge:
-    """Bridge between FiberNetwork and LAMMPS.
+    """Legacy bridge between FiberNetwork and the Python LAMMPS interface.
+
+    This route is unvalidated and outside current bounded CLI qualification.
+    It directly uses Python lammps(), not RuntimeSpec or LAMMPSTask.
     
     Parameters
     ----------

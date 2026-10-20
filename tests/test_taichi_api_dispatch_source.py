@@ -123,13 +123,24 @@ class DispatchChecks(unittest.TestCase):
         self.assertEqual(self.calls, [])
 
     def test_dependency_and_runtime_errors_propagate_without_fallback(self):
+        attempts = []
         for exc in (ImportError('Taichi required: pip install taichi==1.7.4'), RuntimeError('unsupported version'), RuntimeError('architecture unavailable'), RuntimeError('wrong owner')):
-            def fail(**kwargs): raise exc
-            self.namespace['TaichiEngine'] = fail
+            class BrokenEngine:
+                def __init__(self, *, arch, num_threads):
+                    attempts.append((arch, num_threads))
+                    raise exc
+                def stretch_test(self, graph, target_stretch=2.0):
+                    raise AssertionError('must not execute after failed construction')
+                def dynamics(self, graph):
+                    raise AssertionError('must not execute after failed construction')
+            self.namespace['TaichiEngine'] = BrokenEngine
             for backend in ('spring', 'taichi'):
-                with self.subTest(backend=backend, error=str(exc)), self.assertRaises(type(exc)) as caught:
-                    self.simulate(self.graph, backend=backend)
-                self.assertIs(caught.exception, exc)
+                for mode in ('stretch', 'dynamics'):
+                    before = len(attempts)
+                    with self.subTest(backend=backend, mode=mode, error=str(exc)), self.assertRaises(type(exc)) as caught:
+                        self.simulate(self.graph, backend=backend, mode=mode)
+                    self.assertIs(caught.exception, exc)
+                    self.assertEqual(attempts[before:], [('cpu', 4)])
         self.assertEqual(self.calls, [])
 
     def test_no_result_fields_fabricated_or_reinterpreted(self):

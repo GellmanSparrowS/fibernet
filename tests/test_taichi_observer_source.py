@@ -1,5 +1,5 @@
 """AST-isolated actual Python orchestration with fake fields; no Taichi/FiberNet import."""
-import ast,pathlib,time,json,types,sys,dataclasses,copy
+import ast,pathlib,time,json,types,sys,dataclasses,copy,warnings
 import numpy as np
 from _source_check_support import run_source_check
 from test_taichi_event_compat_source import restore_historical_save
@@ -38,7 +38,20 @@ def run_checks():
     oldnodes={n.name:n for n in parse(BASE).body if hasattr(n,'name')};newnodes={n.name:n for n in parse(NEW).body if hasattr(n,'name')}
     check('SimResult unchanged outside public writer and LAMMPS guard contracts',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
     oldmethod=next(n for n in oldnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');newmethod=next(n for n in newnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics')
-    check('all old positional arguments unchanged',ast.dump(oldmethod.args.args[0])==ast.dump(newmethod.args.args[0]) and [ast.dump(x) for x in oldmethod.args.args]==[ast.dump(x) for x in newmethod.args.args] and [ast.dump(x) for x in oldmethod.args.defaults]==[ast.dump(x) for x in newmethod.args.defaults])
+    # Only the reviewed damping API annotation/default changes; physics defaults do not.
+    damp_index=next(i for i,a in enumerate(newmethod.args.args) if a.arg=='damping')
+    old_damp=oldmethod.args.args[damp_index];new_damp=newmethod.args.args[damp_index]
+    default_index=damp_index-(len(newmethod.args.args)-len(newmethod.args.defaults))
+    check('exact damping signature transition',ast.dump(old_damp.annotation)==ast.dump(ast.parse('float',mode='eval').body)
+          and ast.dump(new_damp.annotation)==ast.dump(ast.parse('Optional[float]',mode='eval').body)
+          and ast.literal_eval(oldmethod.args.defaults[default_index])==.3
+          and isinstance(newmethod.args.defaults[default_index],ast.Constant)
+          and newmethod.args.defaults[default_index].value is None)
+    normalized_args=copy.deepcopy(newmethod.args)
+    normalized_args.args[damp_index]=copy.deepcopy(old_damp)
+    normalized_args.defaults[default_index]=copy.deepcopy(oldmethod.args.defaults[default_index])
+    check('all other old positional arguments unchanged',[ast.dump(x) for x in oldmethod.args.args]==[ast.dump(x) for x in normalized_args.args]
+          and [ast.dump(x) for x in oldmethod.args.defaults]==[ast.dump(x) for x in normalized_args.defaults])
     check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer','initial_velocities_by_id','rest_lengths_by_id','material','reference_areas_by_id','max_abs_strain'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-6]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
     class Result:
      def __init__(self,**kwargs):self.__dict__.update(kwargs)
@@ -51,12 +64,17 @@ def run_checks():
      def __getitem__(self,k):return self.a
     
     def load(txt,label):
-     tree=parse(txt);wanted={'_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation'}
-     nodes=[n for n in tree.body if getattr(n,'name',None) in wanted];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
-     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
+     tree=parse(txt);wanted={'_legacy_damping','_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation'}
+     nodes=[n for n in tree.body if getattr(n,'name',None) in wanted or (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='_DAMPING_UNSET' for t in n.targets))];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
+     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(warnings=warnings,_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
      compiled=ast.Module(body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]+nodes,type_ignores=[]);exec(compile(ast.fix_missing_locations(compiled),'<AST-isolated actual orchestration>','exec'),ns);return ns
     
     BN=load(BASE,'baseline_isolated');CN=load(NEW,'candidate_isolated')
+    with warnings.catch_warnings(record=True) as captured:
+     warnings.simplefilter('always')
+     check('omitted damping keeps effective metadata default',CN['_legacy_damping'](None)==.3 and not captured)
+     check('explicit damping preserves metadata value',CN['_legacy_damping'](.6)==.6)
+     check('actual damping helper warns once',len(captured)==1 and 'metadata-only' in str(captured[0].message))
     
     def setup(ns,ids=(17,83)):
      x=np.array([[0.,0.,0.],[1.,0.,0.]]);edges=np.array([[0,1]])
@@ -73,7 +91,7 @@ def run_checks():
      return types.SimpleNamespace(arch='cpu',num_threads=1),types.SimpleNamespace(num_nodes=2,edges={91:None}),fields,count
     
     def run(ns,obs='absent',record=False,ids=(17,83),**extra):
-     self,g,f,c=setup(ns,ids);kw=dict(num_steps=4,save_interval=2,dt=.125,dashpot=0.,drag=0.,damping=0.,record_state=record,state_units={'length':'m','time':'s','mass':'kg','frame':'world_xyz'})
+     self,g,f,c=setup(ns,ids);kw=dict(num_steps=4,save_interval=2,dt=.125,dashpot=0.,drag=0.,record_state=record,state_units={'length':'m','time':'s','mass':'kg','frame':'world_xyz'})
      if obs!='absent':kw['state_observer']=obs
      kw.update(extra)
      try:r=ns['dynamics'](self,g,**kw)
@@ -91,6 +109,7 @@ def run_checks():
      baseline,bf,bc,e=run(BN,record=record);assert e is None
      default,df,dc,e=run(CN,record=record);assert e is None
      explicit,ef,ec,e=run(CN,None,record);assert e is None
+     check(f'actual orchestration retains damping metadata .3 record={record}',default.metadata['damping']==baseline.metadata['damping']==.3)
      check(f'default result unchanged record={record}',normalized(default)==normalized(baseline)==normalized(explicit))
      check(f'default no additional exports record={record}',{k:f.exports for k,f in bf.items() if isinstance(f,Field)}=={k:f.exports for k,f in df.items() if isinstance(f,Field)}=={k:f.exports for k,f in ef.items() if isinstance(f,Field)})
      events=[];observed,of,oc,e=run(CN,events.append,record);assert e is None
@@ -130,11 +149,11 @@ def run_checks():
     contract=(D.parent/'fibernet/ml/_generate_contract.py').read_text(encoding='utf-8');check('accelerated source already generation-bound',"'sim/accelerated.py'" in contract)
     mutated=NEW.replace("schema='native_axial_observer/1'","schema='native_axial_observer/2'",1);check('helper-only mutation changes generation dependency bytes',NEW.encode()!=mutated.encode())
     report=dict(status='PASS_SOURCE_AND_ORCHESTRATION_MOCKS_ONLY',checks=checks,count=len(checks),CPU_seconds=time.process_time()-start,RSS_KiB=peak_rss_kib(),native_imports=False,native_calls=0,physics_trajectories=0,limitations=['AST-isolated actual method with fake fields/prescribed mock sentinels, not native parity','SimResult mocked; historical SimResult AST checked after readable public writer/LAMMPS guard normalization','No full package imports or production serialization runtime','Generation hash binding checked, actual checkpoint resume rejection not executed'])
-    assert len(checks)==31
+    assert len(checks)==37
     return report
 
 def test_observer_mock_contract():
-    assert json.loads(run_source_check(__file__))['count']==31
+    assert json.loads(run_source_check(__file__))['count']==37
 
 if __name__=="__main__":
     print(json.dumps(run_checks()))

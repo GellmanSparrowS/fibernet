@@ -132,7 +132,7 @@ def test_cleanup_never_masks_outcome(tmp_path, monkeypatch, commit, warning_erro
 
 def test_nested_parent_and_numpy_serialization(tmp_path):
     path = tmp_path / 'nested' / 'result.json'
-    result = m.SimResult(displacements=np.array([[1., 2.]]),
+    result = m.SimResult(displacements=np.array([[1., 2.]]), n_nodes=1,
                          metadata={'scalar': np.int64(7), 'array': np.array([3, 4])})
     result.save(path, detailed=True)
     assert json.loads(path.read_text())['scalar'] == 7

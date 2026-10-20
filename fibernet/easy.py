@@ -11,7 +11,7 @@ FiberNet Easy API — 一行代码完成常见任务
 Examples
 --------
 >>> from fibernet import pattern_2d, show, simulate, batch_simulate
->>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
+>>> g = pattern_2d(unit="honeycomb", box=(10,10), grid=(4,4))
 >>> show(g)  # 一行出图
 >>> result = simulate(g, mode="stretch", strain=2.0)  # 一行模拟
 >>> batch_simulate([{"unit": "honeycomb"}, {"unit": "kagome"}], "results.csv")  # 一行批量
@@ -56,7 +56,7 @@ def show(
     Examples
     --------
     >>> from fibernet import pattern_2d, show
-    >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
+    >>> g = pattern_2d(unit="honeycomb", box=(10,10), grid=(4,4))
     >>> show(g)
     >>> show(g, theme="light", save_path="honeycomb.png")
     """
@@ -73,7 +73,7 @@ def show(
 def simulate(
     graph: StructureGraph,
     mode: str = "stretch",
-    strain: float = 2.0,
+    strain: Optional[float] = None,
     backend: str = "spring",
     save_path: Optional[str] = None,
     **kwargs,
@@ -85,9 +85,12 @@ def simulate(
     graph : StructureGraph
         要模拟的结构。
     mode : str
-        模拟模式: "stretch" (位移控制拉伸) 或 "dynamics" (自定义动力学)
-    strain : float
-        Target stretch ratio for both backends (1.01 = 1% extension).
+        "stretch" or "dynamics" for spring/taichi; "stretch" or "history"
+        for FEM; "dynamics" only for LAMMPS.
+    strain : float or None
+        Target stretch ratio, not engineering strain (1.01 = 1% extension).
+        None (including omission) uses 2.0 for stretch. Non-stretch modes
+        accept only None; explicit numeric strain is rejected, even 2.0.
     backend : str
         "spring" (default), "taichi" (an alias for the same spring engine),
         "fem", or explicit "lammps" dynamics. LAMMPS requires preparation
@@ -102,9 +105,12 @@ def simulate(
         it uses explicit controls, not the strain shortcut or graph moduli.
         See docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.
         Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
-        overrides this selection.
+        overrides this selection. 3-D FEM stretch is linear-only and rejects
+        nonlinear=True; nonlinear=None preserves its legacy linear solve.
     save_path : str, optional
-        JSON 保存路径。
+        JSON export path. SimResult saves a summary by default, not a full-state
+        checkpoint. For detailed arrays call result.save(path, detailed=True);
+        restart support is specific to each result/backend contract.
     **kwargs
         For spring/taichi, arch="cpu" or "gpu" and a positive integer
         num_threads (default 4) configure the engine; remaining keywords go
@@ -131,10 +137,19 @@ def simulate(
     Examples
     --------
     >>> from fibernet import pattern_2d, simulate
-    >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
+    >>> g = pattern_2d(unit="honeycomb", box=(10,10), grid=(4,4))
     >>> r = simulate(g, mode="stretch", strain=2.0)  # 质点弹簧拉伸2倍
     >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
     """
+    from inspect import signature
+
+    strain_supplied = strain is not None
+    if not isinstance(mode, str):
+        raise ValueError("mode must be a string")
+    if mode != "stretch" and strain_supplied:
+        raise ValueError("strain is only supported for mode='stretch'; omit it for other modes")
+    if not strain_supplied:
+        strain = 2.0
     if not isinstance(backend, str) or backend not in ("spring", "taichi", "fem", "lammps"):
         raise ValueError("backend must be 'spring', 'taichi', 'fem', or 'lammps'")
     if backend == "lammps":
@@ -143,7 +158,7 @@ def simulate(
     elif backend in ("spring", "taichi"):
         if not isinstance(mode, str) or mode not in ("stretch", "dynamics"):
             raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
-        if kwargs.get('material') is not None and (mode != 'dynamics' or strain != 2.0):
+        if kwargs.get('material') is not None and mode != 'dynamics':
             raise ValueError('dynamic material requires mode=dynamics and no strain shortcut')
         arch = kwargs.pop("arch", "cpu")
         num_threads = kwargs.pop("num_threads", 4)
@@ -152,6 +167,13 @@ def simulate(
         if (isinstance(num_threads, (bool, np.bool_)) or
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
+        method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        method_kwargs = dict(kwargs)
+        if mode == "stretch":
+            if "target_stretch" in method_kwargs:
+                raise TypeError("use strain, not target_stretch, with simulate")
+            method_kwargs["target_stretch"] = strain
+        signature(method).bind(None, graph, **method_kwargs)
         engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
@@ -162,15 +184,15 @@ def simulate(
             raise ValueError("The FEM backend supports mode='stretch' or 'history'")
         from fibernet.ml.beam_frame_fem import BeamFrameFEM
         if mode == "history":
-            if strain != 2.0:
-                raise ValueError('history uses explicit controls, not the strain shortcut')
+            signature(BeamFrameFEM.history).bind(None, graph, **kwargs)
             result = BeamFrameFEM().history(graph, **kwargs)
         elif mode == "stretch":
             dim = kwargs.setdefault("dim", graph.dimension)
-            if not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
+            if isinstance(dim, (bool, np.bool_)) or not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
                 raise ValueError("The FEM dimension must be 2 or 3")
             E = kwargs.pop("E", 1e9)
             nu = kwargs.pop("nu", 0.3)
+            signature(BeamFrameFEM.stretch_test).bind(None, graph, target_stretch=strain, **kwargs)
             fem = BeamFrameFEM(E=E, nu=nu)
             raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
             result = fem.to_sim_result(raw, graph)

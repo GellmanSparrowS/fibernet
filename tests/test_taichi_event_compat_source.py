@@ -9,6 +9,7 @@ import builtins
 import copy
 import dataclasses
 import inspect
+import hashlib
 import json
 from pathlib import Path
 import pickle
@@ -210,14 +211,17 @@ PUBLIC_MODULES=(
     'fibernet/sim/_energy_accounting.py',
 )
 
+API_V2_MODULES = frozenset((PUBLIC_MODULES[0], PUBLIC_MODULES[1], PUBLIC_MODULES[2], PUBLIC_MODULES[4]))
+
 def public_baseline(relative):
     if relative not in PUBLIC_MODULES:
         raise ValueError('unknown public source contract')
-    return ROOT/'tests/fixtures/public_source_contract'/Path(relative).with_suffix('.py.txt')
+    directory = 'public_api_contract_v2' if relative in API_V2_MODULES else 'public_source_contract'
+    return ROOT/'tests/fixtures'/directory/Path(relative).with_suffix('.py.txt')
 
 def require_public_source(relative, raw):
     expected=public_baseline(relative).read_bytes()
-    if relative in PUBLIC_MODULES[3:]:
+    if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
         return
     if raw==expected:
@@ -282,6 +286,22 @@ def restore_historical_save(result_node):
 
 
 class SourceShape(unittest.TestCase):
+    def test_versioned_source_provenance_and_unchanged_kernels(self):
+        manifest=json.loads((ROOT/'tests/fixtures/public_api_contract_v2/manifest.json').read_text())
+        self.assertEqual(set(manifest['sources']), set(API_V2_MODULES))
+        for relative, hashes in manifest['sources'].items():
+            old=ROOT/'tests/fixtures/public_source_contract'/Path(relative).with_suffix('.py.txt')
+            self.assertEqual(hashlib.sha256(old.read_bytes()).hexdigest(), hashes['prior_sha256'])
+            self.assertEqual(hashlib.sha256(public_baseline(relative).read_bytes()).hexdigest(), hashes['sha256'])
+        def kernels(raw):
+            return [canonical_ast(n) for n in ast.walk(ast.parse(raw))
+                    if isinstance(n, ast.FunctionDef) and any(
+                        isinstance(d, ast.Attribute) and isinstance(d.value, ast.Name)
+                        and d.value.id == 'ti' and d.attr in ('kernel', 'func')
+                        for d in n.decorator_list)]
+        old=ROOT/'tests/fixtures/public_source_contract/fibernet/sim/accelerated.py.txt'
+        self.assertEqual(kernels(old.read_text()), kernels(SOURCE.read_text()))
+
     def test_engine_matches_checked_in_public_source(self):
         require_public_source('fibernet/sim/accelerated.py',SOURCE.read_bytes())
 
@@ -342,7 +362,7 @@ class SourceShape(unittest.TestCase):
             raw=public_baseline(path).read_bytes()
             for changed in (raw+b'\n# changed\n',raw.replace(b'\n',b'\r\n')):
                 with self.subTest(path=path):
-                    if path in PUBLIC_MODULES[3:]:
+                    if path in PUBLIC_MODULES[3:] or path in API_V2_MODULES:
                         with self.assertRaises(AssertionError):require_public_source(path,changed)
                     else:
                         require_public_source(path,changed)

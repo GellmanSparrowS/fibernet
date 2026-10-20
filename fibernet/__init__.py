@@ -25,7 +25,7 @@ RL Pipeline (one-liners)
 Parametric Structure Generation (for RL)
 ------------------------------------------
 >>> # Method 1: Displacements at generation time
->>> g = fn.pattern_2d("square", box=(10,10), grid=(3,3),
+>>> g = fn.pattern_2d(unit="square", box=(10,10), grid=(3,3),
 ...                    n_pts_per_side=3, point_displacements=disps)
 >>> # Method 2: Post-generation node manipulation
 >>> g.displace_node(5, [0.1, 0.2])

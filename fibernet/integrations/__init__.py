@@ -8,6 +8,13 @@ Provides integration with popular open-source scientific libraries:
 - OVITO: Advanced visualization and analysis
 
 All integrated libraries are optional dependencies.
+
+Two distinct LAMMPS routes remain public. LAMMPSBridge, LAMMPSResult and
+run_lammps_md are legacy FiberNetwork/Python-library APIs; their direct
+lammps() execution is unvalidated and outside the bounded CLI qualification
+scope. RuntimeSpec/LAMMPSTask are the explicit bounded CLI route, not an
+implementation used by the legacy bridge. Importability flags do not validate
+native runtimes. See docs/API_LAYERS.md and LAMMPS_NOTICE.md.
 """
 
 # NetworkX integration (BSD license)
