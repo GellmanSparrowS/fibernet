@@ -72,6 +72,8 @@ from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim.linear_transport import solve_linear_transport
+from fibernet.sim.joule_heating import (JouleHeatingLoad, JouleHeatingRun,
+                                        assemble_joule_heating, run_joule_heating)
 from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
                                        ReducedBeamSolver)
 
@@ -151,6 +153,7 @@ __all__ = [
     "export_solid", "export_route",
     # Simulation
     "TaichiEngine", "SimResult", "solve_linear_transport",
+    "JouleHeatingLoad", "JouleHeatingRun", "assemble_joule_heating", "run_joule_heating",
     "ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",

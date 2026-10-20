@@ -1,5 +1,5 @@
 {
-  "__init__.py": "b181d7c3514b934e76cd232156961ad4cc702499ac6020a0d003615c630e7801",
+  "__init__.py": "99c7c994c33d6a2a2ce446179a6b01aae7250fe345987ca6bbb2b700f57f0ef5",
   "analysis/__init__.py": "e0d62c28bb14089dd83754ba1b6b5c716f4e58fd4648a1b7dc54d6d38a5f35fe",
   "analysis/_archived/advanced.py": "6b5f6f9af6373e3ee51d1aae419d63a94cb40b268269cd5dfb998ba7fc56ec93",
   "analysis/_archived/comparison.py": "693ba2f4d5fdc818810b95f915f078777a37b9f21d5d8931830587ede489beb9",
@@ -189,6 +189,7 @@
   "sim/fracture/_beam.py": "b37399d580cea864034b227bc9e769d7da9c6e9681619c1ef0d4a9c85497713a",
   "sim/fracture/_engine.py": "49c871e6b3c97e1fe089192199ad76116a39343bf15cd88f687bc82862fd8ef2",
   "sim/fracture/_sparse.py": "a1c51a35df44b1b62892cca53cfb71be9a5d5e8aa4ce86e2bb9f3cfe5a667227",
+  "sim/joule_heating.py": "a0078a18011dac50cf65d0a8509f48f0a4e42be35dc116d755429b2b4d5402ae",
   "sim/linear_transport.py": "8fe7103ebc90a7ed5a443dfb25e0cf9881cbf9c67da9f6ee47c2e82a150ba480",
   "sim/reduced_beam.py": "e87649c357e5f1ca8e93ae458aa5c86d81461f9f86b543e51635748bf70c3288",
   "sim/rl_env.py": "f9dac6187d915098abbcee5fcd3d515767e231cb552198df2887bfc053636959",

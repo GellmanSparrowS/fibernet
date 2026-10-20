@@ -15,3 +15,6 @@ No native physics run is implied by a source-contract pass.
 The root package facade baseline also includes the additive closed-route graph
 mapping and multi-stroke manufacturing exports. Its complete readable source is
 reviewed with those exports; the other five module baselines remain unchanged.
+
+The root facade also includes the one-way Joule load and workflow exports;
+its baseline is updated with the additive public API.
