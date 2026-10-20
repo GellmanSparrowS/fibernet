@@ -143,6 +143,8 @@ def simulate(
     elif backend in ("spring", "taichi"):
         if not isinstance(mode, str) or mode not in ("stretch", "dynamics"):
             raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
+        if kwargs.get('material') is not None and (mode != 'dynamics' or strain != 2.0):
+            raise ValueError('dynamic material requires mode=dynamics and no strain shortcut')
         arch = kwargs.pop("arch", "cpu")
         num_threads = kwargs.pop("num_threads", 4)
         if not isinstance(arch, str) or arch not in ("cpu", "gpu"):

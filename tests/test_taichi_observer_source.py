@@ -23,12 +23,23 @@ def run_checks():
      checks.append(name)
     def parse(txt):return ast.parse(txt)
     def kernels(tree):return [ast.dump(n,include_attributes=False) for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and any(ast.unparse(d)=='ti.kernel' for d in n.decorator_list)]
-    check('all native kernel ASTs unchanged',kernels(parse(BASE))==kernels(parse(NEW)))
+    # The material kernel adds only explicit ti.static(material_mode) branches.
+    # Verify exact reviewed source first, then compare the inactive legacy path.
+    from test_taichi_event_compat_source import public_baseline, canonical_ast
+    expected=public_baseline('fibernet/sim/accelerated.py').read_text(encoding='utf-8')
+    check_tree=parse(NEW)
+    assert kernels(check_tree)==kernels(parse(expected)), 'reviewed native kernel changed'
+    class LegacyMaterialBranches(ast.NodeTransformer):
+     def visit_If(self,node):
+      node=self.generic_visit(node)
+      if ast.unparse(node.test)=='ti.static(material_mode)':return node.orelse
+      return node
+    check('all legacy native kernel ASTs unchanged',kernels(parse(BASE))==kernels(LegacyMaterialBranches().visit(check_tree)))
     oldnodes={n.name:n for n in parse(BASE).body if hasattr(n,'name')};newnodes={n.name:n for n in parse(NEW).body if hasattr(n,'name')}
     check('SimResult unchanged outside public writer and LAMMPS guard contracts',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
     oldmethod=next(n for n in oldnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');newmethod=next(n for n in newnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics')
     check('all old positional arguments unchanged',ast.dump(oldmethod.args.args[0])==ast.dump(newmethod.args.args[0]) and [ast.dump(x) for x in oldmethod.args.args]==[ast.dump(x) for x in newmethod.args.args] and [ast.dump(x) for x in oldmethod.args.defaults]==[ast.dump(x) for x in newmethod.args.defaults])
-    check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-1]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
+    check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer','initial_velocities_by_id','rest_lengths_by_id','material','reference_areas_by_id','max_abs_strain'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-6]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
     class Result:
      def __init__(self,**kwargs):self.__dict__.update(kwargs)
      def compute_detailed(self,*a,**k):pass
@@ -42,7 +53,7 @@ def run_checks():
     def load(txt,label):
      tree=parse(txt);wanted={'_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation'}
      nodes=[n for n in tree.body if getattr(n,'name',None) in wanted];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
-     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
+     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
      compiled=ast.Module(body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]+nodes,type_ignores=[]);exec(compile(ast.fix_missing_locations(compiled),'<AST-isolated actual orchestration>','exec'),ns);return ns
     
     BN=load(BASE,'baseline_isolated');CN=load(NEW,'candidate_isolated')

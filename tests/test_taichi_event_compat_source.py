@@ -244,6 +244,12 @@ def remove_public_lammps_branch(function, key):
     node=copy.deepcopy(function)
     index=1 if (node.body and isinstance(node.body[0],ast.Expr) and
                 isinstance(node.body[0].value,ast.Constant) and isinstance(node.body[0].value.value,str)) else 0
+    if key == 'SimResult.compute_detailed':
+        reference=ast.parse(public_baseline('fibernet/sim/accelerated.py').read_text(encoding='utf-8'))
+        result=next(n for n in reference.body if getattr(n,'name',None)=='SimResult')
+        method=next(n for n in result.body if getattr(n,'name',None)=='compute_detailed')
+        assert canonical_ast(node.body[index])==canonical_ast(method.body[index]), 'material result prefix changed'
+        del node.body[index]
     expected=ast.parse(LAMMPS_PREFIXES[key]).body[0]
     assert canonical_ast(node.body[index])==canonical_ast(expected), key
     del node.body[index]

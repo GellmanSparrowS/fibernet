@@ -1,0 +1,1119 @@
+{
+  "mode": "dynamics",
+  "energy": 2.521767752401439e-07,
+  "time_seconds": 1.4567296504974365,
+  "n_nodes": 2,
+  "n_edges": 1,
+  "max_force": 0.001113006632639154,
+  "max_stretch": 1.0006153976875147,
+  "mean_stretch": 1.0006153976875147,
+  "std_stretch": 0.0,
+  "max_displacement": 0.0006153976875147293,
+  "node_ids": [
+    17,
+    83
+  ],
+  "edge_ids": [
+    91
+  ],
+  "damping": 0.3,
+  "dt": 0.00390625,
+  "num_steps": 256,
+  "native_axial_viscoelastic": {
+    "schema": "native_axial_viscoelastic/1",
+    "material": {
+      "schema": "fibernet.linear_viscoelastic/1",
+      "equilibrium_modulus": 1.0,
+      "branches": [
+        [
+          2.0,
+          0.25
+        ],
+        [
+          1.0,
+          1.0
+        ]
+      ],
+      "parallel_viscosity": 0.0,
+      "units": {
+        "modulus": "Pa",
+        "time": "s",
+        "viscosity": "Pa*s"
+      }
+    },
+    "units": {
+      "length": "m",
+      "time": "s",
+      "mass": "kg",
+      "frame": "world_xyz",
+      "stress": "Pa",
+      "area": "m^2",
+      "energy": "J",
+      "strain": "1"
+    },
+    "node_ids": [
+      17,
+      83
+    ],
+    "edge_ids": [
+      91
+    ],
+    "edge_nodes": [
+      [
+        17,
+        83
+      ]
+    ],
+    "initial_positions": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "reference_areas_m2": [
+      1.0
+    ],
+    "rest_lengths_m": [
+      1.0
+    ],
+    "masses_kg": [
+      1.0,
+      1.0
+    ],
+    "fixed_node_ids": [
+      17
+    ],
+    "constant_external_force_N": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0
+      ]
+    ],
+    "drag_per_s": 0.0,
+    "max_abs_strain": 0.02,
+    "dt": 0.00390625,
+    "completed_steps": 256,
+    "initialization": "relaxed_zero_strain_zero_branch_history_at_geometric_rest",
+    "force_time_level": "cached_sigma_n_at_current_direction_before_kick",
+    "update_time_level": "one_trial_after_drift_and_projection_before_completed_observation",
+    "energy_scope": "stored axial material energy only; contact potential and kinetic energy separate",
+    "dynamic_work_scope": "endpoint work is constitutive; external work includes contact force work when present; signed residuals are not dissipation",
+    "restart_scope": "full material state serialized; this version refuses resume",
+    "samples": [
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 0,
+        "time": 0.0,
+        "interval_dt": 0.0,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0
+        ],
+        "viscous_strain": [
+          [
+            0.0
+          ],
+          [
+            0.0
+          ]
+        ],
+        "stress_Pa": [
+          0.0
+        ],
+        "stored_energy_J": [
+          0.0
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            0.0
+          ],
+          "be_numerical_dissipation_J": [
+            0.0
+          ],
+          "endpoint_work_J": [
+            0.0
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            0.0
+          ],
+          "be_numerical_dissipation_J": [
+            0.0
+          ],
+          "endpoint_work_J": [
+            0.0
+          ]
+        },
+        "kinetic_energy_J": 5e-07,
+        "dynamic_interval": null,
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": 0.0,
+          "projection_force_work_J": 0.0,
+          "kick_drift_residual_J": 0.0,
+          "old_stress_endpoint_residual_J": 0.0
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 32,
+        "time": 0.125,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.00012379111464033699
+        ],
+        "viscous_strain": [
+          [
+            2.7073754970910153e-05
+          ],
+          [
+            7.672257702821136e-06
+          ]
+        ],
+        "stress_Pa": [
+          0.0004333446909167065
+        ],
+        "stored_energy_J": [
+          2.3758162161611437e-08
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            3.4499050870264627e-10
+          ],
+          "be_numerical_dissipation_J": [
+            1.804257995479724e-11
+          ],
+          "endpoint_work_J": [
+            1.6461472176688418e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            4.307256083220837e-09
+          ],
+          "be_numerical_dissipation_J": [
+            7.497690492589231e-10
+          ],
+          "endpoint_work_J": [
+            2.8815187294091183e-08
+          ]
+        },
+        "kinetic_energy_J": 4.728466528386828e-07,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.3562651965351067e-12,
+          "projection_force_work_J": -2.712530393094944e-12,
+          "kick_drift_residual_J": -2.7125304205384e-12,
+          "old_stress_endpoint_residual_J": 4.451622580191252e-11,
+          "constitutive_identity_residual_J": 2.0679515313825692e-25,
+          "dynamic_identity_residual_J": 2.908056841006738e-25
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.5692915080569287e-11,
+          "projection_force_work_J": -3.138583016119821e-11,
+          "kick_drift_residual_J": -3.138583015923059e-11,
+          "old_stress_endpoint_residual_J": 1.6775330478526303e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 64,
+        "time": 0.25,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.00024095757835462805
+        ],
+        "viscous_strain": [
+          [
+            9.072093450274424e-05
+          ],
+          [
+            2.8612184572757343e-05
+          ]
+        ],
+        "stress_Pa": [
+          0.0007537762598402663
+        ],
+        "stored_energy_J": [
+          7.414660956933e-08
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            8.814803105757809e-10
+          ],
+          "be_numerical_dissipation_J": [
+            1.1079987018145436e-11
+          ],
+          "endpoint_work_J": [
+            2.64361109391544e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            2.4348183168436326e-08
+          ],
+          "be_numerical_dissipation_J": [
+            1.2025155448877483e-09
+          ],
+          "endpoint_work_J": [
+            9.969730828265397e-08
+          ]
+        },
+        "kinetic_energy_J": 4.030511418924422e-07,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -4.2375973540684625e-12,
+          "projection_force_work_J": -8.475194708099518e-12,
+          "kick_drift_residual_J": -8.47519463784932e-12,
+          "old_stress_endpoint_residual_J": 2.982575267412187e-11,
+          "constitutive_identity_residual_J": -8.68539643180679e-24,
+          "dynamic_identity_residual_J": -8.50121949854303e-24
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.0483908096399986e-10,
+          "projection_force_work_J": -2.096781619278774e-10,
+          "kick_drift_residual_J": -2.0967816163858463e-10,
+          "old_stress_endpoint_residual_J": 2.853289255770899e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 96,
+        "time": 0.375,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0003464686454175414
+        ],
+        "viscous_strain": [
+          [
+            0.00017289871243548864
+          ],
+          [
+            6.0160605090079536e-05
+          ]
+        ],
+        "stress_Pa": [
+          0.000979916551709109
+        ],
+        "stored_energy_J": [
+          1.3113292974220309e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            1.2616580743722886e-09
+          ],
+          "be_numerical_dissipation_J": [
+            6.814650545989063e-12
+          ],
+          "endpoint_work_J": [
+            3.0201926307575527e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            5.942395228229519e-08
+          ],
+          "be_numerical_dissipation_J": [
+            1.481516423864449e-09
+          ],
+          "endpoint_work_J": [
+            1.9203839844836244e-07
+          ]
+        },
+        "kinetic_energy_J": 3.1127270182001536e-07,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -7.23976514053277e-12,
+          "projection_force_work_J": -1.4479530281084554e-11,
+          "kick_drift_residual_J": -1.4479530299728803e-11,
+          "old_stress_endpoint_residual_J": 1.7832721745366652e-11,
+          "constitutive_identity_residual_J": 7.858215819253763e-24,
+          "dynamic_identity_residual_J": 7.869524929191011e-24
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -2.909076370365051e-10,
+          "projection_force_work_J": -5.818152740726586e-10,
+          "kick_drift_residual_J": -5.818152735080935e-10,
+          "old_stress_endpoint_residual_J": 3.6020079048498052e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 128,
+        "time": 0.5,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0004367729464900272
+        ],
+        "viscous_strain": [
+          [
+            0.0002609837127060735
+          ],
+          [
+            9.947388785869818e-05
+          ]
+        ],
+        "stress_Pa": [
+          0.0011256504726892636
+        ],
+        "stored_energy_J": [
+          1.8317248558392996e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            1.410099580735847e-09
+          ],
+          "be_numerical_dissipation_J": [
+            4.104542169353304e-12
+          ],
+          "endpoint_work_J": [
+            2.8885579914382302e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            1.0285155389771358e-07
+          ],
+          "be_numerical_dissipation_J": [
+            1.651552609401233e-09
+          ],
+          "endpoint_work_J": [
+            2.8767559209104433e-07
+          ]
+        },
+        "kinetic_energy_J": 2.1577692553047183e-07,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -9.60789515049534e-12,
+          "projection_force_work_J": -1.9215790300988884e-11,
+          "kick_drift_residual_J": -1.921579038565427e-11,
+          "old_stress_endpoint_residual_J": 8.862121197135737e-12,
+          "constitutive_identity_residual_J": 9.926167350636332e-24,
+          "dynamic_identity_residual_J": 1.0068339018418884e-23
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -5.639596296824545e-10,
+          "projection_force_work_J": -1.127919259364698e-09,
+          "kick_drift_residual_J": -1.127919259053267e-09,
+          "old_stress_endpoint_residual_J": 4.016477250887191e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 160,
+        "time": 0.625,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0005095788078899322
+        ],
+        "viscous_strain": [
+          [
+            0.000346181345219366
+          ],
+          [
+            0.0001437049978936897
+          ]
+        ],
+        "stress_Pa": [
+          0.001202247543227307
+        ],
+        "stored_energy_J": [
+          2.234658339530245e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            1.3572402003851525e-09
+          ],
+          "be_numerical_dissipation_J": [
+            2.4626546798458883e-12
+          ],
+          "endpoint_work_J": [
+            2.399410800570138e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            1.4755912454283245e-07
+          ],
+          "be_numerical_dissipation_J": [
+            1.7533596477231567e-09
+          ],
+          "endpoint_work_J": [
+            3.7277831814357957e-07
+          ]
+        },
+        "kinetic_energy_J": 1.3051828460565635e-07,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.1000978228622378e-11,
+          "projection_force_work_J": -2.2001956457247322e-11,
+          "kick_drift_residual_J": -2.200195638267608e-11,
+          "old_stress_endpoint_residual_J": 2.8893151888591128e-12,
+          "constitutive_identity_residual_J": 4.1359030627651384e-24,
+          "dynamic_identity_residual_J": 4.0518925318027215e-24
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -8.971919487740345e-10,
+          "projection_force_work_J": -1.7943838975479105e-09,
+          "kick_drift_residual_J": -1.7943838975801486e-09,
+          "old_stress_endpoint_residual_J": 4.193794698042186e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 192,
+        "time": 0.75,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0005636765706908964
+        ],
+        "viscous_strain": [
+          [
+            0.0004224813289143902
+          ],
+          [
+            0.00019014038864416982
+          ]
+        ],
+        "stress_Pa": [
+          0.0012196032362906354
+        ],
+        "stored_energy_J": [
+          2.4856637412227327e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            1.1680392566431783e-09
+          ],
+          "be_numerical_dissipation_J": [
+            1.6310235173891934e-12
+          ],
+          "endpoint_work_J": [
+            1.7103881864689787e-09
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            1.881382605650743e-07
+          ],
+          "be_numerical_dissipation_J": [
+            1.816554574823146e-09
+          ],
+          "endpoint_work_J": [
+            4.3852118926216994e-07
+          ]
+        },
+        "kinetic_energy_J": 6.444692126337466e-08,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.1353078931978759e-11,
+          "projection_force_work_J": -2.2706157863959896e-11,
+          "kick_drift_residual_J": -2.2706157925326875e-11,
+          "old_stress_endpoint_residual_J": -3.6718350498978656e-13,
+          "constitutive_identity_residual_J": 4.446095792472524e-23,
+          "dynamic_identity_residual_J": 4.4564355501294366e-23
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.2577223387922358e-09,
+          "projection_force_work_J": -2.5154446775842628e-09,
+          "kick_drift_residual_J": -2.515444677361209e-09,
+          "old_stress_endpoint_residual_J": 4.225832864113748e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 224,
+        "time": 0.875,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0005987831067153504
+        ],
+        "viscous_strain": [
+          [
+            0.0004859575367884054
+          ],
+          [
+            0.00023630150973019256
+          ]
+        ],
+        "stress_Pa": [
+          0.0011869158435543982
+        ],
+        "stored_energy_J": [
+          2.5769666774963847e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            9.110538358891796e-10
+          ],
+          "be_numerical_dissipation_J": [
+            1.4149320376185977e-12
+          ],
+          "endpoint_work_J": [
+            9.647042644964526e-10
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            2.2137096342094285e-07
+          ],
+          "be_numerical_dissipation_J": [
+            1.8637881868249452e-09
+          ],
+          "endpoint_work_J": [
+            4.809314193574055e-07
+          ]
+        },
+        "kinetic_energy_J": 2.1647037899166813e-08,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.0778696513231718e-11,
+          "projection_force_work_J": -2.155739302646542e-11,
+          "kick_drift_residual_J": -2.155739301730572e-11,
+          "old_stress_endpoint_residual_J": -1.3741007099947938e-12,
+          "constitutive_identity_residual_J": -1.881835893558138e-23,
+          "dynamic_identity_residual_J": -1.8734348404618963e-23
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.6137529916941945e-09,
+          "projection_force_work_J": -3.2275059833881877e-09,
+          "kick_drift_residual_J": -3.2275059829960023e-09,
+          "old_stress_endpoint_residual_J": 4.192210247874226e-09
+        }
+      },
+      {
+        "schema": "native_axial_material_state/1",
+        "step": 256,
+        "time": 1.0,
+        "interval_dt": 0.00390625,
+        "time_level": "completed_projected_t_n",
+        "edge_ids": [
+          91
+        ],
+        "strain": [
+          0.0006153976875147293
+        ],
+        "viscous_strain": [
+          [
+            0.0005342835855915288
+          ],
+          [
+            0.00028001694623670565
+          ]
+        ],
+        "stress_Pa": [
+          0.001113006632639154
+        ],
+        "stored_energy_J": [
+          2.521767752401439e-07
+        ],
+        "increments": {
+          "physical_dissipation_J": [
+            6.449852416666233e-10
+          ],
+          "be_numerical_dissipation_J": [
+            1.6304919684334164e-12
+          ],
+          "endpoint_work_J": [
+            2.77376818997414e-10
+          ]
+        },
+        "cumulative": {
+          "physical_dissipation_J": [
+            2.4609283933643183e-07
+          ],
+          "be_numerical_dissipation_J": [
+            1.91171517899287e-09
+          ],
+          "endpoint_work_J": [
+            5.001813297555676e-07
+          ]
+        },
+        "kinetic_energy_J": 2.0351421846824948e-09,
+        "dynamic_interval": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -9.49960061762629e-12,
+          "projection_force_work_J": -1.8999201235252528e-11,
+          "kick_drift_residual_J": -1.8999201152162804e-11,
+          "old_stress_endpoint_residual_J": -7.097715899077768e-13,
+          "constitutive_identity_residual_J": -6.3589509590014e-24,
+          "dynamic_identity_residual_J": -6.3589509590014e-24
+        },
+        "dynamic_cumulative": {
+          "external_force_work_J": 0.0,
+          "numerical_drag_energy_change_J": 0.0,
+          "projection_kinetic_energy_change_J": -1.939095120438645e-09,
+          "projection_force_work_J": -3.878190240877079e-09,
+          "kick_drift_residual_J": -3.87819023997767e-09,
+          "old_stress_endpoint_residual_J": 4.155567059789302e-09
+        }
+      }
+    ],
+    "final": {
+      "schema": "native_axial_material_state/1",
+      "step": 256,
+      "time": 1.0,
+      "interval_dt": 0.00390625,
+      "time_level": "completed_projected_t_n",
+      "edge_ids": [
+        91
+      ],
+      "strain": [
+        0.0006153976875147293
+      ],
+      "viscous_strain": [
+        [
+          0.0005342835855915288
+        ],
+        [
+          0.00028001694623670565
+        ]
+      ],
+      "stress_Pa": [
+        0.001113006632639154
+      ],
+      "stored_energy_J": [
+        2.521767752401439e-07
+      ],
+      "increments": {
+        "physical_dissipation_J": [
+          6.449852416666233e-10
+        ],
+        "be_numerical_dissipation_J": [
+          1.6304919684334164e-12
+        ],
+        "endpoint_work_J": [
+          2.77376818997414e-10
+        ]
+      },
+      "cumulative": {
+        "physical_dissipation_J": [
+          2.4609283933643183e-07
+        ],
+        "be_numerical_dissipation_J": [
+          1.91171517899287e-09
+        ],
+        "endpoint_work_J": [
+          5.001813297555676e-07
+        ]
+      },
+      "kinetic_energy_J": 2.0351421846824948e-09,
+      "dynamic_interval": {
+        "external_force_work_J": 0.0,
+        "numerical_drag_energy_change_J": 0.0,
+        "projection_kinetic_energy_change_J": -9.49960061762629e-12,
+        "projection_force_work_J": -1.8999201235252528e-11,
+        "kick_drift_residual_J": -1.8999201152162804e-11,
+        "old_stress_endpoint_residual_J": -7.097715899077768e-13,
+        "constitutive_identity_residual_J": -6.3589509590014e-24,
+        "dynamic_identity_residual_J": -6.3589509590014e-24
+      },
+      "dynamic_cumulative": {
+        "external_force_work_J": 0.0,
+        "numerical_drag_energy_change_J": 0.0,
+        "projection_kinetic_energy_change_J": -1.939095120438645e-09,
+        "projection_force_work_J": -3.878190240877079e-09,
+        "kick_drift_residual_J": -3.87819023997767e-09,
+        "old_stress_endpoint_residual_J": 4.155567059789302e-09
+      }
+    },
+    "final_positions_m": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.0006153976875147,
+        0.0,
+        0.0
+      ]
+    ],
+    "final_velocities_m_per_s": [
+      [
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        6.379878031251843e-05,
+        0.0,
+        0.0
+      ]
+    ],
+    "sampled_native_state": [
+      {
+        "step": 0,
+        "time": 0.0,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.001,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 5e-07,
+        "potential_energy": 0.0,
+        "total_energy": 5e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 32,
+        "time": 0.125,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0001237911146403,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0009724676373419147,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 4.728466528386828e-07,
+        "potential_energy": 2.3758162161611437e-08,
+        "total_energy": 4.966048150002943e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 64,
+        "time": 0.25,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0002409575783546,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0008978319908451048,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 4.030511418924422e-07,
+        "potential_energy": 7.414660956933e-08,
+        "total_energy": 4.771977514617721e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 96,
+        "time": 0.375,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0003464686454175,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0007890154647660784,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 3.1127270182001536e-07,
+        "potential_energy": 1.3113292974220309e-07,
+        "total_energy": 4.424056315622184e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 128,
+        "time": 0.5,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.00043677294649,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0006569275843355519,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 2.1577692553047183e-07,
+        "potential_energy": 1.8317248558392996e-07,
+        "total_energy": 3.989494111144018e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 160,
+        "time": 0.625,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.00050957880789,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0005109173800247088,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 1.3051828460565635e-07,
+        "potential_energy": 2.234658339530245e-07,
+        "total_energy": 3.5398411855868086e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 192,
+        "time": 0.75,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.000563676570691,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.00035901788608194626,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 6.444692126337466e-08,
+        "potential_energy": 2.4856637412227327e-07,
+        "total_energy": 3.130132953856479e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 224,
+        "time": 0.875,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0005987831067154,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.00020807228503174954,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 2.1647037899166813e-08,
+        "potential_energy": 2.5769666774963847e-07,
+        "total_energy": 2.7934370564880527e-07,
+        "near_cutoff": false
+      },
+      {
+        "step": 256,
+        "time": 1.0,
+        "positions": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            1.0006153976875147,
+            0.0,
+            0.0
+          ]
+        ],
+        "velocities": [
+          [
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            6.379878031251843e-05,
+            0.0,
+            0.0
+          ]
+        ],
+        "kinetic_energy": 2.0351421846824948e-09,
+        "potential_energy": 2.521767752401439e-07,
+        "total_energy": 2.5421191742482643e-07,
+        "near_cutoff": false
+      }
+    ]
+  },
+  "native_axial_inputs": {
+    "schema": "native_axial_inputs/1",
+    "node_ids": [
+      17,
+      83
+    ],
+    "masses": [
+      1.0,
+      1.0
+    ],
+    "units": {
+      "length": "m",
+      "time": "s",
+      "mass": "kg",
+      "frame": "world_xyz"
+    }
+  }
+}

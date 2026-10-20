@@ -31,6 +31,7 @@ except ImportError:
     HAS_TAICHI = False
 
 from fibernet.core.structure_graph import StructureGraph
+from ._taichi_viscoelastic import material_options as _material_options
 
 
 def _finite_real_array(value, name, shape=None):
@@ -132,7 +133,7 @@ class NativeAxialObserverEvent:
     velocities: np.ndarray = field(repr=False, compare=False)
 
 
-def _emit_axial_observation(observer, step, dt, node_ids, units, positions, velocities):
+def _emit_axial_observation(observer, step, dt, node_ids, units, positions, velocities, *, material_state=None):
     # Own immutable bytes, not aliases to native fields, export buffers or events.
     shape = (len(node_ids), positions.shape[1])
     def snapshot(value, name):
@@ -143,6 +144,9 @@ def _emit_axial_observation(observer, step, dt, node_ids, units, positions, velo
         node_ids=node_ids, units=units,
         positions=snapshot(positions, 'observer positions'),
         velocities=snapshot(velocities, 'observer velocities'))
+    if material_state is not None:
+        from ._taichi_viscoelastic import material_observation
+        event = material_observation(event, material_state)
     # Propagate the original callback exception: no shortened successful result.
     observer(event)
 
@@ -211,6 +215,52 @@ def _checked_kinetic_energy(masses, velocities):
         raise ValueError('nonzero kinetic energy is outside float64 range')
     return energy
 
+
+def _resolve_initial_velocities(node_ids, by_id, dim, fixed_rows, units):
+    """Sparse stable-ID velocities in declared length/time units; no conversion."""
+    from collections.abc import Mapping
+    ids = _strict_state_ids(list(node_ids))
+    if not isinstance(by_id, Mapping):
+        raise ValueError('initial_velocities_by_id must be a stable-ID mapping')
+    keys = _strict_state_ids(list(by_id.keys()), 'initial velocity IDs')
+    if not set(keys) <= set(ids):
+        raise ValueError('initial velocity mapping contains unknown node IDs')
+    if units is None:
+        raise ValueError('initial velocities require explicit state_units')
+    out = np.zeros((len(ids), dim), dtype=np.float64)
+    rows = {node: row for row, node in enumerate(ids)}
+    def reject_bools(value):
+        if isinstance(value, (bool, np.bool_)):
+            raise ValueError('initial velocity must not contain booleans')
+        if isinstance(value, (list, tuple, np.ndarray)):
+            for item in value:
+                reject_bools(item)
+    for node in keys:
+        vector = _finite_real_array(by_id[node], 'initial velocity', (dim,))
+        reject_bools(by_id[node])
+        out[rows[node]] = vector
+    if any(np.any(out[row] != 0) for row in fixed_rows):
+        raise ValueError('fixed nodes cannot have nonzero initial velocity')
+    return out
+
+def _canonical_rest_lengths(positions, elements):
+    """Canonical geometric rest in graph coordinate units, without a provider."""
+    import math
+    return np.array([math.dist(positions[i], positions[j]) for i, j in elements], dtype=np.float64)
+
+def _resolve_rest_lengths(edge_ids, positions, elements, by_id):
+    from collections.abc import Mapping
+    ids = _strict_state_ids(list(edge_ids), 'edge_ids')
+    if not isinstance(by_id, Mapping):
+        raise ValueError('rest_lengths_by_id must be a complete stable-edge-ID mapping')
+    keys = _strict_state_ids(list(by_id), 'rest mapping keys')
+    if set(keys) != set(ids):
+        raise ValueError('rest mapping must cover exactly the graph edge IDs')
+    values = [_finite_real_array(by_id[e], 'rest length', ()) for e in ids]
+    rest = np.array(values, dtype=np.float64)
+    if np.any(rest <= 0) or not np.array_equal(rest, _canonical_rest_lengths(positions, elements)):
+        raise ValueError('rest lengths must exactly equal canonical geometric rest; prestress is unsupported')
+    return rest
 
 def _validate_mass_inputs(value, n_nodes, node_ids):
     if (not isinstance(value, dict) or set(value) != {'schema', 'node_ids', 'masses', 'units'} or
@@ -385,6 +435,9 @@ class SimResult:
         stiffness : float or (number of edges,) array, optional
             Coefficients in F = k * strain and E = 0.5 * k * L0 * strain**2.
         """
+        if 'native_axial_viscoelastic' in self.metadata:
+            from ._taichi_viscoelastic import populate_result
+            return populate_result(self, self.metadata['native_axial_viscoelastic'], graph, stiffness)
         if self.metadata.get('backend') == 'lammps':
             raise ValueError('LAMMPS results use explicit equilibrium lengths; geometric-rest recomputation is unsupported')
 
@@ -431,6 +484,9 @@ class SimResult:
         detailed : bool
             If True, include per-edge arrays (large).
         """
+        if 'native_axial_viscoelastic' in self.metadata:
+            from ._taichi_viscoelastic import validate_result as validate_material_result
+            validate_material_result(self)
         profile = None
         if self.metadata.get('backend') == 'lammps':
             from fibernet.integrations import _harmonic_profile as hp
@@ -452,6 +508,9 @@ class SimResult:
         # replace result fields (or smuggle detailed arrays into a summary).
         d.update({key: value for key, value in self.metadata.items()
                   if key not in self.__dataclass_fields__})
+        if 'native_axial_viscoelastic' in d:
+            import copy
+            d['native_axial_viscoelastic'] = copy.deepcopy(d['native_axial_viscoelastic'])
         if detailed:
             if self.edge_forces is not None:
                 d["edge_forces"] = self.edge_forces.tolist()
@@ -607,6 +666,10 @@ class SimResult:
             from ._energy_accounting import validate_ledger
             r.algorithmic_energy_ledger = validate_ledger(data['algorithmic_energy_ledger'],
                 r.dynamics_state, r.metadata.get('node_ids'), r.metadata.get('native_axial_inputs'), r.n_nodes)
+        if 'native_axial_viscoelastic' in r.metadata:
+            from ._taichi_viscoelastic import validate_result as validate_material_result, populate_result
+            validate_material_result(r)
+            populate_result(r, r.metadata['native_axial_viscoelastic'])
         return r
 
 
@@ -925,6 +988,12 @@ class TaichiEngine:
         cached['accumulate']()
         return forces.to_numpy()
 
+    @staticmethod
+    def dynamic_material_capabilities():
+        from ._taichi_viscoelastic import source_capabilities
+        return source_capabilities()
+
+    @_material_options
     def dynamics(
         self,
         graph: StructureGraph,
@@ -947,6 +1016,11 @@ class TaichiEngine:
         state_units=None,
         record_energy_ledger: bool = False,
         state_observer=None,
+        initial_velocities_by_id=None,
+        rest_lengths_by_id=None,
+        material=None,
+        reference_areas_by_id=None,
+        max_abs_strain=None,
     ) -> SimResult:
         """Run mass-spring dynamics with dashpot damping and air drag.
 
@@ -990,6 +1064,21 @@ class TaichiEngine:
             the call. Ledger and nonempty schedules are initially unsupported.
             None adds no snapshot exports and leaves sampling/results unchanged.
         """
+        material_mode = material is not None
+        if material_mode:
+            if spring_k is not None:
+                raise ValueError('material conflicts with spring_k')
+            if record_energy_ledger:
+                raise ValueError('dynamic material has its own energy record; elastic record_energy_ledger is unsupported')
+            if dashpot != 0:
+                raise ValueError('dynamic material requires explicit dashpot=0; numerical damping is not material viscosity')
+            if displacement_schedule:
+                raise ValueError('dynamic material supports fixed supports, not displacement_schedule')
+            if nodal_masses_by_id is None or nodal_masses is not None or rest_lengths_by_id is None:
+                raise ValueError('dynamic material requires explicit nodal_masses_by_id and rest_lengths_by_id')
+        elif any(value is not None for value in (reference_areas_by_id, max_abs_strain,
+                                                 initial_velocities_by_id, rest_lengths_by_id)):
+            raise ValueError('material-specific areas, strain bound, initial velocities and rest lengths require material')
         if state_observer is not None:
             if not callable(state_observer):
                 raise TypeError('state_observer must be callable or None')
@@ -1054,16 +1143,29 @@ class TaichiEngine:
             displacement_schedule, num_nodes, dim
         )
 
+        initial_velocity = None
+        if initial_velocities_by_id is not None:
+            initial_velocity = _resolve_initial_velocities(
+                node_ids, initial_velocities_by_id, dim, fixed_nodes, units)
         lengths, _ = _element_data(pos_orig, elements)
-        rest_lengths_np = lengths.copy()
+        rest_lengths_np = (_resolve_rest_lengths(list(graph.edges), pos_orig, elements, rest_lengths_by_id)
+                           if material_mode else lengths.copy())
 
         stiff_np = _normalize_spring_stiffness(
             spring_k if spring_k is not None else stiffness, num_edges
         )
 
+        material_history = None
+        if material_mode:
+            from ._taichi_viscoelastic import DynamicAxialMaterial
+            material_history = DynamicAxialMaterial(graph, node_ids, elements,
+                rest_lengths_np, reference_areas_by_id, material, max_abs_strain,
+                units, masses, dt, num_steps, save_interval, pos_orig,
+                np.zeros_like(pos_orig) if initial_velocity is None else initial_velocity)
+            stiff_np = np.zeros(num_edges, dtype=np.float64)
         _ensure_taichi(self.arch, self.num_threads)
         # Taichi fields and kernel (cached to avoid SNode exhaustion and kernel recompilation)
-        cache_key = ('energy-ledger-1' if record_energy_ledger else 'mass-state-1', dim, num_nodes, num_edges)
+        cache_key = ('material-state-1' if material_mode else 'energy-ledger-1' if record_energy_ledger else 'mass-state-1', dim, num_nodes, num_edges)
         if (cache_key not in TaichiEngine._field_cache or
                 not {'ti_mass', 'ti_mass_mode', 'ti_vel_old'}.issubset(TaichiEngine._field_cache[cache_key])):
             # Allocate fields once; reject reuse of a pre-mass/state layout.
@@ -1085,6 +1187,13 @@ class TaichiEngine:
             ti_drag = ti.field(dtype=ti.f64, shape=())
             ti_ramp = ti.field(dtype=ti.f64, shape=())
 
+            # Bind inactive closure cells before Taichi inspects ti.static branches.
+            ti_material_force = material_v_kick = material_v_drag = material_x_drift = None
+            if material_mode:
+                ti_material_force = ti.field(dtype=ti.f64, shape=num_edges)
+                material_v_kick = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+                material_v_drag = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
+                material_x_drift = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
             if record_energy_ledger:
                 ledger_v_edge = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
                 ledger_v_external = ti.Vector.field(dim, dtype=ti.f64, shape=num_nodes)
@@ -1114,7 +1223,10 @@ class TaichiEngine:
                     f_spring = ti.Vector.zero(ti.f64, dim)
                     if dist > 1e-12:
                         strain_val = (dist - ti_L0[e]) / ti_L0[e]
-                        f_spring = -ti_k[e] * strain_val * (d / dist)
+                        if ti.static(material_mode):
+                            f_spring = -ti_material_force[e] * (d / dist)
+                        else:
+                            f_spring = -ti_k[e] * strain_val * (d / dist)
                     # Preserve the softened dashpot law; evaluate all members
                     # against the same pre-kick velocity state.
                     dir_ = d / (dist + 1e-6)
@@ -1135,9 +1247,15 @@ class TaichiEngine:
                             ti_vel[i][k] += ti_ext[i][k] * _dt / ti_mass[i]
                         else:
                             ti_vel[i][k] += ti_ext[i][k] * _dt
+                    if ti.static(material_mode):
+                        material_v_kick[i] = ti_vel[i]
                     ti_vel[i] *= ti.exp(-_drag * _dt)
+                    if ti.static(material_mode):
+                        material_v_drag[i] = ti_vel[i]
                     for k in ti.static(range(dim)):
                         ti_pos[i][k] += ti_vel[i][k] * _dt
+                    if ti.static(material_mode):
+                        material_x_drift[i] = ti_pos[i]
 
                 for i in range(num_nodes):
                     if ti_fixed[i] == 1:
@@ -1232,6 +1350,10 @@ class TaichiEngine:
                 'ti_dashpot': ti_dashpot, 'ti_drag': ti_drag, 'ti_ramp': ti_ramp,
                 'substep': _cached_substep,
             }
+            if material_mode:
+                TaichiEngine._field_cache[cache_key].update(
+                    ti_material_force=ti_material_force, material_v_kick=material_v_kick,
+                    material_v_drag=material_v_drag, material_x_drift=material_x_drift)
             if record_energy_ledger:
                 TaichiEngine._field_cache[cache_key].update(
                     ledger_v_edge=ledger_v_edge, ledger_v_external=ledger_v_external,
@@ -1262,10 +1384,12 @@ class TaichiEngine:
         # Reset field data (always, even on cache hit)
         ti_pos0.from_numpy(pos_orig.astype(np.float64))
         ti_pos.from_numpy(pos_orig.astype(np.float64))
-        ti_vel.from_numpy(np.zeros_like(pos_orig))
+        ti_vel.from_numpy(np.zeros_like(pos_orig) if initial_velocity is None else initial_velocity)
         ti_edges.from_numpy(elements.astype(np.int32))
         ti_L0.from_numpy(rest_lengths_np.astype(np.float64))
         ti_k.from_numpy(stiff_np.astype(np.float64))
+        if material_mode:
+            cached['ti_material_force'].from_numpy(material_history.area * material_history.stress)
 
         fixed_arr = np.zeros(num_nodes, dtype=np.int32)
         for ni in (fixed_nodes or []):
@@ -1321,7 +1445,8 @@ class TaichiEngine:
             velocity = ti_vel.to_numpy()
             lengths_now = np.linalg.norm(positions[elements[:, 1]] - positions[elements[:, 0]], axis=1)
             kinetic = _checked_kinetic_energy(masses, velocity)
-            potential = float(.5 * np.sum(stiff_np * (lengths_now / rest_lengths_np - 1)**2 * rest_lengths_np))
+            potential = (float(np.sum(material_history.stored)) if material_mode else
+                float(.5 * np.sum(stiff_np * (lengths_now / rest_lengths_np - 1)**2 * rest_lengths_np)))
             if potential == 0 and np.any((stiff_np > 0) & (lengths_now / rest_lengths_np - 1 != 0)):
                 raise ValueError('nonzero sampled potential is outside float64 range')
             state_samples.append(dict(step=int(step), time=float(step * dt),
@@ -1333,7 +1458,8 @@ class TaichiEngine:
         max_stretch_history = []
         if state_observer is not None:
             _emit_axial_observation(state_observer, 0, dt, observer_node_ids,
-                                    observer_units, ti_pos.to_numpy(), ti_vel.to_numpy())
+                                    observer_units, ti_pos.to_numpy(), ti_vel.to_numpy(),
+                                    material_state=material_history.snapshot() if material_mode else None)
 
         for step in range(num_steps):
             if schedules:
@@ -1343,9 +1469,16 @@ class TaichiEngine:
                     )
                 ti_sched.from_numpy(schedule_targets)
             substep()
+            if material_mode:
+                candidate = material_history.prepare(ti_pos.to_numpy(), ti_vel.to_numpy(),
+                    cached['material_v_kick'].to_numpy(), cached['material_v_drag'].to_numpy(),
+                    cached['material_x_drift'].to_numpy(), ext_f)
+                cached['ti_material_force'].from_numpy(candidate['force'])
+                material_history.commit(candidate)
             if state_observer is not None:
                 _emit_axial_observation(state_observer, step + 1, dt, observer_node_ids,
-                                        observer_units, ti_pos.to_numpy(), ti_vel.to_numpy())
+                                        observer_units, ti_pos.to_numpy(), ti_vel.to_numpy(),
+                                    material_state=material_history.snapshot() if material_mode else None)
             if record_energy_ledger:
                 # Read only actual completed stages. No force or velocity is reconstructed.
                 v_edge = cached['ledger_v_edge'].to_numpy()
@@ -1380,6 +1513,8 @@ class TaichiEngine:
             if (step + 1) % save_interval == 0 or (record_state and step + 1 == num_steps):
                 cur_pos = ti_pos.to_numpy()
                 trajectory.append(cur_pos.copy())
+                if material_mode:
+                    material_history.sample()
                 if record_state:
                     sample_state(step + 1, cur_pos)
                 # Vectorized edge length computation
@@ -1404,12 +1539,20 @@ class TaichiEngine:
                       "stiffness": float(stiffness), "damping": float(damping),
                       "dt": float(dt), "num_steps": int(num_steps)},
         )
-        result.compute_detailed(graph, stiffness=stiff_np)
+        if material_mode:
+            result.metadata.pop('stiffness', None)
+            result.metadata['native_axial_viscoelastic'] = material_history.result(
+                graph, fixed_nodes, ext_f, drag)
+            result.compute_detailed(graph)
+        else:
+            result.compute_detailed(graph, stiffness=stiff_np)
         if explicit_mass or units is not None:
             result.metadata['native_axial_inputs'] = {
                 'schema': 'native_axial_inputs/1', 'node_ids': list(node_ids),
                 'masses': masses.tolist(), 'units': units}
-        if record_state:
+        if material_mode and record_state:
+            result.metadata['native_axial_viscoelastic']['sampled_native_state'] = state_samples
+        if record_state and not material_mode:
             state = dict(schema='native_axial_state/1', representation='sampled',
                 availability='available', units=units, dt=float(dt),
                 node_ids=list(node_ids), masses=masses.tolist(),
