@@ -11,3 +11,7 @@ They also exercise event/state behavior, explicit LAMMPS routing guards,
 observer orchestration and locale-independent source loading. A source change
 requires reviewing its behavior and updating its applicable baseline together.
 No native physics run is implied by a source-contract pass.
+
+The root package facade baseline also includes the additive closed-route graph
+mapping and multi-stroke manufacturing exports. Its complete readable source is
+reviewed with those exports; the other five module baselines remain unchanged.

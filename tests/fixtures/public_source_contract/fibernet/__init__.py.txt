@@ -64,6 +64,11 @@ from fibernet.gen.solid_export import (PrintSettings, FiberSolid, build_solid,
                                        build_voxel_solid, export_solid,
                                        export_route)
 
+from fibernet.gen.manufacturing_bridge import manufacturing_from_graph, export_mapped_route
+from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
+                                              manufacturing_trails_from_graph,
+                                              export_mapped_trails)
+
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim.linear_transport import solve_linear_transport
@@ -140,6 +145,8 @@ __all__ = [
     "list_units_3d", "register_unit_3d",
     "PlanarManufacturingConfig", "ManufacturingNetwork",
     "compile_planar", "compile_surface", "manufacturable_graph",
+    "manufacturing_from_graph", "export_mapped_route",
+    "ManufacturingTrails", "manufacturing_trails_from_graph", "export_mapped_trails",
     "PrintSettings", "FiberSolid", "build_solid", "build_voxel_solid",
     "export_solid", "export_route",
     # Simulation

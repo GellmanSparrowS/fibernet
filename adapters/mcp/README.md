@@ -4,7 +4,7 @@ A separate optional Linux stdio adapter exposing five bounded native graph and a
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 218 native Python source hashes must match core_manifest.json. The validated native core snapshot is 282c46be5df3e0f0508a4f4ee6c4dfd90e2c24e1. This fixed label identifies the native-only repository projection at validation time, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 218 validated runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the validated producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 220 native Python source hashes must match core_manifest.json. The validated native core snapshot is a8b6d7a82a57e81f58e03fffd76bf1f0a3b4bd33. This fixed label identifies the native-only repository projection at validation time, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 220 validated runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the validated producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -22,7 +22,7 @@ The first install is the native core from this checkout, not a PyPI version assu
 Create an operator-owned JSON file such as manifest.json. Paths must be absolute regular-file paths without symlink components. Replace the placeholder path and SHA with your chosen graph's actual bytes; for the included fixture, use the SHA below.
 
 ```json
-{"source_tree":"282c46be5df3e0f0508a4f4ee6c4dfd90e2c24e1","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
+{"source_tree":"a8b6d7a82a57e81f58e03fffd76bf1f0a3b4bd33","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
 ```
 
 ```sh
@@ -75,8 +75,13 @@ The complete `bounded_suite.py` runner rejects runs exceeding120CPU seconds (ter
 
 ## Separate adapter CI and wheel checks
 
-The Linux Python 3.12 adapter workflow builds and installs separate core and adapter wheels, verifies the embedded 218-file binding and exact MIT notice, and exercises actual installed SDK initialize/catalog and worker topology/chunk/native-parity calls. It also runs the bounded source acceptance, binding-refusal, adversarial, transport and cleanup scripts. The main cross-platform core test workflow does not collect these standalone adapter scripts. The fixed SDK/protocol and Linux-only support limits still apply; this is not evidence for a graphical MCP client or another operating system.
+The Linux Python 3.12 adapter workflow builds and installs separate core and adapter wheels, verifies the embedded 220-file binding and exact MIT notice, and exercises actual installed SDK initialize/catalog and worker topology/chunk/native-parity calls. It also runs the bounded source acceptance, binding-refusal, adversarial, transport and cleanup scripts. The main cross-platform core test workflow does not collect these standalone adapter scripts. The fixed SDK/protocol and Linux-only support limits still apply; this is not evidence for a graphical MCP client or another operating system.
 
 The standalone adapter wheel includes the repository MIT copyright and permission notice. To check an already built and installed pair, run `python adapters/mcp/tests/distribution.py --wheels /absolute/path/to/wheels` from the matching source checkout. An explicit `--installed-root /absolute/path/to/pip-target` can check a separate `pip --target` installation. The check refuses to treat the source checkout as the installed distribution.
 
 The paired core includes explicit high-level LAMMPS dynamics dispatch and its backend-tagged SimResult state schema. Geometry-facing result arrays retain declared graph units while native state is SI; stable IDs and explicit equilibrium lengths remain authoritative. The MCP tool surface remains the existing five graph/topology/artifact tools. SDK startup and saved-network parity checks do not execute the high-level physics dispatch or establish a native LAMMPS trajectory result.
+
+The paired core adds connected physical-edge-once manufacturing trails and stable-ID
+route mappings. The existing five MCP graph/topology/artifact tools are unchanged;
+no manufacturing or machine-control tool is exposed. Compatibility checks cover
+the updated core hashes, SDK startup and topology artifact parity.
