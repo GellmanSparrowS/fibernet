@@ -93,6 +93,9 @@ def simulate(
         "fem", or explicit "lammps" dynamics. LAMMPS requires preparation
         options plus runtime, workdir and limits; record_state is opt-in.
         Its geometry-facing arrays retain graph units; native state is SI.
+        LAMMPS accepts cg_request=CGRequest(...) for 3-D harmonic-bond/cosine-angle
+        networks; projectile_node_id=None and projectile_pairs={} select pure fibers.
+        Runtime, workdir and limits remain explicit. See docs/integrations/LAMMPS_CG_FIBER_ONLY.md.
         FEM mode="history" accepts material, times, constraints, loads,
         length_unit and optional initial_state, returning ViscoelasticResult.
         Its SI 2-D small-strain history includes axial and bending response;

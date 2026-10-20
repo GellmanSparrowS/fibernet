@@ -226,11 +226,11 @@ def require_public_source(relative, raw):
         ast.parse(expected.decode('utf-8'))), 'public source structure changed: '+relative
 
 LAMMPS_PREFIXES={
-    '_validate_result_state': """if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") == "lammps_harmonic_state/1":
+    '_validate_result_state': """if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") in ("lammps_harmonic_state/1", "lammps_cg_state/1"):
     from ._lammps_result import validate_result
     return validate_result(result)
 """,
-    '_dynamics_state_summary': """if isinstance(value, dict) and value.get("schema") == "lammps_harmonic_state/1":
+    '_dynamics_state_summary': """if isinstance(value, dict) and value.get("schema") in ("lammps_harmonic_state/1", "lammps_cg_state/1"):
     from ._lammps_result import state_summary
     return state_summary(value)
 """,
@@ -262,6 +262,14 @@ def restore_historical_save(result_node):
     old_result=next(n for n in ast.parse(baseline).body if getattr(n,'name',None)=='SimResult')
     old_save=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
     node.body[node.body.index(save)]=old_save
+    # Only the reviewed LAMMPS guards alter these public result methods.
+    # Match their full public baselines before comparing the historical engine.
+    for name in ('to_dict', 'load'):
+        method=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        expected_method=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        assert canonical_ast(method)==canonical_ast(expected_method), 'public result method changed: '+name
+        old_method=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        node.body[node.body.index(method)]=old_method
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
     node.body[node.body.index(detailed)]=remove_public_lammps_branch(detailed,'SimResult.compute_detailed')
     return node

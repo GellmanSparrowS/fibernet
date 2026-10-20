@@ -160,3 +160,11 @@ establish additional guarantees beyond the underlying task lifecycle.
 Source capabilities in the adapter describe supported profiles and restrictions,
 not installed-provider readiness or physical equivalence to another backend.
 Source/mocked dispatch checks do not constitute native physics qualification.
+
+## Pure-fiber 3-D coarse-grained networks
+
+For explicitly selected cosine-angle bending without a projectile, use
+`CGRequest` and `prepare_cg`, or `simulate(..., backend="lammps",
+mode="dynamics", cg_request=request, ...)`. See the complete
+[pure-fiber example and scope](LAMMPS_CG_FIBER_ONLY.md).
+This is a bead model, not continuum beam/torsion or contact mechanics.

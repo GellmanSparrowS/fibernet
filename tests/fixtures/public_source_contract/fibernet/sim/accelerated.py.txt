@@ -295,7 +295,7 @@ def _validate_dynamics_state(value, n_nodes=None, node_ids=None):
 
 
 def _validate_result_state(result):
-    if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") == "lammps_harmonic_state/1":
+    if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") in ("lammps_harmonic_state/1", "lammps_cg_state/1"):
         from ._lammps_result import validate_result
         return validate_result(result)
     record = _validate_dynamics_state(result.dynamics_state, result.n_nodes,
@@ -325,7 +325,7 @@ def _validate_result_state(result):
 
 
 def _dynamics_state_summary(value):
-    if isinstance(value, dict) and value.get("schema") == "lammps_harmonic_state/1":
+    if isinstance(value, dict) and value.get("schema") in ("lammps_harmonic_state/1", "lammps_cg_state/1"):
         from ._lammps_result import state_summary
         return state_summary(value)
     record = _validate_dynamics_state(value)
@@ -431,6 +431,11 @@ class SimResult:
         detailed : bool
             If True, include per-edge arrays (large).
         """
+        profile = None
+        if self.metadata.get('backend') == 'lammps':
+            from fibernet.integrations import _harmonic_profile as hp
+            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
+                                      self.dynamics_state, vars(self))
         d = {
             "mode": self.mode,
             "energy": self.energy,
@@ -471,6 +476,8 @@ class SimResult:
             ledger = validate_ledger(self.algorithmic_energy_ledger, record,
                 self.metadata.get('node_ids'), self.metadata.get('native_axial_inputs'), self.n_nodes)
             d['algorithmic_energy_ledger'] = ledger if detailed else ledger_summary(ledger)
+        if profile:
+            hp.json_bytes(d, profile['export_bytes'], indent=2)
         return d
 
     def save(self, path: str, detailed: bool = False):
@@ -529,13 +536,35 @@ class SimResult:
                         pass
 
     @staticmethod
-    def load(path: str) -> "SimResult":
-        with open(path) as f:
-            data = json.load(f)
+    def load(path: str, *, profile=None) -> "SimResult":
+        from fibernet.integrations import _harmonic_profile as hp
+        from fibernet.integrations import _cg_network_profile as network
+        requested = network.select(profile) if profile in network.NAMES else hp.select(profile)
+        with open(path, 'rb' if requested else 'r') as f:
+            if requested and os.fstat(f.fileno()).st_size > requested['export_bytes']:
+                raise ValueError('harmonic profile file exceeds predecode byte bound')
+            if requested:
+                payload = f.read(requested['export_bytes']+1)
+                if len(payload)>requested['export_bytes']:
+                    raise ValueError('harmonic profile file exceeds predecode byte bound')
+                data = json.loads(payload)
+                del payload
+            else:
+                data = json.load(f)
             if 'algorithmic_energy_ledger' in data:
+                if requested:
+                    raise ValueError('harmonic profile does not support algorithmic_energy_ledger')
                 from ._energy_accounting import parse_binary64
+                del data  # Release the first parse before allocating the ledger-aware tree.
                 f.seek(0)
                 data = json.load(f, parse_float=parse_binary64)
+        if data.get('backend') == 'lammps':
+            selected = hp.result_guard(data,data.get('n_nodes'),data.get('n_edges'),data.get('dynamics_state'),data)
+            if selected != requested:
+                raise ValueError('profile-bearing result requires explicit matching load profile')
+            if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)
+        elif requested:
+            raise ValueError('explicit harmonic profile requires a LAMMPS result')
         # Older FEM summary files stored [axial, shear, moment] resultants
         # under the canonical one-dimensional edge_forces name. Recover the
         # axial forces while retaining the original resultants separately.

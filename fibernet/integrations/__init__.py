@@ -89,3 +89,7 @@ __all__.extend([
     'LAMMPSTask', 'TaskState', 'LAMMPSRunResult', 'LAMMPSContractError',
     'prepare_harmonic_beads', 'parse_outputs',
 ])
+
+# Deterministic conservative coarse-bead input records; no native imports.
+from ._lammps_cg import CGRequest, CGAngle, MorsePair, prepare_cg
+__all__.extend(['CGRequest', 'CGAngle', 'MorsePair', 'prepare_cg'])

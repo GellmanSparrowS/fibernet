@@ -25,6 +25,7 @@ from typing import Mapping, Optional, Tuple
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.units import LENGTH_FACTORS
+from . import _harmonic_profile as _profiles
 
 
 class LAMMPSContractError(ValueError):
@@ -80,9 +81,9 @@ class RunSpec:
     sample_every: int
     box_m: Tuple[Tuple[float, float], Tuple[float, float], Tuple[float, float]]
 
-    def checked(self):
+    def checked(self, *, max_steps=100000):
         dt = _number(self.timestep_s, 'timestep_s', True)
-        steps = _integer(self.steps, 'steps', 0, 100000)
+        steps = _integer(self.steps, 'steps', 0, max_steps)
         every = _integer(self.sample_every, 'sample_every', 1, max(1, steps))
         if steps % every:
             raise LAMMPSContractError('steps must be divisible by sample_every')
@@ -108,6 +109,7 @@ class PreparedRun:
     timestep_s: float
     steps: int
     sample_every: int
+    profile: Optional[str] = None
 
     @property
     def identity(self):
@@ -118,21 +120,23 @@ class PreparedRun:
         return 'FIBERNET_LAMMPS_COMPLETE_' + _digest(_json([self.graph_json,self.contract_json,self.data_text]))
 
     def manifest(self):
-        return dict(schema='fibernet.lammps.explicit-beads-exact-mass-types.v3', identity=self.identity,
+        return dict(schema=('fibernet.lammps.conservative-cg/1' if json.loads(self.contract_json).get('model') == 'conservative-ball-cosine-strand-cg/1' else 'fibernet.lammps.explicit-beads-exact-mass-types.v3'), identity=self.identity,
                     graph_sha256=_digest(self.graph_json),
                     files={'model.data': _digest(self.data_text), 'in.model': _digest(self.input_text)},
                     atom_to_node_id={str(i+1): n for i, n in enumerate(self.node_ids)},
                     bond_to_edge_id={str(i+1): n for i, n in enumerate(self.edge_ids)},
                     atom_to_type_id={str(a):t for a,t in json.loads(self.contract_json)['atom_to_type_id']},
                     type_to_mass_kg={str(t):m for t,m in json.loads(self.contract_json)['type_to_mass_kg']},
-                    contract=json.loads(self.contract_json))
+                    contract=json.loads(self.contract_json),
+                    **({'angle_to_stable_id':{str(i):a for i,(a,_) in enumerate(json.loads(self.contract_json)['angles'],1)}}
+                       if json.loads(self.contract_json).get('model') == 'conservative-ball-cosine-strand-cg/1' else {}))
 
 
 def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
                            maximum_bond_length_m: float,
                            masses_kg: Mapping[int, float],
                            bonds: Mapping[int, HarmonicBond], run: RunSpec,
-                           fixed_node_ids=(), forces_N=None, velocities_m_s=None) -> PreparedRun:
+                           fixed_node_ids=(), forces_N=None, velocities_m_s=None, profile=None, output_stride=None) -> PreparedRun:
     """Compile explicit synthetic/CG beads, not atomistic chemistry or beam FEM.
 
     Caller supplies every bead mass and every edge's equilibrium length and
@@ -145,6 +149,10 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
     every integration step must be retained and remain in this declared domain.
     This source revision is not distributed/MPI or arbitrary-strain qualification.
     """
+    try:
+        selected_profile = _profiles.select(profile)
+    except ValueError as exc:
+        raise LAMMPSContractError(str(exc)) from exc
     if not isinstance(graph, StructureGraph):
         raise LAMMPSContractError('expected the authoritative StructureGraph')
     if graph.dimension != 3:
@@ -153,14 +161,43 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
         raise LAMMPSContractError('explicit supported geometry length_unit required')
     scale = LENGTH_FACTORS[length_unit]
     dt, steps, every, box = run.checked()
+    try:
+        output_frames = _profiles.schedule(selected_profile,steps,every,output_stride)
+        if _profiles.sampled(selected_profile):
+            _number(dt*steps,'sampled physical duration',True)
+    except ValueError as exc:
+        raise LAMMPSContractError(str(exc)) from exc
     reach = _number(maximum_bond_length_m, 'maximum_bond_length_m', True)
     if reach > math.hypot(*(hi-lo for lo,hi in box)):
         raise LAMMPSContractError('declared maximum bond length exceeds box diagonal')
     if every != 1:
         raise LAMMPSContractError('pair-none qualification requires every integration step retained')
+    if selected_profile:
+        try:
+            _profiles.counts(len(graph.nodes), len(graph.edges), selected_profile)
+            if len(forces_N or {})>20:
+                raise ValueError('harmonic profile loaded-node bound exceeded')
+            from itertools import islice
+            fixed_node_ids = tuple(islice(iter(fixed_node_ids),1025))
+            if len(fixed_node_ids)>len(graph.nodes):
+                raise ValueError('harmonic profile fixed-node bound exceeded')
+            for mapping in (masses_kg,bonds,forces_N or {},velocities_m_s or {}):
+                if len(mapping)>max(len(graph.nodes),len(graph.edges)):
+                    raise ValueError('profile mapping size exceeds graph bound')
+            # Material tensors must be bounded before their tolist conversion.
+            for edge in graph.edges.values():
+                tensor = getattr(edge.material,'stiffness_tensor',None)
+                if tensor is not None and getattr(tensor,'size',37)>36:
+                    raise ValueError('profile material tensor exceeds bound')
+            _profiles.json_bytes([e.material.to_dict() for e in graph.edges.values()], selected_profile['prepared_bytes'])
+            # Provenance can contain user-sized strings; bound before graph serialization.
+            _profiles.json_bytes([graph.metadata] + [n.metadata for n in graph.nodes.values()] +
+                [e.metadata for e in graph.edges.values()], selected_profile['prepared_bytes'])
+        except ValueError as exc:
+            raise LAMMPSContractError(str(exc)) from exc
     node_ids = tuple(sorted(graph.nodes))
     edge_ids = tuple(sorted(graph.edges))
-    if not 2 <= len(node_ids) <= 256 or not 1 <= len(edge_ids) <= 1024:
+    if not selected_profile and (not 2 <= len(node_ids) <= 256 or not 1 <= len(edge_ids) <= 1024):
         raise LAMMPSContractError('bounded pilot requires 2..256 beads and 1..1024 bonds')
     for key in (*node_ids, *edge_ids):
         _integer(key, 'graph stable ID')
@@ -193,15 +230,18 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
     # Group normalized binary64 values exactly; metadata/loads never become keys.
     # Future per-type properties require a new full key schema before admission.
     mass_keys = sorted({m.hex() for m in masses.values()}, key=float.fromhex)
+    if selected_profile and len(mass_keys) > 2:
+        raise LAMMPSContractError('harmonic_large_v1 permits at most two exact mass types')
     type_by_mass = {key:i+1 for i,key in enumerate(mass_keys)}
     atom_type = {n:type_by_mass[masses[n].hex()] for n in node_ids}
     type_mass = {i+1:float.fromhex(key) for i,key in enumerate(mass_keys)}
     type_table_lower_bound = 16*(len(type_mass)+1)**2
     seen, coefficients = set(), {}
+    node_id_set = set(node_ids)
     for eid in edge_ids:
         edge = graph.edges[eid]
         pair = tuple(sorted((edge.node_i, edge.node_j)))
-        if edge.edge_id != eid or not set(pair) <= set(node_ids) or pair[0] == pair[1]:
+        if edge.edge_id != eid or not set(pair) <= node_id_set or pair[0] == pair[1]:
             raise LAMMPSContractError('invalid edge identity/endpoints')
         if pair in seen:
             raise LAMMPSContractError('parallel edges need an explicit model contract; never aggregated')
@@ -236,6 +276,10 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
                     energy='total unnormalized J; load work not included in etotal',
                     stress='global pressure tensor Pa, compression-positive; not fiber/Cauchy stress',
                     restart='not supported; cancellation cannot resume')
+    if selected_profile:
+        contract['profile'] = selected_profile
+        if _profiles.sampled(selected_profile):
+            contract.update(output_stride=output_stride,native_frames=steps+1,output_frames=output_frames)
     lines = ['FiberNet explicit bead model (SI)', '', f'{len(node_ids)} atoms',
              f'{len(edge_ids)} bonds', '', f'{len(type_mass)} atom types', f'{len(edge_ids)} bond types', '']
     lines += [f'{lo:.17g} {hi:.17g} {axis}lo {axis}hi' for (lo,hi),axis in zip(box,'xyz')]
@@ -271,8 +315,13 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
     data_text = '\n'.join(lines)+'\n'
     marker = 'FIBERNET_LAMMPS_COMPLETE_' + _digest(_json([graph_json,_json(contract),data_text]))
     script += [f'print "{marker}"']
+    if selected_profile:
+        try:
+            _profiles.string_bytes((graph_json, _json(contract), data_text, '\n'.join(script)+'\n'), selected_profile['prepared_bytes'])
+        except ValueError as exc:
+            raise LAMMPSContractError(str(exc)) from exc
     return PreparedRun(graph_json, _json(contract), '\n'.join(lines)+'\n',
-                       '\n'.join(script)+'\n', node_ids, edge_ids, dt, steps, every)
+                       '\n'.join(script)+'\n', node_ids, edge_ids, dt, steps, every, profile)
 
 
 def validate_prepared(prepared: PreparedRun):
@@ -280,15 +329,33 @@ def validate_prepared(prepared: PreparedRun):
     if not isinstance(prepared, PreparedRun):
         raise LAMMPSContractError('expected PreparedRun')
     try:
+        # Bound decoding before inspecting a model discriminator (including escaped JSON).
+        _profiles.string_bytes((prepared.contract_json,), max(8*1024*1024, _profiles.PROFILE['prepared_bytes'], _profiles.SAMPLED_PROFILE['prepared_bytes']))
+        from . import _cg_network_profile as network
+        requested = network.select(prepared.profile) if prepared.profile in network.NAMES else _profiles.select(prepared.profile)
+        if requested:
+            _profiles.string_bytes((prepared.graph_json, prepared.contract_json, prepared.data_text,
+                                    prepared.input_text), requested['prepared_bytes'])
         c = json.loads(prepared.contract_json)
-        graph = StructureGraph.from_dict(json.loads(prepared.graph_json))
+        if c.get('model') == 'conservative-ball-cosine-strand-cg/1':
+            _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),requested['prepared_bytes'] if requested else 1024*1024)
+            from ._lammps_cg import regenerate
+            if regenerate(prepared, c) != prepared:
+                raise LAMMPSContractError('CG files differ from deterministic compiler')
+            return prepared
+        selected = _profiles.check_contract(c, len(prepared.node_ids), len(prepared.edge_ids))
+        if bool(requested) != bool(selected):
+            raise ValueError('prepared profile field/contract mismatch')
+        graph_record = json.loads(prepared.graph_json)
+        _profiles.counts(len(graph_record['nodes']), len(graph_record['edges']), selected)
+        graph = StructureGraph.from_dict(graph_record)
         regenerated = prepare_harmonic_beads(graph, length_unit=c['length_unit'],
             maximum_bond_length_m=c['maximum_bond_length_m'],
             masses_kg=dict(c['masses_kg']),
             bonds={k:HarmonicBond(*v) for k,v in c['bonds']},
             run=RunSpec(c['timestep_s'],c['steps'],c['sample_every'],tuple(tuple(r) for r in c['box_m'])),
             fixed_node_ids=c['fixed_node_ids'], forces_N=dict(c['forces_N']),
-            velocities_m_s=dict(c['velocities_m_s']))
+            velocities_m_s=dict(c['velocities_m_s']), profile=selected['name'] if selected else None, output_stride=c.get('output_stride'))
     except Exception as exc:
         raise LAMMPSContractError('prepared contract cannot be regenerated') from exc
     if regenerated != prepared:
@@ -327,7 +394,14 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                   *, max_output_bytes=8*1024*1024) -> LAMMPSRunResult:
     """Strict parser for this compiler's exact dump/thermo protocol only."""
     validate_prepared(prepared)
-    if len(trajectory_text.encode()) + len(log_text.encode()) > max_output_bytes:
+    selected = _profiles.contract_profile(json.loads(prepared.contract_json))
+    if selected:
+        _integer(max_output_bytes, 'max_output_bytes', 1, selected['raw_bytes'])
+        try:
+            _profiles.string_bytes((trajectory_text, log_text), max_output_bytes)
+        except ValueError as exc:
+            raise LAMMPSContractError(str(exc)) from exc
+    if not selected and len(trajectory_text.encode()) + len(log_text.encode()) > max_output_bytes:
         raise LAMMPSContractError('output byte budget exceeded')
     if log_text.splitlines().count(prepared.completion_marker) != 1:
         raise LAMMPSContractError('native completion marker missing')
@@ -389,6 +463,17 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 r = math.dist(frame.positions_m[by_id[edge['node_i']]], frame.positions_m[by_id[edge['node_j']]])
                 if not 0 < r <= contract['maximum_bond_length_m']:
                     raise LAMMPSContractError('trajectory bond left declared maximum-reach domain')
+        if contract.get('model') == 'conservative-ball-cosine-strand-cg/1':
+            for frame in frames:
+                for nid,_ in contract['projectile_pairs']:
+                    if math.dist(frame.positions_m[by_id[nid]], frame.positions_m[by_id[contract['projectile_node_id']]]) == 0:
+                        raise LAMMPSContractError('coincident selected CG pair in trajectory')
+        if _profiles.sampled(selected) or contract.get('model') == 'conservative-ball-cosine-strand-cg/1':
+            for frame in frames:
+                for nid in contract['fixed_node_ids']:
+                    i=by_id[nid]
+                    if frame.positions_m[i] != frames[0].positions_m[i] or any(frame.velocities_m_s[i]):
+                        raise LAMMPSContractError('fixed native state changed')
         initial_velocity = dict(contract['velocities_m_s'])
         for i,node in enumerate(source['nodes']):
             initial = tuple(x*contract['length_to_m'] for x in node['position'])
@@ -416,7 +501,8 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 if values[3] < 0 or not math.isclose(values[4],values[2]+values[3],rel_tol=1e-12,abs_tol=0.0):
                     raise LAMMPSContractError('inconsistent native energy values')
                 thermo.append(ThermoFrame(int(values[0]), *values[2:5], values[5:]))
-        if reading or [r.step for r in thermo] != expected:
+        thermo_expected = list(range(0,prepared.steps+1,contract['thermo_every'])) if contract.get('profile',{}).get('name') in ('cg_network_sampled_v1','cg_network_mixed_sampled_v1') else expected
+        if reading or [r.step for r in thermo] != thermo_expected:
             raise LAMMPSContractError('missing/inconsistent thermo steps')
     except (ValueError, OverflowError) as exc:
         if isinstance(exc, LAMMPSContractError): raise
@@ -442,13 +528,16 @@ class ResourceLimits:
     output_bytes: int = 8*1024*1024
     file_size_bytes: int = 8*1024*1024  # native regular files; distinct from saved artifacts
 
-    def checked(self):
+    def checked(self, *, profile=None):
+        from . import _cg_network_profile as network
+        selected = network.select(profile) if profile in network.NAMES else _profiles.select(profile)
+        cap = selected['raw_bytes'] if selected and (_profiles.sampled(selected) or profile in network.NAMES) else 16*1024*1024
         _integer(self.cpu_seconds, 'cpu_seconds', 1, 60)
         _number(self.wall_seconds, 'wall_seconds', True)
         if self.wall_seconds > 120: raise LAMMPSContractError('wall_seconds exceeds bounded pilot cap')
         _integer(self.memory_bytes, 'memory_bytes', 64*1024*1024, 2*1024*1024*1024)
-        _integer(self.output_bytes, 'output_bytes', 1024, 16*1024*1024)
-        _integer(self.file_size_bytes, 'file_size_bytes', 1024, 16*1024*1024)
+        _integer(self.output_bytes, 'output_bytes', 1024, cap)
+        _integer(self.file_size_bytes, 'file_size_bytes', 1024, cap)
         return self
 
 
@@ -606,8 +695,38 @@ class LAMMPSTask:
     """
     def __init__(self, prepared: PreparedRun, runtime: RuntimeSpec,
                  workdir, limits=ResourceLimits()):
-        self.prepared, self.limits = validate_prepared(prepared), limits.checked()
-        lower_bound = json.loads(self.prepared.contract_json)['type_pair_cutoff_payload_lower_bound_bytes']
+        self.prepared = validate_prepared(prepared)
+        from . import _cg_network_profile as network
+        self.limits = limits.checked(profile=prepared.profile) if prepared.profile in (_profiles.SAMPLED_NAME,*network.NAMES) else limits.checked()
+        contract = json.loads(self.prepared.contract_json)
+        self.output_forecast = None
+        if _profiles.sampled(_profiles.contract_profile(contract)):
+            size = _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),_profiles.SAMPLED_PROFILE['prepared_bytes'])
+            manifest = dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))
+            # Bound arbitrary runtime strings/ID maps before whole serialization;
+            # then count exactly the same compact UTF-8 bytes start() writes.
+            _profiles.json_bytes(manifest,self.limits.output_bytes)
+            setup_bytes = _profiles.string_bytes((prepared.data_text,prepared.input_text,
+                prepared.graph_json,_json(manifest)),self.limits.output_bytes)
+            self.output_forecast = _profiles.resource_forecast(len(prepared.node_ids),len(prepared.edge_ids),prepared.steps,contract['output_stride'],size,setup_bytes)
+            _profiles.json_bytes(_profiles.export_metadata(prepared,runtime),_profiles.SAMPLED_PROFILE['prepared_bytes'],indent=2)
+            forecast = self.output_forecast
+            if forecast['native_aggregate_forecast_bytes'] > self.limits.output_bytes or forecast['trajectory_bytes'] > self.limits.file_size_bytes:
+                raise LAMMPSContractError('sampled planned native payload exceeds explicit output/file limits')
+            if forecast['detailed_export_forecast_bytes'] > _profiles.SAMPLED_PROFILE['export_bytes']:
+                raise LAMMPSContractError('sampled detailed export forecast exceeds profile limit')
+            if forecast['planned_memory_bytes'] > self.limits.memory_bytes:
+                raise LAMMPSContractError('sampled planned parsing and export memory exceeds explicit memory limit')
+        if prepared.profile in network.NAMES:
+            size=_profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),network.PROFILE['prepared_bytes'])
+            manifest=dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))
+            _profiles.json_bytes(manifest,self.limits.output_bytes)
+            setup=_profiles.string_bytes((prepared.data_text,prepared.input_text,prepared.graph_json,_json(manifest)),self.limits.output_bytes)
+            self.output_forecast=network.forecast(len(prepared.node_ids),len(prepared.edge_ids),prepared.steps,prepared.sample_every,contract['thermo_every'],size,setup)
+            f=self.output_forecast
+            if f['native_aggregate_forecast_bytes']>self.limits.output_bytes or f['trajectory_bytes']>self.limits.file_size_bytes or f['thermo_bytes']>self.limits.file_size_bytes:raise LAMMPSContractError('network forecast exceeds explicit output/file limits')
+            if f['detailed_export_forecast_bytes']>network.PROFILE['export_bytes'] or f['planned_memory_bytes']>self.limits.memory_bytes:raise LAMMPSContractError('network parsing/export forecast exceeds resource bounds')
+        lower_bound = contract['type_pair_cutoff_payload_lower_bound_bytes']
         if lower_bound > self.limits.memory_bytes:
             raise LAMMPSContractError('type-pair cutoff tables alone exceed declared memory budget')
         self.runtime = runtime.checked()

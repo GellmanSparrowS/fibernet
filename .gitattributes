@@ -9,3 +9,6 @@ tests/fixtures/observer_prior71_accelerated.txt -text
 
 # Public regression baselines retain their source UTF-8 bytes.
 tests/fixtures/public_source_contract/**/*.txt -text
+
+# The retained CG acceptance record pins exact compiler bytes.
+fibernet/integrations/_lammps_cg.py -text

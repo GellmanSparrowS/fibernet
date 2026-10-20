@@ -8,6 +8,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
     'fibernet/sim/accelerated.py',
+    'fibernet/integrations/_lammps_cg.py',
     'fibernet/sim/_energy_accounting.py',
     'fibernet/viz/__init__.py',
     'tests/fixtures/observer_prior71_accelerated.txt',

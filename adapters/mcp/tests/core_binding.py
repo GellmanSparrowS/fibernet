@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 223
+assert len(manifest) == 226
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
         assert Path(verify_core()) == core
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
-    cases = [(relative, None) for relative in ('core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
+    cases = [(relative, None) for relative in ('integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
                      '__init__.py', 'gen/__init__.py', 'gen/manufacturing_bridge.py',
                      'gen/manufacturing_trails.py', 'api.py', 'easy.py', 'viz/__init__.py',
@@ -84,7 +84,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
         ('sim/_lammps_result.py', b'ids, edges = list(prepared.node_ids), list(prepared.edge_ids)'): (b'ids, edges = list(reversed(prepared.node_ids)), list(reversed(prepared.edge_ids))', 'high_level_stable_ids_drift'),
         ('sim/_lammps_result.py', b'coefficients[:,0]*(lengths-coefficients[:,1])'): (b'coefficients[:,0]*lengths', 'high_level_equilibrium_force_law_drift'),
         ('sim/_lammps_result.py', b'if set(kwargs)-allowed:'): (b'if False:', 'high_level_strict_options_drift'),
-        ('sim/accelerated.py', b"if self.metadata.get('backend') == 'lammps':"): (b'if False:', 'high_level_recompute_guard_drift'),
+        ('sim/accelerated.py', b"if self.metadata.get('backend') == 'lammps':\n            raise ValueError("): (b'if False:\n            raise ValueError(', 'high_level_recompute_guard_drift'),
     }
     cases.extend(high_level_mutations)
     for relative, material_unit in cases:

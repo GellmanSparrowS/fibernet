@@ -21,3 +21,6 @@ its baseline is updated with the additive public API.
 
 The root and easy facades also expose the additive quasistatic viscoelastic
 history API. Other backends and the remaining baseline modules are unchanged.
+
+LAMMPS CG schemas and bounded profile guards are additive in SimResult.
+The Taichi engine, result writer, Joule and viscoelastic APIs remain unchanged.
