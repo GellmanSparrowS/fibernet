@@ -12,10 +12,7 @@ import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple, Optional
-try:
-    import torch
-except ImportError:  # NumPy/SciPy beam solvers also work in the base install.
-    torch = None
+import sys
 
 
 class BeamFrameFEM:
@@ -25,6 +22,27 @@ class BeamFrameFEM:
         self.E = E
         self.nu = nu
         self.G = E / (2 * (1 + nu))
+
+    def history(self, graph, *, material, times, constraints, loads=None,
+                length_unit, initial_state=None):
+        """Quasistatic 2-D viscoelastic response through the existing frame.
+
+        Explicit uniform LinearViscoelasticMaterial overrides this instance's
+        static E and the graph's static material moduli. times[0] is the
+        unloaded initial state, or the supplied committed checkpoint time.
+        Histories map stable node IDs to (len(times),3) endpoint samples.
+        Loads are Fx/Fy/Mz in N/N/N m. Constraint samples are ux/uy/rz in
+        m/m/rad; None means free and zero means constrained to zero. The mask
+        is constant in time. Graph positions and radii use length_unit.
+
+        Returns ViscoelasticResult with separate physical/numerical loss and
+        a detached JSON-restartable final_state. No input is mutated. Curved
+        members, 3-D, mechanisms and nonfinite results are refused.
+        """
+        from fibernet.sim._viscoelastic_fem import solve_history
+        return solve_history(self, graph, material=material, times=times,
+                             constraints=constraints, loads=loads,
+                             length_unit=length_unit, initial_state=initial_state)
     
     @staticmethod
     def section_properties(r: float) -> Dict[str, float]:
@@ -345,6 +363,8 @@ class BeamFrameFEM:
             node_stress: (n_nodes,) max stress at each node
             reactions: (n_nodes, 3) reaction forces/moments
         """
+        # A tensor can only exist after its owner has imported Torch.
+        torch = sys.modules.get("torch")
         if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
         if torch is not None and isinstance(node_pos, torch.Tensor):
@@ -465,6 +485,7 @@ class BeamFrameFEM:
                 or not np.isfinite(tol) or tol < 0):
             raise ValueError("tol must be a finite nonnegative real number (not bool)")
 
+        torch = sys.modules.get("torch")
         if torch is not None and isinstance(node_pos, torch.Tensor):
             node_pos = node_pos.numpy().copy()
         else:
@@ -618,6 +639,7 @@ class BeamFrameFEM:
         forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
         Applied nodal moments are unsupported; extra columns raise ValueError.
         """
+        torch = sys.modules.get("torch")
         if torch is not None and isinstance(edge_index, torch.Tensor):
             edge_index = edge_index.numpy()
         if torch is not None and isinstance(node_pos, torch.Tensor):

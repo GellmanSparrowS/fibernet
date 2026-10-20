@@ -38,6 +38,7 @@ from fibernet.version import __version__
 # --- Core ---
 from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
 from fibernet.core.material import Material
+from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.fiber import Fiber
 
@@ -72,6 +73,7 @@ from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim.linear_transport import solve_linear_transport
+from fibernet.sim._viscoelastic_fem import ViscoelasticResult
 from fibernet.sim.joule_heating import (JouleHeatingLoad, JouleHeatingRun,
                                         assemble_joule_heating, run_joule_heating)
 from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
@@ -153,6 +155,7 @@ __all__ = [
     "export_solid", "export_route",
     # Simulation
     "TaichiEngine", "SimResult", "solve_linear_transport",
+    "LinearViscoelasticMaterial", "ViscoelasticResult",
     "JouleHeatingLoad", "JouleHeatingRun", "assemble_joule_heating", "run_joule_heating",
     "ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver",
     # Visualization

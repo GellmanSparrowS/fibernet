@@ -29,6 +29,7 @@ import numpy as np
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, pattern_3d
 from fibernet.sim.accelerated import TaichiEngine, SimResult
+from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
 
 
 def show(
@@ -76,8 +77,8 @@ def simulate(
     backend: str = "spring",
     save_path: Optional[str] = None,
     **kwargs,
-) -> SimResult:
-    """Run spring stretch/dynamics or a beam-frame stretch simulation.
+) -> Union[SimResult, _ViscoelasticResult]:
+    """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
 
     Parameters
     ----------
@@ -92,7 +93,11 @@ def simulate(
         "fem", or explicit "lammps" dynamics. LAMMPS requires preparation
         options plus runtime, workdir and limits; record_state is opt-in.
         Its geometry-facing arrays retain graph units; native state is SI.
-        The FEM backend accepts E, nu, pct, and nonlinear.
+        FEM mode="history" accepts material, times, constraints, loads,
+        length_unit and optional initial_state, returning ViscoelasticResult.
+        Its SI 2-D small-strain history includes axial and bending response;
+        it uses explicit controls, not the strain shortcut or graph moduli.
+        See docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.
         Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
         overrides this selection.
     save_path : str, optional
@@ -105,7 +110,7 @@ def simulate(
 
     Returns
     -------
-    SimResult
+    SimResult or ViscoelasticResult
         The engine's result, with its node/edge identity and state metadata.
         Native dynamics velocities are available only when record_state=True,
         in dynamics_state["final"]["velocities"]. For the spring backend,
@@ -148,17 +153,22 @@ def simulate(
         else:
             result = engine.dynamics(graph, **kwargs)
     elif backend == "fem":
-        if mode != "stretch":
-            raise ValueError("The FEM backend supports only mode='stretch'")
+        if mode not in ("stretch", "history"):
+            raise ValueError("The FEM backend supports mode='stretch' or 'history'")
         from fibernet.ml.beam_frame_fem import BeamFrameFEM
-        dim = kwargs.setdefault("dim", graph.dimension)
-        if not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
-            raise ValueError("The FEM dimension must be 2 or 3")
-        E = kwargs.pop("E", 1e9)
-        nu = kwargs.pop("nu", 0.3)
-        fem = BeamFrameFEM(E=E, nu=nu)
-        raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
-        result = fem.to_sim_result(raw, graph)
+        if mode == "history":
+            if strain != 2.0:
+                raise ValueError('history uses explicit controls, not the strain shortcut')
+            result = BeamFrameFEM().history(graph, **kwargs)
+        elif mode == "stretch":
+            dim = kwargs.setdefault("dim", graph.dimension)
+            if not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
+                raise ValueError("The FEM dimension must be 2 or 3")
+            E = kwargs.pop("E", 1e9)
+            nu = kwargs.pop("nu", 0.3)
+            fem = BeamFrameFEM(E=E, nu=nu)
+            raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
+            result = fem.to_sim_result(raw, graph)
 
     if save_path:
         result.save(save_path)

@@ -18,3 +18,6 @@ reviewed with those exports; the other five module baselines remain unchanged.
 
 The root facade also includes the one-way Joule load and workflow exports;
 its baseline is updated with the additive public API.
+
+The root and easy facades also expose the additive quasistatic viscoelastic
+history API. Other backends and the remaining baseline modules are unchanged.
