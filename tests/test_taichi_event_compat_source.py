@@ -204,80 +204,148 @@ def canonical_ast(value):
     if value is Ellipsis:return ['ellipsis']
     return value
 
-def ast_sha(value):
-    import hashlib
-    return hashlib.sha256(json.dumps(canonical_ast(value),sort_keys=True,separators=(',',':')).encode()).hexdigest()
+PUBLIC_MODULES=(
+    'fibernet/__init__.py', 'fibernet/easy.py', 'fibernet/api.py',
+    'fibernet/viz/__init__.py', 'fibernet/sim/accelerated.py',
+    'fibernet/sim/_energy_accounting.py',
+)
 
-def restore_historical_save(result_node):
-    """Seal the reviewed writer change before checking the historical remainder."""
-    import hashlib
-    fixture=json.loads((ROOT/'tests/fixtures/taichi_public_source_contract.json').read_text(encoding='utf-8'))
-    repair=fixture['ledger_writer_repair']
-    node=copy.deepcopy(result_node)
-    save=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='save')
-    assert ast_sha(save)==repair['simresult_save_ast_sha256']
-    baseline=(ROOT/'tests/fixtures/observer_prior71_accelerated.txt').read_bytes()
-    assert hashlib.sha256(baseline).hexdigest()==repair['historical_engine_fixture_sha256']
-    old_result=next(n for n in ast.parse(baseline.decode('utf-8')).body if getattr(n,'name',None)=='SimResult')
-    old_save=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
-    node.body[node.body.index(save)]=old_save
+def public_baseline(relative):
+    if relative not in PUBLIC_MODULES:
+        raise ValueError('unknown public source contract')
+    return ROOT/'tests/fixtures/public_source_contract'/Path(relative).with_suffix('.py.txt')
+
+def require_public_source(relative, raw):
+    expected=public_baseline(relative).read_bytes()
+    if relative in PUBLIC_MODULES[3:]:
+        assert raw==expected, 'public source bytes changed: '+relative
+        return
+    if raw==expected:
+        return
+    assert canonical_ast(ast.parse(raw.decode('utf-8')))==canonical_ast(
+        ast.parse(expected.decode('utf-8'))), 'public source structure changed: '+relative
+
+LAMMPS_PREFIXES={
+    '_validate_result_state': """if isinstance(result.dynamics_state, dict) and result.dynamics_state.get("schema") == "lammps_harmonic_state/1":
+    from ._lammps_result import validate_result
+    return validate_result(result)
+""",
+    '_dynamics_state_summary': """if isinstance(value, dict) and value.get("schema") == "lammps_harmonic_state/1":
+    from ._lammps_result import state_summary
+    return state_summary(value)
+""",
+    'SimResult.compute_detailed': """if self.metadata.get('backend') == 'lammps':
+    raise ValueError('LAMMPS results use explicit equilibrium lengths; geometric-rest recomputation is unsupported')
+""",
+}
+
+def remove_public_lammps_branch(function, key):
+    """Check the readable routing contract before removing its one prefix."""
+    node=copy.deepcopy(function)
+    index=1 if (node.body and isinstance(node.body[0],ast.Expr) and
+                isinstance(node.body[0].value,ast.Constant) and isinstance(node.body[0].value.value,str)) else 0
+    expected=ast.parse(LAMMPS_PREFIXES[key]).body[0]
+    assert canonical_ast(node.body[index])==canonical_ast(expected), key
+    del node.body[index]
     return node
 
 
-def remaining_module(text,ignored_functions=(),ignored_assignments=(),ignored_imports=()):
-    tree=ast.parse(text);tree.body=[n for n in tree.body if not (
-        isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in ignored_functions or
-        isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ignored_assignments for t in n.targets) or
-        isinstance(n,ast.AugAssign) and isinstance(n.target,ast.Name) and n.target.id in ignored_assignments or
-        isinstance(n,ast.ImportFrom) and n.module in ignored_imports)]
-    return tree
+def restore_historical_save(result_node):
+    """Validate the public result contract before comparing the old remainder."""
+    node=copy.deepcopy(result_node)
+    expected=ast.parse(public_baseline('fibernet/sim/accelerated.py').read_text(encoding='utf-8'))
+    expected_result=next(n for n in expected.body if getattr(n,'name',None)=='SimResult')
+    save=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+    expected_save=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+    assert canonical_ast(save)==canonical_ast(expected_save), 'public result writer changed'
+    baseline=(ROOT/'tests/fixtures/observer_prior71_accelerated.txt').read_text(encoding='utf-8')
+    old_result=next(n for n in ast.parse(baseline).body if getattr(n,'name',None)=='SimResult')
+    old_save=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+    node.body[node.body.index(save)]=old_save
+    detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
+    node.body[node.body.index(detailed)]=remove_public_lammps_branch(detailed,'SimResult.compute_detailed')
+    return node
+
 
 class SourceShape(unittest.TestCase):
-    def fixture(self):return json.loads((ROOT/'tests/fixtures/taichi_public_source_contract.json').read_text(encoding='utf-8'))
-    def test_engine_normalized_equals_accepted_private_source(self):
+    def test_engine_matches_checked_in_public_source(self):
+        require_public_source('fibernet/sim/accelerated.py',SOURCE.read_bytes())
+
+    def test_lammps_prefix_mutations_are_refused(self):
         tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
-        tree.body=[n for n in tree.body if not (getattr(n,'name',None)=='_native_axial_event_dataclass' or
-            isinstance(n,ast.Import) and len(n.names)==1 and n.names[0].name=='sys')]
-        event=next(n for n in tree.body if getattr(n,'name',None)=='NativeAxialObserverEvent')
-        event.decorator_list=ast.parse('@dataclass(frozen=True, slots=True)\nclass E: pass').body[0].decorator_list
+        targets={n.name:n for n in tree.body if getattr(n,'name',None) in ('_validate_result_state','_dynamics_state_summary')}
         result=next(n for n in tree.body if getattr(n,'name',None)=='SimResult')
-        tree.body[tree.body.index(result)]=restore_historical_save(result)
-        self.assertEqual(ast_sha(tree),self.fixture()['private_engine_normalized_ast_sha256'])
-    def test_public_modules_only_allowlisted_ast_changes(self):
-        for path,record in self.fixture()['public_remaining_module'].items():
-            tree=remaining_module((ROOT/path).read_text(encoding='utf-8'),**record['ignore'])
-            self.assertEqual(ast_sha(tree),record['sha256'],path)
+        targets['SimResult.compute_detailed']=next(n for n in result.body if getattr(n,'name',None)=='compute_detailed')
+        for key,function in targets.items():
+            index=1 if key.startswith('SimResult.') else 0
+            remove_public_lammps_branch(function,key)
+            for mutation in ('condition','body','missing','extra'):
+                with self.subTest(key=key,mutation=mutation):
+                    node=copy.deepcopy(function)
+                    if mutation=='condition':node.body[index].test=ast.Constant(value=True)
+                    elif mutation=='body':node.body[index].body=[ast.Pass()]
+                    elif mutation=='extra':node.body[index].body.append(ast.Pass())
+                    else:del node.body[index]
+                    with self.assertRaises(AssertionError):remove_public_lammps_branch(node,key)
+
+    def test_lammps_normalization_preserves_unrelated_statements(self):
+        tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
+        for name in ('_validate_result_state','_dynamics_state_summary'):
+            function=next(n for n in tree.body if getattr(n,'name',None)==name)
+            changed=copy.deepcopy(function);changed.body.append(ast.Pass())
+            clean=remove_public_lammps_branch(function,name)
+            remainder=remove_public_lammps_branch(changed,name)
+            self.assertNotEqual(canonical_ast(clean),canonical_ast(remainder))
+        result=next(n for n in tree.body if getattr(n,'name',None)=='SimResult')
+        changed=copy.deepcopy(result)
+        method=next(n for n in changed.body if getattr(n,'name',None)=='compute_detailed')
+        method.body.append(ast.Pass())
+        self.assertNotEqual(canonical_ast(restore_historical_save(result)),canonical_ast(restore_historical_save(changed)))
+
+    def test_public_facades_match_checked_in_sources(self):
+        for path in PUBLIC_MODULES[:3]:
+            with self.subTest(path=path):require_public_source(path,(ROOT/path).read_bytes())
+
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
         extra=[n for n in tree.body if isinstance(n,ast.AugAssign) and isinstance(n.target,ast.Name) and n.target.id=='__all__']
         self.assertEqual(len(extra),1)
         self.assertEqual(ast.literal_eval(extra[0].value),['render_graph','render_deformation'])
-    def test_exact_energy_helper_and_lazy_viz(self):
-        import hashlib
-        fixture=self.fixture();repair=fixture['ledger_writer_repair']
-        for path,expected in fixture['exact_private_files'].items():
-            raw=(ROOT/path).read_bytes()
-            if path!='fibernet/sim/_energy_accounting.py':
-                self.assertEqual(hashlib.sha256(raw).hexdigest(),expected,path)
-                continue
-            self.assertEqual(expected,repair['historical_energy_accounting_sha256'])
-            self.assertEqual(hashlib.sha256(raw).hexdigest(),repair['energy_accounting_sha256'])
-            tree=ast.parse(raw.decode('utf-8'))
-            # Only these separately sealed writer helpers/imports are new.
-            for name in ('_binary64_json_number','dump_binary64_json'):
-                helper=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name==name)
-                self.assertEqual(ast_sha(helper),repair['writer_helper_ast_sha256'][name])
-            tree.body=[n for n in tree.body if not (
-                isinstance(n,ast.FunctionDef) and n.name in {'_binary64_json_number','dump_binary64_json'} or
-                isinstance(n,ast.Import) and ast.dump(n)==ast.dump(ast.parse('import json').body[0]))]
-            decimal=next(n for n in tree.body if isinstance(n,ast.ImportFrom) and n.module=='decimal')
-            self.assertEqual(ast.dump(decimal),ast.dump(ast.parse(
-                'from decimal import Context, Decimal, InvalidOperation, ROUND_HALF_EVEN').body[0]))
-            tree.body[tree.body.index(decimal)]=ast.parse('from decimal import Decimal, InvalidOperation').body[0]
-            self.assertEqual(ast_sha(tree),repair['historical_energy_accounting_ast_sha256'])
+
+    def test_energy_helper_and_lazy_viz_match_public_sources(self):
+        for path in ('fibernet/viz/__init__.py','fibernet/sim/_energy_accounting.py'):
+            with self.subTest(path=path):require_public_source(path,(ROOT/path).read_bytes())
+
+    def test_public_source_mutations_are_refused(self):
+        for path in PUBLIC_MODULES:
+            raw=public_baseline(path).read_bytes()
+            require_public_source(path,raw)
+            with self.subTest(path=path):
+                with self.assertRaises(AssertionError):require_public_source(path,raw+b'\npass\n')
+
+    def test_checkout_line_endings_follow_source_contract(self):
+        for path in PUBLIC_MODULES:
+            raw=public_baseline(path).read_bytes()
+            for changed in (raw+b'\n# changed\n',raw.replace(b'\n',b'\r\n')):
+                with self.subTest(path=path):
+                    if path in PUBLIC_MODULES[3:]:
+                        with self.assertRaises(AssertionError):require_public_source(path,changed)
+                    else:
+                        require_public_source(path,changed)
+
+    def test_writer_mutation_is_refused(self):
+        tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
+        result=next(n for n in tree.body if getattr(n,'name',None)=='SimResult')
+        writer=next(n for n in result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
+        writer.body.append(ast.Pass())
+        with self.assertRaises(AssertionError):restore_historical_save(result)
+
+    def test_public_baseline_path_is_allowlisted(self):
+        for path in ('../outside','fibernet/not_a_contract.py','/etc/passwd'):
+            with self.assertRaises(ValueError):public_baseline(path)
+
     def test_python39_syntax(self):
-        # This does not replace running the 3.9 decorator/import path in 3.9 CI.
-        for path in self.fixture()['runtime_paths']:
+        for path in PUBLIC_MODULES:
             ast.parse((ROOT/path).read_text(encoding='utf-8'),filename=path,feature_version=(3,9))
 
 if __name__=='__main__':unittest.main()

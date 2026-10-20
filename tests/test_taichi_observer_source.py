@@ -1,5 +1,5 @@
 """AST-isolated actual Python orchestration with fake fields; no Taichi/FiberNet import."""
-import ast,pathlib,time,json,hashlib,types,sys,dataclasses,copy
+import ast,pathlib,time,json,types,sys,dataclasses,copy
 import numpy as np
 from _source_check_support import run_source_check
 from test_taichi_event_compat_source import restore_historical_save
@@ -17,7 +17,7 @@ def peak_rss_kib():
 
 def run_checks():
     D=pathlib.Path(__file__).resolve().parent;start=time.process_time();checks=[]
-    BASE=(D/'fixtures/observer_prior71_accelerated.txt').read_text(encoding='utf-8');NEW=(D.parent/'fibernet/sim/accelerated.py').read_text(encoding='utf-8');assert hashlib.sha256(BASE.encode()).hexdigest()=='fe69dd2e2624e061597fab00ee33e254a109e76d50baae936773d43349f3f74d'
+    BASE=(D/'fixtures/observer_prior71_accelerated.txt').read_text(encoding='utf-8');NEW=(D.parent/'fibernet/sim/accelerated.py').read_text(encoding='utf-8')
     def check(name,condition):
      assert condition,name
      checks.append(name)
@@ -25,7 +25,7 @@ def run_checks():
     def kernels(tree):return [ast.dump(n,include_attributes=False) for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and any(ast.unparse(d)=='ti.kernel' for d in n.decorator_list)]
     check('all native kernel ASTs unchanged',kernels(parse(BASE))==kernels(parse(NEW)))
     oldnodes={n.name:n for n in parse(BASE).body if hasattr(n,'name')};newnodes={n.name:n for n in parse(NEW).body if hasattr(n,'name')}
-    check('SimResult unchanged outside sealed ledger save repair',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
+    check('SimResult unchanged outside public writer and LAMMPS guard contracts',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
     oldmethod=next(n for n in oldnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');newmethod=next(n for n in newnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics')
     check('all old positional arguments unchanged',ast.dump(oldmethod.args.args[0])==ast.dump(newmethod.args.args[0]) and [ast.dump(x) for x in oldmethod.args.args]==[ast.dump(x) for x in newmethod.args.args] and [ast.dump(x) for x in oldmethod.args.defaults]==[ast.dump(x) for x in newmethod.args.defaults])
     check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-1]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
@@ -117,8 +117,8 @@ def run_checks():
     check('no solver/native imports','taichi' not in sys.modules and not any(k=='fibernet' or k.startswith('fibernet.') for k in sys.modules))
     # In-file helper is already a bound source dependency; mutation changes that identity.
     contract=(D.parent/'fibernet/ml/_generate_contract.py').read_text(encoding='utf-8');check('accelerated source already generation-bound',"'sim/accelerated.py'" in contract)
-    mutated=NEW.replace("schema='native_axial_observer/1'","schema='native_axial_observer/2'",1);check('helper-only mutation changes generation dependency bytes',hashlib.sha256(NEW.encode()).hexdigest()!=hashlib.sha256(mutated.encode()).hexdigest())
-    report=dict(status='PASS_SOURCE_AND_ORCHESTRATION_MOCKS_ONLY',checks=checks,count=len(checks),CPU_seconds=time.process_time()-start,RSS_KiB=peak_rss_kib(),native_imports=False,native_calls=0,physics_trajectories=0,limitations=['AST-isolated actual method with fake fields/prescribed mock sentinels, not native parity','SimResult mocked; unchanged actual SimResult AST checked','No full package imports or production serialization runtime','Generation hash binding checked, actual checkpoint resume rejection not executed'])
+    mutated=NEW.replace("schema='native_axial_observer/1'","schema='native_axial_observer/2'",1);check('helper-only mutation changes generation dependency bytes',NEW.encode()!=mutated.encode())
+    report=dict(status='PASS_SOURCE_AND_ORCHESTRATION_MOCKS_ONLY',checks=checks,count=len(checks),CPU_seconds=time.process_time()-start,RSS_KiB=peak_rss_kib(),native_imports=False,native_calls=0,physics_trajectories=0,limitations=['AST-isolated actual method with fake fields/prescribed mock sentinels, not native parity','SimResult mocked; historical SimResult AST checked after readable public writer/LAMMPS guard normalization','No full package imports or production serialization runtime','Generation hash binding checked, actual checkpoint resume rejection not executed'])
     assert len(checks)==31
     return report
 

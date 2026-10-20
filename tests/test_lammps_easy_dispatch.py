@@ -158,7 +158,7 @@ class RendererTests(unittest.TestCase):
     def test_pyvista_stable_edge_mapping_without_renderer(self):
         root=Path(__file__).resolve().parents[1]
         def extract(path,names,ns):
-            tree=ast.parse((root/path).read_text())
+            tree=ast.parse((root/path).read_text(encoding='utf-8'))
             body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]
             body += [n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name in names]
             module=ast.Module(body=body,type_ignores=[]);ast.fix_missing_locations(module)
@@ -201,7 +201,7 @@ class DispatchTests(unittest.TestCase):
             def cancel(self):owner.calls.append('cancel')
         self.Task=FakeTask
         self.args=dict(options(),runtime=RUNTIME,workdir='never-created',limits=backend.ResourceLimits())
-        tree=ast.parse((Path(__file__).resolve().parents[1]/'fibernet/easy.py').read_text())
+        tree=ast.parse((Path(__file__).resolve().parents[1]/'fibernet/easy.py').read_text(encoding='utf-8'))
         fn=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='simulate')
         module=ast.Module(body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0),fn],type_ignores=[])
         ast.fix_missing_locations(module);ns={'np':np};exec(compile(module,'easy.py','exec'),ns);self.simulate=ns['simulate']
@@ -273,4 +273,25 @@ class DispatchTests(unittest.TestCase):
         self.assertEqual(self.calls,['construct','cancel','wait'])
 
 
-if __name__ == '__main__':unittest.main()
+
+
+
+class SourceEncodingTests(unittest.TestCase):
+    def test_dispatch_source_under_cp1252_default(self):
+        original=Path.read_text
+        def local_default(path,encoding=None,errors=None):
+            return original(path,encoding=encoding or 'cp1252',errors=errors)
+        with patch.object(Path,'read_text',local_default):
+            test=DispatchTests('test_easy_dispatch_success_and_signature')
+            test.setUp()
+            try:test.test_easy_dispatch_success_and_signature()
+            finally:test.tearDown()
+
+    def test_renderer_sources_under_cp1252_default(self):
+        original=Path.read_text
+        def local_default(path,encoding=None,errors=None):
+            return original(path,encoding=encoding or 'cp1252',errors=errors)
+        with patch.object(Path,'read_text',local_default):
+            RendererTests('test_pyvista_stable_edge_mapping_without_renderer').test_pyvista_stable_edge_mapping_without_renderer()
+
+if __name__=='__main__':unittest.main()
