@@ -289,12 +289,20 @@ class BeamFrameFEM:
         ])
         return second_derivatives @ transverse_dofs
 
-    def _compute_element_stress_2d(self, node_pos, u, edge_index, edge_list, radii):
+    def _compute_element_stress_2d(self, node_pos, u, edge_index, edge_list, radii,
+                                 *, axial_eigenstrain=None):
         """Recover linear stresses from cubic Hermite curvature.
 
         The scalar convention M=-EI*v'' gives M_i=q_local[2],
-        M_j=-q_local[5], and (M_j-M_i)/L=q_local[1].
+        M_j=-q_local[5], and V=(M_j-M_i)/L=-q_local[1]=q_local[4].
+        Thus the endpoint energy-gradient vectors are (-N,-V,M_i) and
+        (N,V,-M_j); reported endpoint moments are not both nodal moments.
         """
+        if axial_eigenstrain is not None:
+            axial_eigenstrain = np.asarray(axial_eigenstrain, dtype=float)
+            if (axial_eigenstrain.shape != (edge_index.shape[1],)
+                    or not np.isfinite(axial_eigenstrain).all()):
+                raise ValueError('axial_eigenstrain requires finite original input edge rows')
         n_edges = len(edge_list)
         sigma_axial = np.zeros(n_edges)
         sigma_bending = np.zeros(n_edges)
@@ -324,6 +332,8 @@ class BeamFrameFEM:
             
             # Axial strain and stress
             eps_axial = (uj_local[0] - ui_local[0]) / L
+            if axial_eigenstrain is not None:
+                eps_axial = eps_axial - axial_eigenstrain[e]
             sigma_axial[idx] = self.E * eps_axial
             
             # Rotational DOFs are the transverse slopes in the local plane.

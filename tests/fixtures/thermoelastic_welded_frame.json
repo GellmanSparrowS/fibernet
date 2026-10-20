@@ -1,0 +1,1628 @@
+{
+  "graph": {
+    "version": "3.1",
+    "dimension": 2,
+    "tolerance": 1e-06,
+    "next_node_id": 2038,
+    "next_edge_id": 7389,
+    "box_size": [
+      0.08,
+      0.08,
+      0.0
+    ],
+    "metadata": {
+      "tiling": {
+        "grid": [
+          4,
+          4
+        ],
+        "unit_box": [
+          0.02,
+          0.02
+        ]
+      },
+      "unit_type": "square",
+      "n_pts_per_side": 0,
+      "pattern": {
+        "unit": "square",
+        "box": [
+          0.02,
+          0.02
+        ],
+        "grid": [
+          4,
+          4
+        ],
+        "n_internal": 0,
+        "n_pts_per_side": 0,
+        "mirror_x": false,
+        "mirror_y": false,
+        "rotation": 0.0
+      }
+    },
+    "nodes": [
+      {
+        "id": 1001,
+        "position": [
+          -0.04,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_role": "C",
+          "fixture_canonical_rank": 0
+        }
+      },
+      {
+        "id": 1038,
+        "position": [
+          0.02,
+          0.02,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 8
+        }
+      },
+      {
+        "id": 1075,
+        "position": [
+          0.04,
+          0.08,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 16
+        }
+      },
+      {
+        "id": 1112,
+        "position": [
+          0.08,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 24
+        }
+      },
+      {
+        "id": 1149,
+        "position": [
+          0.0,
+          0.02,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 3
+        }
+      },
+      {
+        "id": 1186,
+        "position": [
+          0.02,
+          0.08,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 11
+        }
+      },
+      {
+        "id": 1223,
+        "position": [
+          0.06,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 19
+        }
+      },
+      {
+        "id": 1260,
+        "position": [
+          0.1,
+          0.03,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_role": "F",
+          "fixture_canonical_rank": 27
+        }
+      },
+      {
+        "id": 1297,
+        "position": [
+          0.0,
+          0.08,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 6
+        }
+      },
+      {
+        "id": 1334,
+        "position": [
+          0.04,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 14
+        }
+      },
+      {
+        "id": 1371,
+        "position": [
+          0.08,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          false,
+          true,
+          true,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 22
+        }
+      },
+      {
+        "id": 1408,
+        "position": [
+          -0.02,
+          0.05,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_role": "B",
+          "fixture_canonical_rank": 1
+        }
+      },
+      {
+        "id": 1445,
+        "position": [
+          0.02,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 9
+        }
+      },
+      {
+        "id": 1482,
+        "position": [
+          0.06,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 17
+        }
+      },
+      {
+        "id": 1519,
+        "position": [
+          0.08,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 25
+        }
+      },
+      {
+        "id": 1556,
+        "position": [
+          0.0,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 4
+        }
+      },
+      {
+        "id": 1593,
+        "position": [
+          0.04,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 12
+        }
+      },
+      {
+        "id": 1630,
+        "position": [
+          0.06,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 20
+        }
+      },
+      {
+        "id": 1667,
+        "position": [
+          0.12,
+          0.04,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_role": "G",
+          "fixture_canonical_rank": 28
+        }
+      },
+      {
+        "id": 1704,
+        "position": [
+          0.02,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 7
+        }
+      },
+      {
+        "id": 1741,
+        "position": [
+          0.04,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 15
+        }
+      },
+      {
+        "id": 1778,
+        "position": [
+          0.08,
+          0.02,
+          0.0
+        ],
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 23
+        }
+      },
+      {
+        "id": 1815,
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 2
+        }
+      },
+      {
+        "id": 1852,
+        "position": [
+          0.02,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 10
+        }
+      },
+      {
+        "id": 1889,
+        "position": [
+          0.06,
+          0.02,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 18
+        }
+      },
+      {
+        "id": 1926,
+        "position": [
+          0.08,
+          0.08,
+          0.0
+        ],
+        "boundary": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 26
+        }
+      },
+      {
+        "id": 1963,
+        "position": [
+          0.0,
+          0.06,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 5
+        }
+      },
+      {
+        "id": 2000,
+        "position": [
+          0.04,
+          0.02,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 13
+        }
+      },
+      {
+        "id": 2037,
+        "position": [
+          0.06,
+          0.08,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "metadata": {
+          "fixture_canonical_rank": 21
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": 5003,
+        "node_i": 1001,
+        "node_j": 1408,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "branch",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 0
+        }
+      },
+      {
+        "id": 5056,
+        "node_i": 1852,
+        "node_j": 1741,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 19
+        }
+      },
+      {
+        "id": 5109,
+        "node_i": 1630,
+        "node_j": 1519,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 38
+        }
+      },
+      {
+        "id": 5162,
+        "node_i": 1704,
+        "node_j": 1038,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 11
+        }
+      },
+      {
+        "id": 5215,
+        "node_i": 1482,
+        "node_j": 1889,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 30
+        }
+      },
+      {
+        "id": 5268,
+        "node_i": 1815,
+        "node_j": 1704,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 3
+        }
+      },
+      {
+        "id": 5321,
+        "node_i": 1593,
+        "node_j": 1482,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 22
+        }
+      },
+      {
+        "id": 5374,
+        "node_i": 1778,
+        "node_j": 1112,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 41
+        }
+      },
+      {
+        "id": 5427,
+        "node_i": 1038,
+        "node_j": 2000,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "parallel_pair": 0,
+          "parallel_role": "original",
+          "fixture_canonical_rank": 14
+        }
+      },
+      {
+        "id": 5480,
+        "node_i": 1889,
+        "node_j": 1778,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 33
+        }
+      },
+      {
+        "id": 5533,
+        "node_i": 1556,
+        "node_j": 1963,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 6
+        }
+      },
+      {
+        "id": 5586,
+        "node_i": 1334,
+        "node_j": 1741,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 25
+        }
+      },
+      {
+        "id": 5639,
+        "node_i": 1519,
+        "node_j": 1926,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 44
+        }
+      },
+      {
+        "id": 5692,
+        "node_i": 1445,
+        "node_j": 1334,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 17
+        }
+      },
+      {
+        "id": 5745,
+        "node_i": 1223,
+        "node_j": 1112,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 36
+        }
+      },
+      {
+        "id": 5798,
+        "node_i": 1963,
+        "node_j": 1852,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 9
+        }
+      },
+      {
+        "id": 5851,
+        "node_i": 1741,
+        "node_j": 1630,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 28
+        }
+      },
+      {
+        "id": 5904,
+        "node_i": 1408,
+        "node_j": 1556,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "branch",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 1
+        }
+      },
+      {
+        "id": 5957,
+        "node_i": 1186,
+        "node_j": 1075,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 20
+        }
+      },
+      {
+        "id": 6010,
+        "node_i": 2037,
+        "node_j": 1926,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 39
+        }
+      },
+      {
+        "id": 6063,
+        "node_i": 1704,
+        "node_j": 1593,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 12
+        }
+      },
+      {
+        "id": 6116,
+        "node_i": 1482,
+        "node_j": 1371,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 31
+        }
+      },
+      {
+        "id": 6169,
+        "node_i": 1149,
+        "node_j": 1556,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 4
+        }
+      },
+      {
+        "id": 6222,
+        "node_i": 2000,
+        "node_j": 1334,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 23
+        }
+      },
+      {
+        "id": 6275,
+        "node_i": 1112,
+        "node_j": 1519,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 42
+        }
+      },
+      {
+        "id": 6328,
+        "node_i": 1038,
+        "node_j": 2000,
+        "radius": 0.0007,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "additional_physical_member",
+          "parallel_pair": 0,
+          "parallel_role": "additional",
+          "physical_member_ordinal": 1,
+          "fixture_canonical_rank": 15
+        }
+      },
+      {
+        "id": 6381,
+        "node_i": 1223,
+        "node_j": 1630,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "parallel_pair": 1,
+          "parallel_role": "original",
+          "fixture_canonical_rank": 34
+        }
+      },
+      {
+        "id": 6434,
+        "node_i": 1556,
+        "node_j": 1445,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 7
+        }
+      },
+      {
+        "id": 6487,
+        "node_i": 1334,
+        "node_j": 1223,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 26
+        }
+      },
+      {
+        "id": 6540,
+        "node_i": 1260,
+        "node_j": 1667,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "branch",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 45
+        }
+      },
+      {
+        "id": 6593,
+        "node_i": 1852,
+        "node_j": 1186,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 18
+        }
+      },
+      {
+        "id": 6646,
+        "node_i": 1630,
+        "node_j": 2037,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 37
+        }
+      },
+      {
+        "id": 6699,
+        "node_i": 1297,
+        "node_j": 1186,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 10
+        }
+      },
+      {
+        "id": 6752,
+        "node_i": 1075,
+        "node_j": 2037,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 29
+        }
+      },
+      {
+        "id": 6805,
+        "node_i": 1815,
+        "node_j": 1149,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 2
+        }
+      },
+      {
+        "id": 6858,
+        "node_i": 1593,
+        "node_j": 2000,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 21
+        }
+      },
+      {
+        "id": 6911,
+        "node_i": 1371,
+        "node_j": 1778,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 40
+        }
+      },
+      {
+        "id": 6964,
+        "node_i": 1038,
+        "node_j": 1445,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 13
+        }
+      },
+      {
+        "id": 7017,
+        "node_i": 1889,
+        "node_j": 1223,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 32
+        }
+      },
+      {
+        "id": 7070,
+        "node_i": 1149,
+        "node_j": 1038,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 5
+        }
+      },
+      {
+        "id": 7123,
+        "node_i": 2000,
+        "node_j": 1889,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 24
+        }
+      },
+      {
+        "id": 7176,
+        "node_i": 1112,
+        "node_j": 1260,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "branch",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 43
+        }
+      },
+      {
+        "id": 7229,
+        "node_i": 1445,
+        "node_j": 1852,
+        "radius": 0.0005,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 16
+        }
+      },
+      {
+        "id": 7282,
+        "node_i": 1223,
+        "node_j": 1630,
+        "radius": 0.0007,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "additional_physical_member",
+          "parallel_pair": 1,
+          "parallel_role": "additional",
+          "physical_member_ordinal": 1,
+          "fixture_canonical_rank": 35
+        }
+      },
+      {
+        "id": 7335,
+        "node_i": 1963,
+        "node_j": 1297,
+        "radius": 0.0006,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 8
+        }
+      },
+      {
+        "id": 7388,
+        "node_i": 1741,
+        "node_j": 1075,
+        "radius": 0.0004,
+        "material": {
+          "name": "generic",
+          "density": 1000.0,
+          "youngs_modulus": 1000000000.0,
+          "poissons_ratio": 0.3,
+          "shear_modulus": 384615384.6153846
+        },
+        "segments": 4,
+        "internal_points": null,
+        "metadata": {
+          "fixture_origin": "generated_grid",
+          "physical_member_ordinal": 0,
+          "fixture_canonical_rank": 27
+        }
+      }
+    ]
+  },
+  "arguments": {
+    "length_unit": "m",
+    "E_Pa": 1000000.0,
+    "expansion_alpha_per_K": {
+      "6540": 1e-06,
+      "5639": 1e-06,
+      "7176": 1e-06,
+      "6275": 1e-06,
+      "5374": 1e-06,
+      "6911": 1e-06,
+      "6010": 1e-06,
+      "5109": 1e-06,
+      "6646": 1e-06,
+      "5745": 1e-06,
+      "7282": 1e-06,
+      "6381": 1e-06,
+      "5480": 1e-06,
+      "7017": 1e-06,
+      "6116": 1e-06,
+      "5215": 1e-06,
+      "6752": 1e-06,
+      "5851": 1e-06,
+      "7388": 1e-06,
+      "6487": 1e-06,
+      "5586": 1e-06,
+      "7123": 1e-06,
+      "6222": 1e-06,
+      "5321": 1e-06,
+      "6858": 1e-06,
+      "5957": 1e-06,
+      "5056": 1e-06,
+      "6593": 1e-06,
+      "5692": 1e-06,
+      "7229": 1e-06,
+      "6328": 1e-06,
+      "5427": 1e-06,
+      "6964": 1e-06,
+      "6063": 1e-06,
+      "5162": 1e-06,
+      "6699": 1e-06,
+      "5798": 1e-06,
+      "7335": 1e-06,
+      "6434": 1e-06,
+      "5533": 1e-06,
+      "7070": 1e-06,
+      "6169": 1e-06,
+      "5268": 1e-06,
+      "6805": 1e-06,
+      "5904": 1e-06,
+      "5003": 1e-06
+    },
+    "stress_free_temperature_K": 300.0,
+    "temperature_K": {
+      "1667": 301.70000000000005,
+      "1260": 301.3,
+      "1926": 302.0,
+      "1519": 301.65,
+      "1112": 301.29999999999995,
+      "1778": 300.94999999999993,
+      "1371": 300.59999999999997,
+      "2037": 301.70000000000005,
+      "1630": 301.4,
+      "1223": 301.1,
+      "1889": 300.79999999999995,
+      "1482": 300.5,
+      "1075": 301.4,
+      "1741": 301.15,
+      "1334": 300.9,
+      "2000": 300.65,
+      "1593": 300.4,
+      "1186": 301.1,
+      "1852": 300.9,
+      "1445": 300.70000000000005,
+      "1038": 300.5,
+      "1704": 300.3,
+      "1297": 300.8,
+      "1963": 300.65,
+      "1556": 300.5,
+      "1149": 300.34999999999997,
+      "1815": 300.2,
+      "1408": 300.34999999999997,
+      "1001": 300.15
+    },
+    "constraints": {
+      "1815": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "1371": [
+        0.0,
+        null,
+        null
+      ]
+    },
+    "loads": {}
+  }
+}
