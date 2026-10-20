@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 227
+assert len(manifest) == 229
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
         assert Path(verify_core()) == core
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
-    cases = [(relative, None) for relative in ('sim/_taichi_viscoelastic.py', 'integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
+    cases = [(relative, None) for relative in ('sim/electrothermal.py', 'sim/_thermal_step.py', 'sim/_taichi_viscoelastic.py', 'integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
                      '__init__.py', 'gen/__init__.py', 'gen/manufacturing_bridge.py',
                      'gen/manufacturing_trails.py', 'api.py', 'easy.py', 'viz/__init__.py',
@@ -157,9 +157,58 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                             'real_startup_refusal': True})
         finally:
             target.write_bytes(saved)
+    for case in ('added_python_file', 'missing_python_file', 'symlink_directory'):
+        target = core / ('sim/electrothermal.py' if case == 'missing_python_file'
+                         else 'sim/_unexpected.py' if case == 'added_python_file'
+                         else '_unexpected_directory')
+        saved = target.read_bytes() if case == 'missing_python_file' else None
+        try:
+            if case == 'missing_python_file':
+                target.unlink()
+            elif case == 'added_python_file':
+                target.write_bytes(b'# Unlisted executable source.\n')
+            else:
+                target.symlink_to(core / 'sim', target_is_directory=True)
+            expected = ('native core inventory unavailable' if case == 'symlink_directory'
+                        else 'native core file inventory differs from frozen source')
+            with patch.object(importlib.util, 'find_spec', return_value=SimpleNamespace(origin=str(core / '__init__.py'))):
+                try:
+                    verify_core()
+                except ContractError as error:
+                    assert str(error) == expected
+                else:
+                    raise AssertionError('changed inventory accepted')
+            result = subprocess.run(
+                [sys.executable, '-m', 'fibernet_mcp.server', '--manifest',
+                 str(ROOT / 'evidence/manifest.json'), '--output-root', str(output)],
+                input=b'', stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                env=environment, cwd=str(area), timeout=10,
+            )
+            assert result.returncode == 2 and result.stdout == b''
+            assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
+            assert not list(output.iterdir())
+            records.append({'module': str(target.relative_to(core)), 'case': case,
+                            'exact_inventory_boundary_refusal': True,
+                            'real_startup_refusal': True})
+        finally:
+            if saved is not None:
+                target.write_bytes(saved)
+            else:
+                target.unlink()
+    # Traversal errors must not masquerade as a complete inventory.
+    def failed_walk(*args, **kwargs):
+        kwargs['onerror'](PermissionError('test-only directory traversal failure'))
+        return iter(())
+    with patch('fibernet_mcp.safety.os.walk', side_effect=failed_walk):
+        try:
+            verify_core()
+        except ContractError as error:
+            assert str(error) == 'native core inventory unavailable'
+        else:
+            raise AssertionError('unreadable inventory accepted')
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
 
 report = {'core_hashes_verified': len(manifest), 'sdk_positive_controls': 2,
-          'same_output_root_and_core': True, 'refusals': records}
+          'same_output_root_and_core': True, 'inventory_traversal_error_refused': True, 'refusals': records}
 print(json.dumps(report, indent=2))

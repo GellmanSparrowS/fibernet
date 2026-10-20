@@ -182,6 +182,17 @@ def verify_core():
     if spec is None or spec.origin is None: raise ContractError('missing native core')
     root = os.path.dirname(spec.origin)
     manifest = strict_json(read_file(str(Path(__file__).with_name('core_manifest.json'))))
+    # Reject extra and missing source, and fail closed if traversal is incomplete.
+    actual = set()
+    def traversal_error(error):
+        raise ContractError('native core inventory unavailable') from error
+    for directory, directories, files in os.walk(root, followlinks=False, onerror=traversal_error):
+        if any(os.path.islink(os.path.join(directory, name)) for name in directories):
+            raise ContractError('native core inventory unavailable')
+        actual.update(Path(directory, name).relative_to(root).as_posix()
+                      for name in files if name.endswith('.py'))
+    if actual != set(manifest):
+        raise ContractError('native core file inventory differs from frozen source')
     for relative, expected in manifest.items():
         if sha(read_file(os.path.join(root, relative))) != expected:
             raise ContractError('native core differs from frozen source')

@@ -46,3 +46,6 @@ include tests/data/joule_torus/run01/torus_electrical.json
 include docs/integrations/transport_pilot_fixture.json
 include docs/integrations/transport_roundoff_contract_v2.json
 include docs/integrations/thermal_frozen_contract.json
+
+# Small independent reference for the experimental electrothermal model.
+include benchmarks/electrothermal_two_node.py
