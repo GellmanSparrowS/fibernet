@@ -12,3 +12,9 @@ tests/fixtures/public_source_contract/**/*.txt -text
 
 # The retained CG acceptance record pins exact compiler bytes.
 fibernet/integrations/_lammps_cg.py -text
+
+# Exact API contract snapshots and their facade sources must keep Git bytes.
+fibernet/__init__.py -text
+fibernet/easy.py -text
+fibernet/api.py -text
+tests/fixtures/public_api_contract_v2/**/*.txt -text

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def extract(path, name, namespace):
-    tree = ast.parse((ROOT / path).read_text())
+    tree = ast.parse((ROOT / path).read_text(encoding='utf-8'))
     node = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == name)
     module = ast.Module(body=[ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0), node], type_ignores=[])
     exec(compile(ast.fix_missing_locations(module), path, 'exec'), namespace)
@@ -173,10 +173,10 @@ class LegacyDocsContract(unittest.TestCase):
 
     def test_examples_and_obsolete_claims(self):
         for relative in ('fibernet/easy.py','fibernet/__init__.py'):
-            source=(ROOT/relative).read_text()
+            source=(ROOT/relative).read_text(encoding='utf-8')
             self.assertNotIn('pattern_2d("',source)
-        self.assertNotIn('fn.create(', (ROOT/'fibernet/api.py').read_text())
-        self.assertNotIn('All simulation now uses TaichiEngine',(ROOT/'fibernet/sim/fem.py').read_text())
-        self.assertIn('summary by default', (ROOT/'fibernet/easy.py').read_text())
+        self.assertNotIn('fn.create(', (ROOT/'fibernet/api.py').read_text(encoding='utf-8'))
+        self.assertNotIn('All simulation now uses TaichiEngine',(ROOT/'fibernet/sim/fem.py').read_text(encoding='utf-8'))
+        self.assertIn('summary by default', (ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
 
 if __name__=='__main__': unittest.main(verbosity=2)

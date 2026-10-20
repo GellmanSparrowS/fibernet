@@ -2,6 +2,7 @@
 import json
 
 import numpy as np
+import pytest
 
 from fibernet import StructureGraph, simulate
 from fibernet.sim.accelerated import SimResult
@@ -53,8 +54,14 @@ def test_fem_detailed_roundtrip_preserves_forces_and_resultants(tmp_path):
 def test_legacy_fem_summary_recovers_signed_axial_forces(tmp_path):
     path = tmp_path / "legacy.json"
     resultants = [[-2., 3., 4.], [5., -6., 7.]]
-    path.write_text(json.dumps(dict(mode="fem_beam_frame", n_edges=2,
-                                   edge_forces=resultants, max_force=5.)))
+    incomplete = dict(mode="fem_beam_frame", n_edges=2,
+                      edge_forces=resultants, max_force=5.)
+    path.write_text(json.dumps(incomplete), encoding='utf-8')
+    with pytest.raises(ValueError, match='recognizable mechanical'):
+        SimResult.load(path)
+    # Supply the complete synthetic mechanical envelope; do not infer zeros.
+    complete = dict(incomplete, energy=1., n_nodes=3)
+    path.write_text(json.dumps(complete), encoding='utf-8')
     restored = SimResult.load(path)
     np.testing.assert_array_equal(restored.edge_forces, [-2., 5.])
     np.testing.assert_array_equal(restored.metadata["beam_resultants"], resultants)

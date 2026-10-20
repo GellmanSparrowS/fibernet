@@ -7,6 +7,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
+    'fibernet/__init__.py',
+    'fibernet/easy.py',
+    'fibernet/api.py',
+    'tests/fixtures/public_api_contract_v2/fibernet/__init__.py.txt',
+    'tests/fixtures/public_api_contract_v2/fibernet/easy.py.txt',
+    'tests/fixtures/public_api_contract_v2/fibernet/api.py.txt',
+    'tests/fixtures/public_api_contract_v2/fibernet/sim/accelerated.py.txt',
     'fibernet/sim/accelerated.py',
     'fibernet/integrations/_lammps_cg.py',
     'fibernet/sim/_energy_accounting.py',

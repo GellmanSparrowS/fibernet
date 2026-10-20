@@ -114,7 +114,13 @@ def test_linear_and_legacy_not_retroactively_certified(tmp_path):
     assert 'field_status' not in result.metadata
     # Historical zeros are retained as data of unknown validity, not reinterpreted.
     path = tmp_path / 'legacy.json'
-    path.write_text(json.dumps({'mode': 'fem_beam_frame', 'reactions': [[0, 0, 0]]}))
+    incomplete = {'mode': 'fem_beam_frame', 'reactions': [[0, 0, 0]]}
+    path.write_text(json.dumps(incomplete), encoding='utf-8')
+    with pytest.raises(ValueError, match='recognizable mechanical'):
+        SimResult.load(path)
+    # This is a synthetic legacy envelope, not a retained historical output.
+    complete = dict(incomplete, energy=0., n_nodes=1, n_edges=0)
+    path.write_text(json.dumps(complete), encoding='utf-8')
     restored = SimResult.load(path)
     assert restored.metadata['reactions'] == [[0, 0, 0]]
     assert 'solver_status' not in restored.metadata

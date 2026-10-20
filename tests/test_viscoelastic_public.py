@@ -64,7 +64,7 @@ def test_history_rejects_strain_shortcut_before_solving(monkeypatch):
     def forbidden(*args, **kwargs):
         pytest.fail('invalid history shortcut reached the solver')
     monkeypatch.setattr(BeamFrameFEM, 'history', forbidden)
-    with pytest.raises(ValueError, match='explicit controls'):
+    with pytest.raises(ValueError, match="strain is only supported for mode='stretch'"):
         fn.simulate(fn.StructureGraph(dimension=2), backend='fem',
                     mode='history', strain=1.01)
 

@@ -17,14 +17,14 @@ def test_source_checks_ignore_contaminated_parent(monkeypatch):
     for name in ('fibernet', 'fibernet.sim', 'taichi'):
         monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
     report = json.loads(run_source_check(HERE / 'test_taichi_observer_source.py'))
-    assert report['count'] == 31 and report['native_imports'] is False
+    assert report['count'] == 37 and report['native_imports'] is False
     run_source_check(HERE / 'test_taichi_event_compat_source.py')
 
 
 def test_source_checks_without_resource_and_non_utf8_default():
     report = json.loads(run_source_check(
         HERE / 'test_taichi_observer_source.py', '--no-resource', '--cp1252-default'))
-    assert report['count'] == 31 and report['RSS_KiB'] is None
+    assert report['count'] == 37 and report['RSS_KiB'] is None
     run_source_check(HERE / 'test_taichi_event_compat_source.py', '--cp1252-default')
     run_source_check(HERE / 'test_taichi_api_dispatch_source.py', '--cp1252-default')
 
