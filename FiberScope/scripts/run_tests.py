@@ -37,7 +37,7 @@ def main():
         if r.returncode != 0:
             failed.append(name)
             err = (r.stderr or "").strip().splitlines()
-            for l in err[-12:]:
+            for l in (err if name == "selftest_geometry27" else err[-12:]):
                 print("   !", l)
     print("SUMMARY: %d/%d passed" % (len(want) - len(failed), len(want)))
     return 1 if failed else 0
