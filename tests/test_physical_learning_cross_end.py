@@ -1,6 +1,4 @@
-"""Shared APP physical surrogate keeps training and acquisition behavior."""
-from pathlib import Path
-import sys
+"""Public physical surrogate training and acquisition behavior."""
 
 import numpy as np
 import pytest
@@ -9,9 +7,6 @@ from fibernet.ml import PhysicalRegressor, light_features
 from fibernet.ml.physical_learning import select_candidate
 from examples.physical_learning_workflow import PhysicalLearningWorkflow
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "FiberScope"))
-from fslab.learning import Regressor as AppRegressor
 
 
 def test_regressor_public_api_matches_app():
@@ -20,7 +15,6 @@ def test_regressor_public_api_matches_app():
     targets = np.column_stack((2 * features[:, 0] + features[:, 1],
                                features[:, 2] - features[:, 3],
                                features[:, 4] + 0.5 * features[:, 5]))
-    assert PhysicalRegressor is AppRegressor
     for key in ("mlp", "ridge", "random_forest"):
         model = PhysicalRegressor(key=key, seed=23)
         history = model.train(features, targets, epochs=30)

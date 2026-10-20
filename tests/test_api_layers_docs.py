@@ -37,9 +37,9 @@ class APILayersDocumentationTests(unittest.TestCase):
     def test_homepage_guide_links_are_discoverable(self):
         self.assertIn('(docs/API_LAYERS.md)', (ROOT / 'README.md').read_text(encoding='utf-8'))
         pypi = (ROOT / 'PYPI_README.md').read_text(encoding='utf-8')
-        self.assertIn('API layers and simulation modes (development branch)', pypi)
+        self.assertIn('API layers and simulation modes (verified source)', pypi)
         self.assertIn('https://github.com/GellmanSparrowS/fibernet/blob/'
-                      'work/verified-fibernet-20261016/docs/API_LAYERS.md', pypi)
+                      '0586e23ad57d2edff577ab64c7f33910b091fc2f/docs/API_LAYERS.md', pypi)
 
     def test_legacy_scope_is_explicit(self):
         paths = ['fibernet/integrations/__init__.py',

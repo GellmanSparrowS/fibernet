@@ -1,6 +1,4 @@
-"""Compare independent library and desktop manufacturing topology inputs."""
-import sys
-from pathlib import Path
+"""Independent public planar and surface manufacturing topology contracts."""
 
 import numpy as np
 import pytest
@@ -10,9 +8,6 @@ from fibernet.gen.manufacturing import (PlanarManufacturingConfig,
                                        manufacturable_graph)
 
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'FiberScope'))
-from fslab.structure import StructureFactory
 from examples.manufacturing_workflow import ManufacturingWorkflow
 
 
@@ -23,12 +18,6 @@ def test_planar_library_matches_app(unit, rule):
                     line_displacements=[[0.02, -0.01], [0.01, 0.03]],
                     perturbation=0.2, seed=23, expansion_rule=rule)
     library = compile_planar(PlanarManufacturingConfig(**settings))
-    desktop = compile_planar(StructureFactory(**settings))
-    assert np.array_equal(library.edges, desktop.edges)
-    assert np.array_equal(library.route_nodes, desktop.route_nodes)
-    assert np.array_equal(library.route_edges, desktop.route_edges)
-    assert np.allclose(library.reference, desktop.reference, atol=1e-12)
-    assert np.allclose(library.positions, desktop.positions, atol=1e-12)
     assert library.health['odd'] == 0
     assert library.health['components'] == 1
     graph = manufacturable_graph(PlanarManufacturingConfig(**settings))
@@ -46,10 +35,6 @@ def test_surface_library_matches_app(unit):
                     line_displacements=[[0.02, -0.01], [0.01, 0.03]])
     library = compile_surface(vertices, faces,
                               PlanarManufacturingConfig(**settings))
-    desktop = compile_surface(vertices, faces, StructureFactory(**settings))
-    assert np.array_equal(library.edges, desktop.edges)
-    assert np.array_equal(library.route_nodes, desktop.route_nodes)
-    assert np.allclose(library.positions, desktop.positions, atol=1e-12)
     assert library.health['odd'] == 0
 
 

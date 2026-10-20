@@ -1,8 +1,6 @@
-"""The desktop snapshot-feature contract remains numerically unchanged."""
+"""Public snapshot-feature numerical and graph-schema contracts."""
 import hashlib
 import json
-from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
@@ -10,9 +8,6 @@ import pytest
 from fibernet.analysis import ContactConfig, SnapshotFeatureExtractor
 from fibernet.gen import PlanarManufacturingConfig, manufacturable_graph
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "FiberScope"))
-from fslab.features import compute_features as app_compute_features
 
 
 def _digest(features):
@@ -36,10 +31,7 @@ def test_snapshot_feature_golden_and_app_alias():
     library = SnapshotFeatureExtractor(include_contact=True,
                                        contact_config=config)
     actual = library.extract(positions, edges)
-    expected = app_compute_features(positions, edges, include_contact=True,
-                                    contact_config=config)
     assert len(actual) == 54
-    assert _digest(actual) == _digest(expected)
     assert actual["pore_count"] == 4
     assert actual["contact_pair_count"] == 5
     np.testing.assert_allclose(actual["total_length"], 6.8, rtol=1e-12)

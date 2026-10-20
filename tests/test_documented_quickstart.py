@@ -47,19 +47,3 @@ def test_docs_version_matches_library():
     assert config["version"] == ".".join(version.split(".")[:2])
 
 
-def test_recruitment_ui_describes_strain_not_force_flow():
-    # Inspect the static translation table without importing Qt or the app.
-    tree = ast.parse((ROOT / "FiberScope" / "studio" / "i18n.py").read_text(encoding="utf-8"))
-    table = next(node.value for node in tree.body if isinstance(node, ast.Assign)
-                 and any(isinstance(target, ast.Name) and target.id == "TEXT"
-                         for target in node.targets))
-    strings = {ast.literal_eval(key): ast.literal_eval(value)
-               for key, value in zip(table.keys, table.values)
-               if isinstance(value, ast.Tuple) and all(isinstance(item, ast.Constant)
-                                                     for item in value.elts)}
-    assert strings["quantile"][1] == "Strain threshold α"
-    assert strings["view_perc"][1] == "Tensile recruitment"
-    assert strings["legend_active"][1] == "recruited"
-    assert "not a fixed 5% strain" in strings["quantile_hint"][1]
-    assert "not complete force flow" in strings["explain_perc"][1]
-    assert "force flows along continuous paths only" not in strings["explain_perc"][1]

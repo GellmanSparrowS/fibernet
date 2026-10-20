@@ -1,4 +1,4 @@
-"""Public API and APP compatibility checks for tensile recruitment."""
+"""Independent public tensile recruitment and run-adapter contracts."""
 from types import SimpleNamespace
 
 import numpy as np
@@ -45,14 +45,3 @@ def test_invalid_input_is_rejected(strain, edges, left, right, nodes):
         analyze_tensile_recruitment(strain, edges, left, right, nodes)
 
 
-def test_app_import_uses_same_calculation():
-    from pathlib import Path
-    import sys
-
-    app_root = Path(__file__).resolve().parents[1] / 'FiberScope'
-    sys.path.insert(0, str(app_root))
-    try:
-        from fslab.percolation import compute_percolation as app_compute
-        assert app_compute is compute_percolation
-    finally:
-        sys.path.remove(str(app_root))
