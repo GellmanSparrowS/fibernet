@@ -6,7 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
-- train_rl(env_config) → RL 训练
+- train_rl(env_config) → 随机策略 rollout 基线及奖励统计，不进行学习
 
 Examples
 --------
@@ -856,27 +856,32 @@ def train_rl(
     n_episodes: int = 100,
     save_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """一行 RL 训练：训练 RL agent 优化结构。
+    """运行随机策略 rollout 基线并返回奖励统计，不进行策略学习。
+
+    此历史名称下的函数每一步独立采样随机动作，不训练或返回策略模型。
+    实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
+    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同。
 
     Parameters
     ----------
     env_config : dict, optional
         环境配置，默认使用标准配置。
     n_episodes : int
-        训练回合数。
+        随机策略采样回合数。
     save_path : str, optional
-        保存路径。
+        奖励统计 JSON 文件路径，不是模型文件或检查点目录。
 
     Returns
     -------
     dict
-        训练统计。
+        奖励统计：n_episodes、final_reward、mean_reward、max_reward。
+        final_reward 是最后一次随机回合的奖励，不是训练后的策略评估结果。
 
     Examples
     --------
     >>> from fibernet import train_rl
     >>> stats = train_rl(n_episodes=100)
-    >>> print(f"Final reward: {stats['final_reward']:.2f}")
+    >>> print(f"Last random episode reward: {stats['final_reward']:.2f}")
     """
     from fibernet.sim.rl_env import FiberNetworkEnv
 
@@ -1086,7 +1091,11 @@ def batch_simulate_from_json(
     stiffness : float
         Force-like axial rigidity k in F = k * strain for the spring backend.
     damping : float
-        Velocity damping coefficient.
+        Legacy metadata-only value; does not change the simulation. This batch
+        wrapper forwards its default 0.3 explicitly, so an executed case can emit
+        the compatibility warning even when damping is omitted. Active numerical
+        dissipation retains stretch_test's existing dynamics dashpot/drag defaults;
+        use the direct dynamics interface to control dashpot/drag.
     num_steps : int
         Number of simulation steps.
     save_interval : int

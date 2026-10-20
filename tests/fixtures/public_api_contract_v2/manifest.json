@@ -9,7 +9,7 @@
       "prior_sha256": "b4f0aaa4e18c9f4c26b5d7d3534ab9486d9b6bb7b5de8c6caaa0b549cba0cada"
     },
     "fibernet/easy.py": {
-      "sha256": "0d590e1f80c7da4d37c22321959eedbeaeb1588a5d19a5b8e07fa26f77b7c44e",
+      "sha256": "f36cb79ea44b5588031a8577daae3ca99c617b444fe9de713fd52f606de54f90",
       "prior_sha256": "dc9d58b4738b4a7a3ca5a1c616f9b601f6a360ec22de1f9b3d205eca4daf1b79"
     },
     "fibernet/api.py": {
