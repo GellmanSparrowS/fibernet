@@ -1,7 +1,7 @@
 """Geometry and format-boundary regressions, not manufacturing qualification.
 
 A binary64 solid need not survive STL's binary32 coordinate welding. The known
-Lung500 case must fail closed; 3MF preserves its stored coordinates and indexed
+Lung500 and Vans500 cases must fail closed; 3MF preserves their coordinates and indexed
 connectivity, without proving connectedness, absence of self-intersections,
 or manufacturing suitability.
 """
@@ -133,14 +133,15 @@ def main():
         _,incidence=np.unique(edges,axis=0,return_counts=True)
         t=packed[solid.faces].astype(float)
         areas=np.linalg.norm(np.cross(t[:,1]-t[:,0],t[:,2]-t[:,0]),axis=1)
-        if path.name == '3_Lung_quad_500.obj':
+        if path.name in ('3_Lung_quad_500.obj', '6_vans_500.obj'):
             # Keep the unsafe fixture as a negative serialization regression.
             # A failed expectation here requires investigation, not a mesh edit.
-            assert np.any(incidence != 2), 'Lung500 binary32 defect changed'
-            assert np.any(areas == 0), 'Lung500 binary32 collapse changed'
+            assert np.any(incidence != 2), path.name+' binary32 welding defect changed'
+            if path.name == '3_Lung_quad_500.obj':
+                assert np.any(areas == 0), 'Lung500 binary32 collapse changed'
             with tempfile.TemporaryDirectory() as folder:
-                check_stl_refusal(Path(folder)/'lung500.stl', solid)
-                check_3mf_preservation(Path(folder)/'lung500.3mf', solid)
+                check_stl_refusal(Path(folder)/(path.stem+'.stl'), solid)
+                check_3mf_preservation(Path(folder)/(path.stem+'.3mf'), solid)
             serialization = 'STL refused; 3MF coordinates/indices preserved; not manufacturing-qualified'
         else:
             assert np.all(incidence==2), 'STL coordinate welding broke '+path.name
