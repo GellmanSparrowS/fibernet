@@ -39,3 +39,10 @@ exclude tests/test_import_order.py
 exclude tests/test_fiberscope_geometry_cache.py
 exclude tests/test_fiberscope_reporting.py
 exclude tests/test_repository_app_compatibility.py
+
+# Retained electrical/transport regression fixtures (not optional runtime output).
+include tests/data/joule_torus/run01/torus_graph.json
+include tests/data/joule_torus/run01/torus_electrical.json
+include docs/integrations/transport_pilot_fixture.json
+include docs/integrations/transport_roundoff_contract_v2.json
+include docs/integrations/thermal_frozen_contract.json
