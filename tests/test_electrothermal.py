@@ -151,11 +151,18 @@ def test_law_and_results_are_detached_and_immutable():
     metadata={'nested':{'name':'original'}}
     result=et.solve_electrothermal(geometry,law,model_metadata=metadata,**kwargs)
     metadata['nested']['name']='changed'
-    assert json.loads(result.provenance_json)['metadata']['nested']['name']=='original'
+    provenance = json.loads(result.provenance_json)
+    assert provenance['metadata']['nested']['name']=='original'
+    assert provenance['validation_contract'] == 'transport-roundoff-2'
+    assert provenance['thermal_capacity_reconstruction_profile'] == 'binary64-rn-capacity-rho-1'
     assert geometry.to_dict()==before_graph and kwargs==before_inputs
     with pytest.raises(FrozenInstanceError):result.completed=False
     with pytest.raises(TypeError):result.frames[-1].temperature_K[0]=0.
-    parsed=json.loads(result.frames[-1].electrical_json);parsed['conductance_S'][0]=999.
+    parsed=json.loads(result.frames[-1].electrical_json)
+    assert parsed['provenance']['validation_contract'] == 'transport-roundoff-2'
+    assert 'thermal_capacity_reconstruction_profile' not in parsed['provenance']
+    assert json.loads(result.frames[-1].heat_load_json)['provenance']['electrical_validation_contract'] == 'transport-roundoff-2'
+    parsed['conductance_S'][0]=999.
     assert json.loads(result.frames[-1].electrical_json)['conductance_S'][0]!=999.
 
 

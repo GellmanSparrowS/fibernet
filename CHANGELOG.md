@@ -1,3 +1,10 @@
+## [Unreleased] - thermal reconstruction budget
+
+- Bound thermal capacity reconstruction with outward-rounded `C*rho`, where `rho` is the current returned-temperature reconstruction radius; retain separate field-evaluation allowances and unchanged algebraic/precision thresholds.
+- Identify this numerical acceptance revision with `thermal_capacity_reconstruction_profile: binary64-rn-capacity-rho-1` in transient and coupled electrothermal provenance. Public call signatures and result layouts are unchanged; numerical bounds and acceptance outcomes may differ.
+- Preserve explicit refusal for lost increments, unrepresentable products and heat scales too small for the precision budget. Smaller time steps are not guaranteed to be representable; this correction does not establish trajectory convergence or coupled-energy accuracy.
+- Include self-contained synthetic acceptance/refusal tests with exact rational equation checks; no external capture file is required.
+
 ## [Unreleased] - runtime compatibility
 
 - Use ASCII status labels in easy training and batch helpers so decorative symbols do not break narrow redirected consoles; no locale or stream configuration is changed

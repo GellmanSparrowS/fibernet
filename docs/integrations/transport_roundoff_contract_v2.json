@@ -21,8 +21,9 @@
     "limitations": "32*eps is an existing engineering backward-residual margin, not a universal sparse-LU theorem or forward-accuracy certificate. At arbitrary voltage offsets, smaller-than-budget imbalance cannot be certified; component checks can reject unresolved driven drops."
   },
   "thermal": {
+    "thermal_capacity_reconstruction_profile": "binary64-rn-capacity-rho-1",
     "rho_K": "upper half-ulp(Tnew_i) if inc_i != 0; zero otherwise, including fixed nodes",
-    "capacity_allowance_J": "8*eps*C_i*(abs(Told_i)+abs(Tnew_i)) for active free rows, zero fixed/exact inactive rows",
+    "capacity_allowance_J": "outward-rounded C_i*rho_i for free rows, zero fixed/exact inactive rows; requires Tnew_i=RN(Told_i+inc_i) and fixed-node inc_i=0",
     "node_conduction_representation_J": "dt*sum_incident g_e*(rho_a+rho_b)",
     "edge_evaluation_W": "g_e*R(Tnew_a-Tnew_b)+R(qnew_e)",
     "step_edge_evaluation_J": "dt*edge_evaluation_W+R(dt*qnew_e)",
@@ -36,6 +37,6 @@
     "component_bound_J": "1e-10*component_scale_J+component_representation_J+component_evaluation_J",
     "cap": "Complete representation+evaluation allowance must be <=1e-6 of respective local/component scale; nonfinite budgets rejected",
     "unchanged": "Residual/scale formulas, loss-of-increment guard, physical inputs, sparse solver, backward Euler, partial-result API, and all rtol/atol/constants unchanged",
-    "scope": "Only current-step reconstruction relative to previous accepted stored temperature; no invented historical uncertainty. Discrete equation acceptance does not establish time-discretization accuracy."
+    "scope": "Only current-step reconstruction relative to previous accepted stored temperature; no invented historical uncertainty. Representation allowance does not bound solve, assembly, measurement or input uncertainty. Residual acceptance is not a forward-error proof and does not establish time-discretization accuracy."
   }
 }

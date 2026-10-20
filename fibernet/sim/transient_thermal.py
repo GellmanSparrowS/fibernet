@@ -182,7 +182,7 @@ def _solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
         incident[a].append((j,a,b));incident[b].append((j,a,b))
         component_edges[int(labels[a])].append((j,a,b))
     histories={k:[] for k in ('T','q','reservoir','stored','residual','energy','nbound','cbound')}
-    provenance=json.dumps({'validation_contract':'transport-roundoff-2','model':'constant_lumped_thermal','method':'backward_euler','quadrature':'right_endpoint',
+    provenance=json.dumps({'validation_contract':'transport-roundoff-2','thermal_capacity_reconstruction_profile':'binary64-rn-capacity-rho-1','model':'constant_lumped_thermal','method':'backward_euler','quadrature':'right_endpoint',
          'units':{'T':'K','C':'J/K','g':'W/K','q':'W','Q':'W','stored':'J','residual':'J'},
          'length_unit':length_unit,'geometry_inference':False,'scipy_version':scipy.__version__,
          'time_accuracy_verified':False,'relative_algebraic_term':1e-10,'relative_representation_cap':1e-6,

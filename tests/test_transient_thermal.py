@@ -23,7 +23,10 @@ def test_parallel_sparse_ids_reservoir_and_energy():
     assert np.isnan(r.free_node_residual_J[:,1]).all()
     np.testing.assert_allclose(r.node_stored_heat_change_J[-1].sum(),np.sum(np.diff(r.times_s)*r.reservoir_injection_W[1:].sum(axis=1)),rtol=1e-10)
     assert g.to_dict()==before and not r.temperature_K.flags.writeable
-    assert not json.loads(r.provenance_json)['time_accuracy_verified']
+    provenance = json.loads(r.provenance_json)
+    assert not provenance['time_accuracy_verified']
+    assert provenance['validation_contract'] == 'transport-roundoff-2'
+    assert provenance['thermal_capacity_reconstruction_profile'] == 'binary64-rn-capacity-rho-1'
 
 
 def test_unanchored_two_node_discrete_reference():

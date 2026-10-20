@@ -40,8 +40,10 @@ def thermal_fields(temp, *, conn, g, incident, fix, Q):
 
 def evaluate_thermal_step(*, T, new, inc, initial, dt, Q, C, g, conn,
                           fix, free, incident, members, component_edges):
+    # Internal precondition: finite binary64 new=RN(T+inc), with T the
+    # previous accepted step input and fixed-node inc=0. Both callers preserve
+    # this reconstruction. This allowance does not bound solve/input error.
     n, e, nc = len(T), len(g), len(members)
-    eps = np.finfo(float).eps
     is_free = np.ones(n, dtype=bool)
     is_free[fix] = False
     dtQ = _product(dt, Q, 'source step heat')
@@ -54,7 +56,7 @@ def evaluate_thermal_step(*, T, new, inc, initial, dt, Q, C, g, conn,
     # Previous accepted T is the physical step input. Only this step's
     # new=T+inc reconstruction contributes endpoint uncertainty.
     rho=np.array([upper_product(.5, math.ulp(float(new[i]))) if inc[i]!=0 else 0.0 for i in range(n)])
-    capacity_budget=np.array([upper_product(8*eps,float(C[i]),upper_sum([abs(float(T[i])),abs(float(new[i]))]))
+    capacity_budget=np.array([upper_product(float(C[i]),float(rho[i]))
                               if is_free[i] else 0.0 for i in range(n)])
     difference=new[conn[:,0]]-new[conn[:,1]]
     flux_eval=[upper_sum([upper_product(float(g[j]),evaluation_ulp(difference[j])),evaluation_ulp(qnew[j])])

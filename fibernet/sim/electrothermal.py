@@ -237,6 +237,7 @@ def solve_electrothermal(graph, law, prescribed_voltage_V, capacity_J_per_K,
     digest = hashlib.sha256(json.dumps(payload, sort_keys=True, allow_nan=False).encode()).hexdigest()
     provenance = json.dumps({'model': 'fixed_geometry_temperature_dependent_resistive_lumped_thermal',
         'method': 'backward_euler_bounded_picard', 'validation_contract': 'transport-roundoff-2',
+        'thermal_capacity_reconstruction_profile': 'binary64-rn-capacity-rho-1',
         'time_accuracy_verified': False, 'geometry_inference': False, 'length_unit': length_unit,
         'units': {'temperature': 'K', 'electrical_conductance': 'S', 'thermal_conductance': 'W/K',
                   'capacity': 'J/K', 'power': 'W', 'energy': 'J'},
