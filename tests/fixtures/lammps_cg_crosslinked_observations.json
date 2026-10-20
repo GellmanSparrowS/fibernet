@@ -1,0 +1,349 @@
+{
+  "accepted_compiler_sha256": "ef09090ede530f4bfa31c8bd218bfe83f18189cc010ccca36bc3befcdcf2328d",
+  "cases": {
+    "coarse": {
+      "final_diagnostics": {
+        "final_edge_strain_summary": {
+          "max": 0.01798412439876218,
+          "mean": 0.0030568558975259644,
+          "min": -0.0016562466562121125
+        },
+        "free_face_mean_displacement_from_initial_m": [
+          -3.469050211372708e-08,
+          5.729302800018979e-22,
+          1.8647481211776232e-08
+        ],
+        "held_force_convention": "native internal force on held beads; support force would have opposite sign, not a general reaction API",
+        "held_internal_force_sum_N": [
+          4.30497886171208e-13,
+          9.802255569486448e-26,
+          -5.386421981744585e-13
+        ],
+        "junction_displacement_from_initial_m": [
+          -2.1341716134398118e-09,
+          1.569076726441889e-11,
+          -3.646268363220087e-08
+        ],
+        "junction_node_id": 309
+      },
+      "frames": 501,
+      "initial_graph_sha256": "4a66e3b29489d1dd51ac274ddc749dac2fcf986ba0b4ff3cb2c5b7e572f6522b",
+      "metrics": {
+        "energy_scale_J": 4.6435607640217203e-20,
+        "grid": "coarse",
+        "max_bond_length_m": 1.0207840124139876e-06,
+        "max_force_error_N": 7.162857019406787e-27,
+        "max_internal_force_sum_N": 2.540132114811658e-28,
+        "max_internal_torque_N_m": 5.597233900875404e-34,
+        "max_kinetic_error_J": 1.8055593228630336e-35,
+        "max_potential_error_J": 4.402555482247697e-33,
+        "max_verlet_position_over_L": 2.1175689693332757e-16,
+        "max_verlet_velocity_over_V": 9.640578338644883e-18,
+        "maximum_total_energy_drift_J": 6.256473608178253e-25,
+        "min_bond_length_m": 9.983437533437878e-07,
+        "observed_first_step_m": 8.880310386822482e-13,
+        "passed": true,
+        "predicted_first_step_m": 8.880310385111092e-13,
+        "reference_samples": [
+          {
+            "components_J": {
+              "angle": 3.174692740337623e-20,
+              "bond": 1.4688680236840975e-20,
+              "pair": 0.0
+            },
+            "step": 0
+          },
+          {
+            "components_J": {
+              "angle": 1.3401462016726783e-20,
+              "bond": 1.0388644266567504e-20,
+              "pair": 0.0
+            },
+            "step": 250
+          },
+          {
+            "components_J": {
+              "angle": 1.307130759808576e-20,
+              "bond": 4.961752849105138e-21,
+              "pair": 0.0
+            },
+            "step": 500
+          }
+        ]
+      },
+      "prepared_sha256": "ed88feed507eb77e11690761868e04e73f479abafc27c3fbcbb55e5a614178a0",
+      "public_reload_equal": {
+        "result_detailed.json": true,
+        "result_summary.json": true
+      },
+      "public_result": {
+        "energy": 1.80330604471953e-20,
+        "final_max_net_nodal_force_N": 1.1712105968550635e-13,
+        "max_displacement": 4.533345700493435e-08,
+        "max_force": 3.5968248797524476e-14,
+        "max_stretch": 1.0179841243987622
+      },
+      "public_result_units": {
+        "energy": "J",
+        "final_max_net_nodal_force_N": "N",
+        "max_displacement": "m from loaded initial geometry",
+        "max_force": "N; axial bond force only",
+        "max_stretch": "dimensionless bond length/rest length"
+      },
+      "raw_public_equal": true,
+      "reference_graph_sha256": "ec5ad9c85fb4fe11d149c702779f4f23610b0cdecc2513586fdfa9d77f3c9fdd",
+      "steps": 500,
+      "timestep_s": 1e-07
+    },
+    "fine": {
+      "final_diagnostics": {
+        "final_edge_strain_summary": {
+          "max": 0.017984114954562758,
+          "mean": 0.0030568561129083534,
+          "min": -0.0016562467715297569
+        },
+        "free_face_mean_displacement_from_initial_m": [
+          -3.469049574632997e-08,
+          -1.0546897468639667e-21,
+          1.8647480429582883e-08
+        ],
+        "held_force_convention": "native internal force on held beads; support force would have opposite sign, not a general reaction API",
+        "held_internal_force_sum_N": [
+          4.3049770558059215e-13,
+          -2.60066856112122e-26,
+          -5.38644496706789e-13
+        ],
+        "junction_displacement_from_initial_m": [
+          -2.1341811220093315e-09,
+          1.5691349249533762e-11,
+          -3.646291837181289e-08
+        ],
+        "junction_node_id": 309
+      },
+      "frames": 1001,
+      "initial_graph_sha256": "4a66e3b29489d1dd51ac274ddc749dac2fcf986ba0b4ff3cb2c5b7e572f6522b",
+      "metrics": {
+        "energy_scale_J": 4.6435607640217203e-20,
+        "grid": "fine",
+        "max_bond_length_m": 1.0207840124139876e-06,
+        "max_force_error_N": 4.0243246041784154e-27,
+        "max_internal_force_sum_N": 2.8398992587956425e-28,
+        "max_internal_torque_N_m": 5.326400002445949e-34,
+        "max_kinetic_error_J": 1.8055593228630336e-35,
+        "max_potential_error_J": 8.176174467031437e-33,
+        "max_verlet_position_over_L": 2.117612155523532e-16,
+        "max_verlet_velocity_over_V": 9.612167989906245e-18,
+        "maximum_total_energy_drift_J": 1.564144265658713e-25,
+        "min_bond_length_m": 9.983437532284702e-07,
+        "observed_first_step_m": 2.2200775967140046e-13,
+        "passed": true,
+        "predicted_first_step_m": 2.220077596277773e-13,
+        "reference_samples": [
+          {
+            "components_J": {
+              "angle": 3.174692740337623e-20,
+              "bond": 1.4688680236840975e-20,
+              "pair": 0.0
+            },
+            "step": 0
+          },
+          {
+            "components_J": {
+              "angle": 1.3401305154669765e-20,
+              "bond": 1.0388644392843013e-20,
+              "pair": 0.0
+            },
+            "step": 500
+          },
+          {
+            "components_J": {
+              "angle": 1.3071145244836528e-20,
+              "bond": 4.961753287823246e-21,
+              "pair": 0.0
+            },
+            "step": 1000
+          }
+        ]
+      },
+      "prepared_sha256": "eac7f801e83c570dacc862fdc3931e52d8e28d0494583f7d23c8fc65f90fb7fa",
+      "public_reload_equal": {
+        "result_detailed.json": true,
+        "result_summary.json": true
+      },
+      "public_result": {
+        "energy": 1.8032898532662635e-20,
+        "final_max_net_nodal_force_N": 1.1711977521237194e-13,
+        "max_displacement": 4.53333898860253e-08,
+        "max_force": 3.596822990912597e-14,
+        "max_stretch": 1.017984114954563
+      },
+      "public_result_units": {
+        "energy": "J",
+        "final_max_net_nodal_force_N": "N",
+        "max_displacement": "m from loaded initial geometry",
+        "max_force": "N; axial bond force only",
+        "max_stretch": "dimensionless bond length/rest length"
+      },
+      "raw_public_equal": true,
+      "reference_graph_sha256": "ec5ad9c85fb4fe11d149c702779f4f23610b0cdecc2513586fdfa9d77f3c9fdd",
+      "steps": 1000,
+      "timestep_s": 5e-08
+    },
+    "static": {
+      "final_diagnostics": {
+        "final_edge_strain_summary": {
+          "max": 0.02078401241398775,
+          "mean": 0.007042842883476777,
+          "min": -2.220446049250313e-16
+        },
+        "free_face_mean_displacement_from_initial_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "held_force_convention": "native internal force on held beads; support force would have opposite sign, not a general reaction API",
+        "held_internal_force_sum_N": [
+          4.694869273482338e-13,
+          2.6904930515036488e-43,
+          5.299430454519704e-13
+        ],
+        "junction_displacement_from_initial_m": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "junction_node_id": 309
+      },
+      "frames": 1,
+      "initial_graph_sha256": "4a66e3b29489d1dd51ac274ddc749dac2fcf986ba0b4ff3cb2c5b7e572f6522b",
+      "metrics": {
+        "energy_scale_J": 4.6435607640217203e-20,
+        "grid": "static",
+        "max_bond_length_m": 1.0207840124139876e-06,
+        "max_force_error_N": 2.865142807762715e-27,
+        "max_internal_force_sum_N": 7.790001439057492e-30,
+        "max_internal_torque_N_m": 1.0135112292789763e-34,
+        "max_kinetic_error_J": 0.0,
+        "max_potential_error_J": 8.305572885169955e-34,
+        "max_verlet_position_over_L": 0.0,
+        "max_verlet_velocity_over_V": 0.0,
+        "maximum_total_energy_drift_J": 0.0,
+        "min_bond_length_m": 9.999999999999997e-07,
+        "observed_first_step_m": 0.0,
+        "passed": true,
+        "predicted_first_step_m": 0.0,
+        "reference_samples": [
+          {
+            "components_J": {
+              "angle": 3.174692740337623e-20,
+              "bond": 1.4688680236840975e-20,
+              "pair": 0.0
+            },
+            "step": 0
+          }
+        ]
+      },
+      "prepared_sha256": "4593acabca2ff86a2b6c8cc9e0f9edc96268ba765e2fe49eaa6bcfe114fa280f",
+      "public_reload_equal": {
+        "result_detailed.json": true,
+        "result_summary.json": true
+      },
+      "public_result": {
+        "energy": 4.6435607640218034e-20,
+        "final_max_net_nodal_force_N": 1.7760620770222042e-13,
+        "max_displacement": 0.0,
+        "max_force": 4.1568024827974916e-14,
+        "max_stretch": 1.0207840124139875
+      },
+      "public_result_units": {
+        "energy": "J",
+        "final_max_net_nodal_force_N": "N",
+        "max_displacement": "m from loaded initial geometry",
+        "max_force": "N; axial bond force only",
+        "max_stretch": "dimensionless bond length/rest length"
+      },
+      "raw_public_equal": true,
+      "reference_graph_sha256": "ec5ad9c85fb4fe11d149c702779f4f23610b0cdecc2513586fdfa9d77f3c9fdd",
+      "steps": 0,
+      "timestep_s": 1e-07
+    }
+  },
+  "engine": {
+    "expected_banner": "LAMMPS (22 Jul 2025 - Update 4)",
+    "expected_version": 20250722
+  },
+  "matched": {
+    "interpretation": "observed two-grid refinement, not a convergence-order theorem",
+    "max_position_over_L": 2.3729284356053805e-07,
+    "max_velocity_over_V": 5.33572900354477e-07,
+    "maximum_total_energy_drift_J": {
+      "coarse": 6.256473608178253e-25,
+      "fine": 1.564144265658713e-25
+    },
+    "passed": true
+  },
+  "native_rerun_for_publication": false,
+  "normalization": {
+    "L_m": 1e-06,
+    "V_m_s": 0.03162277660168379,
+    "energy_floor_J": 1e-24
+  },
+  "overall_resource_acceptance": "FAIL",
+  "parameters": {
+    "angle_K_J": 3e-18,
+    "angle_rest_radians": "pi",
+    "angles": 64,
+    "bond_k_N_m": 2e-06,
+    "bond_rest_length_m": 1e-06,
+    "bonds": 104,
+    "cycle_rank": 57,
+    "fixed_rule": "i=0",
+    "grid_shape": [
+      4,
+      4,
+      3
+    ],
+    "held_nodes": 12,
+    "initial_position_rule": "x=1.02*i*L; y=j*L; z=k*L+0.01*i*L+0.03*L*(i*(3-i)/2)*(j*(3-j)/2)",
+    "initial_velocity_m_s": [
+      0,
+      0,
+      0
+    ],
+    "length_unit": "m",
+    "mass_kg": 1e-15,
+    "nodes": 48,
+    "pair_interactions": "none",
+    "physical_duration_s": 5e-05,
+    "spacing_m": 1e-06
+  },
+  "resource_qualification_note": "A measured orchestration CPU role exceeded its frozen allowance. Aggregate headroom does not erase that failure. This fixture contains scientific observations only and is not a performance qualification.",
+  "schema": "fibernet-cg-crosslinked-network-observations/1",
+  "scientific_status": "PASS_FROZEN_SCENE_GATES",
+  "scientific_tolerances": {
+    "bond_length_over_L_max": 1.5,
+    "bond_length_over_L_min": 0.5,
+    "box_margin_over_L_min": 1,
+    "drift_relative": {
+      "coarse": 0.001,
+      "fine": 0.00025
+    },
+    "energy_floor_J": 1e-30,
+    "energy_relative": 1e-10,
+    "every_integration_step_required": true,
+    "first_step_min_displacement_over_L": 1e-10,
+    "fixed_node_exact": true,
+    "force_floor_N": 1e-22,
+    "force_relative": 1e-05,
+    "matched_position_over_L_max": 0.001,
+    "matched_velocity_over_V_max": 0.002,
+    "net_force_relative": 1e-10,
+    "observed_first_step_min_ratio": 0.99,
+    "refinement_floor_relative": 1e-10,
+    "refinement_ratio_max": 0.4,
+    "torque_relative": 1e-10,
+    "verlet_position_over_L_max": 1e-10,
+    "verlet_velocity_over_V_max": 1e-10
+  },
+  "scope": "Synthetic 48-bead intermediate network; static force audit plus two temporal grids, not large-scale qualification"
+}

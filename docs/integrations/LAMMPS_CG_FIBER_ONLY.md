@@ -172,3 +172,7 @@ and [upstream license guidance](https://docs.lammps.org/Intro_opensource.html).
 Optional execution is not a blanket licensing exemption. Direct Python-library
 linkage and bundled combined distributions are outside this CLI release and
 require their own licensing review.
+
+For the intermediate 48-bead crosslinked scaffold and reference/initial geometry
+separation, see [Synthetic crosslinked CG network](LAMMPS_CG_CROSSLINKED_NETWORK.md).
+Its retained scientific gates passed, but overall resource acceptance did not.
