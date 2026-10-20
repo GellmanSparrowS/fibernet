@@ -3,6 +3,7 @@ import os
 import sys
 import time
 import tempfile
+import json
 from pathlib import Path
 from dataclasses import replace
 from unittest.mock import patch
@@ -74,7 +75,20 @@ def main():
                 seen.add(win.tabs.currentWidget())
                 if getattr(runner,"_preview_until",None) is not None: runner._preview_until=0
                 assert time.monotonic()<until,runner.status()
-            assert runner.status()['state']=='complete',runner.status()
+            result=runner.status()
+            assert result['state']=='failed',result
+            assert result['message']=='ambiguous zero-thickness solid contact',result
+            assert result['printer_state']=='not_submitted' and not result['busy']
+            assert [stage['name'] for stage in result['stages']]==list(runner.STAGES[:9])
+            assert all(stage['state']=='complete' for stage in result['stages'][:-1])
+            assert result['stages'][-1]['state']=='failed'
+            assert result['stages'][-1]['name']=='solid'
+            assert runner.solid is None and runner.network is None
+            assert all(win.tabs.widget(i).isEnabled() for i in range(win.tabs.count()))
+            assert not any((runner.folder/name).exists() for name in
+                           ('FiberScope.stl','FiberScope.3mf','path.csv'))
+            saved=json.loads((runner.folder/'progress.json').read_text(encoding='utf-8'))
+            assert saved['state']=='failed' and saved['message']==result['message']
             assert all(page in seen for page in (win.tab_struct,win.tab_sim,win.tab_features,
                 win.tab_ml,win.tab_design,win.tab_surface,win.tab_manufacturing))
             assert win.tabs.currentWidget() is win.tab_manufacturing
@@ -85,9 +99,61 @@ def main():
             assert all(button.width()>=button.fontMetrics().horizontalAdvance(button.text())+14 for button in buttons)
             assert len({b.geometry().y() for b in (win.tab_manufacturing.planar,win.tab_manufacturing.curved,win.tab_manufacturing.play)})==1
             tools=[entry for entry in win.ai_panel._log if entry[0]=='tool' and entry[1].startswith('workflow.')]
-            assert len(tools)==11 and all(entry[4] for entry in tools)
-            assert all(stage['page']=='制造' for stage in runner.record['stages'][-3:])
-            assert dialog.source_network is runner.network
+            assert len(tools)==9 and all(entry[4] for entry in tools[:-1])
+            assert not tools[-1][4] and tools[-1][1]=='workflow.solid'
+            assert runner.record['stages'][-1]['page']=='制造'
+            assert dialog.solid is None and dialog.canvas.solid is None
+            assert 'ambiguous zero-thickness solid contact' in dialog.status.text()
+            assert all(not button.isEnabled() for button in
+                       (dialog.stl,dialog.threemf,dialog.route,dialog.bambu,dialog.play))
+            until=time.monotonic()+15
+            while dialog.worker.isRunning():
+                app.processEvents();time.sleep(.005)
+                assert time.monotonic()<until
+            assert dialog.refresh.isEnabled()
+            curved_factory=StructureFactory(unit='square',grid_x=3,grid_y=3,
+                                             n_pts_per_side=2,perturbation=.35,seed=7)
+            win.tab_struct.load_spec(curved_factory)
+            surface=win.tab_surface
+            index=[Path(path).name for path in surface._obj_files].index('3_Lung_quad_500.obj')
+            asset=surface._obj_files[index]
+            surface._mesh_settings[asset]=(48,0)
+            surface._mesh_cache.pop(asset,None)
+            surface.obj_combo.setCurrentIndex(index)
+            surface.chk_follow.setChecked(True)
+            surface.overscale.setValue(106)
+            surface.apply_structure(curved_factory)
+            surface._debounce.stop()
+            surface._recompute()
+            assert surface._mapping_error is None,surface._mapping_error
+            assert len(surface._manufacturing_source[1])==48
+            win.tab_manufacturing.open_source(True)
+            dialog=win.tab_manufacturing.dialog
+            dialog.controls['width'].setValue(250.)
+            dialog.controls['depth'].setValue(250.)
+            dialog.controls['diameter'].setValue(2.)
+            until=time.monotonic()+90
+            while dialog.solid is None:
+                app.processEvents();time.sleep(.005)
+                assert time.monotonic()<until,dialog.status.text()
+                if dialog.worker is not None and not dialog.worker.isRunning():
+                    app.processEvents()
+                    assert dialog.solid is not None,dialog.status.text()
+            assert dialog.canvas.three_d and dialog.solid.settings.up_axis=='y'
+            assert dialog.source_network is surface.manufacturing_network
+            assert dialog.solid.validate()>0
+            exported=folder/'curved-mesh';exported.mkdir()
+            for kind in ('stl','3mf','csv'):
+                path=exported/('lung.'+kind)
+                assert dialog.save(kind,str(path))==str(path),dialog.status.text()
+                assert path.stat().st_size>100
+            from scipy.sparse import coo_matrix
+            from scipy.sparse.csgraph import connected_components
+            faces=dialog.solid.faces;edges=faces[:,[0,1,1,2,2,0]].reshape(-1,2)
+            adjacency=coo_matrix((np.ones(len(edges)),(edges[:,0],edges[:,1])),
+                                 shape=(len(dialog.solid.vertices),)*2).tocsr()
+            components,_=connected_components(adjacency,directed=False)
+            print('[curved-mesh]',components,'mesh boundary components; formats exported',flush=True)
             win.tab_manufacturing.open_source(False)
             assert not win.tab_manufacturing.dialog.canvas.three_d
             win.close()
@@ -95,7 +161,7 @@ def main():
             while win.isVisible():
                 app.processEvents();time.sleep(.01)
                 assert time.monotonic()<until
-    print('[final30] exact visible random parameters, four-arc ring density, parsed square/200, seven actual pages, eleven tool results, automatic views and single-row controls PASS')
+    print('[final30] exact visible random parameters, four-arc ring density, parsed square/200, seven actual pages, exact unsafe-solid refusal, unlocked UI, curved mesh export and single-row controls PASS')
 
 
 if __name__=='__main__': main()

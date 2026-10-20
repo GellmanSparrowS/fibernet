@@ -57,8 +57,12 @@ check and other validation enabled. Closed edge incidence and signed volume do
 not replace independent vertex-link, connectivity, self-intersection or
 manufacturing-process checks.
 
-An accepted in-memory solid does not establish serialized precision: STL writes
-float32 coordinates, and 3MF currently writes nine significant digits. Validate
-the coordinates and topology actually read back from the chosen format before
-using it for a precision-sensitive workflow. This change does not repair
-previously generated files or discard degenerate triangles.
+An accepted in-memory solid does not establish serialized precision. Binary STL
+writes float32 coordinates; export validates those exact coordinates after
+welding equal positions and refuses invalid serialization before replacing the
+destination. 3MF writes 17 significant digits so stored binary64 coordinates
+roundtrip through a binary64 XML parser; downstream readers may use lower
+precision. Validate the coordinates and topology actually read back from the
+chosen format before using it for a precision-sensitive workflow. Neither format
+certifies connectivity, self-intersection freedom or manufacturing suitability.
+This does not repair previously generated files or discard degenerate triangles.

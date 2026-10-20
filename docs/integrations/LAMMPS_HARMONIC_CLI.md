@@ -36,7 +36,7 @@ Mass types group only exactly equal normalized binary64 kg values, without toler
 
 ## Explicit runtime and lifecycle
 
-The publication candidate supports `RuntimeSpec(mode="cli", ...)` only. Linked Python-engine mode and automatic provider discovery fail closed. Native execution is restricted to Linux x86_64 and the qualified wheel-style layout: native `lammps/lmp`, `liblammps.so`, `liblammps.so.0`, bundled `lammps.libs` libraries and an explicit existing MPICH `libmpi.so.12` directory. It is not a generic adapter for every system installation.
+Two explicit CLI profiles are supported: `RuntimeSpec(mode="cli", ...)` for the qualified MPI wheel-style layout, and `RuntimeSpec(mode="cli_serial_static", ...)` for the separately verified static executable described below. Linked Python-engine mode and automatic provider discovery fail closed. Both profiles restrict native execution to Linux x86_64. The `cli` profile requires native `lammps/lmp`, `liblammps.so`, `liblammps.so.0`, bundled `lammps.libs` libraries and an explicit existing MPICH `libmpi.so.12` directory. Neither profile is a generic adapter for every system installation.
 
 The tested external provider is the unofficial PyPI wheel `lammps==2025.7.22.4.0`, based on official upstream `stable_22Jul2025_update4`, with MPICH 5.0.2. [Official current documentation](https://docs.lammps.org/Intro_opensource.html) identifies release 30Sep2026; that does not upgrade or qualify the tested runtime. The adapter does not install either provider and does not add either engine to FiberNet's mandatory, `dev` or `full` dependencies.
 

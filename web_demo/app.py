@@ -118,9 +118,12 @@ class Demo:
         network=state['network'] if curved else compile_planar(factory)
         if len(network.edges)>120000:raise gr.Error('在线资源有限，请减少网络数量；完整规模可使用桌面版')
         settings=PrintSettings(width=float(extent),depth=float(extent),height=float(diameter),diameter=float(diameter),curved=curved,up_axis=state.get('up_axis','z') if curved else 'z')
-        solid=build_solid(network,settings,progress=lambda p:progress(min(p/100,.99),desc='构建圆柱纤维实体'))
         folder=Path(state['directory']);stl=folder/'FiberScope.stl';route=folder/'FiberScope-route.csv'
-        export_solid(stl,solid);export_route(route,network,solid.centers)
+        try:
+            solid=build_solid(network,settings,progress=lambda p:progress(min(p/100,.99),desc='构建圆柱纤维实体'))
+            export_solid(stl,solid);export_route(route,network,solid.centers)
+        except ValueError as exc:
+            raise gr.Error(f'制造校验未通过：{exc}。请调整结构或曲面参数后重试。') from exc
         return str(stl),str(route),f'封闭实体已生成 · {len(solid.faces):,} 三角面 · STL 单位 mm'
 
 SURFACE_MODELS={'金字塔':'demo_pyramid.obj','肺':'3_Lung_quad_500.obj','心脏':'4_Heart_quad_500.obj','运动鞋':'6_vans_500.obj','衣服':'reference_shirt.obj','鞋':'reference_shoe.obj','埃菲尔铁塔':'reference_paris.obj'}
@@ -221,11 +224,12 @@ def create_app():
             inverse_status=gr.Textbox(label='状态',interactive=False)
             optimize.click(demo.inverse,[state,budget,target],[state,best,comparison,inverse_status],concurrency_id='science',api_name='inverse')
         with gr.Tab('6 · 三维曲面'):
-            surface_model=gr.Dropdown(list(SURFACE_MODELS),value='金字塔',label='桌面版曲面模型')
+            surface_model=gr.Dropdown(list(SURFACE_MODELS),value='肺',label='桌面版曲面模型')
             with gr.Row():
                 upload=gr.File(file_types=['.obj'],type='filepath',label='导入 OBJ（三角面 / 四边面）')
-                density=gr.Slider(12,10000,value=1000,step=1,label='目标曲面网格数')
-                surface_points=gr.Slider(2,10,value=5,step=1,label='每段采样点数')
+                density=gr.Slider(12,10000,value=48,step=1,label='目标曲面网格数')
+                surface_points=gr.Slider(2,10,value=2,step=1,label='每段采样点数')
+            gr.Markdown('默认肺部示例使用 48 个曲面网格、每段 2 个采样点，网格包含两个闭合边界分量。调整模型、网格或逆设计结果后会重新校验；导出后仍需检查切片和材料。')
             map_button=gr.Button('映射当前结构',variant='primary');mapped=gr.Plot();surface_status=gr.Textbox(label='状态',interactive=False)
             map_button.click(demo.map_obj,[state,surface_model,upload,density,surface_points],[state,mapped,surface_status],concurrency_id='science',api_name='surface')
         with gr.Tab('7 · 制造导出'):
@@ -236,7 +240,7 @@ def create_app():
             manufacture=gr.Button('生成实体并导出 STL',variant='primary')
             with gr.Row():stl=gr.File(label='STL · 可导入拓竹');route=gr.File(label='闭合路径 CSV')
             print_status=gr.Textbox(label='状态',interactive=False)
-            solid_preview=gr.Model3D(label='可打印圆柱纤维实体',height=600,clear_color=[.95,.97,.99,1])
+            solid_preview=gr.Model3D(label='纤维实体 STL 预览',height=600,clear_color=[.95,.97,.99,1])
             gr.Markdown('点击生成后，如尚未显示三维模型且任务未报错，说明魔搭社区集群仍在排队或计算，请稍候。曲面结构通常比平面结构耗时更长。')
             manufacture.click(demo.preview,[state,source,diameter,extent],[stl,route,print_status,solid_preview],concurrency_id='science',api_name='manufacture')
         gr.Markdown('在线版使用共享 CPU，任务依次计算。下载 STL 后可在本地拓竹软件中切片。完整 AI 助手、自定义单元和长预算任务请使用桌面版。\n\n制作：复旦大学高分子科学系 杨云浩 · 致谢世界人工智能开源大赛')

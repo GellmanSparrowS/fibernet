@@ -20,9 +20,9 @@ This hosted application is a presentation demo. The desktop release is the compl
 
 | Control | Default | Maximum |
 | --- | --- | --- |
-| Surface | Pyramid | Seven desktop models or OBJ import |
-| Target surface quads | 1,000 | 10,000 |
-| Samples per fiber segment | 5 | 10 |
+| Surface | Lung | Seven desktop models or OBJ import |
+| Target surface quads | 48 | 10,000 |
+| Samples per fiber segment | 2 | 10 |
 | Planar grid per direction | 3 | 12 |
 | Physical training samples | 120 | 1,000 |
 | Inverse evaluations | 60 | 1,000 |
@@ -33,4 +33,6 @@ A higher target preserves source detail and applies conforming four-way subdivis
 
 STL preview loads the actual exported solid. The shared compute cluster can queue tasks; curved solids generally take longer than planar solids. Numerical geometry and memory guards remain enabled.
 
-Validation: `python web_demo/test_showcase_defaults.py` checks actual dense-heart refinement and exports the default pyramid solid.
+Start with the unchanged square/grid-3 structure, perturbation 0.35 and seed 7; map the lung at 48 quads with 2 samples per segment, then export at 2 mm diameter and 250 mm extent. This starter mesh has two closed oriented boundary components. These do not establish two separate material parts or material connectedness; containment has not been qualified. The example exercises geometry and file-format checks, not self-intersection freedom or printing suitability. Different densities, shapes and inverse-design results must pass their own validation. Unsafe geometry and STL coordinate collapse produce a visible error rather than an invalid export.
+
+Validation: `python web_demo/test_showcase_defaults.py` retains dense-heart refinement and pyramid mapping checks and exports the default lung mesh. `python web_demo/test_demo.py` retains the real inverse-result pyramid refusal and verifies the starter STL and route readback.
