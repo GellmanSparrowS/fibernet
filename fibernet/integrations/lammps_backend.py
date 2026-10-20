@@ -468,12 +468,12 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 for nid,_ in contract['projectile_pairs']:
                     if math.dist(frame.positions_m[by_id[nid]], frame.positions_m[by_id[contract['projectile_node_id']]]) == 0:
                         raise LAMMPSContractError('coincident selected CG pair in trajectory')
-        if _profiles.sampled(selected) or contract.get('model') == 'conservative-ball-cosine-strand-cg/1':
-            for frame in frames:
-                for nid in contract['fixed_node_ids']:
-                    i=by_id[nid]
-                    if frame.positions_m[i] != frames[0].positions_m[i] or any(frame.velocities_m_s[i]):
-                        raise LAMMPSContractError('fixed native state changed')
+        # Every compiler profile excludes held atoms from integration.
+        for frame in frames:
+            for nid in contract['fixed_node_ids']:
+                i=by_id[nid]
+                if frame.positions_m[i] != frames[0].positions_m[i] or any(frame.velocities_m_s[i]):
+                    raise LAMMPSContractError('fixed native state changed')
         initial_velocity = dict(contract['velocities_m_s'])
         for i,node in enumerate(source['nodes']):
             initial = tuple(x*contract['length_to_m'] for x in node['position'])

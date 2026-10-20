@@ -74,6 +74,16 @@ The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall
 
 Dump units, time, integer steps, complete unique identities, expected types, box, finite values, initial state, PE+KE consistency and a graph/contract-bound completion marker are checked. Returned energy is the engine's mechanical thermo energy. Explicit constant nodal forces and whole-node fixed constraints have compiler/protocol tests, but the native scientific qualification below uses zero loads and no fixed sites. External work is not integrated into the result, so do not apply closed-system energy conservation to loaded runs. Geometric boundary flags are preserved as provenance; fixed sites are an explicit separate argument.
 
+For every harmonic profile, each observed fixed site must retain its position
+and zero velocity. The parser compares held positions exactly to frame zero;
+typed-result conversion independently compares them to the prepared SI geometry
+with relative tolerance `1e-13` and zero absolute tolerance. This check also runs
+when `record_state=False` and before sampled-output projection. Nonzero native
+forces on held sites remain available, but are not general reaction forces.
+The held-state invariant does not broaden other profile-specific validation or
+establish behavior between observations; sparse CG profiles still validate only
+observed states.
+
 Native evidence for the unchanged compiler protocol includes analytical two-site static and unequal-mass oscillator checks, and a heterogeneous 64-site/441-bond generator-defined braced-cubic graph with three mass and stiffness classes. Three network trajectories (100/200/400 steps, 703 frames total) passed saved-frame force/energy/conservation, local integration-residual and common-time refinement checks. Finest energy drift was about 1.48 ppm over the declared short interval. These are bounded correctness cases, not a large-scale performance, contact, beam, chemistry or MPI claim. The CLI-only publication revision itself still requires its final source/runtime admission review; earlier native evidence is not silently relabeled as a new execution.
 
 The legacy `LAMMPSBridge`/`run_lammps_md` API remains for compatibility and is not covered by these checks. Its `_LAMMPS_AVAILABLE` module flag indicates adapter importability, not a verified installed engine.

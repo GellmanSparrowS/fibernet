@@ -4,7 +4,7 @@ A separate optional Linux stdio adapter exposing five bounded native graph and a
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 231 native Python source hashes must match core_manifest.json. The required native core snapshot is 3f2325015fe8613bc74ceb74d3e20fa88804f8e6. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 231 bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 231 native Python source hashes must match core_manifest.json. The required native core snapshot is 1f37996baf2c935afd6e107f075eb19eb6530f25. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 231 bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the identity of the producer/core snapshot. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -24,7 +24,7 @@ Earlier adapter builds used snapshot labels `195494f987805cc14dcf66f4713565e2e5c
 Create an operator-owned JSON file such as manifest.json. Paths must be absolute regular-file paths without symlink components. Replace the placeholder path and SHA with your chosen graph's actual bytes; for the included fixture, use the SHA below.
 
 ```json
-{"source_tree":"3f2325015fe8613bc74ceb74d3e20fa88804f8e6","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
+{"source_tree":"1f37996baf2c935afd6e107f075eb19eb6530f25","graphs":[{"path":"/absolute/path/to/voronoi_4340.json","sha256":"fb40544438cd4e7ca9bc60d8f10c6363c169b0aa7ce99f4e0a3d45b64629c584","length_unit":"unspecified","frame_id":"unknown"}]}
 ```
 
 ```sh

@@ -318,6 +318,17 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         _profiles.shape(thermo.pressure_tensor_Pa,(6,),'native pressure')
         if (not cg and thermo.potential_J < 0) or thermo.kinetic_J < 0 or not np.isclose(thermo.total_J,thermo.potential_J+thermo.kinetic_J,rtol=1e-12,atol=0):
             raise ValueError('inconsistent native frame energy')
+    # Typed results can bypass the parser. Held state is a compiler invariant,
+    # independent of the profile-specific geometry checks below.
+    if contract['fixed_node_ids']:
+        import math
+        rows = {nid:i for i,nid in enumerate(ids)}
+        original = {n['id']:tuple(x*contract['length_to_m'] for x in n['position']) for n in graph['nodes']}
+        for frame in raw.trajectory:
+            for nid in contract['fixed_node_ids']:
+                i = rows[nid]
+                if any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(frame.positions_m[i],original[nid])) or any(frame.velocities_m_s[i]):
+                    raise ValueError('native initial/fixed state mismatch')
     if _profiles.sampled(selected) or cg:
         rows = {nid:i for i,nid in enumerate(ids)}
         original = {n['id']:tuple(x*contract['length_to_m'] for x in n['position']) for n in graph['nodes']}
