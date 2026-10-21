@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 235
+assert len(manifest) == 236
 records = []
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
@@ -63,6 +63,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
                      '__init__.py', 'gen/__init__.py', 'gen/manufacturing_bridge.py',
                      'gen/manufacturing_trails.py', 'api.py', 'easy.py', 'viz/__init__.py',
                      'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py')]
+    cases.append(('ml/graph_training_contract.py', None))
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
     cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))
     cases.append(('io/mesh_export.py', b'vertex_offset = 0  # Convert to one-based OBJ indices only when writing.'))
