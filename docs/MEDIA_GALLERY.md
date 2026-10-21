@@ -74,6 +74,30 @@ The companion ring example removes a matched **2.22% edge length**. All remainin
 
 [Ring editable frame](media/route_preserving_intervention_ring_final.svg) · [Ring manifest](media/route_preserving_intervention_ring.json) · [Full 24-configuration study](CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md) · [Saved study renderer](../scripts/make_intervention_media.py)
 
+## Learning and inverse-design workspaces
+
+![Saved learning diagnostics and inverse-design interface tour](media/learning_inverse_workflow.gif)
+
+The four stages highlight dataset controls, saved diagnostics, inverse-search controls and candidate review in the existing FiberScope screenshots. Original curves and numbers remain unchanged throughout the tour.
+
+[Editable poster](media/learning_inverse_workflow.svg) · [Screenshot hashes and tour parameters](media/module_workflow_tours.json) · [Render-only script](../scripts/render_module_workflow_tours.py)
+
+## Surface mapping and export workspaces
+
+![Saved surface mapping and manufacturing export interface tour](media/surface_export_workflow.gif)
+
+Inspect the surface-bound network, surface controls, fabrication geometry and export controls in the saved interface views. Highlight changes guide the reader through the workspaces; the images do not document printer execution.
+
+[Editable poster](media/surface_export_workflow.svg) · [Screenshot hashes and tour parameters](media/module_workflow_tours.json)
+
+## Electrical field on a toroidal network
+
+![Saved steady electrical field on an 80-node toroidal graph](media/electrical_torus_field.gif)
+
+A camera orbit presents the fixed voltage and current field of a saved 80-node, 162-edge toroidal network with synthetic SI parameters. Field values remain unchanged as the view rotates.
+
+[Editable field poster](media/electrical_torus_field_final.svg) · [Source and rendering parameters](media/electrical_torus_field.json) · [Render-only script](../scripts/render_saved_electrical_field.py)
+
 ## Reproduce the visuals
 
 The new hero is a **render-only** composition of saved geometry and saved GIF frames. Its renderer uses NumPy, Pillow, and the DejaVu Sans / Sans Mono fonts:
@@ -93,3 +117,4 @@ python scripts/check_bilingual_homepage.py
 Historical manifests retain the original render-time hashes. The checker reports byte-exact matches separately from text files whose only difference is LF/CRLF line endings; it does not rewrite those records.
 
 Keep the source manifests, editable frames, and [project license](../LICENSE) with reused media. The homepage combines the selected examples for navigation; it does not combine their separate physical models into one simulation.
+

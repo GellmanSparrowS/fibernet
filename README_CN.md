@@ -1,12 +1,20 @@
-# FiberNet + FiberScope
+<table>
+<tr><td align="center">
+<img src="docs/media/ui/homepage-cover-v2.svg" alt="FiberNet + FiberScope" width="1000">
+<h3>从纤维网络几何，到力学响应与结构设计。</h3>
+<p>构建结构、模拟响应、分析网络，将机器学习与制造流程连接起来。</p>
+<p>
+<a href="README.md"><img src="docs/media/ui/homepage-language-en-inactive-v2.svg" alt="Switch to English" width="180" height="54"></a>
+<a href="README_CN.md"><img src="docs/media/ui/homepage-language-zh-active-v2.svg" alt="中文 — 当前语言" width="180" height="54"></a>
+<a href="#快速开始"><img src="docs/media/ui/homepage-quickstart-zh-v2.svg" alt="快速开始" width="220" height="54"></a>
+</p>
+</td></tr>
+</table>
 
-[![Switch to English](docs/media/ui/language-en-inactive.svg)](README.md) [![中文 — 当前语言](docs/media/ui/language-zh-active.svg)](README_CN.md)
-
-### 从纤维网络几何，到力学响应与结构设计。
+[动态示例](#动态示例) · [功能模块](#选择研究流程) · [桌面应用](#桌面应用) · [方法与复现](#方法与复现)
 
 **FiberNet** 是面向纤维网络生成、模拟、分析与逆向设计的 Python 工具库；**FiberScope** 将共享的几何、简化模型与分析流程带入桌面应用。从构建结构、观察变形、量化连接变化，到响应学习和连续路径构造，同一设计可以贯穿整个研究流程。
 
-[快速开始](#快速开始) · [动态示例](#动态示例) · [功能模块](#选择研究流程) · [桌面应用](#桌面应用) · [方法与复现](#方法与复现)
 
 ![已保存的三维网络几何与 kagome 变形轨迹：分别标明相机运动和模拟材料运动](docs/media/network_workflow_hero.gif)
 
@@ -59,25 +67,67 @@ python -m examples.open_source_workflow --output-dir demo_output
 
 ## 动态示例
 
-### 同一种几何语言，连接不同拓扑
+### 1. 生成平面与三维纤维网络
+
+![从不同相机角度观察 octet、diamond 与 gyroid 纤维网络](docs/media/three_dimensional_topologies.gif)
+
+这组已保存的 octet、diamond 和 gyroid 示例分别包含 **35/118、63/144、203/531 个节点/条边**。旋转视角呈现各固定拓扑的空间连接。[三维参数](docs/media/three_dimensional_topologies.json) · [可编辑三维帧](docs/media/three_dimensional_topologies_final.svg)
+
+#### 同一种几何语言，连接不同拓扑
 
 ![正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何](docs/media/spectrum_four_topologies.gif)
 
 将同一无量纲参考纤维位移轮廓用于**正方形、六边形、环形和 kagome** 网络。几何形状随参数变化，各网络的连接关系保持不变。这是几何参数化展示，而非加载模拟。[制造几何方法](docs/METHODS_MANUFACTURING_UNIFIED.md) · [可编辑矢量关键帧](docs/media/spectrum_four_topologies_peak.svg) · [参数记录](docs/media/spectrum_four_topologies.json)
 
-### 观察复杂网络在拉伸中逐步招募
+### 2. 模拟网络变形，比较加载方向
 
 ![包含 436 个节点的 kagome 网络随拉伸变形，招募边和跨夹持端连通分量同步演化](docs/media/tensile_recruitment_kagome.gif)
 
 这个 **3 × 3 扰动 kagome 网络包含 436 个节点和 576 条边**。蓝色表示超过正轴向应变阈值的边，橙色表示连接两侧夹持端的阈值连通分量；曲线记录已保存简化模型轨迹中的招募边比例。招募刻画的是应变阈值下的连接关系，不是完整力流。[轨迹示例](examples/reduced_recruitment_workflow.py) · [招募分析方法](docs/METHODS_TENSILE_RECRUITMENT.md) · [来源记录](docs/media/tensile_recruitment_kagome.json)
 
-### 用一条连续路径遍历每根纤维
+![同一六边形拓扑的横向与纵向加载](docs/media/directional_recruitment_hexagon.gif)
+
+在同一六边形拓扑上比较横向和纵向加载。已保存的简化模型示例分别在拉伸比 **1.08 和 1.24** 时达到所设定的跨端招募阈值。[方向比较参数](docs/media/directional_recruitment_hexagon.json) · [可编辑比较图](docs/media/directional_recruitment_hexagon_final.svg)
+
+### 3. 分析纤维招募与阈值敏感性
+
+![在同一条已保存 kagome 轨迹上比较三种招募阈值](docs/media/tensile_threshold_sensitivity.gif)
+
+用 **α = 0.02、0.05、0.15** 三种阈值观察同一段变形。在保持原力学轨迹不变的条件下，直接比较连通性结论对分析阈值的依赖。[分析参数](docs/media/tensile_threshold_sensitivity.json) · [可编辑分析帧](docs/media/tensile_threshold_sensitivity_final.svg)
+
+### 4. 学习结构响应，探索目标驱动设计
+
+![学习与逆向设计工作区的已保存界面动态导览](docs/media/learning_inverse_workflow.gif)
+
+从数据准备和响应学习进入目标曲线设计工作区。动图以已保存的 FiberScope 界面解释使用流程，不是训练历史回放。Python 库共享物理标签流、14 维特征、代理模型适配器与 CEM 目标搜索。[学习示例](examples/physical_learning_workflow.py) · [逆向设计示例](examples/curve_inverse_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
+
+#### 在连续路径约束下比较结构干预
+
+![kagome 网络四种匹配的保路径结构干预](docs/media/route_preserving_intervention_kagome.gif)
+
+![环形网络匹配的保路径结构干预](docs/media/route_preserving_intervention_ring.gif)
+
+比较完整结构、低早期应变删边、高后期应变删边与固定随机删边。已保存的 kagome 和环形研究匹配移除边长，并保留欧拉路径，展示设计选择如何改变响应。这些是受控结构干预结果，而非强化学习训练序列。[Kagome 来源](docs/media/route_preserving_intervention_kagome.json) · [环形来源](docs/media/route_preserving_intervention_ring.json) · [比较方法](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md)
+
+### 5. 构建连续制造路径
 
 ![橙色游标沿 kagome 制造图的闭合欧拉路径前进](docs/media/continuous_route_kagome.gif)
 
 闭合欧拉路径将每条独立纤维边遍历一次，也保留平行纤维的独立身份。蓝色是已访问的边，橙色游标标明当前遍历顺序。平面与曲面流程保留结构图到路径的映射，可用于检查和导出；路径回放展示图遍历，而非打印机动力学。[平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [实体与路径导出](examples/solid_export_workflow.py)
 
-**继续探索：**[三维拓扑动图](docs/media/three_dimensional_topologies.gif) · [阈值敏感性](docs/media/tensile_threshold_sensitivity.gif) · [不同方向加载](docs/media/directional_recruitment_hexagon.gif) · [保路径结构干预](docs/MEDIA_GALLERY.md#route-preserving-interventions)。[完整媒体画廊](docs/MEDIA_GALLERY.md)保留每幅动图的来源、参数和可编辑关键帧。
+### 6. 映射曲面纤维，准备几何与路径导出
+
+![曲面映射与制造导出工作区的已保存界面动态导览](docs/media/surface_export_workflow.gif)
+
+先检查曲面上的纤维网络，再进入制造工作区准备路径与几何导出。已保存界面导览连接曲面与制造工具；路径和实体文件描述几何，不代表打印机已执行制造。[曲面与路径示例](examples/manufacturing_workflow.py) · [实体导出示例](examples/solid_export_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
+
+[完整媒体画廊、参数与可编辑关键帧](docs/MEDIA_GALLERY.md)
+
+### 7. 检查三维网络中的电传输
+
+![已保存的环面网络电学场相机环绕展示](docs/media/electrical_torus_field.gif)
+
+在包含 **80 个节点、162 条边**的已保存环面网络上，观察电压与电流的空间分布。相机环绕固定的合成参数稳态电学解，让场分布与图连接关系同时可见。[电学场与渲染来源](docs/media/electrical_torus_field.json) · [电传输接口](docs/integrations/LINEAR_TRANSPORT_USAGE.md)
 
 ## 选择研究流程
 
@@ -124,3 +174,4 @@ python -m examples.open_source_workflow --output-dir demo_output
 ## 许可与引用
 
 FiberNet 采用 [MIT 许可证](LICENSE)，第三方声明见[依赖与模型说明](FiberScope/THIRD_PARTY_NOTICES.md)。关于网络拓扑与逆向设计的已发表研究，请参阅 [Nature Communications 论文](https://www.nature.com/articles/s41467-026-76045-x)。
+

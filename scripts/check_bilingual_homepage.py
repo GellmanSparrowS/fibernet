@@ -42,12 +42,15 @@ def headings(text: str) -> set[str]:
 
 
 def destinations(text: str) -> list[str]:
-    return re.findall(r"\]\(([^)]+)\)", text)
+    markdown = re.findall(r"\]\(([^)]+)\)", text)
+    html = re.findall(r'\b(?:href|src)=["\']([^"\']+)["\']', text, re.I)
+    return markdown + html
 
 
 def canonical_destination(target: str) -> str:
-    target = re.sub(r"language-(?:en|zh)-(?:active|inactive)\.svg", "language-button.svg", target)
-    return target.replace("manufacturing-zh.png", "manufacturing-en.png")
+    target = re.sub(r"(?:homepage-)?language-(?:en|zh)-(?:active|inactive)(?:-v2)?\.svg", "language-button.svg", target)
+    return (target.replace("manufacturing-zh.png", "manufacturing-en.png")
+            .replace("homepage-quickstart-zh-v2.svg", "homepage-quickstart-en-v2.svg"))
 
 
 def check_links(path: Path) -> dict:
@@ -111,7 +114,7 @@ def main() -> None:
     en_links = {canonical_destination(x) for x in destinations(english) if not x.startswith("#")}
     zh_links = {canonical_destination(x) for x in destinations(chinese) if not x.startswith("#")}
     require(en_links == zh_links, f"Language content links differ: {en_links ^ zh_links}")
-    require("](README_CN.md)" in english and "](README.md)" in chinese,
+    require("README_CN.md" in destinations(english) and "README.md" in destinations(chinese),
             "Reciprocal language navigation missing")
     require("fibernet==4.2.0" in english and "4.3.0" in english,
             "Published/development install distinction missing")
@@ -119,7 +122,7 @@ def main() -> None:
             "Unpublished package command advertised")
     document_checks = [check_links(ROOT / name) for name in
                        ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md")]
-    for path in sorted((MEDIA / "ui").glob("language-*.svg")):
+    for path in sorted((MEDIA / "ui").glob("*.svg")):
         svg = ET.fromstring(path.read_bytes())
         require(svg.attrib.get("role") == "img", f"Accessible role missing: {path.name}")
         require(svg.find("{http://www.w3.org/2000/svg}title") is not None,
@@ -161,6 +164,28 @@ def main() -> None:
     require(digest(MEDIA / "network_workflow_hero_poster.svg") == hero["svg_sha256"], "Hero SVG hash differs")
     ET.fromstring((MEDIA / "network_workflow_hero_poster.svg").read_bytes())
     gifs = [decode_gif(p) for p in sorted(MEDIA.glob("*.gif"))]
+    decoded = {row["asset"]: row for row in gifs}
+    tours = json.loads((MEDIA / "module_workflow_tours.json").read_text(encoding="utf-8"))
+    require(tours["kind"] == "saved_interface_tour", "Unexpected tour type")
+    for item in tours["inputs"]:
+        require(digest(ROOT / item["path"]) == item["sha256"], "Tour source hash differs")
+    for item in tours["outputs"]:
+        actual = decoded[item["file"]]
+        for key in ("sha256", "bytes", "frames", "duration_ms"):
+            require(actual[key] == item[key], f"Tour {key} differs: {item['file']}")
+        require(actual["size"] == [item["width"], item["height"]], "Tour size differs")
+    electrical = json.loads((MEDIA / "electrical_torus_field.json").read_text(encoding="utf-8"))
+    for relative, item in electrical["sources"].items():
+        require(digest(ROOT / relative) == item["sha256"], "Electrical source hash differs")
+    require(digest(ROOT / electrical["renderer"]) == electrical["renderer_sha256"],
+            "Electrical renderer hash differs")
+    require(electrical["field_varies_over_frames"] is False and electrical["synthetic"] is True,
+            "Electrical display scope differs")
+    actual = decoded["electrical_torus_field.gif"]
+    require(actual["frames"] == electrical["frames"] and
+            actual["duration_ms"] == electrical["frames"] * electrical["frame_duration_ms"] and
+            actual["size"] == [electrical["width"], electrical["height"]],
+            "Electrical decoded dimensions or timing differ")
     hero_gif = next(row for row in gifs if row["asset"] == "network_workflow_hero.gif")
     require(hero_gif["bytes"] < 6_000_000, "Hero exceeds its 6 MB delivery budget")
     require(hero_gif["frames"] == hero["canvas"]["frames"] and
@@ -170,6 +195,7 @@ def main() -> None:
             "Hero decoded timing differs from manifest")
     report = {"status": "PASS", "documents": document_checks,
               "bilingual_code_and_link_parity": True, "language_buttons": 4,
+              "ui_svg_assets_checked": len(list((MEDIA / "ui").glob("*.svg"))),
               "historical_media": historical, "gifs": gifs,
               "physical_solver_executed": False}
     print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -177,3 +203,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
