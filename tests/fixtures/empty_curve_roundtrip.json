@@ -1,0 +1,107 @@
+{
+  "version": "3.1",
+  "dimension": 3,
+  "tolerance": 1e-06,
+  "next_node_id": 22,
+  "next_edge_id": 30,
+  "box_size": [
+    3.0,
+    4.0,
+    5.0
+  ],
+  "metadata": {
+    "units": {
+      "length": "m"
+    },
+    "provenance": {
+      "generator": "roundtrip_test"
+    }
+  },
+  "nodes": [
+    {
+      "id": 4,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {
+        "source": {
+          "label": "u"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "position": [
+        2.0,
+        0.0,
+        1.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": 12,
+      "node_i": 4,
+      "node_j": 9,
+      "radius": 0.1,
+      "material": {
+        "name": "custom",
+        "density": 1000.0,
+        "youngs_modulus": 1200.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 461.53846153846155,
+        "extra": {
+          "phase": "a"
+        }
+      },
+      "segments": 4,
+      "internal_points": [
+        [
+          1.0,
+          0.5,
+          0.5
+        ]
+      ],
+      "metadata": {
+        "provenance": {
+          "source": "synthetic"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "node_i": 9,
+      "node_j": 4,
+      "radius": 0.1,
+      "material": {
+        "name": "generic",
+        "density": 1000.0,
+        "youngs_modulus": 1000000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615384.6153846
+      },
+      "segments": 4,
+      "internal_points": [],
+      "metadata": {}
+    }
+  ]
+}
