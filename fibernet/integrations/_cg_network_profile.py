@@ -47,11 +47,16 @@ def forecast(n,e,steps,every,thermo_every,prepared_bytes,setup_bytes):
     if type(n)is not int or not 2<=n<=PROFILE['max_nodes'] or type(e)is not int or not 0<=e<=PROFILE['max_edges'] or n*out>PROFILE['max_node_frames']:raise ValueError('network forecast counts invalid')
     for size,cap in ((prepared_bytes,PROFILE['prepared_bytes']),(setup_bytes,PROFILE['raw_bytes'])):
         if type(size)is not int or not 0<=size<=cap:raise ValueError('network forecast bytes invalid')
-    dump=out*(239*n+1024)+32;log=thermo*256
-    slots=12*n*out+16*n+2*e+16*out+64
-    export=64*slots+PROFILE['prepared_bytes']+1024**2
-    memory=4*PROFILE['raw_bytes']+out*(9*n+16)*64+4*slots*64+3*PROFILE['export_bytes']+4*prepared_bytes+68*(n+1)**2
+    from ._lammps_forecast import payload_counts
+    sizes = payload_counts(n, e, out, thermo, out, row_bytes=239,
+        prepared_bytes=prepared_bytes, setup_bytes=setup_bytes,
+        metadata_reserve_bytes=PROFILE['prepared_bytes'],
+        raw_reserve_bytes=PROFILE['raw_bytes'],
+        export_reserve_bytes=PROFILE['export_bytes'], setup_copies=2,
+        type_table_bytes=68*(n+1)**2)
     return dict(integration_steps=steps,output_frames=out,thermo_frames=thermo,node_frames=n*out,
-        trajectory_bytes=dump,thermo_bytes=log,native_aggregate_forecast_bytes=dump+2*log+2*setup_bytes+1024**2,
-        detailed_export_forecast_bytes=export,planned_memory_bytes=memory,
+        trajectory_bytes=sizes['trajectory_bytes'],thermo_bytes=sizes['thermo_bytes'],
+        native_aggregate_forecast_bytes=sizes['native_aggregate_forecast_bytes'],
+        detailed_export_forecast_bytes=sizes['detailed_export_forecast_bytes'],
+        planned_memory_bytes=sizes['planned_memory_bytes'],
         native_morse_matrix_payload_lower_bound_bytes=68*(n+1)**2,observation_scope=SCOPE)

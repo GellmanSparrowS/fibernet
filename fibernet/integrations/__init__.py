@@ -100,3 +100,7 @@ __all__.extend([
 # Deterministic conservative coarse-bead input records; no native imports.
 from ._lammps_cg import CGRequest, CGAngle, MorsePair, prepare_cg
 __all__.extend(['CGRequest', 'CGAngle', 'MorsePair', 'prepare_cg'])
+
+# Pure count/byte planning only; does not inspect or admit a native provider.
+from .lammps_planning import forecast_cg_fiber_only
+__all__.append('forecast_cg_fiber_only')
