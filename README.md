@@ -97,6 +97,8 @@ python -m examples.open_source_workflow --output-dir demo_output
 
 ### 4. 学习结构响应，探索目标驱动设计
 
+使用[图实验输入约定](docs/GRAPH_TRAINING_CONTRACT.md)，绑定原始图数据、按母图隔离的训练/验证/最终评估分组，以及仅由训练图计算的度统计。[完整示例](examples/graph_training_contract.py)沿用 StructureGraph/GraphBatch，不需要学习后端。
+
 ![学习与逆向设计工作区的已保存界面动态导览](docs/media/learning_inverse_workflow.gif)
 
 从数据准备和响应学习进入目标曲线设计工作区。这段已保存的 FiberScope 界面导览呈现从数据到设计的使用流程。Python 库共享物理标签流、14 维特征、代理模型适配器与 CEM 目标搜索。[学习示例](examples/physical_learning_workflow.py) · [逆向设计示例](examples/curve_inverse_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
@@ -307,6 +309,8 @@ Compare horizontal and vertical loading on one hexagonal topology. The saved red
 Read the same deformation through three thresholds, **α = 0.02, 0.05 and 0.15**. The panels reveal which connectivity conclusions depend on the analysis threshold while keeping the saved mechanical trajectory fixed. [Analysis parameters](docs/media/tensile_threshold_sensitivity.json) · [Editable analysis frame](docs/media/tensile_threshold_sensitivity_final.svg)
 
 ### 4. Learn responses and explore target-driven design
+
+Bind graph inputs to group-isolated train/validation/final membership and training-only degree statistics with the [graph experiment input contract](docs/GRAPH_TRAINING_CONTRACT.md). The [complete example](examples/graph_training_contract.py) uses the existing StructureGraph/GraphBatch API without a learning backend.
 
 ![Animated tour of the saved learning and inverse-design workspaces](docs/media/learning_inverse_workflow.gif)
 
