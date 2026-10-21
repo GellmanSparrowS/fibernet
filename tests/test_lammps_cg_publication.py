@@ -127,6 +127,8 @@ class CGPublicationTests(unittest.TestCase):
         from fibernet.sim.accelerated import SimResult
         from fibernet.integrations import _harmonic_profile as hp
         arguments = options()
+        # This stationary fixture does not use easy-dispatch's moving raw data.
+        arguments['velocities_m_s'] = {}
         arguments['run'] = replace(arguments['run'], steps=32)
         prepared = b.prepare_harmonic_beads(graph(), profile=hp.NAME, **arguments)
         self.assertEqual(b.validate_prepared(prepared), prepared)

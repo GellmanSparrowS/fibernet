@@ -319,7 +319,7 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         if (not cg and thermo.potential_J < 0) or thermo.kinetic_J < 0 or not np.isclose(thermo.total_J,thermo.potential_J+thermo.kinetic_J,rtol=1e-12,atol=0):
             raise ValueError('inconsistent native frame energy')
     # Typed results can bypass the parser. Held state is a compiler invariant,
-    # independent of the profile-specific geometry checks below.
+    # independent of the all-node initial/domain checks below.
     if contract['fixed_node_ids']:
         import math
         rows = {nid:i for i,nid in enumerate(ids)}
@@ -329,27 +329,27 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
                 i = rows[nid]
                 if any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(frame.positions_m[i],original[nid])) or any(frame.velocities_m_s[i]):
                     raise ValueError('native initial/fixed state mismatch')
-    if _profiles.sampled(selected) or cg:
-        rows = {nid:i for i,nid in enumerate(ids)}
-        original = {n['id']:tuple(x*contract['length_to_m'] for x in n['position']) for n in graph['nodes']}
-        initial_velocity = dict(contract['velocities_m_s'])
-        import math
-        for frame in raw.trajectory:
-            for nid,point,velocity in zip(ids,frame.positions_m,frame.velocities_m_s):
-                if any(not contract['box_m'][axis][0] < point[axis] < contract['box_m'][axis][1] for axis in range(3)):
-                    raise ValueError('native site left declared box')
-                if frame.step == 0 or nid in contract['fixed_node_ids']:
-                    expected_velocity = initial_velocity.get(nid,(0,0,0)) if frame.step == 0 else (0,0,0)
-                    if any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(point,original[nid])) or any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(velocity,expected_velocity)):
-                        raise ValueError('native initial/fixed state mismatch')
-            if cg:
-                for nid,_ in contract['projectile_pairs']:
-                    if math.dist(frame.positions_m[rows[nid]],frame.positions_m[rows[contract['projectile_node_id']]]) == 0:
-                        raise ValueError('coincident selected CG pair')
-            for edge in graph['edges']:
-                length = math.dist(frame.positions_m[rows[edge['node_i']]],frame.positions_m[rows[edge['node_j']]])
-                if not 0 < length <= contract['maximum_bond_length_m']:
-                    raise ValueError('native bond left declared reach')
+    # All compiler profiles share these checks, even without recorded state.
+    rows = {nid:i for i,nid in enumerate(ids)}
+    original = {n['id']:tuple(x*contract['length_to_m'] for x in n['position']) for n in graph['nodes']}
+    initial_velocity = dict(contract['velocities_m_s'])
+    import math
+    for frame in raw.trajectory:
+        for nid,point,velocity in zip(ids,frame.positions_m,frame.velocities_m_s):
+            if any(not contract['box_m'][axis][0] < point[axis] < contract['box_m'][axis][1] for axis in range(3)):
+                raise ValueError('native site left declared box')
+            if frame.step == 0 or nid in contract['fixed_node_ids']:
+                expected_velocity = initial_velocity.get(nid,(0,0,0)) if frame.step == 0 else (0,0,0)
+                if any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(point,original[nid])) or any(not math.isclose(x,y,rel_tol=1e-13,abs_tol=0) for x,y in zip(velocity,expected_velocity)):
+                    raise ValueError('native initial/fixed state mismatch')
+        if cg:
+            for nid,_ in contract['projectile_pairs']:
+                if math.dist(frame.positions_m[rows[nid]],frame.positions_m[rows[contract['projectile_node_id']]]) == 0:
+                    raise ValueError('coincident selected CG pair')
+        for edge in graph['edges']:
+            length = math.dist(frame.positions_m[rows[edge['node_i']]],frame.positions_m[rows[edge['node_j']]])
+            if not 0 < length <= contract['maximum_bond_length_m']:
+                raise ValueError('native bond left declared reach')
     kept = expected if network else list(range(0,prepared.steps+1,contract.get('output_stride',1)))
     trajectory_by_step = {f.step: f for f in raw.trajectory}
     thermo_by_step = {f.step: f for f in raw.thermo}
