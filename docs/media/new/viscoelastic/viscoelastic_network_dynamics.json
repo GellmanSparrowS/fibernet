@@ -1,0 +1,61 @@
+{
+  "source_result_sha256": "9272909f2a8f506eec916c4f9320137dcc176b11246b50124135ae0d7551e20f",
+  "source_result_name": "viscoelastic_network_recorded.json",
+  "render_only": true,
+  "synthetic_parameters": true,
+  "nodes": 105,
+  "edges": 273,
+  "fixed_nodes": 39,
+  "source_frames": 129,
+  "gif_frames": 65,
+  "source_time_s": [
+    0,
+    0.5
+  ],
+  "dt_s": 0.0001220703125,
+  "solver_steps": 4096,
+  "magnification": 3000.0,
+  "kinetic_energy_recompute_max_abs_error_J": 5.048709793414476e-29,
+  "max_displacement_m": 2.98497858808034e-07,
+  "physical_loss_fraction_final": 0.9924738407425193,
+  "BE_loss_fraction_final": 0.0030624109947120976,
+  "physical_energy_defect_fraction_final": -4.143410849514789e-07,
+  "assumptions": [
+    "small-strain axial generalized Maxwell",
+    "synthetic lumped masses",
+    "zero external force and numerical drag",
+    "initial-velocity excitation",
+    "no bending/contact/adhesion"
+  ],
+  "source_material": {
+    "schema": "fibernet.linear_viscoelastic/1",
+    "equilibrium_modulus": 100000.0,
+    "branches": [
+      [
+        200000.0,
+        0.02
+      ],
+      [
+        100000.0,
+        0.1
+      ]
+    ],
+    "parallel_viscosity": 0.0,
+    "units": {
+      "modulus": "Pa",
+      "time": "s",
+      "viscosity": "Pa*s"
+    }
+  },
+  "units": {
+    "length": "m",
+    "time": "s",
+    "mass": "kg",
+    "frame": "world_xyz",
+    "stress": "Pa",
+    "area": "m^2",
+    "energy": "J",
+    "strain": "1"
+  },
+  "playback": "Uniform sampled frames, 100 ms display each, no interpolated physics"
+}

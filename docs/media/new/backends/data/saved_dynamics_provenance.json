@@ -1,0 +1,121 @@
+{
+  "lammps": {
+    "title": "LAMMPS / BRACED NETWORK",
+    "subtitle": "64 sites / 441 bonds / saved SI dynamics",
+    "source_sha256": {
+      "result.json": "921c2a0ac80783dcfa3ce6f86d57ab8b4ab2e4d830463040a7228bb1ca18209f",
+      "graph.json": "a27f092c77e7cc328ff45e4825d2f773f5cb4cbe2d026d0afa1abcc5b9a0c3e3"
+    },
+    "archive_sha256": "31449e4d36c0adfc6d1ba30ca0e8cd66896d0d353ecbe3bc6ac7b0dd984fe961",
+    "time_unit": "s",
+    "length_unit": "m",
+    "energy_unit": "J",
+    "saved_frames": 401,
+    "displayed_frames": 41,
+    "sample_stride": 10,
+    "scope": "Synthetic harmonic bonded-network benchmark; not atomistic material calibration or a general BPM validation. Initial strained state relaxes dynamically.",
+    "boundaries": [
+      "Visualization uses the finest saved n400 run; n100 and n200 are separate stored levels, not recomputed here.",
+      "A short saved time window does not establish long-time stability or broad material validity.",
+      "Pin joints and phantom crossings; no contact, bending, chemistry or material calibration.",
+      "Recorded checks include saved-frame mechanics, adjacent-step Verlet residuals and common-time refinement; full propagated NumPy reference arrays were not retained for independent reintegration."
+    ],
+    "magnification": 1000,
+    "data_file": "lammps_saved_dynamics.npz",
+    "data_sha256": "5889f04c41403ce695476d51a9a831770fcf7b2581418502bc384d5e90d0d915",
+    "display": "Fixed camera. x_display = x_initial + 1000 * (x_saved - x_initial). Gray lines show the initial saved geometry. Colors show unamplified displacement magnitude. Loop restart is a playback reset, not simulated reverse motion.",
+    "parameters": "Synthetic benchmark inputs, not experimental calibration.",
+    "recorded_validation": {
+      "passed": true,
+      "raw_frames_equal_typed": true,
+      "receipt_sha256": "b2d6efc10f46264f6bbcf7d6376827c0b96e580d19b0b5aaf5118693bd1e1196",
+      "common_time_refinement_error_ratios": {
+        "force": 4.000174981350402,
+        "kinetic": 4.0000188730733,
+        "position": 4.000132343417708,
+        "potential": 4.000028568814496,
+        "velocity": 4.000111429797937
+      }
+    },
+    "presentation": {
+      "width": 800,
+      "height": 1132,
+      "format": "A4 portrait aspect ratio",
+      "geometry_scaling": "uniform; fixed orthographic camera",
+      "gif_disposal": 1,
+      "palette_colors": 96,
+      "renderer_sha256": "245e1b2a285a5f25db7973c1f26d8a60d9c002228e11e86c04d2426bc171109f"
+    },
+    "outputs": {
+      "gif": {
+        "bytes": 2748513,
+        "sha256": "a6b3e8f0389608976b9deea6703d8ab6bad9017def758820a2d21c27f8dd7d8b"
+      },
+      "svg": {
+        "bytes": 92315,
+        "sha256": "87c13f1911db362ab4ea632cf8dcbee9896a2ed7cb9933f1e2b9df0c3d31696c"
+      },
+      "png": {
+        "bytes": 162152,
+        "sha256": "54676267e39efcbdfca30ae23267b90de57ee08741e6b552d092830fd0b09751"
+      }
+    }
+  },
+  "taichi": {
+    "title": "TAICHI / HETEROGENEOUS NETWORK",
+    "subtitle": "4,340 nodes / 5,073 edges / saved axial dynamics",
+    "source_sha256": {
+      "raw_state.npz": "94d50bd1e8dded6d0dc5da9eb6456dfb61894172f96aab5cd074cff43d4aa02f",
+      "heterogeneous_1600.npz": "1f290b781200ad539ee2f4083b911ac0b396eaddd33522f9b3370f6103231103"
+    },
+    "archive_sha256": "0ff03ecd1fa2c57bf594fd459165e9f56166cee293401b9baf60449aa375f12e",
+    "time_unit": "nondimensional",
+    "length_unit": "nondimensional",
+    "energy_unit": "nondimensional",
+    "saved_frames": 9,
+    "displayed_frames": 9,
+    "sample_stride": 200,
+    "scope": "Synthetic nondimensional axial mass-network benchmark, 1,600 integration steps; no GPU performance claim.",
+    "boundaries": [
+      "Only nine saved states are available; no interpolated states are presented.",
+      "Cutoff checks are sampled only. Work ledger was not collected; energy curves do not demonstrate energy balance under forcing.",
+      "Original CPU runtime reported subnormal half-value flushing after initialization; that process-level behavior is not validated by a visualization.",
+      "Backend parity on saved states is not independent validation of the physical constitutive law."
+    ],
+    "magnification": 1000,
+    "data_file": "taichi_saved_dynamics.npz",
+    "data_sha256": "9eef689d152f9e87728ab41650ef587c45ed07d0fbb12a07165c7a94e63e5d22",
+    "display": "Fixed camera. x_display = x_initial + 1000 * (x_saved - x_initial). Gray lines show the initial saved geometry. Colors show unamplified displacement magnitude. Loop restart is a playback reset, not simulated reverse motion.",
+    "parameters": "Synthetic benchmark inputs, not experimental calibration.",
+    "recorded_validation": {
+      "status": "PASS_TOPLEVEL_AXIAL_PARITY",
+      "parity_passed": true,
+      "fixed_nodes": 434,
+      "loaded_nodes": 434,
+      "receipt_sha256": "be9dff7a6b400efec8b6c937d41f042f4e42c782aaa27019e759872e7c3dc328"
+    },
+    "presentation": {
+      "width": 800,
+      "height": 1132,
+      "format": "A4 portrait aspect ratio",
+      "geometry_scaling": "uniform; fixed orthographic camera",
+      "gif_disposal": 1,
+      "palette_colors": 96,
+      "renderer_sha256": "245e1b2a285a5f25db7973c1f26d8a60d9c002228e11e86c04d2426bc171109f"
+    },
+    "outputs": {
+      "gif": {
+        "bytes": 272697,
+        "sha256": "45f9d490909d16132a4e11a490d3bb65bd2231a5a9d1aa7b901d5309f5a05c65"
+      },
+      "svg": {
+        "bytes": 966854,
+        "sha256": "b4ffe5d07dd565f739eba3331e71d7dbc006db39ae571ddae67332090005e518"
+      },
+      "png": {
+        "bytes": 99214,
+        "sha256": "6c5c9ea6439272597ab51c826c92b955db6a8deae0403b690dadec4c0ac16ccb"
+      }
+    }
+  }
+}

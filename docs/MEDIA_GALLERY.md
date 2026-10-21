@@ -118,3 +118,7 @@ Historical manifests retain the original render-time hashes. The checker reports
 
 Keep the source manifests, editable frames, and [project license](../LICENSE) with reused media. The homepage combines the selected examples for navigation; it does not combine their separate physical models into one simulation.
 
+
+## Recorded simulation and learning processes
+
+The [extended gallery](media/new/README.md) adds LAMMPS and Taichi dynamics, viscoelastic stress and energy, quasistatic member removal, transient Joule heating, a saved GINE study and fixed-action RL environment records. Each module includes data and render-only recipes.

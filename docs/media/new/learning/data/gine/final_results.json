@@ -1,0 +1,348 @@
+{
+  "rows": [
+    {
+      "sample_id": "gine-9201-v0",
+      "source_group": "voronoi-parent-9201",
+      "variant": 0,
+      "truth_mS": 0.9876480219768217,
+      "gine_mS": 0.8694853782653809,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 1.1379748553676985
+    },
+    {
+      "sample_id": "gine-9201-v1",
+      "source_group": "voronoi-parent-9201",
+      "variant": 1,
+      "truth_mS": 1.9752960439536433,
+      "gine_mS": 2.062739849090576,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 2.275949710735397
+    },
+    {
+      "sample_id": "gine-9201-v2",
+      "source_group": "voronoi-parent-9201",
+      "variant": 2,
+      "truth_mS": 0.4578343152056891,
+      "gine_mS": 0.45793941617012024,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 1.7479188117791502
+    },
+    {
+      "sample_id": "gine-9201-v3",
+      "source_group": "voronoi-parent-9201",
+      "variant": 3,
+      "truth_mS": 0.3327418705699131,
+      "gine_mS": 0.39330098032951355,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 1.7695209949025388
+    },
+    {
+      "sample_id": "gine-9202-v0",
+      "source_group": "voronoi-parent-9202",
+      "variant": 0,
+      "truth_mS": 1.3960329842627304,
+      "gine_mS": 1.3348069190979004,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 1.5882575046848175
+    },
+    {
+      "sample_id": "gine-9202-v1",
+      "source_group": "voronoi-parent-9202",
+      "variant": 1,
+      "truth_mS": 2.7920659685254607,
+      "gine_mS": 2.6493425369262695,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 3.176515009369635
+    },
+    {
+      "sample_id": "gine-9202-v2",
+      "source_group": "voronoi-parent-9202",
+      "variant": 2,
+      "truth_mS": 0.43385069744850935,
+      "gine_mS": 0.8828132748603821,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 2.3519050422947814
+    },
+    {
+      "sample_id": "gine-9202-v3",
+      "source_group": "voronoi-parent-9202",
+      "variant": 3,
+      "truth_mS": 0.5586070046018896,
+      "gine_mS": 0.6635961532592773,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 2.508082229796843
+    },
+    {
+      "sample_id": "gine-9203-v0",
+      "source_group": "voronoi-parent-9203",
+      "variant": 0,
+      "truth_mS": 1.737987714228016,
+      "gine_mS": 1.4469135999679565,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 1.976648165214214
+    },
+    {
+      "sample_id": "gine-9203-v1",
+      "source_group": "voronoi-parent-9203",
+      "variant": 1,
+      "truth_mS": 3.475975428456032,
+      "gine_mS": 2.5387978553771973,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 3.953296330428428
+    },
+    {
+      "sample_id": "gine-9203-v2",
+      "source_group": "voronoi-parent-9203",
+      "variant": 2,
+      "truth_mS": 0.6060938799568832,
+      "gine_mS": 0.7067745327949524,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 2.983970694285614
+    },
+    {
+      "sample_id": "gine-9203-v3",
+      "source_group": "voronoi-parent-9203",
+      "variant": 3,
+      "truth_mS": 0.6081570059541272,
+      "gine_mS": 0.5749231576919556,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 3.084190269989954
+    },
+    {
+      "sample_id": "gine-9204-v0",
+      "source_group": "voronoi-parent-9204",
+      "variant": 0,
+      "truth_mS": 2.1762060878307192,
+      "gine_mS": 1.759070634841919,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 2.49674837997373
+    },
+    {
+      "sample_id": "gine-9204-v1",
+      "source_group": "voronoi-parent-9204",
+      "variant": 1,
+      "truth_mS": 4.3524121756614385,
+      "gine_mS": 2.85075306892395,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 4.99349675994746
+    },
+    {
+      "sample_id": "gine-9204-v2",
+      "source_group": "voronoi-parent-9204",
+      "variant": 2,
+      "truth_mS": 0.7243434716577201,
+      "gine_mS": 0.8815279006958008,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 3.775673526283083
+    },
+    {
+      "sample_id": "gine-9204-v3",
+      "source_group": "voronoi-parent-9204",
+      "variant": 3,
+      "truth_mS": 0.8334027657853185,
+      "gine_mS": 0.8507471084594727,
+      "training_mean_mS": 1.208246052162886,
+      "trial_bound_mS": 3.9009158019613577
+    }
+  ],
+  "metrics": {
+    "all": {
+      "gine": {
+        "mae_mS": 0.2799788376427091,
+        "rmse_mS": 0.4802500539058388,
+        "r2": 0.8308487499873566
+      },
+      "training_mean": {
+        "mae_mS": 0.9237368421304337,
+        "rmse_mS": 1.1957068081970887,
+        "r2": -0.048551512659962937
+      },
+      "trial_bound": {
+        "mae_mS": 1.2670255406837367,
+        "rmse_mS": 1.6357261681930468,
+        "r2": -0.9622826775549591
+      }
+    },
+    "variant_0": {
+      "gine": {
+        "mae_mS": 0.22189956903128263,
+        "rmse_mS": 0.26288646197403104,
+        "r2": 0.6386556395207165
+      },
+      "training_mean": {
+        "mae_mS": 0.47652166500471804,
+        "rmse_mS": 0.5704165762771632,
+        "r2": -0.7012538191131481
+      },
+      "trial_bound": {
+        "mae_mS": 0.2254385242355432,
+        "rmse_mS": 0.2341231486878543,
+        "r2": 0.713401739300113
+      }
+    },
+    "variant_1": {
+      "gine": {
+        "mae_mS": 0.6672509791381118,
+        "rmse_mS": 0.8890020069316268,
+        "r2": -0.03307137834472629
+      },
+      "training_mean": {
+        "mae_mS": 1.9406913519862576,
+        "rmse_mS": 2.1286867050855425,
+        "r2": -4.923090141845778
+      },
+      "trial_bound": {
+        "mae_mS": 0.4508770484710864,
+        "rmse_mS": 0.4682462973757086,
+        "r2": 0.713401739300113
+      }
+    },
+    "variant_2": {
+      "gine": {
+        "mae_mS": 0.17673319006311342,
+        "rmse_mS": 0.24311054355501108,
+        "r2": -3.2669609707099116
+      },
+      "training_mean": {
+        "mae_mS": 0.6527154610956855,
+        "rmse_mS": 0.6632410734940744,
+        "r2": -30.758055905956873
+      },
+      "trial_bound": {
+        "mae_mS": 2.1593364275934563,
+        "rmse_mS": 2.253229001037458,
+        "r2": -365.5403130862507
+      }
+    },
+    "variant_3": {
+      "gine": {
+        "mae_mS": 0.05403161233832851,
+        "rmse_mS": 0.06343390655593806,
+        "r2": 0.8728219803573931
+      },
+      "training_mean": {
+        "mae_mS": 0.6250188904350737,
+        "rmse_mS": 0.6498370597359027,
+        "r2": -12.346828876580533
+      },
+      "trial_bound": {
+        "mae_mS": 2.232450162434861,
+        "rmse_mS": 2.313285804731486,
+        "r2": -168.13275671820296
+      }
+    },
+    "voronoi-parent-9201": {
+      "gine": {
+        "mae_mS": 0.0665676648931013,
+        "rmse_mS": 0.07949252519386782,
+        "r2": 0.9849128015106404
+      },
+      "training_mean": {
+        "mae_mS": 0.6533909851317479,
+        "rmse_mS": 0.7011873016138539,
+        "r2": -0.17388107913185769
+      },
+      "trial_bound": {
+        "mae_mS": 0.7944610302696793,
+        "rmse_mS": 0.9800054903677669,
+        "r2": -1.2930474158742937
+      }
+    },
+    "voronoi-parent-9202": {
+      "gine": {
+        "mae_mS": 0.1894753057083204,
+        "rmse_mS": 0.24326360508465497,
+        "r2": 0.9330436045595206
+      },
+      "training_mean": {
+        "mae_mS": 0.7989103126844481,
+        "rmse_mS": 0.9441224121973523,
+        "r2": -0.008542962239061813
+      },
+      "trial_bound": {
+        "mae_mS": 1.1110507828268716,
+        "rmse_mS": 1.3842089306432468,
+        "r2": -1.1679091695870722
+      }
+    },
+    "voronoi-parent-9203": {
+      "gine": {
+        "mae_mS": 0.3405415471097838,
+        "rmse_mS": 0.49352482865617453,
+        "r2": 0.8231732767879415
+      },
+      "training_mean": {
+        "mae_mS": 0.9999280641932594,
+        "rmse_mS": 1.239547987625184,
+        "r2": -0.11546661183520035
+      },
+      "trial_bound": {
+        "mae_mS": 1.392472857830788,
+        "rmse_mS": 1.7370832538380783,
+        "r2": -1.1906407058269535
+      }
+    },
+    "voronoi-parent-9204": {
+      "gine": {
+        "mae_mS": 0.5233308328596309,
+        "rmse_mS": 0.7832607851065041,
+        "r2": 0.7130264603279632
+      },
+      "training_mean": {
+        "mae_mS": 1.2427180065122798,
+        "rmse_mS": 1.6731255511443157,
+        "r2": -0.30944164974350397
+      },
+      "trial_bound": {
+        "mae_mS": 1.7701174918076086,
+        "rmse_mS": 2.192828546343252,
+        "r2": -1.249253680539573
+      }
+    }
+  },
+  "mean_per_parent_rmse_mS": {
+    "gine": 0.39988543601030035,
+    "training_mean": 1.1394958131451765,
+    "trial_bound": 1.573531555298086
+  },
+  "contrasts": [
+    {
+      "source_group": "voronoi-parent-9201",
+      "truth_uniform_difference_mS": 0.9876480219768217,
+      "predicted_uniform_difference_mS": 1.1932544708251953,
+      "predicted_doubling_discrepancy_mS": 0.32376909255981445,
+      "truth_placement_difference_mS": -0.125092444635776,
+      "predicted_placement_difference_mS": -0.06463843584060669
+    },
+    {
+      "source_group": "voronoi-parent-9202",
+      "truth_uniform_difference_mS": 1.3960329842627304,
+      "predicted_uniform_difference_mS": 1.3145356178283691,
+      "predicted_doubling_discrepancy_mS": -0.02027130126953125,
+      "truth_placement_difference_mS": 0.12475630715338026,
+      "predicted_placement_difference_mS": -0.21921712160110474
+    },
+    {
+      "source_group": "voronoi-parent-9203",
+      "truth_uniform_difference_mS": 1.737987714228016,
+      "predicted_uniform_difference_mS": 1.0918842554092407,
+      "predicted_doubling_discrepancy_mS": -0.3550293445587158,
+      "truth_placement_difference_mS": 0.0020631259972440086,
+      "predicted_placement_difference_mS": -0.13185137510299683
+    },
+    {
+      "source_group": "voronoi-parent-9204",
+      "truth_uniform_difference_mS": 2.1762060878307192,
+      "predicted_uniform_difference_mS": 1.0916824340820312,
+      "predicted_doubling_discrepancy_mS": -0.6673882007598877,
+      "truth_placement_difference_mS": 0.1090592941275984,
+      "predicted_placement_difference_mS": -0.030780792236328125
+    }
+  ],
+  "violations": {
+    "negative": 0,
+    "above_trial": 0
+  },
+  "independent_final_parents": 4,
+  "paired_variants": true
+}

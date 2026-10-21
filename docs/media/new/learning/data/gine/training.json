@@ -1,0 +1,515 @@
+{
+  "best_epoch": 37,
+  "best_val_mse": 0.09109053382036436,
+  "graph_ids": [
+    "gine-9101-v0",
+    "gine-9101-v1",
+    "gine-9101-v2",
+    "gine-9101-v3",
+    "gine-9102-v0",
+    "gine-9102-v1",
+    "gine-9102-v2",
+    "gine-9102-v3",
+    "gine-9103-v0",
+    "gine-9103-v1",
+    "gine-9103-v2",
+    "gine-9103-v3",
+    "gine-9104-v0",
+    "gine-9104-v1",
+    "gine-9104-v2",
+    "gine-9104-v3",
+    "gine-9105-v0",
+    "gine-9105-v1",
+    "gine-9105-v2",
+    "gine-9105-v3",
+    "gine-9106-v0",
+    "gine-9106-v1",
+    "gine-9106-v2",
+    "gine-9106-v3",
+    "gine-9107-v0",
+    "gine-9107-v1",
+    "gine-9107-v2",
+    "gine-9107-v3",
+    "gine-9108-v0",
+    "gine-9108-v1",
+    "gine-9108-v2",
+    "gine-9108-v3"
+  ],
+  "history": [
+    {
+      "epoch": 0,
+      "online_train_mse": 2.5259496172269187,
+      "validation_mse": 1.7092608787753172
+    },
+    {
+      "epoch": 1,
+      "online_train_mse": 2.0918958683808646,
+      "validation_mse": 1.3731993441845252
+    },
+    {
+      "epoch": 2,
+      "online_train_mse": 1.7294166535139084,
+      "validation_mse": 1.0738592707974624
+    },
+    {
+      "epoch": 3,
+      "online_train_mse": 1.3650071322917938,
+      "validation_mse": 0.7911053373640035
+    },
+    {
+      "epoch": 4,
+      "online_train_mse": 1.0080351307988167,
+      "validation_mse": 0.5859443146975233
+    },
+    {
+      "epoch": 5,
+      "online_train_mse": 0.795366071164608,
+      "validation_mse": 0.5758200149369893
+    },
+    {
+      "epoch": 6,
+      "online_train_mse": 0.7859098414580027,
+      "validation_mse": 0.6373296627927095
+    },
+    {
+      "epoch": 7,
+      "online_train_mse": 0.8181207676728567,
+      "validation_mse": 0.6260210522504025
+    },
+    {
+      "epoch": 8,
+      "online_train_mse": 0.8024420638879141,
+      "validation_mse": 0.5753854254718492
+    },
+    {
+      "epoch": 9,
+      "online_train_mse": 0.7720074107249578,
+      "validation_mse": 0.5382073724158764
+    },
+    {
+      "epoch": 10,
+      "online_train_mse": 0.7477207283178965,
+      "validation_mse": 0.5206016115593185
+    },
+    {
+      "epoch": 11,
+      "online_train_mse": 0.7252936412890753,
+      "validation_mse": 0.5157116887880863
+    },
+    {
+      "epoch": 12,
+      "online_train_mse": 0.703321119149526,
+      "validation_mse": 0.5223632983577536
+    },
+    {
+      "epoch": 13,
+      "online_train_mse": 0.686681866645813,
+      "validation_mse": 0.5396181278616653
+    },
+    {
+      "epoch": 14,
+      "online_train_mse": 0.6778324743111929,
+      "validation_mse": 0.545629662934343
+    },
+    {
+      "epoch": 15,
+      "online_train_mse": 0.6653769761323929,
+      "validation_mse": 0.5291196833497441
+    },
+    {
+      "epoch": 16,
+      "online_train_mse": 0.6497665146986643,
+      "validation_mse": 0.5286220170946253
+    },
+    {
+      "epoch": 17,
+      "online_train_mse": 0.637933557232221,
+      "validation_mse": 0.5399936392790391
+    },
+    {
+      "epoch": 18,
+      "online_train_mse": 0.6300402507185936,
+      "validation_mse": 0.5375350964445326
+    },
+    {
+      "epoch": 19,
+      "online_train_mse": 0.6211546659469604,
+      "validation_mse": 0.5330286412239361
+    },
+    {
+      "epoch": 20,
+      "online_train_mse": 0.6130363866686821,
+      "validation_mse": 0.5263870967797171
+    },
+    {
+      "epoch": 21,
+      "online_train_mse": 0.6036755914489428,
+      "validation_mse": 0.5177220314728529
+    },
+    {
+      "epoch": 22,
+      "online_train_mse": 0.5916607876618704,
+      "validation_mse": 0.5085741574009212
+    },
+    {
+      "epoch": 23,
+      "online_train_mse": 0.5766628856460253,
+      "validation_mse": 0.49305596496320203
+    },
+    {
+      "epoch": 24,
+      "online_train_mse": 0.5586560318867365,
+      "validation_mse": 0.4772409466517298
+    },
+    {
+      "epoch": 25,
+      "online_train_mse": 0.5384188964962959,
+      "validation_mse": 0.45747547847117576
+    },
+    {
+      "epoch": 26,
+      "online_train_mse": 0.5159650618831316,
+      "validation_mse": 0.4362292897563236
+    },
+    {
+      "epoch": 27,
+      "online_train_mse": 0.4906742299596469,
+      "validation_mse": 0.40597487066362936
+    },
+    {
+      "epoch": 28,
+      "online_train_mse": 0.4586368029316266,
+      "validation_mse": 0.3829147057227865
+    },
+    {
+      "epoch": 29,
+      "online_train_mse": 0.4244137754042943,
+      "validation_mse": 0.34913000901535374
+    },
+    {
+      "epoch": 30,
+      "online_train_mse": 0.3810291029512882,
+      "validation_mse": 0.3219117656810788
+    },
+    {
+      "epoch": 31,
+      "online_train_mse": 0.3413517934580644,
+      "validation_mse": 0.279906656492685
+    },
+    {
+      "epoch": 32,
+      "online_train_mse": 0.29037228785455227,
+      "validation_mse": 0.24484536578936944
+    },
+    {
+      "epoch": 33,
+      "online_train_mse": 0.2433081685254971,
+      "validation_mse": 0.20695958320154095
+    },
+    {
+      "epoch": 34,
+      "online_train_mse": 0.19005374082674584,
+      "validation_mse": 0.1591667781026419
+    },
+    {
+      "epoch": 35,
+      "online_train_mse": 0.13994530898829302,
+      "validation_mse": 0.13223829239608575
+    },
+    {
+      "epoch": 36,
+      "online_train_mse": 0.11575243466844161,
+      "validation_mse": 0.09780069484412404
+    },
+    {
+      "epoch": 37,
+      "online_train_mse": 0.08255453562984864,
+      "validation_mse": 0.09109053382036436
+    },
+    {
+      "epoch": 38,
+      "online_train_mse": 0.0666802932197849,
+      "validation_mse": 0.09348367415731754
+    },
+    {
+      "epoch": 39,
+      "online_train_mse": 0.0534283034891511,
+      "validation_mse": 0.10404754547644571
+    }
+  ],
+  "input_digests": {
+    "gine-9101-v0": "bad0814721518969048c5b7ec4852d3847a107974c97ade69b8f35bd7153843c",
+    "gine-9101-v1": "157410e66ced4b1784670ce192c9803107d688ed07ef26957b4a12f72aa66953",
+    "gine-9101-v2": "14a514a51ff95de54e07cce778d48c30f1e22afc8992312af4d7661c18fcd0c7",
+    "gine-9101-v3": "415b8ee49936d009a0d0db43107b899669d8a2e55028720fe5cc5d7edb90c727",
+    "gine-9102-v0": "56bde9d00f08b4ac1ae626575a48989af11e1d95e8944bd2409c409ffa92699c",
+    "gine-9102-v1": "1f4ef65cbaeba17b40a38c6e3313a19e1a8fe0334315ace726b05e75115e160c",
+    "gine-9102-v2": "1225bd8633773602626640be85ee8af8f045ade76d5e0a46a97bfb4cfae3455f",
+    "gine-9102-v3": "f24e206dad0c34e39ea028d8d72a476238ca3e869b77d8962c3457d95a7f9497",
+    "gine-9103-v0": "4757e7113354ff716b36e32308ba3ce80592296286b29044f3e3fafecb6d3228",
+    "gine-9103-v1": "c40990af1bb8c2fb1f88103387d436130a85d6a31cf1a9bb856dbdada9952e94",
+    "gine-9103-v2": "be0e5527a14a8ca0e4c40f28308a4c6c8b2224bb6da7409aae804d32f3903898",
+    "gine-9103-v3": "71d4409c99ad9900156f679ff5ec99e3cba061c03ad36f2acdbbfdf632aff6f1",
+    "gine-9104-v0": "3cc9d39ade26010f12487a66ad2100e0f830d8ebcadd66ee9060f5bbe6e1e475",
+    "gine-9104-v1": "306653517472493fe4cf4a3742705eb40d7b1c6800e7faf1040f1e5358550ad2",
+    "gine-9104-v2": "978deabe822418c8ad0b7dc0e62deb29d7bc215a8d2cef0736c8fda5a90eb40c",
+    "gine-9104-v3": "cce135fe3519efa2208cbbda3234e3f5f3c58fe7c30257e9a150cf67ab18c82a",
+    "gine-9105-v0": "6ea168b20a44653ea2883eac34f8dc968cf4b61ba0e21bce744be0e38fd6d5db",
+    "gine-9105-v1": "c725d864864260bdb5a8db94605162bc25fea849d072a082063f0f042d910fb3",
+    "gine-9105-v2": "0772cf5b364f8036d768faa4bd97153b3bc165515dd53b96674d412d3321d122",
+    "gine-9105-v3": "5438eaed538a3b365bd1c7cce2df63e592194d3a58bf61be09a11ca4f5355bc1",
+    "gine-9106-v0": "82faa37bb873414459b8d3b18ff41ec6de0d87fe561d1b73af66bd7c4b286d0b",
+    "gine-9106-v1": "25bd09073226e1adea02c0bfda482b4eaaf4ad683843b239dac18f8f2b6fc448",
+    "gine-9106-v2": "9486103c7562e020f60f4c5c8df378a9c88fcd310c14e01f3f345d0d667b70ea",
+    "gine-9106-v3": "aa6ac61c41caee75718fd235e28a7183b3088c44bee79ceaad0c35ef3c837a78",
+    "gine-9107-v0": "cfbd7e3353e7d8f9d8c88b0772dac6b72333b746b3e4cd83a02e17ca49875a14",
+    "gine-9107-v1": "97bbe79e628532cd25e56fa3c6dc2ab5decf7bef12564fe21cfdc397d2d931df",
+    "gine-9107-v2": "fa680d9b6a8cee7ce6475beb8df738d62ffb9879fc85f548f4fa6070b97e1bdd",
+    "gine-9107-v3": "cd96f30b0bd1445337c2235ef6dbe5af01a7af78f871c8e012451bb00eaacfe1",
+    "gine-9108-v0": "776e0917f2763a2f523c6db91747bc58e54ddfd52261c13050d4fa310a7d4b08",
+    "gine-9108-v1": "52a2c7cbe6363989f3fb11adc8092a2c89dc5bfe5369b0dc1cb45c212980a29e",
+    "gine-9108-v2": "22ed5ab6411f980f085a11eb2d9aa2708872085b77c1bab6ced3739470f66f24",
+    "gine-9108-v3": "6eca33a3362bde9ec3d9c3ca739f4cf9e840189cd3205d3c7311fad7fb9dedc2"
+  },
+  "parameter_trace": [
+    "c285f048a76a2417bab086f8eb0ff7e3c1c7c76d79a1d84d0ff72c0d5d5a36a6",
+    "a97bff2e316ac1cc1465038199b5dd6bce9318cd0fe2503e8bd550f3594ecc3e",
+    "8bd5aa08e0f8c3e1e652289553ef03854d5083286b9775ff6e618d219b40d3dc",
+    "77a22bd35e359a3ab205c0a0c6b93399311eb705bfbcb909ac8135fc8290d8a4",
+    "437c3a2a79d6d4ca91924413757251b8ada0346fac2fae462b938f0f51673754",
+    "a02e4ebf2857d2f58971ce6c405294ae96c4c0cf18de10bea78f90f84f32371c",
+    "7b7f2db60fbf6d138bb4d1e7e78e6188ffb39da491b82ac7fdcbe3d870bfebe6",
+    "2f9563385854f5fe00ca6e63c61102725fb2efee294984413c9d541d9a800854",
+    "01ae6b894064df88119d3a66da7748a89f6197b0a1592c8ee481448f4f6cf454",
+    "14f6038cc43696e32eca4d381fb9c5c3d696d91bc6ab4f71eb2cb2be0a8b587a",
+    "a097bc4b6ef79eb4cf106136de5d85a42bafc36861570270ab1892416a54d8f6",
+    "e3a781888f6c4e299a767a8d96ccf4c6a3eba06fdfb40132c85e6a9aeab11207",
+    "c5ce124f992a6aa5b5cb4121a94fda95ed20f6ba2a82b6865fd0efdb43be9ad1",
+    "1deed257fecc105698eda4e7c402c1d353c2dbc0980406e6f64f5048915570de",
+    "46f51075cbdbe6733b40e6c12f5d621b3961373bfb40e0700eb9a660c4df1650",
+    "fed6bbf71c18c4de1a44d02b6da0664f6360edd1865ffcb013b3703b9c9384a6",
+    "8a33c08df007912673ad793a14f56c60b9ba3e8691c0a21c5448e790ff4c5346",
+    "a837ded5716853e439c8f392d1a7af6c3e24c8108a6b622ca9b16cfbf4d54038",
+    "5f9dbcf4722b9cc1b5925c0594309b3cc83ca8c44a1836bfd6d4a92bff2ad6b6",
+    "1fc9c633bd86c9ccd3020a058cff0ec8563b694da3d7ec9f7fb5d7643bc19e05",
+    "6f9f170fbf741d411a6bc12e1fc9d3d85969b261a4049d7ce1a5e0c9e68b2ae8",
+    "77e7ea2cd80417590ee97da8100f416d6529a926eda4b22bdc4c48f45dd59106",
+    "caa25d3a6aa555fe64798ccceb3f4f18e8459a0b48c82e797a4b2d912f29a1ab",
+    "69a1184c005f463d9e03b59cd0f2df0def1f1b3bbb863ab87789bd72b4fdf7ed",
+    "3d5823cee393c6659f9eadefac0d2d2c5415f554fc6e5b0ee729197b4832107e",
+    "b93985ecd69b9441d24726b380e7b63fa4665c91638aae4b1f64ea8d1ac40f85",
+    "1a413c0aaab54c980b2eb06aa12232fc41536435a8862bf023f224ddaf12038b",
+    "5e16f23d6f4a7d70f99d0a9a65280bd26362829bd0eca8b31ee16254302174de",
+    "695cc83f1b0b4da4a3f44aa8856a8e3bce132febda8c2826ece3743b163be319",
+    "4d0d4641b1fbe631b3e701206f00624d261afa362b6b095f9210fb1f5e06642d",
+    "4f2808907cac91b8c22923e0d780917f0aa0dbaea0688ea550362c930b9ae956",
+    "766ac2ab4fc86db6378f1f287c39f8d21adac697f74fc2b60a6b9d3c97e82dfa",
+    "4bca1071d2177a61f32e0d5d66ac308fd34f28cc8ede9d0507e1eefd12d2535e",
+    "9d877e109d43b7d5cb8c9a63ef6b67c56387311c93df0967cead44c5731d9514",
+    "324279a01ffee90bb400299645185d5356443f698a0242253b0950f7a6d78e38",
+    "3cde25a9cf56069a4cd9cb0cfa94af06679d217e8d07387b5052f61d23b9b271",
+    "a5085bcb38eb5f710a2578a3adb7633f0a2ff7b5fd174fbfcf5d65168c3d57a7",
+    "c270a84a76377af6ea5c72c8ca347e2c83af2591b2aad15d70de8b643d95817a",
+    "a6256803c5ea56184ae5280836be616fdedddbc8547858c7480a611bdd097be4",
+    "df14c8d1678a4048f32f59764ad3a178cf687b16b548e48e289bfb76fa332012"
+  ],
+  "schema": "fibernet.gine_training.v1",
+  "selected_validation_metrics": {
+    "r2": 0.8555495835437978,
+    "r2_status": "available",
+    "rmse": 0.3018120836221843
+  },
+  "source_groups": {
+    "gine-9101-v0": "voronoi-parent-9101",
+    "gine-9101-v1": "voronoi-parent-9101",
+    "gine-9101-v2": "voronoi-parent-9101",
+    "gine-9101-v3": "voronoi-parent-9101",
+    "gine-9102-v0": "voronoi-parent-9102",
+    "gine-9102-v1": "voronoi-parent-9102",
+    "gine-9102-v2": "voronoi-parent-9102",
+    "gine-9102-v3": "voronoi-parent-9102",
+    "gine-9103-v0": "voronoi-parent-9103",
+    "gine-9103-v1": "voronoi-parent-9103",
+    "gine-9103-v2": "voronoi-parent-9103",
+    "gine-9103-v3": "voronoi-parent-9103",
+    "gine-9104-v0": "voronoi-parent-9104",
+    "gine-9104-v1": "voronoi-parent-9104",
+    "gine-9104-v2": "voronoi-parent-9104",
+    "gine-9104-v3": "voronoi-parent-9104",
+    "gine-9105-v0": "voronoi-parent-9105",
+    "gine-9105-v1": "voronoi-parent-9105",
+    "gine-9105-v2": "voronoi-parent-9105",
+    "gine-9105-v3": "voronoi-parent-9105",
+    "gine-9106-v0": "voronoi-parent-9106",
+    "gine-9106-v1": "voronoi-parent-9106",
+    "gine-9106-v2": "voronoi-parent-9106",
+    "gine-9106-v3": "voronoi-parent-9106",
+    "gine-9107-v0": "voronoi-parent-9107",
+    "gine-9107-v1": "voronoi-parent-9107",
+    "gine-9107-v2": "voronoi-parent-9107",
+    "gine-9107-v3": "voronoi-parent-9107",
+    "gine-9108-v0": "voronoi-parent-9108",
+    "gine-9108-v1": "voronoi-parent-9108",
+    "gine-9108-v2": "voronoi-parent-9108",
+    "gine-9108-v3": "voronoi-parent-9108"
+  },
+  "split": {
+    "config_sha256": "c702d923ea1ef345e6626eddd4d5b991d527fed114609e7a1812f95e03adb66a",
+    "graph_ids": [
+      "gine-9101-v0",
+      "gine-9101-v1",
+      "gine-9101-v2",
+      "gine-9101-v3",
+      "gine-9102-v0",
+      "gine-9102-v1",
+      "gine-9102-v2",
+      "gine-9102-v3",
+      "gine-9103-v0",
+      "gine-9103-v1",
+      "gine-9103-v2",
+      "gine-9103-v3",
+      "gine-9104-v0",
+      "gine-9104-v1",
+      "gine-9104-v2",
+      "gine-9104-v3",
+      "gine-9105-v0",
+      "gine-9105-v1",
+      "gine-9105-v2",
+      "gine-9105-v3",
+      "gine-9106-v0",
+      "gine-9106-v1",
+      "gine-9106-v2",
+      "gine-9106-v3",
+      "gine-9107-v0",
+      "gine-9107-v1",
+      "gine-9107-v2",
+      "gine-9107-v3",
+      "gine-9108-v0",
+      "gine-9108-v1",
+      "gine-9108-v2",
+      "gine-9108-v3"
+    ],
+    "groups": {
+      "gine-9101-v0": "voronoi-parent-9101",
+      "gine-9101-v1": "voronoi-parent-9101",
+      "gine-9101-v2": "voronoi-parent-9101",
+      "gine-9101-v3": "voronoi-parent-9101",
+      "gine-9102-v0": "voronoi-parent-9102",
+      "gine-9102-v1": "voronoi-parent-9102",
+      "gine-9102-v2": "voronoi-parent-9102",
+      "gine-9102-v3": "voronoi-parent-9102",
+      "gine-9103-v0": "voronoi-parent-9103",
+      "gine-9103-v1": "voronoi-parent-9103",
+      "gine-9103-v2": "voronoi-parent-9103",
+      "gine-9103-v3": "voronoi-parent-9103",
+      "gine-9104-v0": "voronoi-parent-9104",
+      "gine-9104-v1": "voronoi-parent-9104",
+      "gine-9104-v2": "voronoi-parent-9104",
+      "gine-9104-v3": "voronoi-parent-9104",
+      "gine-9105-v0": "voronoi-parent-9105",
+      "gine-9105-v1": "voronoi-parent-9105",
+      "gine-9105-v2": "voronoi-parent-9105",
+      "gine-9105-v3": "voronoi-parent-9105",
+      "gine-9106-v0": "voronoi-parent-9106",
+      "gine-9106-v1": "voronoi-parent-9106",
+      "gine-9106-v2": "voronoi-parent-9106",
+      "gine-9106-v3": "voronoi-parent-9106",
+      "gine-9107-v0": "voronoi-parent-9107",
+      "gine-9107-v1": "voronoi-parent-9107",
+      "gine-9107-v2": "voronoi-parent-9107",
+      "gine-9107-v3": "voronoi-parent-9107",
+      "gine-9108-v0": "voronoi-parent-9108",
+      "gine-9108-v1": "voronoi-parent-9108",
+      "gine-9108-v2": "voronoi-parent-9108",
+      "gine-9108-v3": "voronoi-parent-9108"
+    },
+    "input_digests": {
+      "gine-9101-v0": "bad0814721518969048c5b7ec4852d3847a107974c97ade69b8f35bd7153843c",
+      "gine-9101-v1": "157410e66ced4b1784670ce192c9803107d688ed07ef26957b4a12f72aa66953",
+      "gine-9101-v2": "14a514a51ff95de54e07cce778d48c30f1e22afc8992312af4d7661c18fcd0c7",
+      "gine-9101-v3": "415b8ee49936d009a0d0db43107b899669d8a2e55028720fe5cc5d7edb90c727",
+      "gine-9102-v0": "56bde9d00f08b4ac1ae626575a48989af11e1d95e8944bd2409c409ffa92699c",
+      "gine-9102-v1": "1f4ef65cbaeba17b40a38c6e3313a19e1a8fe0334315ace726b05e75115e160c",
+      "gine-9102-v2": "1225bd8633773602626640be85ee8af8f045ade76d5e0a46a97bfb4cfae3455f",
+      "gine-9102-v3": "f24e206dad0c34e39ea028d8d72a476238ca3e869b77d8962c3457d95a7f9497",
+      "gine-9103-v0": "4757e7113354ff716b36e32308ba3ce80592296286b29044f3e3fafecb6d3228",
+      "gine-9103-v1": "c40990af1bb8c2fb1f88103387d436130a85d6a31cf1a9bb856dbdada9952e94",
+      "gine-9103-v2": "be0e5527a14a8ca0e4c40f28308a4c6c8b2224bb6da7409aae804d32f3903898",
+      "gine-9103-v3": "71d4409c99ad9900156f679ff5ec99e3cba061c03ad36f2acdbbfdf632aff6f1",
+      "gine-9104-v0": "3cc9d39ade26010f12487a66ad2100e0f830d8ebcadd66ee9060f5bbe6e1e475",
+      "gine-9104-v1": "306653517472493fe4cf4a3742705eb40d7b1c6800e7faf1040f1e5358550ad2",
+      "gine-9104-v2": "978deabe822418c8ad0b7dc0e62deb29d7bc215a8d2cef0736c8fda5a90eb40c",
+      "gine-9104-v3": "cce135fe3519efa2208cbbda3234e3f5f3c58fe7c30257e9a150cf67ab18c82a",
+      "gine-9105-v0": "6ea168b20a44653ea2883eac34f8dc968cf4b61ba0e21bce744be0e38fd6d5db",
+      "gine-9105-v1": "c725d864864260bdb5a8db94605162bc25fea849d072a082063f0f042d910fb3",
+      "gine-9105-v2": "0772cf5b364f8036d768faa4bd97153b3bc165515dd53b96674d412d3321d122",
+      "gine-9105-v3": "5438eaed538a3b365bd1c7cce2df63e592194d3a58bf61be09a11ca4f5355bc1",
+      "gine-9106-v0": "82faa37bb873414459b8d3b18ff41ec6de0d87fe561d1b73af66bd7c4b286d0b",
+      "gine-9106-v1": "25bd09073226e1adea02c0bfda482b4eaaf4ad683843b239dac18f8f2b6fc448",
+      "gine-9106-v2": "9486103c7562e020f60f4c5c8df378a9c88fcd310c14e01f3f345d0d667b70ea",
+      "gine-9106-v3": "aa6ac61c41caee75718fd235e28a7183b3088c44bee79ceaad0c35ef3c837a78",
+      "gine-9107-v0": "cfbd7e3353e7d8f9d8c88b0772dac6b72333b746b3e4cd83a02e17ca49875a14",
+      "gine-9107-v1": "97bbe79e628532cd25e56fa3c6dc2ab5decf7bef12564fe21cfdc397d2d931df",
+      "gine-9107-v2": "fa680d9b6a8cee7ce6475beb8df738d62ffb9879fc85f548f4fa6070b97e1bdd",
+      "gine-9107-v3": "cd96f30b0bd1445337c2235ef6dbe5af01a7af78f871c8e012451bb00eaacfe1",
+      "gine-9108-v0": "776e0917f2763a2f523c6db91747bc58e54ddfd52261c13050d4fa310a7d4b08",
+      "gine-9108-v1": "52a2c7cbe6363989f3fb11adc8092a2c89dc5bfe5369b0dc1cb45c212980a29e",
+      "gine-9108-v2": "22ed5ab6411f980f085a11eb2d9aa2708872085b77c1bab6ced3739470f66f24",
+      "gine-9108-v3": "6eca33a3362bde9ec3d9c3ca739f4cf9e840189cd3205d3c7311fad7fb9dedc2"
+    },
+    "seed": 42,
+    "train_indices": [
+      0,
+      1,
+      2,
+      3,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31
+    ],
+    "validation_fraction": 0.25,
+    "validation_indices": [
+      4,
+      5,
+      6,
+      7,
+      20,
+      21,
+      22,
+      23
+    ]
+  },
+  "target_digest": "d94338759a7fa63446e330263fa401d316a99331a98f306b3310d4187c0c77f1",
+  "training": {
+    "batch_size": 4,
+    "best_state_restored": true,
+    "deterministic": true,
+    "early_stopping": 0,
+    "epochs_requested": 40,
+    "epochs_run": 40,
+    "gradient_clip": 1.0,
+    "initial_state_sha256": "f405d289faf7e67a8dac631ac002286f016c19099618a67019569721ecf5a61e",
+    "lr": 0.001,
+    "optimizer": "AdamW",
+    "seed": 42,
+    "threads": 1,
+    "weight_decay": 0.0001
+  }
+}
