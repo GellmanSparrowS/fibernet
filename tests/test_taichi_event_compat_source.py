@@ -181,7 +181,7 @@ class LazyFacade(unittest.TestCase):
             tree=ast.parse((ROOT/relative).read_text(encoding='utf-8'));selected=[]
             for n in tree.body:
                 if getattr(n,'name',None) in {'__getattr__','__dir__'}:selected.append(n)
-                if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_RENDER_EXPORTS','_LAZY_EXPORTS'} for t in n.targets):selected.append(n)
+                if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in {'_RENDER_EXPORTS','_LAZY_EXPORTS','_LAZY_MODULES'} for t in n.targets):selected.append(n)
             ns={'__name__':'source_facade'};exec(compile(ast.Module(body=selected,type_ignores=[]),relative,'exec'),ns)
             self.assertIn(name,ns['__dir__']())
             failure=ModuleNotFoundError('missing plot dependency')
@@ -219,7 +219,30 @@ def public_baseline(relative):
     directory = 'public_api_contract_v2' if relative in API_V2_MODULES else 'public_source_contract'
     return ROOT/'tests/fixtures'/directory/Path(relative).with_suffix('.py.txt')
 
+# Whole-file reviewed facade versions only. No normalization of arbitrary regions.
+FACADE_PINS = {
+    'fibernet/__init__.py': ('root.py.txt', '5a4b85e0d6b5faa6c2008014ea766a98dd260f01ec9616fcca8856005c22028b'),
+    'fibernet/sim/__init__.py': ('sim.py.txt', '7fa239798226e30c4541213bb079043b6fdedff3fbe7e26f53f84e2302c3caa8'),
+}
+
+def reviewed_facade(relative):
+    name, digest = FACADE_PINS[relative]
+    raw = (ROOT/'tests/fixtures/optional_facades_v2'/name).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == digest, 'reviewed facade fixture changed'
+    return raw
+
+
+def prior_sim_facade():
+    raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_prior.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '0078e02e3492792774843f0b2f86a23a86d78553327191ff79dc5b2d2b0d7036', 'prior sim facade fixture changed'
+    return raw
+
+
 def require_public_source(relative, raw):
+    if relative in FACADE_PINS:
+        prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
+        assert raw in (prior, reviewed_facade(relative)), 'public source bytes changed: '+relative
+        return
     expected=public_baseline(relative).read_bytes()
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -339,6 +362,27 @@ class SourceShape(unittest.TestCase):
     def test_public_facades_match_checked_in_sources(self):
         for path in PUBLIC_MODULES[:3]:
             with self.subTest(path=path):require_public_source(path,(ROOT/path).read_bytes())
+
+    def test_reviewed_optional_facades_are_exact(self):
+        for relative in FACADE_PINS:
+            raw = reviewed_facade(relative)
+            require_public_source(relative, raw)
+            require_public_source(relative, (ROOT/relative).read_bytes())
+            if relative == 'fibernet/sim/__init__.py':
+                require_public_source(relative, prior_sim_facade())
+            # Both unrelated edits and edits inside lazily extracted declarations
+            # or functions require a fresh source review, including whitespace.
+            mutations = [raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                         raw.replace(b'def __getattr__(name):', b'def __getattr__(name): # changed', 1),
+                         raw.replace(b'_LAZY_EXPORTS = {', b'_LAZY_EXPORTS = { # changed', 1)]
+            for changed in mutations:
+                self.assertNotEqual(changed, raw)
+                with self.subTest(relative=relative, changed=changed[:40]):
+                    with self.assertRaises(AssertionError):require_public_source(relative, changed)
+        root = reviewed_facade('fibernet/__init__.py')
+        changed = root.replace(b'_LAZY_MODULES = {', b'_LAZY_MODULES = { # changed', 1)
+        self.assertNotEqual(changed, root)
+        with self.assertRaises(AssertionError):require_public_source('fibernet/__init__.py', changed)
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))

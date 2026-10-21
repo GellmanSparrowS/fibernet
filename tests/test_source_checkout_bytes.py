@@ -8,6 +8,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
     'fibernet/__init__.py',
+    'fibernet/sim/__init__.py',
+    'tests/fixtures/optional_facades_v2/root.py.txt',
+    'tests/fixtures/optional_facades_v2/sim.py.txt',
+    'tests/fixtures/optional_facades_v2/sim_prior.py.txt',
+    'adapters/mcp/tests/fixtures/provenance_v1_outputs.json',
     'fibernet/easy.py',
     'fibernet/api.py',
     'tests/fixtures/public_api_contract_v2/fibernet/__init__.py.txt',

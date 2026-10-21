@@ -54,6 +54,15 @@ if args.installed_root:
     assert core_root.is_relative_to(installed) and adapter_root.is_relative_to(installed)
 
 
+
+
+def expected_core_provenance(manifest):
+    raw = json.dumps(manifest, sort_keys=True, separators=(',', ':'),
+                     ensure_ascii=True).encode('utf-8')
+    return {'schema_version': 'fibernet.core-provenance/1',
+            'canonical_core_manifest_sha256': hashlib.sha256(raw).hexdigest(),
+            'source_file_count': len(manifest), 'scope': 'fibernet_python_sources'}
+
 async def smoke(area):
     fixture = (root / 'fixtures/voronoi_4340.json').resolve()
     configuration = {'source_tree': TREE, 'graphs': [{
@@ -77,6 +86,11 @@ async def smoke(area):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
                 assert len((await session.list_tools()).tools) == 5
+                resources = await session.list_resources()
+                assert {str(item.uri) for item in resources.resources} == {'fibernet://capabilities', 'fibernet://provenance/1'}
+                provenance = await session.read_resource('fibernet://provenance/1')
+                assert len(provenance.contents) == 1
+                assert json.loads(provenance.contents[0].text) == expected_core_provenance(manifest)
                 result = await session.call_tool('fibernet_catalog', {})
                 assert not result.isError
                 graph = result.structuredContent['graphs'][0]

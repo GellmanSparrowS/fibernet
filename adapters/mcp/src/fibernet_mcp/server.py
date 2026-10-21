@@ -23,19 +23,33 @@ from mcp.server.stdio import stdio_server
 from mcp.shared.exceptions import McpError
 import mcp.types as mt
 from .safety import (ContractError, MAX_BYTES, canonical, graph_preflight,
-                     open_directory, read_at, read_file, sha, strict_json, write_at, verify_core)
+                     open_directory, read_at, read_file, sha, strict_json, write_at, _verify_core_result)
 
 VERSION = 'fibernet.mcp/1'
 TREE = '6eabb154cd37d95c7c447a568b1b737c3ec883c8'
 MAX_SESSION = 48 * 1024 * 1024
 ID = re.compile(r'^[a-f0-9]{32}$')
+PROVENANCE_URI = 'fibernet://provenance/1'
 
 def envelope(**kw): return {'schema_version': VERSION, **kw}
 def failure(code, category='contract', retryable=False):
     return envelope(error={'category':category,'code':code,'message':code.replace('_',' ').lower(),'retryable':retryable})
 
+def _verified_worker_result(payload, expected_provenance):
+    """Check the private worker envelope before any public result or cache use."""
+    if (not isinstance(payload, dict) or set(payload) != {'core_provenance', 'result'}
+            or not isinstance(payload['core_provenance'], dict)
+            or canonical(payload['core_provenance']) != canonical(expected_provenance)
+            or not isinstance(payload['result'], dict)
+            or '_core_provenance' in payload['result']):
+        raise ContractError('worker core provenance mismatch')
+    return {**payload['result'], '_core_provenance': dict(expected_provenance)}
+
+
 class ManagedStore:
-    def __init__(self, manifest, output_root):
+    def __init__(self, manifest, output_root, core_verification=None):
+        self._core_verification = core_verification if core_verification is not None else _verify_core_result()
+        self._artifact_provenance = {}
         self.root = open_directory(output_root)
         self.session = 'fibernet-mcp-' + uuid.uuid4().hex
         created=False
@@ -73,6 +87,10 @@ class ManagedStore:
         except BaseException:
             self.close(); raise
 
+    @property
+    def core_provenance(self):
+        return self._core_verification.provenance()
+
     def put_file(self, name, raw):
         if self.total + len(raw) > MAX_SESSION: raise ContractError('session storage limit')
         write_at(self.fd,name,raw); self.files.add(name); self.total += len(raw)
@@ -83,19 +101,25 @@ class ManagedStore:
         if sha(raw) != self.graphs[gid]['source_sha256']: raise ContractError('source integrity failure')
         return self.graphs[gid]
 
-    def artifact(self, gid, metrics):
+    def artifact(self, gid, metrics, core_provenance):
+        identity = canonical(self.core_provenance)
+        if canonical(core_provenance) != identity:
+            raise ContractError('worker core provenance mismatch')
         raw = canonical(metrics); digest = sha(raw)
-        for a in self.artifacts.values():
-            if a['sha256']==digest and a['source_sha256']==self.graphs[gid]['source_sha256']: return a
+        for aid, a in self.artifacts.items():
+            if (a['sha256']==digest and a['source_sha256']==self.graphs[gid]['source_sha256']
+                    and self._artifact_provenance.get(aid)==identity): return a
         if len(self.artifacts)>=64: raise ContractError('artifact limit')
         aid=uuid.uuid4().hex; self.put_file(aid,raw)
         a={'artifact_id':aid,'uri':'fibernet://artifacts/'+aid,'mime_type':'application/json',
            'byte_size':len(raw),'sha256':digest,'source_sha256':self.graphs[gid]['source_sha256'],
            'producer':self.producer,'kind':'topology_metrics'}
-        self.artifacts[aid]=a;return a
+        self.artifacts[aid]=a;self._artifact_provenance[aid]=identity;return a
 
     def info(self,aid):
         if aid not in self.artifacts: raise ContractError('unknown handle')
+        if self._artifact_provenance.get(aid) != canonical(self.core_provenance):
+            raise ContractError('artifact core provenance mismatch')
         return self.artifacts[aid]
 
     def close(self):
@@ -132,7 +156,10 @@ class Supervisor:
                 await anyio.sleep(.02)
             if p.returncode != 0: reason='failed';return failure('WORKER_FAILED','internal')
             raw=read_at(self.store.fd,out)
-            return strict_json(raw)
+            try:
+                return _verified_worker_result(strict_json(raw), self.store.core_provenance)
+            except ContractError:
+                reason='failed';return failure('WORKER_PROVENANCE_MISMATCH','internal')
         except BaseException:
             reason='cancelled';raise
         finally:
@@ -170,8 +197,8 @@ class BoundedOutput:
 async def serve(args):
     if sys.platform!='linux' or not hasattr(os,'O_NOFOLLOW'): raise ContractError('Linux confinement required')
     if importlib.metadata.version('mcp')!='1.29.0': raise ContractError('untested SDK version')
-    verify_core()
-    store=ManagedStore(args.manifest,args.output_root);sup=Supervisor(store,args.timeout)
+    core_verification=_verify_core_result()
+    store=ManagedStore(args.manifest,args.output_root,core_verification);sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
     # Remove unused local definitions from each advertised schema to fit bounded list output.
     def prune(schema):
@@ -196,13 +223,15 @@ async def serve(args):
     @server.list_tools()
     async def tools(): return [mt.Tool(**d) for d in definitions]
     @server.list_resources()
-    async def resources(): return [mt.Resource(uri='fibernet://capabilities',name='capabilities',mimeType='application/json',annotations=mt.Annotations(audience=['user','assistant'],priority=.5))]
+    async def resources(): return [mt.Resource(uri='fibernet://capabilities',name='capabilities',mimeType='application/json',annotations=mt.Annotations(audience=['user','assistant'],priority=.5)),
+                                  mt.Resource(uri=PROVENANCE_URI,name='verified core provenance v1',mimeType='application/json',annotations=mt.Annotations(audience=['user','assistant'],priority=.5))]
     @server.list_resource_templates()
     async def templates(): return [mt.ResourceTemplate(uriTemplate='fibernet://artifacts/{artifact_id}',name='artifact manifest',mimeType='application/json')]
     @server.read_resource()
     async def resource(uri):
         u=str(uri)
         if u=='fibernet://capabilities': data={'schema_version':VERSION,'protocol':'2025-11-25','source_tree':TREE,'physics':[],'transport':'stdio','platform':'linux'}
+        elif u==PROVENANCE_URI: data=store.core_provenance
         elif re.fullmatch(r'fibernet://artifacts/[a-f0-9]{32}',u):
             try: data=store.info(u.rsplit('/',1)[1])
             except ContractError: raise McpError(mt.ErrorData(code=-32002,message='Resource not found'))
@@ -224,7 +253,7 @@ async def serve(args):
                     data=envelope(graph_id=gid,source_sha256=g['source_sha256'],validation_status='valid' if result['valid'] else 'invalid',scope='serialization_and_topology',node_count=g['node_count'],edge_count=g['edge_count'],issues=[] if result['valid'] else [{'code':'INVALID_GRAPH','path':'graph','message':'native graph or topology validation failed'}],issues_truncated=False)
                 elif not result['valid']: data=failure('INVALID_GRAPH','domain')
                 else:
-                    metrics=result['metrics'];a=store.artifact(gid,metrics)
+                    metrics=result['metrics'];a=store.artifact(gid,metrics,result['_core_provenance'])
                     data=envelope(graph_id=gid,source_sha256=g['source_sha256'],metrics={k:metrics[k] for k in ['schema','n_nodes','n_physical_edges','n_unique_connections','n_components','n_isolates','cycle_rank_physical','largest_component_fraction']},artifact=a)
             elif name=='fibernet_artifact_info': data=envelope(artifact=store.info(arguments['artifact_id']))
             elif name=='fibernet_artifact_read':

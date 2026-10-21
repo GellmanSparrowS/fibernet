@@ -17,6 +17,15 @@ ENV={**os.environ,'PYTHONPATH':os.pathsep.join([str(ROOT/'src')]+([str(Path(CORE
  'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','MPLCONFIGDIR':str(ROOT/'evidence/mpl'),
  'XDG_CACHE_HOME':str(ROOT/'evidence/cache'),'PYTHONDONTWRITEBYTECODE':'1'}
 
+
+
+def expected_core_provenance(manifest):
+    raw = json.dumps(manifest, sort_keys=True, separators=(',', ':'),
+                     ensure_ascii=True).encode('utf-8')
+    return {'schema_version': 'fibernet.core-provenance/1',
+            'canonical_core_manifest_sha256': hashlib.sha256(raw).hexdigest(),
+            'source_file_count': len(manifest), 'scope': 'fibernet_python_sources'}
+
 async def run(timeout=10,audit='acceptance.json',cancel=False,force_kill=False):
     p=StdioServerParameters(command=sys.executable,args=['-m','fibernet_mcp.server','--manifest',str(ROOT/'evidence/manifest.json'),'--output-root',str(RUN),'--timeout',str(timeout),'--audit',audit],env=ENV)
     records=[]
@@ -26,6 +35,12 @@ async def run(timeout=10,audit='acceptance.json',cancel=False,force_kill=False):
             listing=await session.list_tools();assert len(listing.tools)==5
             assert len((await session.list_resource_templates()).resourceTemplates)==1
             await session.read_resource('fibernet://capabilities')
+            expected = expected_core_provenance(json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text()))
+            resources = await session.list_resources()
+            assert {str(item.uri) for item in resources.resources} == {'fibernet://capabilities', 'fibernet://provenance/1'}
+            provenance = await session.read_resource('fibernet://provenance/1')
+            assert len(provenance.contents) == 1
+            assert json.loads(provenance.contents[0].text) == expected
             cat=(await session.call_tool('fibernet_catalog',{})).structuredContent
             g=cat['graphs'][0];assert g['node_count']==4340 and g['edge_count']==5073
             if cancel:
