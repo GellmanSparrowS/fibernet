@@ -26,8 +26,10 @@ def graph(unit='mm', reverse=True):
 
 
 def options(unit='mm'):
+    # Declare the mobile velocity already used by raw_result at frame zero.
     return dict(length_unit=unit,maximum_bond_length_m=.01,masses_kg={10:1.,40:2.},
-                bonds={77:backend.HarmonicBond(2.,.001)},run=backend.RunSpec(.01,2,1,((-.01,.01),)*3))
+                bonds={77:backend.HarmonicBond(2.,.001)},run=backend.RunSpec(.01,2,1,((-.01,.01),)*3),
+                velocities_m_s={40:(.01,0,0)})
 
 
 def raw_result(p):
@@ -50,6 +52,13 @@ def mapped(unit='mm', record=True):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_synthetic_initial_velocity_requires_declaration(self):
+        args=options();args.pop('velocities_m_s')
+        p=backend.prepare_harmonic_beads(graph(),**args)
+        for record in (False,True):
+            with self.subTest(record_state=record),self.assertRaisesRegex(ValueError,'native initial/fixed state mismatch'):
+                adapter.to_sim_result(p,raw_result(p),RUNTIME,0,record)
+
     def test_mapping_units_identity_and_graph_unchanged(self):
         g=graph();before=g.to_dict();p=backend.prepare_harmonic_beads(g,**options())
         r=adapter.to_sim_result(p,raw_result(p),RUNTIME,.125,True)
@@ -222,7 +231,8 @@ class DispatchTests(unittest.TestCase):
         for mode,strain in [('stretch',2),('dynamics',1.1)]:
             with patch.object(backend,'LAMMPSTask',self.Task),self.assertRaises(ValueError):
                 self.simulate(graph(),mode=mode,strain=strain,backend='lammps',**self.args)
-        for missing in self.args:
+        # The newly explicit velocity is optional, unlike all original fields.
+        for missing in (key for key in self.args if key != 'velocities_m_s'):
             args=dict(self.args);args.pop(missing)
             with patch.object(backend,'LAMMPSTask',self.Task),self.assertRaises(TypeError):
                 self.simulate(graph(),mode='dynamics',backend='lammps',**args)

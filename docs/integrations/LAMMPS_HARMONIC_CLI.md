@@ -80,9 +80,13 @@ typed-result conversion independently compares them to the prepared SI geometry
 with relative tolerance `1e-13` and zero absolute tolerance. This check also runs
 when `record_state=False` and before sampled-output projection. Nonzero native
 forces on held sites remain available, but are not general reaction forces.
-The held-state invariant does not broaden other profile-specific validation or
-establish behavior between observations; sparse CG profiles still validate only
-observed states.
+Independently constructed typed results also undergo all-node frame-zero
+position and velocity checks against the prepared SI state, strict box-interior
+checks, and positive/bounded physical-bond length checks for every compiler
+profile. Initial comparisons use relative tolerance `1e-13` and zero absolute
+tolerance. These checks precede output projection and also run without recorded
+state. They do not establish behavior between observations; sparse CG profiles
+still validate only observed states. Selected-pair coincidence remains CG-only.
 
 Native evidence for the unchanged compiler protocol includes analytical two-site static and unequal-mass oscillator checks, and a heterogeneous 64-site/441-bond generator-defined braced-cubic graph with three mass and stiffness classes. Three network trajectories (100/200/400 steps, 703 frames total) passed saved-frame force/energy/conservation, local integration-residual and common-time refinement checks. Finest energy drift was about 1.48 ppm over the declared short interval. These are bounded correctness cases, not a large-scale performance, contact, beam, chemistry or MPI claim. The CLI-only publication revision itself still requires its final source/runtime admission review; earlier native evidence is not silently relabeled as a new execution.
 
