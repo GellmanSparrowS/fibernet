@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "source_commit": "c5f52d2805e3fe03e8cfb2109e295e3131e8e289",
+  "kind": "saved_interface_tour",
+  "renderer": "scripts/render_module_workflow_tours.py",
+  "inputs": [
+    {
+      "path": "FiberScope/docs/screenshots/learning-en.png",
+      "git_blob": "f4ea7c9e15692dda87e2bacd1d8c88ddb1ab4613",
+      "sha256": "b4e515df6be0600fb1230d7885b3a7e3204ef6b898476f0b17d88edbd61eb0e3",
+      "source_url": "https://raw.githubusercontent.com/GellmanSparrowS/fibernet/c5f52d2805e3fe03e8cfb2109e295e3131e8e289/FiberScope/docs/screenshots/learning-en.png"
+    },
+    {
+      "path": "FiberScope/docs/screenshots/inverse-en.png",
+      "git_blob": "92daef6f1aa2757f74807958ef695a460a90782e",
+      "sha256": "d0c6d7c86b7f6d9b4d233be7852aac8523b46290a89e2936e66fde584d9ad3ec",
+      "source_url": "https://raw.githubusercontent.com/GellmanSparrowS/fibernet/c5f52d2805e3fe03e8cfb2109e295e3131e8e289/FiberScope/docs/screenshots/inverse-en.png"
+    },
+    {
+      "path": "FiberScope/docs/screenshots/surface-en.png",
+      "git_blob": "cb2045f20aadf907201bf78c0994bf49a329d0f5",
+      "sha256": "b6b26a517d5aef1e2b7169d9887c439fa94cf205e75a888ebc3657889ad271fb",
+      "source_url": "https://raw.githubusercontent.com/GellmanSparrowS/fibernet/c5f52d2805e3fe03e8cfb2109e295e3131e8e289/FiberScope/docs/screenshots/surface-en.png"
+    },
+    {
+      "path": "FiberScope/docs/screenshots/manufacturing-en.png",
+      "git_blob": "0da23fa08928bfcaef3fde36dcd5af216570e86d",
+      "sha256": "c10c2a3be5b46df0b8a635b63bcf63a7004116663643f4a1fb8da07dafa4fc7a",
+      "source_url": "https://raw.githubusercontent.com/GellmanSparrowS/fibernet/c5f52d2805e3fe03e8cfb2109e295e3131e8e289/FiberScope/docs/screenshots/manufacturing-en.png"
+    }
+  ],
+  "outputs": [
+    {
+      "file": "learning_inverse_workflow.gif",
+      "sha256": "9b1dcf141e1b882b153aefb908047c94a58a7c6635476a4bc4ff10953fd82123",
+      "bytes": 242779,
+      "width": 960,
+      "height": 830,
+      "frames": 20,
+      "duration_ms": 9600,
+      "caption_en": "Animated tour of saved FiberScope learning and inverse-design interfaces. Only emphasis changes; plots and results remain the original screenshot data.",
+      "caption_zh": "FiberScope 学习与逆向设计的已保存界面导览。仅高亮提示发生变化，图表和结果保留原始截图内容；并非实时训练或性能基准。"
+    },
+    {
+      "file": "surface_export_workflow.gif",
+      "sha256": "a848231abfa31ab8999c3cc5739ac00d4ca07ba0c009e46e0c287c251c216a7e",
+      "bytes": 236827,
+      "width": 960,
+      "height": 830,
+      "frames": 12,
+      "duration_ms": 9600,
+      "caption_en": "Animated tour of saved FiberScope surface and manufacturing interfaces. Shows surface geometry and export controls, not a physical printer run or a solid-mechanics solution.",
+      "caption_zh": "FiberScope 曲面与制造的已保存界面导览。展示曲面几何和导出选项，不代表实际打印执行或三维实体力学求解。"
+    }
+  ],
+  "animation": "Only stage selection and annotation emphasis change. No scientific data are interpolated or generated.",
+  "scope": "Screenshots are existing repository assets. These tours do not add physical validation, training validation, or fabrication validation.",
+  "poster_images": "Embedded byte-for-byte source PNGs; self-contained editable SVG compositions."
+}
