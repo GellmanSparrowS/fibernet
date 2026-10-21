@@ -63,3 +63,50 @@ An Eulerian multigraph remains traversable regardless of geometric overlap, but 
 ### Frozen external-program launch
 
 Before opening Bambu Studio, the Windows frozen process temporarily clears its inherited DLL search directory and restores it after process creation. Bundle-relative PATH and Qt plugin entries are removed from the child environment, and the child working directory is the slicer installation directory. This follows the [PyInstaller external-program guidance](https://pyinstaller.org/en/latest/common-issues-and-pitfalls.html#launching-external-programs-from-the-frozen-application). The regression executes this branch with a captured process-launch call; it does not claim an installed-slicer test.
+
+### Binary STL precision preflight
+
+Binary STL stores each triangle coordinate as an IEEE binary32 value. Export
+checks that exact final-coordinate representation before staging a file: finite
+values, three distinct welded vertices per face, exactly nonzero triangle area,
+two incident triangles per welded edge, and the existing nonzero signed-volume
+rule. Equal serialized positions (including signed zero) are welded only in the
+validation copy. The exporter does not move vertices or remove triangles.
+Precision overflow, collapsed faces or invalid welded edge incidence cause a
+clear refusal while preserving an existing destination. Normals are calculated
+from the emitted positions using binary64 arithmetic, so normal bytes may
+change. Coordinate bytes, including signed zero, retain the binary32 cast of
+the supplied final positions. Validation uses numeric coordinate equality and
+inherits the existing closure and signed-volume checks and their limitations.
+
+These checks do not certify self-intersection freedom, every vertex-link
+condition, manufacturing suitability, or a slicer's tolerance-based welding.
+Disconnected closed components are not rejected solely for their count. The
+STL preflight does not certify the separate 3MF decimal serialization or the
+legacy FiberNetwork mesh exporters; no alternate format is selected on failure.
+
+
+### 3MF coordinate serialization precision
+
+The 3MF writer emits coordinates with 17 significant decimal digits. Finite
+stored binary64 coordinates roundtrip to the same binary64 values when the XML
+coordinate attributes are parsed as binary64. This preserves the stored values,
+not a claim about their physical accuracy. The [3MF Core specification, vertex
+coordinates and ST_Number schema](https://github.com/3MFConsortium/spec_core/blob/master/3MF%20Core%20Specification.md#4131-vertex)
+allows decimal coordinates and scientific notation with this precision.
+
+The guarantee is scoped to binary64 values (and binary16/binary32 values exactly
+representable in binary64). The existing exporter also accepts real integer
+storage through 64 bits; its floating decimal formatter can lose integer
+precision beyond binary64 exactness, including some integers above 2^53. Wider
+floating types remain rejected by validation. No new integer or wider-float
+precision contract is introduced.
+
+Vertex order and integer face references are retained after the existing
+validation step, which can reverse all triangle windings for negative aggregate
+signed volume. Disconnected index components remain in the single mesh object;
+no component labels, centerline graph, settings or provenance metadata are added.
+Millimeter units and the existing package/build structure remain unchanged.
+A consumer, including a slicer or a reader exposing binary32 vertex arrays, can
+still reduce precision. XML coordinate fidelity does not certify self-intersection
+freedom, arbitrary mesh validity, printer readiness or manufacturing suitability.

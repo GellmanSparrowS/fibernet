@@ -1,2 +1,20 @@
 # The numerical cache identity hashes exact source bytes.
 FiberScope/fslab/*.py -text
+
+# Source-contract and native-core bindings require byte-identical checkouts.
+fibernet/sim/accelerated.py -text
+fibernet/sim/_energy_accounting.py -text
+fibernet/viz/__init__.py -text
+tests/fixtures/observer_prior71_accelerated.txt -text
+
+# Public regression baselines retain their source UTF-8 bytes.
+tests/fixtures/public_source_contract/**/*.txt -text
+
+# The retained CG acceptance record pins exact compiler bytes.
+fibernet/integrations/_lammps_cg.py -text
+
+# Exact API contract snapshots and their facade sources must keep Git bytes.
+fibernet/__init__.py -text
+fibernet/easy.py -text
+fibernet/api.py -text
+tests/fixtures/public_api_contract_v2/**/*.txt -text

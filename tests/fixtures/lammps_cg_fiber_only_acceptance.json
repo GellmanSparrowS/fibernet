@@ -1,0 +1,76 @@
+{
+  "schema": "fibernet.cg_fiber_only.acceptance/1",
+  "model": "harmonic bonds and cosine angles; no pair force",
+  "case": "seven-node-noncoplanar-branched-fiber-only/1",
+  "node_ids": [
+    101,
+    205,
+    309,
+    413,
+    517,
+    621,
+    725
+  ],
+  "edge_ids": [
+    71,
+    83,
+    97,
+    109,
+    127,
+    139
+  ],
+  "angle_ids": [
+    47,
+    59,
+    61,
+    73,
+    89
+  ],
+  "runtime": {
+    "runtime_banner": "LAMMPS (22 Jul 2025 - Update 4)",
+    "runtime_mode": "cli_serial_static",
+    "runtime_version": 20250722,
+    "runtime_executable_sha256": "9e900904e54988e53cef3f2ed74b4efd1b12d1e3a81c6e329ff2cdb91ef00b57"
+  },
+  "cases": {
+    "static": {
+      "steps": 0,
+      "timestep_s": 1e-07,
+      "prepared_sha256": "102ac16c3805555c7b9c2c18865224137de6dc53099f7af3f68274866f33dabf",
+      "graph_sha256": "6fcd01d3baff90f96d6b2e597119427a20cf01959254fa67228b7d52f2c247dc",
+      "model_data_sha256": "7b92317928cea2b5d3d9e8baf3e6a06f55ad9bceb23710e425caf4486707c8c5",
+      "input_sha256": "3fd783e1607f731cdb3f47e1d01ef248ad1c504b1372a9f58af8f0d259dc7762",
+      "raw_trajectory_sha256": "b1d5aecbbbae22495b64b35a409c1e67c5197204bf3a6ad53787bef2d7c5e28e",
+      "raw_log_sha256": "b7fd87c02690204f932539d896bfc8255accec3334f1160d9ab17ae3078565f6"
+    },
+    "coarse": {
+      "steps": 100,
+      "timestep_s": 1e-07,
+      "prepared_sha256": "ebf0db6e2fd56828c43d37d27466c259982ea9d255ed0ae3ab68e4b82525201a",
+      "graph_sha256": "6fcd01d3baff90f96d6b2e597119427a20cf01959254fa67228b7d52f2c247dc",
+      "model_data_sha256": "7b92317928cea2b5d3d9e8baf3e6a06f55ad9bceb23710e425caf4486707c8c5",
+      "input_sha256": "1ef370dcb601895ee80f5c3b07eb8f8d8e5ca7e80073823851e1ef04da27a079",
+      "raw_trajectory_sha256": "60d1b20369ef40dc894f26ca03f60e2cbc761752f962b4edf95cd9bc1dca4ea9",
+      "raw_log_sha256": "e3cb57298a2738b8fc6cd16c3152214bfb1365aa34cc878140dac0fdd6c3233c"
+    },
+    "fine": {
+      "steps": 200,
+      "timestep_s": 5e-08,
+      "prepared_sha256": "4f81343250e2fc70a17c217acfb2802d8287593a7c331d2e02d4dee71def2a9b",
+      "graph_sha256": "6fcd01d3baff90f96d6b2e597119427a20cf01959254fa67228b7d52f2c247dc",
+      "model_data_sha256": "7b92317928cea2b5d3d9e8baf3e6a06f55ad9bceb23710e425caf4486707c8c5",
+      "input_sha256": "ed6c934d4c4d972a67baf38e6b6731d8a176d5f99a5593e26a6ba103d3e6f6f5",
+      "raw_trajectory_sha256": "1dbe96ba4dc46075ec4d336acb2b881554f3a6ead9332355f2ee86a96b4250f2",
+      "raw_log_sha256": "4a2f30f3590444cf8b939b49b18af7d6fa05011807cdd209739dbfd76134ffec"
+    }
+  },
+  "maximum_total_energy_drift_J": {
+    "coarse": 1.8738469179178458e-22,
+    "fine": 4.6846204280515225e-23
+  },
+  "fine_over_coarse_energy_drift": 0.25000016720986534,
+  "accepted_compiler_sha256": "ef09090ede530f4bfa31c8bd218bfe83f18189cc010ccca36bc3befcdcf2328d",
+  "independent_review_sha256": "7088bbdbfc9c7630f9235a2f9c0160e461f9dabe3390f1faf0ae37011c0877d9",
+  "qualification": "One seven-bead branched example on three fixed grids; not general-network, continuum-beam, contact, long-run or convergence-order validation.",
+  "publication_tests": "Generated-byte/contract checks only; no new native execution."
+}

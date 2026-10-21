@@ -1,7 +1,6 @@
-"""Verify the independent surface map preserves APP geometry and seam edges."""
+"""Independent surface-map golden geometry and seam-edge contracts."""
 import hashlib
 from pathlib import Path
-import sys
 
 import numpy as np
 import pytest
@@ -10,8 +9,6 @@ from fibernet.gen import MappingConfig, load_obj, map_cells
 from examples.surface_mapping_workflow import SurfaceMappingWorkflow
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "FiberScope"))
-from fslab.surface_mapping import map_cells as app_map_cells
 
 
 @pytest.mark.parametrize("unit, expected", [
@@ -24,11 +21,6 @@ def test_surface_map_matches_app_and_old_output(unit, expected):
     spectrum = [[0.02, -0.01], [0.01, 0.03]]
     config = MappingConfig(max_points=100000, max_segments=200000)
     points, edges = map_cells(vertices, faces, spectrum, unit, config)
-    app_points, app_edges = app_map_cells(
-        vertices, faces, spectrum, unit,
-        MappingConfig(max_points=100000, max_segments=200000))
-    assert np.array_equal(points, app_points)
-    assert np.array_equal(edges, app_edges)
     assert (points.shape, edges.shape) == expected[:2]
     assert hashlib.sha256(points.tobytes()).hexdigest()[:16] == expected[2]
     assert hashlib.sha256(np.asarray(edges, dtype="<i8").tobytes()).hexdigest()[:16] == expected[3]

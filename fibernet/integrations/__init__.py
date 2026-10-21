@@ -8,6 +8,13 @@ Provides integration with popular open-source scientific libraries:
 - OVITO: Advanced visualization and analysis
 
 All integrated libraries are optional dependencies.
+
+Two distinct LAMMPS routes remain public. LAMMPSBridge, LAMMPSResult and
+run_lammps_md are legacy FiberNetwork/Python-library APIs; their direct
+lammps() execution is unvalidated and outside the bounded CLI qualification
+scope. RuntimeSpec/LAMMPSTask are the explicit bounded CLI route, not an
+implementation used by the legacy bridge. Importability flags do not validate
+native runtimes. See docs/API_LAYERS.md and LAMMPS_NOTICE.md.
 """
 
 # NetworkX integration (BSD license)
@@ -30,7 +37,8 @@ try:
 except ImportError:
     _MDANALYSIS_AVAILABLE = False
 
-# LAMMPS integration (GPL v2 license)
+# Legacy LAMMPS integration (GPL v2 engine). This flag means adapter
+# importability only; it does not verify an installed native runtime.
 try:
     from .lammps_integration import (
         LAMMPSBridge, LAMMPSResult,
@@ -75,3 +83,20 @@ if _OVITO_AVAILABLE:
         "OVITOBridge", "OVITOAnalysisResult",
         "render_network_ovito"
     ])
+
+# Bounded explicit CG backend. Importing these does not import or
+# initialize native LAMMPS; execution requires an explicit pinned RuntimeSpec.
+from .lammps_backend import (
+    HarmonicBond, RunSpec, PreparedRun, RuntimeSpec, ResourceLimits,
+    LAMMPSTask, TaskState, LAMMPSRunResult, LAMMPSContractError,
+    prepare_harmonic_beads, parse_outputs,
+)
+__all__.extend([
+    'HarmonicBond', 'RunSpec', 'PreparedRun', 'RuntimeSpec', 'ResourceLimits',
+    'LAMMPSTask', 'TaskState', 'LAMMPSRunResult', 'LAMMPSContractError',
+    'prepare_harmonic_beads', 'parse_outputs',
+])
+
+# Deterministic conservative coarse-bead input records; no native imports.
+from ._lammps_cg import CGRequest, CGAngle, MorsePair, prepare_cg
+__all__.extend(['CGRequest', 'CGAngle', 'MorsePair', 'prepare_cg'])

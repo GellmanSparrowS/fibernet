@@ -1097,7 +1097,9 @@ def list_units() -> List[str]:
 
 
 def register_unit(name: str, factory):
-    """Register a custom unit factory."""
+    """Register a callable custom unit factory; valid names may be replaced."""
+    if not callable(factory):
+        raise TypeError("unit factory must be callable")
     _UNIT_FACTORIES[name.lower()] = factory
 
 # ======================================================================
@@ -1851,7 +1853,9 @@ def list_units_3d():
 
 
 def register_unit_3d(name, factory):
-    """Register a custom 3D unit factory."""
+    """Register a callable custom 3D factory; valid names may be replaced."""
+    if not callable(factory):
+        raise TypeError("unit factory must be callable")
     _UNIT_FACTORIES_3D[name.lower()] = factory
 
 
@@ -1918,13 +1922,17 @@ def pattern_2d(
     perturbation : float
         Cn-symmetric perturbation magnitude (fraction of edge length).
     seed : int, optional
-        Random seed for deterministic displacements.
+        Random seed for deterministic displacements. For ``unit="voronoi"``,
+        an omitted or None seed uses 42 for both tessellation and displacements.
+        An explicit integer seed selects a reproducible realization.
     boundary_mode : str
         ``"none"``, ``"extend"``, or ``"error"``.
     fit_to_box : bool
         Scale custom points to fit within the box.
     unit_kwargs : dict, optional
         Extra kwargs for the unit factory (e.g., ``angle=20`` for reentrant).
+        These override top-level factory arguments, including ``seed``. For
+        Voronoi, an overriding ``seed=None`` also uses the default seed 42.
 
     Returns
     -------
@@ -1955,7 +1963,10 @@ def pattern_2d(
             "seed": seed,
         }
         factory_kwargs.update(ukw)
-        unit_cell = _UNIT_FACTORIES[unit_name](**factory_kwargs)
+        if unit_name == "voronoi" and factory_kwargs["seed"] is None:
+            factory_kwargs["seed"] = 42
+        factory = _UNIT_FACTORIES[unit_name]
+        unit_cell = factory(**factory_kwargs)
     else:
         # Custom points with intermediate node support
         pts = [tuple(p) for p in points]
@@ -2018,8 +2029,11 @@ def pattern_2d(
 
     # Step 6: Bridge small disconnected components (Voronoi artifacts)
     if unit == "voronoi":
-        result = _bridge_small_components(result, min_component_size=5,
-                                         radius=radius, material=mat)
+        bridge = (_bridge_owned_components
+                  if material is None and 'material' not in (unit_kwargs or {})
+                  and factory is _unit_voronoi
+                  else _bridge_small_components)
+        result = bridge(result, min_component_size=5, radius=radius, material=mat)
 
     result._metadata["pattern"] = {
         "unit": unit or "custom",
@@ -2547,7 +2561,22 @@ def _bridge_small_components(
     boundaries. This finds components smaller than ``min_component_size``
     and adds a bridge edge from their nearest node to the main component.
     """
-    g = graph.copy()
+    return _bridge_components_inplace(graph.copy(), min_component_size, radius, material)
+
+
+def _bridge_owned_components(graph, min_component_size=5, radius=0.1, material=None):
+    """Internal freshly tiled default-material graph; preserve nested isolation."""
+    graph._metadata = copy.deepcopy(graph._metadata)
+    for node in graph.nodes.values():
+        node.metadata = copy.deepcopy(node.metadata)
+    for edge in graph.edges.values():
+        edge.metadata = copy.deepcopy(edge.metadata)
+    return _bridge_components_inplace(graph, min_component_size, radius, material)
+
+
+def _bridge_components_inplace(graph, min_component_size=5, radius=0.1, material=None):
+    """Original bridge traversal, mutating only the supplied owned graph."""
+    g = graph
     if not g.nodes:
         return g
 

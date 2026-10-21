@@ -7,3 +7,13 @@
 左右夹持区按初始样本 x 宽度的固定比例选取整列节点，左侧固定，右侧沿 x 指定终位移。默认准静态模式把总位移分成指定增量，每级先按当前横向范围施加仿射预测，再进行显式速度更新和指数阻尼松弛；另可使用连续斜坡模式。每级保存坐标、边轴向应变、原始右夹持反力、轴向/弯曲近似/接触势能、动能和外部做功。原始反力可非单调，不能用展示层的单调包络代替做功或干预评价。左右夹持及所有边在输出中保留相同编号，以供时序招募和独立复算使用。
 
 该 NumPy 求解器的单一实现同时由 Python 库与 APP 调用。迁移前后四类黄金案例共 40 组时序和末帧数值数组最大相对偏差为零；旧三项干预研究及新的 60 个招募/接触案例重算后全部案例数据严格相同，才升级缓存与检查点到 e2v12。跨端一致性只证明软件实现同源，不构成模型物理正确性或实验标定。非线性梁框架 FEM 对六边形方向性招募给出相同的定性方向差异，但两模型的贯通起点不同；研究报告应分别列出求解器与阈值。
+
+## Graph IDs and replay arrays
+
+Graph node IDs need not be contiguous after editing. The solver maps sorted
+original node IDs to dense array rows and preserves graph edge insertion order.
+`edges`, grip indices, contact pairs and weld triplets use these dense rows
+internally; result metadata includes `node_ids` and `edge_ids` to map replay
+arrays back to the input graph. Input `weld_triplets` refer to original node IDs.
+Disabling contact skips candidate construction as well as contact forces; it
+does not change the axial or bending model.

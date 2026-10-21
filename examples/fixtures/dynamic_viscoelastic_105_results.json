@@ -1,0 +1,91 @@
+{
+  "BE_dissipation_J": [
+    4.28012564531581e-15,
+    2.1403002664573705e-15,
+    1.0702244978023586e-15
+  ],
+  "field_metrics": {
+    "epsilon": {
+      "both_differences_at_roundoff": false,
+      "coarse_medium_norm": 2.111994240858901e-08,
+      "finest_peak_norm": 2.7363706447769954e-05,
+      "frozen_zero_floor": 1.4210854715202004e-14,
+      "medium_fine_norm": 1.0541241672328922e-08,
+      "refinement_ratio": 0.49911318262127613
+    },
+    "sigma": {
+      "both_differences_at_roundoff": false,
+      "coarse_medium_norm": 0.006253252784633696,
+      "finest_peak_norm": 5.647177612337489,
+      "frozen_zero_floor": 5.6843418860808015e-09,
+      "medium_fine_norm": 0.0031423739758039333,
+      "refinement_ratio": 0.5025183027185119
+    },
+    "u": {
+      "both_differences_at_roundoff": false,
+      "coarse_medium_norm": 1.2214746900008953e-10,
+      "finest_peak_norm": 1.583754031454924e-07,
+      "frozen_zero_floor": 1.8474111129762606e-16,
+      "medium_fine_norm": 6.096774478464674e-11,
+      "refinement_ratio": 0.4991322807073641
+    },
+    "v": {
+      "both_differences_at_roundoff": false,
+      "coarse_medium_norm": 7.963273854679616e-09,
+      "finest_peak_norm": 3.254233686137817e-06,
+      "frozen_zero_floor": 6.985763810841223e-20,
+      "medium_fine_norm": 3.986006704044233e-09,
+      "refinement_ratio": 0.5005487412318311
+    }
+  },
+  "finest": {
+    "final_BE_dissipation_K0": 0.0030624109947120976,
+    "final_physical_dissipation_K0": 0.9924738407425193,
+    "max_abs_strain": 9.376700133227117e-05,
+    "mechanical_peak_K0": 1.0000895906719032,
+    "physical_energy_defect_K0": 0.0013870463385037882
+  },
+  "gates": {
+    "BE_halving_0": true,
+    "BE_halving_1": true,
+    "epsilon_medium_fine_2_percent": true,
+    "epsilon_refinement": true,
+    "finest_BE_at_most_0_01_K0": true,
+    "finest_final_physical_loss_at_least_0_05_K0": true,
+    "finest_mechanical_at_most_1_01_K0": true,
+    "finest_physical_energy_defect_2_percent": true,
+    "medium_fine_final_physical_loss_1_percent": true,
+    "sigma_medium_fine_2_percent": true,
+    "sigma_refinement": true,
+    "u_medium_fine_2_percent": true,
+    "u_refinement": true,
+    "v_medium_fine_2_percent": true,
+    "v_refinement": true
+  },
+  "horizon_s": 0.5,
+  "initial_kinetic_energy_J": 3.494712171718062e-13,
+  "intervals": [
+    1024,
+    2048,
+    4096
+  ],
+  "nodes": 105,
+  "norms": "Maximum over 129 common times of mass-weighted free-node vector RMS or reference-volume-weighted edge scalar RMS",
+  "physical_dissipation_J": [
+    3.4682940389446867e-13,
+    3.4683522136075855e-13,
+    3.4684104113546557e-13
+  ],
+  "physical_edges": 273,
+  "route": {
+    "closed": true,
+    "output_units": "mm",
+    "physical_edges_once": 273,
+    "rows": 274,
+    "source_units": "m"
+  },
+  "saved_states_per_level": 129,
+  "schema": "fibernet.synthetic_network_example_results/1",
+  "scope": "Synthetic in-plane axial network; three-grid self-convergence and discrete identities; not continuous-reference accuracy or printability",
+  "status": "PASS_FROZEN_SYNTHETIC_GATES"
+}

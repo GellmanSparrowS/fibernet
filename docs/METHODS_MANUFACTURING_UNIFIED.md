@@ -19,3 +19,36 @@ OBJ 输入在映射前限制文件为 64 MB；未请求面数简化时最多读�
 ## 实体构建与格式输出
 
 输入路径的中心线首先按输出设置缩放为毫米坐标，平面网络按指定宽、深、高放置，曲面网络受最大高度与 250 mm 包络约束。解析实体路径以圆柱段和球形接头构建有限截面的管状网络，空间相近批次用流形布尔并集处理，并在大几何量时提前停止。可选体素路径对中心线采样，以受控体素预算求距离场并提取等值面。实体网格经封闭双流形边计数和非零体积检查；方向为负时统一翻转三角面朝向。STL 以二进制三角面写出，3MF 显式写入毫米单位，CSV 按闭合路线输出逐步节点与入边编号。三种文件先写临时文件，再以原子替换提交，取消和异常时清理临时文件。实体生成依赖可选几何包，库的基础图/路线分析不强制加载这些包。
+
+### Full-precision native cleanup
+
+The curved-solid route passes its native `Mesh64` result directly through one
+Manifold reconstruction, then extracts `Mesh64` again. This retains binary64
+coordinates through cleanup without decimal rounding or a float32 bridge. The
+provider must support `Manifold.to_mesh64` (verified API: manifold3d 3.5.1).
+Nonempty halfedge tangents are explicitly unsupported and raise `ValueError`.
+An explicit non-`NoError` status or an empty result raises `ValueError`.
+Exceptions raised by the native constructor/provider propagate unchanged.
+
+The native constructor can remove vertices and retriangulate faces according to
+its existing tolerance. Vertex/triangle counts, ordering and mesh bytes can
+change. Passing metadata through the constructor does not establish preservation
+of its semantic meaning: neighboring face provenance may change and properties
+may be interpolated. This is not a face-to-fiber or multi-material print mapping.
+The existing contact-separation and planar geometry rules are unchanged.
+
+A provider success status is insufficient to certify geometry. `FiberSolid`
+validation is an additional check, not a full connectedness, vertex-link,
+self-intersection, surface-fidelity or manufacturing-process qualification.
+Export formats need their own precision/readback checks.
+
+A CPU-only regression with manifold3d 3.5.1 and NumPy 2.3.5 covered a
+189-node/812-edge synthetic BCC print derivative and a 740-node/1174-edge
+curved network. Both final meshes passed exact zero-area, near-degeneracy,
+oriented edge-incidence, vertex-link, connectedness, Euler, envelope and
+positive-volume checks. The BCC surface was unchanged. The curved case used
+15 local retriangulation patches: exact saved-coordinate analysis bounded
+bidirectional surface change by 2.024e-14 mm, below its 2e-9 mm comparison
+limit. Its exact signed-volume change was approximately +5.852e-15 mm³;
+this is bounded fidelity, not exact surface identity. These fixed cases do not
+establish global embeddedness, arbitrary-input validity or print feasibility.

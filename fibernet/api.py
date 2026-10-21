@@ -1,35 +1,17 @@
-"""
-High-level convenience API for FiberNet.
+"""Legacy FiberNetwork convenience API, separate from the StructureGraph API.
 
-Design Philosophy
------------------
-FiberNet uses a **registry pattern** to make the API extensible:
-- ``create()`` dispatches to registered generators
-- ``simulate()`` dispatches to registered simulation backends
-- Third-party plugins can register via ``register_generator()`` / ``register_backend()``
-
-This makes it easy to add new structure types, simulation methods (e.g. truss FEM,
-continuum FEM, LAMMPS, GROMACS), and ML models without modifying core code.
+The generator registry is accessed through ``fibernet.api.create``; it is not
+exported as ``fibernet.create``. Registering a backend here does not extend the
+root ``fibernet.simulate`` dispatcher. The legacy mechanics entry point is
+unsupported and raises an explicit migration error rather than changing models.
 
 Quick Start
 -----------
->>> import fibernet as fn
->>> 
->>> # 1. Create a structure
->>> net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
->>> 
->>> # 2. Run mechanics (beam FEM)
->>> result = fn.simulate_mechanics(net, strain=0.001)
->>> print(f"E = {result['modulus']:.2e} Pa")
->>> 
->>> # 3. Run dynamics (mass-spring, Taichi-accelerated)
->>> traj = fn.simulate_dynamics(net, dt=1e-7, steps=5000)
->>> 
->>> # 4. Analyze structure
->>> stats = fn.analyze(net)
->>> 
->>> # 5. Visualize
->>> fn.plot(net, color_by="orientation")
+>>> import fibernet.api as legacy
+>>> net = legacy.create("random_2d", num_fibers=200, fiber_length=10.0)
+>>> names = legacy.list_generators()
+
+For current simulations, prepare a StructureGraph and use ``fibernet.simulate``.
 """
 
 import numpy as np
@@ -57,12 +39,12 @@ class _Registry:
     Examples
     --------
     >>> # Register a custom generator
-    >>> @fn.register_generator("my_custom_lattice")
+    >>> @legacy.register_generator("my_custom_lattice")
     ... def make_my_lattice(**kwargs):
     ...     return FiberNetwork(...)
     >>> 
     >>> # Use it
-    >>> net = fn.create("my_custom_lattice", param1=42)
+    >>> net = legacy.create("my_custom_lattice", param1=42)
     """
     
     def __init__(self):
@@ -106,7 +88,7 @@ def register_generator(name: str) -> Callable:
     
     Examples
     --------
-    >>> @fn.register_generator("my_lattice")
+    >>> @legacy.register_generator("my_lattice")
     ... def make_lattice(cell_size=10.0, **kwargs):
     ...     return FiberNetwork(...)
     """
@@ -131,7 +113,7 @@ def register_backend(name: str) -> Callable:
     
     Examples
     --------
-    >>> @fn.register_backend("my_fem")
+    >>> @legacy.register_backend("my_fem")
     ... def run_my_fem(network, strain=0.01, **kwargs):
     ...     return {...}
     """
@@ -260,8 +242,9 @@ def create(
     
     Examples
     --------
-    >>> net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150, grid_size=(5, 5))
-    >>> net = fn.create("random_2d", num_fibers=200, fiber_length=10.0)
+    >>> import fibernet.api as legacy
+    >>> names = legacy.list_generators()
+    >>> net = legacy.create("random_2d", num_fibers=200, fiber_length=10.0)
     """
     if generator not in _registry.generators:
         available = _registry.list_generators()
@@ -344,64 +327,23 @@ def simulate_mechanics(
     model: str = "linear",
     **kwargs,
 ) -> Dict:
-    """Run mechanical simulation on a fiber network.
-    
-    Parameters
-    ----------
-    network : FiberNetwork
-        Fiber network.
-    strain : float
-        Applied strain (default 0.01 = 1%).
-    axis : int
-        Loading direction (0=x, 1=y, 2=z).
-    model : str
-        Constitutive model:
-        - ``"linear"`` : Linear elastic beam FEM (Euler-Bernoulli)
-        - ``"bilinear"`` : Bilinear elastoplastic
-        - ``"neo_hookean"`` : Hyperelastic (large deformation)
-    **kwargs
-        Additional model parameters (e.g. ``segments_per_fiber``).
-    
-    Returns
-    -------
-    dict
-        ``modulus``, ``max_stress``, ``max_displacement``, ``energy``,
-        ``stress_strain``, ``fem``.
+    """Unsupported legacy FiberNetwork mechanics entry point.
+
+    The former FiberFEM and nonlinear constitutive implementations are absent.
+    This function deliberately does not substitute the StructureGraph beam-frame
+    model or reinterpret legacy engineering strain as a stretch ratio.
+    For a separately prepared StructureGraph, use fibernet.simulate with
+    backend="fem", mode="stretch", strain=1 + engineering_strain. Review the
+    graph conversion, boundary conditions, units and constitutive assumptions;
+    this is not an equivalent drop-in replacement. 3-D FEM is linear-only.
     """
-    from fibernet.sim.mechanical import FiberFEM
-    
-    if model == "linear":
-        seg = kwargs.get('segments_per_fiber', 5)
-        fem = FiberFEM(network, segments_per_fiber=seg)
-        result = fem.apply_uniaxial_strain(strain=strain, axis=axis)
-        E = fem.effective_modulus(strain=strain, axis=axis)
-        return {
-            'modulus': E,
-            'max_stress': result.max_stress() if hasattr(result, 'max_stress') else 0,
-            'max_displacement': result.max_displacement() if hasattr(result, 'max_displacement') else 0,
-            'energy': result.energy if hasattr(result, 'energy') else 0,
-            'displacements': result.displacements,
-            'node_positions': fem.node_positions,
-            'fem': fem,
-        }
-    else:
-        from fibernet.sim.nonlinear import (
-            NonlinearFEM, LinearElastic, BilinearPlasticity, HyperelasticNeoHookean,
-        )
-        model_map = {
-            'bilinear': BilinearPlasticity(),
-            'neo_hookean': HyperelasticNeoHookean(),
-        }
-        constitutive = model_map.get(model, LinearElastic())
-        fem = NonlinearFEM(network, constitutive_model=constitutive)
-        strains, stresses = fem.compute_stress_strain(
-            max_strain=strain, num_steps=kwargs.get('num_steps', 20)
-        )
-        return {
-            'stress_strain': (strains, stresses),
-            'max_stress': stresses[-1] if len(stresses) > 0 else 0,
-            'fem': fem,
-        }
+    raise NotImplementedError(
+        "simulate_mechanics is an unsupported legacy FiberNetwork API: its "
+        "FiberFEM/nonlinear solvers are unavailable. Prepare and validate a "
+        "StructureGraph for fibernet.simulate(..., backend='fem', mode='stretch') "
+        "instead; strain there is stretch ratio (1 + engineering strain), and "
+        "the model and boundary conditions are not a drop-in replacement."
+    )
 
 
 def simulate_dynamics(
@@ -415,13 +357,14 @@ def simulate_dynamics(
     backend: str = "taichi",
     **kwargs,
 ) -> Dict:
-    """Run mass-spring dynamics simulation.
-    
-    Models the fiber network as a spring-mass system where:
-    - Crosslinks become point masses
-    - Fibers become springs with stiffness derived from Young's modulus
-    - Spring rest length = fiber segment length
-    - Spring stiffness k = E * A / L (axial rigidity)
+    """Run the explicit legacy NumPy mass-spring path.
+
+    The historical default backend="taichi" is retained in the signature but
+    rejects before conversion. Its crosslink topology and mixed unit/coefficient
+    conventions have no validated mapping to the current StructureGraph engine.
+    Use fibernet.simulate with a prepared StructureGraph for native dynamics.
+    The explicit NumPy implementation is preserved; this dispatch repair does
+    not validate or correct its physical units or integration conventions.
     
     Parameters
     ----------
@@ -440,7 +383,9 @@ def simulate_dynamics(
     save_interval : int
         Save trajectory every N steps.
     backend : str
-        ``"taichi"`` for GPU/CPU parallel, ``"numpy"`` for pure Python.
+        Explicit "numpy" selects the unchanged legacy implementation.
+        "taichi" raises NotImplementedError with migration guidance; unknown
+        names raise ValueError. No backend is selected as a fallback.
     
     Returns
     -------
@@ -450,21 +395,23 @@ def simulate_dynamics(
     
     See Also
     --------
-    simulate_mechanics : Static FEM analysis.
+    simulate_mechanics : Unsupported legacy mechanics (migration error).
     
-    Examples
-    --------
-    >>> net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
-    >>> traj = fn.simulate_dynamics(net, dt=1e-7, steps=5000, damping=0.05)
-    >>> print(f"Final energy: {traj['energy']:.2e} J")
+    Notes
+    -----
+    See docs/TAICHI_API_DISPATCH.md. Legacy NumPy output semantics are unchanged;
+    do not treat this wrapper as a unit-consistent native-backend adapter.
     """
-    from fibernet.sim.accelerated import TaichiEngine, HAS_TAICHI
-    
-    if backend == "taichi" and not HAS_TAICHI:
-        raise ImportError(
-            "Taichi required for GPU/CPU parallel dynamics. "
-            "Install: pip install taichi\n"
-            "Or use backend='numpy' for pure Python."
+    if not isinstance(backend, str) or backend not in ("taichi", "numpy"):
+        raise ValueError("backend must be 'taichi' or 'numpy'")
+    if backend == "taichi":
+        raise NotImplementedError(
+            "Legacy FiberNetwork Taichi dynamics has no validated crosslink-topology "
+            "and unit mapping to StructureGraph (EA/L versus EA; mm versus physical "
+            "length units). Prepare a StructureGraph with explicit coefficients, "
+            "masses and units, then use fibernet.simulate(graph, mode='dynamics', "
+            "backend='taichi', ...). Endpoint-only conversion is not equivalent. "
+            "See docs/TAICHI_API_DISPATCH.md."
         )
     
     # Build spring-mass system from network
@@ -478,41 +425,12 @@ def simulate_dynamics(
     if external_force is not None:
         velocities = velocities  # placeholder
     
-    if backend == "taichi":
-        engine = TaichiEngine(arch=kwargs.get("arch", "cpu"))
-        result = engine.parallel_dynamics(
-            positions=positions,
-            velocities=velocities,
-            masses=masses,
-            rest_lengths=rest_lengths,
-            stiffness=stiffness,
-            edges=edges,
-            dt=dt,
-            damping=damping,
-            num_steps=steps,
-            save_interval=save_interval,
-            fixed_nodes=fixed_nodes,
-            external_force=external_force,
-        )
-        return {
-            'positions': result.positions[-1] if result.positions else positions,
-            'trajectory': result.positions or [],
-            'velocities': result.forces if result.forces is not None else np.zeros_like(positions),
-            'energy': result.energy,
-            'time_seconds': result.time_seconds,
-            'edges': edges,
-            'rest_lengths': rest_lengths,
-            'stiffness': stiffness,
-            'initial_positions': positions,
-        }
-    else:
-        # Pure numpy fallback
-        return _numpy_dynamics(
-            positions, velocities, masses, edges, rest_lengths, stiffness,
-            dt=dt, steps=steps, damping=damping,
-            fixed_nodes=fixed_nodes, external_force=external_force,
-            save_interval=save_interval,
-        )
+    return _numpy_dynamics(
+        positions, velocities, masses, edges, rest_lengths, stiffness,
+        dt=dt, steps=steps, damping=damping,
+        fixed_nodes=fixed_nodes, external_force=external_force,
+        save_interval=save_interval,
+    )
 
 
 def _build_mass_spring_system(network: FiberNetwork):
@@ -726,16 +644,17 @@ def simulate_thermal(
     T_cold: float = 0,
     axis: int = 0,
 ) -> Dict:
-    """Run thermal simulation."""
-    from fibernet.sim.thermal import ThermalSolver
-    
-    solver = ThermalSolver(network)
-    result = solver.solve_steady_state(T_hot=T_hot, T_cold=T_cold, axis=axis)
-    
-    return {
-        'conductivity': result.effective_conductivity,
-        'temperatures': result.temperatures,
-    }
+    """Unsupported legacy steady-state/effective-conductivity interface.
+
+    Explicit transient lumped conduction is a different model, not a fallback.
+    CTE and thermal deformation are not provided by that replacement example.
+    """
+    raise NotImplementedError(
+        "Legacy steady-state/effective-conductivity thermal API is unsupported. "
+        "Explicit transient lumped conduction requires caller-supplied C/g/T0/Q "
+        "and a time grid; see examples/transient_thermal_explicit.py. "
+        "This is not an equivalent replacement and does not compute CTE or thermal deformation."
+    )
 
 
 def analyze(network: FiberNetwork) -> Dict:
@@ -988,9 +907,7 @@ def create_metamaterial(
     >>> # Run dynamics simulation
     >>> traj = fn.simulate_dynamics(meta, dt=1e-7, steps=5000)
     >>> 
-    >>> # Run mechanics
-    >>> result = fn.simulate_mechanics(meta, strain=0.001)
-    >>> print(f"Modulus: {result['modulus']:.2e} Pa")
+    Legacy simulate_mechanics is unsupported; see its migration documentation.
     """
     # Step 1: Generate unit cell
     if unit_cell not in _registry.generators:

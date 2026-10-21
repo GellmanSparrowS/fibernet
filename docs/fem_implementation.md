@@ -1,4 +1,18 @@
-# FiberNet FEM Implementation Guide
+# FiberNet FEM Implementation Guide (historical)
+
+
+> Historical document: this guide combines earlier implementations and planned
+> capabilities. It is not the current public solver/API contract. In particular,
+> `nonlinear.py` and `incremental_fem.py` are under `fibernet/sim/_archived/`, not
+> supported public nonlinear constitutive/damage APIs. The code tree below is
+> historical. Do not restore/import archived modules as a supported workflow.
+>
+> For the current `BeamFrameFEM` input, linear assumptions, unavailable nonlinear
+> reactions and approximate recovery, use the [beam contract](METHODS_BEAM_FEM_CONTRACT.md).
+> The unified shortcut energy is an `axial_stress_proxy`, not the total strain
+> energy used in the historical effective-modulus formula below. The separate
+> optional [fracture API](FRACTURE_METHODS.md) performs member removal with its own
+> limits; it does not provide automatic post-fracture contact or validated fragment motion.
 
 ## Overview
 
@@ -139,9 +153,10 @@ Computed from transverse strain response:
 
 ---
 
-## Nonlinear Extensions
+## Archived nonlinear extensions (not current public capabilities)
 
-The `sim/nonlinear.py` module extends the linear FEM with:
+The historical `sim/_archived/nonlinear.py` describes the following models;
+this listing does not establish support or validation through the current API:
 
 ### Constitutive Models
 
@@ -164,7 +179,7 @@ for strain_step in np.linspace(0, max_strain, num_steps):
 
 ### Damage and Failure
 
-The `sim/incremental_fem.py` module implements:
+The historical `sim/_archived/incremental_fem.py` contains work on:
 - Isotropic damage evolution
 - Fiber failure criteria
 - Progressive network degradation
@@ -257,7 +272,7 @@ The `sim/accelerated.py` module provides Taichi-based GPU acceleration for large
 
 ---
 
-## Code Structure
+## Historical code structure (not the current import layout)
 
 ```
 fibernet/sim/

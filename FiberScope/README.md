@@ -1,5 +1,66 @@
 # FiberScope 3.1
 
+## Start here (English)
+
+FiberScope is the desktop interface; FiberNet is the Python library. The
+[4.2.0 release](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0)
+contains the documented FiberScope 3.1 Windows x64 build. Extract the entire
+ZIP and launch `FiberScope.exe`; it does not need Python. The current source
+checkout may contain newer library features than this desktop release.
+
+For source use, run these commands from the repository root in a Python 3.10
+virtual environment:
+
+```bash
+python -m pip install -e .
+python -m pip install -r FiberScope/requirements.txt
+python FiberScope/run.py --lang en --theme light
+```
+
+The pinned desktop dependencies were verified on Windows with Python 3.10.
+A successful headless check on another platform does not establish native
+window, graphics-driver, or packaged-executable compatibility there.
+
+### First session
+
+1. In Structure studio, choose a small topology and grid; set the seed to
+   make the geometry reproducible
+2. Open Live sim and choose a target stretch ratio (1.01 means 1% extension)
+3. Select Build & simulate, then use playback to inspect the trajectory
+4. In the tensile-recruitment view, vary the strain threshold, select
+   Build & simulate again, and inspect which recruited components span both grips. Colors indicate thresholded
+   edge strain and connectivity, not complete force transfer
+5. Use Export to save results. The displayed reaction belongs to the reduced
+   spring/bending/contact model and is not an experimentally calibrated force
+
+The library's beam-FEM shortcut is a different model from this desktop reduced
+solver. See the [model guide](../docs/METHODS_REDUCED_SOLVER_UNIFIED.md) and
+[interface screenshots](docs/screenshots/README.md). Screenshots describe the
+captured release and may retain older labels.
+
+Core generation and simulation work offline. Online AI services need separate
+configuration. Optional external SAC/TD3/DDPG training needs the dependencies
+in `requirements-rl.txt` and a configured `FIBERSCOPE_TRAIN_PYTHON`; it is not
+bundled into the executable.
+
+### Source checks
+
+```bash
+python FiberScope/run.py --smoke
+python FiberScope/scripts/audit_ui_layout.py --capture-dir demo_layout
+python FiberScope/scripts/audit_simulation_ui.py --capture-dir demo_simulation_ui
+```
+
+These require the desktop dependencies, including Qt. The smoke command runs
+offscreen workflows and exports; the layout audit captures selected pages. The simulation UI audit runs a small
+network, checks playback/loop/speed controls, and verifies English/Chinese
+control widths at two window sizes.
+Inspect captures separately for clipping and readability. Neither command
+alone certifies a Windows executable built on another machine.
+
+## 中文指南
+
+
 纤维网络材料交互设计软件：结构生成 → 拉伸仿真 → 特征分析 → 机器学习 → 逆向设计 → 三维曲面 → 制造导出。
 
 ## 直接运行

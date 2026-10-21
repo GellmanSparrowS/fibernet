@@ -268,3 +268,8 @@ __all__.extend([
     "biomimetic_network",
     "hierarchical_lattice",
 ])
+
+# Additive edge-once multi-stroke routing; legacy closed-route exports unchanged.
+from .manufacturing_trails import (ManufacturingTrails, manufacturing_trails_from_graph,
+                                    export_mapped_trails)
+__all__.extend(["ManufacturingTrails", "manufacturing_trails_from_graph", "export_mapped_trails"])

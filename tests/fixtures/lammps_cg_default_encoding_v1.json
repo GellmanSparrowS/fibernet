@@ -1,0 +1,26 @@
+{
+  "schema": "cg-default-encoding-bytes/1",
+  "cases": {
+    "base": {
+      "identity": "1c457535fbc701eb6dad4757bd4501af6dbbd73585319bc78a83b9cc683fbcff",
+      "graph_json": "3e9058dadbdd5c171f53d0163693ffbef0c5932f931f10919c12bb52d0e1e386",
+      "contract_json": "505ba71d47488cc57665026663afea18b936a841186239123478e71f0825fa6a",
+      "data_text": "40801db4615cb5b7aea9aecb8bb3df7cdf5741a4aa5e37d47c6cf79f4b591982",
+      "input_text": "6abca646bcc04d6f83bb5609039e0b16346a30bd5be7278e863bff8bbfb20817"
+    },
+    "no_pairs": {
+      "identity": "bf5e33b6560a068917eaa8ae187fe86c4819b0171be915f6b90e8daadc415162",
+      "graph_json": "3e9058dadbdd5c171f53d0163693ffbef0c5932f931f10919c12bb52d0e1e386",
+      "contract_json": "88bd9e7d246e69c53967b5e9f8e25d98f6904dd085acccefbdafb1395fed0e28",
+      "data_text": "40801db4615cb5b7aea9aecb8bb3df7cdf5741a4aa5e37d47c6cf79f4b591982",
+      "input_text": "f0547ff24354d24d7d9f85b451addb36f4963a35192727aff8ad14cffd9bd1a4"
+    },
+    "all_pairs": {
+      "identity": "53c680dd326ae3315900f529c2b5756f2756fe387ca92ecafa47a09ea8857111",
+      "graph_json": "0e5795a8b6479e347223ffd4d4a192668a536681a98dc248fcc6f634783c9b17",
+      "contract_json": "0df7ed165e93e2bf040b7e81270b67973ee9e967f4f74f8647b21a3bc4539632",
+      "data_text": "5569a5737360c7a706fbabd516536b19128643592a7ab863db4aa2b22db540db",
+      "input_text": "e90789e33d6698ac2f699f8aa33a46b3ddd5a6ad59104d3aa8bf1c2bc96fb97b"
+    }
+  }
+}

@@ -1,3 +1,7 @@
+## 未发布版本的 Taichi 兼容性变更
+
+当前工作版本的 TaichiEngine 暂时只支持 Taichi 1.7.4；accel、full 和 dev 可选依赖同步固定该版本。运行时生命周期修复依赖经过验证的私有接口，其他版本会明确报错，不会静默回退。其他计算后端不受影响。引擎须在同一个运行时所有者线程中创建和运行，该线程可以是 GUI 工作线程；跨线程使用及所有权不明的外部初始化会被安全拒绝。CPU 验证不代表 GPU 或跨平台验证。详见 [生命周期说明](docs/architecture/taichi-lifecycle-audit.md)。
+
 [**查看全部中英文界面 · Bilingual desktop gallery (16 screenshots)**](FiberScope/docs/screenshots/README.md)
 
 # FiberScope 3.0 · FiberNet
@@ -140,7 +144,7 @@ from fibernet.ml import BeamFrameFEM
 
 solver = BeamFrameFEM(E=1e9, nu=0.3)
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
-result = solver.stretch_test(g, target_stretch=2.0)
+result = solver.stretch_test(g, target_stretch=1.01, nonlinear=False)
 
 print(f"最大应力: {result['sigma_total'].max()/1e6:.1f} MPa")
 print(f"最大位移: {result['max_displacement']:.4f} m")
@@ -206,7 +210,7 @@ pip install fibernet[rl]      # 仅RL
 
 ## 🔬 梁单元有限元法（FEM）
 
-FiberNet v4.1 引入了基于 Euler–Bernoulli 梁理论的生产级**梁框架有限元求解器**，提供超越质点弹簧模型的物理精确力学分析。
+FiberNet 提供基于 Euler–Bernoulli 梁理论的**梁框架有限元求解器**。线性模型适用于小变形；现有二维非线性增量路径的最终平衡尚未验证，不能据此声称实验定量准确。
 
 ### 物理模型
 
@@ -220,11 +224,11 @@ EA = E × πr²              （轴向刚度）
 σ_total = σ_axial + σ_bending
 ```
 
-纤维半径加倍，弯曲刚度增大 **16倍**（r⁴ 依赖），正确捕获纤维网络超材料的物理行为。
+在这一梁模型中，纤维半径加倍，弯曲刚度增大 **16倍**（r⁴ 依赖）；该截面关系本身不构成材料实验验证。
 
-### 验证结果
+### 历史数值输出（非当前非线性验收）
 
-跨 **152个模拟** 验证（8种2D + 6种3D拓扑 × 4种半径 × 4种拉伸目标）：
+下列旧表保留历史记录。其大变形应力不能作为已验证的非线性平衡应力，原单位/加载与恢复口径需查原记录；不据此证明材料准确性。历史报告曾列出 **152个模拟**（8种2D + 6种3D拓扑 × 4种半径 × 4种拉伸目标）：
 
 | 半径 | 最大应力（2×拉伸，蜂窝） | 主导模式 |
 |------|--------------------------|----------|
@@ -233,7 +237,7 @@ EA = E × πr²              （轴向刚度）
 | r = 0.10 | 14,835 MPa | 弯曲主导 |
 | r = 0.20 | 20,997 MPa | 弯曲主导 |
 
-所有结构均展示**完整变形传导** —— 边界位移传递至整个结构，而非仅前几层。
+历史图中的位移传播不等于平衡、唯一性或反力有效性验证。当前可用性以 [梁 FEM 合同](docs/METHODS_BEAM_FEM_CONTRACT.md) 与结果状态为准。
 
 ### API
 
@@ -246,21 +250,19 @@ solver = BeamFrameFEM(E=1e9, nu=0.3)
 # 生成结构（半径对FEM有物理意义！）
 g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
 
-# 一行拉伸测试（自动选择线性/非线性求解器）
-result = solver.stretch_test(g, target_stretch=2.0)
+# 小变形线性示例（目标伸长比1.01，长度与E须使用一致单位）
+result = solver.stretch_test(g, target_stretch=1.01, nonlinear=False)
 
 # 访问结果
 u = result['u']                      # 节点位移
 sigma = result['sigma_total']        # 每单元总应力
 sigma_axial = result['sigma_axial']  # 轴向分量
 sigma_bend = result['sigma_bending'] # 弯曲分量
-reactions = result['reactions']      # 边界反力
+reactions = result['reactions']      # 该线性路径可用；按约束行读取并检查平衡
 
 # 底层API（自定义分析）
-fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # 线性
-result = solver.solve_2d_nonlinear(**fem_input)    # 几何非线性
-result = solver.solve_3d(**fem_input)              # 3D分析
+# 直接solve接口需显式传数组和边界，不能展开整个graph_to_fem_input字典
+# 具体输入/可用性见下方梁FEM合同；3D应单独生成dim=3输入
 
 # 转为SimResult（兼容可视化/ML流水线）
 sim_result = solver.to_sim_result(result, graph=g)
@@ -271,7 +273,7 @@ sim_result = solver.to_sim_result(result, graph=g)
 | 求解器 | 适用场景 |
 |--------|----------|
 | `solve_2d()` | 线性2D — 小变形，速度快 |
-| `solve_2d_nonlinear()` | 非线性2D — 大变形（共旋坐标法） |
+| `solve_2d_nonlinear()` | 二维更新几何增量线性解；最终非线性平衡未验证，反力不可用 |
 | `solve_3d()` | 3D梁框架分析 |
 | `stretch_test()` | 便捷封装 — 自动选择求解器 |
 
@@ -341,31 +343,29 @@ r2 = fn.SimResult.load("result.json")
 
 ### 模拟 — FEM（BeamFrameFEM）
 
-Euler–Bernoulli 梁框架有限元法。纤维建模为**焊死接头的梁单元** —— 半径直接决定弯曲（r⁴）和轴向（r²）刚度。提供物理精确的应力分解（轴向 + 弯曲）。适用于**定量力学分析**和**设计验证**。
+Euler–Bernoulli 梁框架有限元法。纤维建模为**焊死接头的梁单元** —— 半径直接决定弯曲（r⁴）和轴向（r²）刚度。线性路径提供模型内的轴向与弯曲应力分解；使用前应检查约束、残差与量纲，不能默认作为材料实验验证。
 
-支持**线性**求解器（小变形，速度快）和**几何非线性**求解器（大变形，共旋增量法）。便捷方法 `stretch_test()` 根据应变幅度自动选择求解器。
+支持小变形**线性**求解器及二维更新几何增量线性解。后者的最终非线性平衡未验证，`reactions`、`K`、`node_moment` 为 `None`；应力/边力为近似线性参考恢复。`stretch_test()` 在二维且未指定 `nonlinear` 时按伸长幅度自动选择；须检查 `field_status` 与 `solver_status`。见 [完整可用性约束](docs/METHODS_BEAM_FEM_CONTRACT.md)。
 
 ```python
 from fibernet.ml import BeamFrameFEM
 
 solver = BeamFrameFEM(E=1e9, nu=0.3)  # 杨氏模量, 泊松比
 
-# 一行调用（自动选择求解器）
-result = solver.stretch_test(g, target_stretch=2.0, dim=2)
+# 小变形线性调用
+result = solver.stretch_test(g, target_stretch=1.01, dim=2, nonlinear=False)
 
 # 完整访问
-u = result['u']                    # 节点位移 (N×dim)
+u = result['u']                    # 二维节点自由度 (N×3)：ux, uy, theta
 sigma = result['sigma_total']      # 每单元总应力
 sigma_axial = result['sigma_axial']  # 轴向应力分量
 sigma_bend = result['sigma_bending'] # 弯曲应力分量
-reactions = result['reactions']    # 边界反力
+reactions = result['reactions']    # 本例为线性；非线性路径为None，不可当零
 edge_forces = result['edge_forces']  # 每单元内力
 
 # 底层API
-fem_input = solver.graph_to_fem_input(g, dim=2, pct=0.1)
-result = solver.solve_2d(**fem_input)              # 线性2D
-result = solver.solve_2d_nonlinear(**fem_input)    # 非线性2D（大变形）
-result = solver.solve_3d(**fem_input)              # 3D梁框架
+# solve_2d/solve_3d需显式数组及边界；不得直接展开整个graph_to_fem_input字典
+# 3D使用独立dim=3输入；直接节点力矩载荷不受支持
 
 # 兼容可视化/ML流水线
 sim_result = solver.to_sim_result(result, graph=g)

@@ -1,3 +1,28 @@
+## [Unreleased] - RL evaluation isolation
+
+- Add keyword-only `eval_env` to `fibernet.rl.algorithms.train_rl`, enabling automatic evaluation independently of model saving.
+- Reject shared known in-process training/evaluation environment objects before model or callback construction. Remote resources and custom wrappers still require caller-managed isolation.
+- Save-only calls now warn and skip unsafe automatic evaluation on the training environment, while retaining checkpoint/final saves. Provide an independent `eval_env` to restore best-model selection.
+- Document migration and bounded validation in `docs/architecture/rl-evaluation-isolation.md`; add inert contract regressions without real model training or simulation.
+- Correct root/easy `train_rl` documentation to identify random-policy rollout statistics, not policy learning, and clarify batch damping's existing metadata-only behavior. Runtime and exports are unchanged; source-bound batch resume may require a fresh output directory after this documentation change.
+
+## [Unreleased] - thermal reconstruction budget
+
+- Bound thermal capacity reconstruction with outward-rounded `C*rho`, where `rho` is the current returned-temperature reconstruction radius; retain separate field-evaluation allowances and unchanged algebraic/precision thresholds.
+- Identify this numerical acceptance revision with `thermal_capacity_reconstruction_profile: binary64-rn-capacity-rho-1` in transient and coupled electrothermal provenance. Public call signatures and result layouts are unchanged; numerical bounds and acceptance outcomes may differ.
+- Preserve explicit refusal for lost increments, unrepresentable products and heat scales too small for the precision budget. Smaller time steps are not guaranteed to be representable; this correction does not establish trajectory convergence or coupled-energy accuracy.
+- Include self-contained synthetic acceptance/refusal tests with exact rational equation checks; no external capture file is required.
+
+## [Unreleased] - runtime compatibility
+
+- Use ASCII status labels in easy training and batch helpers so decorative symbols do not break narrow redirected consoles; no locale or stream configuration is changed
+- Read UTF-8 Python source fixtures explicitly in documentation/exporter tests; keep graph JSON loading on its historical default text codec
+- Test invalid UTF-8 batch input with a complete graph and independent UTF-8/cp1252 disk-decoding oracles, separating decoder failures from stub-engine failures
+
+- Temporarily restrict TaichiEngine and accel/full/dev extras to Taichi 1.7.4 for the version-verified runtime-lifetime repair; other versions fail explicitly
+- Same-owner engines share the runtime; owning worker threads are supported, cross-owner use and unverifiable external initialization fail safely
+- Non-Taichi backends are unaffected; broader Taichi versions require explicit lifecycle matrix validation
+
 ## [4.3.0] - 2026-10-07
 
 - Add experimental `fibernet.sim.fracture` Config/Solver/Result API and dedicated material-complete JSON CLI

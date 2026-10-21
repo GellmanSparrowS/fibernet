@@ -253,6 +253,13 @@ def export_obj(
         Output filename.
     n_sides : int
         Number of sides for cylinder approximation.
+
+    Notes
+    -----
+    This legacy FiberNetwork exporter writes one capped cylinder between each
+    fiber's first and last centerline points. Intermediate centerline points,
+    material records and fiber IDs are not serialized. Faces use one-based OBJ
+    vertex references; the internal cylinder mesh remains zero-based.
     
     Examples
     --------
@@ -262,7 +269,7 @@ def export_obj(
     """
     all_vertices = []
     all_faces = []
-    vertex_offset = 1  # OBJ uses 1-based indexing
+    vertex_offset = 0  # Convert to one-based OBJ indices only when writing.
     
     for fiber in network.fibers:
         start = fiber.centerline[0]

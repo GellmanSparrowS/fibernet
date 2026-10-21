@@ -1,0 +1,180 @@
+# Source-only wrapper fixture from accepted core73 84ad0757127a62c1fce22983c46d7b6ad9bef0c0; never imported.
+
+# fibernet/easy.py SHA256 91cdebff3fbb9f1000980f3e27277875fc5fd97fa8736f1882c750c7cf35ae9d
+def simulate(
+    graph: StructureGraph,
+    mode: str = "stretch",
+    strain: float = 2.0,
+    backend: str = "spring",
+    save_path: Optional[str] = None,
+    **kwargs,
+) -> SimResult:
+    """Run a stretch simulation with the spring or beam-frame FEM backend.
+
+    Parameters
+    ----------
+    graph : StructureGraph
+        要模拟的结构。
+    mode : str
+        模拟模式: "stretch" (位移控制拉伸) 或 "dynamics" (自定义动力学)
+    strain : float
+        Target stretch ratio for both backends (1.01 = 1% extension).
+    backend : str
+        "spring" or "fem". The FEM backend accepts E, nu, pct, and nonlinear.
+        Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
+        overrides this selection.
+    save_path : str, optional
+        JSON 保存路径。
+
+    Returns
+    -------
+    SimResult
+        模拟结果。
+
+    Examples
+    --------
+    >>> from fibernet import pattern_2d, simulate
+    >>> g = pattern_2d("honeycomb", box=(10,10), grid=(4,4))
+    >>> r = simulate(g, mode="stretch", strain=2.0)  # 质点弹簧拉伸2倍
+    >>> r = simulate(g, mode="stretch", strain=2.0, backend="spring")  # 质点弹簧拉 2 倍
+    """
+    if backend == "spring":
+        engine = TaichiEngine()
+        if mode == "stretch":
+            result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
+        elif mode == "dynamics":
+            result = engine.dynamics(graph, **kwargs)
+        else:
+            raise ValueError(f"Unknown spring mode '{mode}'. Use: stretch, dynamics")
+    elif backend == "fem":
+        if mode != "stretch":
+            raise ValueError("The FEM backend supports only mode='stretch'")
+        from fibernet.ml.beam_frame_fem import BeamFrameFEM
+        dim = kwargs.setdefault("dim", graph.dimension)
+        if not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
+            raise ValueError("The FEM dimension must be 2 or 3")
+        E = kwargs.pop("E", 1e9)
+        nu = kwargs.pop("nu", 0.3)
+        fem = BeamFrameFEM(E=E, nu=nu)
+        raw = fem.stretch_test(graph, target_stretch=strain, **kwargs)
+        result = fem.to_sim_result(raw, graph)
+    else:
+        raise ValueError("backend must be 'spring' or 'fem'")
+
+
+    if save_path:
+        result.save(save_path)
+        print(f"Saved to {save_path}")
+
+    return result
+
+# fibernet/api.py SHA256 cd978764ceefcb4a0c649aa46b2762077ffbcbbee8033bc8035ca600eb660d74
+def simulate_dynamics(
+    network: FiberNetwork,
+    dt: float = 1e-7,
+    steps: int = 5000,
+    damping: float = 0.01,
+    external_force: Optional[np.ndarray] = None,
+    fixed_nodes: Optional[List[int]] = None,
+    save_interval: int = 100,
+    backend: str = "taichi",
+    **kwargs,
+) -> Dict:
+    """Run mass-spring dynamics simulation.
+    
+    Models the fiber network as a spring-mass system where:
+    - Crosslinks become point masses
+    - Fibers become springs with stiffness derived from Young's modulus
+    - Spring rest length = fiber segment length
+    - Spring stiffness k = E * A / L (axial rigidity)
+    
+    Parameters
+    ----------
+    network : FiberNetwork
+        Fiber network with crosslinks.
+    dt : float
+        Time step (seconds). Should be small enough for stability.
+    steps : int
+        Number of integration steps.
+    damping : float
+        Velocity damping coefficient (0 = no damping, 0.01 = light damping).
+    external_force : ndarray, optional
+        External force on each node (N, 3).
+    fixed_nodes : list of int, optional
+        Node indices to fix in space.
+    save_interval : int
+        Save trajectory every N steps.
+    backend : str
+        ``"taichi"`` for GPU/CPU parallel, ``"numpy"`` for pure Python.
+    
+    Returns
+    -------
+    dict
+        ``positions`` (final), ``trajectory`` (list of position snapshots),
+        ``velocities``, ``forces``, ``energy``, ``time_seconds``.
+    
+    See Also
+    --------
+    simulate_mechanics : Static FEM analysis.
+    
+    Examples
+    --------
+    >>> net = fn.create("reentrant_honeycomb_2d", reentrant_angle=150)
+    >>> traj = fn.simulate_dynamics(net, dt=1e-7, steps=5000, damping=0.05)
+    >>> print(f"Final energy: {traj['energy']:.2e} J")
+    """
+    from fibernet.sim.accelerated import TaichiEngine, HAS_TAICHI
+    
+    if backend == "taichi" and not HAS_TAICHI:
+        raise ImportError(
+            "Taichi required for GPU/CPU parallel dynamics. "
+            "Install: pip install taichi\n"
+            "Or use backend='numpy' for pure Python."
+        )
+    
+    # Build spring-mass system from network
+    edges, rest_lengths, stiffness, masses, positions = _build_mass_spring_system(network)
+    
+    if fixed_nodes is None:
+        fixed_nodes = []
+    
+    velocities = np.zeros_like(positions)
+    
+    if external_force is not None:
+        velocities = velocities  # placeholder
+    
+    if backend == "taichi":
+        engine = TaichiEngine(arch=kwargs.get("arch", "cpu"))
+        result = engine.parallel_dynamics(
+            positions=positions,
+            velocities=velocities,
+            masses=masses,
+            rest_lengths=rest_lengths,
+            stiffness=stiffness,
+            edges=edges,
+            dt=dt,
+            damping=damping,
+            num_steps=steps,
+            save_interval=save_interval,
+            fixed_nodes=fixed_nodes,
+            external_force=external_force,
+        )
+        return {
+            'positions': result.positions[-1] if result.positions else positions,
+            'trajectory': result.positions or [],
+            'velocities': result.forces if result.forces is not None else np.zeros_like(positions),
+            'energy': result.energy,
+            'time_seconds': result.time_seconds,
+            'edges': edges,
+            'rest_lengths': rest_lengths,
+            'stiffness': stiffness,
+            'initial_positions': positions,
+        }
+    else:
+        # Pure numpy fallback
+        return _numpy_dynamics(
+            positions, velocities, masses, edges, rest_lengths, stiffness,
+            dt=dt, steps=steps, damping=damping,
+            fixed_nodes=fixed_nodes, external_force=external_force,
+            save_interval=save_interval,
+        )

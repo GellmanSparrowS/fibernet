@@ -16,3 +16,36 @@ prune docs/_build
 prune build
 prune dist
 prune *.egg-info
+include examples/data/lammps_braced_network_si.json
+
+# Source-distribution inputs for the standalone library examples and tests.
+recursive-include examples/fixtures *.json
+recursive-include tests/fixtures *.json *.txt *.md
+include .gitattributes
+include scripts/deformation_test/run_large_deformation_fem.py
+# Only the project-generated procedural pyramid, with its license/provenance.
+include FiberScope/assets/obj/demo_pyramid.obj
+include FiberScope/LICENSE
+include FiberScope/THIRD_PARTY_NOTICES.md
+# Repository/desktop/benchmark integration checks remain in full-checkout CI.
+exclude tests/test_pruning_matching.py
+exclude tests/test_independent_fem_cycle_intervention.py
+exclude tests/test_recruitment_fem_validation.py
+exclude tests/test_cycle_intervention.py
+exclude tests/test_ai_cycle_selector.py
+exclude tests/test_constrained_cycle_intervention.py
+exclude tests/test_recruitment_sensitivity.py
+exclude tests/test_import_order.py
+exclude tests/test_fiberscope_geometry_cache.py
+exclude tests/test_fiberscope_reporting.py
+exclude tests/test_repository_app_compatibility.py
+
+# Retained electrical/transport regression fixtures (not optional runtime output).
+include tests/data/joule_torus/run01/torus_graph.json
+include tests/data/joule_torus/run01/torus_electrical.json
+include docs/integrations/transport_pilot_fixture.json
+include docs/integrations/transport_roundoff_contract_v2.json
+include docs/integrations/thermal_frozen_contract.json
+
+# Small independent reference for the experimental electrothermal model.
+include benchmarks/electrothermal_two_node.py

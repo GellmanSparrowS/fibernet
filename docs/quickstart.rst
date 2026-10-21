@@ -1,219 +1,108 @@
 Quick Start Guide
 =================
 
-This guide will help you get started with FiberNet in just a few minutes.
+This small example uses the base Python dependencies installed in
+:doc:`getting_started`. It generates a graph, runs a small-extension beam-FEM
+simulation, and verifies that a saved result can be read back. It does not
+require FiberScope or an optional GPU backend.
 
-Installation
-------------
+Generate, simulate, and save
+----------------------------
+
+Run this complete block in a notebook or Python script. It writes into a
+``demo_output`` directory beneath your current working directory.
+
+.. code-block:: python
+
+   from pathlib import Path
+   import numpy as np
+   import matplotlib.pyplot as plt
+   import fibernet as fn
+
+   output = Path("demo_output")
+   output.mkdir(parents=True, exist_ok=True)
+   graph = fn.pattern_2d(
+       unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05, seed=23
+   )
+   figure = fn.show(graph, theme="publication",
+                    save_path=str(output / "network.png"))
+   plt.close(figure)
+   result = fn.simulate(
+       graph, backend="fem", mode="stretch", strain=1.01,
+       save_path=str(output / "fem_result.json")
+   )
+   restored = fn.SimResult.load(str(output / "fem_result.json"))
+   assert np.isclose(result.max_displacement, restored.max_displacement)
+   assert np.isfinite(result.max_displacement)
+   print(graph.num_nodes, graph.num_edges, result.max_displacement)
+
+``strain=1.01`` is a stretch ratio (1% extension), not an engineering strain
+of 101%. Geometry lengths and fiber radius must use one consistent unit.
+The example checks the software workflow; it is not a calibrated material
+prediction. ``max_force`` is the largest individual beam axial force, not a
+grip reaction or effective modulus. The result's ``energy`` is an axial-stress
+proxy rather than total bending-plus-contact energy.
+
+Analyze tensile recruitment
+---------------------------
+
+This independent example supplies edge-strain data directly, without running
+a mechanical solver:
+
+.. code-block:: python
+
+   import numpy as np
+   from fibernet.analysis import analyze_tensile_recruitment
+
+   edges = np.array([[0, 1], [1, 2], [0, 2]])
+   edge_strain = np.array([[0.0, 0.0, 0.0], [0.2, 0.3, -0.1]])
+   recruitment = analyze_tensile_recruitment(
+       edge_strain, edges, left_nodes=[0], right_nodes=[2], n_nodes=3
+   )
+   assert recruitment.perc_frame == 1
+   print(recruitment.perc_frame)
+
+Rows of ``edge_strain`` are frames; columns match the order of ``edges``.
+Node indices in the edges and grips must refer to the same node ordering.
+A spanning recruited component indicates thresholded tensile connectivity,
+not complete force transfer. Changing the threshold can change this result
+without changing the simulated trajectory. By default, the threshold is
+``max(alpha * frame_max_positive_strain, 0.0001)`` with hysteresis for
+already recruited edges; ``alpha=0.05`` is not a fixed 5% strain cutoff.
+
+Runnable source examples
+------------------------
+
+The ``examples`` directory belongs to the source checkout, not the installed
+library package. From the repository root:
 
 .. code-block:: bash
 
-    pip install fibernet
+   python -m examples.open_source_workflow --output-dir demo_output
+   python -m examples.reduced_recruitment_workflow --output-dir demo_stretch
+   python -m examples.manufacturing_workflow --output-dir demo_routes
 
-Or install from source:
+The first command combines graph generation, a network image, FEM result
+serialization, and recruitment analysis. It writes ``network.png``,
+``fem_result.json``, and ``summary.json``. The second uses the desktop's
+reduced model and saves its trajectory. The third compiles closed routes;
+a closed graph route alone does not certify physical printability.
 
-.. code-block:: bash
+Troubleshooting
+---------------
 
-    git clone https://github.com/yourusername/fibernet.git
-    cd fibernet
-    pip install -e .
+* If ``examples`` cannot be imported, run from a source checkout's root after
+  ``python -m pip install -e .``
+* If the wrong package is imported, inspect ``fibernet.__file__`` and
+  ``fibernet.__version__`` in the same Python environment as your script
+* On a machine without a display, set ``MPLBACKEND=Agg`` before running image
+  examples; inspect the saved PNG instead of opening an interactive window
+* For a bug report, include your Python and FiberNet versions, the command,
+  and the complete error at the
+  `issue tracker <https://github.com/GellmanSparrowS/fibernet/issues>`_
 
-Basic Usage
------------
-
-1. Generate a Network
-~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet import gen
-    
-    # Random 2D network
-    net = gen.random_straight_2d(num_fibers=100, fiber_length=10.0, seed=42)
-    
-    # Square lattice
-    net = gen.square_lattice_2d(spacing=2.0, grid_size=(10, 10))
-    
-    # Honeycomb
-    net = gen.honeycomb_lattice_2d(cell_size=2.0, grid_size=(8, 8))
-    
-    # 3D random network
-    net = gen.random_straight_3d(num_fibers=100, fiber_length=8.0, seed=42)
-
-2. Analyze the Network
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.analysis import (
-        TopologyAnalyzer, MorphologyAnalyzer
-    )
-    from fibernet.analysis.spatial import compute_spatial_statistics
-    
-    # Topology
-    topo = TopologyAnalyzer(net)
-    topo.analyze()
-    
-    # Morphology
-    morph = MorphologyAnalyzer(net)
-    S = morph.nematic_order_parameter()
-    
-    # Comprehensive statistics
-    stats = compute_spatial_statistics(net)
-    print(f"Nematic order: {stats['nematic_order']:.3f}")
-
-3. Run Simulations
-~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.sim import FiberFEM
-    
-    # Mechanical simulation
-    fem = FiberFEM(net)
-    E = fem.effective_modulus()
-    print(f"Effective modulus: {E:.2e} Pa")
-
-4. Use Pre-defined Materials
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.materials import get_material
-    
-    # Get material properties
-    steel = get_material('steel')
-    print(f"Steel E = {steel.youngs_modulus/1e9:.1f} GPa")
-    
-    # Available materials
-    from fibernet.materials import list_materials
-    print(list_materials())
-
-5. Compare Networks
-~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.analysis.comparison import network_similarity
-    
-    net1 = gen.random_straight_2d(num_fibers=80, seed=42)
-    net2 = gen.square_lattice_2d(spacing=2.0, grid_size=(8, 8))
-    
-    sim = network_similarity(net1, net2)
-    print(f"Similarity: {sim:.3f}")
-
-6. Export Results
-~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.io import export_vtk, export_json
-    from fibernet.io.mesh_export import export_stl, export_obj
-    
-    # Export for visualization
-    export_vtk(net, 'network.vtk')
-    
-    # Export for external tools
-    export_json(net, 'network.json')
-    
-    # Export as mesh for FEM solvers
-    export_stl(net, 'network.stl')
-    export_obj(net, 'network.obj')
-
-7. Visualize
-~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.visualization import NetworkVisualizer
-    
-    viz = NetworkVisualizer(net)
-    viz.plot_2d()
-    viz.save('network.png')
-
-Advanced Features
------------------
-
-Parameter Sweeps
-~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.doe import DesignOfExperiments
-    
-    def compute_modulus(net):
-        fem = FiberFEM(net)
-        return {'modulus': fem.effective_modulus()}
-    
-    params = {
-        'num_fibers': [50, 80, 110],
-        'fiber_length': [6.0, 10.0, 14.0],
-    }
-    
-    doe = DesignOfExperiments(gen.random_straight_2d, {'seed': 42}, compute_modulus)
-    results = doe.grid_search(params)
-
-Effective Properties
-~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.analysis.homogenization import compute_effective_properties
-    
-    props = compute_effective_properties(net)
-    print(f"E_x = {props['elastic']['E_x']:.2e} Pa")
-    print(f"nu = {props['elastic']['nu']:.3f}")
-
-Unit Conversions
-~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-    from fibernet.units import convert_length, convert_pressure
-    
-    # Convert units
-    length_mm = convert_length(1.0, 'm', 'mm')  # 1000.0
-    pressure_gpa = convert_pressure(100.0, 'MPa', 'GPa')  # 0.1
-
-Network Types
--------------
-
-FiberNet supports many network types:
-
-**Disordered:**
-- Random straight (2D/3D)
-- Random curved
-- Poisson line process
-- Voronoi tessellation
-
-**Ordered:**
-- Square lattice
-- Triangular lattice
-- Honeycomb
-- Kagome
-- Diamond
-- Cubic
-
-**Special:**
-- Chiral metamaterials
-- Woven/braided
-- Hierarchical
-- Biomimetic (collagen, fibrin, cellulose)
-- CNT networks
-- Fractal (Sierpinski, Koch, tree, Hilbert)
-- Gradient (density, property, multi-zone)
-
-Next Steps
+Next steps
 ----------
 
-- Browse the `examples/` directory for more use cases
-- Read the full `API documentation <api/index.html>`_
-- Check out the `research case studies <examples/research_case_study.html>`_
-
-Getting Help
-------------
-
-- Report issues on `GitHub <https://github.com/yourusername/fibernet/issues>`_
-- Check the `FAQ <faq.html>`_
-- Join the discussion on `GitHub Discussions <https://github.com/yourusername/fibernet/discussions>`_
-
+Read :doc:`getting_started` for model choices and optional dependencies, or
+:doc:`api/index` for the API reference.

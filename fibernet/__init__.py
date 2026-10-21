@@ -25,7 +25,7 @@ RL Pipeline (one-liners)
 Parametric Structure Generation (for RL)
 ------------------------------------------
 >>> # Method 1: Displacements at generation time
->>> g = fn.pattern_2d("square", box=(10,10), grid=(3,3),
+>>> g = fn.pattern_2d(unit="square", box=(10,10), grid=(3,3),
 ...                    n_pts_per_side=3, point_displacements=disps)
 >>> # Method 2: Post-generation node manipulation
 >>> g.displace_node(5, [0.1, 0.2])
@@ -38,6 +38,7 @@ from fibernet.version import __version__
 # --- Core ---
 from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
 from fibernet.core.material import Material
+from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.fiber import Fiber
 
@@ -64,24 +65,33 @@ from fibernet.gen.solid_export import (PrintSettings, FiberSolid, build_solid,
                                        build_voxel_solid, export_solid,
                                        export_route)
 
+from fibernet.gen.manufacturing_bridge import manufacturing_from_graph, export_mapped_route
+from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
+                                              manufacturing_trails_from_graph,
+                                              export_mapped_trails)
+
 # --- Simulation ---
 from fibernet.sim.accelerated import TaichiEngine, SimResult
+from fibernet.sim.linear_transport import solve_linear_transport
+from fibernet.sim._viscoelastic_fem import ViscoelasticResult
+from fibernet.sim.joule_heating import (JouleHeatingLoad, JouleHeatingRun,
+                                        assemble_joule_heating, run_joule_heating)
 from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
                                        ReducedBeamSolver)
 
-# --- Visualization ---
-from fibernet.viz.render import (
-    render_trajectory,
-    render_graph, render_graph_3d,
-    render_deformation, render_gallery,
-    render_deformation_3d, render_trajectory_3d, render_gallery_3d,
-    render_stress_3d, render_comparison_3d, render_multi_angle_3d,
-    render_with_stats, render_fem_stress,
-    THEMES,
+# --- Visualization (resolved only when explicitly requested) ---
+_RENDER_EXPORTS = (
+    "render_trajectory",
+    "render_graph", "render_graph_3d",
+    "render_deformation", "render_gallery",
+    "render_deformation_3d", "render_trajectory_3d", "render_gallery_3d",
+    "render_stress_3d", "render_comparison_3d", "render_multi_angle_3d",
+    "render_with_stats", "render_fem_stress",
+    "THEMES",
 )
 
 # --- Easy API ---
-from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl
+from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl, predict_named
 
 # --- PyVista 3D Rendering (optional) ---
 try:
@@ -139,10 +149,14 @@ __all__ = [
     "list_units_3d", "register_unit_3d",
     "PlanarManufacturingConfig", "ManufacturingNetwork",
     "compile_planar", "compile_surface", "manufacturable_graph",
+    "manufacturing_from_graph", "export_mapped_route",
+    "ManufacturingTrails", "manufacturing_trails_from_graph", "export_mapped_trails",
     "PrintSettings", "FiberSolid", "build_solid", "build_voxel_solid",
     "export_solid", "export_route",
     # Simulation
-    "TaichiEngine", "SimResult",
+    "TaichiEngine", "SimResult", "solve_linear_transport",
+    "LinearViscoelasticMaterial", "ViscoelasticResult",
+    "JouleHeatingLoad", "JouleHeatingRun", "assemble_joule_heating", "run_joule_heating",
     "ReducedBeamConfig", "ReducedBeamResult", "ReducedBeamSolver",
     # Visualization
     "render_graph", "render_graph_3d", "render_deformation",
@@ -152,7 +166,7 @@ __all__ = [
     "render_fem_stress",
     "THEMES",
     # Easy API
-    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl",
+    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl", "predict_named",
     # Analysis
     "GraphFeatureExtractor",
     "GraphFeatureExtractor3D",
@@ -165,3 +179,17 @@ __all__ = [
     "evaluate_agent", "save_agent", "load_agent",
     "run_bayesian_optimization",
 ]
+
+
+def __getattr__(name):
+    """Keep core imports independent of Matplotlib's plotting initialization."""
+    if name in _RENDER_EXPORTS:
+        from importlib import import_module
+        value = getattr(import_module("fibernet.viz.render"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_RENDER_EXPORTS))

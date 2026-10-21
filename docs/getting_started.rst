@@ -1,123 +1,105 @@
 Getting Started
 ===============
 
+Choose a workflow
+-----------------
+
+FiberNet is the Python library. FiberScope is a separate desktop application
+in the same repository. Installing the library does not install the desktop UI.
+Start with :doc:`quickstart` for a small graph, a beam-FEM simulation, and a
+saved result. No GPU, Taichi, or desktop application is needed for that example.
+
 Installation
 ------------
 
-FiberNet requires Python 3.9+ and depends on ``numpy`` and ``scipy``.
+The library requires Python 3.9 or newer. Its base dependencies are NumPy,
+SciPy, NetworkX, and Matplotlib. Use a virtual environment to keep optional
+workflows separate from your other projects:
 
 .. code-block:: bash
 
-   # Basic installation
-   pip install fibernet
+   python -m venv .venv
+   # Linux/macOS:
+   source .venv/bin/activate
+   # Windows PowerShell instead:
+   # .venv\Scripts\Activate.ps1
+   python -m pip install --upgrade pip
+   python -m pip install fibernet
 
-   # With all optional features
-   pip install fibernet[full]
+To use the examples included in a source checkout:
 
-Optional Dependencies
-~~~~~~~~~~~~~~~~~~~~~
+.. code-block:: bash
 
-FiberNet is designed to work with only ``numpy`` and ``scipy`` as required
-dependencies. Additional features require optional packages:
+   git clone https://github.com/GellmanSparrowS/fibernet.git
+   cd fibernet
+   python -m pip install -e .
+   python -m examples.open_source_workflow --output-dir demo_output
 
-* ``pip install fibernet[viz]`` — matplotlib + pyvista for visualization
-* ``pip install fibernet[graph]`` — networkx for topology analysis
-* ``pip install fibernet[ml]`` — scikit-learn + tqdm for ML integration
-* ``pip install fibernet[accel]`` — taichi for GPU-accelerated FEM
-* ``pip install fibernet[io]`` — h5py for HDF5 I/O
-* ``pip install fibernet[full]`` — all optional dependencies
-
-First Example
--------------
+Source and published package versions can differ. Check the version and
+location actually imported before reporting a problem:
 
 .. code-block:: python
 
    import fibernet as fn
+   print(fn.__version__)
+   print(fn.__file__)
 
-   # Generate a random 2D fiber network
-   net = fn.create(
-       'random_2d',
-       num_fibers=100,
-       fiber_length=10.0,
-       box_size=(30, 30),
-       seed=42
-   )
+Optional dependencies
+~~~~~~~~~~~~~~~~~~~~~
 
-   # Analyze structure
-   stats = fn.analyze(net)
-   print(f"Fibers: {stats['num_fibers']}")
-   print(f"Nematic order: {stats['nematic_order']:.3f}")
+Install only the extras needed for your workflow. Quote the package expression
+so shells do not interpret square brackets:
 
-   # Run mechanical simulation (FEM)
-   result = fn.simulate_mechanics(net, strain=0.01)
+* ``python -m pip install "fibernet[viz]"``: PyVista 3D visualization
+* ``python -m pip install "fibernet[mesh]"``: Trimesh-based mesh tools
+* ``python -m pip install "fibernet[manufacturing]"``: solid generation and mesh reduction
+* ``python -m pip install "fibernet[ml]"``: scikit-learn, pandas, and tqdm
+* ``python -m pip install "fibernet[rl]"``: reinforcement-learning dependencies
+* ``python -m pip install "fibernet[accel]"``: optional Taichi backend
+* ``python -m pip install "fibernet[io]"``: HDF5 support
+* ``python -m pip install "fibernet[fracture]"``: experimental fracture backend (4.3.0 source)
 
-   # Export to file
-   fn.export(net, 'network.vtk', format='vtk')
+For a checkout, use the equivalent editable command, for example
+``python -m pip install -e ".[ml]"``. The desktop application has its own
+requirements; library extras do not replace them.
 
-Network Types
--------------
+Choose the model deliberately
+-----------------------------
 
-Random Networks
-~~~~~~~~~~~~~~~
+* ``fn.simulate(..., backend="fem", mode="stretch", strain=1.01)`` uses the
+  beam-frame FEM shortcut. Despite the parameter name, ``strain`` here is a
+  stretch ratio: 1.01 means 1% extension. Use a small extension for this
+  small-strain model.
+* ``ReducedBeamSolver`` and ``ReducedBeamConfig`` expose the desktop's reduced
+  axial-spring, degree-two bending, and optional node-contact model. The
+  source example ``python -m examples.reduced_recruitment_workflow`` saves
+  trajectories and recruitment results.
+* ``analyze_tensile_recruitment`` analyzes positive axial edge-strain
+  thresholds on an existing trajectory. Its spanning components are graph
+  statistics, not a complete mechanical force-flow calculation.
+* The experimental fracture API is a separate linear-static member-removal
+  model. Read its methods and limits before using it; selecting a regular
+  spring or FEM shortcut does not enable fracture.
 
-.. code-block:: python
+These models have different assumptions and output meanings. Their forces
+are not calibrated material measurements. See the repository's
+`beam-FEM contract <https://github.com/GellmanSparrowS/fibernet/blob/main/docs/METHODS_BEAM_FEM_CONTRACT.md>`_,
+`reduced-model methods <https://github.com/GellmanSparrowS/fibernet/blob/main/docs/METHODS_REDUCED_SOLVER_UNIFIED.md>`_,
+and `fracture methods <https://github.com/GellmanSparrowS/fibernet/blob/main/docs/FRACTURE_METHODS.md>`_.
 
-   net = fn.create('random_2d', num_fibers=100, fiber_length=10.0, box_size=(30, 30))
-   net = fn.create('random_3d', num_fibers=100, fiber_length=15.0, box_size=(30, 30, 30))
+Desktop application
+-------------------
 
-Ordered Lattices
-~~~~~~~~~~~~~~~~
+The documented FiberScope 3.1 Windows build is distributed with the
+`4.2.0 release <https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0>`_.
+Extract the entire ZIP before running ``FiberScope.exe``. Python is not
+required for that executable. Source launch, optional external RL setup, and
+first-run steps are in the
+`desktop guide <https://github.com/GellmanSparrowS/fibernet/blob/main/FiberScope/README.md>`_.
 
-.. code-block:: python
-
-   net = fn.create('square_2d', spacing=5.0, grid_size=(10, 10))
-   net = fn.create('honeycomb_2d', cell_size=5.0, grid_size=(10, 10))
-   net = fn.create('triangular_2d', spacing=5.0, grid_size=(10, 10))
-   net = fn.create('cubic_3d', spacing=5.0, grid_size=(5, 5, 5))
-
-Specialized Structures
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from fibernet import gen
-   net = gen.chiral_network_2d(num_fibers=50, chirality=0.5, seed=42)
-   net = gen.single_helix(radius=5.0, pitch=2.0, turns=3)
-   net = gen.plain_weave_2d(spacing=5.0, warp_count=10, weft_count=10)
-   net = gen.biomimetic_collagen(num_fibers=100, seed=42)
-
-Simulations
------------
-
-Mechanical FEM
-~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from fibernet.sim import FiberFEM
-
-   fem = FiberFEM(net, segments_per_fiber=5)
-   result = fem.apply_uniaxial_strain(strain=0.01, axis=0)
-   E_eff = fem.effective_modulus(strain=0.001)
-
-Thermal
-~~~~~~~
-
-.. code-block:: python
-
-   result = fn.simulate_thermal(net, T_hot=100.0, T_cold=0.0)
-
-Electromagnetic
-~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from fibernet.sim import EMSolver
-   solver = EMSolver(net)
-   result = solver.solve_conductivity(voltage=1.0)
-
-Next Steps
+Next steps
 ----------
 
-* Browse the :doc:`api/index` for detailed function reference
-* Try the :doc:`tutorials` for step-by-step workflows
+* Follow :doc:`quickstart` for a complete minimal Python workflow
+* Browse :doc:`api/index` for API reference
+* Use the repository's ``examples/`` directory for runnable source workflows

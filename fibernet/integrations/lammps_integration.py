@@ -1,11 +1,18 @@
 """
-LAMMPS Integration for FiberNet
+Legacy LAMMPS Python-library integration for FiberNet
 
 Provides integration with LAMMPS for molecular dynamics simulations:
 - Convert FiberNetwork to LAMMPS data file
 - Run MD simulations with various force fields
 - Extract trajectories and properties
 - Coarse-grained fiber models
+
+This public compatibility route uses FiberNetwork and directly instantiates
+Python lammps() in run_simulation. It does not delegate to the bounded
+RuntimeSpec/LAMMPSTask CLI backend. It is unvalidated and outside the current
+bounded CLI qualification scope; importability is not runtime qualification.
+For the explicit CLI route see docs/API_LAYERS.md. Preserve the upstream and
+provider notices in LAMMPS_NOTICE.md; optionality is not a license exemption.
 
 LAMMPS is GPL v2 licensed: https://github.com/lammps/lammps
 """
@@ -34,14 +41,17 @@ class LAMMPSResult:
     def to_dict(self) -> Dict:
         return {
             'num_frames': len(self.trajectory),
-            'final_energy': self.energies[-1] if self.energies else 0.0,
-            'final_temperature': self.temperatures[-1] if self.temperatures else 0.0,
+            'final_energy': self.energies[-1] if self.energies else None,
+            'final_temperature': self.temperatures[-1] if self.temperatures else None,
             'simulation_time': self.simulation_time,
         }
 
 
 class LAMMPSBridge:
-    """Bridge between FiberNetwork and LAMMPS.
+    """Legacy bridge between FiberNetwork and the Python LAMMPS interface.
+
+    This route is unvalidated and outside current bounded CLI qualification.
+    It directly uses Python lammps(), not RuntimeSpec or LAMMPSTask.
     
     Parameters
     ----------
@@ -52,10 +62,12 @@ class LAMMPSBridge:
     def __init__(self, network: FiberNetwork):
         self.network = network
         self._lammps_available = False
+        self._lammps_import_error = None
         try:
             from lammps import lammps
             self._lammps_available = True
-        except ImportError:
+        except ImportError as error:
+            self._lammps_import_error = error
             warnings.warn(
                 "LAMMPS Python interface not available. "
                 "Install with: pip install lammps"
@@ -252,7 +264,12 @@ run             {nsteps}
         nsteps: int = 1000,
         workdir: str = None,
     ) -> LAMMPSResult:
-        """Run LAMMPS MD simulation.
+        """Run LAMMPS MD simulation in-process, without resource bounds.
+
+        Provider, execution, extraction and cleanup failures raise exceptions.
+        Missing providers fail before any files or temporary directories are
+        created. Unavailable energy and temperature serialize as None.
+        This legacy model is not redirected to the bounded harmonic backend.
         
         Parameters
         ----------
@@ -269,8 +286,7 @@ run             {nsteps}
             Simulation results.
         """
         if not self._lammps_available:
-            warnings.warn("LAMMPS not available. Returning empty result.")
-            return LAMMPSResult()
+            raise self._lammps_import_error
         
         if workdir is None:
             workdir = tempfile.mkdtemp()
@@ -288,9 +304,9 @@ run             {nsteps}
         )
         
         # Run LAMMPS
+        from lammps import lammps
+        lmp = lammps(cmdargs=['-log', 'none', '-screen', 'none'])
         try:
-            from lammps import lammps
-            lmp = lammps(cmdargs=['-log', 'none', '-screen', 'none'])
             lmp.file(script_file)
             
             # Extract results
@@ -303,11 +319,20 @@ run             {nsteps}
                 simulation_time=nsteps * 0.001,
             )
             
+        except BaseException as error:
+            try:
+                lmp.close()
+            except BaseException as close_error:
+                # Cleanup must never replace the original failure, including
+                # interrupts. Retain the secondary failure for diagnostics.
+                try:
+                    error.lammps_close_error = close_error
+                except BaseException:
+                    pass
+            raise
+        else:
+            # A cleanup-only failure must not report successful simulation.
             lmp.close()
-            
-        except Exception as e:
-            warnings.warn(f"LAMMPS simulation failed: {e}")
-            result = LAMMPSResult()
         
         return result
 

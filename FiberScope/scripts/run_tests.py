@@ -37,11 +37,14 @@ def main():
         if r.returncode != 0:
             failed.append(name)
             err = (r.stderr or "").strip().splitlines()
-            for l in err[-12:]:
+            for l in (err if name == "selftest_geometry27" else err[-12:]):
                 print("   !", l)
     print("SUMMARY: %d/%d passed" % (len(want) - len(failed), len(want)))
     return 1 if failed else 0
 
 
 if __name__ == "__main__":
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8", errors="backslashreplace")
     sys.exit(main())

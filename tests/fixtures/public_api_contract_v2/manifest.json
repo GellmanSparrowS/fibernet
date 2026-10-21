@@ -1,0 +1,24 @@
+{
+  "version": "public_api_contract_v2",
+  "prior_fixture": "tests/fixtures/public_source_contract",
+  "baseline_commit": "60a3edae547a05f6f7e5168a7bec82a52c4f1b40",
+  "scope": "Mechanical API contracts; native physics kernels unchanged",
+  "sources": {
+    "fibernet/__init__.py": {
+      "sha256": "a19120193ea5be3193f13c7ba481663eba6cb19a777648095766c658966f7fcb",
+      "prior_sha256": "b4f0aaa4e18c9f4c26b5d7d3534ab9486d9b6bb7b5de8c6caaa0b549cba0cada"
+    },
+    "fibernet/easy.py": {
+      "sha256": "f36cb79ea44b5588031a8577daae3ca99c617b444fe9de713fd52f606de54f90",
+      "prior_sha256": "dc9d58b4738b4a7a3ca5a1c616f9b601f6a360ec22de1f9b3d205eca4daf1b79"
+    },
+    "fibernet/api.py": {
+      "sha256": "90401bc44eb9465681dd1ef62cc1ef7e0818a717c4ec7f3fd3c2055775484885",
+      "prior_sha256": "37a08121ea2bd06f014609bed230b4594023c5a9030cd8f6dc625083c4b33eeb"
+    },
+    "fibernet/sim/accelerated.py": {
+      "sha256": "30c52d266eebbe5593aae1c89188019a87b64f6ee3765f204e408c72220d6ae1",
+      "prior_sha256": "56eea592e581dd2464e7db304d2e6a7a129baf561d32f33e292c09474c928ab8"
+    }
+  }
+}

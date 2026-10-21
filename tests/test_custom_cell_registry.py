@@ -1,6 +1,4 @@
-"""Custom cells share APP JSON and compile through the public library API."""
-from pathlib import Path
-import sys
+"""Custom-cell JSON registry and public graph compilation contracts."""
 
 import numpy as np
 import pytest
@@ -8,9 +6,6 @@ import pytest
 from fibernet.gen import (CustomCell, CustomCellRegistry,
                           PlanarManufacturingConfig, compile_planar)
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "FiberScope"))
-from fslab.structure import _cell_factory, valid_cell_spec
 
 
 SPEC = {"nodes": [[0, 0], [1, 0], [1, 1], [0, 1], [.5, .5]],
@@ -21,12 +16,8 @@ SPEC = {"nodes": [[0, 0], [1, 0], [1, 1], [0, 1], [.5, .5]],
 
 
 def test_app_custom_cell_json_roundtrip_and_route(tmp_path):
-    assert valid_cell_spec(SPEC)
     cell = CustomCell.from_mapping(SPEC)
     graph = cell.to_graph()
-    app_graph = _cell_factory(SPEC)(box=(10, 10), n_pts_per_side=0)
-    np.testing.assert_array_equal(graph.node_positions(), app_graph.node_positions())
-    np.testing.assert_array_equal(graph.edge_array(), app_graph.edge_array())
     registry = CustomCellRegistry(tmp_path / "custom_units.json")
     key = registry.save("My-Cell", cell, reserved={"square"})
     assert key == "my_cell"

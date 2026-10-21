@@ -200,6 +200,9 @@ def render_structure_graph_3d(
         print("PyVista not installed. Install with: pip install pyvista")
         return None
 
+    from fibernet.viz.render import _align_result
+    sim_result = _align_result(graph, sim_result, require_edges=color_by in ("stress", "stretch"))
+
     plotter = pv.Plotter(off_screen=off_screen, window_size=window_size)
     plotter.background_color = background
 

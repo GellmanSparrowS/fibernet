@@ -1,3 +1,18 @@
+## Unreleased Taichi compatibility change
+
+This checkout's `TaichiEngine` currently supports **Taichi 1.7.4 only**. The
+runtime-lifetime safety repair relies on version-verified private runtime APIs;
+other versions fail with an actionable error. The `accel`, `full` and `dev`
+extras now pin that version. Non-Taichi backends remain unaffected. CPU lifecycle
+validation does not establish GPU or cross-platform support.
+
+Initialize, allocate and run on one owning thread, which may be a GUI worker.
+Same-owner engine instances share the runtime. Cross-owner calls are rejected;
+there is no implicit thread transfer when the owning worker exits. Unknown
+externally initialized runtimes are rejected safely. See the
+[runtime lifecycle contract](docs/architecture/taichi-lifecycle-audit.md).
+Wider version support requires a tested lifecycle/version matrix.
+
 ## Experimental fracture backend in 4.3.0
 
 The optional `fibernet[fracture]` extra adds a standalone linear-static Timoshenko member-removal API with explicit SI strengths, original node/edge IDs, pre-removal event traces and hash-bound resumable checkpoints. See [fracture methods, API, limits and provenance](docs/FRACTURE_METHODS.md) and the synthetic `examples/fracture_quickstart.py`. Existing spring/FEM shortcuts keep their previous semantics. The backend rejects curved, parallel-edge or heterogeneous-beam inputs rather than silently simplifying them. It has no automatic contact or validated finite-fragment motion; path loss is topological, and energy outputs are not fracture toughness. No experimental calibration is claimed.
@@ -12,7 +27,9 @@ FiberNet supplies programmable graph, generation, analysis, and modeling tools. 
 
 ## Start here
 
-The library and desktop APP live in this **existing `fibernet` repository**. Install the 4.2.0 library with `python -m pip install fibernet==4.2.0`. Download the Windows APP from [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0); it does not require a local Python installation. The [repository and release map](docs/INTEGRATION_REPO_MAP.md) describes the shared and APP-only features.
+See [API layers and simulation modes](docs/API_LAYERS.md) for backend, mode, material and result boundaries.
+
+The library and desktop APP live in this **existing `fibernet` repository**. This checkout targets the 4.3.0 library release candidate, which is not yet published to PyPI. Install the candidate from this checkout with `python -m pip install -e .`; after 4.3.0 is published, the version-pinned command will be `python -m pip install fibernet==4.3.0`. Download the Windows APP from [GitHub Releases](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0); it does not require a local Python installation. The [repository and release map](docs/INTEGRATION_REPO_MAP.md) describes the shared and APP-only features.
 
 With Python 3.10, from the repository root, install the checkout with `python -m pip install -e .`. The [complete runnable workflow](examples/open_source_workflow.py) uses the library's beam-frame FEM and does not require the desktop APP. The animated 3×3 kagome stretch below uses the shared reduced spring/bending/contact solver, also available without the APP through the [trajectory example](examples/reduced_recruitment_workflow.py). These are different models with different assumptions.
 
@@ -118,7 +135,7 @@ For the APP's structural, planar-pore and finite-width contact descriptors, run 
 
 ### Train the shared physical surrogate
 
-Install the optional ML dependencies with `python -m pip install "fibernet[ml]==4.2.0"` or `python -m pip install -e ".[ml]"` from source, then run `python -m examples.physical_learning_workflow --output-dir demo_learning` from a checkout. The [runnable workflow](examples/physical_learning_workflow.py) defaults to clearly labeled synthetic data for checking the API; pass `--data samples.npz` with `X` shaped `(N, 14)` and physical `Y` shaped `(N, 3)` for your own peak, stiffness, and work labels. It writes held-out predictions and a metric summary. In Python, `from fibernet.ml import light_features, PhysicalRegressor` gives the same descriptor and six-model adapter used by FiberScope. The APP's [English learning workspace](FiberScope/docs/screenshots/learning-en.png) exposes data generation, training and prediction. The [method and leakage controls](docs/METHODS_PHYSICAL_LEARNING_UNIFIED.md) describe training-only normalization and the limits of a random holdout split. The synthetic demo is not evidence of material prediction accuracy.
+For this unpublished 4.3.0 candidate, install the optional ML dependencies from the checkout with `python -m pip install -e ".[ml]"`; after publication, use `python -m pip install "fibernet[ml]==4.3.0"`. Then run `python -m examples.physical_learning_workflow --output-dir demo_learning` from a checkout. The [runnable workflow](examples/physical_learning_workflow.py) defaults to clearly labeled synthetic data for checking the API; pass `--data samples.npz` with `X` shaped `(N, 14)` and physical `Y` shaped `(N, 3)` for your own peak, stiffness, and work labels. It writes held-out predictions and a metric summary. In Python, `from fibernet.ml import light_features, PhysicalRegressor` gives the same descriptor and six-model adapter used by FiberScope. The APP's [English learning workspace](FiberScope/docs/screenshots/learning-en.png) exposes data generation, training and prediction. The [method and leakage controls](docs/METHODS_PHYSICAL_LEARNING_UNIFIED.md) describe training-only normalization and the limits of a random holdout split. The synthetic demo is not evidence of material prediction accuracy.
 
 ### Generate resumable physical labels
 
