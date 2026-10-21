@@ -4,6 +4,7 @@ import json
 import math
 import os
 import stat
+from dataclasses import dataclass
 
 MAX_BYTES = 16 * 1024 * 1024
 MAX_NODES = 10000
@@ -174,14 +175,36 @@ def write_at(root, name, raw):
     finally: os.close(fd)
 
 
-def verify_core():
-    """Resolve but do not import FiberNet, then verify every shipped Python file."""
+@dataclass(frozen=True)
+class _CoreVerification:
+    root: str
+    canonical_core_manifest_sha256: str
+    source_file_count: int
+
+    def provenance(self):
+        """Return only the versioned, path-free identity of verified Python sources."""
+        return {'schema_version': 'fibernet.core-provenance/1',
+                'canonical_core_manifest_sha256': self.canonical_core_manifest_sha256,
+                'source_file_count': self.source_file_count,
+                'scope': 'fibernet_python_sources'}
+
+
+def _verify_core_result():
+    """Verify one strict manifest and return its root plus canonical identity."""
     import importlib.util
     from pathlib import Path
     spec = importlib.util.find_spec('fibernet')
     if spec is None or spec.origin is None: raise ContractError('missing native core')
     root = os.path.dirname(spec.origin)
     manifest = strict_json(read_file(str(Path(__file__).with_name('core_manifest.json'))))
+    if not isinstance(manifest, dict) or not manifest:
+        raise ContractError('invalid native core manifest')
+    for relative, expected in manifest.items():
+        if (not isinstance(relative, str) or not relative.endswith('.py')
+                or '\\' in relative or any(part in ('', '.', '..') for part in relative.split('/'))
+                or not isinstance(expected, str) or len(expected) != 64
+                or any(c not in '0123456789abcdef' for c in expected)):
+            raise ContractError('invalid native core manifest')
     # Reject extra and missing source, and fail closed if traversal is incomplete.
     actual = set()
     def traversal_error(error):
@@ -196,4 +219,9 @@ def verify_core():
     for relative, expected in manifest.items():
         if sha(read_file(os.path.join(root, relative))) != expected:
             raise ContractError('native core differs from frozen source')
-    return root
+    return _CoreVerification(root, sha(canonical(manifest)), len(manifest))
+
+
+def verify_core():
+    """Preserve the public root-path return contract without importing FiberNet."""
+    return _verify_core_result().root

@@ -18,3 +18,8 @@ fibernet/__init__.py -text
 fibernet/easy.py -text
 fibernet/api.py -text
 tests/fixtures/public_api_contract_v2/**/*.txt -text
+
+# Reviewed optional facade sources and exact source snapshots retain Git bytes.
+fibernet/sim/__init__.py -text
+tests/fixtures/optional_facades_v2/*.txt -text
+adapters/mcp/tests/fixtures/provenance_v1_outputs.json -text
