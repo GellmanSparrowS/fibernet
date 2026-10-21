@@ -1,0 +1,363 @@
+{
+  "schema": "fibernet.recorded-gallery.v1",
+  "files": {
+    "README.md": {
+      "sha256": "96c8f517da81e3b05e6554e8b43ed9828a973279c2a637840d28b80f3931e739",
+      "bytes": 1367
+    },
+    "backends/README.md": {
+      "sha256": "b6d374ac10a611b2eaba4a25d0be8a2581ad5dfa207a688de68dbeded6170544",
+      "bytes": 548
+    },
+    "backends/data/SAVED_BACKEND_DYNAMICS.md": {
+      "sha256": "dcb77d870c49b4e42e0e795e1ef7bb9d914168465add71788770443c4346dadc",
+      "bytes": 1655
+    },
+    "backends/data/lammps_saved_dynamics.npz": {
+      "sha256": "5889f04c41403ce695476d51a9a831770fcf7b2581418502bc384d5e90d0d915",
+      "bytes": 54332
+    },
+    "backends/data/saved_dynamics_provenance.json": {
+      "sha256": "f5b3d2ef0ca9948b111519fa2dbff66c3bd4b321aafec4d0b34a17867095aa8b",
+      "bytes": 5684
+    },
+    "backends/data/taichi_saved_dynamics.npz": {
+      "sha256": "9eef689d152f9e87728ab41650ef587c45ed07d0fbb12a07165c7a94e63e5d22",
+      "bytes": 553578
+    },
+    "backends/lammps_saved_dynamics.gif": {
+      "sha256": "a6b3e8f0389608976b9deea6703d8ab6bad9017def758820a2d21c27f8dd7d8b",
+      "bytes": 2748513
+    },
+    "backends/lammps_saved_dynamics.png": {
+      "sha256": "54676267e39efcbdfca30ae23267b90de57ee08741e6b552d092830fd0b09751",
+      "bytes": 162152
+    },
+    "backends/lammps_saved_dynamics.svg": {
+      "sha256": "87c13f1911db362ab4ea632cf8dcbee9896a2ed7cb9933f1e2b9df0c3d31696c",
+      "bytes": 92315
+    },
+    "backends/render.py": {
+      "sha256": "245e1b2a285a5f25db7973c1f26d8a60d9c002228e11e86c04d2426bc171109f",
+      "bytes": 5402
+    },
+    "backends/taichi_saved_dynamics.gif": {
+      "sha256": "45f9d490909d16132a4e11a490d3bb65bd2231a5a9d1aa7b901d5309f5a05c65",
+      "bytes": 272697
+    },
+    "backends/taichi_saved_dynamics.png": {
+      "sha256": "6c5c9ea6439272597ab51c826c92b955db6a8deae0403b690dadec4c0ac16ccb",
+      "bytes": 99214
+    },
+    "backends/taichi_saved_dynamics.svg": {
+      "sha256": "b4ffe5d07dd565f739eba3331e71d7dbc006db39ae571ddae67332090005e518",
+      "bytes": 966854
+    },
+    "fracture/README.md": {
+      "sha256": "ed93b4a3722a23114e005cf9d234fe0583b61dca2aa4d2435d99fe7becce8608",
+      "bytes": 2525
+    },
+    "fracture/fracture_poster.svg": {
+      "sha256": "e1eb1544b68494f0596a1b9bffc5698a0d8cf97534e80f79f720aa00c5df27b8",
+      "bytes": 42936
+    },
+    "fracture/fracture_sequence.gif": {
+      "sha256": "43b07a1972df8322a8e29072c0259506068367306914ad9d1a03782c4b6af8ad",
+      "bytes": 1709614
+    },
+    "fracture/render.py": {
+      "sha256": "ae2552e7642b710e61acda6aff23d08fc5bdb41c6aa0894225a04a016024c83c",
+      "bytes": 5816
+    },
+    "fracture/replay.json": {
+      "sha256": "a5c3dd55d1cbd0bc15a3188a972ccaf7cc8558d7478ff7fa4f35f55a9f925144",
+      "bytes": 150161
+    },
+    "learning/DATA_PROVENANCE.json": {
+      "sha256": "231f2a997d5553e93bee076d0017452f19e222f37ba2b211d2dd966dfd3c4575",
+      "bytes": 5141
+    },
+    "learning/LICENSE": {
+      "sha256": "09bfa500541608a386a7be7cf636fdb5be3c3feaec2bdb8fc63ca756687c9403",
+      "bytes": 1078
+    },
+    "learning/README.md": {
+      "sha256": "a4bc08e12c18cfb08012c825dec6c4d97cdbb211920f7eef4ec176c05fdf4175",
+      "bytes": 2695
+    },
+    "learning/data/gine/fields/gine-9204-v2.npz": {
+      "sha256": "65aa8cbac1afa515a684cdcafb6f2f9cf93fece892ebfbe177c04cd970e8a1bc",
+      "bytes": 68336
+    },
+    "learning/data/gine/final_results.json": {
+      "sha256": "c2f28db8f2f62180f0965c0e451d46f08a05739a622fbef5e0cf98a77e45309f",
+      "bytes": 10260
+    },
+    "learning/data/gine/inputs/gine-9204-v2.npz": {
+      "sha256": "596a4695acd6368da00031807e3fc10a2157c8a1334dd14a7e73eefba935adef",
+      "bytes": 124028
+    },
+    "learning/data/gine/training.json": {
+      "sha256": "8c9bd92208d6873e35eaf63df32d99e30c364063871857c1690e6f66f981cad3",
+      "bytes": 19020
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/env_return.json": {
+      "sha256": "ca1264661a1ebdfeb70da75ec479bc24fd70d41ad6896cdd9ffefd0a4bab9d03",
+      "bytes": 80
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/raw_result.json": {
+      "sha256": "3fd6ee305f0d80dfa84e1d119244f3aa224097aec16463b8eddad72ab37aa1ae",
+      "bytes": 15274
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/solver_graph.json": {
+      "sha256": "21aa7565a70ff94c4410755f817fa84cf346844db07ecadaf0e63d0d9deafa47",
+      "bytes": 43865
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/env_return.json": {
+      "sha256": "e87b72b0258694247209621c6d1599ba6c1c378962e501580b0f50d3576d090d",
+      "bytes": 81
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/raw_result.json": {
+      "sha256": "2139d9f06db897ea903354c35e15d669408e3f995cce3da2f081ab7aed24fceb",
+      "bytes": 13432
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/solver_graph.json": {
+      "sha256": "7e97ce9a082bc4c5ab69e6ac55ea785fb78d2746df5078ddaa11dcefda5b25c8",
+      "bytes": 40964
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/env_return.json": {
+      "sha256": "01e1d53033e1808a2dbfc3062d21d28831a3fb562421fe1204f0dda2ed67ed6f",
+      "bytes": 80
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/raw_result.json": {
+      "sha256": "a24caa5aa6e53fe77a4882f652dbd0c7de97b22bf38fa2e5f10a5094f2394342",
+      "bytes": 13766
+    },
+    "learning/data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/solver_graph.json": {
+      "sha256": "62bca9f5eb1e8c82147ed0252df544094ad53b7b776e5f5f4afef423db0328ca",
+      "bytes": 40830
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/H4/controls.json": {
+      "sha256": "e63a1407110a5e3b774787e019259af20f3aac7f98ec856e96a15561eb738dcb",
+      "bytes": 257
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/H4/zero_graph.json": {
+      "sha256": "fa212f34d751252e0863f03207330001646bfe71905ebfba27de8e51b04b994b",
+      "bytes": 43865
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/K3/controls.json": {
+      "sha256": "716bd6c385593af6aa26045d5fe28c99f7df21fc5a5ce1cce96fc9983867124d",
+      "bytes": 473
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/K3/zero_graph.json": {
+      "sha256": "2e6859c5d095aa5aa9caff3e53f25af8d47c7eb60b690cfdfbdcbdd217ab8106",
+      "bytes": 40937
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/T5/controls.json": {
+      "sha256": "96154a32dc38f603c61588a290e02147a9908be68083f6e5d5f973946d4a95ea",
+      "bytes": 220
+    },
+    "learning/data/rl/fibernet-rl-native-stageA-20261016/T5/zero_graph.json": {
+      "sha256": "07d7fbada21decdca08ba45fa95af6cd85e09f55735399e50bbdfbf2a0731137",
+      "bytes": 40830
+    },
+    "learning/media/gine_training_final.svg": {
+      "sha256": "46fc21c96b3401fd3b941cc372ef49805b48362c4a2155de7afa327f7bc0f10a",
+      "bytes": 741648
+    },
+    "learning/media/gine_training_frame_00.png": {
+      "sha256": "da2a72238b9ed08817a4a71578e098791e3d6825c281e7489b6d9b24ed181dee",
+      "bytes": 298346
+    },
+    "learning/media/gine_training_frame_10.png": {
+      "sha256": "be4dbaa687e703a9315c2b9123bf2a04297e09af8417c3f2e1f1ace087abefea",
+      "bytes": 305799
+    },
+    "learning/media/gine_training_frame_23.png": {
+      "sha256": "c51f215fde30769e8033afd0ccfbd00196ad3abbbc1e13f287f9d8c1e084ba0b",
+      "bytes": 308587
+    },
+    "learning/media/gine_training_history.gif": {
+      "sha256": "cea633e13abcc71f1ab0142e8a7dda22c75bdbd48ed74441f5bddbda2a09f825",
+      "bytes": 2595431
+    },
+    "learning/media/gine_training_receipt.json": {
+      "sha256": "5ab85d02739fdc1054ed828d17e2f5791c3e7944a50e8636e11e9b12178fbb56",
+      "bytes": 544
+    },
+    "learning/media/rl_environment_fixed_actions.gif": {
+      "sha256": "5e3ea8d8c3a30d6815105e62973bf2da42a7fed0d2bcf6b08f9a57c7e5221ee1",
+      "bytes": 152724
+    },
+    "learning/media/rl_environment_receipt.json": {
+      "sha256": "0ffac70454bfbb2f864da8e61fe91300e6bf6db2373cfae4259dd321ddd44edf",
+      "bytes": 360
+    },
+    "learning/media/rl_environment_stage_0.png": {
+      "sha256": "4507ba9435e962cffde217546f153ec089ca19635ca69be66c56ad339d55641b",
+      "bytes": 91950
+    },
+    "learning/media/rl_environment_stage_0.svg": {
+      "sha256": "388c4f182f94ab2b9e07f3114cd9622220925a1161d342e88ac5362a8bcd2ea9",
+      "bytes": 208326
+    },
+    "learning/media/rl_environment_stage_1.png": {
+      "sha256": "fdf2fd0593339fa1e537d6834251e36f9c53ff603b68a47b80cce488593d3047",
+      "bytes": 103198
+    },
+    "learning/media/rl_environment_stage_1.svg": {
+      "sha256": "513e6a8109ee224c4752cdc325d95b825cb73ca187ebd021ce4e92ac4ac9d9ac",
+      "bytes": 209400
+    },
+    "learning/media/rl_environment_stage_2.png": {
+      "sha256": "187b688929ed4b62f5a7ede51ad63f5f6d67872a75cc0cbd44c19cf3396ac421",
+      "bytes": 117263
+    },
+    "learning/media/rl_environment_stage_2.svg": {
+      "sha256": "a64f199c32405222dab590810d7d4cc41ca33ffa9a972c6b3cdbf30d97dd8bf6",
+      "bytes": 222648
+    },
+    "learning/render_gine_history.py": {
+      "sha256": "11d3365dc540c3a18bf3fc3878f5096ead478eb539f600c9a5d36f3fd7bb3cec",
+      "bytes": 5251
+    },
+    "learning/render_rl_step.py": {
+      "sha256": "4d7cf543646f7faf439e4964e5e14019b6d6d642e544c750099c619bf01422e2",
+      "bytes": 3908
+    },
+    "thermal/README.md": {
+      "sha256": "a957f06937c85c9c8b967e9c9fcbd5080e3f508b7c5983c8b6f9c8341530081f",
+      "bytes": 612
+    },
+    "thermal/check.py": {
+      "sha256": "ca84fd18ae739912fe3f74d0536cdec8aa8788d47cca3ef1c821b951ad6e88d5",
+      "bytes": 2366
+    },
+    "thermal/data/README.md": {
+      "sha256": "f303c9855928acb4473ff3f514f058dc028e7db50f9f75396420ef64a477a312",
+      "bytes": 2294
+    },
+    "thermal/data/archive_provenance.json": {
+      "sha256": "ed4adb09f51e42e1b81ef945207f048ee0d0e159ecfa70ac5b19949e64f69a24",
+      "bytes": 474
+    },
+    "thermal/data/campaign_analysis.json": {
+      "sha256": "2235bd42f501ee7161ee964b765d36d8c6e0b97db4f6d2da8d036bfcb7f0079a",
+      "bytes": 3097
+    },
+    "thermal/data/energy_ledger_80.csv": {
+      "sha256": "bc3ff316f1ce62b594c839c9ee42c922209a3ccb65983b5b86e783f56ca9ed24",
+      "bytes": 9651
+    },
+    "thermal/data/summary.json": {
+      "sha256": "d3b11d0bc95767f2608f759650abafb03e86fd26590f71d450b2689e7f899471",
+      "bytes": 17313
+    },
+    "thermal/data/thermal.npz": {
+      "sha256": "4b4547015df2b6921cba8299fa57e6aa99221a7af828d7a7eec6f92a911c67ed",
+      "bytes": 11765788
+    },
+    "thermal/render.py": {
+      "sha256": "e25d2e786cf2b0316cc4e0882df95b494f9da5cda40e3f89c2a470bf6ab4bd19",
+      "bytes": 7859
+    },
+    "thermal/transient_thermal_network.gif": {
+      "sha256": "23af4e8c2835e8225192299bbc12405e287c01f628dde3fd8f49b44844f557b8",
+      "bytes": 897382
+    },
+    "thermal/transient_thermal_network.json": {
+      "sha256": "a65bb9fbc69910dfa7233deee3f4d3f14560224db0dc69c624b271b7f33a913b",
+      "bytes": 2800
+    },
+    "thermal/transient_thermal_network_final.svg": {
+      "sha256": "a0df65efadd9f6d8c11110f5710b5da290e2d857fb3eb3ba6ee04170cf921b9e",
+      "bytes": 584543
+    },
+    "viscoelastic/README.md": {
+      "sha256": "9f1f7e2c1b62c92bf7e6988ac68b2486223bdef0677d6fc4f11c260424dc050d",
+      "bytes": 2527
+    },
+    "viscoelastic/render_recovered_dynamics.py": {
+      "sha256": "08b8c6d50c5133a4a7e674d24dcd4ac273835b698bf402cfaa2fe562a4433f56",
+      "bytes": 7347
+    },
+    "viscoelastic/viscoelastic_network_contact_sheet.png": {
+      "sha256": "6935f417d550819d6e35b305514683780740a52a3d1f59d29f8853f97bc842aa",
+      "bytes": 241016
+    },
+    "viscoelastic/viscoelastic_network_dynamics.gif": {
+      "sha256": "b40510a13a9302711de11c5db28935cc5079e0e6a3a26f85e68b4603fb8cf953",
+      "bytes": 1885425
+    },
+    "viscoelastic/viscoelastic_network_dynamics.json": {
+      "sha256": "6e6b1a10de25b985282c8fa66035208e7ee6e5325cd1111f2cd2947869ab3e6f",
+      "bytes": 1545
+    },
+    "viscoelastic/viscoelastic_network_recorded.json": {
+      "sha256": "b2dd2fc674522657dbbcdc910bf38a4355afe5c9c667d59fae901a94142f7b53",
+      "bytes": 4404961
+    },
+    "viscoelastic/viscoelastic_network_recorded.npz": {
+      "sha256": "4ce88ce2e8c73d0574e1f4ce547ce8b4c0a053f5fc66f9310c653e73c58fdabe",
+      "bytes": 499198
+    }
+  },
+  "animations": {
+    "backends/lammps_saved_dynamics.gif": {
+      "dimensions": [
+        800,
+        1132
+      ],
+      "frames": 41,
+      "duration_ms": 5200
+    },
+    "backends/taichi_saved_dynamics.gif": {
+      "dimensions": [
+        800,
+        1132
+      ],
+      "frames": 9,
+      "duration_ms": 5200
+    },
+    "fracture/fracture_sequence.gif": {
+      "dimensions": [
+        960,
+        1358
+      ],
+      "frames": 31,
+      "duration_ms": 11400
+    },
+    "learning/media/gine_training_history.gif": {
+      "dimensions": [
+        840,
+        1188
+      ],
+      "frames": 21,
+      "duration_ms": 7200
+    },
+    "learning/media/rl_environment_fixed_actions.gif": {
+      "dimensions": [
+        840,
+        1188
+      ],
+      "frames": 3,
+      "duration_ms": 5400
+    },
+    "thermal/transient_thermal_network.gif": {
+      "dimensions": [
+        960,
+        1358
+      ],
+      "frames": 81,
+      "duration_ms": 8100
+    },
+    "viscoelastic/viscoelastic_network_dynamics.gif": {
+      "dimensions": [
+        800,
+        1132
+      ],
+      "frames": 65,
+      "duration_ms": 6500
+    }
+  }
+}

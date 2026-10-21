@@ -12,9 +12,9 @@
   "solver_input_sha256_recorded": "8a73a1216bb4ae75f4f23eb65fd72722c86a4a3fe13063fbfb332d214298f850",
   "input_hash_note": "Solver-recorded input hash retained verbatim; source file SHA256 verified separately.",
   "renderer": "scripts/render_saved_electrical_field.py",
-  "renderer_sha256": "d4a66fe49b1f41f759dfbe463830f89ece8525e2fd590537c1277bfdfdb99e53",
+  "renderer_sha256": "6a46b854b036fab751334b87257938178ef223b1e2c0a36089cc56900fba6021",
   "gif_sha256": "59217881aa05242cc26b4f3c1acd52d133293f53bb4b67109be1d4968e61647a",
-  "svg_sha256": "564c084d431fa5a939fb2a2acff5ebc909656087b504088f60fc622b672c1ffa",
+  "svg_sha256": "eb275c607fcc5a19fb0aa404af9926936fc725fe9fe24d071d8dbd6122b16cc0",
   "nodes": 80,
   "edges": 162,
   "node_ids": [

@@ -105,23 +105,49 @@ def decode_gif(path: Path) -> dict:
             "sha256": digest(path)}
 
 
+def locale_block(text: str, language: str) -> str:
+    start, end = f"<!-- locale:{language}:start -->", f"<!-- locale:{language}:end -->"
+    require(text.count(start) == text.count(end) == 1, f"Missing/duplicate {language} locale markers")
+    return text.split(start, 1)[1].split(end, 1)[0].strip()
+
+
+def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
+    """Validate GitHub-native disclosures and shared translated source blocks."""
+    sections = re.findall(r"<details([^>]*)>\s*<summary>(.*?)</summary>(.*?)</details>", homepage, re.S)
+    require(len(sections) == 2, "Expected two native language disclosures")
+    zh_attrs, zh_summary, zh_section = sections[0]
+    en_attrs, en_summary, en_section = sections[1]
+    require(not zh_attrs.strip() and en_attrs.strip() == "open", "English must be open; Chinese closed")
+    require("中文" in zh_summary and "English" in en_summary, "Accessible language names missing")
+    require("<a " not in zh_summary + en_summary, "Language controls must be native summaries")
+    require("README_CN.md" not in destinations(homepage), "Homepage language control navigates away")
+    require(homepage.count('<table>') == 1, "Expected one opening brand card")
+    require("selected" not in zh_summary.lower() + en_summary.lower(), "Static selection label is misleading")
+    english, chinese = locale_block(en_section, "en"), locale_block(zh_section, "zh")
+    require(chinese == locale_block(standalone, "zh"), "Standalone Chinese differs from inline source")
+    for label, block in (("English", english), ("Chinese", chinese)):
+        gifs = re.findall(r"!\[[^\]]*\]\(([^)]+\.gif)\)", block)
+        require(len(gifs) == len(set(gifs)) == 19, f"{label} must retain all 19 inline animations")
+    return english, chinese
+
+
 def main() -> None:
-    english = (ROOT / "README.md").read_text(encoding="utf-8")
-    chinese = (ROOT / "README_CN.md").read_text(encoding="utf-8")
+    homepage = (ROOT / "README.md").read_text(encoding="utf-8")
+    standalone = (ROOT / "README_CN.md").read_text(encoding="utf-8")
+    english, chinese = check_locale_structure(homepage, standalone)
     code_pattern = r"```(?:python|bash)\n(.*?)```"
     require(re.findall(code_pattern, english, re.S) == re.findall(code_pattern, chinese, re.S),
             "English and Chinese runnable snippets differ")
     en_links = {canonical_destination(x) for x in destinations(english) if not x.startswith("#")}
     zh_links = {canonical_destination(x) for x in destinations(chinese) if not x.startswith("#")}
     require(en_links == zh_links, f"Language content links differ: {en_links ^ zh_links}")
-    require("README_CN.md" in destinations(english) and "README.md" in destinations(chinese),
-            "Reciprocal language navigation missing")
+
     require("fibernet==4.2.0" in english and "4.3.0" in english,
             "Published/development install distinction missing")
     require("pip install fibernet==4.3.0" not in english + chinese,
             "Unpublished package command advertised")
     document_checks = [check_links(ROOT / name) for name in
-                       ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md")]
+                       ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md", "docs/HOMEPAGE_EXAMPLE_SCOPE.md")]
     for path in sorted((MEDIA / "ui").glob("*.svg")):
         svg = ET.fromstring(path.read_bytes())
         require(svg.attrib.get("role") == "img", f"Accessible role missing: {path.name}")

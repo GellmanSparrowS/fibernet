@@ -1,0 +1,7 @@
+{
+  "archive_sha256": "9dfc6126f9fb700a986970a313d5f04a0a827fb8c5b08f23957ef135ae29b0f9",
+  "archive_member": "FiberNet_full_network_electrothermal_validated/full_80steps/thermal.npz",
+  "original_member_sha256": "4b4547015df2b6921cba8299fa57e6aa99221a7af828d7a7eec6f92a911c67ed",
+  "data_transformation": "Lossless NPZ recompression only; all arrays retained with identical dtype, shape and values, including unavailable initial diagnostics as NaN.",
+  "synthetic": true
+}

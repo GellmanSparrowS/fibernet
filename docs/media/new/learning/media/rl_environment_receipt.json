@@ -1,0 +1,13 @@
+{
+  "source_archive_sha256": "0eefbb109cc8b88c52d6401156bfec7582ce8f5dddcca72264720007275f63fc",
+  "frames": 3,
+  "size_px": [
+    840,
+    1188
+  ],
+  "duration_ms_per_frame": 1800,
+  "cpu_s": 0.817043704,
+  "maxrss_kib": 107032,
+  "new_training_inference_physics_calls": 0,
+  "gif_sha256": "5e3ea8d8c3a30d6815105e62973bf2da42a7fed0d2bcf6b08f9a57c7e5221ee1"
+}

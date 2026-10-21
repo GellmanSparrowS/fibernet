@@ -1,0 +1,74 @@
+{
+  "convergence_passed": true,
+  "runs": {
+    "20": {
+      "peak_temperature_K": 300.41526680130437,
+      "peak_rise_K": 0.41526680130436944,
+      "stored_total_J": 0.00011766563998578232,
+      "reservoir_integral_J": -0.00020399312584806658,
+      "source_integral_J": 0.00032165876583385396,
+      "max_independent_node_residual_over_bound": 0.9328736719431728,
+      "max_independent_component_residual_over_bound": 0.0016985638155561352,
+      "minimum_temperature_increment_K": 0.0,
+      "maximum_nodewise_steady_overshoot_K": 0.0,
+      "cpu_s": 3.518912466,
+      "maxrss_KiB": 153228
+    },
+    "40": {
+      "peak_temperature_K": 300.41860074107194,
+      "peak_rise_K": 0.41860074107194123,
+      "stored_total_J": 0.00011857380392456036,
+      "reservoir_integral_J": -0.0002030849619092842,
+      "source_integral_J": 0.00032165876583385396,
+      "max_independent_node_residual_over_bound": 0.9500133760599921,
+      "max_independent_component_residual_over_bound": 0.0011209909125981317,
+      "minimum_temperature_increment_K": 0.0,
+      "maximum_nodewise_steady_overshoot_K": 0.0,
+      "cpu_s": 5.811907989,
+      "maxrss_KiB": 163488
+    },
+    "80": {
+      "peak_temperature_K": 300.4202906813709,
+      "peak_rise_K": 0.42029068137088643,
+      "stored_total_J": 0.00011903426146790142,
+      "reservoir_integral_J": -0.00020262450436595307,
+      "source_integral_J": 0.00032165876583385396,
+      "max_independent_node_residual_over_bound": 0.9753606524757423,
+      "max_independent_component_residual_over_bound": 0.001239635272862114,
+      "minimum_temperature_increment_K": 0.0,
+      "maximum_nodewise_steady_overshoot_K": 0.0,
+      "cpu_s": 9.659959925,
+      "maxrss_KiB": 186328
+    }
+  },
+  "refinement_comparison": {
+    "20_40": {
+      "final_max_temperature_difference_K": 0.0035080452794886696,
+      "common_time_max_temperature_difference_K": 0.004266619747511413,
+      "final_temperature_relative_difference": 0.008380408669381148,
+      "stored_total_J_relative_difference": 0.007659060506786431,
+      "reservoir_integral_J_relative_difference": 0.004471842376926174
+    },
+    "40_80": {
+      "final_max_temperature_difference_K": 0.0017796851928437718,
+      "common_time_max_temperature_difference_K": 0.0021986461260325996,
+      "final_temperature_relative_difference": 0.004234415064923328,
+      "stored_total_J_relative_difference": 0.003868277398984183,
+      "reservoir_integral_J_relative_difference": 0.0022724672160062145
+    }
+  },
+  "permutation": {
+    "temperature_K_max_difference": 5.684341886080802e-14,
+    "source_W_max_difference": 3.550259189077595e-21,
+    "capacity_J_per_K_max_difference": 0.0,
+    "reservoir_injection_W_max_difference": 1.0823492879133857e-18,
+    "node_stored_heat_change_J_max_difference": 1.6887719385882613e-20,
+    "heat_rate_sign_max_difference_W": 5.224818179508725e-17,
+    "initial_relative_heat_rate_gate_passed": false
+  },
+  "strict_json_fields_exact": 20,
+  "all_csv_fields_exact": true,
+  "synthetic": true,
+  "one_way_coupling": true,
+  "original_failure_evidence_preserved": true
+}
