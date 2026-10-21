@@ -1,555 +1,126 @@
-## 未发布版本的 Taichi 兼容性变更
+# FiberNet + FiberScope
 
-当前工作版本的 TaichiEngine 暂时只支持 Taichi 1.7.4；accel、full 和 dev 可选依赖同步固定该版本。运行时生命周期修复依赖经过验证的私有接口，其他版本会明确报错，不会静默回退。其他计算后端不受影响。引擎须在同一个运行时所有者线程中创建和运行，该线程可以是 GUI 工作线程；跨线程使用及所有权不明的外部初始化会被安全拒绝。CPU 验证不代表 GPU 或跨平台验证。详见 [生命周期说明](docs/architecture/taichi-lifecycle-audit.md)。
+[![Switch to English](docs/media/ui/language-en-inactive.svg)](README.md) [![中文 — 当前语言](docs/media/ui/language-zh-active.svg)](README_CN.md)
 
-[**查看全部中英文界面 · Bilingual desktop gallery (16 screenshots)**](FiberScope/docs/screenshots/README.md)
+### 从纤维网络几何，到力学响应与结构设计。
 
-# FiberScope 3.0 · FiberNet
+**FiberNet** 是面向纤维网络生成、模拟、分析与逆向设计的 Python 工具库；**FiberScope** 将共享的几何、简化模型与分析流程带入桌面应用。从构建结构、观察变形、量化连接变化，到响应学习和连续路径构造，同一设计可以贯穿整个研究流程。
 
-**从纤维网络基本单元到物理仿真、AI 逆向设计与可打印实体。**
+[快速开始](#快速开始) · [动态示例](#动态示例) · [功能模块](#选择研究流程) · [桌面应用](#桌面应用) · [方法与复现](#方法与复现)
 
-FiberScope is an interactive desktop application for manufacturability-informed fiber-network materials design, powered by the FiberNet Python toolkit.
+![已保存的三维网络几何与 kagome 变形轨迹：分别标明相机运动和模拟材料运动](docs/media/network_workflow_hero.gif)
 
-- **在线体验 / Live demo:** https://modelscope.cn/studios/GellmanSparrow/FiberScope
-- **Windows 完整版 / Download:** [FiberScope 3.0 release](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0)
-- **操作与源码 / Desktop guide:** [FiberScope/README.md](FiberScope/README.md)
-- **方法与复现 / Methods:** [3.0 methods](FiberScope/docs/METHODS_3_0.md)
-- **录像流程 / Recording command:** [AI workflow](FiberScope/docs/finals/AI_RECORDING_3_0.md)
+**把几何与响应放在一起看。** 左侧环绕展示已保存的固定三维网络，右侧回放包含 436 个节点、576 条边的 kagome 网络简化模型变形轨迹。左侧改变的是相机视角，而非材料状态。[媒体来源与渲染说明](docs/MEDIA_GALLERY.md) · [静态海报](docs/media/network_workflow_hero_poster.svg)
 
-## FiberScope 软件
+## 快速开始
 
-| 板块 | 能力 |
-| --- | --- |
-| 结构生成 | 多种基本单元、共享位移参数、自定义单元与周期规则 |
-| 原位仿真 | 拉伸、焊接锚点、曲线及高分辨率 GIF 回放 |
-| 特征分析 | 结构与孔隙特征，不以几何接触指标作为训练输入 |
-| 机器学习 | 真实物理标签、六种回归模型、主动学习及留出集评价 |
-| AI 逆向设计 | 目标曲线搜索、CEM、可扩展强化学习与可选代理模型 |
-| 三维曲面 | 真实单元映射、三角 OBJ 转四边网格及采样控制 |
-| 制造 | 闭合路径、圆柱纤维实体、STL/路径导出与本地拓竹交接 |
+### 安装 Python 库
 
-桌面版运行于 Windows 10/11 x64，无需安装 Python。在线版复用同一数值核心，在共享 CPU 上提供七步核心体验；完整 AI 助手、自定义编辑和高预算任务在桌面版使用。在线版不会控制访问者的打印机。
-
-制作：**杨云浩，复旦大学高分子科学系**。致谢 **世界人工智能开源大赛（GOAI）**。
-
-## 验证与适用范围
-
-桌面 3.0 已通过 22 套回归、真实 300 样本物理标注及 200 次 J 型逆设计流程。STL 已通过独立封闭检查并在 Bambu Studio 导入；未将这些检查表述为实际打印验证。力学结果来自降阶数值模型，实验定量预测需材料校准。闭合图路径与常规切片器重新生成的机床路径不同。
-
-项目代码沿用 MIT 许可；依赖与衍生模型说明见 [THIRD_PARTY_NOTICES.md](FiberScope/THIRD_PARTY_NOTICES.md)。
-
----
-
-## FiberNet Python toolkit
-
-<div align="center">
-
-# 🧬 FiberNet v4
-
-**纤维网络结构生成、力学模拟与智能优化 Python 工具包**
-
-[![PyPI](https://img.shields.io/pypi/v/fibernet?logo=pypi&logoColor=white)](https://pypi.org/project/fibernet/)
-[![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://python.org)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
-[![CI](https://github.com/GellmanSparrowS/fibernet/actions/workflows/ci.yml/badge.svg)](https://github.com/GellmanSparrowS/fibernet/actions)
-[![Downloads](https://img.shields.io/pypi/dm/fibernet)](https://pypi.org/project/fibernet/)
-
-[English](README.md) · [PyPI](https://pypi.org/project/fibernet/) · [教程](#-教程) · [API 参考](#-api-参考)
-
-*由 [ML-BioMat Lab](https://ml-biomat.com/) @ [BMG-FDU](https://github.com/BMG-FDU) 开发*
-
-</div>
-
----
-
-## 概述
-
-FiberNet 是面向材料科学与生物力学研究的 Python 工具包，用于**纤维网络超结构的计算设计**。提供完整闭环工作流：
-
-```
-结构生成 → 力学模拟（质点弹簧 / 梁单元FEM） → 特征提取 → 机器学习 → 强化学习
-```
-
-| 功能 | 说明 |
-|------|------|
-| **26种基元** | 12种2D + 14种3D：蜂窝、kagome、凹角、octet、diamond\_3d、fcc、bcc、gyroid、TPMS… |
-| **参数化控制** | 内部点位移，支持RL连续动作空间 |
-| **双模型模拟** | Taichi质点弹簧（GPU） + 梁单元FEM（Euler–Bernoulli） |
-| **94维特征** | 结构 + 孔隙 + 接触特征提取 |
-| **一行ML** | `predict_from_csv()` → 训练、评估、可视化、保存 |
-| **一行RL** | `run_bayesian_optimization()` 或 CEM 优化 |
-
----
-
-## 🖼️ 展示
-
-<div align="center">
-<img src="docs/images/01_2d_gallery.png" width="80%" alt="2D结构库" />
-</div>
-
-*12种2D基元：正方形、三角形、六边形、蜂窝、kagome、Voronoi、手性、凹角、星形、交叉、钻石、缺肋。*
-
-<div align="center">
-<img src="docs/images/voronoi_1.5x_auto.png" width="80%" alt="Voronoi拉伸" />
-</div>
-
-*Voronoi结构在1.5×单轴拉伸下的变形与应力分布（质点弹簧模型）。*
-
-<div align="center">
-<img src="docs/images/05_trajectory_dark.png" width="80%" alt="变形轨迹" />
-</div>
-
-*8帧变形轨迹：蜂窝结构拉伸过程，按边拉伸比着色。*
-
-<div align="center">
-<img src="docs/images/fem_showcase_dark.png" width="80%" alt="FEM变形展示" />
-</div>
-
-*梁单元FEM分析：多种拓扑结构和纤维半径下的单轴拉伸（2×）与压缩（0.5×）。亮色 = 高von Mises应力。结构建模为焊死接头的梁框架，弯曲刚度与半径的四次方成正比。*
-
-<div align="center">
-<img src="docs/images/09_ml_analysis_dark.png" width="80%" alt="ML分析" />
-</div>
-
-*机器学习分析：混淆矩阵、ROC曲线和学习曲线。*
-
-<div align="center">
-<img src="docs/images/11_rl_reward_dark.png" width="80%" alt="RL奖励" />
-</div>
-
-*CEM强化学习：每episode奖励和单调递增最佳奖励。*
-
----
-
-## 🚀 快速开始
-
-### 一行API
-
-```python
-import fibernet as fn
-
-g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
-fn.show(g)  # 一行出图
-```
-
-```python
-r = fn.simulate(g, mode="stretch", strain=1.5, backend="spring")
-print(f"最大力={r.max_force:.0f} N, 最大拉伸={r.max_stretch:.3f}")
-```
-
-### FEM 三行代码
-
-```python
-from fibernet.ml import BeamFrameFEM
-
-solver = BeamFrameFEM(E=1e9, nu=0.3)
-g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
-result = solver.stretch_test(g, target_stretch=1.01, nonlinear=False)
-
-print(f"最大应力: {result['sigma_total'].max()/1e6:.1f} MPa")
-print(f"最大位移: {result['max_displacement']:.4f} m")
-```
-
-### 完整流水线
-
-```python
-import fibernet as fn
-import numpy as np
-
-# 1. 参数化结构（20个位移参数，RL动作空间）
-displacements = [(np.random.uniform(-0.3, 0.3), np.random.uniform(-0.3, 0.3))
-                 for _ in range(20)]
-g = fn.pattern_2d(unit="square", box=(10, 10), grid=(3, 3),
-                  n_pts_per_side=5, point_displacements=displacements)
-
-# 2a. Taichi质点弹簧模拟
-engine = fn.TaichiEngine()
-r = engine.stretch_test(g, target_stretch=1.5, stiffness=1e5,
-                        damping=0.3, num_steps=1000, save_interval=200)
-
-# 2b. 或梁单元FEM（Euler-Bernoulli，焊死接头）
-from fibernet.ml import BeamFrameFEM
-fem = BeamFrameFEM(E=1e9, nu=0.3)
-fem_result = fem.stretch_test(g, target_stretch=1.5)
-sim_r = fem.to_sim_result(fem_result, graph=g)
-
-# 3. 可视化
-fig = fn.render_trajectory(g, r.positions_trajectory, r.edge_stretches,
-                           n_frames=6, title="拉伸过程")
-fig.savefig("deformation.png", dpi=150)
-
-# 4. 特征提取（94维向量）
-ext = fn.GraphFeatureExtractor()
-features = ext.extract(g)
-
-# 5. 节点操作（RL动作空间）
-internal = g.get_internal_nodes()
-g.displace_node(internal[0], [0.1, 0.2])
-```
-
----
-
-## 📦 安装
+已发布的包版本为 **FiberNet 4.2.0**：
 
 ```bash
-pip install fibernet          # 核心
-pip install fibernet[full]    # 完整 (ML + RL + 可视化 + 模拟)
-pip install fibernet[ml]      # 仅ML
-pip install fibernet[rl]      # 仅RL
+python -m pip install fibernet==4.2.0
 ```
 
-| 可选组 | 包 |
-|--------|-----|
-| `ml` | scikit-learn, pandas, tqdm |
-| `rl` | gymnasium, scikit-optimize, stable-baselines3 |
-| `accel` | taichi (GPU模拟) |
-| `viz` | pyvista (3D可视化) |
-| `full` | 以上全部 |
-
----
-
-## 🔬 梁单元有限元法（FEM）
-
-FiberNet 提供基于 Euler–Bernoulli 梁理论的**梁框架有限元求解器**。线性模型适用于小变形；现有二维非线性增量路径的最终平衡尚未验证，不能据此声称实验定量准确。
-
-### 物理模型
-
-与质点弹簧模型（纤维直径仅为装饰参数）不同，FEM求解器将结构视为**焊死接头的梁框架** —— 接头刚性连接、传递弯矩，纤维半径直接决定弯曲和轴向刚度：
-
-```
-EI = E × πr⁴ / 4          （弯曲刚度）
-EA = E × πr²              （轴向刚度）
-σ_axial = N / A            （轴向应力）
-σ_bending = M·r / I        （弯曲应力）
-σ_total = σ_axial + σ_bending
-```
-
-在这一梁模型中，纤维半径加倍，弯曲刚度增大 **16倍**（r⁴ 依赖）；该截面关系本身不构成材料实验验证。
-
-### 历史数值输出（非当前非线性验收）
-
-下列旧表保留历史记录。其大变形应力不能作为已验证的非线性平衡应力，原单位/加载与恢复口径需查原记录；不据此证明材料准确性。历史报告曾列出 **152个模拟**（8种2D + 6种3D拓扑 × 4种半径 × 4种拉伸目标）：
-
-| 半径 | 最大应力（2×拉伸，蜂窝） | 主导模式 |
-|------|--------------------------|----------|
-| r = 0.02 | 2,967 MPa | 弯曲主导 |
-| r = 0.05 | 7,418 MPa | 弯曲主导 |
-| r = 0.10 | 14,835 MPa | 弯曲主导 |
-| r = 0.20 | 20,997 MPa | 弯曲主导 |
-
-历史图中的位移传播不等于平衡、唯一性或反力有效性验证。当前可用性以 [梁 FEM 合同](docs/METHODS_BEAM_FEM_CONTRACT.md) 与结果状态为准。
-
-### API
-
-```python
-from fibernet.ml import BeamFrameFEM
-import fibernet as fn
-
-solver = BeamFrameFEM(E=1e9, nu=0.3)
-
-# 生成结构（半径对FEM有物理意义！）
-g = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
-
-# 小变形线性示例（目标伸长比1.01，长度与E须使用一致单位）
-result = solver.stretch_test(g, target_stretch=1.01, nonlinear=False)
-
-# 访问结果
-u = result['u']                      # 节点位移
-sigma = result['sigma_total']        # 每单元总应力
-sigma_axial = result['sigma_axial']  # 轴向分量
-sigma_bend = result['sigma_bending'] # 弯曲分量
-reactions = result['reactions']      # 该线性路径可用；按约束行读取并检查平衡
-
-# 底层API（自定义分析）
-# 直接solve接口需显式传数组和边界，不能展开整个graph_to_fem_input字典
-# 具体输入/可用性见下方梁FEM合同；3D应单独生成dim=3输入
-
-# 转为SimResult（兼容可视化/ML流水线）
-sim_result = solver.to_sim_result(result, graph=g)
-```
-
-### 支持的求解器
-
-| 求解器 | 适用场景 |
-|--------|----------|
-| `solve_2d()` | 线性2D — 小变形，速度快 |
-| `solve_2d_nonlinear()` | 二维更新几何增量线性解；最终非线性平衡未验证，反力不可用 |
-| `solve_3d()` | 3D梁框架分析 |
-| `stretch_test()` | 便捷封装 — 自动选择求解器 |
-
----
-
-## 📚 API 参考
-
-### 结构生成
-
-```python
-import numpy as np
-disps = [(np.random.uniform(-0.3, 0.3), np.random.uniform(-0.3, 0.3))
-         for _ in range(20)]
-
-g = fn.pattern_2d(
-    unit="square",              # 12种2D基元
-    box=(10, 10),               # 单元格尺寸
-    grid=(3, 3),                # 铺排网格
-    n_pts_per_side=5,           # 每边内部点数
-    point_displacements=disps,  # 参数化控制
-    radius=0.05,                # 纤维半径（FEM需要）
-    seed=42,
-)
-
-# 3D结构
-g3d = fn.pattern_3d(unit="octet", box=(5, 5, 5), grid=(2, 2, 2))
-```
-
-**可用基元类型：**
-
-- **2D：** chiral, cross, diamond, hexagon, honeycomb, kagome, missing\_rib, reentrant, square, star, triangle, voronoi
-- **3D：** bcc, chiral\_3d, cubic, diamond\_3d, fcc, gyroid, hcp, iwp, lidinoid, neovius, octet, reentrant\_3d, schwarz\_d, schwarz\_p
-
-### 节点操作
-
-```python
-g.displace_node(node_id, [dx, dy])          # 相对位移
-g.set_node_position(node_id, [x, y])        # 绝对位置
-g.set_node_positions({1: [2.5, 0.5], 3: [7.5, 1.0]})  # 批量设置
-
-internal = g.get_internal_nodes()  # RL动作目标
-boundary = g.get_boundary_nodes()
-```
-
-### 模拟 — 质点弹簧
-
-基于 Taichi 的 GPU 加速质点弹簧动力学。纤维建模为质点通过线性弹簧连接。适用于**大规模动力学模拟**和**快速原型验证**。纤维直径不影响力学行为（仅作装饰）。
-
-```python
-engine = fn.TaichiEngine()
-r = engine.stretch_test(g,
-    target_stretch=1.5,     # 拉伸比
-    stiffness=1e5,          # 弹簧常数
-    damping=0.3,            # 阻尼比
-    num_steps=5000,         # 总步数
-    ramp_fraction=0.2,      # 20%加载 + 80%弛豫
-    save_interval=1000)
-
-r.max_force           # 最大边力 (N)
-r.edge_forces         # 每边力
-r.edge_stretches      # 每边拉伸比
-r.positions_trajectory # 位置轨迹列表
-
-r.save("result.json", detailed=True)
-r2 = fn.SimResult.load("result.json")
-```
-
-### 模拟 — FEM（BeamFrameFEM）
-
-Euler–Bernoulli 梁框架有限元法。纤维建模为**焊死接头的梁单元** —— 半径直接决定弯曲（r⁴）和轴向（r²）刚度。线性路径提供模型内的轴向与弯曲应力分解；使用前应检查约束、残差与量纲，不能默认作为材料实验验证。
-
-支持小变形**线性**求解器及二维更新几何增量线性解。后者的最终非线性平衡未验证，`reactions`、`K`、`node_moment` 为 `None`；应力/边力为近似线性参考恢复。`stretch_test()` 在二维且未指定 `nonlinear` 时按伸长幅度自动选择；须检查 `field_status` 与 `solver_status`。见 [完整可用性约束](docs/METHODS_BEAM_FEM_CONTRACT.md)。
-
-```python
-from fibernet.ml import BeamFrameFEM
-
-solver = BeamFrameFEM(E=1e9, nu=0.3)  # 杨氏模量, 泊松比
-
-# 小变形线性调用
-result = solver.stretch_test(g, target_stretch=1.01, dim=2, nonlinear=False)
-
-# 完整访问
-u = result['u']                    # 二维节点自由度 (N×3)：ux, uy, theta
-sigma = result['sigma_total']      # 每单元总应力
-sigma_axial = result['sigma_axial']  # 轴向应力分量
-sigma_bend = result['sigma_bending'] # 弯曲应力分量
-reactions = result['reactions']    # 本例为线性；非线性路径为None，不可当零
-edge_forces = result['edge_forces']  # 每单元内力
-
-# 底层API
-# solve_2d/solve_3d需显式数组及边界；不得直接展开整个graph_to_fem_input字典
-# 3D使用独立dim=3输入；直接节点力矩载荷不受支持
-
-# 兼容可视化/ML流水线
-sim_result = solver.to_sim_result(result, graph=g)
-```
-
-**质点弹簧 vs FEM 对比：**
-
-| 方面 | 质点弹簧 | BeamFrameFEM |
-|------|----------|--------------|
-| 物理 | 质点 + 线性弹簧 | Euler–Bernoulli梁单元 |
-| 接头 | 铰接（无弯矩传递） | 焊死（刚性，传递弯矩） |
-| 半径影响 | 仅装饰 | 物理（EI ∝ r⁴, EA ∝ r²） |
-| 应力输出 | 边拉伸比 | 完整分解（轴向 + 弯曲） |
-| 速度 | GPU加速，动力学快 | CPU稀疏求解，静力学快 |
-| 适用场景 | 大规模动力学，RL奖励 | 定量应力分析，设计验证 |
-
-### 可视化
-
-```python
-fig = fn.render_graph(g, theme="dark")       # 深紫色
-fig = fn.render_graph(g, theme="light")      # 白色背景
-fig = fn.render_graph(g, theme="blueprint")  # 蓝图风格
-
-fig = fn.render_deformation(g_original, g_deformed, color_by="stress")
-fig = fn.render_trajectory(g, r.positions_trajectory, r.edge_stretches,
-                           n_frames=6, title="拉伸过程")
-```
-
-### 机器学习
-
-```python
-from fibernet.ml import (
-    train_predictor, cross_validate, compare_models,
-    predict_from_csv, plot_predictions, plot_feature_importance,
-)
-
-result = predict_from_csv("sim_results.csv", target="max_force",
-                          model_type="rf", output_dir="ml_out/")
-
-model, metrics = train_predictor(X, y, model_type="rf")
-print(f"R² = {metrics['r2']:.3f}")
-
-cv = cross_validate(X, y, model_type="ridge", cv=5)
-```
-
-### 强化学习
-
-```python
-from fibernet.rl import (
-    plot_reward_curve, plot_convergence, plot_action_distribution,
-    run_bayesian_optimization, save_agent, load_agent,
-)
-
-result = run_bayesian_optimization(
-    objective_fn,
-    param_space={"grid_x": (2, 5), "stiffness": (1e4, 1e6)},
-    n_iter=50)
-
-plot_reward_curve(rewards, window=20, save_path="reward.png")
-plot_convergence(objectives, minimize=True, save_path="conv.png")
-```
-
-### 🎯 RL参数化控制
-
-FiberNet 为每条边上每个内部点暴露 **(dx, dy) 位移参数**，为强化学习提供连续动作空间。
-
-```python
-# 40维动作向量 → 20对 (dx,dy)
-action = agent.act(obs)  # shape: (40,), range: [-0.3, 0.3]
-displacements = [(action[2*i], action[2*i+1]) for i in range(20)]
-g = fn.pattern_2d(unit="square", grid=(3,3), n_pts_per_side=5,
-                  point_displacements=displacements)
-```
-
----
-
-## 🎓 教程
-
-完整端到端 Jupyter 教程：
-
-```
-tutorials/complete_tutorial_v4.ipynb
-```
-
-独立运行脚本（支持断点续跑）：
+如需使用 **4.3.0 开发版源码**及其中的新增接口，请克隆仓库，在仓库根目录安装：
 
 ```bash
-python3 tutorials/run_pipeline.py                        # 完整流程
-python3 tutorials/run_pipeline.py --num-structures 100   # 快速测试
-python3 tutorials/run_pipeline.py --skip-rl              # 跳过RL
+git clone https://github.com/GellmanSparrowS/fibernet.git
+cd fibernet
+python -m pip install -e .
 ```
 
-覆盖：结构生成 → 批量模拟 → 形变可视化 → 特征提取 → 机器学习 → CEM强化学习。
+源码版本与 PyPI 发布版分开管理；4.3.0 尚未发布至 PyPI。需要 Python 3.9 及以上版本。按任务选择可选依赖，例如在源码目录运行 `python -m pip install -e ".[ml]"` 或 `python -m pip install -e ".[manufacturing]"`。
 
----
+### 生成、模拟、保存
 
-## 🔬 工作原理
+```python
+import fibernet as fn
 
-### 质点弹簧模型 (Taichi)
+graph = fn.pattern_2d(
+    unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05, seed=23
+)
+fn.show(graph, save_path="network.png")
 
-GPU加速质点弹簧动力学：
-
-1. **节点** = 带位置和速度的质点
-2. **边** = 线性弹簧（可配置刚度和静息长度）
-3. **边界** = 拉伸时固定节点（Dirichlet边界条件）
-4. **弛豫** = 加载前的初始能量最小化
-5. **加载** = 受控位移至目标拉伸比
-
-```
-F_弹簧 = k × (L − L₀) / L₀ × 方向
-F_阻尼 = −c × v_相对 · 方向 × 方向 × L₀
-F_阻力 = −γ × v
+result = fn.simulate(graph, backend="fem", mode="stretch", strain=1.01)
+result.save("fem_result.json", detailed=True)
+print(graph.num_nodes, graph.num_edges, result.max_displacement)
 ```
 
-### 梁单元FEM
+这里的 `strain=1.01` 表示**拉伸比**，即 1% 伸长。该显式 FEM 路径使用小应变梁框架模型和核心依赖，不需要 Taichi 或桌面应用。几何与材料参数需采用一致的单位体系，详见[梁 FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)。
 
-Euler–Bernoulli梁单元，焊死接头：
+在源码目录运行完整的“生成结构 → 模拟 → 保存结果 → 招募分析”流程：
 
-1. **节点** = 焊死接头（刚性连接，传递弯矩）
-2. **单元** = 梁单元，含轴向 + 弯曲刚度
-3. **半径** = 纤维半径决定EA和EI（物理截面）
-4. **边界** = 每侧10%固定（Dirichlet边界条件）
-5. **求解器** = 线性（小变形）或共旋非线性（大变形）
-
-```
-K_global × U = F    →    σ = E × B × U_element
+```bash
+python -m examples.open_source_workflow --output-dir demo_output
 ```
 
-### 参数化结构控制（用于RL）
+输出包括网络图、模拟结果 JSON 和分析摘要。[查看可执行示例](examples/open_source_workflow.py)。
 
-每条边可有 `n_pts_per_side` 个内部节点，每个带可编程 `(dx, dy)` 位移：
+## 动态示例
 
-```
-动作 = [dx₁, dy₁, dx₂, dy₂, ..., dxₙ, dyₙ] ∈ [−0.3, 0.3]^(2n)
-```
+### 同一种几何语言，连接不同拓扑
 
-正方形 `n_pts_per_side=5`：**40个连续参数**（20个位移对）。
+![正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何](docs/media/spectrum_four_topologies.gif)
 
----
+将同一无量纲参考纤维位移轮廓用于**正方形、六边形、环形和 kagome** 网络。几何形状随参数变化，各网络的连接关系保持不变。这是几何参数化展示，而非加载模拟。[制造几何方法](docs/METHODS_MANUFACTURING_UNIFIED.md) · [可编辑矢量关键帧](docs/media/spectrum_four_topologies_peak.svg) · [参数记录](docs/media/spectrum_four_topologies.json)
 
-## 📁 项目结构
+### 观察复杂网络在拉伸中逐步招募
 
-```
-fibernet/
-├── fibernet/
-│   ├── core/         # StructureGraph, Material, transforms
-│   ├── gen/          # pattern_2d/3d, 单元工厂 (26种)
-│   ├── sim/          # TaichiEngine (质点弹簧), SimResult
-│   ├── ml/           # BeamFrameFEM, train_predictor, cross_validate
-│   ├── viz/          # render_graph, render_trajectory, themes
-│   ├── analysis/     # GraphFeatureExtractor (94维)
-│   ├── rl/           # CEM env, 贝叶斯优化, 奖励曲线
-│   └── easy.py       # show(), simulate(), batch_simulate()
-├── tutorials/        # Jupyter教程 + 独立运行器
-├── tests/            # 312项测试 (pytest)
-├── examples/         # 19个示例脚本
-├── docs/             # Sphinx文档 + 图片
-└── pyproject.toml    # 构建配置
-```
+![包含 436 个节点的 kagome 网络随拉伸变形，招募边和跨夹持端连通分量同步演化](docs/media/tensile_recruitment_kagome.gif)
 
----
+这个 **3 × 3 扰动 kagome 网络包含 436 个节点和 576 条边**。蓝色表示超过正轴向应变阈值的边，橙色表示连接两侧夹持端的阈值连通分量；曲线记录已保存简化模型轨迹中的招募边比例。招募刻画的是应变阈值下的连接关系，不是完整力流。[轨迹示例](examples/reduced_recruitment_workflow.py) · [招募分析方法](docs/METHODS_TENSILE_RECRUITMENT.md) · [来源记录](docs/media/tensile_recruitment_kagome.json)
 
-## 📝 引用
+### 用一条连续路径遍历每根纤维
 
-```bibtex
-@software{fibernet2026,
-  title = {FiberNet: 纤维网络设计与优化Python工具包},
-  author = {ML-BioMat Lab, BMG-FDU},
-  year = {2026},
-  url = {https://github.com/GellmanSparrowS/fibernet},
-  version = {4.1.5},
-}
-```
+![橙色游标沿 kagome 制造图的闭合欧拉路径前进](docs/media/continuous_route_kagome.gif)
 
----
+闭合欧拉路径将每条独立纤维边遍历一次，也保留平行纤维的独立身份。蓝色是已访问的边，橙色游标标明当前遍历顺序。平面与曲面流程保留结构图到路径的映射，可用于检查和导出；路径回放展示图遍历，而非打印机动力学。[平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [实体与路径导出](examples/solid_export_workflow.py)
 
-## 📄 许可证
+**继续探索：**[三维拓扑动图](docs/media/three_dimensional_topologies.gif) · [阈值敏感性](docs/media/tensile_threshold_sensitivity.gif) · [不同方向加载](docs/media/directional_recruitment_hexagon.gif) · [保路径结构干预](docs/MEDIA_GALLERY.md#route-preserving-interventions)。[完整媒体画廊](docs/MEDIA_GALLERY.md)保留每幅动图的来源、参数和可编辑关键帧。
 
-MIT License. 详见 [LICENSE](LICENSE)。
+## 选择研究流程
 
----
+| 研究目标 | Python 入口 | 指南或可执行示例 |
+| --- | --- | --- |
+| 生成二维、三维结构 | `pattern_2d`、`pattern_3d`、`StructureGraph` | [参数化生成](fibernet/gen/pattern.py) |
+| 研究变形与力学响应 | 显式 FEM 或 Taichi 路径；共享简化模型使用 `ReducedBeamSolver` | [接口层次、单位与模型选择](docs/API_LAYERS.md) |
+| 量化结构与招募行为 | `SnapshotFeatureExtractor`、`analyze_tensile_recruitment` | [快照特征](examples/snapshot_features_workflow.py) · [招募分析](examples/tensile_recruitment_quickstart.py) |
+| 构建复用基元与连续路径 | `CustomCellRegistry`、`compile_planar`、`compile_surface` | [自定义基元方法](docs/METHODS_CUSTOM_CELL_UNIFIED.md) · [制造几何](docs/METHODS_MANUFACTURING_UNIFIED.md) |
+| 从模拟响应中学习 | `PlanarPhysicalDataset`、`light_features`、`PhysicalRegressor` | [可续算标签生成](examples/physical_dataset_workflow.py) · [代理模型学习](examples/physical_learning_workflow.py) |
+| 搜索目标响应结构 | `CurveInverseDesigner`；可选 `fibernet.rl` 工具 | [目标曲线搜索](examples/curve_inverse_workflow.py) · [学习与搜索方法](docs/METHODS_CURVE_INVERSE_UNIFIED.md) |
 
-<div align="center">
+物理响应学习流程与桌面应用共享 **14 维几何特征和 3 个响应标签**。默认可运行示例使用合成数据检查接口；构建响应代理模型时，可输入自己保存的物理标签。目标曲线搜索采用无导数交叉熵方法（CEM）；可选的强化学习环境和算法适配器属于另一条流程，CEM 不等同于强化学习。
 
-**[English](README.md)** · [PyPI](https://pypi.org/project/fibernet/4.1.5/) · [GitHub](https://github.com/GellmanSparrowS/fibernet)
+### 开发版源码中的扩展接口
 
-</div>
+- **时变力学：**[黏弹梁框架历史](docs/VISCOELASTIC_NETWORK.md)、[轴向黏弹动力学](docs/DYNAMIC_AXIAL_VISCOELASTICITY.md)与[状态观测](docs/state_observer.md)。
+- **传输与热过程：**[线性电传输](docs/integrations/LINEAR_TRANSPORT_USAGE.md)、[瞬态热网络](docs/integrations/TRANSIENT_THERMAL_USAGE.md)与[单向焦耳热](docs/ONE_WAY_JOULE_HEATING.md)。独立的[实验性电热接口](docs/EXPERIMENTAL_ELECTROTHERMAL.md)以显式系数和状态接受检查，处理固定几何、电压驱动的热反馈。
+- **外部引擎：**[有界 LAMMPS 谐键动力学](docs/integrations/LAMMPS_HARMONIC_CLI.md)与[粗粒化纤维网络](docs/integrations/LAMMPS_CG_CROSSLINKED_NETWORK.md)，采用显式运行时和单位约定。
+- **实验性断裂：**独立的线性静力 Timoshenko 杆件移除后端，保留稳定 ID、事件记录和可续算检查点。[模型范围与来源](docs/FRACTURE_METHODS.md)。
+- **图学习：**[边感知 GINE 数据与模型适配器](docs/integrations/EDGE_GINE.md)。
+
+这些模块级流程分别定义输入与结果类型。[接口地图](docs/API_LAYERS.md)列出支持的组合，不能将它们当作可互换的 `simulate` 选择项。
+
+## 桌面应用
+
+**希望直接通过界面操作？** 下载 [FiberScope 3.1.0 Windows x64 版](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0)，完整解压 ZIP 后运行 `FiberScope.exe`。桌面可执行程序包含所需运行时，不需要本地安装 Python。
+
+[![FiberScope 中文制造工作区](FiberScope/docs/screenshots/manufacturing-zh.png)](FiberScope/docs/screenshots/README.md)
+
+通过界面设计几何、检查轨迹、查看招募与特征卡片、训练响应代理模型，并探索目标曲线设计。共享核心将这些计算与 Python 流程连接起来；[集成说明](docs/INTEGRATION_REPO_MAP.md)区分共享能力与应用专属功能。界面支持英文和中文；可选的 SAC/TD3/DDPG 训练需要另行配置外部 Python 运行时。
+
+[桌面使用指南](FiberScope/README.md) · [中英文界面截图](FiberScope/docs/screenshots/README.md) · [发布说明](docs/RELEASE_4_2_0.md)
+
+## 方法与复现
+
+先明确物理问题，再选择模型、单位、加载控制与结果类型。梁框架 FEM 和简化弹簧／弯曲／接触求解器代表不同模型，解读输出时应对应阅读 [FEM 方法](docs/METHODS_BEAM_FEM_CONTRACT.md)与[简化模型方法](docs/METHODS_REDUCED_SOLVER_UNIFIED.md)。数值示例不等同于实验材料标定。
+
+- **可检查的媒体：**[来源记录、可编辑矢量帧与渲染命令](docs/MEDIA_GALLERY.md)。
+- **研究示例：**[阈值与方向敏感性](docs/RECRUITMENT_SENSITIVITY_2026-09-24.md)、[匹配的保路径结构干预](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md)以及[同图跨模型比较](docs/INDEPENDENT_FEM_CYCLE_INTERVENTION_2026-09-24.md)。图示对应的研究记录同时保留模型依赖性与负结果。
+- **兼容性：**当前开发版将可选 Taichi 后端固定为 **1.7.4**。引擎应在其所属线程上初始化和使用，支持条件见[运行时生命周期约定](docs/architecture/taichi-lifecycle-audit.md)。上面的 FEM 快速开始不使用 Taichi。
+- **项目资料：**[示例索引](examples/README.md)、[测试](tests/test_tensile_recruitment.py)、[版本记录](CHANGELOG.md)与[能力清单](docs/CAPABILITY_AUDIT_2026-09-24.md)。
+
+## 许可与引用
+
+FiberNet 采用 [MIT 许可证](LICENSE)，第三方声明见[依赖与模型说明](FiberScope/THIRD_PARTY_NOTICES.md)。关于网络拓扑与逆向设计的已发表研究，请参阅 [Nature Communications 论文](https://www.nature.com/articles/s41467-026-76045-x)。
