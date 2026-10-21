@@ -218,28 +218,16 @@ def resource_forecast(n, e, steps, stride, prepared_bytes, setup_bytes):
     native=steps+1
     if type(prepared_bytes) is not int or not 0 <= prepared_bytes <= SAMPLED_PROFILE['prepared_bytes']:
         raise ValueError('prepared byte forecast invalid')
-    dump=native*(233*n+1024)+32
-    thermo=native*256
     if type(setup_bytes) is not int or not 0 <= setup_bytes <= SAMPLED_PROFILE['raw_bytes']:
         raise ValueError('exact setup artifact byte count invalid')
-    setup=setup_bytes
-    diagnostic_reserve=1024*1024
-    aggregate=dump+2*thermo+setup+diagnostic_reserve
-    # Detailed state, repeated final state, trajectory, final geometry, edge
-    # arrays, times/energies/pressures, IDs, scalar summary and bounded history.
-    slots=12*n*out+16*n+2*e+16*out+64
-    export=64*slots+SAMPLED_PROFILE['prepared_bytes']+1024*1024
-    raw_parse=4*SAMPLED_PROFILE['raw_bytes']
-    parsed=native*(9*n+16)*64
-    selected=4*slots*64
-    serialization=3*SAMPLED_PROFILE['export_bytes']
-    memory=raw_parse+parsed+selected+serialization+4*prepared_bytes
-    return dict(native_frames=native,output_frames=out,node_frames=n*native,
-        trajectory_bytes=dump,thermo_bytes=thermo,prepared_artifact_bytes=setup,
-        diagnostic_reserve_bytes=diagnostic_reserve,native_aggregate_forecast_bytes=aggregate,
-        detailed_export_forecast_bytes=export,raw_parse_memory_bytes=raw_parse,
-        parsed_state_memory_bytes=parsed,selected_copy_memory_bytes=selected,
-        serialization_memory_bytes=serialization,planned_memory_bytes=memory)
+    from ._lammps_forecast import payload_counts
+    sizes = payload_counts(n, e, native, native, out, row_bytes=233,
+        prepared_bytes=prepared_bytes, setup_bytes=setup_bytes,
+        metadata_reserve_bytes=SAMPLED_PROFILE['prepared_bytes'],
+        raw_reserve_bytes=SAMPLED_PROFILE['raw_bytes'],
+        export_reserve_bytes=SAMPLED_PROFILE['export_bytes'])
+    return dict(native_frames=native, output_frames=out, node_frames=n*native, **sizes)
+
 
 
 def export_metadata(prepared, runtime):
