@@ -113,10 +113,10 @@ class TestPairFreeForecast(unittest.TestCase):
                     result['native_type_pair_cutoff_payload_lower_bound_bytes'], 38416
                 )
 
-    def test_retained_prepared_and_native_input_bytes_unchanged(self):
-        # This fixture deliberately contains no native receipts, provider paths,
-        # review records, or historical source-code copies. These are input-only
-        # checks, not new evidence of native execution or compiler equivalence.
+    def test_retained_prepared_and_native_input_archive_hashes(self):
+        # Retain exact archive integrity independently of runtime regeneration.
+        # math.dist rounding changed in Python 3.10; the derived initial bending
+        # energy and completion marker need not match across Python versions.
         fixture = json.loads((FIXTURES / 'lammps_pairfree_prepared_inputs.json').read_text())
         for name, case in fixture['cases'].items():
             with self.subTest(case=name):
@@ -125,14 +125,7 @@ class TestPairFreeForecast(unittest.TestCase):
                     case['input_text'], tuple(fixture['node_ids']), tuple(fixture['edge_ids']),
                     case['timestep_s'], case['steps'], 1,
                 )
-                before = (prepared.graph_json, prepared.contract_json, prepared.data_text,
-                          prepared.input_text, prepared.identity)
-                result = self.plan(prepared)
-                self.assertEqual(result['source_identity']['prepared_sha256'], case['prepared_sha256'])
-                self.assertEqual(
-                    before, (prepared.graph_json, prepared.contract_json, prepared.data_text,
-                             prepared.input_text, prepared.identity)
-                )
+                self.assertEqual(prepared.identity, case['prepared_sha256'])
                 for attr, key in (('graph_json', 'graph_sha256'),
                                   ('data_text', 'model_data_sha256'),
                                   ('input_text', 'input_sha256')):
@@ -140,7 +133,35 @@ class TestPairFreeForecast(unittest.TestCase):
                         hashlib.sha256(getattr(prepared, attr).encode('utf-8')).hexdigest(),
                         case[key],
                     )
-                self.assertEqual(result['source_identity']['graph_sha256'], case['graph_sha256'])
+
+    def test_current_runtime_prepared_inputs_remain_exact_and_unchanged(self):
+        from fibernet.integrations.lammps_backend import validate_prepared
+
+        for steps, timestep in ((100, 1e-7), (200, 5e-8), (0, 1e-7)):
+            with self.subTest(steps=steps, timestep=timestep):
+                graph, request = build_branched_case(steps=steps, timestep_s=timestep)
+                prepared = prepare_cg(graph, request)
+                repeated = prepare_cg(graph, request)
+                before = {name: getattr(prepared, name)
+                          for name in PreparedRun.__dataclass_fields__}
+                for field, value in before.items():
+                    self.assertEqual(value, getattr(repeated, field), msg=field)
+                self.assertIs(validate_prepared(prepared), prepared)
+                result = self.plan(prepared)
+                self.assertEqual(before, {name: getattr(prepared, name) for name in before})
+                self.assertEqual(result['source_identity']['prepared_sha256'], prepared.identity)
+                self.assertEqual(result['source_identity']['graph_sha256'],
+                                 hashlib.sha256(prepared.graph_json.encode('utf-8')).hexdigest())
+                # Valid-looking changes still fail exact compiler revalidation.
+                contract = json.loads(prepared.contract_json)
+                contract['initial_bending_energy_J'] += 1e-18
+                for altered in (
+                    replace(prepared, input_text=prepared.input_text + '# altered\n'),
+                    replace(prepared, contract_json=json.dumps(
+                        contract, sort_keys=True, separators=(',', ':'))),
+                ):
+                    with self.assertRaises(ValueError):
+                        self.plan(altered)
 
     def test_worst_caps_1001_frames_without_arrays(self):
         import numpy as np

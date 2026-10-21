@@ -45,6 +45,10 @@ print(forecast["fits_declared_budgets"])
 Use the intended `RuntimeSpec` strings when exact setup-byte accounting matters:
 the planner counts their serialized manifest and metadata representation.
 
+Prepared byte identities can vary across Python versions, so recreate
+`PreparedRun` with `prepare_cg()` from the original graph and request after
+changing runtimes.
+
 ## Supported inputs
 
 The planner accepts the existing unprofiled, pair-free CG contract:
