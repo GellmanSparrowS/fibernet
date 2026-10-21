@@ -8,7 +8,7 @@
 </table>
 
 <details>
-<summary><img src="docs/media/ui/homepage-language-zh-v3.svg" alt="中文：展开或收起" width="180" height="54"></summary>
+<summary>中文：展开或收起</summary>
 
 <!-- locale:zh:start -->
 [动态示例](#动态示例) · [功能模块](#选择研究流程) · [桌面应用](#桌面应用) · [方法与复现](#方法与复现)
@@ -219,7 +219,7 @@ FiberNet 采用 [MIT 许可证](LICENSE)，第三方声明见[依赖与模型说
 </details>
 
 <details open>
-<summary><img src="docs/media/ui/homepage-language-en-v3.svg" alt="English: expand or collapse" width="180" height="54"></summary>
+<summary>English: expand or collapse</summary>
 
 <!-- locale:en:start -->
 [Animated examples](#animated-examples) · [Modules](#choose-a-workflow) · [Desktop app](#desktop-application) · [Methods and reproducibility](#methods-and-reproducibility)
