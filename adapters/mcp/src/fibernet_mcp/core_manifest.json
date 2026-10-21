@@ -28,7 +28,7 @@
   "core/material.py": "e817611530f08106b5fbf20a7633116a145bbb149fb9d634256147328b526aed",
   "core/network.py": "220d273048af0b1ec146b12a7ea3b082c484246ccd887b7c89afe700deb14c4a",
   "core/pbc.py": "b2f9c65ef55e2e49c890401450c0e88396ae2f8f1391746afd4f4e8d283782e4",
-  "core/structure_graph.py": "a42424b6efa2cce5ab13b0c75abcd628d91d4a326406d43db6638e1a07254d30",
+  "core/structure_graph.py": "23c2d1915530e1192fb7626f5e562b2902de75a4f35a4d75948d030589dfeabd",
   "core/tiling.py": "0bf0e701a5830a69d868094a657a7f94ba2aeac28fe11e4d6b7d5893f14354cf",
   "core/transform.py": "faf2e4eb0e8753398c818fa1be5b3e45a8673cec4ec6b04888e2a3909bbbd2e5",
   "core/transforms.py": "77913cbcf292805bbfa949a6524fe7abf8d578f35edd447eab5324b9c6e3b499",

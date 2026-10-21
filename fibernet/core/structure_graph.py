@@ -1030,6 +1030,12 @@ class StructureGraph:
                 raise ValueError('serialized edges must have distinct endpoints')
             g._next_edge_id = eid
             ip = np.array(ed["internal_points"]) if ed.get("internal_points") is not None else None
+            if ip is not None:
+                # JSON [] loses the coordinate axis of a valid empty curve.
+                if ip.shape == (0,):
+                    ip = np.empty((0, 3))
+                elif ip.ndim != 2 or ip.shape[1] != 3:
+                    raise ValueError('serialized internal_points must have shape (M, 3)')
             try:
                 material = (Material.from_dict(_material_record(ed['material']))
                             if 'material' in ed else Material())
