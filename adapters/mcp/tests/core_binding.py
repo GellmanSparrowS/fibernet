@@ -30,7 +30,7 @@ async def positive(environment, output):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
-                assert len((await session.list_tools()).tools) == 5
+                assert len((await session.list_tools()).tools) == 6
                 result = await session.call_tool('fibernet_catalog', {})
                 assert not result.isError
                 graph = result.structuredContent['graphs'][0]
@@ -41,6 +41,7 @@ original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
 assert len(manifest) == 237
 records = []
+lazy_rejection_checked = False
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
     area = Path(temporary)
     core = area / 'fibernet'
@@ -139,6 +140,30 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
             assert result.returncode == 2 and result.stdout == b''
             assert result.stderr == b'FiberNet MCP startup or transport rejected\n'
             assert not list(output.iterdir())
+            if not lazy_rejection_checked:
+                marker = area / 'unexpected-protocol-import'
+                guard = '''import runpy, sys
+from pathlib import Path
+class RejectProtocolImport:
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in ('mcp', 'jsonschema'):
+            Path(marker).write_text(fullname)
+            raise RuntimeError('protocol import reached before core refusal')
+sys.meta_path.insert(0, RejectProtocolImport())
+marker = sys.argv.pop(1)
+sys.argv[0] = 'fibernet_mcp.server'
+runpy.run_module('fibernet_mcp.server', run_name='__main__')
+'''
+                guarded = subprocess.run(
+                    [sys.executable, '-c', guard, str(marker), '--manifest',
+                     str(ROOT / 'evidence/manifest.json'), '--output-root', str(output)],
+                    input=b'', stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    env=environment, cwd=str(area), timeout=10,
+                )
+                assert guarded.returncode == 2 and guarded.stdout == b''
+                assert guarded.stderr == b'FiberNet MCP startup or transport rejected\n'
+                assert not marker.exists() and not list(output.iterdir())
+                lazy_rejection_checked = True
             records.append({'module': relative,
                             'case': (high_level_mutations.get((relative, material_unit), (None, None))[1] or ('tube_native_cleanup_drift' if material_unit == b'result=m.Manifold(mesh)'
                                      else 'tube_index_range_guard_drift' if material_unit == b'first_index=int(indices.min())'
@@ -210,6 +235,8 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     anyio.run(positive, environment, output)
     assert not list(output.iterdir())
 
+assert lazy_rejection_checked
 report = {'core_hashes_verified': len(manifest), 'sdk_positive_controls': 2,
+          'core_refused_before_protocol_import': lazy_rejection_checked,
           'same_output_root_and_core': True, 'inventory_traversal_error_refused': True, 'refusals': records}
 print(json.dumps(report, indent=2))

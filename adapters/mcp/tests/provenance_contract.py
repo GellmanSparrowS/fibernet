@@ -82,6 +82,8 @@ def server_namespace():
               mt=SimpleNamespace(**{k:Model for k in ('Resource','Annotations','ResourceTemplate','ErrorData','CallToolResult','TextContent','Tool')}),
               McpError=ProtocolError,ReadResourceContents=Model)
     ns['_verify_core_result']=NEW._verify_core_result
+    ns['TransportContractError']=type('TransportContractError',(NEW.ContractError,),{})
+    ns['MAX_TRANSPORT_RESULT_BYTES']=1024*1024
     exec(compile(ast.Module(body=body,type_ignores=[]),'<extracted-server-source>','exec'),ns)
     serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
     # Extract callbacks, not serve() or SDK setup/transport. No actual server exists.
@@ -280,6 +282,26 @@ class ProvenanceContract(unittest.TestCase):
 
     def test_11_exact_legacy_outputs_and_resource_addition(self):
         outputs=self.legacy_outputs()
+        current_outputs=json.loads(json.dumps(outputs))
+        # The DC route is additive. Keep the frozen original five-tool fixture
+        # immutable and prove exact legacy outputs after explicit extensions only.
+        self.assertEqual(len(outputs['tool_definitions']), 6)
+        new_tool=outputs['tool_definitions'].pop()
+        self.assertEqual(new_tool['name'], 'fibernet_solve_linear_transport')
+        for tool in outputs['tool_definitions']:
+            for direction in ('inputSchema','outputSchema'):
+                artifact=tool[direction]['$defs'].get('Artifact')
+                if artifact:
+                    self.assertEqual(artifact['properties']['kind']['enum'][-1], 'linear_transport_result')
+                    artifact['properties']['kind']['enum'].pop()
+        catalog_schema=outputs['tool_definitions'][0]['outputSchema']['oneOf'][0]['properties']['capabilities']['const']
+        self.assertEqual(catalog_schema.pop(), 'solve_linear_transport')
+        capabilities=outputs['fibernet_catalog']['structuredContent']['capabilities']
+        self.assertEqual(capabilities.pop(), 'solve_linear_transport')
+        value=json.loads(outputs['capabilities'][0]['content'])
+        self.assertEqual(value['physics'], ['steady_linear_electrical_conductance'])
+        value['physics']=[]
+        outputs['capabilities'][0]['content']=NEW.canonical(value).decode()
         raw=json.dumps(outputs,indent=2,sort_keys=True).encode()+b'\n'
         self.assertEqual(FIXTURE.read_bytes(),raw)
         self.assertEqual(hashlib.sha256(FIXTURE.read_bytes()).hexdigest(),
@@ -288,8 +310,9 @@ class ProvenanceContract(unittest.TestCase):
         for definition in definitions:
             for direction in ('inputSchema','outputSchema'):
                 jsonschema.Draft202012Validator.check_schema(definition[direction])
-            jsonschema.Draft202012Validator(definition['outputSchema']).validate(
-                outputs[definition['name']]['structuredContent'])
+            if definition['name'] in outputs:
+                jsonschema.Draft202012Validator(definition['outputSchema']).validate(
+                    current_outputs[definition['name']]['structuredContent'])
 
     def test_12_supervisor_refuses_before_artifact_publication(self):
         for mode in ('match','different','missing'):
