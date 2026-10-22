@@ -953,6 +953,10 @@ class BeamFrameFEM:
         ``edge_forces`` contains signed axial forces. The solver's full
         three-column force/resultant array is retained as the distinct
         ``metadata['beam_resultants']`` value, including in summary exports.
+        ``beam_resultant_contract`` describes dimension, quantity kinds and
+        availability. N denotes the axial-force symbol, not an asserted newton
+        unit. In 3-D only axial N is recovered; the retained shear slots are
+        legacy placeholders, not measured zero forces. No unit system is inferred.
         Present numerical diagnostics are independently copied; input-row
         residual records become stable-node-ID records only with a graph map.
         
@@ -1069,6 +1073,29 @@ class BeamFrameFEM:
         axial_forces = (beam_forces[:, 0].copy()
                         if beam_forces.ndim == 2 and beam_forces.shape[1] >= 1
                         else np.zeros(0))
+        resultant_contract = {}
+        if (np.ndim(u) == 2 and u.shape[1] in (3, 6) and
+                beam_forces.ndim == 2 and beam_forces.shape[1] == 3):
+            dimension = 2 if u.shape[1] == 3 else 3
+            # Preserve producer qualifications, especially nonlinear approximations.
+            status = fem_result.get('field_status', {}).get('edge_forces', {}).get('status', 'available')
+            components = [{'name': 'axial_N', 'quantity_kind': 'force', 'status': status}]
+            if dimension == 2:
+                components.extend([
+                    {'name': 'shear_V', 'quantity_kind': 'force', 'status': status},
+                    {'name': 'mean_bending_moment', 'quantity_kind': 'moment',
+                     'status': status, 'definition': '(M_i + M_j) / 2'},
+                ])
+            else:
+                components.extend([
+                    {'name': name, 'quantity_kind': 'force', 'status': 'unavailable',
+                     'reason': 'not_recovered_by_3d_solver'}
+                    for name in ('shear_V_y', 'shear_V_z')
+                ])
+            resultant_contract['beam_resultant_contract'] = {
+                'schema_version': 1, 'dimension': dimension, 'components': components,
+                'unit_system': 'not_declared',
+            }
         edge_stretches = np.zeros(0)
         
         # Approximate energy from stresses
@@ -1123,6 +1150,7 @@ class BeamFrameFEM:
                 **identity,
                 **availability,
                 **numerical,
+                **resultant_contract,
                 'sigma_axial': sigma_axial,
                 'sigma_bending': sigma_bending,
                 'sigma_total': fem_result.get('sigma_total', np.array([])),
