@@ -81,6 +81,11 @@ def read_saved_thermal_json(path):
     """
     with Path(path).open('rb') as stream:
         raw = stream.read(_MAX_JSON_BYTES + 1)
+    return _decode_saved_thermal_json(raw)
+
+
+def _decode_saved_thermal_json(raw):
+    """Shared strict decoder; permits byte authentication before parsing."""
     if len(raw) > _MAX_JSON_BYTES:
         raise ValueError('saved JSON exceeds 64 MiB reader limit')
     data = json.loads(raw, object_pairs_hook=_unique_object,
@@ -113,16 +118,21 @@ class SavedTemperatureSnapshot:
                 'temperature_K': dict(zip(data['node_ids'], data['temperature_K']))}
 
     def solve(self, graph, *, profile, E_Pa, expansion_alpha_per_K,
-              stress_free_temperature_K, constraints, loads=None):
+              stress_free_temperature_K, constraints, loads=None, size_limits=None):
         """Explicit NEW mechanics solve, never a replayed displacement history.
 
         profile must be 'elementary' or 'network'. Delegation preserves the
-        corresponding experimental owner's admission limits and errors. This
+        corresponding experimental owner's admission limits and errors. Optional
+        size_limits applies only to network size admission, never physical limits. This
         does not certify time/spatial accuracy, stability or electrical lineage.
         """
         if profile not in ('elementary', 'network'):
             raise ValueError("profile must explicitly be 'elementary' or 'network'")
+        if size_limits is not None and profile != 'network':
+            raise ValueError('size_limits is supported only for profile=network')
         kwargs = self.mechanical_kwargs(graph)
+        if size_limits is not None:
+            kwargs['size_limits'] = size_limits
         from . import _thermoelastic
         owner = (_thermoelastic.solve_thermoelastic_snapshot if profile == 'elementary'
                  else _thermoelastic.solve_thermoelastic_network_snapshot)

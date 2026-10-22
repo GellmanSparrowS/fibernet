@@ -73,7 +73,7 @@ explicit accepted-prefix use and preserves `source_completed=False`.
 
 `profile="elementary"` delegates to the existing two-node axial benchmark
 profile. `profile="network"` delegates to the existing experimental 2D planar
-welded Euler–Bernoulli network profile: 2–192 nodes, 1–256 physical edges,
+welded Euler–Bernoulli network profile: by default 2–192 nodes and 1–256 physical edges,
 straight/collinear members, sufficient supports, explicit common E and
 per-edge alpha. The network uses endpoint-mean temperature for each member's
 constant axial eigenstrain. It does not resolve through-section temperature
@@ -83,7 +83,11 @@ Existing admission checks remain unchanged: endpoint thermal strains ≤1e-5,
 mean total axial strain and extreme-fiber strain ≤1e-4, rotations/slopes ≤1e-3
 rad. Admission is not buckling, material, joint, mesh or time-step validation.
 Large saved fields can be reopened and bound without being admissible to the
-bounded mechanics solver; the adapter never raises limits or cuts out a model.
+default mechanics profile; the adapter never raises limits implicitly or cuts out a model.
+For an explicit caller-chosen network size contract, pass `ThermoelasticSizeLimits`
+as `size_limits` to `frame.solve(...)`. All non-size model checks remain unchanged.
+See [THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for usage and the distinction
+between size admission and factorization/resource guarantees.
 
 Displacement, axial/bending stress, reactions and applicability diagnostics are
 new mechanical outputs, not recovered upstream fields. There is no inertia,
@@ -105,3 +109,5 @@ is intended. Existing outputs are never replaced. The mechanics JSON supplies
 `profile`, `length_unit`, `E_Pa`, `expansion_alpha_per_K`,
 `stress_free_temperature_K`, `constraints`, and optional `loads`. ID-keyed
 objects use canonical decimal string keys. No coefficient or support is inferred.
+This CLI retains default profile limits; explicit size contracts are available
+through the Python library API, not additional CLI or MCP options.

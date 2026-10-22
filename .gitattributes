@@ -37,3 +37,7 @@ fibernet/core/structure_graph.py -text
 
 # The saved-temperature transfer owner is included in exact native-core bindings.
 fibernet/sim/saved_temperature.py -text
+
+# Thermoelastic API and owner are included in exact native-core bindings.
+fibernet/sim/thermoelastic.py -text
+fibernet/sim/_thermoelastic.py -text

@@ -338,9 +338,15 @@ def reviewed_nodal_controls_facade():
     return raw
 
 
+def reviewed_thermoelastic_facade():
+    raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_thermoelastic.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'a86c885e655b3833ba292bf89f76d481c849bc9c9f7a204d3d46896ac839c6aa', 'reviewed thermoelastic facade changed'
+    return raw
+
+
 def require_public_source(relative, raw):
     if relative == 'fibernet/sim/__init__.py':
-        assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade()), 'public source bytes changed: '+relative
+        assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source()), 'public source bytes changed: '+relative
@@ -751,7 +757,6 @@ class SourceShape(unittest.TestCase):
     def test_reviewed_nodal_controls_facade_is_exact(self):
         relative = 'fibernet/sim/__init__.py'
         raw = reviewed_nodal_controls_facade()
-        self.assertEqual(raw, (ROOT/relative).read_bytes())
         require_public_source(relative, raw)
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'prepare_nodal_controls', b'wrong_controls', 1),
@@ -768,6 +773,28 @@ class SourceShape(unittest.TestCase):
         with patch.object(Path, 'read_bytes', changed_read):
             with self.assertRaisesRegex(AssertionError, 'reviewed nodal controls facade changed'):
                 reviewed_nodal_controls_facade()
+
+    def test_reviewed_thermoelastic_facade_is_exact(self):
+        relative = 'fibernet/sim/__init__.py'
+        raw = reviewed_thermoelastic_facade()
+        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        require_public_source(relative, raw)
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'ThermoelasticSizeLimits', b'WrongLimits', 1),
+                        raw.replace(b'solve_thermoelastic_network_snapshot', b'wrong_owner', 1),
+                        raw.replace(b'prepare_nodal_controls', b'wrong_controls', 1),
+                        raw.replace(b'def __getattr__(name):', b'def __getattr__(name): # changed', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source(relative, changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/optional_facades_v2/sim_thermoelastic.py.txt'
+        def changed_read(path):
+            value = original(path)
+            return value+b'\n' if path == fixture else value
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'reviewed thermoelastic facade changed'):
+                reviewed_thermoelastic_facade()
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
