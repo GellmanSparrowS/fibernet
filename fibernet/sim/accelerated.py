@@ -486,6 +486,135 @@ def _validate_mechanical_json(data):
         raise ValueError('history must be a list of records')
 
 
+_SPRING_PROVENANCE = 'spring_coefficient_provenance'
+
+
+def _spring_coefficient_record(normalized, source, scalar, edge_ids):
+    """Adopt an already detached normalized buffer, never the caller's input.
+
+    Scalar inputs retain only one value. Mapless legacy recomputation cannot
+    persist an ID-aligned array: describe that absence rather than invent IDs.
+    """
+    record = dict(source=source, representation='scalar' if scalar is not None else 'per_edge',
+                  edge_count=len(normalized), availability='available')
+    if scalar is not None:
+        record['value'] = float(scalar)
+    else:
+        record['row_map'] = 'metadata.edge_ids' if edge_ids is not None else None
+        if edge_ids is None:
+            record.update(availability='unavailable', reason='missing_edge_ids')
+        else:
+            record['values'] = normalized
+    return record
+
+
+def _spring_provenance(simulation, current_metrics):
+    return dict(schema='spring_coefficient_provenance/1',
+                law='geometric_rest_axial/1', quantity_kind='force',
+                simulation=simulation, current_metrics=current_metrics)
+
+
+def _validate_spring_provenance(value, n_edges, edge_ids, *, detailed=True, array_mode='json'):
+    """Validate v1 and detach its dictionaries; export arrays only if requested.
+
+    Existing ndarray buffers are inspected without copying or list conversion
+    on the summary path. Detailed export makes one JSON list per independent
+    array; load restores one owned float64 buffer. A simulation reference never
+    duplicates its coefficient payload. This validates provenance, not physics.
+    """
+    keys = {'schema', 'law', 'quantity_kind', 'simulation', 'current_metrics'}
+    if (not isinstance(value, dict) or set(value) != keys or
+            value['schema'] != 'spring_coefficient_provenance/1' or
+            value['law'] != 'geometric_rest_axial/1' or value['quantity_kind'] != 'force'):
+        raise ValueError('unsupported spring_coefficient_provenance record')
+    if isinstance(n_edges, (bool, np.bool_)) or not isinstance(n_edges, (int, np.integer)) or n_edges < 0:
+        raise ValueError('spring provenance requires a nonnegative edge count')
+    if edge_ids is not None:
+        ids = _strict_state_ids(edge_ids, 'edge_ids')
+        if len(ids) != n_edges:
+            raise ValueError('spring provenance edge_ids disagree with result count')
+
+    unknown = {'availability': 'unknown', 'reason': 'not_recorded'}
+
+    def coefficient(record, sources):
+        common = {'source', 'representation', 'edge_count', 'availability'}
+        if not isinstance(record, dict) or not common.issubset(record):
+            raise ValueError('invalid spring coefficient descriptor')
+        count = record['edge_count']
+        if (record['source'] not in sources or isinstance(count, (bool, np.bool_)) or
+                not isinstance(count, (int, np.integer)) or count != n_edges):
+            raise ValueError('spring coefficient source or count disagrees with result')
+        rep, availability = record['representation'], record['availability']
+        if rep == 'scalar':
+            if set(record) != common | {'value'} or availability != 'available':
+                raise ValueError('scalar spring coefficient must retain its value')
+            scalar = _finite_real_array(record['value'], 'spring coefficient', ())
+            if scalar < 0:
+                raise ValueError('spring coefficient must be nonnegative')
+            return {**record, 'edge_count': int(count), 'value': float(scalar)}
+        if rep != 'per_edge' or availability not in ('available', 'unavailable'):
+            raise ValueError('invalid spring coefficient representation or availability')
+        expected = common | {'row_map'} | ({'values'} if availability == 'available' else {'reason'})
+        if set(record) != expected:
+            raise ValueError('invalid per-edge spring coefficient fields')
+        if record['row_map'] is None:
+            if (record['source'] != 'compute_detailed.stiffness' or edge_ids is not None or
+                    availability != 'unavailable' or record.get('reason') != 'missing_edge_ids'):
+                raise ValueError('missing spring row map must remain explicitly unavailable')
+        elif record['row_map'] != 'metadata.edge_ids' or edge_ids is None:
+            raise ValueError('per-edge spring coefficients require result edge_ids')
+        if availability == 'unavailable':
+            if record['row_map'] is not None and record['reason'] != 'omitted_from_summary':
+                raise ValueError('unsupported spring coefficient unavailability reason')
+            return {**record, 'edge_count': int(count)}
+        raw = record['values']
+        if isinstance(raw, (list, tuple)) and any(isinstance(item, (bool, np.bool_)) for item in raw):
+            raise ValueError('spring coefficients must not contain booleans')
+        # Internal buffers are already normalized float64. JSON arrays are
+        # strictly validated/detached on load, not trusted as producer buffers.
+        if isinstance(raw, np.ndarray) and raw.dtype == np.dtype(np.float64) and not np.ma.isMaskedArray(raw):
+            values = raw
+        else:
+            values = _finite_real_array(raw, 'spring coefficients', (n_edges,))
+        if values.shape != (n_edges,) or not np.isfinite(values).all() or np.any(values < 0):
+            raise ValueError('spring coefficients must be finite, nonnegative and match edge rows')
+        out = {k: v for k, v in record.items() if k != 'values'}
+        out['edge_count'] = int(count)
+        if not detailed:
+            out.update(availability='unavailable', reason='omitted_from_summary')
+        elif array_mode in ('owned', 'retain'):
+            out['values'] = values.copy() if array_mode == 'owned' and values is raw else values
+        else:
+            out['values'] = values.tolist()
+        return out
+
+    simulation = value['simulation']
+    if isinstance(simulation, dict) and set(simulation) == set(unknown) and simulation == unknown:
+        simulation = dict(unknown)
+    else:
+        simulation = coefficient(simulation, ('stiffness', 'spring_k'))
+    metrics = value['current_metrics']
+    if isinstance(metrics, dict) and metrics == {'source': 'simulation'}:
+        if simulation == unknown:
+            raise ValueError('current metrics cannot reference unknown simulation coefficients')
+        metrics = {'source': 'simulation'}
+    else:
+        metrics = coefficient(metrics, ('compute_detailed.stiffness',))
+    return _spring_provenance(simulation, metrics)
+
+
+def _populate_spring_result(result, graph, normalized, source, scalar):
+    """Finish the existing metric call, then adopt its original simulation input.
+
+    This non-solving seam accepts only the engine-owned normalized coefficients.
+    The call uses the same buffer as before; no numerical input is replaced.
+    """
+    result.compute_detailed(graph, stiffness=normalized)
+    result.metadata[_SPRING_PROVENANCE] = _spring_provenance(
+        _spring_coefficient_record(normalized, source, scalar, result.metadata.get('edge_ids')),
+        {'source': 'simulation'})
+
+
 @dataclass
 class SimResult:
     """Unified result container for spring and beam-frame simulations.
@@ -546,7 +675,10 @@ class SimResult:
         Mapless historical results use graph insertion order for all nodes and
         edges; no ID maps are inferred or added. Validate before changing any
         fields. With stiffness=None, only geometric metrics are updated; force,
-        energy and solver metadata remain unchanged.
+        energy and coefficient provenance remain unchanged. With explicit stiffness,
+        current_metrics records the new metric model without replacing the
+        original simulation coefficients. Neither is inferred from legacy
+        metadata['stiffness'].
         """
         if self.mode == 'fem_beam_frame' and stiffness is not None:
             raise ValueError('FEM solver force and energy channels cannot be recomputed with spring stiffness')
@@ -575,6 +707,12 @@ class SimResult:
             if (isinstance(value, (bool, np.bool_)) or
                     not isinstance(value, (int, np.integer)) or value not in (0, count)):
                 raise ValueError(f'{name} disagrees with selected result rows')
+
+        provenance = None
+        if _SPRING_PROVENANCE in self.metadata:
+            provenance = _validate_spring_provenance(
+                self.metadata[_SPRING_PROVENANCE], n_edges, self.metadata.get('edge_ids'),
+                array_mode='retain')
 
         node_rows = {nid: row for row, nid in enumerate(node_ids)}
         pos_orig = _finite_real_array(
@@ -631,8 +769,21 @@ class SimResult:
                     updates['max_displacement'] = float(magnitudes.max()) if n_nodes else 0.0
         except FloatingPointError as exc:
             raise ValueError('detailed metrics must remain finite') from exc
+        if 'edge_forces' in updates:
+            metrics = _spring_coefficient_record(
+                spring_coefficients, 'compute_detailed.stiffness',
+                float(coefficients) if coefficients.ndim == 0 else None,
+                self.metadata.get('edge_ids'))
+            provenance = _spring_provenance(
+                provenance['simulation'] if provenance is not None else
+                {'availability': 'unknown', 'reason': 'not_recorded'}, metrics)
+            provenance = _validate_spring_provenance(
+                provenance, n_edges, self.metadata.get('edge_ids'), array_mode='retain')
+        # Commit provenance with metrics only after every validation succeeds.
         for name, value in updates.items():
             setattr(self, name, value)
+        if 'edge_forces' in updates:
+            self.metadata[_SPRING_PROVENANCE] = provenance
 
         return self
 
@@ -669,7 +820,11 @@ class SimResult:
         # Metadata shares the historical flat JSON namespace. Never let it
         # replace result fields (or smuggle detailed arrays into a summary).
         d.update({key: value for key, value in self.metadata.items()
-                  if key not in self.__dataclass_fields__})
+                  if key not in self.__dataclass_fields__ and key != _SPRING_PROVENANCE})
+        if _SPRING_PROVENANCE in self.metadata:
+            d[_SPRING_PROVENANCE] = _validate_spring_provenance(
+                self.metadata[_SPRING_PROVENANCE], self.n_edges,
+                self.metadata.get('edge_ids'), detailed=detailed)
         if 'native_axial_viscoelastic' in d:
             import copy
             d['native_axial_viscoelastic'] = copy.deepcopy(d['native_axial_viscoelastic'])
@@ -829,6 +984,10 @@ class SimResult:
                 setattr(r, key, np.array(data[key]))
         if data.get("positions_trajectory"):
             r.positions_trajectory = [np.array(frame) for frame in data["positions_trajectory"]]
+        if _SPRING_PROVENANCE in r.metadata:
+            r.metadata[_SPRING_PROVENANCE] = _validate_spring_provenance(
+                r.metadata[_SPRING_PROVENANCE], r.n_edges, r.metadata.get('edge_ids'),
+                array_mode='owned')
         if 'native_axial_inputs' in r.metadata:
             r.metadata['native_axial_inputs'] = _validate_mass_inputs(r.metadata['native_axial_inputs'], r.n_nodes, r.metadata.get('node_ids'))
         if 'dynamics_state' in data:
@@ -1229,6 +1388,8 @@ class TaichiEngine:
             Element energy is 0.5 * k * strain**2 * rest_length. A conventional
             force/extension spring constant is k / rest_length; no automatic
             conversion from Young's modulus or graph radius is performed.
+            Effective coefficients are recorded in spring_coefficient_provenance;
+            legacy metadata['stiffness'] retains the possibly inactive argument.
         dashpot : active dashpot damping coefficient (existing softened direction)
         drag : air drag coefficient
         state_observer : optional synchronous callable, keyword-only
@@ -1329,6 +1490,14 @@ class TaichiEngine:
         stiff_np = _normalize_spring_stiffness(
             spring_k if spring_k is not None else stiffness, num_edges
         )
+
+        # Capture input shape/value before observers can mutate caller arrays.
+        # Numerical normalization above and all kernel inputs remain unchanged.
+        spring_scalar = None
+        if not material_mode:
+            active_input = spring_k if spring_k is not None else stiffness
+            if np.ndim(active_input) == 0:
+                spring_scalar = float(stiff_np[0]) if num_edges else float(active_input)
 
         material_history = None
         if material_mode:
@@ -1720,7 +1889,9 @@ class TaichiEngine:
                 graph, fixed_nodes, ext_f, drag)
             result.compute_detailed(graph)
         else:
-            result.compute_detailed(graph, stiffness=stiff_np)
+            _populate_spring_result(result, graph, stiff_np,
+                                    'spring_k' if spring_k is not None else 'stiffness',
+                                    spring_scalar)
         if explicit_mass or units is not None:
             result.metadata['native_axial_inputs'] = {
                 'schema': 'native_axial_inputs/1', 'node_ids': list(node_ids),

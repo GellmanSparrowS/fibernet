@@ -26,11 +26,14 @@ SOURCE=ROOT/'fibernet/sim/accelerated.py'
 WANTED={'_native_axial_event_dataclass','NativeAxialObserverEvent','_emit_axial_observation',
  '_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows',
  '_resolve_nodal_masses','_checked_kinetic_energy','_validate_mass_inputs',
- '_validate_dynamics_state','_validate_result_state','_dynamics_state_summary','SimResult'}
+ '_validate_dynamics_state','_validate_result_state','_dynamics_state_summary','SimResult',
+ '_spring_coefficient_record','_spring_provenance','_validate_spring_provenance','_populate_spring_result'}
 
 def isolated(legacy=False):
     tree=ast.parse(SOURCE.read_text(encoding='utf-8'))
-    selected=[n for n in tree.body if getattr(n,'name',None) in WANTED]
+    selected=[n for n in tree.body if getattr(n,'name',None) in WANTED or
+              (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and
+               t.id=='_SPRING_PROVENANCE' for t in n.targets))]
     module=types.ModuleType('_taichi_event_compat_legacy' if legacy else '_taichi_event_compat_current')
     sys.modules[module.__name__]=module
     def dataclass39(*,frozen=False):
@@ -274,11 +277,32 @@ def reviewed_result_identity_source():
     return approved
 
 
+# Only the reviewed provenance delta is applied to the prior method-qualified
+# source. Historical fixtures and all unrelated code retain their byte identity.
+SPRING_PROVENANCE_DELTA_PIN = '3654c03ab5b13c5773b5fa8aa665e50819006ddc6a6093aad7389e230f2faf42'
+
+
+def reviewed_spring_provenance_source():
+    raw = (ROOT/'tests/fixtures/spring_coefficient_provenance_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == SPRING_PROVENANCE_DELTA_PIN, 'reviewed spring source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_spring_source_delta/1', 'unsupported spring source delta'
+    source = reviewed_result_identity_source()
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'spring source delta base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'spring source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'spring source delta result changed'
+    return source
+
+
 def normalize_result_identity_method(function):
     """Qualify the complete reviewed prefix; retain every appended statement."""
     historical = result_detail_method(public_baseline('fibernet/sim/accelerated.py').read_bytes())
     approved = result_detail_method(b'class SimResult:\n' + reviewed_result_identity_method())
-    for reference in (approved, historical):
+    provenance = result_detail_method(reviewed_spring_provenance_source())
+    for reference in (provenance, approved, historical):
         prefix = copy.deepcopy(function)
         suffix = prefix.body[len(reference.body):]
         prefix.body = prefix.body[:len(reference.body)]
@@ -296,7 +320,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -351,12 +375,15 @@ def restore_historical_save(result_node):
     old_result=next(n for n in ast.parse(baseline).body if getattr(n,'name',None)=='SimResult')
     old_save=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name=='save')
     node.body[node.body.index(save)]=old_save
-    # Only the reviewed LAMMPS guards alter these public result methods.
-    # Match their full public baselines before comparing the historical engine.
+    # Match full approved methods, including the independently reviewed spring
+    # metadata delta, before comparing the historical engine. No loose removal.
+    provenance_tree = ast.parse(reviewed_spring_provenance_source().decode('utf-8'))
+    provenance_result = next(n for n in provenance_tree.body if getattr(n,'name',None)=='SimResult')
     for name in ('to_dict', 'load'):
         method=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name==name)
         expected_method=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
-        assert canonical_ast(method)==canonical_ast(expected_method), 'public result method changed: '+name
+        provenance_method=next(n for n in provenance_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method)), 'public result method changed: '+name
         old_method=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         node.body[node.body.index(method)]=old_method
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
@@ -365,9 +392,61 @@ def restore_historical_save(result_node):
 
 
 class SourceShape(unittest.TestCase):
+    def test_spring_provenance_delta_is_scoped_and_bound(self):
+        before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
+        after = ast.parse(reviewed_spring_provenance_source().decode('utf-8'))
+        old = {n.name:n for n in before.body if hasattr(n, 'name')}
+        new = {n.name:n for n in after.body if hasattr(n, 'name')}
+        self.assertEqual(set(new)-set(old), {'_spring_coefficient_record', '_spring_provenance',
+                                            '_validate_spring_provenance', '_populate_spring_result'})
+        self.assertEqual(set(old)-set(new), set())
+        for name in set(old)-{'SimResult', 'TaichiEngine'}:
+            self.assertEqual(canonical_ast(old[name]), canonical_ast(new[name]), name)
+        for cls, allowed in (('SimResult', {'compute_detailed', 'to_dict', 'load'}),
+                             ('TaichiEngine', {'dynamics'})):
+            old_methods = {n.name:n for n in old[cls].body if isinstance(n, ast.FunctionDef)}
+            new_methods = {n.name:n for n in new[cls].body if isinstance(n, ast.FunctionDef)}
+            self.assertEqual(set(old_methods), set(new_methods))
+            for name in set(old_methods)-allowed:
+                self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
+        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+
+    def test_spring_provenance_persistence_mutations_are_refused(self):
+        raw = SOURCE.read_bytes()
+        replacements = [
+            (b"_SPRING_PROVENANCE = 'spring_coefficient_provenance'", b"_SPRING_PROVENANCE = 'changed'"),
+            (b"quantity_kind='force'", b"quantity_kind='force_per_length'"),
+            (b"reason='omitted_from_summary'", b"reason='inferred_from_stiffness'"),
+            (b"self.metadata.get('edge_ids'), detailed=detailed", b"self.metadata.get('edge_ids'), detailed=True"),
+            (b"array_mode='owned'", b"array_mode='retain'"),
+            (b"result.compute_detailed(graph, stiffness=normalized)", b"result.compute_detailed(graph, stiffness=1.)"),
+        ]
+        for before, after in replacements:
+            self.assertIn(before, raw)
+            with self.subTest(before=before):
+                with self.assertRaises(AssertionError):
+                    require_public_source('fibernet/sim/accelerated.py', raw.replace(before, after, 1))
+
+    def test_spring_provenance_normalization_rejects_unreviewed_result_edits(self):
+        tree = ast.parse(SOURCE.read_text(encoding='utf-8'))
+        result = next(n for n in tree.body if getattr(n, 'name', None)=='SimResult')
+        for name in ('to_dict', 'load'):
+            altered = copy.deepcopy(result)
+            method = next(n for n in altered.body if isinstance(n, ast.FunctionDef) and n.name==name)
+            method.body.append(ast.Pass())
+            with self.subTest(method=name):
+                with self.assertRaises(AssertionError):
+                    restore_historical_save(altered)
+        altered = copy.deepcopy(result)
+        method = next(n for n in altered.body if isinstance(n, ast.FunctionDef) and n.name=='compute_detailed')
+        method.body.append(ast.Pass())
+        self.assertNotEqual(canonical_ast(restore_historical_save(result)),
+                            canonical_ast(restore_historical_save(altered)))
+
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_result_identity_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+        require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())
         approved = result_detail_method(SOURCE.read_bytes())
