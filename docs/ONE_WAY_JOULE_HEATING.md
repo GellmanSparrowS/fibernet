@@ -133,3 +133,11 @@ works even when only t=0 was accepted. Preserve `error.attempted_step`,
 `error.attempted_time_s` and the error message alongside that export if the
 failure context is needed. Rejected trial states are never added to the
 prefix. The JSON export is for inspection/analysis, not a restart checkpoint.
+
+## Continue from saved temperatures
+
+For an explicit new prescribed-temperature mechanical snapshot, see
+[Saved thermal mechanics](SAVED_THERMAL_MECHANICS.md). It reopens a saved frame,
+checks stable IDs, coordinates and units, and delegates to the existing bounded
+experimental 2D owner. It does not rerun electricity or heat, or feed deformation
+back into either model.

@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
     'fibernet/__init__.py',
     'fibernet/sim/__init__.py',
+    'fibernet/sim/saved_temperature.py',
     'tests/fixtures/optional_facades_v2/root.py.txt',
     'tests/fixtures/optional_facades_v2/sim.py.txt',
     'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt',
