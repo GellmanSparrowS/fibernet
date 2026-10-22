@@ -18,6 +18,7 @@ fibernet/__init__.py -text
 fibernet/easy.py -text
 fibernet/api.py -text
 tests/fixtures/public_api_contract_v2/**/*.txt -text
+tests/fixtures/result_identity_contract_v1/compute_detailed.py.txt -text
 
 # Reviewed optional facade sources and exact source snapshots retain Git bytes.
 fibernet/sim/__init__.py -text
