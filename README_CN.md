@@ -1,14 +1,13 @@
 [English / 中文 · 仓库首页](README.md)
 
 <!-- locale:zh:start -->
-[动态示例](#动态示例) · [功能模块](#选择研究流程) · [桌面应用](#桌面应用) · [方法与复现](#方法与复现)
+[快速开始](#快速开始) · [生成](#1-生成网络) → [模拟](#2-模拟响应) → [分析与学习](#3-分析与学习) → [设计与导出](#4-设计与导出) · [功能索引](#选择研究流程)
 
-**从几何、响应与连接关系出发，设计纤维网络。** FiberNet 将结构生成、力学模拟、电热传输、响应学习与连续路径构造连接为 Python 研究流程；FiberScope 将共享的几何、简化模型与分析功能带入桌面。从一个网络开始，比较设计选择，再将结果用于下一阶段。
-
+FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界面。
 
 ![已保存的三维网络几何与 kagome 变形轨迹：分别标明相机运动和模拟材料运动](docs/media/network_workflow_hero.gif)
 
-**把几何与响应放在一起看。** 左侧环绕展示已保存的固定三维网络，右侧回放包含 436 个节点、576 条边的 kagome 网络简化模型变形轨迹。[媒体来源与渲染说明](docs/MEDIA_GALLERY.md) · [静态海报](docs/media/network_workflow_hero_poster.svg)
+[媒体来源与渲染说明](docs/MEDIA_GALLERY.md) · [静态海报](docs/media/network_workflow_hero_poster.svg)
 
 ## 快速开始
 
@@ -47,7 +46,7 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 这里的 `strain=1.01` 表示**拉伸比**，即 1% 伸长。该显式 FEM 路径使用小应变梁框架模型和核心依赖，不需要 Taichi 或桌面应用。几何与材料参数需采用一致的单位体系，详见[梁 FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)。
 
-在源码目录运行完整的“生成结构 → 模拟 → 保存结果 → 招募分析”流程：
+在源码目录运行完整的“生成结构 → 模拟 → 保存结果 → 重载 → 招募分析”流程：
 
 ```bash
 python -m examples.open_source_workflow --output-dir demo_output
@@ -55,109 +54,110 @@ python -m examples.open_source_workflow --output-dir demo_output
 
 输出包括网络图、模拟结果 JSON 和分析摘要。[查看可执行示例](examples/open_source_workflow.py)。
 
-## 动态示例
+## 1. 生成网络
 
-### 1. 生成平面与三维纤维网络
+<p>
+<img src="docs/media/three_dimensional_topologies.gif" alt="从不同相机角度观察 octet、diamond 与 gyroid 纤维网络" width="350" align="top">
+<img src="docs/media/spectrum_four_topologies.gif" alt="正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何" width="350" align="top">
+</p>
 
-![从不同相机角度观察 octet、diamond 与 gyroid 纤维网络](docs/media/three_dimensional_topologies.gif)
+Octet、diamond 与 gyroid 网络的相机环绕。 [三维参数](docs/media/three_dimensional_topologies.json) · [可编辑三维帧](docs/media/three_dimensional_topologies_final.svg)
 
-这组已保存的 octet、diamond 和 gyroid 示例分别包含 **35/118、63/144、203/531 个节点/条边**。旋转视角呈现各固定拓扑的空间连接。[三维参数](docs/media/three_dimensional_topologies.json) · [可编辑三维帧](docs/media/three_dimensional_topologies_final.svg)
+四种平面拓扑使用同一位移轮廓：形状变化，连接关系不变。 [制造几何方法](docs/METHODS_MANUFACTURING_UNIFIED.md) · [可编辑矢量关键帧](docs/media/spectrum_four_topologies_peak.svg) · [参数记录](docs/media/spectrum_four_topologies.json)
 
-#### 同一种几何语言，连接不同拓扑
+## 2. 模拟响应
 
-![正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何](docs/media/spectrum_four_topologies.gif)
-
-将同一无量纲参考纤维位移轮廓用于**正方形、六边形、环形和 kagome** 网络。几何形状随参数变化，各网络的连接关系保持不变。这组几何参数化示例在保持拓扑的同时探索形状变化。[制造几何方法](docs/METHODS_MANUFACTURING_UNIFIED.md) · [可编辑矢量关键帧](docs/media/spectrum_four_topologies_peak.svg) · [参数记录](docs/media/spectrum_four_topologies.json)
-
-### 2. 模拟网络变形，比较加载方向
+### 拉伸轨迹与招募
 
 ![包含 436 个节点的 kagome 网络随拉伸变形，招募边和跨夹持端连通分量同步演化](docs/media/tensile_recruitment_kagome.gif)
 
-这个 **3 × 3 扰动 kagome 网络包含 436 个节点和 576 条边**。蓝色表示超过正轴向应变阈值的边，橙色表示连接两侧夹持端的阈值连通分量；曲线记录已保存简化模型轨迹中的招募边比例。应变阈值统计将局部伸长与网络尺度的跨端路径联系起来。[轨迹示例](examples/reduced_recruitment_workflow.py) · [招募分析方法](docs/METHODS_TENSILE_RECRUITMENT.md) · [来源记录](docs/media/tensile_recruitment_kagome.json)
+Kagome 拉伸中的纤维招募与跨夹持端路径（简化模型）。 [轨迹示例](examples/reduced_recruitment_workflow.py) · [招募分析方法](docs/METHODS_TENSILE_RECRUITMENT.md) · [来源记录](docs/media/tensile_recruitment_kagome.json)
 
-![同一六边形拓扑的横向与纵向加载](docs/media/directional_recruitment_hexagon.gif)
-
-在同一六边形拓扑上比较横向和纵向加载。已保存的简化模型示例分别在拉伸比 **1.08 和 1.24** 时达到所设定的跨端招募阈值。[方向比较参数](docs/media/directional_recruitment_hexagon.json) · [可编辑比较图](docs/media/directional_recruitment_hexagon_final.svg)
-
-### 3. 分析纤维招募与阈值敏感性
-
-![在同一条已保存 kagome 轨迹上比较三种招募阈值](docs/media/tensile_threshold_sensitivity.gif)
-
-用 **α = 0.02、0.05、0.15** 三种阈值观察同一段变形。在保持原力学轨迹不变的条件下，直接比较连通性结论对分析阈值的依赖。[分析参数](docs/media/tensile_threshold_sensitivity.json) · [可编辑分析帧](docs/media/tensile_threshold_sensitivity_final.svg)
-
-### 4. 学习结构响应，探索目标驱动设计
-
-![学习与逆向设计工作区的已保存界面动态导览](docs/media/learning_inverse_workflow.gif)
-
-从数据准备和响应学习进入目标曲线设计工作区。这段已保存的 FiberScope 界面导览呈现从数据到设计的使用流程。Python 库共享物理标签流、14 维特征、代理模型适配器与 CEM 目标搜索。[学习示例](examples/physical_learning_workflow.py) · [逆向设计示例](examples/curve_inverse_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
-
-#### 在连续路径约束下比较结构干预
-
-![kagome 网络四种匹配的保路径结构干预](docs/media/route_preserving_intervention_kagome.gif)
-
-![环形网络匹配的保路径结构干预](docs/media/route_preserving_intervention_ring.gif)
-
-比较完整结构、低早期应变删边、高后期应变删边与固定随机删边。已保存的 kagome 和环形研究匹配移除边长，并保留欧拉路径，展示设计选择如何改变响应。受控比较使不同结构干预对响应的影响清晰可见。[Kagome 来源](docs/media/route_preserving_intervention_kagome.json) · [环形来源](docs/media/route_preserving_intervention_ring.json) · [比较方法](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md)
-
-### 5. 构建连续制造路径
-
-![橙色游标沿 kagome 制造图的闭合欧拉路径前进](docs/media/continuous_route_kagome.gif)
-
-闭合欧拉路径将每条独立纤维边遍历一次，也保留平行纤维的独立身份。蓝色是已访问的边，橙色游标标明当前遍历顺序。平面与曲面流程保留结构图到路径的映射，可用于检查和导出；路径回放清晰呈现结构图的遍历顺序。[平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [实体与路径导出](examples/solid_export_workflow.py)
-
-### 6. 映射曲面纤维，准备几何与路径导出
-
-![曲面映射与制造导出工作区的已保存界面动态导览](docs/media/surface_export_workflow.gif)
-
-先检查曲面上的纤维网络，再进入制造工作区准备路径与几何导出。这段已保存界面导览将曲面设计连接到可检查的路径文件与实体几何文件。[曲面与路径示例](examples/manufacturing_workflow.py) · [实体导出示例](examples/solid_export_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
-
-[完整媒体画廊、参数与可编辑关键帧](docs/MEDIA_GALLERY.md)
-
-### 7. 检查三维网络中的电传输
-
-![已保存的环面网络电学场相机环绕展示](docs/media/electrical_torus_field.gif)
-
-在包含 **80 个节点、162 条边**的已保存环面网络上，观察电压与电流的空间分布。相机环绕固定的合成参数稳态电学解，让场分布与图连接关系同时可见。[电学场与渲染来源](docs/media/electrical_torus_field.json) · [电传输接口](docs/integrations/LINEAR_TRANSPORT_USAGE.md)
-
-## 模拟与学习过程图集
-
-沿真实保存的状态，查看网络运动、构件失效、热传输与数据驱动研究。每个示例均链接原始数据、可编辑图件和重绘方法。
-
-### 8. 比较 LAMMPS 与 Taichi 网络动力学
+### LAMMPS 与 Taichi
 
 ![LAMMPS 谐键网络动力学](docs/media/new/backends/lammps_saved_dynamics.gif)
 
 ![Taichi 非均匀轴向网络动力学](docs/media/new/backends/taichi_saved_dynamics.gif)
 
-LAMMPS 展示 64 个节点、441 条键在 41.667 µs 内的运动；Taichi 展示 4,340 个节点、5,073 条边的无量纲轴向网络记录。固定视角下，**位移放大 1,000 倍**，位移读数和能量保留真实量值。这些是各后端的合成基准场景。[数据、单位与重绘方法](docs/media/new/backends/README.md)。
+LAMMPS 谐键网络与 Taichi 轴向网络动力学，位移放大 1,000 倍。 [数据、单位与重绘方法](docs/media/new/backends/README.md)
 
-### 9. 解析黏弹网络运动与能量转移
+### 黏弹运动与能量
 
 ![保存的广义 Maxwell 网络动力学](docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif)
 
-105 个节点、273 条边在 0.5 s 内振动并松弛。实际轴向应力随运动呈现；动能、储能、材料耗散与后向欧拉数值损失分别显示。**位移放大 3,000 倍**，使小应变响应清晰可见。[材料模型、保存轨迹与重绘方法](docs/media/new/viscoelastic/README.md)。
+广义 Maxwell 网络的松弛、储能与耗散，位移放大 3,000 倍。 [材料模型、保存轨迹与重绘方法](docs/media/new/viscoelastic/README.md)
 
-### 10. 跟踪构件移除形成的断裂序列
+### 准静态构件移除
 
 ![含缺口框架的准静态构件移除序列](docs/media/new/fracture/fracture_sequence.gif)
 
-含缺口的 63 节点、158 梁框架进一步移除 17 个构件，直至承载路径断开。每个保存的移除状态均与计算反力和弹性储能同步呈现。图中以**未变形参考构型**呈现准静态构件移除，将局部失效事件与网络连接的丧失联系起来。[场景、事件数据与可编辑图件](docs/media/new/fracture/README.md)。
+未变形框架上的准静态构件移除，以及对应的反力与弹性储能。 [场景、事件数据与可编辑图件](docs/media/new/fracture/README.md)
 
-### 11. 跟踪复杂网络中的瞬态焦耳热
+### 电场与热过程
+
+<img src="docs/media/electrical_torus_field.gif" alt="已保存的环面网络电学场相机环绕展示" width="460" align="top">
+
+环面网络稳态电压与电流的相机环绕。 [电学场与渲染来源](docs/media/electrical_torus_field.json) · [电传输接口](docs/integrations/LINEAR_TRANSPORT_USAGE.md)
 
 ![4340 节点网络的瞬态焦耳热](docs/media/new/thermal/transient_thermal_network.gif)
 
-温度在 4,340 个节点、5,073 条边上传播，完整呈现 81 个保存状态。同步能量账本显示输入、储存与热库交换。这组合成参数的**固定几何单向电致加热**示例，将温度场与随时间演化的能量平衡联系起来。[热模型、收敛证据与数据](docs/media/new/thermal/README.md)。
+固定几何上的单向焦耳热过程，以及随时间变化的能量平衡。 [热模型、收敛证据与数据](docs/media/new/thermal/README.md)
 
-### 12. 检查图学习研究与 RL 环境动作
+## 3. 分析与学习
+
+### 比较方向与分析阈值
+
+![同一六边形拓扑的横向与纵向加载](docs/media/directional_recruitment_hexagon.gif)
+
+横向与纵向加载的首次跨端招募拉伸比分别为 1.08 和 1.24（简化模型）。 [方向比较参数](docs/media/directional_recruitment_hexagon.json) · [可编辑比较图](docs/media/directional_recruitment_hexagon_final.svg)
+
+![在同一条已保存 kagome 轨迹上比较三种招募阈值](docs/media/tensile_threshold_sensitivity.gif)
+
+α = 0.02、0.05、0.15 三个阈值，对应同一条变形轨迹。 [分析参数](docs/media/tensile_threshold_sensitivity.json) · [可编辑分析帧](docs/media/tensile_threshold_sensitivity_final.svg)
+
+### 图学习
+
+准备图批次、相互隔离的数据划分，以及仅由训练集计算的度统计。 [图实验输入约定](docs/GRAPH_TRAINING_CONTRACT.md) · [完整示例](examples/graph_training_contract.py)
 
 ![保存的 GINE 电导学习研究](docs/media/new/learning/media/gine_training_history.gif)
 
-沿**归档 GINE 研究训练器**的记录，查看 40 个训练轮次，以及按母体几何划分的数据集上的最终电导预测。固定的已求解电场为学习曲线提供空间参照；研究文档说明该实现与当前公开数据和模型适配器的对应关系。[研究、数据划分、误差与重绘方法](docs/media/new/learning/README.md)。
+归档 GINE 电导学习研究：40 轮训练，按母图划分评估集。 [研究、数据划分、误差与重绘方法](docs/media/new/learning/README.md)
 
 ![强化学习环境中的预设动作](docs/media/new/learning/media/rl_environment_fixed_actions.gif)
 
-三个网络依次展示重置、预设动作和保存的原生响应，同时给出奖励与终止状态。这些**预设动作的 RL 环境交互**展示状态、动作与响应的接口，用于检查奖励和回合状态转换。[环境记录与模型范围](docs/media/new/learning/README.md)。
+三个 RL 环境中的预设动作、原生响应、奖励与终止条件。 [环境记录与模型范围](docs/media/new/learning/README.md)
+
+## 4. 设计与导出
+
+### 保留路径的结构干预
+
+![kagome 网络四种匹配的保路径结构干预](docs/media/route_preserving_intervention_kagome.gif)
+
+![环形网络匹配的保路径结构干预](docs/media/route_preserving_intervention_ring.gif)
+
+三种删边策略使用相同的移除边长，并保留欧拉路径。 [Kagome 来源](docs/media/route_preserving_intervention_kagome.json) · [环形来源](docs/media/route_preserving_intervention_ring.json) · [比较方法](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md)
+
+### 路径与稳定 ID
+
+<img src="docs/media/continuous_route_kagome.gif" alt="橙色游标沿 kagome 制造图的闭合欧拉路径前进" width="460" align="top">
+
+每条纤维边遍历一次，平行纤维保持独立。 [生成新的平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [生成新的实体与路径](examples/solid_export_workflow.py)
+
+将当前图导出为闭合路径或多段路径，得到毫米坐标 CSV 与稳定 ID 映射 JSON。输入几何、单位和路径约束见对应指南。 [闭合路径适用范围](docs/MANUFACTURING_GRAPH_MAPPING.md#geometry-and-ownership) · [多段路径适用范围](docs/MULTISTROKE_MANUFACTURING.md#scope-and-input-validation)
+
+### 在 FiberScope 中操作
+
+已保存界面导览：从响应学习到曲面映射与导出。
+
+![学习与逆向设计工作区的已保存界面动态导览](docs/media/learning_inverse_workflow.gif)
+
+[学习示例](examples/physical_learning_workflow.py) · [逆向设计示例](examples/curve_inverse_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
+
+![曲面映射与制造导出工作区的已保存界面动态导览](docs/media/surface_export_workflow.gif)
+
+[曲面与路径示例](examples/manufacturing_workflow.py) · [实体导出示例](examples/solid_export_workflow.py) · [导览来源](docs/media/module_workflow_tours.json)
+
+[参数与模型范围](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [媒体来源与可编辑帧](docs/MEDIA_GALLERY.md)
 
 ## 选择研究流程
 
@@ -166,11 +166,10 @@ LAMMPS 展示 64 个节点、441 条键在 41.667 µs 内的运动；Taichi 展�
 | 生成二维、三维结构 | `pattern_2d`、`pattern_3d`、`StructureGraph` | [参数化生成](fibernet/gen/pattern.py) |
 | 研究变形与力学响应 | 显式 FEM 或 Taichi 路径；共享简化模型使用 `ReducedBeamSolver` | [接口层次、单位与模型选择](docs/API_LAYERS.md) |
 | 量化结构与招募行为 | `SnapshotFeatureExtractor`、`analyze_tensile_recruitment` | [快照特征](examples/snapshot_features_workflow.py) · [招募分析](examples/tensile_recruitment_quickstart.py) |
+| 沿用当前 `StructureGraph` 导出路径 | `manufacturing_from_graph` → `export_mapped_route`；`manufacturing_trails_from_graph` → `export_mapped_trails` | [闭合路径与稳定 ID](docs/MANUFACTURING_GRAPH_MAPPING.md) · [多段路径与适用范围](docs/MULTISTROKE_MANUFACTURING.md) |
 | 构建复用基元与连续路径 | `CustomCellRegistry`、`compile_planar`、`compile_surface` | [自定义基元方法](docs/METHODS_CUSTOM_CELL_UNIFIED.md) · [制造几何](docs/METHODS_MANUFACTURING_UNIFIED.md) |
 | 从模拟响应中学习 | `PlanarPhysicalDataset`、`light_features`、`PhysicalRegressor` | [可续算标签生成](examples/physical_dataset_workflow.py) · [代理模型学习](examples/physical_learning_workflow.py) |
 | 搜索目标响应结构 | `CurveInverseDesigner`；可选 `fibernet.rl` 工具 | [目标曲线搜索](examples/curve_inverse_workflow.py) · [学习与搜索方法](docs/METHODS_CURVE_INVERSE_UNIFIED.md) |
-
-物理响应学习流程与桌面应用共享 **14 维几何特征和 3 个响应标签**。从合成数据示例开始，再用自己保存的物理标签训练响应代理模型。目标曲线设计使用无导数交叉熵搜索（CEM）；基于动作的工作流可选择强化学习环境和算法适配器。
 
 ### 开发版源码中的扩展接口
 
@@ -188,13 +187,13 @@ LAMMPS 展示 64 个节点、441 条键在 41.667 µs 内的运动；Taichi 展�
 
 [![FiberScope 中文制造工作区](FiberScope/docs/screenshots/manufacturing-zh.png)](FiberScope/docs/screenshots/README.md)
 
-通过界面设计几何、检查轨迹、查看招募与特征卡片、训练响应代理模型，并探索目标曲线设计。共享核心将这些计算与 Python 流程连接起来；[集成说明](docs/INTEGRATION_REPO_MAP.md)区分共享能力与应用专属功能。界面支持英文和中文；可选的 SAC/TD3/DDPG 训练需要另行配置外部 Python 运行时。
+提供英文和中文界面。可选的 SAC/TD3/DDPG 训练需要单独配置外部 Python 运行时。 [集成说明](docs/INTEGRATION_REPO_MAP.md)
 
 [桌面使用指南](FiberScope/README.md) · [中英文界面截图](FiberScope/docs/screenshots/README.md) · [发布说明](docs/RELEASE_4_2_0.md)
 
 ## 方法与复现
 
-先明确物理问题，再选择模型、单位、加载控制与结果类型。梁框架 FEM 和简化弹簧／弯曲／接触求解器代表不同模型，解读输出时应对应阅读 [FEM 方法](docs/METHODS_BEAM_FEM_CONTRACT.md)与[简化模型方法](docs/METHODS_REDUCED_SOLVER_UNIFIED.md)。[示例解读指南](docs/HOMEPAGE_EXAMPLE_SCOPE.md)将各幅动图与模型、数据和解读方式对应起来。
+比较结果前，先选择合适的模型：梁框架 FEM 与弹簧、弯曲和接触构成的简化模型采用不同的力学描述。 [FEM 方法](docs/METHODS_BEAM_FEM_CONTRACT.md) · [简化模型方法](docs/METHODS_REDUCED_SOLVER_UNIFIED.md) · [示例解读指南](docs/HOMEPAGE_EXAMPLE_SCOPE.md)
 
 - **可检查的媒体：**[来源记录、可编辑矢量帧与渲染命令](docs/MEDIA_GALLERY.md)。
 - **研究示例：**[阈值与方向敏感性](docs/RECRUITMENT_SENSITIVITY_2026-09-24.md)、[匹配的保路径结构干预](docs/CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md)以及[同图跨模型比较](docs/INDEPENDENT_FEM_CYCLE_INTERVENTION_2026-09-24.md)。完整比较记录呈现模型依赖性与各组研究结果。
