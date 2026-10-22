@@ -21,7 +21,7 @@ def unique(pairs):
         out[key] = value
     return out
 
-def strict_json(raw):
+def strict_json(raw, *, electrical_rpc=False):
     if len(raw) > MAX_BYTES:
         raise ContractError('JSON byte budget exceeded')
     try:
@@ -29,8 +29,41 @@ def strict_json(raw):
                             parse_constant=lambda _: (_ for _ in ()).throw(ContractError('nonfinite JSON')))
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise ContractError('invalid strict JSON') from exc
+    if electrical_rpc:
+        _normalize_electrical_rpc_values(result)
     check_tree(result)
     return result
+
+def _normalize_electrical_rpc_values(message):
+    """Only S/V fields use native float semantics; ID/frame guards stay exact.
+
+    The native solver converts physical real values to float64. JSON integer
+    and exponent encodings therefore share that conversion. An unrepresentable
+    S/V value becomes an invalid schema value, giving a structured refusal
+    rather than terminating a valid session. Strict JSON syntax, all other
+    integer fields, strings, depth and byte bounds retain their existing checks.
+    """
+    if not isinstance(message, dict) or message.get('method') != 'tools/call':
+        return
+    params = message.get('params')
+    if not isinstance(params, dict) or params.get('name') != 'fibernet_solve_linear_transport':
+        return
+    arguments = params.get('arguments')
+    if not isinstance(arguments, dict):
+        return
+    for field, scalar in (('conductance_S', 'value_S'), ('dirichlet_voltage_V', 'value_V')):
+        records = arguments.get(field)
+        if not isinstance(records, list):
+            continue
+        for record in records:
+            if not isinstance(record, dict) or type(record.get(scalar)) not in (int, float):
+                continue
+            try:
+                value = float(record[scalar])
+            except OverflowError:
+                value = None
+            record[scalar] = value if value is not None and math.isfinite(value) else None
+
 
 def check_tree(value, depth=0):
     if depth > 16:

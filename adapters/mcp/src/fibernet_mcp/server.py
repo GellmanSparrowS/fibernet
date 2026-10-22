@@ -1,4 +1,4 @@
-"""Linux-only stdio server. Five bounded operations; no model-supplied paths."""
+"""Linux-only stdio server. Bounded graph and DC electrical operations; no model-supplied paths."""
 import argparse
 import asyncio
 import base64
@@ -24,6 +24,9 @@ from mcp.shared.exceptions import McpError
 import mcp.types as mt
 from .safety import (ContractError, MAX_BYTES, canonical, graph_preflight,
                      open_directory, read_at, read_file, sha, strict_json, write_at, _verify_core_result)
+
+from .electrical import (MAX_TRANSPORT_REQUEST_BYTES,
+                         MAX_TRANSPORT_RESULT_BYTES, TransportContractError, transport_request)
 
 VERSION = 'fibernet.mcp/1'
 TREE = '6eabb154cd37d95c7c447a568b1b737c3ec883c8'
@@ -101,19 +104,21 @@ class ManagedStore:
         if sha(raw) != self.graphs[gid]['source_sha256']: raise ContractError('source integrity failure')
         return self.graphs[gid]
 
-    def artifact(self, gid, metrics, core_provenance):
+    def artifact(self, gid, metrics, core_provenance, kind='topology_metrics'):
+        if kind not in ('topology_metrics', 'linear_transport_result'):
+            raise ContractError('invalid artifact kind')
         identity = canonical(self.core_provenance)
         if canonical(core_provenance) != identity:
             raise ContractError('worker core provenance mismatch')
         raw = canonical(metrics); digest = sha(raw)
         for aid, a in self.artifacts.items():
-            if (a['sha256']==digest and a['source_sha256']==self.graphs[gid]['source_sha256']
+            if (a['kind']==kind and a['sha256']==digest and a['source_sha256']==self.graphs[gid]['source_sha256']
                     and self._artifact_provenance.get(aid)==identity): return a
         if len(self.artifacts)>=64: raise ContractError('artifact limit')
         aid=uuid.uuid4().hex; self.put_file(aid,raw)
         a={'artifact_id':aid,'uri':'fibernet://artifacts/'+aid,'mime_type':'application/json',
            'byte_size':len(raw),'sha256':digest,'source_sha256':self.graphs[gid]['source_sha256'],
-           'producer':self.producer,'kind':'topology_metrics'}
+           'producer':self.producer,'kind':kind}
         self.artifacts[aid]=a;self._artifact_provenance[aid]=identity;return a
 
     def info(self,aid):
@@ -136,18 +141,31 @@ class ManagedStore:
 class Supervisor:
     def __init__(self,store,timeout=10):
         self.store=store;self.timeout=timeout;self.active=None;self.audit=[]
-    async def run(self,operation,gid):
+    async def run(self,operation,gid,request=None):
         if len(self.audit)>=128: return failure('WORKER_LIMIT','resource')
         if self.active is not None: return failure('BUSY','resource',True)
         self.store.source(gid)
         out='worker-'+uuid.uuid4().hex
         env={k:os.environ[k] for k in ('PATH','PYTHONPATH','MPLCONFIGDIR','XDG_CACHE_HOME') if k in os.environ}
         env.update(OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1',NUMEXPR_NUM_THREADS='1',PYTHONDONTWRITEBYTECODE='1')
-        p=subprocess.Popen([sys.executable,'-m','fibernet_mcp.worker',operation,
-                            os.path.join(self.store.path,gid),os.path.join(self.store.path,out),
-                            self.store.graphs[gid]['source_sha256']],
-                           stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
-                           env=env,start_new_session=True)
+        command=[sys.executable,'-m','fibernet_mcp.worker',operation,
+                 os.path.join(self.store.path,gid),os.path.join(self.store.path,out),
+                 self.store.graphs[gid]['source_sha256']]
+        request_name=None
+        try:
+            if request is not None:
+                raw=canonical(request)
+                if len(raw)>MAX_TRANSPORT_REQUEST_BYTES or self.store.total+len(raw)>MAX_SESSION:
+                    return failure('TRANSPORT_REQUEST_LIMIT','resource')
+                request_name='request-'+uuid.uuid4().hex
+                write_at(self.store.fd,request_name,raw)
+                command.extend([os.path.join(self.store.path,request_name),sha(raw)])
+            p=subprocess.Popen(command,stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL,env=env,start_new_session=True)
+        except BaseException:
+            if request_name is not None:
+                with contextlib.suppress(FileNotFoundError): os.unlink(request_name,dir_fd=self.store.fd)
+            raise
         self.active=p;start=time.monotonic();reason='completed'
         try:
             while p.poll() is None:
@@ -155,7 +173,7 @@ class Supervisor:
                     reason='timed_out';return failure('WORKER_TIMEOUT','resource',True)
                 await anyio.sleep(.02)
             if p.returncode != 0: reason='failed';return failure('WORKER_FAILED','internal')
-            raw=read_at(self.store.fd,out)
+            raw=read_at(self.store.fd,out,MAX_TRANSPORT_RESULT_BYTES+4096 if operation=='linear_transport' else MAX_BYTES)
             try:
                 return _verified_worker_result(strict_json(raw), self.store.core_provenance)
             except ContractError:
@@ -173,6 +191,8 @@ class Supervisor:
                         with contextlib.suppress(ProcessLookupError): os.killpg(p.pid,signal.SIGKILL)
                 p.wait()
                 with contextlib.suppress(FileNotFoundError): os.unlink(out,dir_fd=self.store.fd)
+                if request_name is not None:
+                    with contextlib.suppress(FileNotFoundError): os.unlink(request_name,dir_fd=self.store.fd)
                 self.audit.append({'pid':p.pid,'reason':reason,'returncode':p.returncode,
                                    'reaped':True,'elapsed_s':round(time.monotonic()-start,4)})
                 self.active=None
@@ -185,8 +205,8 @@ class BoundedInput:
             if not raw: return
             if len(raw)>20*1024*1024 or not raw.endswith(b'\n'): raise ContractError('transport line budget')
             # Strict JSON before SDK decoding; JSON RPC string arguments bounded too.
-            strict_json(raw)
-            yield raw.decode('utf-8')
+            message=strict_json(raw,electrical_rpc=True)
+            yield canonical(message).decode('utf-8')+'\n'
 
 class BoundedOutput:
     async def write(self,s):
@@ -230,7 +250,7 @@ async def serve(args):
     @server.read_resource()
     async def resource(uri):
         u=str(uri)
-        if u=='fibernet://capabilities': data={'schema_version':VERSION,'protocol':'2025-11-25','source_tree':TREE,'physics':[],'transport':'stdio','platform':'linux'}
+        if u=='fibernet://capabilities': data={'schema_version':VERSION,'protocol':'2025-11-25','source_tree':TREE,'physics':['steady_linear_electrical_conductance'],'transport':'stdio','platform':'linux'}
         elif u==PROVENANCE_URI: data=store.core_provenance
         elif re.fullmatch(r'fibernet://artifacts/[a-f0-9]{32}',u):
             try: data=store.info(u.rsplit('/',1)[1])
@@ -244,7 +264,7 @@ async def serve(args):
             if name not in indexed: raise ContractError('unknown tool')
             jsonschema.Draft202012Validator(indexed[name]['inputSchema']).validate(arguments)
             if name=='fibernet_catalog':
-                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536},capabilities=['validate_structure','analyze_topology','read_artifact'])
+                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport'])
             elif name in ('fibernet_validate','fibernet_analyze_topology'):
                 gid=arguments['graph_id'];g=store.source(gid)
                 result=await sup.run('validate' if name=='fibernet_validate' else 'topology',gid)
@@ -255,6 +275,17 @@ async def serve(args):
                 else:
                     metrics=result['metrics'];a=store.artifact(gid,metrics,result['_core_provenance'])
                     data=envelope(graph_id=gid,source_sha256=g['source_sha256'],metrics={k:metrics[k] for k in ['schema','n_nodes','n_physical_edges','n_unique_connections','n_components','n_isolates','cycle_rank_physical','largest_component_fraction']},artifact=a)
+            elif name=='fibernet_solve_linear_transport':
+                gid=arguments['graph_id'];g=store.source(gid)
+                request=transport_request(g,arguments)
+                result=await sup.run('linear_transport',gid,request)
+                if 'error' in result: data=result
+                elif 'error_code' in result: data=failure(result['error_code'],result['error_category'])
+                else:
+                    value=result['electrical']
+                    a=store.artifact(gid,value,result['_core_provenance'],kind='linear_transport_result')
+                    data=envelope(graph_id=gid,source_sha256=g['source_sha256'],
+                                  status=value['status'],artifact=a)
             elif name=='fibernet_artifact_info': data=envelope(artifact=store.info(arguments['artifact_id']))
             elif name=='fibernet_artifact_read':
                 aid=arguments['artifact_id'];a=store.info(aid);raw=read_at(store.fd,aid)
@@ -263,6 +294,7 @@ async def serve(args):
                 if offset>len(raw): raise ContractError('offset past EOF')
                 chunk=raw[offset:offset+arguments.get('length',32768)];n=offset+len(chunk)
                 data=envelope(artifact_id=aid,offset=offset,next_offset=n,eof=n==len(raw),encoding='base64',data=base64.b64encode(chunk).decode(),sha256=a['sha256'],total_bytes=len(raw))
+        except TransportContractError as exc: data=failure(exc.code,exc.category)
         except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError,OSError): data=failure('INVALID_ARGUMENT_OR_HANDLE')
         except Exception: data=failure('INTERNAL_FAILURE','internal')
         if name in indexed:

@@ -13,7 +13,8 @@ from fibernet_mcp.server import TREE
 configuration={'source_tree':TREE,'graphs':[{'path':str(ROOT/'fixtures/voronoi_4340.json'),'sha256':hashlib.sha256((ROOT/'fixtures/voronoi_4340.json').read_bytes()).hexdigest(),'length_unit':'unspecified','frame_id':'unknown'}]}
 (ROOT/'evidence/manifest.json').write_text(json.dumps(configuration,indent=2))
 RUN=ROOT/'evidence'/('run-'+uuid.uuid4().hex[:8]);RUN.mkdir()
-ENV={**os.environ,'PYTHONPATH':os.pathsep.join([str(ROOT/'src')]+([str(Path(CORE).resolve())] if CORE else [])),
+ENV={**os.environ,'PYTHONPATH':os.pathsep.join([str(ROOT/'src')]+([str(Path(CORE).resolve())] if CORE else [])+
+                                       ([os.environ['PYTHONPATH']] if os.environ.get('PYTHONPATH') else [])),
  'OPENBLAS_NUM_THREADS':'1','OMP_NUM_THREADS':'1','MPLCONFIGDIR':str(ROOT/'evidence/mpl'),
  'XDG_CACHE_HOME':str(ROOT/'evidence/cache'),'PYTHONDONTWRITEBYTECODE':'1'}
 
@@ -32,7 +33,7 @@ async def run(timeout=10,audit='acceptance.json',cancel=False,force_kill=False):
     async with stdio_client(p) as (r,w):
         async with ClientSession(r,w) as session:
             init=await session.initialize();assert init.protocolVersion=='2025-11-25'
-            listing=await session.list_tools();assert len(listing.tools)==5
+            listing=await session.list_tools();assert len(listing.tools)==6
             assert len((await session.list_resource_templates()).resourceTemplates)==1
             await session.read_resource('fibernet://capabilities')
             expected = expected_core_provenance(json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text()))
