@@ -185,7 +185,7 @@ Signature: `bind_graph_inputs(batches, *, source_groups, feature_spec, external,
 - `source_refs` has exactly `graph`, `external`, and `conditions`, each a nonempty string. These are provenance annotations; the API does not read a named file or authenticate its contents.
 - Optional `derived_views` maps every graph ID to `node_features`, `edge_features`, `edge_index`, and `graph_index` NumPy arrays. The function recomputes each array from raw inputs and requires exact typed canonical equality. A prepared neural-model object is not raw authority.
 
-The returned `inputs` payload uses `fibernet.graph_inputs.v2`. Each sample records its group, source/projection/input/topology hashes, counts, fixed-condition roles, and source references. The function discards temporary projected arrays after validation; it does not expose a tensor-preparation API.
+The v1 metadata-only feature profile returns a `fibernet.graph_inputs.v2` payload; the [explicit Dirichlet profile](#explicit-dirichlet-voltagemask-profile) returns `.v3`. Each sample records its group, source/projection/input/topology hashes, counts, condition-profile metadata, and source references. Binding returns metadata; use `project_graph_inputs` for detached, revalidated NumPy arrays.
 
 ### `bind_explicit_group_split`
 
@@ -226,7 +226,7 @@ Omit both reconstruction arguments to obtain `blocked_missing_raw_authority` wit
 
 ## Conditions, units, and common errors
 
-Each sample needs a complete `fibernet.electrical_conditions.v1` dictionary. Both `boundary_voltages` and `nodal_currents` are explicit lists, even when empty. Each entry has an existing stable node ID, finite numeric value, and unit `V` or `A`. IDs must be unique within each list. These records describe electrical conditions; stored geometric boundary-face flags do not impose mechanical constraints.
+For the v1 metadata-only feature profile, each sample needs a complete `fibernet.electrical_conditions.v1` dictionary. The [explicit Dirichlet profile](#explicit-dirichlet-voltagemask-profile) instead uses conditions `.v2` with its source declaration. Both `boundary_voltages` and `nodal_currents` are explicit lists, even when empty. Each entry has an existing stable node ID, finite numeric value, and unit `V` or `A`. IDs must be unique within each list. These records describe electrical conditions; stored geometric boundary-face flags do not impose mechanical constraints.
 
 `conditioning="metadata_only_fixed_rule"` means every sample uses the same ordered numerical role slots: rule ID, slot counts, values, numeric types, units, and order must agree. Graph-local node IDs may differ. For example, two-terminal roles `[0.0 V, 1.0 V]` can use different node IDs in each graph, but `[0.0 V, 2.0 V]`, reversed slots, or a different number of boundary nodes is unsupported. The API does not infer physical roles from geometry and does not verify that the declared roles are physically equivalent. Boundary values are bound metadata, not additional node-feature columns.
 
@@ -238,7 +238,7 @@ Invalid contract inputs raise `ValueError`. Useful categories and remedies are:
 - `one graph per experiment sample required`: create separate one-graph snapshots.
 - `external unit mismatch` or `geometry unit/frame mismatch`: align explicit declarations; convert source data yourself if needed.
 - `required feature missing`: provide a measured/declared value, or explicitly choose a non-required selector. Do not fill missing data merely to suppress the error.
-- `mixed/unencoded numerical condition rules unsupported by this profile`: use one fixed ordered condition profile, or choose another workflow for variable conditions.
+- `mixed/unencoded numerical condition rules unsupported by this profile`: keep one fixed ordered condition rule, or explicitly select the [Dirichlet profile](#explicit-dirichlet-voltagemask-profile) for supported variable boundary conditions.
 - `split must exactly partition samples` or `mother groups overlap`: correct membership at the source-group level.
 - `training source mutated or coalesced relative to bound source`: restore the original source or create a new binding/split; do not relabel the old record.
 - `projection exceeds finite float32 range` or `raw integer loses precision before projection`: use meaningful units/scales or a supported representation without silently dropping nonzero information.
@@ -252,7 +252,7 @@ Messages aid diagnosis but are not stable error codes. The underlying `graph_bat
 
 Samples are nonempty, with sorted nonnegative int64 node IDs, unique physical-edge IDs, dimension 2 or 3, no self-loops, and exact forward/reverse message pairs. Parallel physical fibers retain distinct identities and each contributes both directions. All-isolated samples are admissible. An internally consistent graph with coalesced edges is a different input; only comparison with a prior binding can identify that change.
 
-The node projection is normalized `(x, y, z, dimension)`. Edge columns are selected scalar values followed by availability masks, then repeated according to physical-edge parent rows for both message directions. Only even reversal parity is supported. Arithmetic uses float64 before explicit float32 narrowing; nonfinite values and lost nonzero range reject. Lengths are recomputed from stored coordinates, with polyline length following stored internal points. Radius is read, never inferred.
+The v1 metadata-only profile projects normalized `(x, y, z, dimension)`; the explicit Dirichlet profile appends fixed-scale voltage and its mask. Edge columns are selected scalar values followed by availability masks, then repeated according to physical-edge parent rows for both message directions. Only even reversal parity is supported. Arithmetic uses float64 before explicit float32 narrowing; nonfinite values and lost nonzero range reject. Lengths are recomputed from stored coordinates, with polyline length following stored internal points. Radius is read, never inferred.
 
 GraphBatch v2 can bind stored material/boundary/segment provenance, but material names are not numerical predictors. This profile does not prepare `MaterialFeatureView` as a model input, infer electrical conductivity from a material selector, or support custom material extras or anisotropic stiffness tensors. The example therefore supplies conductivity as an explicit external column. Missing stored provenance is not replaced with a physically inferred value.
 
@@ -260,13 +260,13 @@ GraphBatch v2 can bind stored material/boundary/segment provenance, but material
 
 The hash dependencies proceed from raw source and an independent feature specification to projection/input identity, then explicit split, then training statistics. Model architecture, targets, labels, optimizer state, and weights are outside this dependency chain.
 
-Arbitrary graph/node/edge metadata are checked for bounded serialization but excluded from scientific source/input/split hashes. Put relevant pre-solve quantities in the supported raw/condition schemas. Opaque source references also do not change scientific input/split identity; changing a reference does change the outer input record digest. Material identities and exact raw numerical values remain in source identity even when their projections happen to match.
+Arbitrary graph/node/edge metadata are checked for bounded serialization but excluded from scientific source/input/split hashes. Put relevant pre-solve quantities in the supported raw/condition schemas. The top-level `source_refs` annotations do not change scientific input/split identity; changing one changes the outer input record digest. References inside the raw `current_declaration`, by contrast, participate in source identity. Material identities and exact raw numerical values remain in source identity even when their projections happen to match.
 
 Changing held-out raw data requires rebinding the split and statistics link. It must not change histogram values or fitted moments for unchanged training samples. A checksum proves internal identity, not the truth, origin, or authenticity of a caller's physical assertions. Mother-group and condition-role declarations are also caller responsibilities.
 
 Canonical encoding preserves exact numeric types, signed zero, ordered sequences, and little-endian C-order array values. Thus `1`, `1.0`, and `True` are distinct; the last is not accepted as a numerical count or ID. Dictionaries sort UTF-8 keys without Unicode normalization. Only finite values and the closed versioned schemas are accepted. No pickle or arbitrary object serialization is used. Each record digest uses SHA256 with its own domain tag.
 
-The input envelope is `fibernet.graph_inputs.v2`; `.v1` is not silently upgraded. Other public envelope schemas are listed with their corresponding operations above. Size limits are 8 MiB per bounded canonical aggregate/JSON record or array, 300,000 canonical items, depth 32, 4,096 UTF-8 bytes per string, 10,000 samples, 100,000 nodes and 200,000 physical edges per sample, and 64 edge selectors. These are format limits, not a demonstrated memory/performance envelope.
+Input envelopes are `fibernet.graph_inputs.v2` for the v1 metadata-only feature profile and `.v3` for the explicit Dirichlet profile; the unsupported input envelope `.v1` is not silently upgraded. Other public envelope schemas are listed with their corresponding operations above. Size limits are 8 MiB per bounded canonical aggregate/JSON record or array, 300,000 canonical items, depth 32, 4,096 UTF-8 bytes per string, 10,000 samples, 100,000 nodes and 200,000 physical edges per sample, and 64 edge selectors. These are format limits, not a demonstrated memory/performance envelope.
 
 ### Scientific scope
 
@@ -279,3 +279,121 @@ Historical artifact metadata can document a specific runtime without certifying 
 FiberNet is MIT-licensed; retain the copyright, permission notice, and disclaimer in the repository's [LICENSE](../LICENSE) when redistributing copies or substantial portions. The PNA denominator profile references PyG 2.7.0, also MIT-licensed (copyright 2023 PyG Team). This module and example do not vendor PyG source, weights, or binaries. A distribution that copies substantial PyG code must carry PyG's full notice as well; a reference is not a substitute for that notice.
 
 Do not infer that all optional dependencies share the MIT license. Installing a model backend is a separate choice governed by that backend's package and license terms. No optional dependency version pin or trainer API is added by this metadata interface.
+
+## Explicit Dirichlet voltage/mask profile
+
+Represent variable electrode placement, cardinality and voltage in a six-column
+node projection of the existing `GraphBatch`. The explicit
+`dirichlet_voltage_mask.v1` profile keeps geometry, physical multiedges and raw
+condition provenance aligned through binding, projection and training statistics.
+
+### Opt in and project
+
+Starting with the feature specification and raw-source mapping in the example
+above, select the profile and provide conditions for each sample:
+
+```python
+feature_spec = {
+    **feature_spec,
+    "schema": "fibernet.graph_feature_spec.v2",
+    "condition_profile": "dirichlet_voltage_mask.v1",
+}
+sources[sample_id]["conditions"] = {
+    "schema": "fibernet.electrical_conditions.v2",
+    "task_rule_id": "declared_two_terminal_problem.v1",
+    "conditioning": "dirichlet_voltage_mask.v1",
+    "boundary_voltages": [
+        {"node_id": left_id, "value": 1.0, "unit": "V"},
+        {"node_id": right_id, "value": 0.0, "unit": "V"},
+    ],
+    "nodal_currents": [],
+    "current_declaration": {
+        "kind": "no_nodal_current_injections.v1",
+        "source_ref": authoritative_declaration_reference,
+        "source_sha256": authoritative_declaration_sha256,
+    },
+}
+```
+
+Bind the samples with the existing `bind_graph_inputs` call, then obtain their
+arrays through the new helper. Each source retains the four fields `batch`,
+`external`, `conditions` and `source_refs`:
+
+```python
+from fibernet.ml.graph_training_contract import project_graph_inputs
+views = project_graph_inputs(inputs, sources=sources)
+node_features = views[sample_id]["node_features"]  # (nodes, 6), float32
+```
+
+The helper recomputes each projection and checks its raw source, including source
+references, against the frozen binding. Its returned `node_features`,
+`edge_features`, `edge_index` and `graph_index` arrays own their memory, so callers
+can modify a view independently of raw inputs, metadata and later projections.
+The optional `derived_views` argument to binding checks supplied arrays against
+the same authoritative recomputation.
+
+### Feature columns and stable-ID alignment
+
+Columns 0–3 are normalized x/y/z/dimension using the existing four offsets and
+scales. Column 4 is voltage divided by the fixed scale **1 V**; column 5 is the
+**Dirichlet mask**. A free node has `(+0, 0)` in the last two columns, while a
+fixed 0 V node has `(+0, 1)`. Raw signed zeros and full numerical precision remain
+source-bound; projected voltage zeros are canonical +0 and other values use
+float32 rounding. The source, projection and input hashes retain these distinct
+levels of identity. All normalization constants are fixed by the specification
+or profile.
+
+Rows follow `batch.node_ids`. The projection's `edge_index` is the directed
+`batch.message_index`, with `2E` columns and `2E` edge-feature rows. The raw
+`batch.edge_index` contains `E` physical edges. Both orientations of each physical
+multiedge retain their alignment:
+
+```python
+batch = sources[sample_id]["batch"]  # The same successfully revalidated source.
+node_ids_for_feature_rows = batch.node_ids
+physical_ids_for_message_rows = batch.message_parent_ids
+physical_rows_for_message_rows = batch.message_parent_rows
+orientations_for_message_rows = batch.message_orientation
+# physical_ids_for_message_rows == batch.edge_ids[physical_rows_for_message_rows]
+```
+
+These IDs and maps are provenance, bound by `topology_hash`, rather than predictor
+columns. PNA degree statistics count incoming directed messages for every selected
+training node, including isolates and parallel-edge instances.
+
+### Current declaration and source identity
+
+This profile describes Dirichlet electrodes with **no prescribed nodal current
+injections**; electrode reaction currents may still be nonzero. Supply a
+source-backed declaration and its SHA256 alongside the empty current list.
+Recover that declaration from the experiment authority: absent fields, solver
+defaults, geometric flags, fitted tolerances, trial potentials and solved fields
+alone cannot establish it. The API binds the supplied declaration and provenance;
+checking the referenced source and its scientific truth remains the caller's
+responsibility.
+
+The binding uses `fibernet.graph_inputs.v3` in the existing `FrozenRecord`.
+`source_hash` covers raw geometry, material provenance, external features and
+conditions; `projection_hash` covers the actual arrays and feature specification;
+`input_hash` links both. Samples share a task-rule identity while their encoded
+boundary assignments may vary.
+
+### Validation and compatibility
+
+- Supply a nonempty list of distinct known stable node IDs with finite voltages
+  in V. Unlisted nodes are free. Duplicate or overlapping assignments, unknown
+  IDs, non-V units, and values that overflow or underflow finite float32
+  projection reject. Electrode selection and unit conversion are caller tasks.
+- An explicit current declaration is required. Unknown policies and any
+  prescribed-current row, including a zero-valued row, reject. Unsupported
+  versions and mixed old/new profile combinations also reject.
+- The v1 metadata-only profile keeps its original v2 binding identities and
+  fixed numerical-slot/cardinality checks. Selecting this profile is explicit;
+  four-column model weights require a separately designed compatibility path.
+- Group splits and training-degree statistics support both profiles. Statistics
+  accept exactly the training sources and remain independent of labels and
+  held-out arrays. Raw-source mutation and supplied-array tampering reject.
+
+The contract establishes input identity and preparation. Boundary-value
+solvability, adequate electrode coverage, scientific suitability and model
+performance belong to the downstream experiment's validation.
