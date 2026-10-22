@@ -57,7 +57,12 @@ class DispatchContract(unittest.TestCase):
 
     def test_signature_and_omitted_defaults(self):
         sig = inspect.signature(self.simulate)
-        self.assertEqual(list(sig.parameters), ['graph','mode','strain','backend','save_path','kwargs'])
+        self.assertEqual(list(sig.parameters), ['graph','mode','strain','backend','save_path','stretch_ratio','kwargs'])
+        self.assertEqual(sig.parameters['stretch_ratio'].kind, inspect.Parameter.KEYWORD_ONLY)
+        self.assertIsNone(sig.parameters['stretch_ratio'].default)
+        self.assertEqual([name for name, parameter in sig.parameters.items()
+                          if parameter.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD],
+                         ['graph', 'mode', 'strain', 'backend', 'save_path'])
         self.assertIsNone(sig.parameters['strain'].default)
         for options in ({}, {'strain': None}):
             self.calls.clear(); self.assertIs(self.simulate(self.graph, **options), self.result)

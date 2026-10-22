@@ -218,7 +218,12 @@ class DispatchTests(unittest.TestCase):
     def test_easy_dispatch_success_and_signature(self):
         import inspect
         signature=inspect.signature(self.simulate)
-        self.assertEqual(list(signature.parameters),['graph','mode','strain','backend','save_path','kwargs'])
+        self.assertEqual(list(signature.parameters),['graph','mode','strain','backend','save_path','stretch_ratio','kwargs'])
+        self.assertEqual(signature.parameters['stretch_ratio'].kind, inspect.Parameter.KEYWORD_ONLY)
+        self.assertIsNone(signature.parameters['stretch_ratio'].default)
+        self.assertEqual([name for name, parameter in signature.parameters.items()
+                          if parameter.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD],
+                         ['graph', 'mode', 'strain', 'backend', 'save_path'])
         self.assertEqual(signature.parameters['backend'].default,'spring')
         with patch.object(backend,'LAMMPSTask',self.Task):
             r=self.simulate(graph(),mode='dynamics',backend='lammps',record_state=True,**self.args)
