@@ -57,11 +57,14 @@ python -m examples.open_source_workflow --output-dir demo_output
 ## 1. 生成网络
 
 <p>
-<img src="docs/media/three_dimensional_topologies.gif" alt="从不同相机角度观察 octet、diamond 与 gyroid 纤维网络" width="350" align="top">
-<img src="docs/media/spectrum_four_topologies.gif" alt="正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何" width="350" align="top">
+<img src="docs/media/three_dimensional_topologies.gif" alt="从不同相机角度观察 octet、diamond 与 gyroid 纤维网络" align="top">
 </p>
 
 Octet、diamond 与 gyroid 网络的相机环绕。 [三维参数](docs/media/three_dimensional_topologies.json) · [可编辑三维帧](docs/media/three_dimensional_topologies_final.svg)
+
+<p>
+<img src="docs/media/spectrum_four_topologies.gif" alt="正方形、六边形、环形与 kagome 网络使用同一参考纤维位移轮廓改变几何" width="350" align="top">
+</p>
 
 四种平面拓扑使用同一位移轮廓：形状变化，连接关系不变。 [制造几何方法](docs/METHODS_MANUFACTURING_UNIFIED.md) · [可编辑矢量关键帧](docs/media/spectrum_four_topologies_peak.svg) · [参数记录](docs/media/spectrum_four_topologies.json)
 
@@ -95,7 +98,7 @@ LAMMPS 谐键网络与 Taichi 轴向网络动力学，位移放大 1,000 倍。 
 
 ### 电场与热过程
 
-<img src="docs/media/electrical_torus_field.gif" alt="已保存的环面网络电学场相机环绕展示" width="460" align="top">
+<img src="docs/media/electrical_torus_field.gif" alt="已保存的环面网络电学场相机环绕展示" align="top">
 
 环面网络稳态电压与电流的相机环绕。 [电学场与渲染来源](docs/media/electrical_torus_field.json) · [电传输接口](docs/integrations/LINEAR_TRANSPORT_USAGE.md)
 
