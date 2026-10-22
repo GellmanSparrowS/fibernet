@@ -561,8 +561,8 @@ class SimResult:
         if mapped_nodes != mapped_edges:
             raise ValueError('compute_detailed requires both node_ids and edge_ids, or neither for legacy results')
         if mapped_nodes:
-            node_ids = _strict_state_ids(self.metadata['node_ids'], nonnegative=True)
-            edge_ids = _strict_state_ids(self.metadata['edge_ids'], 'edge_ids', nonnegative=True)
+            node_ids = _strict_state_ids(self.metadata['node_ids'])
+            edge_ids = _strict_state_ids(self.metadata['edge_ids'], 'edge_ids')
             if set(node_ids) != set(graph.nodes):
                 raise ValueError('node_ids must exactly cover graph nodes')
             if not set(edge_ids).issubset(graph.edges):

@@ -134,6 +134,116 @@ class ResultIdentityContractTests(unittest.TestCase):
             'reactions': np.arange(u.size, dtype=float).reshape(u.shape),
         }
 
+    def signed_native_case(self):
+        # Match the established native mass-state test's in-memory rekeying.
+        # This does not widen StructureGraph.from_dict's existing ID domain.
+        graph = StructureGraph.from_dict({
+            'version': '3.0', 'dimension': 3,
+            'nodes': [{'id': 0, 'position': [0., 0., 0.]},
+                      {'id': 1, 'position': [2., 0., 0.]}],
+            'edges': [{'id': 0, 'node_i': 0, 'node_j': 1, 'radius': .03},
+                      {'id': 1, 'node_i': 1, 'node_j': 0, 'radius': .07}],
+        })
+        graph._nodes = {30: graph._nodes[0], -7: graph._nodes[1]}
+        for nid, node in graph.nodes.items(): node.node_id = nid
+        graph._edges = {-90: graph._edges[0], 3: graph._edges[1]}
+        for eid, edge in graph.edges.items():
+            edge.edge_id = eid
+            edge.node_i = 30 if edge.node_i == 0 else -7
+            edge.node_j = 30 if edge.node_j == 0 else -7
+        graph.edges[-90].material.name = 'signed_parallel_a'
+        graph.edges[-90].material.youngs_modulus = 100.
+        graph.edges[3].material.name = 'signed_parallel_b'
+        graph.edges[3].material.youngs_modulus = 300.
+        result = SimResult(
+            mode='dynamics', n_nodes=2, n_edges=2, energy=123., max_force=31.,
+            deformed_positions=np.array([[0., 0., 0.], [2.2, 0., 0.]]),
+            displacements=np.array([[0., 0., 0.], [.2, 0., 0.]]),
+            edge_forces=np.array([10., 11.]), edge_stretches=np.ones(2),
+            metadata={'node_ids': [30, -7], 'edge_ids': [-90, 3]},
+        )
+        return graph, result
+
+    def test_signed_native_ids_parallel_edges_and_result_roundtrip(self):
+        graph, result = self.signed_native_case()
+        coefficients = np.array([3., 11.])  # ordered by physical IDs [-90, 3]
+        result.compute_detailed(graph, coefficients)
+        np.testing.assert_allclose(result.edge_stretches, [1.1, 1.1])
+        np.testing.assert_allclose(result.edge_forces, [.3, 1.1])
+        self.assertAlmostEqual(result.energy, .14)
+        graph._nodes = {nid: graph.nodes[nid] for nid in (-7, 30)}
+        graph._edges = {eid: graph.edges[eid] for eid in (3, -90)}
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'signed_result.json'
+            result.save(str(path), detailed=True)
+            restored = SimResult.load(str(path))
+            restored.compute_detailed(graph, coefficients)
+        self.assertEqual(restored.metadata['node_ids'], [30, -7])
+        self.assertEqual(restored.metadata['edge_ids'], [-90, 3])
+        np.testing.assert_allclose(restored.edge_forces, [.3, 1.1])
+        self.assertAlmostEqual(restored.energy, .14)
+        self.assertEqual([graph.edges[e].radius for e in restored.metadata['edge_ids']], [.03, .07])
+        self.assertEqual([graph.edges[e].material.name for e in restored.metadata['edge_ids']],
+                         ['signed_parallel_a', 'signed_parallel_b'])
+
+    def test_signed_selected_edge_and_invalid_maps_remain_strict(self):
+        graph, result = self.signed_native_case()
+        result.metadata['edge_ids'] = [-90]
+        result.n_edges = 1
+        result.edge_forces = result.edge_forces[:1]
+        result.edge_stretches = result.edge_stretches[:1]
+        result.compute_detailed(graph, np.array([3.]))
+        np.testing.assert_allclose(result.edge_forces, [.3])
+        self.assertAlmostEqual(result.energy, .03)
+        for name, bad in (
+            ('node_ids', [30, -7.]), ('node_ids', [30, False]),
+            ('node_ids', [30, 30]), ('node_ids', [30, -999]),
+            ('edge_ids', [-90, -90]), ('edge_ids', [-90, -999]),
+            ('edge_ids', [-90., 3]), ('edge_ids', [-90, True]),
+        ):
+            with self.subTest(name=name, bad=bad):
+                graph, result = self.signed_native_case()
+                result.metadata[name] = bad
+                self.assert_rejected_unchanged(result, graph, np.array([3., 11.]))
+
+    def test_fem_guard_precedes_malformed_mixed_mode_routing(self):
+        graph = self.graph()
+        records = [None, {'native_axial_viscoelastic': None},
+                   {'native_axial_viscoelastic': {'malformed': True}},
+                   {'backend': 'lammps'},
+                   {'backend': 'lammps', 'native_axial_viscoelastic': {'malformed': True}}]
+        for metadata in records:
+            for stiffness in (1., float('nan'), np.array([1., 2.])):
+                with self.subTest(metadata=metadata, stiffness=stiffness):
+                    result = self.result(graph)
+                    result.mode = 'fem_beam_frame'
+                    result.metadata = copy.deepcopy(metadata)
+                    before = copy.deepcopy(vars(result))
+                    with patch('builtins.__import__', side_effect=AssertionError('mixed-mode routing must not import')):
+                        with self.assertRaisesRegex(ValueError, 'FEM solver force and energy'):
+                            result.compute_detailed(graph, stiffness)
+                    self.assert_nested_equal(vars(result), before)
+
+    def test_legacy_fem_explicit_map_sign_domain_is_unchanged(self):
+        for negative_kind in ('node', 'edge'):
+            with self.subTest(negative_kind=negative_kind):
+                graph = self.graph()
+                raw = self.raw_fem(graph)
+                before = copy.deepcopy(raw)
+                if negative_kind == 'node':
+                    graph._nodes = {(-40 if nid == 40 else nid): node for nid, node in graph.nodes.items()}
+                    graph.nodes[-40].node_id = -40
+                    for edge in graph.edges.values():
+                        if edge.node_i == 40: edge.node_i = -40
+                        if edge.node_j == 40: edge.node_j = -40
+                else:
+                    graph._edges = {(-90 if eid == 90 else eid): edge for eid, edge in graph.edges.items()}
+                    graph.edges[-90].edge_id = -90
+                with self.assertRaisesRegex(ValueError, 'nonnegative integer IDs'):
+                    BeamFrameFEM(E=100.).to_sim_result(raw, graph,
+                        node_ids=list(graph.nodes), edge_ids=list(graph.edges))
+                self.assert_nested_equal(raw, before)
+
     def test_reordered_graph_and_result_roundtrip_preserves_identity(self):
         graph = self.graph()
         result = self.result(graph)

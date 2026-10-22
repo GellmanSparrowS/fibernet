@@ -238,12 +238,66 @@ def prior_sim_facade():
     return raw
 
 
+# Reviewed result-detail method only; historical API-v2 fixtures stay immutable.
+RESULT_IDENTITY_METHOD_PIN = '705e63bd4dc84b86ed2cd2a85b4fc4db1050f84a69eabc34624488f324bc77e5'
+
+
+def result_detail_method(raw):
+    tree = ast.parse(raw.decode('utf-8'))
+    results = [n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'SimResult']
+    assert len(results) == 1, 'expected one SimResult class'
+    methods = [n for n in results[0].body if isinstance(n, ast.FunctionDef) and n.name == 'compute_detailed']
+    assert len(methods) == 1, 'expected one compute_detailed method'
+    return methods[0]
+
+
+def reviewed_result_identity_method():
+    raw = (ROOT/'tests/fixtures/result_identity_contract_v1/compute_detailed.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == RESULT_IDENTITY_METHOD_PIN, 'reviewed result identity method fixture changed'
+    return raw
+
+
+def reviewed_result_identity_source():
+    """Reconstruct only the approved method and two field-comment changes."""
+    raw = public_baseline('fibernet/sim/accelerated.py').read_bytes()
+    method = result_detail_method(raw)
+    lines = raw.splitlines(keepends=True)
+    approved = b''.join(lines[:method.lineno-1]) + reviewed_result_identity_method() + b''.join(lines[method.end_lineno:])
+    for before, after in (
+        (b'    edge_forces: np.ndarray = None       # per-edge axial force magnitude\n',
+         b'    edge_forces: np.ndarray = None       # signed per-edge axial force\n'),
+        (b'    max_force: float = 0.0              # maximum edge force\n',
+         b'    max_force: float = 0.0              # maximum absolute axial edge force\n'),
+    ):
+        assert approved.count(before) == 1, 'historical result field comment changed'
+        approved = approved.replace(before, after, 1)
+    return approved
+
+
+def normalize_result_identity_method(function):
+    """Qualify the complete reviewed prefix; retain every appended statement."""
+    historical = result_detail_method(public_baseline('fibernet/sim/accelerated.py').read_bytes())
+    approved = result_detail_method(b'class SimResult:\n' + reviewed_result_identity_method())
+    for reference in (approved, historical):
+        prefix = copy.deepcopy(function)
+        suffix = prefix.body[len(reference.body):]
+        prefix.body = prefix.body[:len(reference.body)]
+        if canonical_ast(prefix) == canonical_ast(reference):
+            normalized = copy.deepcopy(historical)
+            normalized.body.extend(suffix)
+            return normalized
+    raise AssertionError('unreviewed result identity method change')
+
+
 def require_public_source(relative, raw):
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
         assert raw in (prior, reviewed_facade(relative)), 'public source bytes changed: '+relative
         return
     expected=public_baseline(relative).read_bytes()
+    if relative == 'fibernet/sim/accelerated.py':
+        assert raw in (expected, reviewed_result_identity_source()), 'public source bytes changed: '+relative
+        return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
         return
@@ -269,6 +323,8 @@ LAMMPS_PREFIXES={
 def remove_public_lammps_branch(function, key):
     """Check the readable routing contract before removing its one prefix."""
     node=copy.deepcopy(function)
+    if key == 'SimResult.compute_detailed':
+        node = normalize_result_identity_method(node)
     index=1 if (node.body and isinstance(node.body[0],ast.Expr) and
                 isinstance(node.body[0].value,ast.Constant) and isinstance(node.body[0].value.value,str)) else 0
     if key == 'SimResult.compute_detailed':
@@ -309,6 +365,73 @@ def restore_historical_save(result_node):
 
 
 class SourceShape(unittest.TestCase):
+    def test_result_identity_reviewed_source_is_method_scoped(self):
+        baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
+        self.assertEqual(reviewed_result_identity_source(), SOURCE.read_bytes())
+        require_public_source('fibernet/sim/accelerated.py', baseline)
+        require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())
+        approved = result_detail_method(SOURCE.read_bytes())
+        historical = result_detail_method(baseline)
+        self.assertEqual(canonical_ast(normalize_result_identity_method(approved)), canonical_ast(historical))
+
+    def test_result_identity_prefix_mutations_are_refused(self):
+        method = result_detail_method(SOURCE.read_bytes())
+        # FEM must still precede native-material and LAMMPS routing.
+        for index in (1, 2, 3):
+            for mutation in ('condition', 'body', 'missing', 'extra'):
+                with self.subTest(index=index, mutation=mutation):
+                    changed = copy.deepcopy(method)
+                    if mutation == 'condition': changed.body[index].test = ast.Constant(value=True)
+                    elif mutation == 'body': changed.body[index].body = [ast.Pass()]
+                    elif mutation == 'extra': changed.body[index].body.append(ast.Pass())
+                    else: del changed.body[index]
+                    with self.assertRaises(AssertionError):
+                        remove_public_lammps_branch(changed, 'SimResult.compute_detailed')
+        changed = copy.deepcopy(method)
+        changed.args.defaults = [ast.Constant(value=1.)]
+        with self.assertRaises(AssertionError): normalize_result_identity_method(changed)
+        changed = copy.deepcopy(method)
+        call = next(n for n in ast.walk(changed) if isinstance(n, ast.Call)
+                    and isinstance(n.func, ast.Name) and n.func.id == '_strict_state_ids')
+        call.keywords.append(ast.keyword(arg='nonnegative', value=ast.Constant(value=True)))
+        with self.assertRaises(AssertionError): normalize_result_identity_method(changed)
+
+    def test_result_identity_arithmetic_mutations_are_refused(self):
+        method = result_detail_method(SOURCE.read_bytes())
+        changed = copy.deepcopy(method)
+        force = next(n for n in ast.walk(changed) if isinstance(n, ast.Assign)
+                     and any(isinstance(t, ast.Name) and t.id == 'forces' for t in n.targets))
+        force.value.op = ast.Add()
+        with self.assertRaises(AssertionError): normalize_result_identity_method(changed)
+        changed = copy.deepcopy(method)
+        energy = next(n for n in ast.walk(changed) if isinstance(n, ast.keyword) and n.arg == 'energy')
+        energy.value = ast.Constant(value=0.)
+        with self.assertRaises(AssertionError): normalize_result_identity_method(changed)
+
+    def test_result_identity_normalization_preserves_appended_statements(self):
+        method = result_detail_method(SOURCE.read_bytes())
+        changed = copy.deepcopy(method)
+        tail = ast.parse('unrelated_appended_statement = 17').body[0]
+        changed.body.append(tail)
+        normalized = normalize_result_identity_method(changed)
+        self.assertEqual(canonical_ast(normalized.body[-1]), canonical_ast(tail))
+        self.assertNotEqual(canonical_ast(normalize_result_identity_method(method)), canonical_ast(normalized))
+        raw = SOURCE.read_bytes()
+        appended = raw.replace(b'\n    def to_dict(', b'\n        unrelated_appended_statement = 17\n\n    def to_dict(', 1)
+        self.assertNotEqual(appended, raw)
+        with self.assertRaises(AssertionError): require_public_source('fibernet/sim/accelerated.py', appended)
+
+    def test_result_identity_unrelated_source_mutations_are_refused(self):
+        raw = SOURCE.read_bytes()
+        changes = [raw+b'\n# unrelated comment\n', raw.replace(b'\n', b'\r\n'),
+                   raw.replace(b'max_displacement: float = 0.0', b'max_displacement: float = 1.0', 1),
+                   raw.replace(b'def to_dict(self, detailed: bool = False)', b'def to_dict(self, detailed: bool = True)', 1),
+                   raw.replace(b'forces = spring_coefficients * strain', b'forces = spring_coefficients + strain', 1)]
+        for changed in changes:
+            self.assertNotEqual(changed, raw)
+            with self.subTest(changed=changed[-80:]):
+                with self.assertRaises(AssertionError): require_public_source('fibernet/sim/accelerated.py', changed)
+
     def test_versioned_source_provenance_and_unchanged_kernels(self):
         manifest=json.loads((ROOT/'tests/fixtures/public_api_contract_v2/manifest.json').read_text())
         self.assertEqual(set(manifest['sources']), set(API_V2_MODULES))
