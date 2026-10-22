@@ -2066,20 +2066,46 @@ def _post_tile_connectivity_repair(
     graph : StructureGraph
         Tiled structure (modified in-place).
     max_bridge_dist : float
-        Maximum distance for bridge edges.
+        Maximum distance for bridge edges, in raw graph coordinate units.
     radius : float, optional
         Bridge edge radius. Default: median of existing edge radii.
     material : Material, optional
         Bridge material. Default: first edge's material.
+
+    Notes
+    -----
+    The graph's ``post_tile_connectivity_repair`` metadata describes this
+    invocation. Only newly added physical edges receive the same metadata key.
+    No physical length unit is inferred and no coordinate conversion is applied.
+    Completion does not guarantee connectivity or mechanical stability.
     """
+    report = {
+        "version": 1,
+        "status": "incomplete",
+        "coordinate_space": "graph_coordinates",
+        "length_unit": None,
+        "unit_conversion_applied": False,
+        "max_bridge_dist": float(max_bridge_dist),
+        "dangling_max_dist": float(max_bridge_dist * 2),
+        "distance_comparison": "strictly_less_than",
+        "components_before": None,
+        "components_after": None,
+        "added_edge_ids": [],
+        "added_node_ids": [],
+        "merged_node_ids": [],
+        "removed_edge_ids": [],
+    }
+    graph.metadata["post_tile_connectivity_repair"] = report
     try:
         from scipy.spatial import cKDTree
     except ImportError:
+        report.update(status="skipped_missing_dependency", missing_dependency="scipy")
         return graph
     
     try:
         import networkx as _nx
     except ImportError:
+        report.update(status="skipped_missing_dependency", missing_dependency="networkx")
         return graph
     
     # Check if already connected
@@ -2091,7 +2117,9 @@ def _post_tile_connectivity_repair(
         G_nx.add_edge(e.node_i, e.node_j)
     
     comps = list(_nx.connected_components(G_nx))
+    report["components_before"] = len(comps)
     if len(comps) <= 1:
+        report.update(status="not_needed", components_after=len(comps))
         return graph
     
     # Default radius/material from existing edges
@@ -2172,11 +2200,24 @@ def _post_tile_connectivity_repair(
             
             # Check not already connected
             if frozenset([main_nid, other_nid]) not in existing_edges:
-                graph.add_edge(main_nid, other_nid, radius=radius, material=material)
+                edge_count = graph.num_edges
+                eid = graph.add_edge(
+                    main_nid, other_nid, radius=radius, material=material,
+                    post_tile_connectivity_repair={
+                        "version": 1,
+                        "reason": "connect_disconnected_components",
+                        "distance_at_addition": float(dists[valid][best_other]),
+                        "distance_limit": float(max_bridge_dist),
+                        "coordinate_space": "graph_coordinates",
+                        "length_unit": None,
+                    },
+                )
+                if graph.num_edges > edge_count:
+                    report["added_edge_ids"].append(eid)
                 existing_edges.add(frozenset([main_nid, other_nid]))
                 main_comp = main_comp | other_set
     
-    # Repair dangling (degree-1) nodes by connecting to nearest non-boundary neighbor
+    # Process degree-1 candidates using the pre-pass adjacency (no boundary filter).
     G_check = _nx.Graph()
     for nid in graph.nodes:
         G_check.add_node(nid)
@@ -2208,8 +2249,25 @@ def _post_tile_connectivity_repair(
                     best_nid = other_nid
             
             if best_nid is not None:
-                graph.add_edge(d_nid, best_nid, radius=radius, material=material)
+                edge_count = graph.num_edges
+                eid = graph.add_edge(
+                    d_nid, best_nid, radius=radius, material=material,
+                    post_tile_connectivity_repair={
+                        "version": 1,
+                        "reason": "connect_degree_one_node",
+                        "distance_at_addition": float(best_dist),
+                        "distance_limit": float(max_bridge_dist * 2),
+                        "coordinate_space": "graph_coordinates",
+                        "length_unit": None,
+                    },
+                )
+                # add_edge may return an existing physical edge for this pair.
+                if graph.num_edges > edge_count:
+                    report["added_edge_ids"].append(eid)
 
+    # Update only the report after the unchanged dangling-node traversal.
+    G_check.add_edges_from((e.node_i, e.node_j) for e in graph.edges.values())
+    report.update(status="completed", components_after=_nx.number_connected_components(G_check))
     return graph
 
 def pattern_3d(
@@ -2253,6 +2311,15 @@ def pattern_3d(
     Returns
     -------
     StructureGraph
+
+    Notes
+    -----
+    HCP and TPMS units run a post-tile connectivity repair. Its report is in
+    ``graph.metadata["post_tile_connectivity_repair"]``; added physical edges
+    carry the same metadata key with their reason and distance at addition.
+    The existing limits are 3.0 for component bridges and 6.0 for the subsequent
+    degree-one pass, in raw graph coordinate units, not inferred metres or mm.
+    These reports do not describe tiling welds or certify mechanical stability.
     """
     if isinstance(grid, int):
         grid = (grid, grid, grid)
