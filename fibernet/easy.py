@@ -76,6 +76,8 @@ def simulate(
     strain: Optional[float] = None,
     backend: str = "spring",
     save_path: Optional[str] = None,
+    *,
+    stretch_ratio: Optional[float] = None,
     **kwargs,
 ) -> Union[SimResult, _ViscoelasticResult]:
     """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
@@ -111,6 +113,12 @@ def simulate(
         JSON export path. SimResult saves a summary by default, not a full-state
         checkpoint. For detailed arrays call result.save(path, detailed=True);
         restart support is specific to each result/backend contract.
+    stretch_ratio : float or None, keyword-only
+        Explicit target ratio lambda (1.01 = 1% extension), only for stretch.
+        Must be finite and positive; booleans are rejected. Prefer this name
+        for new code. Do not combine a non-None value with legacy strain.
+        None means unset; when both names are unset the legacy default is 2.0.
+        This names the loading ratio, not the model's range of validity.
     **kwargs
         For spring/taichi, arch="cpu" or "gpu" and a positive integer
         num_threads (default 4) configure the engine; remaining keywords go
@@ -143,6 +151,23 @@ def simulate(
     """
     from inspect import signature
 
+    # Resolve the explicit spelling before provider construction. The historical
+    # strain argument and its positional order remain compatible.
+    if stretch_ratio is not None:
+        if strain is not None:
+            raise ValueError("use only stretch_ratio or legacy strain, not both")
+        if mode != "stretch":
+            raise ValueError("stretch_ratio is only supported for mode='stretch'; omit it for other modes")
+        valid_ratio = False
+        if (not isinstance(stretch_ratio, (bool, np.bool_)) and
+                isinstance(stretch_ratio, (int, float, np.integer, np.floating))):
+            try:
+                valid_ratio = bool(np.isfinite(stretch_ratio) and stretch_ratio > 0)
+            except (TypeError, ValueError, OverflowError):
+                pass
+        if not valid_ratio:
+            raise ValueError("stretch_ratio must be a finite positive real ratio (1.01 = 1% extension)")
+        strain = stretch_ratio
     strain_supplied = strain is not None
     if not isinstance(mode, str):
         raise ValueError("mode must be a string")
@@ -171,7 +196,7 @@ def simulate(
         method_kwargs = dict(kwargs)
         if mode == "stretch":
             if "target_stretch" in method_kwargs:
-                raise TypeError("use strain, not target_stretch, with simulate")
+                raise TypeError("use stretch_ratio (or legacy strain), not target_stretch, with simulate")
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
         engine = TaichiEngine(arch=arch, num_threads=int(num_threads))

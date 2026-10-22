@@ -313,7 +313,19 @@ def normalize_result_identity_method(function):
     raise AssertionError('unreviewed result identity method change')
 
 
+EASY_STRETCH_RATIO_PIN = 'fe9cde78f9618555c22cdac2e63c1998c2af781c970596fc192d362857b469ff'
+
+
+def reviewed_easy_stretch_ratio_source():
+    raw = (ROOT/'tests/fixtures/easy_stretch_ratio_v1/easy.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == EASY_STRETCH_RATIO_PIN, 'reviewed stretch ratio source changed'
+    return raw
+
+
 def require_public_source(relative, raw):
+    if relative == 'fibernet/easy.py':
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source()), 'public source bytes changed: '+relative
+        return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
         assert raw in (prior, reviewed_facade(relative)), 'public source bytes changed: '+relative
@@ -389,6 +401,79 @@ def restore_historical_save(result_node):
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
     node.body[node.body.index(detailed)]=remove_public_lammps_branch(detailed,'SimResult.compute_detailed')
     return node
+
+
+class StretchRatioSourceAdmission(unittest.TestCase):
+    def test_exact_old_and_new_versions_are_admitted(self):
+        old = public_baseline('fibernet/easy.py').read_bytes()
+        new = reviewed_easy_stretch_ratio_source()
+        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), new)
+        self.assertNotEqual(old, new)
+        require_public_source('fibernet/easy.py', old)
+        require_public_source('fibernet/easy.py', new)
+
+    def test_source_outside_simulate_is_unchanged(self):
+        def without_simulate(raw):
+            tree = ast.parse(raw)
+            tree.body = [node for node in tree.body
+                         if not (isinstance(node, ast.FunctionDef) and node.name == 'simulate')]
+            return canonical_ast(tree)
+        self.assertEqual(without_simulate(public_baseline('fibernet/easy.py').read_bytes()),
+                         without_simulate(reviewed_easy_stretch_ratio_source()))
+
+    def test_unreviewed_mutations_are_refused(self):
+        raw = reviewed_easy_stretch_ratio_source()
+        changes = (
+            (b'if strain is not None:', b'if False:'),
+            (b'strain = 2.0', b'strain = 1.02'),
+            (b'stretch_ratio > 0', b'stretch_ratio >= 0'),
+            (b'np.isfinite(stretch_ratio)', b'True'),
+            (b'    *,\n    stretch_ratio:', b'    stretch_ratio:'),
+            (b'strain = stretch_ratio', b'strain = stretch_ratio + 1'),
+            (b'target: str = "max_force"', b'target: str = "energy"'),
+        )
+        for before, after in changes:
+            with self.subTest(mutation=before):
+                self.assertIn(before, raw)
+                changed = raw.replace(before, after, 1)
+                with self.assertRaises(AssertionError):
+                    require_public_source('fibernet/easy.py', changed)
+        for changed in (raw + b'\npass\n', raw + b'\n# unreviewed\n',
+                        raw.replace(b'\n', b'\r\n')):
+            with self.subTest(suffix=changed[-40:]), self.assertRaises(AssertionError):
+                require_public_source('fibernet/easy.py', changed)
+
+    def test_fixture_bytes_survive_crlf_checkout(self):
+        import subprocess
+        import tempfile
+        name = 'tests/fixtures/easy_stretch_ratio_v1/easy.py.txt'
+        raw = reviewed_easy_stretch_ratio_source()
+        for autocrlf in ('false', 'true'):
+            with self.subTest(autocrlf=autocrlf), tempfile.TemporaryDirectory() as directory:
+                repo = Path(directory)
+                def git(*args):
+                    return subprocess.run(['git', '-c', 'core.autocrlf=' + autocrlf,
+                                           '-c', 'core.safecrlf=false', *args],
+                                          cwd=repo, check=True, capture_output=True, timeout=10)
+                git('init', '-q')
+                (repo/'.gitattributes').write_bytes((ROOT/'.gitattributes').read_bytes())
+                target = repo/name
+                target.parent.mkdir(parents=True)
+                target.write_bytes(raw)
+                git('add', '--', '.gitattributes', name)
+                target.unlink()
+                git('checkout-index', '--all', '--force')
+                self.assertEqual(target.read_bytes(), raw)
+
+    def test_fixture_digest_is_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/easy_stretch_ratio_v1/easy.py.txt'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw + b'\n# changed fixture\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'reviewed stretch ratio source changed'):
+                reviewed_easy_stretch_ratio_source()
 
 
 class SourceShape(unittest.TestCase):
