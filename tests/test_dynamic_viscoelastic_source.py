@@ -95,7 +95,7 @@ def run_checks():
         _element_data=lambda x,e:(np.linalg.norm(x[e[:,1]]-x[e[:,0]], axis=1), None))
     nodes = [ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0)]
     nodes += [n for n in ntree.body if getattr(n, 'name', None) in helpers
-              or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '_DAMPING_UNSET' for t in n.targets))] + [method]
+              or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id in {'_DAMPING_UNSET', '_SPRING_PROVENANCE'} for t in n.targets))] + [method]
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])), '<actual dynamics AST, cached fake native fields>', 'exec'), ns)
     class Field:
         def __init__(self):
@@ -227,6 +227,8 @@ def run_checks():
             native_axial_viscoelastic=fixture,
             native_axial_inputs=dict(schema='native_axial_inputs/1',node_ids=[17,83],masses=[2.,3.],units=dict(mod.SI))))
     summary = saved.to_dict(detailed=False)
+    check('viscoelastic summary does not invent spring provenance',
+        ns['_SPRING_PROVENANCE'] not in summary)
     check('actual summary export retains full material branch state and final x/v',
         summary['native_axial_viscoelastic']['final']==fixture['final'] and
         summary['native_axial_viscoelastic']['final_positions_m']==fixture['final_positions_m'])
