@@ -889,7 +889,11 @@ class BeamFrameFEM:
             Boundary percentage.
         nonlinear : bool or None
             In 2-D, None auto-selects incremental updated-geometry solves for
-            |stretch-1| > 0.3; True selects this path explicitly.
+            |stretch-1| > 0.3; True selects this experimental path explicitly.
+            This path warns at any stretch: final nonlinear equilibrium is
+            unverified, and final stiffness/reactions/nodal moments are unavailable.
+            False retains the small-deformation linear solve and warns when
+            |stretch-1| > 0.3. This legacy switch is not a validity bound.
             In 3-D, only the linear solver exists: True is unsupported, while
             None and False retain the linear solve. Large 3-D stretches warn
             because this small-deformation model is not a nonlinear solution.
@@ -925,12 +929,21 @@ class BeamFrameFEM:
             if nonlinear is None:
                 nonlinear = abs(target_stretch - 1.0) > 0.3
             if nonlinear:
+                warnings.warn(
+                    '2-D beam-frame stretch uses experimental incremental updated-geometry linear solves; '
+                    'final nonlinear equilibrium is unverified, and final stiffness, reactions and nodal moments '
+                    'are unavailable. For small-deformation analysis, use nonlinear=False with a suitably small '
+                    'stretch (for example, target_stretch=1.01).', UserWarning, stacklevel=2)
                 result = self.solve_2d_nonlinear(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
                     prescribed_disp=prescribed, fixed_nodes=left, n_steps=10,
                     deduplicate=deduplicate
                 )
             else:
+                if abs(target_stretch - 1.0) > 0.3:
+                    warnings.warn(
+                        '2-D beam-frame stretch uses a small-deformation linear solver even at large stretch; '
+                        'nonlinear=False does not provide a large-deformation solution.', UserWarning, stacklevel=2)
                 result = self.solve_2d(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
                     fixed_nodes=left, prescribed_disp=prescribed,

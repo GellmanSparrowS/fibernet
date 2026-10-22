@@ -322,6 +322,16 @@ def reviewed_easy_stretch_ratio_source():
     return raw
 
 
+
+EASY_RL_FAILURE_PIN = 'a2303068861cf198148c7cb1f6eb78f46aa35f3f8eb648fa1d72c85d430cd73e'
+
+
+def reviewed_easy_rl_failure_source():
+    raw = (ROOT/'tests/fixtures/easy_rl_failure_v1/easy.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == EASY_RL_FAILURE_PIN, 'reviewed RL failure source changed'
+    return raw
+
+
 def reviewed_nodal_controls_facade():
     raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt').read_bytes()
     assert hashlib.sha256(raw).hexdigest() == '268c34a2446a4ca46aab8c29c39053502f8d343f9b25a9f77ee2ddc66161ddc1', 'reviewed nodal controls facade changed'
@@ -333,7 +343,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -416,7 +426,8 @@ class StretchRatioSourceAdmission(unittest.TestCase):
     def test_exact_old_and_new_versions_are_admitted(self):
         old = public_baseline('fibernet/easy.py').read_bytes()
         new = reviewed_easy_stretch_ratio_source()
-        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), new)
+        self.assertIn((ROOT/'fibernet/easy.py').read_bytes(),
+                      (new, reviewed_easy_rl_failure_source()))
         self.assertNotEqual(old, new)
         require_public_source('fibernet/easy.py', old)
         require_public_source('fibernet/easy.py', new)
@@ -483,6 +494,63 @@ class StretchRatioSourceAdmission(unittest.TestCase):
         with patch.object(Path, 'read_bytes', changed_read):
             with self.assertRaisesRegex(AssertionError, 'reviewed stretch ratio source changed'):
                 reviewed_easy_stretch_ratio_source()
+
+
+
+class RLFailureSourceAdmission(unittest.TestCase):
+    def test_exact_three_versions_and_current_are_admitted(self):
+        old = public_baseline('fibernet/easy.py').read_bytes()
+        stretch = reviewed_easy_stretch_ratio_source()
+        failure = reviewed_easy_rl_failure_source()
+        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), failure)
+        self.assertEqual(len({old, stretch, failure}), 3)
+        for raw in (old, stretch, failure):
+            require_public_source('fibernet/easy.py', raw)
+
+    def test_source_outside_rollout_and_summary_is_unchanged(self):
+        def without_rollout_and_summary(raw):
+            tree = ast.parse(raw)
+            self.assertIsInstance(tree.body[0], ast.Expr)
+            self.assertIsInstance(tree.body[0].value, ast.Constant)
+            self.assertIsInstance(tree.body[0].value.value, str)
+            tree.body = [node for node in tree.body[1:]
+                         if not (isinstance(node, ast.FunctionDef) and node.name == 'train_rl')]
+            return canonical_ast(tree)
+        self.assertEqual(without_rollout_and_summary(reviewed_easy_stretch_ratio_source()),
+                         without_rollout_and_summary(reviewed_easy_rl_failure_source()))
+
+    def test_unreviewed_mutations_are_refused(self):
+        raw = reviewed_easy_rl_failure_source()
+        changes = (
+            (b'n_episodes <= 0', b'n_episodes < 0'),
+            (b'not math.isfinite(reward)', b'False'),
+            (b'if "error" in info:', b'if False:'),
+            (b'env.close()', b'pass'),
+            (b'allow_nan=False', b'allow_nan=True'),
+            (b'os.replace(temporary, destination)', b'pass'),
+            (b'if strain is not None:', b'if False:'),
+            (b'strain = 2.0', b'strain = 1.02'),
+            (b'target: str = "max_force"', b'target: str = "energy"'),
+        )
+        for before, after in changes:
+            with self.subTest(mutation=before):
+                self.assertIn(before, raw)
+                with self.assertRaises(AssertionError):
+                    require_public_source('fibernet/easy.py', raw.replace(before, after, 1))
+        for changed in (raw + b'\npass\n', raw + b'\n# unreviewed\n',
+                        raw.replace(b'\n', b'\r\n')):
+            with self.subTest(suffix=changed[-40:]), self.assertRaises(AssertionError):
+                require_public_source('fibernet/easy.py', changed)
+
+    def test_fixture_digest_is_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/easy_rl_failure_v1/easy.py.txt'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw + b'\n# changed fixture\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'reviewed RL failure source changed'):
+                reviewed_easy_rl_failure_source()
 
 
 class SourceShape(unittest.TestCase):

@@ -25,22 +25,28 @@ python -m pip install -e .
 
 需要 Python 3.9 及以上版本。可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
 
-### 生成、模拟、保存
+### 开发版源码示例：生成、模拟、保存
+
+以下示例需要上方通过 `python -m pip install -e .` 安装的开发版源码。已发布的 PyPI 4.2.0 不支持这里的 `stretch_ratio` 参数。
 
 ```python
 import fibernet as fn
 
+# SI units: coordinates and radius in m; E in Pa; forces in N.
 graph = fn.pattern_2d(
     unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05, seed=23
 )
 fn.show(graph, save_path="network.png")
 
-result = fn.simulate(graph, backend="fem", mode="stretch", strain=1.01)
+result = fn.simulate(
+    graph, backend="fem", mode="stretch", stretch_ratio=1.01,
+    nonlinear=False, E=1e9, nu=0.3,
+)
 result.save("fem_result.json", detailed=True)
 print(graph.num_nodes, graph.num_edges, result.max_displacement)
 ```
 
-`strain=1.01` 指拉伸比 1.01，即 1% 伸长。本例使用小应变梁 FEM，几何与材料参数采用一致的单位体系。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
+`stretch_ratio=1.01` 指 1% 伸长；`nonlinear=False` 明确选择小变形线性梁 FEM。坐标和半径按米解释，`E=1e9` Pa，`nu=0.3` 无量纲，输出位移为米、力为牛顿；程序不自动换算单位，也不从图的材料记录读取模量。省略拉伸比仍使用兼容默认值 2.0，二维会进入未验证最终平衡的实验增量路径，不适合作为线性入门调用。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
 在源码目录运行完整流程：
 

@@ -14,7 +14,7 @@ def test_fem_quickstart():
     graph = fn.pattern_2d(unit='honeycomb', box=(10, 10), grid=(2, 2),
                           radius=0.05)
     result = BeamFrameFEM(E=1e9, nu=0.3).stretch_test(
-        graph, target_stretch=1.01)
+        graph, target_stretch=1.01, nonlinear=False)
     expected = np.linalg.norm(np.asarray(result['u'])[:, :2], axis=1).max()
     assert result['max_displacement'] > 0
     assert np.isclose(result['max_displacement'], expected)

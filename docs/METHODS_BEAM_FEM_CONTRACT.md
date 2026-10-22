@@ -8,6 +8,31 @@
 
 本地修正前的非线性梁 FEM 方向性 18 案例位于 `benchmarks/results/recruitment_fem_validation.json`，旧最大边力以固定半径 0.05 换算，不能引用其力值。修正后含真实半径与平行边语义的复算结果位于 `benchmarks/results/recruitment_fem_validation_parallel.json`；18/18 个预设阈值下的贯通判定没有变化，而记录的最大单边轴力为旧值四倍。该结果只支持在两种不同数值假设下检查方向性阈值图，不证明简化求解器在定量力值或实验材料上准确。独立平行边、不同半径和压缩伸长的公开回归位于 `tests/test_fem_parallel_contract.py`。
 
+## Start with explicit small-deformation settings
+
+```python
+import fibernet as fn
+
+# SI units: coordinates and radius in m; E in Pa; forces in N.
+graph = fn.pattern_2d(unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05)
+result = fn.simulate(
+    graph, backend="fem", mode="stretch", stretch_ratio=1.01,
+    nonlinear=False, E=1e9, nu=0.3,
+)
+```
+
+Here `stretch_ratio=1.01` is 1% extension, `nu` is dimensionless, and displacement
+is in m. These illustrative parameters are not an experimental calibration.
+The shortcut still defaults to a stretch ratio of 2.0 for compatibility.
+In 2-D, `nonlinear=None` selects incremental updated-geometry linear solves when
+|λ−1|>0.3; explicit `nonlinear=True` selects them at any ratio. Both selections
+warn that this is an experimental model with unverified final nonlinear
+equilibrium and unavailable final stiffness, reactions and nodal moments.
+With `nonlinear=False`, the solver stays linear even at large stretch and warns
+when |λ−1|>0.3. The warnings describe the actual branch; they do not change its
+numerical results. The legacy 0.3 switch is not a validated small-deformation
+limit. A call without a warning still needs an appropriate model and loading.
+
 ## Public shortcut dimension selection
 
 `simulate(graph, backend="fem")` selects the existing beam solver from
