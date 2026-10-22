@@ -28,7 +28,13 @@ print(prepared.manifest())
 
 Every site mass must be finite and positive in kg. Every physical bond requires a finite positive spring stiffness k in N/m and equilibrium length r0 in m. The physical energy is 0.5*k*(r-r0)^2; the compiler writes the LAMMPS harmonic coefficient K=k/2, following the [official harmonic convention](https://docs.lammps.org/bond_harmonic.html). Rest lengths must be supplied independently of a deformed current graph.
 
-The compiler currently requires 3D, straight nonzero edges, a fixed orthogonal nonperiodic box, 2–256 sites, 1–1024 physical bonds, at most 100,000 steps, and every step retained. Curves/internal points and parallel physical edges are explicitly rejected rather than flattened or deduplicated. Shared graph junctions become one site. Crossing edges do not create new welded junctions or contact.
+Without a named resource profile, the compiler requires 3D, straight nonzero edges, a fixed orthogonal nonperiodic box, 2–256 sites, 1–1024 physical bonds, at most 100,000 steps, and every step retained. Curves/internal points and parallel physical edges are explicitly rejected rather than flattened or deduplicated. Shared graph junctions become one site. Crossing edges do not create new welded junctions or contact.
+
+For a bounded full trajectory, [`harmonic_full_history_v1`](../LAMMPS_FULL_HISTORY.md)
+supports up to 64 nodes, 512 edges, and 2048 steps with every state retained
+(2049 frames including the initial state). It uses the same compiler and force
+law, with at most two exact mass values and 20 loaded nodes. Select it through
+the existing `profile` option; it does not certify a particular simulation.
 
 Mass types group only exactly equal normalized binary64 kg values, without tolerance or rounding. Native atom IDs, graph node/edge IDs and their maps remain separate from type IDs. The parser requires each atom's expected type, not merely a type in the valid range. Material metadata, boundaries, loads and stable IDs do not become type-grouping keys.
 
