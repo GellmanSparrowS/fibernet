@@ -11,6 +11,7 @@ import numpy as np
 
 import fibernet as fn
 from fibernet.analysis import analyze_tensile_recruitment
+from fibernet.ml.beam_frame_fem import BeamFrameFEM
 
 
 class OpenSourceWorkflow:
@@ -29,9 +30,10 @@ class OpenSourceWorkflow:
         plt.close(figure)
 
         result_path = self.output_dir / 'fem_result.json'
+        pct = 0.10
         simulation = fn.simulate(graph, backend='fem', mode='stretch',
-                                 strain=self.target_stretch,
-                                 save_path=str(result_path))
+                                 strain=self.target_stretch, dim=2, pct=pct)
+        simulation.save(str(result_path), detailed=True)
         restored = fn.SimResult.load(str(result_path))
         if not np.isclose(simulation.max_displacement,
                           restored.max_displacement):
@@ -43,17 +45,16 @@ class OpenSourceWorkflow:
                                dtype=float)[:, :2]
         edges = np.asarray([[node_index[e.node_i], node_index[e.node_j]]
                             for e in graph.edges.values()], dtype=int)
-        final_xy = np.asarray(simulation.deformed_positions)[:, :2]
+        final_xy = np.asarray(restored.deformed_positions)[:, :2]
         start_length = np.linalg.norm(
             positions[edges[:, 1]] - positions[edges[:, 0]], axis=1)
         final_length = np.linalg.norm(
             final_xy[edges[:, 1]] - final_xy[edges[:, 0]], axis=1)
         edge_strain = np.stack([np.zeros(len(edges)),
                                 final_length / start_length - 1.0])
-        xmin, xmax = positions[:, 0].min(), positions[:, 0].max()
-        grip_width = 0.1 * (xmax - xmin)
-        left = np.flatnonzero(positions[:, 0] <= xmin + grip_width)
-        right = np.flatnonzero(positions[:, 0] >= xmax - grip_width)
+        boundaries = BeamFrameFEM.graph_to_fem_input(
+            graph, dim=2, pct=pct)['boundaries']
+        left, right = boundaries['left'], boundaries['right']
         recruitment = analyze_tensile_recruitment(
             edge_strain, edges, left, right, n_nodes=len(node_ids),
             alpha=self.alpha)

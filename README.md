@@ -57,7 +57,7 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 这里的 `strain=1.01` 表示**拉伸比**，即 1% 伸长。该显式 FEM 路径使用小应变梁框架模型和核心依赖，不需要 Taichi 或桌面应用。几何与材料参数需采用一致的单位体系，详见[梁 FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)。
 
-在源码目录运行完整的“生成结构 → 模拟 → 保存结果 → 招募分析”流程：
+在源码目录运行完整的“生成结构 → 模拟 → 保存结果 → 重载 → 招募分析”流程：
 
 ```bash
 python -m examples.open_source_workflow --output-dir demo_output
@@ -115,7 +115,9 @@ python -m examples.open_source_workflow --output-dir demo_output
 
 ![橙色游标沿 kagome 制造图的闭合欧拉路径前进](docs/media/continuous_route_kagome.gif)
 
-闭合欧拉路径将每条独立纤维边遍历一次，也保留平行纤维的独立身份。蓝色是已访问的边，橙色游标标明当前遍历顺序。平面与曲面流程保留结构图到路径的映射，可用于检查和导出；路径回放清晰呈现结构图的遍历顺序。[平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [实体与路径导出](examples/solid_export_workflow.py)
+闭合欧拉路径将每条独立纤维边遍历一次，也保留平行纤维的独立身份。蓝色是已访问的边，橙色游标标明当前遍历顺序。路径回放清晰呈现结构图的遍历顺序。[生成新的平面与曲面路径](examples/manufacturing_workflow.py) · [自定义基元](examples/custom_cell_workflow.py) · [生成新的实体与路径](examples/solid_export_workflow.py)
+
+沿用当前 `StructureGraph` 导出：全偶度连通图使用 `manufacturing_from_graph` → `export_mapped_route`；含奇度节点时使用 `manufacturing_trails_from_graph` → `export_mapped_trails`。两条路径均接收连通、非空的直边图，显式声明 `m`/`mm` 和坐标系，输出 mm 坐标 CSV 与稳定 ID 映射 JSON，不修改源图拓扑。详见[闭合路径适用范围](docs/MANUFACTURING_GRAPH_MAPPING.md#geometry-and-ownership)与[多段路径适用范围](docs/MULTISTROKE_MANUFACTURING.md#scope-and-input-validation)。
 
 ### 6. 映射曲面纤维，准备几何与路径导出
 
@@ -178,6 +180,7 @@ LAMMPS 展示 64 个节点、441 条键在 41.667 µs 内的运动；Taichi 展�
 | 生成二维、三维结构 | `pattern_2d`、`pattern_3d`、`StructureGraph` | [参数化生成](fibernet/gen/pattern.py) |
 | 研究变形与力学响应 | 显式 FEM 或 Taichi 路径；共享简化模型使用 `ReducedBeamSolver` | [接口层次、单位与模型选择](docs/API_LAYERS.md) |
 | 量化结构与招募行为 | `SnapshotFeatureExtractor`、`analyze_tensile_recruitment` | [快照特征](examples/snapshot_features_workflow.py) · [招募分析](examples/tensile_recruitment_quickstart.py) |
+| 沿用当前 `StructureGraph` 导出路径 | `manufacturing_from_graph` → `export_mapped_route`；`manufacturing_trails_from_graph` → `export_mapped_trails` | [闭合路径与稳定 ID](docs/MANUFACTURING_GRAPH_MAPPING.md) · [多段路径与适用范围](docs/MULTISTROKE_MANUFACTURING.md) |
 | 构建复用基元与连续路径 | `CustomCellRegistry`、`compile_planar`、`compile_surface` | [自定义基元方法](docs/METHODS_CUSTOM_CELL_UNIFIED.md) · [制造几何](docs/METHODS_MANUFACTURING_UNIFIED.md) |
 | 从模拟响应中学习 | `PlanarPhysicalDataset`、`light_features`、`PhysicalRegressor` | [可续算标签生成](examples/physical_dataset_workflow.py) · [代理模型学习](examples/physical_learning_workflow.py) |
 | 搜索目标响应结构 | `CurveInverseDesigner`；可选 `fibernet.rl` 工具 | [目标曲线搜索](examples/curve_inverse_workflow.py) · [学习与搜索方法](docs/METHODS_CURVE_INVERSE_UNIFIED.md) |
@@ -270,7 +273,7 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 Here `strain=1.01` is a **stretch ratio**: 1% extension. This explicit FEM route uses a small-strain beam-frame model and the core dependencies, without Taichi or the desktop app. Choose consistent geometry and material units; see the [beam-FEM contract](docs/METHODS_BEAM_FEM_CONTRACT.md).
 
-For the complete generation → simulation → saved result → recruitment-analysis workflow, run from the checkout:
+For the complete generation → simulation → save → reload → recruitment-analysis workflow, run from the checkout:
 
 ```bash
 python -m examples.open_source_workflow --output-dir demo_output
@@ -328,7 +331,9 @@ Compare the intact structure with low-early-strain, high-late-strain and fixed-r
 
 ![An orange cursor traverses a closed Euler route through a kagome manufacturing graph](docs/media/continuous_route_kagome.gif)
 
-A closed Euler route visits every independent fiber edge once, including parallel fibers. Blue marks visited edges; the orange cursor shows traversal order. The planar and surface workflows preserve the graph-to-route mapping for inspection and export. The playback makes the graph traversal order explicit. [Planar and curved routes](examples/manufacturing_workflow.py) · [Custom cells](examples/custom_cell_workflow.py) · [Solid and route export](examples/solid_export_workflow.py)
+A closed Euler route visits every independent fiber edge once, including parallel fibers. Blue marks visited edges; the orange cursor shows traversal order. The playback makes the graph traversal order explicit. [Generate new planar and curved routes](examples/manufacturing_workflow.py) · [Custom cells](examples/custom_cell_workflow.py) · [Generate new solids and routes](examples/solid_export_workflow.py)
+
+Export from the current `StructureGraph`: use `manufacturing_from_graph` → `export_mapped_route` for a connected all-even graph, or `manufacturing_trails_from_graph` → `export_mapped_trails` when odd-degree nodes are present. Both accept connected, nonempty straight-edge graphs with explicit `m`/`mm` units and a coordinate frame, producing mm-coordinate CSV plus stable-ID mapping JSON without changing the source topology. See the [closed-route limits](docs/MANUFACTURING_GRAPH_MAPPING.md#geometry-and-ownership) and [multi-stroke limits](docs/MULTISTROKE_MANUFACTURING.md#scope-and-input-validation).
 
 ### 6. Map fibers onto surfaces and prepare exports
 
@@ -391,6 +396,7 @@ Three networks show reset, prescribed action and recorded native response, toget
 | Generate 2D/3D structures | `pattern_2d`, `pattern_3d`, `StructureGraph` | [Pattern generation](fibernet/gen/pattern.py) |
 | Study deformation and mechanics | Explicit FEM or Taichi route; `ReducedBeamSolver` for the shared reduced model | [API layers, units, and model selection](docs/API_LAYERS.md) |
 | Quantify structure and recruitment | `SnapshotFeatureExtractor`, `analyze_tensile_recruitment` | [Snapshot features](examples/snapshot_features_workflow.py) · [Recruitment](examples/tensile_recruitment_quickstart.py) |
+| Export routes from the current `StructureGraph` | `manufacturing_from_graph` → `export_mapped_route`; `manufacturing_trails_from_graph` → `export_mapped_trails` | [Closed routes and stable IDs](docs/MANUFACTURING_GRAPH_MAPPING.md) · [Multi-stroke routes and limits](docs/MULTISTROKE_MANUFACTURING.md) |
 | Build reusable cells and continuous routes | `CustomCellRegistry`, `compile_planar`, `compile_surface` | [Custom-cell methods](docs/METHODS_CUSTOM_CELL_UNIFIED.md) · [Manufacturing](docs/METHODS_MANUFACTURING_UNIFIED.md) |
 | Learn from simulated responses | `PlanarPhysicalDataset`, `light_features`, `PhysicalRegressor` | [Resumable labels](examples/physical_dataset_workflow.py) · [Surrogate learning](examples/physical_learning_workflow.py) |
 | Search for a target response | `CurveInverseDesigner`; optional `fibernet.rl` tools | [Target-curve search](examples/curve_inverse_workflow.py) · [Learning and search methods](docs/METHODS_CURVE_INVERSE_UNIFIED.md) |
