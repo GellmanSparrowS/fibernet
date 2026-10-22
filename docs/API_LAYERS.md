@@ -25,6 +25,20 @@ from a legacy network is approximate, not lossless preservation of curved fibers
 or every crosslink. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
 
+### Edit geometry before preparing solver controls
+
+Use `graph.displace_node(node_id, [dx, dy])`,
+`graph.set_node_position(node_id, [x, y, z])`, or
+`graph.set_node_positions({node_id: [x, y]})` with stable node IDs. These
+coordinates use the graph's existing units; no conversion is performed.
+Rejected edits leave geometry, merge lookup and ID counters unchanged. A batch
+with a rejected ID or coordinate is rejected before any node is changed.
+Valid edits retain IDs, boundary labels and internal edge points; they do not
+recompute boundary membership or deform a curved edge's internal geometry.
+Prepare supports and loads after editing. Existing prepared controls must be
+prepared again when the graph changes, as described in
+[stable-ID nodal controls](STABLE_NODAL_CONTROLS.md).
+
 ## Mechanical facade capability matrix
 
 Selectors are case-sensitive. Default `simulate` is `backend="spring"`,

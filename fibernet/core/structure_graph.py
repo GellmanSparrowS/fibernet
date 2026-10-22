@@ -307,6 +307,16 @@ class StructureGraph:
         ]
         return [(kx + dx, ky + dy, kz + dz) for dx, dy, dz in offsets]
 
+    def _checked_position_key(self, position):
+        """Check the destination lookup key before changing graph state."""
+        if not np.isfinite(position).all():
+            raise ValueError("position must be finite")
+        try:
+            with np.errstate(over='raise', invalid='raise'):
+                return self._pos_key(position)
+        except (ValueError, OverflowError, FloatingPointError, IndexError) as exc:
+            raise ValueError("position exceeds the spatial hash coordinate range or has missing coordinates") from exc
+
     def add_node(
         self,
         position: Sequence[float],
@@ -331,8 +341,8 @@ class StructureGraph:
         if len(pos) != 3:
             raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
 
+        key = self._checked_position_key(pos)
         if merge:
-            key = self._pos_key(pos)
             for nk in self._nearby_keys(key):
                 for nid in self._spatial_hash.get(nk, []):
                     if np.linalg.norm(self._nodes[nid].position - pos) < self._tolerance:
@@ -344,7 +354,6 @@ class StructureGraph:
         self._nodes[nid] = node
         self._next_node_id += 1
 
-        key = self._pos_key(pos)
         self._spatial_hash.setdefault(key, []).append(nid)
         return nid
 
@@ -394,16 +403,12 @@ class StructureGraph:
         disp = np.asarray(displacement, dtype=float)
         if len(disp) == 2:
             disp = np.append(disp, 0.0)
-        # Update spatial hash
-        old_pos = self._nodes[node_id].position
-        old_key = self._pos_key(old_pos)
-        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
-            self._spatial_hash[old_key].remove(node_id)
-        # Apply displacement
-        self._nodes[node_id].position = old_pos + disp
-        # Update spatial hash
-        new_key = self._pos_key(self._nodes[node_id].position)
-        self._spatial_hash.setdefault(new_key, []).append(node_id)
+        try:
+            with np.errstate(over='raise', invalid='raise'):
+                position = self._nodes[node_id].position + disp
+        except FloatingPointError as exc:
+            raise ValueError("displacement must produce a finite position") from exc
+        self.set_node_position(node_id, position)
 
     def set_node_position(self, node_id: int, position: Sequence[float]):
         """Set the absolute position of a node.
@@ -415,21 +420,13 @@ class StructureGraph:
         position : array-like
             New position (x, y) or (x, y, z).
         """
-        if node_id not in self._nodes:
-            raise KeyError(f"Node {node_id} not found")
-        pos = np.asarray(position, dtype=float)
-        if len(pos) == 2:
-            pos = np.append(pos, 0.0)
-        # Update spatial hash
-        old_key = self._pos_key(self._nodes[node_id].position)
-        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
-            self._spatial_hash[old_key].remove(node_id)
-        self._nodes[node_id].position = pos.copy()
-        new_key = self._pos_key(pos)
-        self._spatial_hash.setdefault(new_key, []).append(node_id)
+        self.set_node_positions({node_id: position})
 
     def set_node_positions(self, positions: Dict[int, Sequence[float]]):
-        """Batch-set positions of multiple nodes.
+        """Batch-set positions, validating every update before changing any.
+
+        Rejected edits leave positions, merge lookup and stable IDs unchanged.
+        Coordinate normalization retains the existing method semantics.
 
         Parameters
         ----------
@@ -440,8 +437,22 @@ class StructureGraph:
         --------
         >>> g.set_node_positions({1: [0.5, 0.0], 3: [1.0, 2.0]})
         """
-        for nid, pos in positions.items():
-            self.set_node_position(nid, pos)
+        updates = []
+        for nid, value in positions.items():
+            if nid not in self._nodes:
+                raise KeyError(f"Node {nid} not found")
+            pos = np.asarray(value, dtype=float)
+            if len(pos) == 2:
+                pos = np.append(pos, 0.0)
+            pos = pos.copy()
+            new_key = self._checked_position_key(pos)
+            old_key = self._pos_key(self._nodes[nid].position)
+            updates.append((nid, pos, old_key, new_key))
+        for nid, pos, old_key, new_key in updates:
+            if old_key in self._spatial_hash and nid in self._spatial_hash[old_key]:
+                self._spatial_hash[old_key].remove(nid)
+            self._nodes[nid].position = pos
+            self._spatial_hash.setdefault(new_key, []).append(nid)
 
     def get_internal_nodes(self) -> List[int]:
         """Return node IDs of non-boundary (internal) nodes.
