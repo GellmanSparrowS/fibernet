@@ -801,10 +801,18 @@ class SimResult:
             from ._taichi_viscoelastic import validate_result as validate_material_result
             validate_material_result(self)
         profile = None
+        record = None
         if self.metadata.get('backend') == 'lammps':
             from fibernet.integrations import _harmonic_profile as hp
-            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
-                                      self.dynamics_state, vars(self))
+            from ._lammps_result import _plain_full_history_export, validate_result
+            if _plain_full_history_export(self, detailed):
+                # Full validation includes result_guard; retain its detached
+                # state only for this hook-free projection, never on self.
+                record = validate_result(self)
+                profile = hp.contract_profile(self.metadata['model_contract'])
+            else:
+                profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
+                                          self.dynamics_state, vars(self))
         d = {
             "mode": self.mode,
             "energy": self.energy,
@@ -843,7 +851,8 @@ class SimResult:
         if 'native_axial_inputs' in d:
             d['native_axial_inputs'] = _validate_mass_inputs(d['native_axial_inputs'], self.n_nodes, self.metadata.get('node_ids'))
         if self.dynamics_state is not None:
-            record = _validate_result_state(self)
+            if record is None:
+                record = _validate_result_state(self)
             d['dynamics_state'] = record if detailed else _dynamics_state_summary(record)
         if self.algorithmic_energy_ledger is not None:
             from ._energy_accounting import validate_ledger, ledger_summary

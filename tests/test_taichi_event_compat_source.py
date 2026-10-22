@@ -297,6 +297,25 @@ def reviewed_spring_provenance_source():
     return source
 
 
+
+RESULT_PROCESSING_DELTA_PIN = '2c68770bace60ad63be802c63a10026d2b3bf0b8a3a4611454c6e8863ffd2b7d'
+
+
+def candidate_result_processing_source():
+    raw = (ROOT/'tests/fixtures/result_processing_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == RESULT_PROCESSING_DELTA_PIN, 'result processing delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'candidate_result_processing_delta/1'
+    source = reviewed_spring_provenance_source()
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'result processing base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'result processing delta not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'result processing source changed'
+    return source
+
+
 def normalize_result_identity_method(function):
     """Qualify the complete reviewed prefix; retain every appended statement."""
     historical = result_detail_method(public_baseline('fibernet/sim/accelerated.py').read_bytes())
@@ -351,7 +370,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), candidate_result_processing_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -410,11 +429,14 @@ def restore_historical_save(result_node):
     # metadata delta, before comparing the historical engine. No loose removal.
     provenance_tree = ast.parse(reviewed_spring_provenance_source().decode('utf-8'))
     provenance_result = next(n for n in provenance_tree.body if getattr(n,'name',None)=='SimResult')
+    processing_tree = ast.parse(candidate_result_processing_source().decode('utf-8'))
+    processing_result = next(n for n in processing_tree.body if getattr(n,'name',None)=='SimResult')
     for name in ('to_dict', 'load'):
         method=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name==name)
         expected_method=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         provenance_method=next(n for n in provenance_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
-        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method)), 'public result method changed: '+name
+        processing_method=next(n for n in processing_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method), canonical_ast(processing_method)), 'public result method changed: '+name
         old_method=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         node.body[node.body.index(method)]=old_method
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
@@ -553,6 +575,51 @@ class RLFailureSourceAdmission(unittest.TestCase):
                 reviewed_easy_rl_failure_source()
 
 
+
+class ResultProcessingSourceAdmission(unittest.TestCase):
+    def test_exact_candidate_and_prior_sources_are_admitted(self):
+        current = candidate_result_processing_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        for raw in (reviewed_spring_provenance_source(), current):
+            require_public_source('fibernet/sim/accelerated.py', raw)
+
+    def test_only_to_dict_differs(self):
+        def without_to_dict(raw):
+            tree = ast.parse(raw)
+            result = next(n for n in tree.body if getattr(n, 'name', None)=='SimResult')
+            result.body = [n for n in result.body if getattr(n, 'name', None)!='to_dict']
+            return canonical_ast(tree)
+        self.assertEqual(without_to_dict(reviewed_spring_provenance_source()),
+                         without_to_dict(candidate_result_processing_source()))
+
+    def test_unapproved_shortcuts_and_unrelated_changes_refused(self):
+        raw = candidate_result_processing_source()
+        replacements = (
+            (b'if _plain_full_history_export(self, detailed):', b'if True:'),
+            (b'record = validate_result(self)', b'record = self.dynamics_state'),
+            (b'if record is None:', b'if False:'),
+            (b"hp.json_bytes(d, profile['export_bytes'], indent=2)", b'pass'),
+            (b'json.dump(data, f, indent=2, default=convert)', b'pass'),
+        )
+        for before, after in replacements:
+            self.assertEqual(raw.count(before), 1)
+            with self.subTest(mutation=before), self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', raw.replace(before, after, 1))
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n')):
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', changed)
+
+    def test_delta_digest_is_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/result_processing_v1/accelerated_delta.json'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw+b'\n' if path==fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'result processing delta changed'):
+                candidate_result_processing_source()
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -571,7 +638,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+        self.assertIn(SOURCE.read_bytes(), (reviewed_spring_provenance_source(), candidate_result_processing_source()))
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -607,7 +674,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+        self.assertIn(SOURCE.read_bytes(), (reviewed_spring_provenance_source(), candidate_result_processing_source()))
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())

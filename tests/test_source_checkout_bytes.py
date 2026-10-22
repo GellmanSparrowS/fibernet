@@ -22,6 +22,7 @@ PROTECTED = (
     'tests/fixtures/public_api_contract_v2/fibernet/api.py.txt',
     'tests/fixtures/public_api_contract_v2/fibernet/sim/accelerated.py.txt',
     'fibernet/sim/accelerated.py',
+    'tests/fixtures/result_processing_v1/accelerated_delta.json',
     'fibernet/integrations/_lammps_cg.py',
     'fibernet/sim/_energy_accounting.py',
     'fibernet/viz/__init__.py',
