@@ -507,9 +507,9 @@ class SimResult:
     positions_trajectory: List[np.ndarray] = field(default_factory=list)
 
     # Detailed fields (populated by compute_detailed or detailed=True)
-    edge_forces: np.ndarray = None       # per-edge axial force magnitude
+    edge_forces: np.ndarray = None       # signed per-edge axial force
     edge_stretches: np.ndarray = None    # per-edge stretch ratio (L/L0)
-    max_force: float = 0.0              # maximum edge force
+    max_force: float = 0.0              # maximum absolute axial edge force
     max_stretch: float = 0.0            # maximum edge stretch ratio
     mean_stretch: float = 0.0           # mean edge stretch ratio
     std_stretch: float = 0.0            # std of edge stretch ratios
@@ -526,7 +526,7 @@ class SimResult:
     algorithmic_energy_ledger: Optional[Dict] = None  # separate opt-in v1 record
 
     def compute_detailed(self, graph, stiffness: Union[float, np.ndarray] = None):
-        """Compute detailed metrics from deformed positions.
+        """Compute identity-aligned geometric-rest axial metrics.
 
         Parameters
         ----------
@@ -534,45 +534,105 @@ class SimResult:
             Original (undeformed) graph.
         stiffness : float or (number of edges,) array, optional
             Coefficients in F = k * strain and E = 0.5 * k * L0 * strain**2.
+            Arrays follow the result's edge_ids order, including a selected
+            subset. FEM results accept only None: their solver forces and
+            energy are not geometric-rest spring quantities.
+
+        Notes
+        -----
+        When present, node_ids and edge_ids must both be supplied in metadata.
+        Node IDs cover the graph exactly; edge IDs may select an ordered subset
+        of physical edges. Parallel edges are identified by ID, not endpoints.
+        Mapless historical results use graph insertion order for all nodes and
+        edges; no ID maps are inferred or added. Validate before changing any
+        fields. With stiffness=None, only geometric metrics are updated; force,
+        energy and solver metadata remain unchanged.
         """
+        if self.mode == 'fem_beam_frame' and stiffness is not None:
+            raise ValueError('FEM solver force and energy channels cannot be recomputed with spring stiffness')
         if 'native_axial_viscoelastic' in self.metadata:
             from ._taichi_viscoelastic import populate_result
             return populate_result(self, self.metadata['native_axial_viscoelastic'], graph, stiffness)
         if self.metadata.get('backend') == 'lammps':
             raise ValueError('LAMMPS results use explicit equilibrium lengths; geometric-rest recomputation is unsupported')
 
-        from fibernet.sim.accelerated import _graph_to_arrays, _element_data
+        mapped_nodes = 'node_ids' in self.metadata
+        mapped_edges = 'edge_ids' in self.metadata
+        if mapped_nodes != mapped_edges:
+            raise ValueError('compute_detailed requires both node_ids and edge_ids, or neither for legacy results')
+        if mapped_nodes:
+            node_ids = _strict_state_ids(self.metadata['node_ids'], nonnegative=True)
+            edge_ids = _strict_state_ids(self.metadata['edge_ids'], 'edge_ids', nonnegative=True)
+            if set(node_ids) != set(graph.nodes):
+                raise ValueError('node_ids must exactly cover graph nodes')
+            if not set(edge_ids).issubset(graph.edges):
+                raise ValueError('edge_ids must select existing physical graph edges')
+        else:
+            node_ids, edge_ids = list(graph.nodes), list(graph.edges)
+        n_nodes, n_edges = len(node_ids), len(edge_ids)
+        for name, count in (('n_nodes', n_nodes), ('n_edges', n_edges)):
+            value = getattr(self, name)
+            if (isinstance(value, (bool, np.bool_)) or
+                    not isinstance(value, (int, np.integer)) or value not in (0, count)):
+                raise ValueError(f'{name} disagrees with selected result rows')
 
-        pos_orig, elements, _, _ = _graph_to_arrays(graph)
-        lengths, _ = _element_data(pos_orig, elements)
+        node_rows = {nid: row for row, nid in enumerate(node_ids)}
+        pos_orig = _finite_real_array(
+            np.asarray([graph.nodes[nid].position for nid in node_ids]).reshape(n_nodes, 3),
+            'graph positions', (n_nodes, 3))
+        elements = np.asarray([
+            [node_rows[graph.edges[eid].node_i], node_rows[graph.edges[eid].node_j]]
+            for eid in edge_ids], dtype=int).reshape(n_edges, 2)
 
-        self.n_nodes = len(pos_orig)
-        self.n_edges = len(elements)
+        def node_array(value, name):
+            if value is None:
+                return None
+            array = _finite_real_array(value, name)
+            if array.ndim != 2 or array.shape[0] != n_nodes or array.shape[1] not in (2, 3):
+                raise ValueError(f'{name} must match result node rows with 2 or 3 coordinates')
+            return array
 
-        if self.deformed_positions is not None:
-            pos_def = self.deformed_positions
-            # Per-edge stretch (vectorized)
-            final_lengths = np.linalg.norm(pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
-            self.edge_stretches = final_lengths / lengths
-            self.max_stretch = float(np.max(self.edge_stretches))
-            self.mean_stretch = float(np.mean(self.edge_stretches))
-            self.std_stretch = float(np.std(self.edge_stretches))
+        pos_def = node_array(self.deformed_positions, 'deformed_positions')
+        displacements = node_array(self.displacements, 'displacements')
+        for name in ('edge_forces', 'edge_stretches'):
+            value = getattr(self, name)
+            if value is not None:
+                array = _finite_real_array(value, name)
+                # Historical raw FEM conversions may lack geometric stretches.
+                if name == 'edge_stretches' and self.mode == 'fem_beam_frame' and array.shape == (0,):
+                    continue
+                if array.shape != (n_edges,):
+                    raise ValueError(f'{name} must match selected result edge rows')
+        spring_coefficients = None
+        if stiffness is not None:
+            coefficients = _finite_real_array(stiffness, 'stiffness')
+            spring_coefficients = _normalize_spring_stiffness(coefficients, n_edges)
 
-            # Per-edge forces (F = k * (L - L0) / L0)
-            if stiffness is not None:
-                spring_coefficients = _normalize_spring_stiffness(
-                    stiffness, len(elements)
-                )
-                strain = final_lengths / lengths - 1.0
-                self.edge_forces = spring_coefficients * strain
-                self.max_force = float(np.max(np.abs(self.edge_forces)))
-                self.energy = float(
-                    0.5 * np.sum(spring_coefficients * strain ** 2 * lengths)
-                )
-
-        # Max displacement
-        if self.displacements is not None:
-            self.max_displacement = float(np.max(np.linalg.norm(self.displacements, axis=1)))
+        # Commit together only after all identity, shape and arithmetic checks.
+        updates = {'n_nodes': n_nodes, 'n_edges': n_edges}
+        try:
+            with np.errstate(over='raise', invalid='raise', divide='raise'):
+                if pos_def is not None:
+                    lengths, _ = _element_data(pos_orig, elements)
+                    final_lengths = np.linalg.norm(pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
+                    stretches = final_lengths / lengths
+                    updates.update(edge_stretches=stretches,
+                                   max_stretch=float(stretches.max()) if n_edges else 0.0,
+                                   mean_stretch=float(stretches.mean()) if n_edges else 0.0,
+                                   std_stretch=float(stretches.std()) if n_edges else 0.0)
+                    if spring_coefficients is not None:
+                        strain = stretches - 1.0
+                        forces = spring_coefficients * strain
+                        updates.update(edge_forces=forces,
+                                       max_force=float(np.max(np.abs(forces))) if n_edges else 0.0,
+                                       energy=float(0.5 * np.sum(spring_coefficients * strain ** 2 * lengths)))
+                if displacements is not None:
+                    magnitudes = np.linalg.norm(displacements, axis=1)
+                    updates['max_displacement'] = float(magnitudes.max()) if n_nodes else 0.0
+        except FloatingPointError as exc:
+            raise ValueError('detailed metrics must remain finite') from exc
+        for name, value in updates.items():
+            setattr(self, name, value)
 
         return self
 
