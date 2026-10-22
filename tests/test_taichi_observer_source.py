@@ -36,7 +36,7 @@ def run_checks():
       return node
     check('all legacy native kernel ASTs unchanged',kernels(parse(BASE))==kernels(LegacyMaterialBranches().visit(check_tree)))
     oldnodes={n.name:n for n in parse(BASE).body if hasattr(n,'name')};newnodes={n.name:n for n in parse(NEW).body if hasattr(n,'name')}
-    check('SimResult unchanged outside public writer and LAMMPS guard contracts',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
+    check('SimResult unchanged outside reviewed writer, routing and provenance contracts',ast.dump(oldnodes['SimResult'])==ast.dump(restore_historical_save(newnodes['SimResult'])))
     oldmethod=next(n for n in oldnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');newmethod=next(n for n in newnodes['TaichiEngine'].body if isinstance(n,ast.FunctionDef) and n.name=='dynamics')
     # Only the reviewed damping API annotation/default changes; physics defaults do not.
     damp_index=next(i for i,a in enumerate(newmethod.args.args) if a.arg=='damping')
@@ -64,8 +64,8 @@ def run_checks():
      def __getitem__(self,k):return self.a
     
     def load(txt,label):
-     tree=parse(txt);wanted={'_legacy_damping','_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation'}
-     nodes=[n for n in tree.body if getattr(n,'name',None) in wanted or (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='_DAMPING_UNSET' for t in n.targets))];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
+     tree=parse(txt);wanted={'_legacy_damping','_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation','_spring_coefficient_record','_spring_provenance','_populate_spring_result'}
+     nodes=[n for n in tree.body if getattr(n,'name',None) in wanted or (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('_DAMPING_UNSET','_SPRING_PROVENANCE') for t in n.targets))];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
      mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(warnings=warnings,_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
      compiled=ast.Module(body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]+nodes,type_ignores=[]);exec(compile(ast.fix_missing_locations(compiled),'<AST-isolated actual orchestration>','exec'),ns);return ns
     
@@ -99,12 +99,22 @@ def run_checks():
      return r,f,c,None
     
     def normalized(r):
+     snapshot=vars(r)
+     if 'spring_coefficient_provenance' in r.metadata:
+      # Assert the precise additive contract before excluding it from this
+      # historical numeric/orchestration comparison. Do not ignore arbitrary
+      # metadata, and do not label mocked fields as physical validation.
+      assert r.metadata['spring_coefficient_provenance']==dict(
+       schema='spring_coefficient_provenance/1',law='geometric_rest_axial/1',quantity_kind='force',
+       simulation=dict(source='stiffness',representation='scalar',edge_count=1,availability='available',value=100000.),
+       current_metrics={'source':'simulation'})
+      snapshot={**snapshot,'metadata':{k:v for k,v in r.metadata.items() if k!='spring_coefficient_provenance'}}
      def norm(v):
       if isinstance(v,np.ndarray):return v.tolist()
       if isinstance(v,dict):return {k:norm(vv) for k,vv in v.items() if k!='time_seconds'}
       if isinstance(v,(tuple,list)):return [norm(a) for a in v]
       return v
-     return norm(vars(r))
+     return norm(snapshot)
     for record in [False,True]:
      baseline,bf,bc,e=run(BN,record=record);assert e is None
      default,df,dc,e=run(CN,record=record);assert e is None
@@ -148,7 +158,7 @@ def run_checks():
     # In-file helper is already a bound source dependency; mutation changes that identity.
     contract=(D.parent/'fibernet/ml/_generate_contract.py').read_text(encoding='utf-8');check('accelerated source already generation-bound',"'sim/accelerated.py'" in contract)
     mutated=NEW.replace("schema='native_axial_observer/1'","schema='native_axial_observer/2'",1);check('helper-only mutation changes generation dependency bytes',NEW.encode()!=mutated.encode())
-    report=dict(status='PASS_SOURCE_AND_ORCHESTRATION_MOCKS_ONLY',checks=checks,count=len(checks),CPU_seconds=time.process_time()-start,RSS_KiB=peak_rss_kib(),native_imports=False,native_calls=0,physics_trajectories=0,limitations=['AST-isolated actual method with fake fields/prescribed mock sentinels, not native parity','SimResult mocked; historical SimResult AST checked after readable public writer/LAMMPS guard normalization','No full package imports or production serialization runtime','Generation hash binding checked, actual checkpoint resume rejection not executed'])
+    report=dict(status='PASS_SOURCE_AND_ORCHESTRATION_MOCKS_ONLY',checks=checks,count=len(checks),CPU_seconds=time.process_time()-start,RSS_KiB=peak_rss_kib(),native_imports=False,native_calls=0,physics_trajectories=0,limitations=['AST-isolated actual method with fake fields/prescribed mock sentinels, not native parity','SimResult mocked; historical SimResult AST checked after exact reviewed writer/routing/provenance normalization','No full package imports or production serialization runtime','Generation hash binding checked, actual checkpoint resume rejection not executed'])
     assert len(checks)==37
     return report
 
