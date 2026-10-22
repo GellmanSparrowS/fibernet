@@ -38,8 +38,8 @@ class ManufacturingNavigationTests(unittest.TestCase):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         folds = re.findall(r'(<details(?: open)?>)\s*<summary>(.*?)</summary>', readme)
         self.assertEqual(folds, [
-            ('<details>', '中文：展开或收起'),
-            ('<details open>', 'English: expand or collapse'),
+            ('<details>', '中文'),
+            ('<details open>', 'English'),
         ])
         self.assertIn('<img src="docs/media/ui/homepage-cover-v2.svg"', readme)
         self.assertIn('<a href="#quick-start"><img src="docs/media/ui/homepage-quickstart-en-v2.svg"', readme)
