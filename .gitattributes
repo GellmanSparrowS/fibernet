@@ -31,3 +31,6 @@ tests/fixtures/easy_stretch_ratio_v1/easy.py.txt -text
 
 # The reviewed random-rollout failure fixture retains exact source bytes.
 tests/fixtures/easy_rl_failure_v1/easy.py.txt -text
+
+# Exact private result-processing source delta.
+tests/fixtures/result_processing_v1/accelerated_delta.json -text
