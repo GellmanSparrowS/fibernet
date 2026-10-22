@@ -25,3 +25,6 @@ tests/fixtures/spring_coefficient_provenance_v1/accelerated_delta.json -text
 fibernet/sim/__init__.py -text
 tests/fixtures/optional_facades_v2/*.txt -text
 adapters/mcp/tests/fixtures/provenance_v1_outputs.json -text
+
+# The reviewed explicit stretch-ratio API fixture retains exact source bytes.
+tests/fixtures/easy_stretch_ratio_v1/easy.py.txt -text

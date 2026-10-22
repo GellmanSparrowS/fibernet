@@ -29,12 +29,19 @@ are derived representations, not alternative authoritative graphs.
 
 Selectors are case-sensitive. Default `simulate` is `backend="spring"`,
 `mode="stretch"`; it requires Taichi, with no silent NumPy fallback.
-`strain` means **stretch ratio λ**, not engineering strain ε: λ=1.01 means
+Prefer the keyword-only `stretch_ratio` for new stretch calls. Legacy
+`strain` means the same **stretch ratio λ**, not engineering strain ε: λ=1.01 means
 ε=0.01 (1% extension). The effective default stretch ratio is 2.0, not 2%.
 The facade default `strain=None` means unset; omission or `None` resolves to
 λ=2.0 for stretch. Every non-`None` `strain` is rejected outside stretch,
 including explicit `2.0` and NaN. Other modes take explicit controls. There is
 no facade `target_stretch` alias; direct solver methods use that parameter.
+`stretch_ratio` must be a finite positive real scalar, not a boolean, and is
+rejected outside stretch. Do not supply both non-`None` names, even with equal
+values. `None` means unset for either name; the omitted default remains 2.0.
+Legacy positional calls retain their argument order and behavior. A positive
+ratio does not establish physical applicability: choose a small deformation
+for the small-strain FEM model.
 
 | Backend | Mode | Model/material | Controls | Return |
 |---|---|---|---|---|
@@ -212,7 +219,7 @@ from fibernet import pattern_2d, simulate
 # pattern_2d is keyword-only. Coordinates, radii and E must be consistent.
 graph = pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
 result = simulate(
-    graph, backend="fem", mode="stretch", strain=1.01,
+    graph, backend="fem", mode="stretch", stretch_ratio=1.01,
     dim=2, nonlinear=False, E=1e9, nu=0.3,
 )
 result.save("frame_detailed.json", detailed=True)

@@ -34,7 +34,7 @@
   "core/transforms.py": "77913cbcf292805bbfa949a6524fe7abf8d578f35edd447eab5324b9c6e3b499",
   "core/viscoelastic.py": "e8fd07c5c06bbf85569c7c92f8806f983fb53a649eef03f52e8dd2ef22cb3f92",
   "doe.py": "c2b2c740a9b2f250f07ee1295972a79fb3feb7c0fd47f0ddac83c01c56f7efaf",
-  "easy.py": "f36cb79ea44b5588031a8577daae3ca99c617b444fe9de713fd52f606de54f90",
+  "easy.py": "fe9cde78f9618555c22cdac2e63c1998c2af781c970596fc192d362857b469ff",
   "examples/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "examples/basic_usage.py": "953db401437d9f208d6c75b2daca4cb98fd7256a7c961bee20d85788d3512037",
   "gen/__init__.py": "e897bdf50e6e9379675230d3204e24c49733fb0bb6670f3713b70804c3c6806c",
