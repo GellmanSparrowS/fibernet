@@ -322,7 +322,16 @@ def reviewed_easy_stretch_ratio_source():
     return raw
 
 
+def reviewed_nodal_controls_facade():
+    raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '268c34a2446a4ca46aab8c29c39053502f8d343f9b25a9f77ee2ddc66161ddc1', 'reviewed nodal controls facade changed'
+    return raw
+
+
 def require_public_source(relative, raw):
+    if relative == 'fibernet/sim/__init__.py':
+        assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade()), 'public source bytes changed: '+relative
+        return
     if relative == 'fibernet/easy.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source()), 'public source bytes changed: '+relative
         return
@@ -670,6 +679,27 @@ class SourceShape(unittest.TestCase):
         changed = root.replace(b'_LAZY_MODULES = {', b'_LAZY_MODULES = { # changed', 1)
         self.assertNotEqual(changed, root)
         with self.assertRaises(AssertionError):require_public_source('fibernet/__init__.py', changed)
+
+    def test_reviewed_nodal_controls_facade_is_exact(self):
+        relative = 'fibernet/sim/__init__.py'
+        raw = reviewed_nodal_controls_facade()
+        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        require_public_source(relative, raw)
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'prepare_nodal_controls', b'wrong_controls', 1),
+                        raw.replace(b'PreparedNodalControls', b'WrongControls', 1),
+                        raw.replace(b'def __getattr__(name):', b'def __getattr__(name): # changed', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source(relative, changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt'
+        def changed_read(path):
+            value = original(path)
+            return value+b'\n' if path == fixture else value
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'reviewed nodal controls facade changed'):
+                reviewed_nodal_controls_facade()
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
