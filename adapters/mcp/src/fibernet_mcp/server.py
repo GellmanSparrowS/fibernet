@@ -16,12 +16,6 @@ import time
 import uuid
 
 import anyio
-import jsonschema
-from mcp.server.lowlevel import Server
-from mcp.server.lowlevel.helper_types import ReadResourceContents
-from mcp.server.stdio import stdio_server
-from mcp.shared.exceptions import McpError
-import mcp.types as mt
 from .safety import (ContractError, MAX_BYTES, canonical, graph_preflight,
                      open_directory, read_at, read_file, sha, strict_json, write_at, _verify_core_result)
 
@@ -218,6 +212,13 @@ async def serve(args):
     if sys.platform!='linux' or not hasattr(os,'O_NOFOLLOW'): raise ContractError('Linux confinement required')
     if importlib.metadata.version('mcp')!='1.29.0': raise ContractError('untested SDK version')
     core_verification=_verify_core_result()
+    # Refuse an unverified core before loading the protocol implementation.
+    import jsonschema
+    from mcp.server.lowlevel import Server
+    from mcp.server.lowlevel.helper_types import ReadResourceContents
+    from mcp.server.stdio import stdio_server
+    from mcp.shared.exceptions import McpError
+    import mcp.types as mt
     store=ManagedStore(args.manifest,args.output_root,core_verification);sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
     # Remove unused local definitions from each advertised schema to fit bounded list output.

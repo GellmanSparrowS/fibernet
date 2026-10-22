@@ -246,6 +246,7 @@ def main():
         stages = []
         for name in SCRIPTS:
             start = time.monotonic()
+            child_cpu_start = usage_cpu(resource.RUSAGE_CHILDREN)
             with (directory / (name + '.log')).open('wb') as log:
                 command = [sys.executable, str(ROOT / 'tests' / name)]
                 if name.startswith('test_'):
@@ -254,7 +255,9 @@ def main():
                                '-q', str(ROOT / 'tests' / name)]
                 result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
             stages.append({'script': name, 'returncode': result.returncode,
-                           'elapsed_s': time.monotonic() - start})
+                           'elapsed_s': time.monotonic() - start,
+                           'waited_child_cpu_seconds':
+                               usage_cpu(resource.RUSAGE_CHILDREN) - child_cpu_start})
             (directory / 'stages.json').write_text(json.dumps(stages, indent=2))
             if result.returncode:
                 raise SystemExit(result.returncode)
@@ -265,6 +268,11 @@ def main():
     report = run_bounded([sys.executable, str(Path(__file__).resolve()),
                           '--worker', str(directory)], directory, ROOT)
     print(json.dumps(report, indent=2))
+    stages_path = directory / 'stages.json'
+    stages = json.loads(stages_path.read_text()) if stages_path.exists() else []
+    incomplete = (SCRIPTS[len(stages)] if len(stages) < len(SCRIPTS)
+                  and all(stage['returncode'] == 0 for stage in stages) else None)
+    print(json.dumps({'completed_stages': stages, 'incomplete_stage': incomplete}, indent=2))
     assert not report['failures'], 'bounded adapter suite failed'
 
 
