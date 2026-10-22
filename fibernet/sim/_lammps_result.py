@@ -47,6 +47,12 @@ def source_capabilities():
                             'whole-node fixity', 'constant nodal loads',
                             'explicit SI masses and bond coefficients',
                             'bounded domain; every integration step retained'],
+            'harmonic_profiles': {
+                p['name']: {key: p[key] for key in ('max_nodes','max_edges',
+                    'steps','max_steps','sample_every','output_stride','frames',
+                    'max_output_frames','max_mass_types','max_loaded_nodes') if key in p}
+                for p in (_profiles.PROFILE, _profiles.SAMPLED_PROFILE,
+                          _profiles.FULL_HISTORY_PROFILE)},
             'dependency': 'explicit independently admitted RuntimeSpec',
             'cancellation': 'hard child cancellation via direct LAMMPSTask',
             'unsupported': ['material calibration', 'material stress', 'general reactions',
@@ -105,10 +111,10 @@ def validate_state(value, n_nodes=None, node_ids=None):
     elif 'profile' in value:
         p = _profiles.record(value['profile'])
         common.add('profile')
-        if _profiles.sampled(p):
+        if _profiles.variable_steps(p):
             common.update(('output_stride','native_frames','output_frames'))
         count = _profiles.schedule(p,value.get('final',{}).get('step'),1,value.get('output_stride'))
-        if _profiles.sampled(p) and (type(value.get('native_frames')) is not int or value['native_frames'] != value['final']['step']+1 or type(value.get('output_frames')) is not int or value['output_frames'] != count):
+        if _profiles.variable_steps(p) and (type(value.get('native_frames')) is not int or value['native_frames'] != value['final']['step']+1 or type(value.get('output_frames')) is not int or value['output_frames'] != count):
             raise ValueError('sampled state frame counts mismatch')
         _profiles.shape([value.get('dt')],(1,),'dt')
         for key in ('step','time','potential_energy','kinetic_energy','total_energy'):
@@ -123,7 +129,7 @@ def validate_state(value, n_nodes=None, node_ids=None):
                 _profiles.shape(value.get(key),(count,),key)
             _profiles.shape(value.get('pressure_tensor'),(count,6),'pressure_tensor')
             _profiles.shape(value.get('final',{}).get('pressure_tensor'),(6,),'final pressure_tensor')
-        _profiles.json_bytes(value,_profiles.PROFILE['export_bytes'])
+        _profiles.json_bytes(value,p['export_bytes'])
     if set(value) != common | (arrays if sampled else set()):
         raise ValueError('LAMMPS state has missing or unknown fields')
     if (value['backend'] != 'lammps' or value['units'] != UNITS or
@@ -365,7 +371,7 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         state['profile'] = selected
         if network:
             state.update({k: contract[k] for k in NETWORK_FIELDS})
-        elif _profiles.sampled(selected):
+        elif _profiles.variable_steps(selected):
             state.update({k:contract[k] for k in ('output_stride','native_frames','output_frames')})
     for key, attr in [('positions','positions_m'), ('velocities','velocities_m_s'), ('nodal_forces','forces_N')]:
         state[key] = [np.asarray(getattr(f, attr)).tolist() for f in trajectory]

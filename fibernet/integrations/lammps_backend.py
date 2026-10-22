@@ -161,10 +161,12 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
         raise LAMMPSContractError('explicit supported geometry length_unit required')
     scale = LENGTH_FACTORS[length_unit]
     dt, steps, every, box = run.checked()
+    if profile == _profiles.FULL_HISTORY_NAME and output_stride is None:
+        output_stride = 1
     try:
         output_frames = _profiles.schedule(selected_profile,steps,every,output_stride)
-        if _profiles.sampled(selected_profile):
-            _number(dt*steps,'sampled physical duration',True)
+        if _profiles.variable_steps(selected_profile):
+            _number(dt*steps,'harmonic profile physical duration',True)
     except ValueError as exc:
         raise LAMMPSContractError(str(exc)) from exc
     reach = _number(maximum_bond_length_m, 'maximum_bond_length_m', True)
@@ -231,7 +233,7 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
     # Future per-type properties require a new full key schema before admission.
     mass_keys = sorted({m.hex() for m in masses.values()}, key=float.fromhex)
     if selected_profile and len(mass_keys) > 2:
-        raise LAMMPSContractError('harmonic_large_v1 permits at most two exact mass types')
+        raise LAMMPSContractError('harmonic profile permits at most two exact mass types')
     type_by_mass = {key:i+1 for i,key in enumerate(mass_keys)}
     atom_type = {n:type_by_mass[masses[n].hex()] for n in node_ids}
     type_mass = {i+1:float.fromhex(key) for i,key in enumerate(mass_keys)}
@@ -278,7 +280,7 @@ def prepare_harmonic_beads(graph: StructureGraph, *, length_unit: str,
                     restart='not supported; cancellation cannot resume')
     if selected_profile:
         contract['profile'] = selected_profile
-        if _profiles.sampled(selected_profile):
+        if _profiles.variable_steps(selected_profile):
             contract.update(output_stride=output_stride,native_frames=steps+1,output_frames=output_frames)
     lines = ['FiberNet explicit bead model (SI)', '', f'{len(node_ids)} atoms',
              f'{len(edge_ids)} bonds', '', f'{len(type_mass)} atom types', f'{len(edge_ids)} bond types', '']
@@ -531,7 +533,7 @@ class ResourceLimits:
     def checked(self, *, profile=None):
         from . import _cg_network_profile as network
         selected = network.select(profile) if profile in network.NAMES else _profiles.select(profile)
-        cap = selected['raw_bytes'] if selected and (_profiles.sampled(selected) or profile in network.NAMES) else 16*1024*1024
+        cap = selected['raw_bytes'] if selected and (_profiles.variable_steps(selected) or profile in network.NAMES) else 16*1024*1024
         _integer(self.cpu_seconds, 'cpu_seconds', 1, 60)
         _number(self.wall_seconds, 'wall_seconds', True)
         if self.wall_seconds > 120: raise LAMMPSContractError('wall_seconds exceeds bounded pilot cap')
@@ -697,26 +699,29 @@ class LAMMPSTask:
                  workdir, limits=ResourceLimits()):
         self.prepared = validate_prepared(prepared)
         from . import _cg_network_profile as network
-        self.limits = limits.checked(profile=prepared.profile) if prepared.profile in (_profiles.SAMPLED_NAME,*network.NAMES) else limits.checked()
+        self.limits = limits.checked(profile=prepared.profile) if prepared.profile in (_profiles.SAMPLED_NAME,_profiles.FULL_HISTORY_NAME,*network.NAMES) else limits.checked()
         contract = json.loads(self.prepared.contract_json)
         self.output_forecast = None
-        if _profiles.sampled(_profiles.contract_profile(contract)):
-            size = _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),_profiles.SAMPLED_PROFILE['prepared_bytes'])
+        profile = _profiles.contract_profile(contract)
+        if _profiles.variable_steps(profile):
+            size = _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),profile['prepared_bytes'])
             manifest = dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))
             # Bound arbitrary runtime strings/ID maps before whole serialization;
             # then count exactly the same compact UTF-8 bytes start() writes.
             _profiles.json_bytes(manifest,self.limits.output_bytes)
             setup_bytes = _profiles.string_bytes((prepared.data_text,prepared.input_text,
                 prepared.graph_json,_json(manifest)),self.limits.output_bytes)
-            self.output_forecast = _profiles.resource_forecast(len(prepared.node_ids),len(prepared.edge_ids),prepared.steps,contract['output_stride'],size,setup_bytes)
-            _profiles.json_bytes(_profiles.export_metadata(prepared,runtime),_profiles.SAMPLED_PROFILE['prepared_bytes'],indent=2)
+            self.output_forecast = _profiles.resource_forecast(len(prepared.node_ids),len(prepared.edge_ids),prepared.steps,contract['output_stride'],size,setup_bytes,profile=prepared.profile)
+            _profiles.json_bytes(_profiles.export_metadata(prepared,runtime),profile['prepared_bytes'],indent=2)
             forecast = self.output_forecast
-            if forecast['native_aggregate_forecast_bytes'] > self.limits.output_bytes or forecast['trajectory_bytes'] > self.limits.file_size_bytes:
-                raise LAMMPSContractError('sampled planned native payload exceeds explicit output/file limits')
-            if forecast['detailed_export_forecast_bytes'] > _profiles.SAMPLED_PROFILE['export_bytes']:
-                raise LAMMPSContractError('sampled detailed export forecast exceeds profile limit')
+            if (forecast['native_aggregate_forecast_bytes'] > self.limits.output_bytes or
+                    forecast['trajectory_bytes'] > self.limits.file_size_bytes or
+                    forecast['thermo_bytes'] > self.limits.file_size_bytes):
+                raise LAMMPSContractError('harmonic profile planned native payload exceeds explicit output/file limits')
+            if forecast['detailed_export_forecast_bytes'] > profile['export_bytes']:
+                raise LAMMPSContractError('harmonic profile detailed export forecast exceeds profile limit')
             if forecast['planned_memory_bytes'] > self.limits.memory_bytes:
-                raise LAMMPSContractError('sampled planned parsing and export memory exceeds explicit memory limit')
+                raise LAMMPSContractError('harmonic profile planned parsing and export memory exceeds explicit memory limit')
         if prepared.profile in network.NAMES:
             size=_profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),network.PROFILE['prepared_bytes'])
             manifest=dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))
