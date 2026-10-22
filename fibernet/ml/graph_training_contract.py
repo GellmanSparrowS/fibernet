@@ -22,6 +22,7 @@ MAX_NODES = 100000
 MAX_EDGES = 200000
 I64 = 2**63 - 1
 _PREFIX = b'fibernet.graph_contract.v1\x00'
+_DIRICHLET = 'dirichlet_voltage_mask.v1'
 _RESERVED = {'id', 'node_id', 'edge_id', 'graph_id', 'source_group',
              'parent_id', 'parent_row', 'message_orientation', 'target', 'label',
              'prediction', 'solved_voltage', 'solver_result', 'model'}
@@ -323,8 +324,12 @@ def _snapshot(batch):
 
 
 def _feature_spec(spec):
-    _keys(spec,('schema','length_unit','coordinate_frame','dtype','node_offset','node_scale','features'),'feature spec')
-    if spec['schema'] != 'fibernet.graph_feature_spec.v1' or spec['dtype']!='float32':
+    if type(spec) is not dict or spec.get('schema') not in ('fibernet.graph_feature_spec.v1','fibernet.graph_feature_spec.v2'):
+        raise ValueError('unsupported feature profile')
+    fields=('schema','length_unit','coordinate_frame','dtype','node_offset','node_scale','features')
+    encoded=spec['schema']=='fibernet.graph_feature_spec.v2'
+    _keys(spec,fields+(('condition_profile',) if encoded else ()),'feature spec')
+    if spec['dtype']!='float32' or (encoded and (type(spec['condition_profile']) is not str or spec['condition_profile']!=_DIRICHLET)):
         raise ValueError('unsupported feature profile')
     for name in ('length_unit','coordinate_frame'): _text(spec[name],name)
     for name in ('node_offset','node_scale'):
@@ -421,6 +426,52 @@ def _fixed_condition_bytes(record):
     return canonical_bytes(record)
 
 
+def _condition_for_spec(value, snapshot, spec):
+    if spec['schema']=='fibernet.graph_feature_spec.v1':
+        return _conditions(value,snapshot)
+    _keys(value,('schema','task_rule_id','conditioning','boundary_voltages','nodal_currents','current_declaration'),'encoded conditions')
+    if value['schema']!='fibernet.electrical_conditions.v2' or value['conditioning']!=_DIRICHLET:
+        raise ValueError('encoded condition schema/profile mismatch')
+    declaration=value['current_declaration']
+    _keys(declaration,('kind','source_ref','source_sha256'),'explicit current declaration')
+    if declaration['kind']!='no_nodal_current_injections.v1':
+        raise ValueError('unknown/unsupported current injection semantics')
+    _text(declaration['source_ref'],'current declaration source');_sha(declaration['source_sha256'])
+    if type(value['nodal_currents']) is not list or value['nodal_currents']:
+        raise ValueError('encoded profile requires explicit no nodal current injections')
+    # Reuse exact legacy row validation, never infer a condition from geometry,
+    # metadata, a trial field, or a solved field. The caller supplies raw authority.
+    legacy={k:v for k,v in value.items() if k!='current_declaration'}
+    legacy['schema']='fibernet.electrical_conditions.v1'
+    legacy['conditioning']='metadata_only_fixed_rule'
+    _conditions(legacy,snapshot)
+    if not value['boundary_voltages']:
+        raise ValueError('encoded profile requires nonempty Dirichlet conditions')
+    return parse_json(json.dumps(value,allow_nan=False))
+
+
+def _condition_record(condition, spec):
+    if spec['schema']=='fibernet.graph_feature_spec.v1':
+        return _fixed_condition_record(condition)
+    return {'schema':'fibernet.encoded_electrical_rule.v1',
+            'task_rule_id':condition['task_rule_id'],'conditioning':_DIRICHLET,
+            'voltage_unit':'V','voltage_scale':1.0,'voltage_offset':0.0,
+            'zero_policy':'positive_zero_projection_raw_signed_zero_preserved.v1',
+            'current_policy':'no_nodal_current_injections.v1'}
+
+
+def _condition_record_bytes(record, spec):
+    if spec['schema']=='fibernet.graph_feature_spec.v1':
+        return _fixed_condition_bytes(record)
+    if type(record) is not dict:
+        raise ValueError('encoded condition record required')
+    _text(record.get('task_rule_id'),'encoded task rule')
+    expected=_condition_record({'task_rule_id':record['task_rule_id']},spec)
+    if canonical_bytes(record)!=canonical_bytes(expected):
+        raise ValueError('encoded condition rule/profile mismatch')
+    return canonical_bytes(record)
+
+
 def _normalize(values, mask, offset, scale):
     raw=np.array(values,dtype=np.float64,copy=True)
     with np.errstate(over='ignore',under='ignore',invalid='ignore',divide='ignore'):
@@ -434,7 +485,7 @@ def _normalize(values, mask, offset, scale):
     return out
 
 
-def _project(snapshot, spec, lookup, supplied):
+def _project(snapshot, spec, lookup, supplied, condition=None):
     a=snapshot['arrays'];n=len(a['node_ids']);e=len(a['edge_ids']);fs=spec['features']
     raw=np.zeros((e,len(fs)),dtype=np.float64);mask=np.zeros(raw.shape,dtype=bool)
     for j,f in enumerate(fs):
@@ -457,6 +508,18 @@ def _project(snapshot, spec, lookup, supplied):
     output={'node_features':_normalize(nodes,np.ones(nodes.shape,dtype=bool),spec['node_offset'],spec['node_scale']),
             'edge_features':np.concatenate((edge,mask.astype(np.float32)),axis=1)[a['message_parent_rows']],
             'edge_index':a['message_index'].copy(),'graph_index':np.zeros(n,dtype=np.int64)}
+    if spec['schema']=='fibernet.graph_feature_spec.v2':
+        condition=_condition_for_spec(condition,snapshot,spec)
+        voltage=np.zeros((n,1),dtype=np.float64);fixed=np.zeros((n,1),dtype=bool)
+        node_rows={int(nid):i for i,nid in enumerate(a['node_ids'])}
+        for row in condition['boundary_voltages']:
+            value=row['value']
+            if type(value) is int and int(float(value))!=value:
+                raise ValueError('raw integer loses precision before projection')
+            i=node_rows[row['node_id']];fixed[i,0]=True
+            voltage[i,0]=0.0 if value==0 else value
+        normalized=_normalize(voltage,fixed,[0.0],[1.0])
+        output['node_features']=np.concatenate((output['node_features'],normalized,fixed.astype(np.float32)),axis=1)
     if supplied is not None:
         _keys(supplied,output,'derived NumPy view')
         for name,expected in output.items():
@@ -465,14 +528,14 @@ def _project(snapshot, spec, lookup, supplied):
     return output
 
 
-def _bind_owned(s, *, group, spec, external, condition, refs, supplied=None):
+def _prepare_owned(s, *, group, spec, external, condition, refs, supplied=None):
     gid=s['graph_id'];group=_text(group,'mother group')
     if s['length_unit']!=spec['length_unit'] or s['coordinate_frame']!=spec['coordinate_frame']:
         raise ValueError('geometry unit/frame mismatch')
-    raw,lookup=_external(external,s,spec);condition=_conditions(condition,s)
+    raw,lookup=_external(external,s,spec);condition=_condition_for_spec(condition,s,spec)
     _keys(refs,('graph','external','conditions'),'source references')
     for value in refs.values(): _text(value,'source reference')
-    projected=_project(s,spec,lookup,supplied);fs_hash=_hash('feature_spec/v1',spec)
+    projected=_project(s,spec,lookup,supplied,condition);fs_hash=_hash('feature_spec/v1',spec)
     # Only closed pre-solve schemas enter data identity. Arbitrary graph/node/
     # edge metadata and opaque file references are not model inputs.
     ext={'units':dict(external['units']),'rows':raw} if external is not None else None
@@ -483,8 +546,17 @@ def _bind_owned(s, *, group, spec, external, condition, refs, supplied=None):
     return {'graph_id':gid,'source_group':group,'source_hash':src,'projection_hash':projection,
             'input_hash':inp,'topology_hash':topology,'node_count':len(a['node_ids']),
             'physical_edge_count':len(a['edge_ids']),'condition_rule':condition['task_rule_id'],
-            'condition_record':_fixed_condition_record(condition),
-            'source_refs':dict(refs)}
+            'condition_record':_condition_record(condition,spec),
+            'source_refs':dict(refs)},projected
+
+
+def _bind_owned(s, *, group, spec, external, condition, refs, supplied=None):
+    return _prepare_owned(s,group=group,spec=spec,external=external,condition=condition,refs=refs,supplied=supplied)[0]
+
+
+def _input_schema(spec):
+    return ('fibernet.graph_inputs.v2' if spec['schema']=='fibernet.graph_feature_spec.v1'
+            else 'fibernet.graph_inputs.v3')
 
 
 def bind_graph_inputs(batches, *, source_groups, feature_spec, external, conditions, source_refs, derived_views=None):
@@ -504,26 +576,26 @@ def bind_graph_inputs(batches, *, source_groups, feature_spec, external, conditi
         rows.append(_bind_owned(s,group=source_groups[gid],spec=spec,external=external[gid],
                     condition=conditions[gid],refs=source_refs[gid],
                     supplied=None if derived_views is None else derived_views[gid]))
-    if len({_fixed_condition_bytes(r['condition_record']) for r in rows})!=1:
+    if len({_condition_record_bytes(r['condition_record'],spec) for r in rows})!=1:
         raise ValueError('mixed/unencoded numerical condition rules unsupported by this profile')
-    return _record('inputs',{'schema':'fibernet.graph_inputs.v2','feature_spec':spec,'feature_spec_hash':fs_hash,'samples':rows})
+    return _record('inputs',{'schema':_input_schema(spec),'feature_spec':spec,'feature_spec_hash':fs_hash,'samples':rows})
 
 
 def _inputs(record):
     p=_read(record,'inputs');_keys(p,('schema','feature_spec','feature_spec_hash','samples'),'inputs')
-    if p['schema']!='fibernet.graph_inputs.v2': raise ValueError('input schema unsupported')
     spec=_feature_spec(p['feature_spec'])
+    if p['schema']!=_input_schema(spec): raise ValueError('input schema/profile mismatch')
     if p['feature_spec_hash']!=_hash('feature_spec/v1',spec): raise ValueError('feature spec binding mismatch')
     if type(p['samples']) is not list or not 1<=len(p['samples'])<=MAX_SAMPLES: raise ValueError('sample records invalid')
     ids=[];condition_records=set()
     for row in p['samples']:
         _keys(row,('graph_id','source_group','source_hash','projection_hash','input_hash','topology_hash','node_count','physical_edge_count','condition_rule','condition_record','source_refs'),'sample binding')
         ids.append(_text(row['graph_id'],'graph ID'));_text(row['source_group'],'mother');_text(row['condition_rule'],'condition rule')
-        condition_records.add(_fixed_condition_bytes(row['condition_record']))
+        condition_records.add(_condition_record_bytes(row['condition_record'],spec))
         if row['condition_rule']!=row['condition_record']['task_rule_id']: raise ValueError('condition rule linkage mismatch')
         for k in ('source_hash','projection_hash','input_hash','topology_hash'): _sha(row[k])
         _integer(row['node_count'],'node count',1,MAX_NODES);_integer(row['physical_edge_count'],'edge count',0,MAX_EDGES)
-        if any(len(row['condition_record'][key])>row['node_count'] for key in ('boundary_voltages','nodal_currents')):
+        if spec['schema']=='fibernet.graph_feature_spec.v1' and any(len(row['condition_record'][key])>row['node_count'] for key in ('boundary_voltages','nodal_currents')):
             raise ValueError('fixed condition slot count exceeds sample nodes')
         _keys(row['source_refs'],('graph','external','conditions'),'source references')
         for v in row['source_refs'].values(): _text(v,'source reference')
@@ -531,6 +603,28 @@ def _inputs(record):
         if expected!=row['input_hash']: raise ValueError('input digest linkage mismatch')
     if len(set(ids))!=len(ids) or len(condition_records)!=1: raise ValueError('sample identity/numerical rule mismatch')
     return p
+
+
+def project_graph_inputs(inputs, *, sources):
+    """Revalidate raw sources and return detached, call-local NumPy projections.
+
+    Sources have the same four fields as training_sources. No labels, fitted
+    transforms, optional backend or persistent graph representation is created.
+    """
+    p=_inputs(inputs);rows={r['graph_id']:r for r in p['samples']}
+    if type(sources) is not dict or set(sources)!=set(rows):
+        raise ValueError('exact bound graph-ID sources required')
+    output={}
+    for gid,row in rows.items():
+        item=sources[gid];_keys(item,('batch','external','conditions','source_refs'),'projection source')
+        snapshot=_snapshot(item['batch'])
+        if snapshot['graph_id']!=gid: raise ValueError('projection graph ID mismatch')
+        rebound,projected=_prepare_owned(snapshot,group=row['source_group'],spec=p['feature_spec'],
+            external=item['external'],condition=item['conditions'],refs=item['source_refs'])
+        if canonical_bytes(rebound)!=canonical_bytes(row):
+            raise ValueError('projection source differs from bound raw authority')
+        output[gid]=projected
+    return output
 
 
 def bind_explicit_group_split(inputs, *, train_ids, validation_ids, final_ids, split_seed, algorithm='explicit_replay.v1'):
