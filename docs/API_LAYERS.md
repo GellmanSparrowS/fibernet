@@ -247,3 +247,16 @@ result.save("frame_detailed.json", detailed=True)
 This is a small-strain beam-frame example, not a material calibration or a unit
 conversion. For advanced controls use the linked complete examples instead of
 adding unsupported mode/material/backend combinations to this call.
+
+
+## Prescribed-temperature mechanics
+
+`fibernet.sim.thermoelastic` exposes the existing experimental planar sparse
+thermoelastic owner and its detached snapshot type. The network entry point
+keeps its 192-node/256-edge defaults; an explicit `ThermoelasticSizeLimits`
+record can select different node and physical-edge ceilings; the conservative
+assembly-contribution ceiling is derived read-only metadata. The saved-temperature adapter accepts the same record and delegates
+to that owner. There is no new graph class, backend registry entry,
+`simulate(...)` dispatch or task supervisor. Size limits do not guarantee
+factorization memory/time or confer a large-task MCP capability. See
+[THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for contracts and units.
