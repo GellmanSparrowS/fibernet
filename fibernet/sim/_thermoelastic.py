@@ -1,4 +1,4 @@
-"""Two separate experimental prescribed-snapshot profiles; neither is a facade API.
+"""Shared owner of the public experimental prescribed-temperature snapshots.
 
 The existing elementary profile retains its two-node axial-only, uniform-
 temperature restrictions. The network profile admits bounded planar welded
@@ -19,6 +19,7 @@ from ._frame_linear_common import (
 
 PROFILE = 'thermoelastic_2d_elementary/2'
 NETWORK_PROFILE = 'thermoelastic_2d_network/1'
+BOUNDED_NETWORK_PROFILE = 'thermoelastic_2d_network_bounded/1'
 
 
 @dataclass(frozen=True)
@@ -173,10 +174,8 @@ def _snapshot(graph, *, length_unit, E_Pa, expansion_alpha_per_K,
         mask=mask, root=root, thermal_strain=thermal_strain, profile=PROFILE)
 
 
-def _snapshot_core(graph, *, length_unit, E, reference, ids, eids, pos, edges,
-                   radii, dofs, B, temperatures, alpha, force, values, mask,
-                   root, thermal_strain, profile):
-    """One assembly/recovery/output body, entered after profile preflight."""
+def _assemble_snapshot_system(*, pos, edges, radii, E, thermal_strain, force, eids):
+    """Shared sparse assembly; no factorization or solve."""
     from fibernet.ml.beam_frame_fem import BeamFrameFEM
     fem = BeamFrameFEM(E=E)
     thermal = assemble_axial_eigenstrain_load(pos, edges, radii, E, thermal_strain)
@@ -184,6 +183,16 @@ def _snapshot_core(graph, *, length_unit, E, reference, ids, eids, pos, edges,
     if list(selected) != list(range(len(eids))):
         raise ValueError('unexpected selected edge rows')
     _finite_derived('stiffness and RHS', K.data, thermal, force)
+    return fem, thermal, K, selected
+
+
+def _snapshot_core(graph, *, length_unit, E, reference, ids, eids, pos, edges,
+                   radii, dofs, B, temperatures, alpha, force, values, mask,
+                   root, thermal_strain, profile, _size_admission=None):
+    """One assembly/recovery/output body, entered after profile preflight."""
+    fem, thermal, K, selected = _assemble_snapshot_system(
+        pos=pos, edges=edges, radii=radii, E=E, thermal_strain=thermal_strain,
+        force=force, eids=eids)
     u = _solve_constrained_sparse(K, force[0]+thermal, values[0], mask)
     displacement = u.reshape(-1, 3)
     total = np.einsum('ei,ei->e', B[:, 0, :], u[dofs])
@@ -222,6 +231,8 @@ def _snapshot_core(graph, *, length_unit, E, reference, ids, eids, pos, edges,
         'constraint_mask': mask.reshape(-1, 3).tolist(),
         'prescribed_values': values[0].reshape(-1, 3).tolist(),
         'loads': force[0].reshape(-1, 3).tolist()}
+    if _size_admission is not None:
+        identity['size_admission'] = _size_admission
     result = dict(identity, input_sha256=hashlib.sha256(_json(identity).encode()).hexdigest(),
         units={'length': 'm', 'rotation': 'rad', 'force': 'N', 'moment': 'N*m',
                'stress': 'Pa', 'temperature': 'K', 'alpha': '1/K'},
@@ -238,29 +249,55 @@ def _snapshot_core(graph, *, length_unit, E, reference, ids, eids, pos, edges,
     if applicability is not None:
         result['applicability'] = applicability
         result['balance_origin_node_id'] = ids[root]
-    return ThermoelasticSnapshot(_json(result))
+    snapshot = ThermoelasticSnapshot(_json(result))
+    return snapshot
 
 
 def solve_thermoelastic_network_snapshot(graph, *, length_unit, E_Pa,
         expansion_alpha_per_K, stress_free_temperature_K, temperature_K,
-        constraints, loads=None):
+        constraints, loads=None, size_limits=None):
     """Experimental planar welded EB network under prescribed nodal temperatures.
 
     Admission is not material, junction, shear, mesh or stability qualification.
     There is no thermal solve, lineage inference, coordinate-based identity,
-    geometric stiffness, feedback, public facade or numerical regularization.
+    geometric stiffness, feedback, simulate-facade routing or regularization.
+    Explicit size_limits change size admission only, not the physical model.
+    They do not bound sparse factorization fill, peak memory or elapsed time.
     """
     with np.errstate(over='raise', invalid='raise', divide='raise', under='raise'):
         return _network_snapshot(graph, length_unit=length_unit, E_Pa=E_Pa,
             expansion_alpha_per_K=expansion_alpha_per_K,
             stress_free_temperature_K=stress_free_temperature_K,
-            temperature_K=temperature_K, constraints=constraints, loads=loads)
+            temperature_K=temperature_K, constraints=constraints, loads=loads,
+            size_limits=size_limits)
 
 
 def _network_snapshot(graph, *, length_unit, E_Pa, expansion_alpha_per_K,
-                      stress_free_temperature_K, temperature_K, constraints, loads):
-    if not 2 <= len(graph.nodes) <= 192 or not 1 <= len(graph.edges) <= 256:
-        raise ValueError('network profile requires 2..192 nodes and 1..256 edges')
+                      stress_free_temperature_K, temperature_K, constraints, loads,
+                      size_limits=None):
+    admission = None
+    if size_limits is None:
+        if not 2 <= len(graph.nodes) <= 192 or not 1 <= len(graph.edges) <= 256:
+            raise ValueError('network profile requires 2..192 nodes and 1..256 edges')
+    else:
+        from .thermoelastic import ThermoelasticSizeLimits
+        if type(size_limits) is not ThermoelasticSizeLimits:
+            raise TypeError('size_limits must be ThermoelasticSizeLimits or None')
+        admission = size_limits._admit(graph)
+    prepared = _network_preflight(graph,
+        length_unit=length_unit, E_Pa=E_Pa,
+        expansion_alpha_per_K=expansion_alpha_per_K,
+        stress_free_temperature_K=stress_free_temperature_K,
+        temperature_K=temperature_K, constraints=constraints, loads=loads)
+    if admission is not None:
+        prepared['profile'] = BOUNDED_NETWORK_PROFILE
+        prepared['_size_admission'] = admission
+    return _snapshot_core(graph, **prepared)
+
+
+def _network_preflight(graph, *, length_unit, E_Pa, expansion_alpha_per_K,
+                       stress_free_temperature_K, temperature_K, constraints, loads):
+    """Shared non-size preflight, entered only through a profile admission."""
     for mapping in (graph.nodes, graph.edges):
         if any(isinstance(key, (bool, np.bool_))
                or not isinstance(key, numbers.Integral) or key < 0 for key in mapping):
@@ -306,7 +343,7 @@ def _network_snapshot(graph, *, length_unit, E_Pa, expansion_alpha_per_K,
         raise ValueError('thermal strain exceeds network profile bound')
     zero_roots = [nid for nid in ids if prescribed.get(nid) == (0., 0., 0.)]
     root = ids.index(zero_roots[0]) if zero_roots else 0
-    return _snapshot_core(graph, length_unit=length_unit, E=E, reference=reference,
+    return dict(length_unit=length_unit, E=E, reference=reference,
         ids=ids, eids=eids, pos=pos, edges=edges, radii=radii, dofs=dofs, B=B,
         temperatures=temperatures, alpha=alpha, force=force, values=values,
         mask=mask, root=root, thermal_strain=thermal_strain, profile=NETWORK_PROFILE)

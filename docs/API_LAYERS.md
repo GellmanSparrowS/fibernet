@@ -25,6 +25,20 @@ from a legacy network is approximate, not lossless preservation of curved fibers
 or every crosslink. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
 
+### Edit geometry before preparing solver controls
+
+Use `graph.displace_node(node_id, [dx, dy])`,
+`graph.set_node_position(node_id, [x, y, z])`, or
+`graph.set_node_positions({node_id: [x, y]})` with stable node IDs. These
+coordinates use the graph's existing units; no conversion is performed.
+Rejected edits leave geometry, merge lookup and ID counters unchanged. A batch
+with a rejected ID or coordinate is rejected before any node is changed.
+Valid edits retain IDs, boundary labels and internal edge points; they do not
+recompute boundary membership or deform a curved edge's internal geometry.
+Prepare supports and loads after editing. Existing prepared controls must be
+prepared again when the graph changes, as described in
+[stable-ID nodal controls](STABLE_NODAL_CONTROLS.md).
+
 ## Mechanical facade capability matrix
 
 Selectors are case-sensitive. Default `simulate` is `backend="spring"`,
@@ -233,3 +247,16 @@ result.save("frame_detailed.json", detailed=True)
 This is a small-strain beam-frame example, not a material calibration or a unit
 conversion. For advanced controls use the linked complete examples instead of
 adding unsupported mode/material/backend combinations to this call.
+
+
+## Prescribed-temperature mechanics
+
+`fibernet.sim.thermoelastic` exposes the existing experimental planar sparse
+thermoelastic owner and its detached snapshot type. The network entry point
+keeps its 192-node/256-edge defaults; an explicit `ThermoelasticSizeLimits`
+record can select different node and physical-edge ceilings; the conservative
+assembly-contribution ceiling is derived read-only metadata. The saved-temperature adapter accepts the same record and delegates
+to that owner. There is no new graph class, backend registry entry,
+`simulate(...)` dispatch or task supervisor. Size limits do not guarantee
+factorization memory/time or confer a large-task MCP capability. See
+[THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for contracts and units.

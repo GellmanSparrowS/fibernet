@@ -8,6 +8,10 @@ Core backend:
 
 # Keep importing a simulation contract independent of unrelated native engines.
 _LAZY_EXPORTS = {
+    "ThermoelasticSizeLimits": "fibernet.sim.thermoelastic",
+    "ThermoelasticSnapshot": "fibernet.sim.thermoelastic",
+    "solve_thermoelastic_snapshot": "fibernet.sim.thermoelastic",
+    "solve_thermoelastic_network_snapshot": "fibernet.sim.thermoelastic",
     "prepare_nodal_controls": "fibernet.sim.nodal_controls",
     "PreparedNodalControls": "fibernet.sim.nodal_controls",
     "TaichiEngine": "fibernet.sim.accelerated",
