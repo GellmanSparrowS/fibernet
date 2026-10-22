@@ -2,6 +2,10 @@
 import copy
 from dataclasses import replace
 import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
 import sys
 import unittest
 
@@ -221,8 +225,49 @@ class TestDirichletProfile(unittest.TestCase):
         self.assertEqual(record.as_dict()['status'],'new_contract_lineage_only')
 
     def test_14_no_optional_backends_loaded(self):
-        for name in ('torch','torch_geometric','sklearn','xgboost','exudyn','fibernet.sim','fibernet.ml.edge_gine_training'):
-            self.assertFalse(any(n==name or n.startswith(name+'.') for n in sys.modules),name)
+        # Collection and earlier tests may legitimately load optional backends.
+        # Exercise this profile in a fresh interpreter with the existing guard.
+        root = Path(__file__).resolve().parents[1]
+        script = """
+import json
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]).resolve()
+sys.path[:0] = [str(root), str(root / 'tests')]
+from test_graph_training_import_boundary import RejectOptionalImports, is_optional
+assert not any(name == 'fibernet' or name.startswith('fibernet.') or is_optional(name)
+               for name in sys.modules)
+guard = RejectOptionalImports()
+sys.meta_path.insert(0, guard)
+try:
+    from test_graph_dirichlet_profile import C, encoded_bind, encoded_source
+    assert Path(C.__file__).resolve() == root / 'fibernet/ml/graph_training_contract.py'
+    sources = {'x': encoded_source('x')}
+    inputs = encoded_bind(sources)
+    arrays = C.project_graph_inputs(inputs, sources=sources)['x']
+    assert inputs.as_dict()['schema'] == 'fibernet.graph_inputs.v3'
+    assert arrays['node_features'].shape == (3, 6)
+    loaded = sorted(name for name in sys.modules if is_optional(name))
+    assert not guard.attempts, guard.attempts
+    assert not loaded, loaded
+    print(json.dumps({'optional_import_attempts': guard.attempts,
+                      'loaded_optional_modules': loaded, 'node_columns': 6}))
+finally:
+    sys.meta_path.remove(guard)
+"""
+        env = os.environ.copy()
+        env['PYTHONDONTWRITEBYTECODE'] = '1'
+        for name in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+                     'NUMEXPR_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS'):
+            env[name] = '1'
+        result = subprocess.run(
+            [sys.executable, '-I', '-B', '-c', script, str(root)],
+            check=True, capture_output=True, text=True, timeout=60, env=env,
+        )
+        self.assertEqual(json.loads(result.stdout), {
+            'optional_import_attempts': [], 'loaded_optional_modules': [],
+            'node_columns': 6,
+        })
 
 
 if __name__=='__main__':unittest.main()
