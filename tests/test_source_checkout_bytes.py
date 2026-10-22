@@ -11,6 +11,7 @@ PROTECTED = (
     'fibernet/sim/__init__.py',
     'tests/fixtures/optional_facades_v2/root.py.txt',
     'tests/fixtures/optional_facades_v2/sim.py.txt',
+    'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt',
     'tests/fixtures/optional_facades_v2/sim_prior.py.txt',
     'adapters/mcp/tests/fixtures/provenance_v1_outputs.json',
     'fibernet/easy.py',

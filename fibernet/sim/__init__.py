@@ -8,6 +8,8 @@ Core backend:
 
 # Keep importing a simulation contract independent of unrelated native engines.
 _LAZY_EXPORTS = {
+    "prepare_nodal_controls": "fibernet.sim.nodal_controls",
+    "PreparedNodalControls": "fibernet.sim.nodal_controls",
     "TaichiEngine": "fibernet.sim.accelerated",
     "SimResult": "fibernet.sim.accelerated",
     "ReducedBeamConfig": "fibernet.sim.reduced_beam",
