@@ -41,3 +41,6 @@ fibernet/sim/saved_temperature.py -text
 # Thermoelastic API and owner are included in exact native-core bindings.
 fibernet/sim/thermoelastic.py -text
 fibernet/sim/_thermoelastic.py -text
+
+# Exact native-core bindings cover every package Python source.
+fibernet/**/*.py -text
