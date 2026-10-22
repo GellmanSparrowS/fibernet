@@ -3,7 +3,7 @@
 No geometry/material inference. Array order is explicit; no root API export.
 Numerical equation acceptance does not certify time-discretization accuracy.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from collections.abc import Mapping
 import hashlib
 import json
@@ -65,6 +65,63 @@ class TransientThermalResult:
     completed: bool
     input_sha256: str
     provenance_json: str
+
+    def to_dict(self) -> dict:
+        """Return detached strict-JSON-ready fields without changing arrays.
+
+        Null means unavailable, never zero: interval diagnostics at t=0, and
+        free-node residuals/bounds at fixed-temperature nodes. Availability is
+        determined by the existing mask and fixed IDs, not by finding NaNs.
+        Other nonfinite values, or inconsistent diagnostic sentinels, raise
+        ValueError. ``completed=False`` still describes only accepted frames.
+        """
+        nt, nn = len(self.times_s), len(self.node_ids)
+        mask = np.asarray(self.interval_diagnostics_available)
+        if (nt == 0 or mask.shape != (nt,) or mask.dtype.kind != 'b' or
+                mask[0] or not mask[1:].all()):
+            raise ValueError('interval_diagnostics_available must mark only t=0 unavailable')
+        if (self.times_s.shape != (nt,) or self.times_s[0] != 0 or
+                np.any(np.diff(self.times_s) <= 0)):
+            raise ValueError('times_s must start at zero and strictly increase')
+        if (self.node_ids.shape != (nn,) or self.fixed_node_ids.ndim != 1 or
+                not np.isin(self.fixed_node_ids, self.node_ids).all() or
+                self.component_labels.shape != (nn,)):
+            raise ValueError('diagnostic node, fixed-node and component rows must agree')
+        nc = len(np.unique(self.component_labels))
+        node_available = mask[:, None] & ~np.isin(self.node_ids, self.fixed_node_ids)[None, :]
+        component_available = np.broadcast_to(mask[:, None], (nt, nc))
+        availability = {
+            'free_node_residual_J': node_available,
+            'node_acceptance_bound_J': node_available,
+            'component_energy_residual_J': component_available,
+            'component_acceptance_bound_J': component_available,
+        }
+        value = {}
+        for field in fields(self):
+            item = getattr(self, field.name)
+            if field.name in availability:
+                available = availability[field.name]
+                if item.shape != available.shape:
+                    raise ValueError(field.name + ' diagnostic shape mismatch')
+                if not np.isfinite(item[available]).all():
+                    raise ValueError(field.name + ' has nonfinite available diagnostics')
+                if not np.isnan(item[~available]).all():
+                    raise ValueError(field.name + ' unavailable diagnostics must use NaN sentinels')
+                detached = item.astype(object)
+                detached[~available] = None
+                value[field.name] = detached.tolist()
+            elif isinstance(item, np.ndarray):
+                if not np.isfinite(item).all():
+                    raise ValueError(field.name + ' must contain only finite values')
+                value[field.name] = item.tolist()
+            else:
+                value[field.name] = item
+        # Match the existing Joule ledger convention; keep its recorded units,
+        # input/source metadata and validation limits rather than infer new ones.
+        value['provenance'] = json.loads(value.pop('provenance_json'))
+        if not isinstance(value['provenance'], dict):
+            raise ValueError('provenance_json must encode a JSON object')
+        return json.loads(json.dumps(value, allow_nan=False))
 
 
 def _id(v):

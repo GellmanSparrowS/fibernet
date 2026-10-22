@@ -84,3 +84,37 @@ def test_example_import_performs_no_solve():
     with patch.object(fn, 'solve_linear_transport', side_effect=AssertionError('unexpected solve')):
         spec.loader.exec_module(example)
     assert callable(example.run_example)
+
+
+def test_strict_json_reopen_joule_workflow(tmp_path):
+    import json
+    graph, electrical, weights = fixture()
+    kwargs = thermal_inputs(weights)
+    kwargs['fixed_temperature_K'] = {907: 300.}
+    heating = fn.run_joule_heating(graph, electrical, **kwargs)
+    path = tmp_path / 'joule_heating.json'
+    path.write_text(json.dumps({
+        'electrical': electrical.to_dict(),
+        'heat_load': heating.heat_load.to_dict(),
+        'thermal': heating.thermal.to_dict(),
+    }, allow_nan=False), encoding='utf-8')
+    # Reopening and consuming saved fields is not another physical solve.
+    with patch.object(fn, 'solve_linear_transport', side_effect=AssertionError('unexpected electrical solve')), \
+            patch('fibernet.sim.transient_thermal.solve_transient_thermal',
+                  side_effect=AssertionError('unexpected thermal solve')):
+        reopened = json.loads(path.read_text(encoding='utf-8'))
+        thermal = reopened['thermal']
+        assert thermal['completed'] is True
+        assert thermal['input_sha256'] == heating.thermal.input_sha256
+        assert thermal['node_ids'] == reopened['electrical']['node_ids']
+        assert thermal['edge_ids'] == [11, 31, 67]
+        assert thermal['endpoints_by_id'] == [[101, 907], [907, 101], [101, 907]]
+        assert thermal['source_W'] == reopened['heat_load']['total_node_power_W']
+        assert thermal['interval_diagnostics_available'] == [False, True]
+        assert thermal['free_node_residual_J'][0] == [None, None]
+        assert thermal['free_node_residual_J'][1][1] is None
+        assert thermal['provenance']['units']['stored'] == 'J'
+        stored = sum(thermal['node_stored_heat_change_J'][-1])
+        supplied = .1 * (sum(thermal['source_W']) + sum(thermal['reservoir_injection_W'][-1]))
+        assert abs(stored - supplied) <= sum(thermal['component_acceptance_bound_J'][-1])
+        np.testing.assert_array_equal(thermal['temperature_K'], heating.thermal.temperature_K)
