@@ -1,0 +1,238 @@
+{
+  "kind": "saved_interface_tour",
+  "canvas": [
+    960,
+    640
+  ],
+  "input_sha256": {
+    "FiberScope/docs/screenshots/learning-en.png": "b4e515df6be0600fb1230d7885b3a7e3204ef6b898476f0b17d88edbd61eb0e3",
+    "FiberScope/docs/screenshots/inverse-en.png": "d0c6d7c86b7f6d9b4d233be7852aac8523b46290a89e2936e66fde584d9ad3ec",
+    "FiberScope/docs/screenshots/surface-en.png": "b6b26a517d5aef1e2b7169d9887c439fa94cf205e75a888ebc3657889ad271fb",
+    "FiberScope/docs/screenshots/manufacturing-en.png": "c10c2a3be5b46df0b8a635b63bcf63a7004116663643f4a1fb8da07dafa4fc7a"
+  },
+  "stages": [
+    {
+      "title": "Learning",
+      "source": "FiberScope/docs/screenshots/learning-en.png",
+      "duration_ms": 1500,
+      "kind": "whole_screen_orientation",
+      "placements": [
+        {
+          "source_box": [
+            0,
+            0,
+            1600,
+            1000
+          ],
+          "target_box": [
+            41,
+            74,
+            918,
+            622
+          ],
+          "source_crop_rgb_sha256": "60ef538478151f3950c53d19d670ee3f884a84b1aec2328af1746f0fb54cbc88"
+        }
+      ]
+    },
+    {
+      "title": "Learning controls",
+      "source": "FiberScope/docs/screenshots/learning-en.png",
+      "duration_ms": 2200,
+      "kind": "saved_ui_detail",
+      "placements": [
+        {
+          "source_box": [
+            14,
+            146,
+            328,
+            293
+          ],
+          "target_box": [
+            16,
+            131,
+            944,
+            565
+          ],
+          "source_crop_rgb_sha256": "6591841f74cb5a312ca778f35d54a4f2b0cf6014848a81ec4c7995e930f5a210"
+        }
+      ]
+    },
+    {
+      "title": "Inverse design",
+      "source": "FiberScope/docs/screenshots/inverse-en.png",
+      "duration_ms": 1500,
+      "kind": "whole_screen_orientation",
+      "placements": [
+        {
+          "source_box": [
+            0,
+            0,
+            1600,
+            1000
+          ],
+          "target_box": [
+            41,
+            74,
+            918,
+            622
+          ],
+          "source_crop_rgb_sha256": "5bb8b73a2ed499557a5b883d400be1ff6109d245457572236f65a6b42ccdb240"
+        }
+      ]
+    },
+    {
+      "title": "Inverse-design controls",
+      "source": "FiberScope/docs/screenshots/inverse-en.png",
+      "duration_ms": 2200,
+      "kind": "saved_ui_detail",
+      "placements": [
+        {
+          "source_box": [
+            10,
+            179,
+            326,
+            378
+          ],
+          "target_box": [
+            45,
+            74,
+            915,
+            622
+          ],
+          "source_crop_rgb_sha256": "5e9223135b00f20a67faee09d415f019e83746df2270e7cd9634d43ba01d74e2"
+        }
+      ]
+    },
+    {
+      "title": "Surface mapping",
+      "source": "FiberScope/docs/screenshots/surface-en.png",
+      "duration_ms": 1500,
+      "kind": "whole_screen_orientation",
+      "placements": [
+        {
+          "source_box": [
+            0,
+            0,
+            1600,
+            1000
+          ],
+          "target_box": [
+            41,
+            74,
+            918,
+            622
+          ],
+          "source_crop_rgb_sha256": "c8f78febf486013b3f7f950ab4ea49b13c316c82ba2169ba3037420e38aaa8aa"
+        }
+      ]
+    },
+    {
+      "title": "Surface controls",
+      "source": "FiberScope/docs/screenshots/surface-en.png",
+      "duration_ms": 2200,
+      "kind": "saved_ui_detail",
+      "placements": [
+        {
+          "source_box": [
+            12,
+            345,
+            288,
+            520
+          ],
+          "target_box": [
+            48,
+            74,
+            912,
+            622
+          ],
+          "source_crop_rgb_sha256": "61ec6aea98434f175d1e19c4b31b58baadc38620e7e0a38d62b84a02ee140f18"
+        }
+      ]
+    },
+    {
+      "title": "Fabrication",
+      "source": "FiberScope/docs/screenshots/manufacturing-en.png",
+      "duration_ms": 1500,
+      "kind": "whole_screen_orientation",
+      "placements": [
+        {
+          "source_box": [
+            0,
+            0,
+            1600,
+            1000
+          ],
+          "target_box": [
+            41,
+            74,
+            918,
+            622
+          ],
+          "source_crop_rgb_sha256": "cd29b19f007a5e80e52e9fcbeb26078ab6f67b695794c4324d6dcaaa6fd434cd"
+        }
+      ]
+    },
+    {
+      "title": "Export controls",
+      "source": "FiberScope/docs/screenshots/manufacturing-en.png",
+      "duration_ms": 2200,
+      "kind": "saved_ui_detail",
+      "placements": [
+        {
+          "source_box": [
+            18,
+            950,
+            325,
+            983
+          ],
+          "target_box": [
+            50,
+            150,
+            910,
+            242
+          ],
+          "source_crop_rgb_sha256": "7db11497dc7cb617de004ceb939fe59627b64ab3d1a24c3ec7d37ddfb31997e8"
+        },
+        {
+          "source_box": [
+            332,
+            950,
+            639,
+            983
+          ],
+          "target_box": [
+            50,
+            280,
+            910,
+            372
+          ],
+          "source_crop_rgb_sha256": "93b547410194bdae84e30f25489c72c9964e2103c0383da9d4f57705c9ed2103"
+        },
+        {
+          "source_box": [
+            646,
+            950,
+            954,
+            983
+          ],
+          "target_box": [
+            49,
+            410,
+            911,
+            502
+          ],
+          "source_crop_rgb_sha256": "29efb1958c5f41bfadf33a79fed40f21930f5e0ba3224090579de16180a61edb"
+        }
+      ]
+    }
+  ],
+  "whole_screen_text_is_orientation_not_mobile_reading": true,
+  "scientific_plots_cropped": false,
+  "original_sources_unchanged": true,
+  "resampling": "Lanczos resizing and GIF palette quantization; no redraw of source UI contents",
+  "gif_sha256": "ce14232bc9ff34a62a2f53d588d368f737d66b4bd0129045f09bdaec289c0c07",
+  "renderer_sha256": "481b565dd478239661aaf2a59621e2f393cdc7638bb19dd160aa1d0564bfc7c4",
+  "duration_ms": 14800,
+  "no_application_training_physics_execution": true,
+  "visual_qa": "PENDING human inspection"
+}

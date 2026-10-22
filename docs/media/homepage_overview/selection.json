@@ -1,0 +1,162 @@
+{
+  "schema": "fibernet.homepage-selection.v1",
+  "base_commit": "e3c0e0d8a0e29d8c7e90f02572ccd58550405d2a",
+  "displayed_gifs": [
+    "docs/media/three_dimensional_topologies.gif",
+    "docs/media/spectrum_four_topologies.gif",
+    "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
+    "docs/media/homepage_overview/gine_overview.gif",
+    "docs/media/continuous_route_kagome.gif",
+    "docs/media/homepage_overview/fiberscope_overview.gif"
+  ],
+  "original_gifs": [
+    {
+      "path": "docs/media/network_workflow_hero.gif",
+      "sha256": "2d48640416d68bcfadea02b84d44078e1297378f09ce55fdfcca30ee0950d2bd"
+    },
+    {
+      "path": "docs/media/tensile_recruitment_kagome.gif",
+      "sha256": "b8c572ab28cdf753e52799caa303fde7cdbac77e899b28fa4e716ecdd09e9397"
+    },
+    {
+      "path": "docs/media/new/backends/lammps_saved_dynamics.gif",
+      "sha256": "a6b3e8f0389608976b9deea6703d8ab6bad9017def758820a2d21c27f8dd7d8b"
+    },
+    {
+      "path": "docs/media/new/backends/taichi_saved_dynamics.gif",
+      "sha256": "45f9d490909d16132a4e11a490d3bb65bd2231a5a9d1aa7b901d5309f5a05c65"
+    },
+    {
+      "path": "docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif",
+      "sha256": "b40510a13a9302711de11c5db28935cc5079e0e6a3a26f85e68b4603fb8cf953"
+    },
+    {
+      "path": "docs/media/new/fracture/fracture_sequence.gif",
+      "sha256": "43b07a1972df8322a8e29072c0259506068367306914ad9d1a03782c4b6af8ad"
+    },
+    {
+      "path": "docs/media/new/thermal/transient_thermal_network.gif",
+      "sha256": "23af4e8c2835e8225192299bbc12405e287c01f628dde3fd8f49b44844f557b8"
+    },
+    {
+      "path": "docs/media/directional_recruitment_hexagon.gif",
+      "sha256": "dd76800542bf8b950b5c76a06a5a7ab062b70f35603a332e2a5675e2da1a45e6"
+    },
+    {
+      "path": "docs/media/tensile_threshold_sensitivity.gif",
+      "sha256": "c25496e1abbeb3a3f2a3ab66d95d34596e1ed9e6dc02fe24414d2a0bca2e92ae"
+    },
+    {
+      "path": "docs/media/new/learning/media/gine_training_history.gif",
+      "sha256": "cea633e13abcc71f1ab0142e8a7dda22c75bdbd48ed74441f5bddbda2a09f825"
+    },
+    {
+      "path": "docs/media/new/learning/media/rl_environment_fixed_actions.gif",
+      "sha256": "5e3ea8d8c3a30d6815105e62973bf2da42a7fed0d2bcf6b08f9a57c7e5221ee1"
+    },
+    {
+      "path": "docs/media/route_preserving_intervention_kagome.gif",
+      "sha256": "0c43100356ff3b8310664178599374e8f1cd7ffd4bead42574612817332632ae"
+    },
+    {
+      "path": "docs/media/route_preserving_intervention_ring.gif",
+      "sha256": "52ffe94be978af493f677981c3fc376070200a96e40a3b1469ad4b0db10c72c9"
+    },
+    {
+      "path": "docs/media/learning_inverse_workflow.gif",
+      "sha256": "9b1dcf141e1b882b153aefb908047c94a58a7c6635476a4bc4ff10953fd82123"
+    },
+    {
+      "path": "docs/media/surface_export_workflow.gif",
+      "sha256": "a848231abfa31ab8999c3cc5739ac00d4ca07ba0c009e46e0c287c251c216a7e"
+    },
+    {
+      "path": "docs/media/three_dimensional_topologies.gif",
+      "sha256": "82e8f3fb7827bfa15975933ef6da75e0ce50d642b0a5644e5ea3e0c18e5ee86b"
+    },
+    {
+      "path": "docs/media/spectrum_four_topologies.gif",
+      "sha256": "2bf98832e4e1bd4c9efd9d16a75f39812ed89af2b3b192804815a86ec55994ec"
+    },
+    {
+      "path": "docs/media/electrical_torus_field.gif",
+      "sha256": "59217881aa05242cc26b4f3c1acd52d133293f53bb4b67109be1d4968e61647a"
+    },
+    {
+      "path": "docs/media/continuous_route_kagome.gif",
+      "sha256": "cb90b8262aa5873d01a1b3f8c323a782fb65eda02adda7c897588d1559f5dac7"
+    }
+  ],
+  "derivatives": [
+    {
+      "path": "docs/media/homepage_overview/gine_overview.gif",
+      "sha256": "018141f1691c7545e5f11beaa7187b9c16e89e5277094e0c607f1258c7957d4b"
+    },
+    {
+      "path": "docs/media/homepage_overview/gine_history.svg",
+      "sha256": "c0d3b7a338233e253c2d1bddeeaa0c0c9cd68200252ef0a18b234288ec1d6035"
+    },
+    {
+      "path": "docs/media/homepage_overview/gine_final_evaluation.svg",
+      "sha256": "6fd02cd8b3867b46e9546ded80decdbcf5ae7933e460ae7eb988f42abf194c3c"
+    },
+    {
+      "path": "docs/media/homepage_overview/fiberscope_overview.gif",
+      "sha256": "ce14232bc9ff34a62a2f53d588d368f737d66b4bd0129045f09bdaec289c0c07"
+    },
+    {
+      "path": "docs/media/homepage_overview/fiberscope_overview.svg",
+      "sha256": "c6f5ffc8e8bf26ec7899c18a3bf962b8089af58aef61732e1b14b866017c917f"
+    },
+    {
+      "path": "docs/media/homepage_overview/intervention_kagome_grid.svg",
+      "sha256": "8e3c3aec4ce852d1bbc6162533ef5d78324b6fe293216d8cd31100d57f452d78"
+    },
+    {
+      "path": "docs/media/homepage_overview/intervention_ring_grid.svg",
+      "sha256": "5d41c40a42a2b113ca22e25f25ba9fc83ad7911bdb014140ecdc0a199f16137a"
+    },
+    {
+      "path": "docs/media/homepage_overview/gine_receipt.json",
+      "sha256": "909086ee22495ca66f2a6f89fef403c0885be40290a205181cf250ccdcb2834e"
+    },
+    {
+      "path": "docs/media/homepage_overview/fiberscope_receipt.json",
+      "sha256": "8d47042743e8ba0a2fba92d5838e2c1f68d0aa9fa524d6147c347dfea0046ee5"
+    },
+    {
+      "path": "docs/media/homepage_overview/interventions_receipt.json",
+      "sha256": "cd50ee328ceb96355286aef4b42cc30c511225bd773ae20b428a71c28c5f14a8"
+    },
+    {
+      "path": "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
+      "sha256": "f95b75330a619eef18360732ce4bfbc52bfd550c94c856950ab4d7c9e34200be"
+    },
+    {
+      "path": "docs/media/homepage_overview/tensile_recruitment_labeled_final.svg",
+      "sha256": "9f242f801f833f14e32d679b21773ed2fac9172050548b8ba411aa41a799e9bb"
+    },
+    {
+      "path": "docs/media/homepage_overview/tensile_label_receipt.json",
+      "sha256": "9f777a4d3434c675df8ff8b69afe5faa083b6ce95cb8e96bbce8c91a45a74a9d"
+    }
+  ],
+  "renderers": [
+    {
+      "path": "scripts/render_homepage_gine.py",
+      "sha256": "96072477528c4394de10140da4e07f05be2721e906d747fc4aceac2efcb32c11"
+    },
+    {
+      "path": "scripts/render_homepage_saved_ui.py",
+      "sha256": "481b565dd478239661aaf2a59621e2f393cdc7638bb19dd160aa1d0564bfc7c4"
+    },
+    {
+      "path": "scripts/relayout_homepage_interventions.py",
+      "sha256": "514e7dddeacdc444e28eb312ca409cf6cb869dee25b5b886dffb9046b4bfda32"
+    },
+    {
+      "path": "scripts/relabel_saved_tensile.py",
+      "sha256": "e2f34e14da696893e1f882369d79fb43817a544a482865de5118a1f14f182676"
+    }
+  ]
+}

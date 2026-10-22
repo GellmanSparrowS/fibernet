@@ -19,6 +19,14 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
+HOMEPAGE_GIFS = (
+    "docs/media/three_dimensional_topologies.gif",
+    "docs/media/spectrum_four_topologies.gif",
+    "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
+    "docs/media/homepage_overview/gine_overview.gif",
+    "docs/media/continuous_route_kagome.gif",
+    "docs/media/homepage_overview/fiberscope_overview.gif",
+)
 
 
 def digest(path: Path) -> str:
@@ -181,7 +189,8 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     require(chinese == locale_block(standalone, "zh"), "Standalone Chinese differs from inline source")
     for label, block in (("English", english), ("Chinese", chinese)):
         gifs = inline_gifs(block)
-        require(len(gifs) == len(set(gifs)) == 19, f"{label} must retain all 19 inline animations")
+        require(len(gifs) == len(set(gifs)) == len(HOMEPAGE_GIFS) and set(gifs) == set(HOMEPAGE_GIFS),
+                f"{label} inline animations must match the homepage selection")
     return english, chinese
 
 
@@ -208,6 +217,19 @@ def main() -> None:
         require(svg.find("{http://www.w3.org/2000/svg}title") is not None,
                 f"Accessible title missing: {path.name}")
         require("<script" not in path.read_text().lower(), f"Script in badge: {path.name}")
+
+    selection = json.loads((MEDIA / "homepage_overview/selection.json").read_text())
+    require(selection["schema"] == "fibernet.homepage-selection.v1", "Unknown homepage selection schema")
+    require(selection["displayed_gifs"] == list(HOMEPAGE_GIFS), "Homepage selection differs")
+    originals = selection["original_gifs"]
+    require(len(originals) == len({r["path"] for r in originals}) == 19,
+            "Expected 19 preserved original GIFs")
+    for record in originals + selection["derivatives"] + selection["renderers"]:
+        require(digest(ROOT / record["path"]) == record["sha256"],
+                f"Homepage source/media hash differs: {record['path']}")
+    for relative in HOMEPAGE_GIFS:
+        decode_gif(ROOT / relative)
+    check_links(ROOT / "docs/HOMEPAGE_OVERVIEW_MEDIA.md")
 
     historical = []
     for path in sorted(MEDIA.glob("*.json")):

@@ -75,16 +75,17 @@ class InlineGifParserTests(unittest.TestCase):
         for name, text in NEGATIVE.items():
             bad = english.replace(target, text.replace('x.gif', src), 1)
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, '19 inline animations'):
+                with self.assertRaisesRegex(ValueError, 'inline animations must match the homepage selection'):
                     CHECK.check_locale_structure(readme.replace(english, bad), chinese)
         for name, text in POSITIVE.items():
             good = english.replace(target, text.replace('x.gif', src), 1)
             with self.subTest(name=name):
                 CHECK.check_locale_structure(readme.replace(english, good), chinese)
         for name, bad in [('missing', english.replace(target, '', 1)),
-                          ('duplicate', english + '\n' + target)]:
+                          ('duplicate', english + '\n' + target),
+                          ('substituted', english.replace(src, 'unselected.gif', 1))]:
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, '19 inline animations'):
+                with self.assertRaisesRegex(ValueError, 'inline animations must match the homepage selection'):
                     CHECK.check_locale_structure(readme.replace(english, bad), chinese)
 
 
