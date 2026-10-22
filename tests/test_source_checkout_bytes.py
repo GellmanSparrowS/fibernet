@@ -7,6 +7,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
+    'fibernet/core/structure_graph.py',
     'fibernet/__init__.py',
     'fibernet/sim/__init__.py',
     'tests/fixtures/optional_facades_v2/root.py.txt',
