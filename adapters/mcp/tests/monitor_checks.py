@@ -1,11 +1,12 @@
 """Short-lived CPU, terminal limits and new-session descendant regressions."""
 import json
+import os
 from pathlib import Path
 import sys
 import uuid
 from unittest.mock import patch
 
-from bounded_suite import ROOT, run_bounded, subreaper
+from bounded_suite import ROOT, disk_bytes, run_bounded, subreaper
 
 AREA = ROOT / 'evidence' / ('monitor-' + uuid.uuid4().hex[:8])
 AREA.mkdir()
@@ -13,6 +14,28 @@ LIMITS = {'cpu_seconds': 5, 'wall_seconds': 5,
           'rss_bytes': 256 * 1024 ** 2, 'disk_bytes': 4 * 1024 ** 2}
 before = subreaper()
 records = []
+inventory = AREA / 'disk_inventory'
+inventory.mkdir()
+(inventory / 'nested').mkdir()
+(inventory / 'regular').write_bytes(b'abc')
+(inventory / 'nested/payload').write_bytes(b'defgh')
+(inventory / 'file_link').symlink_to(inventory / 'regular')
+(inventory / 'directory_link').symlink_to(inventory / 'nested', target_is_directory=True)
+(inventory / 'missing_link').symlink_to(inventory / 'missing')
+os.mkfifo(inventory / 'fifo')
+assert disk_bytes(inventory) == 8
+assert disk_bytes(inventory / 'missing') == 0
+# Scanning must tolerate deletion between directory discovery and traversal.
+scandir = os.scandir
+def remove_before_scan(path):
+    if Path(path) == inventory / 'nested':
+        (inventory / 'nested/payload').unlink()
+        (inventory / 'nested').rmdir()
+    return scandir(path)
+with patch('bounded_suite.os.scandir', side_effect=remove_before_scan):
+    assert disk_bytes(inventory) == 3
+records.append({'case': 'disk_inventory', 'regular_file_bytes': 3,
+                'symlinks_and_fifo_excluded': True, 'vanished_directory_tolerated': True})
 burn = ('import time; start=time.process_time(); '
         'exec("while time.process_time()-start < .08: pass")')
 short = ('import subprocess,sys; '

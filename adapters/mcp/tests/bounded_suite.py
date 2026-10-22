@@ -27,10 +27,18 @@ FINISHING_CPU_RESERVE = 1.0
 
 def disk_bytes(root):
     total = 0
-    for path in root.rglob('*'):
+    pending = [os.fspath(root)]
+    while pending:
         try:
-            if path.is_file() and not path.is_symlink():
-                total += path.stat().st_size
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            pending.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                    except FileNotFoundError:
+                        pass
         except FileNotFoundError:
             pass
     return total
