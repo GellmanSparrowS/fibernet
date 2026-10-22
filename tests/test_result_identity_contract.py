@@ -506,7 +506,9 @@ class ResultIdentityContractTests(unittest.TestCase):
                     'boundaries': {'left': [0], 'right': [1, 2]}}), \
                 patch('matplotlib.pyplot.close'):
             summary = workflow.OpenSourceWorkflow(directory).run()
-            simulate.assert_called_once_with(graph, backend='fem', mode='stretch', strain=1.01, dim=2, pct=.10)
+            simulate.assert_called_once_with(
+                graph, backend='fem', mode='stretch', stretch_ratio=1.01,
+                dim=2, pct=.10, nonlinear=False, E=1e9, nu=.3)
             restored = SimResult.load(str(Path(directory) / 'fem_result.json'))
             self.assertEqual(restored.metadata['beam_resultant_contract'], result.metadata['beam_resultant_contract'])
             self.assertEqual(summary['nodes'], 3)

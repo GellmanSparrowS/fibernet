@@ -337,8 +337,10 @@ def test_atomic_statistics_success_replaces_only_after_stage_close(
     if existing:
         destination.write_bytes(previous)
         destination.chmod(0o640)
-    streams, replacements = [], []
+    expected_chmod = stat.S_IMODE(destination.stat().st_mode) if existing else 0o600
+    streams, replacements, chmods = [], [], []
     real_fdopen, real_replace = os.fdopen, os.replace
+    real_chmod = os.chmod
     def fdopen(*args, **kwargs):
         stream = real_fdopen(*args, **kwargs)
         streams.append(stream)
@@ -357,10 +359,24 @@ def test_atomic_statistics_success_replaces_only_after_stage_close(
             'n_episodes': 1, 'final_reward': 2.0, 'mean_reward': 2.0, 'max_reward': 2.0}
         replacements.append((stage, target))
         return real_replace(stage, target)
+    def chmod(stage, mode):
+        from pathlib import Path
+        assert streams and streams[-1].closed
+        assert env.events[-1] == 'close'
+        assert Path(stage).parent == destination.parent and Path(stage) != destination
+        assert mode == expected_chmod
+        chmods.append((stage, mode))
+        return real_chmod(stage, mode)
     monkeypatch.setattr(os, 'fdopen', fdopen)
     monkeypatch.setattr(os, 'replace', replace)
+    monkeypatch.setattr(os, 'chmod', chmod)
     result = modules.easy.train_rl(n_episodes=1, save_path=destination)
     assert len(replacements) == 1
+    assert chmods == [(replacements[0][0], expected_chmod)]
     assert json.loads(destination.read_text()) == result
     assert list(tmp_path.iterdir()) == [destination]
-    assert stat.S_IMODE(destination.stat().st_mode) == (0o640 if existing else 0o600)
+    if os.name == 'nt':
+        # Windows chmod controls only the read-only flag, not POSIX rwx bits.
+        assert stat.S_IMODE(destination.stat().st_mode) == 0o666
+    else:
+        assert stat.S_IMODE(destination.stat().st_mode) == (0o640 if existing else 0o600)

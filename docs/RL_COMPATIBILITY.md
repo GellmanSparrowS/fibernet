@@ -29,6 +29,8 @@ separate physical contract, not additional fields guessed from existing output.
 Statistics are staged in an exclusively created temporary file beside the target.
 Serialization, writes and close must succeed before atomic replacement. A failed
 save preserves the previous output and removes its staging file when cleanup is
-possible. Existing ordinary permissions are retained; new files use mode 0600.
+possible. On POSIX, existing ordinary permission bits are retained and new files
+use mode 0600. Windows chmod controls only the read-only flag; it does not enforce
+POSIX rwx bits or an owner-only ACL. File ownership and ACLs are not preserved.
 Symlinks, nonregular targets and special mode bits are rejected. This guarantees
 replacement atomicity, not crash durability or concurrent-writer locking.
