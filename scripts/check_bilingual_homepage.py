@@ -7,6 +7,7 @@ come from CRLF files; report that distinction instead of rewriting provenance.
 from __future__ import annotations
 
 import hashlib
+from html.parser import HTMLParser
 import json
 import re
 import unicodedata
@@ -18,6 +19,14 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
+HOMEPAGE_GIFS = (
+    "docs/media/three_dimensional_topologies.gif",
+    "docs/media/spectrum_four_topologies.gif",
+    "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
+    "docs/media/homepage_overview/gine_overview.gif",
+    "docs/media/continuous_route_kagome.gif",
+    "docs/media/homepage_overview/fiberscope_overview.gif",
+)
 
 
 def digest(path: Path) -> str:
@@ -45,6 +54,59 @@ def destinations(text: str) -> list[str]:
     markdown = re.findall(r"\]\(([^)]+)\)", text)
     html = re.findall(r'\b(?:href|src)=["\']([^"\']+)["\']', text, re.I)
     return markdown + html
+
+
+def _without_markdown_code(text: str) -> str:
+    """Exclude fenced blocks and matching backtick spans before image checks."""
+    lines = []
+    fence = None
+    for line in text.splitlines(keepends=True):
+        if fence is not None:
+            char, length = fence
+            if re.fullmatch(r" {0,3}" + re.escape(char) + r"{" + str(length)
+                            + r",}[ \t]*(?:\r?\n)?", line):
+                fence = None
+            lines.append("\n")
+            continue
+        opening = re.match(r" {0,3}(`{3,}|~{3,})([^\r\n]*)", line)
+        if opening and not (opening[1][0] == "`" and "`" in opening[2]):
+            fence = (opening[1][0], len(opening[1]))
+            lines.append("\n")
+        else:
+            lines.append(line)
+    prose = "".join(lines)
+    return re.sub(r"(?<!`)(`+)(?!`)((?:(?!\n[ \t]*\n).)*?)(?<!`)\1(?!`)", " ", prose, flags=re.S)
+
+
+class _InlineGifParser(HTMLParser):
+    """Collect exact img/src attributes and text, excluding HTML comments."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.html_gifs: list[str] = []
+        self.markdown_parts: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "img":
+            src = next((value for name, value in attrs if name == "src"), None)
+            if src and urlsplit(src).path.lower().endswith(".gif"):
+                self.html_gifs.append(src)
+
+    def handle_data(self, data: str) -> None:
+        self.markdown_parts.append(data)
+
+
+def inline_gifs(text: str) -> list[str]:
+    """Count this README's inline GIF references, not code, comments or links.
+
+    This bounded source check is not a substitute for GitHub rendering QA.
+    """
+    parser = _InlineGifParser()
+    parser.feed(_without_markdown_code(text))
+    parser.close()
+    markdown = re.findall(r"!\[[^\]]*\]\(([^)]+\.gif)\)",
+                          "\n".join(parser.markdown_parts), re.I)
+    return markdown + parser.html_gifs
 
 
 def canonical_destination(target: str) -> str:
@@ -126,8 +188,9 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     english, chinese = locale_block(en_section, "en"), locale_block(zh_section, "zh")
     require(chinese == locale_block(standalone, "zh"), "Standalone Chinese differs from inline source")
     for label, block in (("English", english), ("Chinese", chinese)):
-        gifs = re.findall(r"!\[[^\]]*\]\(([^)]+\.gif)\)", block)
-        require(len(gifs) == len(set(gifs)) == 19, f"{label} must retain all 19 inline animations")
+        gifs = inline_gifs(block)
+        require(len(gifs) == len(set(gifs)) == len(HOMEPAGE_GIFS) and set(gifs) == set(HOMEPAGE_GIFS),
+                f"{label} inline animations must match the homepage selection")
     return english, chinese
 
 
@@ -154,6 +217,19 @@ def main() -> None:
         require(svg.find("{http://www.w3.org/2000/svg}title") is not None,
                 f"Accessible title missing: {path.name}")
         require("<script" not in path.read_text().lower(), f"Script in badge: {path.name}")
+
+    selection = json.loads((MEDIA / "homepage_overview/selection.json").read_text())
+    require(selection["schema"] == "fibernet.homepage-selection.v1", "Unknown homepage selection schema")
+    require(selection["displayed_gifs"] == list(HOMEPAGE_GIFS), "Homepage selection differs")
+    originals = selection["original_gifs"]
+    require(len(originals) == len({r["path"] for r in originals}) == 19,
+            "Expected 19 preserved original GIFs")
+    for record in originals + selection["derivatives"] + selection["renderers"]:
+        require(digest(ROOT / record["path"]) == record["sha256"],
+                f"Homepage source/media hash differs: {record['path']}")
+    for relative in HOMEPAGE_GIFS:
+        decode_gif(ROOT / relative)
+    check_links(ROOT / "docs/HOMEPAGE_OVERVIEW_MEDIA.md")
 
     historical = []
     for path in sorted(MEDIA.glob("*.json")):
