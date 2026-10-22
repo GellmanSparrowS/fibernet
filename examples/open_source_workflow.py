@@ -1,7 +1,9 @@
 """Runnable FiberNet workflow from graph generation to tensile recruitment.
 
 Run: python -m examples.open_source_workflow --output-dir demo_output
-The FEM example uses a small strain and does not calibrate experimental forces.
+The FEM example explicitly selects small-deformation linear analysis.
+Coordinates and radii are in m, E in Pa, and forces in N; nu is dimensionless.
+These illustrative material parameters do not calibrate experimental forces.
 """
 import argparse
 import json
@@ -22,6 +24,7 @@ class OpenSourceWorkflow:
 
     def run(self):
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        # SI units are declared here, not inferred or converted by the solver.
         graph = fn.pattern_2d(unit='honeycomb', box=(10, 10), grid=(2, 2),
                               radius=0.05, seed=23)
         figure = fn.show(graph, theme='publication',
@@ -32,7 +35,8 @@ class OpenSourceWorkflow:
         result_path = self.output_dir / 'fem_result.json'
         pct = 0.10
         simulation = fn.simulate(graph, backend='fem', mode='stretch',
-                                 strain=self.target_stretch, dim=2, pct=pct)
+                                 stretch_ratio=self.target_stretch, dim=2, pct=pct,
+                                 nonlinear=False, E=1e9, nu=0.3)
         simulation.save(str(result_path), detailed=True)
         restored = fn.SimResult.load(str(result_path))
         if not np.isclose(simulation.max_displacement,

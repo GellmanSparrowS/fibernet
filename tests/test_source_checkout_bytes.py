@@ -15,6 +15,7 @@ PROTECTED = (
     'tests/fixtures/optional_facades_v2/sim_prior.py.txt',
     'adapters/mcp/tests/fixtures/provenance_v1_outputs.json',
     'fibernet/easy.py',
+    'tests/fixtures/easy_rl_failure_v1/easy.py.txt',
     'fibernet/api.py',
     'tests/fixtures/public_api_contract_v2/fibernet/__init__.py.txt',
     'tests/fixtures/public_api_contract_v2/fibernet/easy.py.txt',

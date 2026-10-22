@@ -6,7 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
-- train_rl(env_config) → 随机策略 rollout 基线及奖励统计，不进行学习
+- train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用
 
 Examples
 --------
@@ -881,66 +881,142 @@ def train_rl(
     n_episodes: int = 100,
     save_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """运行随机策略 rollout 基线并返回奖励统计，不进行策略学习。
+    """随机策略 rollout 基线入口，不进行策略学习；当前内置环境不可用。
 
     此历史名称下的函数每一步独立采样随机动作，不训练或返回策略模型。
+    当前 FiberNetworkEnv 所需的等效模量 E* 和泊松比 ν* 不在 spring-dynamics
+    SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，
+    不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。
+
     实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
-    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同。
+    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；
+    策略训练器也不会自动提供物理评价器。
 
     Parameters
     ----------
     env_config : dict, optional
-        环境配置，默认使用标准配置。
+        历史环境配置；当前所有 E*/ν* 目标均不受支持。
     n_episodes : int
-        随机策略采样回合数。
+        随机策略采样回合数，必须为正整数，不能是布尔值。
     save_path : str, optional
         奖励统计 JSON 文件路径，不是模型文件或检查点目录。
+        环境或回合失败时不写入统计，也不报告成功。统计先写入同目录临时文件，
+        成功关闭后再原子替换目标；写入失败保留原文件，不保证断电持久性。
 
     Returns
     -------
     dict
-        奖励统计：n_episodes、final_reward、mean_reward、max_reward。
+        保留的统计格式：n_episodes、final_reward、mean_reward、max_reward。
         final_reward 是最后一次随机回合的奖励，不是训练后的策略评估结果。
+        当前内置环境不可用，因此正常调用不会返回这份统计。
 
-    Examples
-    --------
-    >>> from fibernet import train_rl
-    >>> stats = train_rl(n_episodes=100)
-    >>> print(f"Last random episode reward: {stats['final_reward']:.2f}")
+    Raises
+    ------
+    ValueError
+        n_episodes 不是正整数，或回合奖励不是有限实数。
+    NotImplementedError
+        内置环境不支持所需的 E*/ν* 物理评价。
+    RuntimeError
+        环境通过 info.error 报告失败。原始执行异常保持原样抛出。
     """
+    import math
+    from numbers import Integral, Real
+
+    if (isinstance(n_episodes, (bool, np.bool_)) or
+            not isinstance(n_episodes, Integral) or n_episodes <= 0):
+        raise ValueError("n_episodes must be a positive integer, not a boolean")
+    n_episodes = int(n_episodes)
+
     from fibernet.sim.rl_env import FiberNetworkEnv
 
     env = FiberNetworkEnv(**(env_config or {}))
+    primary_error = None
+    try:
+        rewards = []
+        for ep in range(n_episodes):
+            obs, info = env.reset()
+            if "error" in info:
+                raise RuntimeError(f"Rollout reset failed: {info['error']}")
+            total_reward = 0.0
+            done = False
 
-    rewards = []
-    for ep in range(n_episodes):
-        obs, _ = env.reset()
-        total_reward = 0
-        done = False
+            while not done:
+                action = env.action_space.sample()
+                obs, reward, terminated, truncated, info = env.step(action)
+                if "error" in info:
+                    raise RuntimeError(f"Rollout step failed: {info['error']}")
+                if (isinstance(reward, (bool, np.bool_)) or
+                        not isinstance(reward, Real) or not math.isfinite(reward)):
+                    raise ValueError("Rollout reward must be a finite real number")
+                total_reward += float(reward)
+                if not math.isfinite(total_reward):
+                    raise ValueError("Total rollout reward must remain finite")
+                done = terminated or truncated
 
-        while not done:
-            action = env.action_space.sample()
-            obs, reward, terminated, truncated, info = env.step(action)
-            total_reward += reward
-            done = terminated or truncated
+            rewards.append(total_reward)
 
-        rewards.append(total_reward)
-        if (ep + 1) % 10 == 0:
-            avg = np.mean(rewards[-10:])
-            print(f"  Episode {ep+1}/{n_episodes}: avg_reward={avg:.2f}")
+        stats = {
+            "n_episodes": n_episodes,
+            "final_reward": rewards[-1],
+            "mean_reward": math.fsum(value / n_episodes for value in rewards),
+            "max_reward": max(rewards),
+        }
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        try:
+            env.close()
+        except BaseException as close_error:
+            if primary_error is None:
+                raise
+            # Preserve the execution exception and its original cause. Python
+            # 3.11+ also retains the secondary cleanup failure as a note.
+            if hasattr(primary_error, "add_note"):
+                primary_error.add_note(f"Environment cleanup also failed: {close_error}")
 
-    env.close()
-
-    stats = {
-        "n_episodes": n_episodes,
-        "final_reward": rewards[-1],
-        "mean_reward": np.mean(rewards),
-        "max_reward": np.max(rewards),
-    }
-
+    # Close successfully before publishing any statistics or success message.
     if save_path:
-        with open(save_path, "w") as f:
-            json.dump(stats, f, indent=2)
+        import os
+        import stat
+        import tempfile
+        import warnings
+
+        destination = Path(save_path)
+        try:
+            info = destination.lstat()
+        except FileNotFoundError:
+            mode = 0o600
+        else:
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("Statistics destination must be a regular file, not a symlink or nonregular target")
+            mode = stat.S_IMODE(info.st_mode)
+            if mode & 0o7000:
+                raise ValueError("Statistics destination has unsupported special mode bits")
+        fd, name = tempfile.mkstemp(prefix=f".{destination.name}.rollout-",
+                                    dir=destination.parent)
+        temporary = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                fd = None  # The stream owns the descriptor, including on failure.
+                json.dump(stats, stream, indent=2, allow_nan=False)
+            # Serialization, buffered writes and close must all succeed before
+            # replacing an existing result. This does not promise crash durability.
+            os.chmod(temporary, mode)
+            os.replace(temporary, destination)
+        finally:
+            for cleanup in ((lambda: os.close(fd)) if fd is not None else None,
+                            lambda: temporary.unlink(missing_ok=True)):
+                if cleanup is None:
+                    continue
+                try:
+                    cleanup()
+                except Exception as exc:
+                    try:
+                        warnings.warn(f"Statistics cleanup failed for owned temporary {temporary}: {exc!r}; "
+                                      "the save outcome is unchanged", RuntimeWarning, stacklevel=2)
+                    except Exception:
+                        pass  # Do not mask a save failure or a completed replace.
         print(f"OK: Stats saved to {save_path}")
 
     print(f"OK: Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")

@@ -1,0 +1,10 @@
+{
+  "schema": "reviewed_easy_rl_failure_source/1",
+  "path": "fibernet/easy.py",
+  "sha256": "a2303068861cf198148c7cb1f6eb78f46aa35f3f8eb648fa1d72c85d430cd73e",
+  "prior_sha256": "fe9cde78f9618555c22cdac2e63c1998c2af781c970596fc192d362857b469ff",
+  "reviewed_patch_sha256": "774bf5ed86b75eabbdd6c8ed4b60329ae3f79d2a69990b5ef7873472275cc462",
+  "independent_review_sha256": "049f7095482e81cc716ce9ca3f0249dca2668fe909a3c9294b3dd4b06157b31a",
+  "integration_base_commit": "c662b2e5c37736573c000c8a899e1fb36e41740a",
+  "scope": "Root random-rollout failure handling, reliable cleanup and atomic statistics only; no SB3 policy-trainer change or physical RL qualification."
+}

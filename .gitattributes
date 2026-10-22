@@ -28,3 +28,6 @@ adapters/mcp/tests/fixtures/provenance_v1_outputs.json -text
 
 # The reviewed explicit stretch-ratio API fixture retains exact source bytes.
 tests/fixtures/easy_stretch_ratio_v1/easy.py.txt -text
+
+# The reviewed random-rollout failure fixture retains exact source bytes.
+tests/fixtures/easy_rl_failure_v1/easy.py.txt -text

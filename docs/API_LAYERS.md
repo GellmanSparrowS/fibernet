@@ -86,10 +86,15 @@ spring/stretch only. Neither is a general backend router.
 - FEM facade stretch infers `dim` from `graph.dimension` unless explicitly 2 or 3.
   Direct `BeamFrameFEM.stretch_test` instead defaults to 2. Its 2-D
   `nonlinear=None` selects updated-geometry increments for |λ−1|>0.3; this is not
-  a nonlinear material law. The 3-D solver is linear only: do not request
-  `nonlinear=True` (rejected before solving). In 3-D, `None` preserves the linear
-  solve; |λ−1|>0.3 emits an applicability warning. Large strain is outside
-  small-strain model assumptions.
+  a nonlinear material law. Every selected 2-D incremental call warns, including
+  explicit `nonlinear=True` at small stretch: final nonlinear equilibrium is
+  unverified and final stiffness, reactions and nodal moments are unavailable.
+  With 2-D `nonlinear=False`, |λ−1|>0.3 warns about the small-deformation linear
+  model instead. The 3-D solver is linear only: do not request `nonlinear=True`
+  (rejected before solving). In 3-D, `None` preserves the linear solve;
+  |λ−1|>0.3 emits an applicability warning. This unchanged dispatch/warning
+  threshold is not a physical validity bound, and silence is not a qualification
+  of any particular network or loading.
   `BeamFrameFEM(E=1e9, nu=0.3)` resides in
   `fibernet.ml.beam_frame_fem` for historical reasons. Its raw `solve_2d` and
   `solve_3d` expose DOFs, constraints, loads, reactions and beam resultants, not
@@ -216,8 +221,8 @@ general restart checkpoint or a certificate that material dynamics can resume.
 ```python
 from fibernet import pattern_2d, simulate
 
-# pattern_2d is keyword-only. Coordinates, radii and E must be consistent.
-graph = pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
+# SI units: coordinates and radius in m; E in Pa; forces in N.
+graph = pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
 result = simulate(
     graph, backend="fem", mode="stretch", stretch_ratio=1.01,
     dim=2, nonlinear=False, E=1e9, nu=0.3,

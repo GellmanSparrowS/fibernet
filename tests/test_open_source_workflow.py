@@ -43,6 +43,11 @@ class OpenSourceWorkflowTests(unittest.TestCase):
                         'edge_forces', 'edge_stretches')
 
         def capture_simulation(graph, **kwargs):
+            self.assertEqual(kwargs['stretch_ratio'], 1.01)
+            self.assertIs(kwargs['nonlinear'], False)
+            self.assertEqual(kwargs['E'], 1e9)
+            self.assertEqual(kwargs['nu'], 0.3)
+            self.assertNotIn('strain', kwargs)
             self.assertEqual(kwargs['pct'], 0.10)
             self.assertEqual(kwargs['dim'], 2)
             observed['graph'] = graph
