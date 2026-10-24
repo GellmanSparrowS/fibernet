@@ -92,7 +92,7 @@ class BatchPolicy(unittest.TestCase):
         # Old rows remain unmigrated; test only an isolated copied CSV.
         row=self.rows()[0];b=json.loads(row['run_binding']);del b['parameters']['geometry_policy']
         b['parameters_sha256']=self.ns['_batch_value_sha256'](b['parameters']);row['run_binding']=json.dumps(b)
-        with (self.out/'simulation_results.csv').open('w') as f:
+        with (self.out/'simulation_results.csv').open('w',newline='',encoding='utf-8') as f:
             w=csv.DictWriter(f,fieldnames=list(row));w.writeheader();w.writerow(row)
         old=(self.out/'simulation_results.csv').read_bytes()
         with self.assertRaisesRegex(ValueError,'parameters mismatch'):self.run_batch(str(self.inputs),str(self.out))
