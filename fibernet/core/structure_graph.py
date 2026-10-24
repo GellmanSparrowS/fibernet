@@ -883,7 +883,7 @@ class StructureGraph:
         from fibernet.core.fiber import Fiber
         from fibernet.core.network import FiberNetwork, Crosslink
 
-        net = FiberNetwork(dimension=self._dimension, box_size=self._box_size)
+        net = FiberNetwork(dimension=self._dimension, box_size=self.box_size)
         net.metadata = copy.deepcopy(self._metadata)
 
         node_to_fibers: Dict[int, List[Tuple[int, float]]] = {}
@@ -899,7 +899,7 @@ class StructureGraph:
             fid = net.num_fibers
             n_seg = max(edge.segments, max(4, int(dist / max(edge.radius * 2, 0.05))))
             fiber = Fiber.straight(
-                pi, pj, radius=edge.radius, material=edge.material,
+                pi, pj, radius=edge.radius, material=copy.deepcopy(edge.material),
                 fiber_id=fid, segments=n_seg,
             )
             net.add_fiber(fiber)
