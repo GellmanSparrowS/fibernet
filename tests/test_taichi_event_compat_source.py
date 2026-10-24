@@ -344,6 +344,33 @@ def reviewed_thermoelastic_facade():
     return raw
 
 
+
+def reviewed_lammps_capability_facade(reverse=None):
+    """Admit only the pinned lazy alias delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'f0a9e038e15e8eec98c74096bb0d5262147ee71d27e9ed235fdff66537790ba7', 'reviewed LAMMPS facade delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_lammps_capability_facade_delta/1'
+    assert delta['source'] == 'fibernet/sim/__init__.py'
+    assert delta['baseline_main'] == 'cfb220026e906c34e68ec41f784a65abe3524291'
+    base = reviewed_thermoelastic_facade()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'LAMMPS facade delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'LAMMPS facade inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'LAMMPS facade delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'LAMMPS facade delta result changed'
+    if reverse is not None:
+        assert source == base, 'LAMMPS facade inverse changed historical bytes'
+    return source
+
+
 # Byte-pinned deltas from the immutable public-main source chain. Historical
 # fixtures are retained verbatim; only these two exact candidate versions enter.
 TAICHI_GEOMETRY_SOURCE_PINS = {
@@ -375,7 +402,7 @@ def reviewed_taichi_geometry_source(relative):
 
 def require_public_source(relative, raw):
     if relative == 'fibernet/sim/__init__.py':
-        assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade()), 'public source bytes changed: '+relative
+        assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative)), 'public source bytes changed: '+relative
@@ -912,7 +939,7 @@ class SourceShape(unittest.TestCase):
     def test_reviewed_thermoelastic_facade_is_exact(self):
         relative = 'fibernet/sim/__init__.py'
         raw = reviewed_thermoelastic_facade()
-        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        self.assertEqual(raw, reviewed_lammps_capability_facade(reverse=(ROOT/relative).read_bytes()))
         require_public_source(relative, raw)
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'ThermoelasticSizeLimits', b'WrongLimits', 1),
@@ -930,6 +957,35 @@ class SourceShape(unittest.TestCase):
         with patch.object(Path, 'read_bytes', changed_read):
             with self.assertRaisesRegex(AssertionError, 'reviewed thermoelastic facade changed'):
                 reviewed_thermoelastic_facade()
+
+    def test_reviewed_lammps_capability_facade_is_exact_and_reversible(self):
+        relative = 'fibernet/sim/__init__.py'
+        raw = reviewed_lammps_capability_facade()
+        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        self.assertEqual(reviewed_lammps_capability_facade(reverse=raw),
+                         reviewed_thermoelastic_facade())
+        require_public_source(relative, raw)
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'lammps_source_capabilities', b'wrong_capabilities', 1),
+                        raw.replace(b'fibernet.sim._lammps_result', b'fibernet.sim.accelerated', 1),
+                        raw.replace(b'ThermoelasticSizeLimits', b'WrongLimits', 1),
+                        raw.replace(b'prepare_nodal_controls', b'wrong_controls', 1),
+                        raw.replace(b'def __getattr__(name):', b'def __getattr__(name): # changed', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source(relative, changed)
+            with self.assertRaises(AssertionError):
+                reviewed_lammps_capability_facade(reverse=changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json'
+        for mutation in (lambda value: value+b'\n',
+                         lambda value: value.replace(b'lammps_source_capabilities', b'wrong_capabilities', 1)):
+            def changed_read(path):
+                value = original(path)
+                return mutation(value) if path == fixture else value
+            with patch.object(Path, 'read_bytes', changed_read):
+                with self.assertRaisesRegex(AssertionError, 'reviewed LAMMPS facade delta changed'):
+                    reviewed_lammps_capability_facade()
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))

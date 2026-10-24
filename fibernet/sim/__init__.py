@@ -8,6 +8,7 @@ Core backend:
 
 # Keep importing a simulation contract independent of unrelated native engines.
 _LAZY_EXPORTS = {
+    "lammps_source_capabilities": "fibernet.sim._lammps_result",
     "ThermoelasticSizeLimits": "fibernet.sim.thermoelastic",
     "ThermoelasticSnapshot": "fibernet.sim.thermoelastic",
     "solve_thermoelastic_snapshot": "fibernet.sim.thermoelastic",
