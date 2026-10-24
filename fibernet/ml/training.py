@@ -324,6 +324,28 @@ if HAS_TORCH:
             raise ValueError(f"Unknown schedule_type: {schedule_type}")
 
 
+    def _loss_shapes(pred, target, default_mse, phase):
+        """Normalize loss inputs without guessing an implicit MSE output axis."""
+        if default_mse:
+            if pred.dim() == 2 and pred.shape[-1] == 1 and target.dim() == 1:
+                pred = pred.squeeze(-1)
+            elif target.dim() == 2 and target.shape[-1] == 1 and pred.dim() == 1:
+                target = target.squeeze(-1)
+            if pred.shape != target.shape:
+                raise ValueError(
+                    f"Default MSE {phase} prediction shape {tuple(pred.shape)} "
+                    f"must match target shape {tuple(target.shape)}; "
+                    "only scalar (B,) / (B, 1) normalization is supported"
+                )
+        else:
+            # Preserve the established normalization for explicitly supplied losses.
+            if pred.dim() > target.dim() and pred.shape[-1] == 1:
+                pred = pred.squeeze(-1)
+            elif target.dim() > pred.dim() and target.shape[-1] == 1:
+                target = target.squeeze(-1)
+        return pred, target
+
+
     def train_model(
         model: nn.Module,
         X_train: Union[np.ndarray, "torch.Tensor"],
@@ -367,7 +389,9 @@ if HAS_TORCH:
         weight_decay : float
             L2 regularization.
         loss_fn : callable, optional
-            Loss function. Default: MSELoss.
+            Loss function. Default: MSELoss, requiring exact prediction/target
+            shapes after scalar (B,) / (B, 1) normalization. Explicit losses
+            retain their own shape contract; metric_prediction is metric-only.
         metric_prediction : callable, optional
             Detached raw output Tensor -> tabular point Tensor on the same
             device. Used only for metrics, never loss. See ml-metric-usage.md.
@@ -406,7 +430,8 @@ if HAS_TORCH:
         device = torch.device(device)
         model = model.to(device)
 
-        if loss_fn is None:
+        default_mse = loss_fn is None
+        if default_mse:
             loss_fn = nn.MSELoss()
         if optimizer is None:
             optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -455,11 +480,7 @@ if HAS_TORCH:
                 xb, yb = xb.to(device), yb.to(device)
                 optimizer.zero_grad()
                 pred = model(xb)
-                # Handle shape mismatch (e.g., pred=[B,1] vs yb=[B])
-                if pred.dim() > yb.dim() and pred.shape[-1] == 1:
-                    pred = pred.squeeze(-1)
-                elif yb.dim() > pred.dim() and yb.shape[-1] == 1:
-                    yb = yb.squeeze(-1)
+                pred, yb = _loss_shapes(pred, yb, default_mse, "training")
                 loss = loss_fn(pred, yb)
                 loss.backward()
                 if gradient_clip > 0:
@@ -489,10 +510,7 @@ if HAS_TORCH:
                         xb, yb = xb.to(device), yb.to(device)
                         pred = model(xb)
                         raw_pred, raw_target = pred, yb
-                        if pred.dim() > yb.dim() and pred.shape[-1] == 1:
-                            pred = pred.squeeze(-1)
-                        elif yb.dim() > pred.dim() and yb.shape[-1] == 1:
-                            yb = yb.squeeze(-1)
+                        pred, yb = _loss_shapes(pred, yb, default_mse, "validation")
                         loss = loss_fn(pred, yb)
                         v_loss += loss.item()
                         v_n += 1
