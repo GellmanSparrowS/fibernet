@@ -1,3 +1,8 @@
+## [Unreleased] - raw beam-resultant availability
+
+- Expose the existing component contract on raw 2-D, 3-D and incremental 2-D beam results. Preserve numeric outputs and approximate qualifications; unrecovered 3-D shear slots remain explicitly unavailable.
+- Document caller-qualified field-learning targets and retain unknown legacy component availability.
+
 ## [Unreleased] - explicit Taichi geometry policy
 
 - Breaking input acceptance: graph-based spring/Taichi calls now reject nonempty edge-owned `internal_points` by default. Explicit `geometry_policy="endpoint_chord"` retains the existing endpoint interpretation without modifying the graph or claiming curved-fiber mechanics.
