@@ -3,6 +3,7 @@ import copy
 import importlib
 import json
 import os
+from pathlib import Path
 import subprocess
 import sys
 import textwrap
@@ -114,18 +115,30 @@ def test_cold_public_accessor_with_native_providers_absent():
                 raise AssertionError(name)
         import subprocess
         from unittest.mock import patch
-        with patch.object(subprocess, 'Popen', side_effect=AssertionError('native launch')):
-            import fibernet.sim as sim
-            assert 'lammps_source_capabilities' not in vars(sim)
-            from fibernet.sim import lammps_source_capabilities
-            from fibernet.sim._lammps_result import source_capabilities
-            assert lammps_source_capabilities is source_capabilities
+        sys.path.insert(0, sys.argv[1])
+        from _source_check_support import install_import_process_audit
+        # FiberNet is cold. Ordinary dependency initialization may perform only
+        # the existing exact, caller/argv-bound platform/CPU probes. This is not
+        # a claim that dependency imports never launch an OS process.
+        probes = install_import_process_audit()
+        assert not any(name == 'fibernet' or name.startswith('fibernet.') for name in sys.modules)
+        import fibernet.sim as sim
+        assert 'lammps_source_capabilities' not in vars(sim)
+        from fibernet.sim import lammps_source_capabilities
+        from fibernet.sim._lammps_result import source_capabilities
+        from fibernet.integrations import lammps_backend as backend
+        assert lammps_source_capabilities is source_capabilities
+        # No exceptions, including dependency probes, during the accessor call.
+        with patch.object(backend.RuntimeSpec, 'checked', side_effect=AssertionError('admission')), \\
+             patch.object(backend.LAMMPSTask, 'start', side_effect=AssertionError('launch')), \\
+             patch.object(subprocess, 'Popen', side_effect=AssertionError('child')):
             c = lammps_source_capabilities()
             assert c['runtime_readiness'] == 'unknown'
         assert not any(name.split('.')[0] in blocked for name in sys.modules)
         print(json.dumps({'models': sorted(c['models'])}))
     ''')
-    result = subprocess.run([sys.executable, '-c', script], env=dict(os.environ),
+    result = subprocess.run([sys.executable, '-c', script, str(Path(__file__).resolve().parent)],
+                            env=dict(os.environ),
                             capture_output=True, text=True, timeout=20)
     assert result.returncode == 0, result.stdout + result.stderr
     assert cg.MODEL in result.stdout
