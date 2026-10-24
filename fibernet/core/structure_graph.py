@@ -735,7 +735,7 @@ class StructureGraph:
         g = StructureGraph(
             dimension=self._dimension,
             tolerance=self._tolerance,
-            box_size=self._box_size,
+            box_size=self._box_size.copy() if self._box_size is not None else None,
         )
         g._metadata = copy.deepcopy(self._metadata)
         for nid, node in self._nodes.items():
