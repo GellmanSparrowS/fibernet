@@ -83,6 +83,7 @@ def server_namespace():
               McpError=ProtocolError,ReadResourceContents=Model)
     ns['_verify_core_result']=NEW._verify_core_result
     ns['TransportContractError']=type('TransportContractError',(NEW.ContractError,),{})
+    ns['ProjectionContractError']=type('ProjectionContractError',(NEW.ContractError,),{})
     ns['MAX_TRANSPORT_RESULT_BYTES']=1024*1024
     exec(compile(ast.Module(body=body,type_ignores=[]),'<extracted-server-source>','exec'),ns)
     serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
@@ -285,7 +286,16 @@ class ProvenanceContract(unittest.TestCase):
         current_outputs=json.loads(json.dumps(outputs))
         # The DC route is additive. Keep the frozen original five-tool fixture
         # immutable and prove exact legacy outputs after explicit extensions only.
-        self.assertEqual(len(outputs['tool_definitions']), 6)
+        self.assertEqual(len(outputs['tool_definitions']), 7)
+        projection_tool=outputs['tool_definitions'].pop()
+        self.assertEqual(projection_tool['name'], 'fibernet_project_fiber_network_report')
+        for tool in outputs['tool_definitions']:
+            for direction in ('inputSchema','outputSchema'):
+                artifact=tool[direction]['$defs'].get('Artifact')
+                if artifact:
+                    self.assertEqual(artifact['properties']['kind']['enum'].pop(), 'fiber_network_projection_report')
+        self.assertEqual(outputs['tool_definitions'][0]['outputSchema']['oneOf'][0]['properties']['capabilities']['const'].pop(), 'project_fiber_network_report')
+        self.assertEqual(outputs['fibernet_catalog']['structuredContent']['capabilities'].pop(), 'project_fiber_network_report')
         new_tool=outputs['tool_definitions'].pop()
         self.assertEqual(new_tool['name'], 'fibernet_solve_linear_transport')
         for tool in outputs['tool_definitions']:

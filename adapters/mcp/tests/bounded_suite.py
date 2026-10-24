@@ -18,7 +18,7 @@ import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ('provenance_contract.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
-           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py')
+           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py', 'test_projection_fixtures.py', 'test_projection.py')
 DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
@@ -251,7 +251,7 @@ def main():
                 command = [sys.executable, str(ROOT / 'tests' / name)]
                 if name.startswith('test_'):
                     command = [sys.executable, '-m', 'pytest', '-p', 'no:cacheprovider',
-                               '-o', 'addopts=', '--basetemp', str(directory / 'electrical-pytest'),
+                               '-o', 'addopts=', '--basetemp', str(directory / (Path(name).stem + '-pytest')),
                                '-q', str(ROOT / 'tests' / name)]
                 result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
             stages.append({'script': name, 'returncode': result.returncode,

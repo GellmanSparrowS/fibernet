@@ -10,6 +10,8 @@ import sys
 import tempfile
 import zipfile
 
+from projection_fixtures import fixture_bytes
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--wheels', type=Path, required=True)
@@ -110,6 +112,9 @@ async def smoke(area):
     electrical,request=electrical_fixture()
     electrical_path=area/'electrical.json'
     electrical_path.write_text(json.dumps(electrical,allow_nan=False))
+    projection_path=area/'projection_native31.json'
+    projection_path.write_bytes(fixture_bytes('projection_native31.json'))
+    configuration['graphs'].append({'path':str(projection_path),'sha256':hashlib.sha256(projection_path.read_bytes()).hexdigest(),'length_unit':'m','frame_id':'lab_xyz'})
     configuration['graphs'].append({'path':str(electrical_path),
         'sha256':hashlib.sha256(electrical_path.read_bytes()).hexdigest(),
         'length_unit':'mm','frame_id':'installed_test'})
@@ -130,7 +135,7 @@ async def smoke(area):
         async with stdio_client(parameters) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
-                assert len((await session.list_tools()).tools) == 6
+                assert len((await session.list_tools()).tools) == 7
                 resources = await session.list_resources()
                 assert {str(item.uri) for item in resources.resources} == {'fibernet://capabilities', 'fibernet://provenance/1'}
                 provenance = await session.read_resource('fibernet://provenance/1')
@@ -162,7 +167,7 @@ async def smoke(area):
                 from fibernet.analysis.topology_metrics import analyze_topology
                 reference = asdict(analyze_topology(StructureGraph.load_json(str(fixture))))
                 assert json.loads(raw) == json.loads(json.dumps(reference))
-                graph=result.structuredContent['graphs'][1]
+                graph=result.structuredContent['graphs'][2]
                 response=await session.call_tool('fibernet_solve_linear_transport',
                     {'graph_id':graph['graph_id'],**request})
                 assert not response.isError,response
@@ -179,10 +184,28 @@ async def smoke(area):
                 assert actual==expected
                 assert actual['edge_ids']==[e['id'] for e in electrical['edges']]
                 assert actual['endpoints_by_id']==[[e['node_i'],e['node_j']] for e in electrical['edges']]
+                projection_graph=result.structuredContent['graphs'][1]
+                projection_call=await session.call_tool('fibernet_project_fiber_network_report',
+                    {'graph_id':projection_graph['graph_id'],'geometry_policy':'endpoint_chord'})
+                assert not projection_call.isError,projection_call
+                projection_artifact=projection_call.structuredContent['artifact']
+                assert projection_artifact['kind']=='fiber_network_projection_report'
+                projection_report=await read_content(session,projection_artifact)
+                frozen_bytes=fixture_bytes('projection_report.json')
+                frozen_reference=json.loads(frozen_bytes)
+                assert projection_artifact['sha256']==hashlib.sha256(frozen_bytes).hexdigest()
+                assert projection_artifact['byte_size']==len(frozen_bytes)
+                assert projection_report==frozen_reference
+                import fibernet.core.fiber_network_profile as projection_owner
+                assert Path(projection_owner.__file__).resolve().is_relative_to(core_root)
                 # Both protocol and native computation above use installed packages.
+                # Projection reuses the frozen native report; no fixture regeneration.
                 return {'nodes':len(electrical['nodes']),'edges':len(electrical['edges']),
                         'parallel_edges':10,'wire_ids_unsorted':True,
-                        'native_all_fields_exact':True,'artifact_sha256':artifact['sha256']}
+                        'native_all_fields_exact':True,'artifact_sha256':artifact['sha256'],
+                        'projection_report_bytes':projection_artifact['byte_size'],
+                        'projection_report_sha256':projection_artifact['sha256'],
+                        'projection_frozen_native_report_exact':True}
     assert not list(output.iterdir())
 
 
@@ -191,7 +214,7 @@ with tempfile.TemporaryDirectory(prefix='fibernet-mcp-installed-') as temporary:
     assert not list((Path(temporary)/'output').iterdir())
 print(json.dumps({'wheel_license_bytes_match': True, 'wheel_core_hashes': len(manifest),
                   'installed_core_hashes': len(manifest), 'real_sdk_initialize': True,
-                  'listed_tools': 6, 'catalog_nodes': 4340, 'catalog_edges': 5073,
+                  'listed_tools': 7, 'catalog_nodes': 4340, 'catalog_edges': 5073,
                   'installed_worker_full_native_parity': True,
                   'installed_electrical': electrical_report,
                   'source_tree': TREE}, indent=2))
