@@ -92,8 +92,10 @@ raise `ValueError` (including `LAMMPSContractError`).
 - `budget_comparison` checks aggregate native output, individual trajectory
   and thermo files, detailed export and the modeled memory envelope.
   `fits_declared_budgets` is true when all five comparisons fit.
-- `record_state=False` retains the same transient-memory estimate because
-  current conversion constructs the full state before selecting saved output.
+- Raw parsed history remains retained. `record_state=False` avoids full
+  converted-state materialization, but the transient-memory estimates remain
+  conservative and unchanged. This is not streaming parsing and does not
+  establish native performance or process peak RSS.
 
 ## Scope
 

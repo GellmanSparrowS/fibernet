@@ -282,6 +282,26 @@ def field_units(length_unit):
             'edge_forces':'N', 'edge_stretches':'1', 'energy':'J', 'time_seconds':'s wall time'}
 
 
+class _ConvertedFrames(list):
+    """Re-iterable JSON list view, converting at most one frame per iteration.
+
+    The base list owns only frame references. Its real length also preserves the
+    JSON encoder's empty-list handling and the existing JSON budget prewalk.
+    This is conversion-copy avoidance, not streaming native-output parsing.
+    """
+
+    def __init__(self, frames, convert):
+        super().__init__(frames)
+        self._convert = convert
+
+    def __iter__(self):
+        for frame in super().__iter__():
+            yield self._convert(frame)
+
+    def __getitem__(self, index):
+        return self._convert(super().__getitem__(index))
+
+
 def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
     """Map completed native output; geometry-facing arrays retain original graph units."""
     from .accelerated import SimResult
@@ -374,14 +394,27 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         elif _profiles.variable_steps(selected):
             state.update({k:contract[k] for k in ('output_stride','native_frames','output_frames')})
     for key, attr in [('positions','positions_m'), ('velocities','velocities_m_s'), ('nodal_forces','forces_N')]:
-        state[key] = [np.asarray(getattr(f, attr)).tolist() for f in trajectory]
+        convert = lambda f, attr=attr: np.asarray(getattr(f, attr)).tolist()
+        state[key] = ([convert(f) for f in trajectory] if record_state
+                      else _ConvertedFrames(trajectory, convert))
     for key, attr in [('potential_energy','potential_J'), ('kinetic_energy','kinetic_J'), ('total_energy','total_J'), ('pressure_tensor','pressure_tensor_Pa')]:
         state[key] = [getattr(f, attr) for f in thermo]
-    state['pressure_tensor'] = [list(v) for v in state['pressure_tensor']]
+    state['pressure_tensor'] = ([list(v) for v in state['pressure_tensor']] if record_state
+                                else _ConvertedFrames(state['pressure_tensor'], list))
     state['final'] = dict(step=expected[-1], time=state['times'][-1], **{k: state[k][-1] for k in ('positions','velocities','nodal_forces','potential_energy','kinetic_energy','total_energy','pressure_tensor')})
-    state = validate_state(state, len(ids), ids)
+    if record_state:
+        state = validate_state(state, len(ids), ids)
+    else:
+        # Prepared metadata and every raw frame have already been checked above.
+        # Preserve the old serialization/type and profile byte-budget failures
+        # without building or detaching an unrequested full SI history.
+        if selected:
+            _profiles.json_bytes(state, selected['export_bytes'])
+        else:
+            for _ in json.JSONEncoder(allow_nan=False).iterencode(state):
+                pass
     original = {n['id']: np.asarray(n['position'])*contract['length_to_m'] for n in graph['nodes']}
-    positions = np.asarray(state['positions'][-1]); displacement = positions-np.asarray([original[n] for n in ids])
+    positions = np.asarray(state['final']['positions']); displacement = positions-np.asarray([original[n] for n in ids])
     row = {n:i for i,n in enumerate(ids)}; topology = {e['id']:e for e in graph['edges']}; bonds = dict(contract['bonds'])
     lengths = np.asarray([np.linalg.norm(positions[row[topology[e]['node_j']]]-positions[row[topology[e]['node_i']]]) for e in edges])
     coefficients = np.asarray([bonds[e] for e in edges]).reshape((-1,2)); forces = coefficients[:,0]*(lengths-coefficients[:,1]); stretches = lengths/coefficients[:,1]
