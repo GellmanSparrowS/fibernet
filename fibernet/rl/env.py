@@ -29,6 +29,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
+from fibernet.sim._taichi_geometry import (
+    GeometryPolicyError, preflight_taichi_geometry, validate_geometry_policy,
+)
+
 try:
     import gymnasium as gym
     from gymnasium import spaces
@@ -66,7 +70,7 @@ if HAS_GYM:
         grid : (nx, ny)
             Tiling grid.
         n_pts_per_side : int
-            Internal points per edge.
+            Intermediate graph nodes per side, not edge-owned internal_points.
         target_stretch : float
             Stretch ratio for evaluation.
         stiffness : float
@@ -86,6 +90,10 @@ if HAS_GYM:
             Scale factor for rewards.
         unit_kwargs : dict, optional
             Extra kwargs for pattern_2d.
+        geometry_policy : str, keyword-only
+            "reject_internal_points" (default) rejects edge-owned internal_points.
+            "endpoint_chord" explicitly ignores them mechanically. Actual graph
+            nodes joined by straight edges remain eligible under either policy.
         """
 
         metadata = {"render_modes": ["human"], "render_fps": 4}
@@ -106,8 +114,11 @@ if HAS_GYM:
             reward_scale: float = 1e-4,
             unit_kwargs: Optional[Dict] = None,
             render_mode: Optional[str] = None,
+            *,
+            geometry_policy: str = "reject_internal_points",
         ):
             _require_gym()
+            self.geometry_policy = validate_geometry_policy(geometry_policy)
             super().__init__()
 
             self.unit = unit
@@ -125,7 +136,9 @@ if HAS_GYM:
             self.unit_kwargs = unit_kwargs or {}
             self.render_mode = render_mode
 
-            self.engine = TaichiEngine()
+            # Initialize the provider only after the actual generated graph
+            # passes preflight, including graphs from registered custom units.
+            self.engine = None
 
             # Calculate dimensions
             self.n_sides = self._get_n_sides()
@@ -242,11 +255,17 @@ if HAS_GYM:
                     **self.unit_kwargs,
                 )
 
+                geometry_record = preflight_taichi_geometry(
+                    g, geometry_policy=self.geometry_policy,
+                )
+                if self.engine is None:
+                    self.engine = TaichiEngine()
                 r = self.engine.stretch_test(
                     g, target_stretch=self.target_stretch,
                     stiffness=self.stiffness, damping=self.damping,
                     num_steps=self.num_steps, save_interval=self.num_steps,
                     auto_steps=False,
+                    geometry_policy=self.geometry_policy,
                 )
 
                 reward = self._compute_reward(r)
@@ -262,8 +281,12 @@ if HAS_GYM:
                     "n_edges": g.num_edges,
                     "graph": g,
                     "step": self._step_count,
+                    "taichi_geometry": geometry_record,
                 }
 
+            except GeometryPolicyError:
+                # Rejected geometry is a contract failure, not a poor reward.
+                raise
             except Exception as e:
                 reward = -10.0
                 info = {"error": str(e), "step": self._step_count}
@@ -301,6 +324,11 @@ if HAS_GYM:
             Target mechanical properties {"max_force": float, ...}
         max_steps : int
             Maximum steps per episode.
+        geometry_policy : str, keyword-only
+            "reject_internal_points" (default) rejects nonempty edge-owned
+            internal_points, including those requested by the n_internal action.
+            "endpoint_chord" explicitly opts into ignoring these points; the
+            action space and generator requests are not changed automatically.
         """
 
         metadata = {"render_modes": ["human"]}
@@ -314,8 +342,11 @@ if HAS_GYM:
             max_steps: int = 5,
             reward_scale: float = 1e-4,
             render_mode: Optional[str] = None,
+            *,
+            geometry_policy: str = "reject_internal_points",
         ):
             _require_gym()
+            self.geometry_policy = validate_geometry_policy(geometry_policy)
             super().__init__()
 
             self.available_units = available_units or ["honeycomb", "square", "triangle", "kagome", "reentrant"]
@@ -326,7 +357,7 @@ if HAS_GYM:
             self.reward_scale = reward_scale
             self.render_mode = render_mode
 
-            self.engine = TaichiEngine()
+            self.engine = None
 
             # Action space: Dict
             n_units = len(self.available_units)
@@ -407,9 +438,15 @@ if HAS_GYM:
                     seed=self.np_random.integers(0, 10000),
                 )
 
+                geometry_record = preflight_taichi_geometry(
+                    g, geometry_policy=self.geometry_policy,
+                )
+                if self.engine is None:
+                    self.engine = TaichiEngine()
                 r = self.engine.stretch_test(
                     g, target_stretch=1.5, stiffness=1e5, damping=0.3,
                     num_steps=1000, save_interval=1000, auto_steps=False,
+                    geometry_policy=self.geometry_policy,
                 )
 
                 info.update({
@@ -422,6 +459,7 @@ if HAS_GYM:
                     "unit": unit_name,
                     "grid": (grid_x, grid_y),
                     "graph": g,
+                    "taichi_geometry": geometry_record,
                 })
 
                 self._current_graph = g
@@ -429,6 +467,10 @@ if HAS_GYM:
 
                 reward = self._compute_reward(info)
 
+            except GeometryPolicyError:
+                # Do not turn an unsupported n_internal action into a reward
+                # penalty, solver failure, or successful history entry.
+                raise
             except Exception as e:
                 reward = -10.0
                 info["error"] = str(e)
@@ -450,6 +492,8 @@ if HAS_GYM:
 
     def make_env(
         env_type: str = "structure",
+        *,
+        geometry_policy: str = "reject_internal_points",
         **kwargs,
     ) -> gym.Env:
         """Factory function for creating FiberNet RL environments.
@@ -458,18 +502,21 @@ if HAS_GYM:
         ----------
         env_type : str
             "structure" (continuous), "design" (mixed), "parametric" (legacy)
+        geometry_policy : str, keyword-only
+            Explicit Taichi geometry acceptance policy for the chosen environment.
 
         Returns
         -------
         gym.Env
         """
+        geometry_policy = validate_geometry_policy(geometry_policy)
         if env_type == "structure":
-            return FiberStructureEnv(**kwargs)
+            return FiberStructureEnv(geometry_policy=geometry_policy, **kwargs)
         elif env_type == "design":
-            return FiberDesignEnv(**kwargs)
+            return FiberDesignEnv(geometry_policy=geometry_policy, **kwargs)
         elif env_type == "parametric":
             from fibernet.rl.parametric import ParametricStructureEnv
-            return ParametricStructureEnv(**kwargs)
+            return ParametricStructureEnv(geometry_policy=geometry_policy, **kwargs)
         else:
             raise ValueError(f"Unknown env_type: {env_type}. Options: structure, design, parametric")
 

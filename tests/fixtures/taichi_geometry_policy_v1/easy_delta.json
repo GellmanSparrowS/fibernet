@@ -1,0 +1,53 @@
+{
+  "schema": "reviewed_taichi_geometry_source_delta/1",
+  "source": "fibernet/easy.py",
+  "baseline_main": "30f29eb4c574a25b7d15b8540ad2d98b9cbcef36",
+  "base_sha256": "a2303068861cf198148c7cb1f6eb78f46aa35f3f8eb648fa1d72c85d430cd73e",
+  "result_sha256": "f9b7365ff5e39602f52e73888be82e077470384b152e13f69aea377ce0df5f79",
+  "hunks": [
+    {
+      "before": "from fibernet.gen.pattern import pattern_2d, pattern_3d\nfrom fibernet.sim.accelerated import TaichiEngine, SimResult\nfrom fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult\n\n\ndef show(\n",
+      "after": "from fibernet.gen.pattern import pattern_2d, pattern_3d\nfrom fibernet.sim.accelerated import TaichiEngine, SimResult\nfrom fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult\nfrom fibernet.sim._taichi_geometry import (\n    preflight_taichi_geometry as _preflight_taichi_geometry,\n    validate_geometry_policy as _validate_geometry_policy,\n)\n\n\ndef show(\n"
+    },
+    {
+      "before": "        num_threads (default 4) configure the engine; remaining keywords go\n        to the selected method. The active runtime's ownership and thread\n        settings still apply. GPU requests never silently fall back to CPU.\n\n    Returns\n    -------\n",
+      "after": "        num_threads (default 4) configure the engine; remaining keywords go\n        to the selected method. The active runtime's ownership and thread\n        settings still apply. GPU requests never silently fall back to CPU.\n        geometry_policy defaults to \"reject_internal_points\": any nonempty\n        edge-owned internal_points reject before engine construction. Explicit\n        \"endpoint_chord\" ignores those points mechanically without changing\n        the graph. Actual graph nodes remain accepted; neither policy provides\n        curved-fiber mechanics. Other backends do not accept this option.\n\n    Returns\n    -------\n"
+    },
+    {
+      "before": "                not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):\n            raise ValueError(\"num_threads must be a positive integer\")\n        method = TaichiEngine.stretch_test if mode == \"stretch\" else TaichiEngine.dynamics\n        method_kwargs = dict(kwargs)\n        if mode == \"stretch\":\n            if \"target_stretch\" in method_kwargs:\n                raise TypeError(\"use stretch_ratio (or legacy strain), not target_stretch, with simulate\")\n            method_kwargs[\"target_stretch\"] = strain\n        signature(method).bind(None, graph, **method_kwargs)\n        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))\n        if mode == \"stretch\":\n            result = engine.stretch_test(graph, target_stretch=strain, **kwargs)\n",
+      "after": "                not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):\n            raise ValueError(\"num_threads must be a positive integer\")\n        method = TaichiEngine.stretch_test if mode == \"stretch\" else TaichiEngine.dynamics\n        kwargs.setdefault(\"geometry_policy\", \"reject_internal_points\")\n        method_kwargs = dict(kwargs)\n        if mode == \"stretch\":\n            if \"target_stretch\" in method_kwargs:\n                raise TypeError(\"use stretch_ratio (or legacy strain), not target_stretch, with simulate\")\n            method_kwargs[\"target_stretch\"] = strain\n        signature(method).bind(None, graph, **method_kwargs)\n        _preflight_taichi_geometry(graph, geometry_policy=kwargs[\"geometry_policy\"])\n        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))\n        if mode == \"stretch\":\n            result = engine.stretch_test(graph, target_stretch=strain, **kwargs)\n"
+    },
+    {
+      "before": "_BATCH_SOURCE_RECIPE = \"fibernet-batch-source-1\"\n_BATCH_SOURCE_FILES = (\n    \"fibernet/easy.py\", \"fibernet/sim/accelerated.py\",\n    \"fibernet/core/structure_graph.py\", \"fibernet/core/material.py\",\n)\n\n",
+      "after": "_BATCH_SOURCE_RECIPE = \"fibernet-batch-source-1\"\n_BATCH_SOURCE_FILES = (\n    \"fibernet/easy.py\", \"fibernet/sim/accelerated.py\",\n    \"fibernet/sim/_taichi_geometry.py\",\n    \"fibernet/core/structure_graph.py\", \"fibernet/core/material.py\",\n)\n\n"
+    },
+    {
+      "before": "\n\ndef _batch_parameters(mode, backend, target_stretch, stiffness, damping,\n                      num_steps, save_interval):\n    \"\"\"Normalize only supported scalar types and the solver's effective None.\"\"\"\n    from numbers import Integral, Real\n    import math\n\n    parameters = {\"mode\": mode, \"backend\": backend, \"auto_steps\": False}\n    for name, value in ((\"target_stretch\", target_stretch),\n                        (\"stiffness\", stiffness), (\"damping\", damping)):\n        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):\n",
+      "after": "\n\ndef _batch_parameters(mode, backend, target_stretch, stiffness, damping,\n                      num_steps, save_interval, geometry_policy=\"reject_internal_points\"):\n    \"\"\"Normalize only supported scalar types and the solver's effective None.\"\"\"\n    from numbers import Integral, Real\n    import math\n\n    parameters = {\"mode\": mode, \"backend\": backend, \"auto_steps\": False,\n                  \"geometry_policy\": _validate_geometry_policy(geometry_policy)}\n    for name, value in ((\"target_stretch\", target_stretch),\n                        (\"stiffness\", stiffness), (\"damping\", damping)):\n        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):\n"
+    },
+    {
+      "before": "    num_steps: int = 1000,\n    save_interval: int = 200,\n    backend: str = \"spring\",\n) -> str:\n    \"\"\"Batch simulate structures from JSON files.\n    \n",
+      "after": "    num_steps: int = 1000,\n    save_interval: int = 200,\n    backend: str = \"spring\",\n    *,\n    geometry_policy: str = \"reject_internal_points\",\n) -> str:\n    \"\"\"Batch simulate structures from JSON files.\n    \n"
+    },
+    {
+      "before": "        Save trajectory every N steps.\n    backend : str\n        Simulation backend: \"spring\" (TaichiEngine).\n    \n    Returns\n    -------\n",
+      "after": "        Save trajectory every N steps.\n    backend : str\n        Simulation backend: \"spring\" (TaichiEngine).\n    geometry_policy : str, keyword-only\n        \"reject_internal_points\" (default) records a per-file failure for\n        nonempty edge-owned points. Explicit \"endpoint_chord\" ignores those\n        points mechanically without changing the graph. Invalid policies fail\n        before provider construction or output writes.\n    \n    Returns\n    -------\n"
+    },
+    {
+      "before": "    if mode != \"stretch\":\n        raise ValueError(f\"Unsupported mode: {mode!r}; expected 'stretch'\")\n    parameters = _batch_parameters(mode, backend, target_stretch, stiffness,\n                                   damping, num_steps, save_interval)\n\n    json_path = Path(json_dir)\n    output_path = Path(output_dir)\n",
+      "after": "    if mode != \"stretch\":\n        raise ValueError(f\"Unsupported mode: {mode!r}; expected 'stretch'\")\n    parameters = _batch_parameters(mode, backend, target_stretch, stiffness,\n                                   damping, num_steps, save_interval, geometry_policy)\n\n    json_path = Path(json_dir)\n    output_path = Path(output_dir)\n"
+    },
+    {
+      "before": "                             \"inputs must remain unchanged during the call\")\n        binding = _batch_canonical_json(_batch_binding(input_hashes[fname],\n                                                       parameters, implementation))\n        try:\n            g = _batch_graph_from_bytes(raw)\n            r = engine.stretch_test(\n                g,\n                target_stretch=target_stretch,\n",
+      "after": "                             \"inputs must remain unchanged during the call\")\n        binding = _batch_canonical_json(_batch_binding(input_hashes[fname],\n                                                       parameters, implementation))\n        g = r = None\n        try:\n            g = _batch_graph_from_bytes(raw)\n            _preflight_taichi_geometry(g, geometry_policy=geometry_policy)\n            r = engine.stretch_test(\n                g,\n                target_stretch=target_stretch,\n"
+    },
+    {
+      "before": "                num_steps=num_steps,\n                save_interval=save_interval,\n                auto_steps=False,\n            )\n            row = {\n                \"filename\": fname,\n",
+      "after": "                num_steps=num_steps,\n                save_interval=save_interval,\n                auto_steps=False,\n                geometry_policy=geometry_policy,\n            )\n            row = {\n                \"filename\": fname,\n"
+    },
+    {
+      "before": "            row = {\"filename\": fname, \"success\": False, \"error\": str(e)}\n            print(f\"  [{fname}] FAILED: {e}\")\n        finally:\n            del raw\n        row[\"run_binding\"] = binding\n        results.append(row)\n",
+      "after": "            row = {\"filename\": fname, \"success\": False, \"error\": str(e)}\n            print(f\"  [{fname}] FAILED: {e}\")\n        finally:\n            # Retain at most one parsed graph/result, including failed cases.\n            g = r = None\n            del raw\n        row[\"run_binding\"] = binding\n        results.append(row)\n"
+    }
+  ]
+}

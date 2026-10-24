@@ -30,6 +30,10 @@ from fibernet.core.structure_graph import StructureGraph
 from fibernet.gen.pattern import pattern_2d, pattern_3d
 from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
+from fibernet.sim._taichi_geometry import (
+    preflight_taichi_geometry as _preflight_taichi_geometry,
+    validate_geometry_policy as _validate_geometry_policy,
+)
 
 
 def show(
@@ -124,6 +128,11 @@ def simulate(
         num_threads (default 4) configure the engine; remaining keywords go
         to the selected method. The active runtime's ownership and thread
         settings still apply. GPU requests never silently fall back to CPU.
+        geometry_policy defaults to "reject_internal_points": any nonempty
+        edge-owned internal_points reject before engine construction. Explicit
+        "endpoint_chord" ignores those points mechanically without changing
+        the graph. Actual graph nodes remain accepted; neither policy provides
+        curved-fiber mechanics. Other backends do not accept this option.
 
     Returns
     -------
@@ -193,12 +202,14 @@ def simulate(
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
         method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        kwargs.setdefault("geometry_policy", "reject_internal_points")
         method_kwargs = dict(kwargs)
         if mode == "stretch":
             if "target_stretch" in method_kwargs:
                 raise TypeError("use stretch_ratio (or legacy strain), not target_stretch, with simulate")
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
+        _preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])
         engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
@@ -1026,6 +1037,7 @@ _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
 _BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
 _BATCH_SOURCE_FILES = (
     "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py", "fibernet/core/material.py",
 )
 
@@ -1041,12 +1053,13 @@ def _batch_value_sha256(value):
 
 
 def _batch_parameters(mode, backend, target_stretch, stiffness, damping,
-                      num_steps, save_interval):
+                      num_steps, save_interval, geometry_policy="reject_internal_points"):
     """Normalize only supported scalar types and the solver's effective None."""
     from numbers import Integral, Real
     import math
 
-    parameters = {"mode": mode, "backend": backend, "auto_steps": False}
+    parameters = {"mode": mode, "backend": backend, "auto_steps": False,
+                  "geometry_policy": _validate_geometry_policy(geometry_policy)}
     for name, value in (("target_stretch", target_stretch),
                         ("stiffness", stiffness), ("damping", damping)):
         if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
@@ -1174,6 +1187,8 @@ def batch_simulate_from_json(
     num_steps: int = 1000,
     save_interval: int = 200,
     backend: str = "spring",
+    *,
+    geometry_policy: str = "reject_internal_points",
 ) -> str:
     """Batch simulate structures from JSON files.
     
@@ -1203,6 +1218,11 @@ def batch_simulate_from_json(
         Save trajectory every N steps.
     backend : str
         Simulation backend: "spring" (TaichiEngine).
+    geometry_policy : str, keyword-only
+        "reject_internal_points" (default) records a per-file failure for
+        nonempty edge-owned points. Explicit "endpoint_chord" ignores those
+        points mechanically without changing the graph. Invalid policies fail
+        before provider construction or output writes.
     
     Returns
     -------
@@ -1250,7 +1270,7 @@ def batch_simulate_from_json(
     if mode != "stretch":
         raise ValueError(f"Unsupported mode: {mode!r}; expected 'stretch'")
     parameters = _batch_parameters(mode, backend, target_stretch, stiffness,
-                                   damping, num_steps, save_interval)
+                                   damping, num_steps, save_interval, geometry_policy)
 
     json_path = Path(json_dir)
     output_path = Path(output_dir)
@@ -1345,8 +1365,10 @@ def batch_simulate_from_json(
                              "inputs must remain unchanged during the call")
         binding = _batch_canonical_json(_batch_binding(input_hashes[fname],
                                                        parameters, implementation))
+        g = r = None
         try:
             g = _batch_graph_from_bytes(raw)
+            _preflight_taichi_geometry(g, geometry_policy=geometry_policy)
             r = engine.stretch_test(
                 g,
                 target_stretch=target_stretch,
@@ -1355,6 +1377,7 @@ def batch_simulate_from_json(
                 num_steps=num_steps,
                 save_interval=save_interval,
                 auto_steps=False,
+                geometry_policy=geometry_policy,
             )
             row = {
                 "filename": fname,
@@ -1373,6 +1396,8 @@ def batch_simulate_from_json(
             row = {"filename": fname, "success": False, "error": str(e)}
             print(f"  [{fname}] FAILED: {e}")
         finally:
+            # Retain at most one parsed graph/result, including failed cases.
+            g = r = None
             del raw
         row["run_binding"] = binding
         results.append(row)

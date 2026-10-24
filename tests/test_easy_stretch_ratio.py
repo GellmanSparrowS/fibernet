@@ -24,22 +24,25 @@ class StretchRatioTests(unittest.TestCase):
         self.assertIsNone(signature.parameters['stretch_ratio'].default)
 
     def test_spring_alias_forwards_without_constructing_native_engine(self):
+        graph = fn.StructureGraph(dimension=3)
         calls = []
         class Engine:
             def __init__(self, **kwargs):
                 pass
-            def stretch_test(self, graph, target_stretch):
+            def stretch_test(self, graph, target_stretch, *, geometry_policy):
+                if geometry_policy != "reject_internal_points":
+                    raise AssertionError("unexpected geometry policy")
                 calls.append(target_stretch)
                 return target_stretch
         with patch.object(easy, 'TaichiEngine', Engine):
             for backend in ('spring', 'taichi'):
                 for value in (1, 1.01, np.float64(.99)):
-                    self.assertEqual(easy.simulate(None, backend=backend,
+                    self.assertEqual(easy.simulate(graph, backend=backend,
                                                   stretch_ratio=value), value)
-            self.assertEqual(easy.simulate(None), 2.0)
-            self.assertEqual(easy.simulate(None, stretch_ratio=None), 2.0)
-            self.assertEqual(easy.simulate(None, strain=1.02, stretch_ratio=None), 1.02)
-            self.assertEqual(easy.simulate(None, 'stretch', 1.03, 'spring', None), 1.03)
+            self.assertEqual(easy.simulate(graph), 2.0)
+            self.assertEqual(easy.simulate(graph, stretch_ratio=None), 2.0)
+            self.assertEqual(easy.simulate(graph, strain=1.02, stretch_ratio=None), 1.02)
+            self.assertEqual(easy.simulate(graph, 'stretch', 1.03, 'spring', None), 1.03)
         self.assertEqual(len(calls), 10)
 
     def test_invalid_explicit_ratio_fails_before_engine_creation(self):

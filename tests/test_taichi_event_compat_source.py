@@ -344,12 +344,41 @@ def reviewed_thermoelastic_facade():
     return raw
 
 
+# Byte-pinned deltas from the immutable public-main source chain. Historical
+# fixtures are retained verbatim; only these two exact candidate versions enter.
+TAICHI_GEOMETRY_SOURCE_PINS = {
+    'fibernet/easy.py': ('easy_delta.json', 'f29c4619d8ff2e5cd118aa59a21ab65ec0a43470f4032f1881136ddb4e07943c'),
+    'fibernet/sim/accelerated.py': ('accelerated_delta.json', '17271606f8dfaa9deecef7446beb8b0b98cfe7d1b01af37718475c700d63afe1'),
+}
+
+
+def reviewed_taichi_geometry_source(relative):
+    if relative not in TAICHI_GEOMETRY_SOURCE_PINS:
+        raise ValueError('unknown geometry source contract')
+    name, digest = TAICHI_GEOMETRY_SOURCE_PINS[relative]
+    raw = (ROOT/'tests/fixtures/taichi_geometry_policy_v1'/name).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == digest, 'reviewed geometry source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_taichi_geometry_source_delta/1', 'unsupported geometry source delta'
+    assert delta['source'] == relative, 'geometry source delta target changed'
+    assert delta['baseline_main'] == '30f29eb4c574a25b7d15b8540ad2d98b9cbcef36', 'geometry source baseline changed'
+    source = (reviewed_easy_rl_failure_source() if relative == 'fibernet/easy.py'
+              else reviewed_spring_provenance_source())
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'geometry source delta base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'geometry source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'geometry source delta result changed'
+    return source
+
+
 def require_public_source(relative, raw):
     if relative == 'fibernet/sim/__init__.py':
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative)), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -357,7 +386,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative)), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -433,7 +462,7 @@ class StretchRatioSourceAdmission(unittest.TestCase):
         old = public_baseline('fibernet/easy.py').read_bytes()
         new = reviewed_easy_stretch_ratio_source()
         self.assertIn((ROOT/'fibernet/easy.py').read_bytes(),
-                      (new, reviewed_easy_rl_failure_source()))
+                      (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py')))
         self.assertNotEqual(old, new)
         require_public_source('fibernet/easy.py', old)
         require_public_source('fibernet/easy.py', new)
@@ -504,11 +533,13 @@ class StretchRatioSourceAdmission(unittest.TestCase):
 
 
 class RLFailureSourceAdmission(unittest.TestCase):
-    def test_exact_three_versions_and_current_are_admitted(self):
+    def test_exact_historical_versions_and_current_are_admitted(self):
         old = public_baseline('fibernet/easy.py').read_bytes()
         stretch = reviewed_easy_stretch_ratio_source()
         failure = reviewed_easy_rl_failure_source()
-        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), failure)
+        current = reviewed_taichi_geometry_source('fibernet/easy.py')
+        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), current)
+        require_public_source('fibernet/easy.py', current)
         self.assertEqual(len({old, stretch, failure}), 3)
         for raw in (old, stretch, failure):
             require_public_source('fibernet/easy.py', raw)
@@ -559,6 +590,110 @@ class RLFailureSourceAdmission(unittest.TestCase):
                 reviewed_easy_rl_failure_source()
 
 
+class GeometryPolicySourceAdmission(unittest.TestCase):
+    def test_current_sources_match_only_the_exact_reviewed_deltas(self):
+        for relative in TAICHI_GEOMETRY_SOURCE_PINS:
+            with self.subTest(source=relative):
+                expected = reviewed_taichi_geometry_source(relative)
+                self.assertEqual((ROOT/relative).read_bytes(), expected)
+                require_public_source(relative, expected)
+                for changed in (expected+b'\n# unreviewed\n',
+                                expected.replace(b'\n', b'\r\n')):
+                    with self.assertRaises(AssertionError):
+                        require_public_source(relative, changed)
+
+    def test_easy_delta_leaves_all_other_definitions_and_exports_unchanged(self):
+        old = ast.parse(reviewed_easy_rl_failure_source())
+        new = ast.parse(reviewed_taichi_geometry_source('fibernet/easy.py'))
+        expected_import = ast.parse(
+            'from fibernet.sim._taichi_geometry import '
+            'preflight_taichi_geometry as _preflight_taichi_geometry, '
+            'validate_geometry_policy as _validate_geometry_policy').body[0]
+        imports = [node for node in new.body if isinstance(node, ast.ImportFrom)
+                   and node.module == 'fibernet.sim._taichi_geometry']
+        self.assertEqual([canonical_ast(node) for node in imports],
+                         [canonical_ast(expected_import)])
+        new.body.remove(imports[0])
+        allowed = {'simulate', '_batch_parameters', 'batch_simulate_from_json'}
+        old_functions = {node.name: node for node in old.body
+                         if isinstance(node, ast.FunctionDef)}
+        for index, node in enumerate(new.body):
+            if isinstance(node, ast.FunctionDef) and node.name in allowed:
+                new.body[index] = copy.deepcopy(old_functions[node.name])
+        def sources(tree):
+            return next(node for node in tree.body if isinstance(node, ast.Assign)
+                        and any(isinstance(target, ast.Name) and
+                                target.id == '_BATCH_SOURCE_FILES' for target in node.targets))
+        old_sources, new_sources = sources(old), sources(new)
+        expected = list(ast.literal_eval(old_sources.value))
+        expected.insert(2, 'fibernet/sim/_taichi_geometry.py')
+        self.assertEqual(ast.literal_eval(new_sources.value), tuple(expected))
+        new.body[new.body.index(new_sources)] = copy.deepcopy(old_sources)
+        self.assertEqual(canonical_ast(old), canonical_ast(new))
+
+    def test_accelerated_delta_leaves_serializers_and_native_kernels_unchanged(self):
+        old = ast.parse(reviewed_spring_provenance_source())
+        new = ast.parse(reviewed_taichi_geometry_source('fibernet/sim/accelerated.py'))
+        expected_import = ast.parse(
+            'from ._taichi_geometry import preflight_taichi_geometry').body[0]
+        imports = [node for node in new.body if isinstance(node, ast.ImportFrom)
+                   and node.module == '_taichi_geometry']
+        self.assertEqual([canonical_ast(node) for node in imports],
+                         [canonical_ast(expected_import)])
+        new.body.remove(imports[0])
+        old_engine = next(node for node in old.body if isinstance(node, ast.ClassDef)
+                          and node.name == 'TaichiEngine')
+        new_engine = next(node for node in new.body if isinstance(node, ast.ClassDef)
+                          and node.name == 'TaichiEngine')
+        old_methods = {node.name: node for node in old_engine.body
+                       if isinstance(node, ast.FunctionDef)}
+        for index, node in enumerate(new_engine.body):
+            if isinstance(node, ast.FunctionDef) and node.name in {'dynamics', 'stretch_test'}:
+                new_engine.body[index] = copy.deepcopy(old_methods[node.name])
+        self.assertEqual(canonical_ast(old), canonical_ast(new))
+
+    def test_policy_changes_cannot_be_silently_normalized(self):
+        cases = {
+            'fibernet/easy.py': (
+                (b'kwargs.setdefault("geometry_policy", "reject_internal_points")',
+                 b'kwargs.setdefault("geometry_policy", "endpoint_chord")'),
+                (b'_preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])',
+                 b'pass'),
+                (b'"fibernet/sim/_taichi_geometry.py",', b''),
+            ),
+            'fibernet/sim/accelerated.py': (
+                (b'geometry_policy: str = "reject_internal_points"',
+                 b'geometry_policy: str = "endpoint_chord"'),
+                (b'"taichi_geometry": geometry_record', b'"taichi_geometry": {}'),
+                (b'geometry_record = preflight_taichi_geometry(',
+                 b'geometry_record = ignored_preflight('),
+            ),
+        }
+        for relative, replacements in cases.items():
+            raw = reviewed_taichi_geometry_source(relative)
+            for before, after in replacements:
+                with self.subTest(source=relative, mutation=before):
+                    self.assertIn(before, raw)
+                    with self.assertRaises(AssertionError):
+                        require_public_source(relative, raw.replace(before, after, 1))
+
+    def test_delta_fixture_digest_is_not_self_accepting(self):
+        original = Path.read_bytes
+        for relative, (name, _) in TAICHI_GEOMETRY_SOURCE_PINS.items():
+            fixture = ROOT/'tests/fixtures/taichi_geometry_policy_v1'/name
+            def changed_read(path):
+                raw = original(path)
+                return raw+b'\n' if path == fixture else raw
+            with self.subTest(source=relative), patch.object(Path, 'read_bytes', changed_read):
+                with self.assertRaisesRegex(AssertionError, 'reviewed geometry source delta changed'):
+                    reviewed_taichi_geometry_source(relative)
+
+    def test_delta_source_path_is_allowlisted(self):
+        for relative in ('../outside', '/etc/passwd', 'fibernet/api.py'):
+            with self.assertRaises(ValueError):
+                reviewed_taichi_geometry_source(relative)
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -577,7 +712,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_taichi_geometry_source('fibernet/sim/accelerated.py'), SOURCE.read_bytes())
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -613,7 +748,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_spring_provenance_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_taichi_geometry_source('fibernet/sim/accelerated.py'), SOURCE.read_bytes())
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())

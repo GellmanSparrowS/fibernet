@@ -7,12 +7,15 @@ import platform
 from numbers import Real, Integral
 from pathlib import Path
 import numpy as np
+from fibernet.sim._taichi_geometry import (
+    GeometryPolicyError, validate_geometry_policy,
+)
 
 SCHEMA = 'fibernet.generate-checkpoint/1'
 SAMPLING = 'cartesian-radius/2'
 SOURCE_FILES = ('ml/dataset.py', 'ml/_generate_contract.py', 'gen/pattern.py',
                 'core/tiling.py', 'core/transforms.py', 'core/structure_graph.py',
-                'core/material.py', 'sim/accelerated.py')
+                'core/material.py', 'sim/accelerated.py', 'sim/_taichi_geometry.py')
 BUILTINS = ('square', 'triangle', 'hexagon', 'honeycomb', 'kagome', 'reentrant',
             'chiral', 'star', 'cross', 'missing_rib', 'diamond', 'voronoi')
 
@@ -51,7 +54,8 @@ def sequence(value, default, name):
 
 def make_plan(*, units, grid_range, radius_range, n_internal_range, box,
               target_stretch, stiffness, damping, num_steps, max_samples,
-              seed, checkpoint_every):
+              seed, checkpoint_every, geometry_policy='reject_internal_points'):
+    geometry_policy = validate_geometry_policy(geometry_policy)
     units = sequence(units, ['honeycomb','square','triangle'], 'units')
     if any(not isinstance(u,str) or not u.strip() for u in units):
         raise ValueError('units must contain nonempty strings')
@@ -73,7 +77,8 @@ def make_plan(*, units, grid_range, radius_range, n_internal_range, box,
     integer(checkpoint_every,'checkpoint_every',1)
     solver = dict(target_stretch=real(target_stretch,'target_stretch'),
                   stiffness=real(stiffness,'stiffness'), damping=real(damping,'damping'),
-                  num_steps=integer(num_steps,'num_steps',1))
+                  num_steps=integer(num_steps,'num_steps',1),
+                  geometry_policy=geometry_policy)
     if solver['stiffness'] < 0:
         raise ValueError('stiffness must be nonnegative')
     solver.update(save_interval=solver['num_steps'],auto_steps=False,
@@ -94,6 +99,30 @@ def make_plan(*, units, grid_range, radius_range, n_internal_range, box,
 
 def sample_id(params):
     return 'v2-' + digest(params)
+
+
+def validate_plan_geometry(pattern, plan, geometry_policy):
+    """Reject known incompatible selected jobs without constructing a graph.
+
+    The caller supplies the existing shuffled/capped plan, not the declaration.
+    Registered replacements are not assumed to honor a built-in factory's
+    n_internal contract; their actual graphs still require per-job preflight.
+    """
+    policy = validate_geometry_policy(geometry_policy)
+    if policy != 'reject_internal_points':
+        return
+    for params in plan:
+        name = params['unit'].lower()
+        expected = getattr(pattern, '_unit_'+name, None) if name in BUILTINS else None
+        if (params['n_internal'] > 0 and expected is not None
+                and pattern._UNIT_FACTORIES.get(name) is expected):
+            raise GeometryPolicyError(
+                "geometry_policy='reject_internal_points' rejects the built-in plan: "
+                f"selected unit {params['unit']!r} requests n_internal={params['n_internal']}. "
+                "Select n_internal_range=[0], or explicitly choose "
+                "geometry_policy='endpoint_chord' to ignore edge-owned points "
+                "mechanically. Neither choice establishes curved-beam equivalence."
+            )
 
 
 def implementation_recipe(pattern, units):

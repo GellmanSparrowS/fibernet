@@ -32,6 +32,7 @@ except ImportError:
 
 from fibernet.core.structure_graph import StructureGraph
 from ._taichi_viscoelastic import material_options as _material_options
+from ._taichi_geometry import preflight_taichi_geometry
 
 
 def _finite_real_array(value, name, shape=None):
@@ -1352,6 +1353,7 @@ class TaichiEngine:
         material=None,
         reference_areas_by_id=None,
         max_abs_strain=None,
+        geometry_policy: str = "reject_internal_points",
     ) -> SimResult:
         """Run mass-spring dynamics with dashpot damping and air drag.
 
@@ -1398,7 +1400,15 @@ class TaichiEngine:
             carry stable IDs and declared units. Exceptions propagate and stop
             the call. Ledger and nonempty schedules are initially unsupported.
             None adds no snapshot exports and leaves sampling/results unchanged.
+        geometry_policy : str, keyword-only
+            "reject_internal_points" (default) rejects nonempty edge-owned
+            internal_points before owner/array work. Explicit "endpoint_chord"
+            ignores those points mechanically without mutating the graph.
+            Actual-node straight edges remain accepted; no curved mechanics
+            or mechanical equivalence is implied.
         """
+        geometry_record = preflight_taichi_geometry(
+            graph, geometry_policy=geometry_policy)
         damping = _legacy_damping(damping)
         material_mode = material is not None
         if material_mode:
@@ -1881,7 +1891,8 @@ class TaichiEngine:
                      for i, ms in enumerate(max_stretch_history)],
             metadata={"node_ids": list(node_ids), "edge_ids": list(graph.edges),
                       "stiffness": float(stiffness), "damping": float(damping),
-                      "dt": float(dt), "num_steps": int(num_steps)},
+                      "dt": float(dt), "num_steps": int(num_steps),
+                      "taichi_geometry": geometry_record},
         )
         if material_mode:
             result.metadata.pop('stiffness', None)
@@ -1924,6 +1935,8 @@ class TaichiEngine:
         ramp_fraction: float = 0.2,
         auto_steps: bool = True,
         max_nodes: int = 20000,
+        *,
+        geometry_policy: str = "reject_internal_points",
     ) -> SimResult:
         """Displacement-controlled uniaxial stretch with automatic step calculation.
 
@@ -1953,12 +1966,17 @@ class TaichiEngine:
             Fraction of total steps for ramp phase (default 0.2 = 20%)
         auto_steps : bool
             Auto-calculate steps based on graph diameter if num_steps is None
+        geometry_policy : str, keyword-only
+            Strict default rejects nonempty edge-owned internal_points.
+            Explicit "endpoint_chord" ignores them mechanically without
+            changing the graph; this does not supply curved-fiber mechanics.
 
         Returns
         -------
         SimResult
             Result with deformed_positions and trajectory
         """
+        preflight_taichi_geometry(graph, geometry_policy=geometry_policy)
         _check_taichi_owner()
         if not np.isfinite(ramp_fraction) or not 0 <= ramp_fraction <= 1:
             raise ValueError("ramp_fraction must be finite and between 0 and 1")
@@ -2030,6 +2048,7 @@ class TaichiEngine:
             num_steps=num_steps,
             save_interval=save_interval,
             max_nodes=max_nodes,
+            geometry_policy=geometry_policy,
         )
 
     @staticmethod
