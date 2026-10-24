@@ -97,3 +97,71 @@ access externally; no lock or compare-and-swap generation check is added.
 
 Coverage is in `tests/test_model_artifact_persistence.py`. The earlier native
 training proposal and pre-repair evidence remain historical records.
+
+## Optional current GINE inference state (JSON)
+
+The separate optional `fibernet.ml.edge_gine_io` module saves current, unmodified
+`GINERegressor` models without pickle. It does not train, evaluate model quality,
+convert historical artifacts, or infer target units. Torch and torch-geometric
+must already be installed; the package root does not import them for this API.
+
+```python
+from fibernet.ml.edge_gine_io import save_gine_state, load_gine_state
+
+save_gine_state(model, "gine.json", target={
+    "name": "force", "unit": "N", "kind": "graph_scalar", "encoding": "identity",
+}, origin={
+    "kind": "caller_asserted", "description": "My current model state",
+    "source_ref": None,
+})
+loaded_model, info = load_gine_state("gine.json")
+# Use the existing prepare_gine(config=info["model_config"], ...) and model(prepared).
+# The loaded model is owned, in eval mode; use torch.no_grad() for inference.
+```
+
+Only current `fibernet.edge_gine.v1`, CPU float32, fixed zero epsilon, two-layer
+16-wide models with mean or sum pooling are supported. Material-view profiles,
+subclasses, computation-module changes, custom hooks, parametrizations, and
+instance-forward overrides reject. These are ordinary supported-contract checks,
+not an adversarial attestation framework. A model can be freely changed after
+return; the returned metadata makes no persistent claim about later mutations.
+
+The closed `fibernet.gine_inference_state.v1` JSON contains exactly `schema`,
+`model_config`, `target`, `state`, `runtime`, and `origin`. The target descriptor
+has exactly the four keys shown above; units are explicitly caller-declared and
+are never converted. Optional `origin` is `None` or the three-key declaration
+shown above. Its reference is never fetched; neither origin nor the returned
+state/artifact SHA256 identifies authenticated authorship, training, or quality.
+There are no optimizer, metrics, training-history, or readiness fields.
+
+The writer records its actual Python, NumPy, Torch and PyG versions and SHA256
+of the model/preparation, graph-data, bounded-parser, and serializer sources.
+The reader requires exact equality. Even a comment-only change in those files
+can prevent loading. Own writer output works under the same supported runtime;
+there is no initial cross-version migration or compatibility override. The
+historical `fibernet.gine_artifact.v1` format explicitly rejects. Exact identities
+are not a hardware-independent bitwise-output promise.
+
+Reads and writes enforce 8 MiB JSON, depth 32, 300,000 canonical items and 4,096
+UTF-8 bytes per string, reject duplicate/unknown fields and nonfinite values,
+and require exact state names, shapes, scalar counts and canonical float32
+values. The reconstructed model state digest is checked after loading. Metadata
+is detached; save preserves the source model's state, mode, gradients and CPU
+RNG, while load constructs a new eval model without consuming caller CPU RNG.
+Neither operation changes global thread counts or determinism settings.
+
+Destination staging, regular-file/symlink/special-mode checks, ordinary `rwx`
+preservation and absent-target `0600` behavior follow the single-file convention
+above. Validation occurs before replacement. Parent directories must exist.
+Ordinary failures preserve the previous file; the owned temporary is cleaned
+when the filesystem permits it. There is no crash durability, concurrency,
+ancestor-symlink security or inode/ACL preservation guarantee. On Windows,
+`0600` does not establish a private ACL. This JSON API never loads pickle.
+
+`tests/test_edge_gine_state_io.py` uses fresh deterministic synthetic models for
+own-state and output fidelity, both pools, RNG/ownership checks, malformed
+record refusals and ordinary write failures. These checks are not evidence of
+physical accuracy, generalization, performance, or compatibility of a historical
+qualified model. The existing CPU training-contract CI job includes this module
+in its no-skip selection with official CPU Torch and PyG, without compiled PyG
+extensions or native simulation-provider execution.

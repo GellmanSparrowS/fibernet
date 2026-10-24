@@ -87,6 +87,10 @@ jobs:
         # from PyPI, then admit only the pinned official CPU Torch wheel.
         python -m pip install "filelock==4.2.4" "fsspec==2026.9.0" "jinja2==3.1.6" "markupsafe==3.0.4" "typing-extensions>=4.10.0" "setuptools>=77.0.3" "sympy>=1.13.3" "networkx>=2.5.1"
         python -m pip install --force-reinstall --no-deps --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu "torch==2.14.1+cpu"
+        # Pure-Python PyG plus its ordinary dependencies only; no optional
+        # compiled PyG extensions and no CUDA packages. Never let PyG replace Torch.
+        python -m pip install "aiohttp" "fsspec" "jinja2" "numpy" "psutil" "pyparsing" "requests" "tqdm" "xxhash==3.8.1"
+        python -m pip install --no-deps --only-binary=:all: --index-url https://pypi.org/simple "torch-geometric==2.7.0"
         python -m pip check
 
     - name: Verify CPU runtime and run focused training contracts without skips
@@ -97,15 +101,21 @@ jobs:
         import sys
         import pytest
         import torch
+        import torch_geometric
 
         distribution = importlib.metadata.distribution("torch")
         assert distribution.version == torch.__version__ == "2.14.1+cpu"
         assert torch.version.cuda is None
         assert Path(torch.__file__).resolve() == Path(distribution.locate_file("torch/__init__.py")).resolve()
+        pyg_distribution = importlib.metadata.distribution("torch-geometric")
+        assert pyg_distribution.version == torch_geometric.__version__ == "2.7.0"
+        assert Path(torch_geometric.__file__).resolve() == Path(pyg_distribution.locate_file("torch_geometric/__init__.py")).resolve()
+        assert importlib.metadata.version("xxhash") == "3.8.1"
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
         print("Python:", sys.executable)
         print("Torch:", torch.__version__, "origin:", torch.__file__)
+        print("PyG:", torch_geometric.__version__, "origin:", torch_geometric.__file__)
         print("CPU threads:", torch.get_num_threads(), torch.get_num_interop_threads())
 
         class NoSkippedTests:
@@ -120,6 +130,7 @@ jobs:
             "tests/test_training_default_mse_shapes.py",
             "tests/test_training_contracts.py",
             "tests/test_training_metric_availability.py",
+            "tests/test_edge_gine_state_io.py",
         ], plugins=[NoSkippedTests()])
         assert not any(name in sys.modules for name in ("taichi", "gmsh", "lammps"))
         raise SystemExit(result)
