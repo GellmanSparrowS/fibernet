@@ -1,3 +1,11 @@
+## [Unreleased] - checked graph prediction
+
+- Add `predict_gnn` for existing CPU scalar FiberGNN models and GraphBatch v1,
+  checking caller-declared raw XYZ+dimension compatibility while preserving
+  graph identity and prior module modes. Low-level forward remains unchanged.
+- Return graph-aligned model-space predictions with an explicit caller-supplied
+  target name and unknown target-unit/transform statuses.
+
 ## [Unreleased] - raw beam-resultant availability
 
 - Expose the existing component contract on raw 2-D, 3-D and incremental 2-D beam results. Preserve numeric outputs and approximate qualifications; unrecovered 3-D shear slots remain explicitly unavailable.
