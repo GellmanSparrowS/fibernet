@@ -250,7 +250,7 @@ def test_no_publication_for_output_contract_failures_or_provenance(tmp_path):
     report=native_report(small(),request)
     # Source-extracted callback control is explicitly not the real-client test.
     tree=ast.parse((ROOT/'src/fibernet_mcp/server.py').read_text())
-    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
+    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_serve_admitted')
     call=copy.deepcopy(next(n for n in serve.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='call'));call.decorator_list=[]
     ns={**vars(server),'store':store,'jsonschema':jsonschema,'mt':mt,
         'indexed':{d['name']:d for d in json.loads((ROOT/'src/fibernet_mcp/tool_schemas.json').read_text())['tools']}}

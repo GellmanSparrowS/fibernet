@@ -86,8 +86,8 @@ def server_namespace():
     ns['ProjectionContractError']=type('ProjectionContractError',(NEW.ContractError,),{})
     ns['MAX_TRANSPORT_RESULT_BYTES']=1024*1024
     exec(compile(ast.Module(body=body,type_ignores=[]),'<extracted-server-source>','exec'),ns)
-    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
-    # Extract callbacks, not serve() or SDK setup/transport. No actual server exists.
+    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_serve_admitted')
+    # Extract callbacks, not _serve_admitted() or SDK setup/transport. No actual server exists.
     selected=[]
     for n in serve.body:
         if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name in ('prune','tools','resources','templates','resource','call'):

@@ -226,14 +226,23 @@ async def serve(args):
     if sys.platform!='linux' or not hasattr(os,'O_NOFOLLOW'): raise ContractError('Linux confinement required')
     if importlib.metadata.version('mcp')!='1.29.0': raise ContractError('untested SDK version')
     core_verification=_verify_core_result()
-    # Refuse an unverified core before loading the protocol implementation.
+    # Admit operator-owned bytes before optional protocol setup. Ownership is
+    # established immediately so every later setup/import/cancellation path closes.
+    store=ManagedStore(args.manifest,args.output_root,core_verification)
+    try:
+        await _serve_admitted(args,store)
+    finally:
+        store.close()
+
+async def _serve_admitted(args,store):
+    # Neither protocol imports nor schema setup are needed for source refusals.
     import jsonschema
     from mcp.server.lowlevel import Server
     from mcp.server.lowlevel.helper_types import ReadResourceContents
     from mcp.server.stdio import stdio_server
     from mcp.shared.exceptions import McpError
     import mcp.types as mt
-    store=ManagedStore(args.manifest,args.output_root,core_verification);sup=Supervisor(store,args.timeout)
+    sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
     # Remove unused local definitions from each advertised schema to fit bounded list output.
     def prune(schema):
@@ -366,12 +375,10 @@ async def serve(args):
             await server.run(*streams,server.create_initialization_options())
     finally:
         # SDK task group cancels in-flight work before this scope ends.
-        try:
-            if args.audit:
-                fd=open_directory(args.output_root)
-                try: write_at(fd,args.audit,canonical({'workers':sup.audit,'artifacts':len(store.artifacts)}))
-                finally: os.close(fd)
-        finally: store.close()
+        if args.audit:
+            fd=open_directory(args.output_root)
+            try: write_at(fd,args.audit,canonical({'workers':sup.audit,'artifacts':len(store.artifacts)}))
+            finally: os.close(fd)
 
 def main():
     if sys.platform!='linux': raise SystemExit('Linux confinement required')
