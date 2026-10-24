@@ -1,0 +1,17 @@
+{
+  "schema": "reviewed_fiber_network_profile_facade_delta/1",
+  "source": "fibernet/__init__.py",
+  "baseline_main": "e6b9bd31aab88f861879e79e906aea4387686e6f",
+  "base_sha256": "5a4b85e0d6b5faa6c2008014ea766a98dd260f01ec9616fcca8856005c22028b",
+  "result_sha256": "0ea04c0e27c3ebdda23deef8ef7f9eb3d8b47f1de226f61049b4330ca33daffe",
+  "hunks": [
+    {
+      "before": "from fibernet.core.fiber import Fiber\n",
+      "after": "from fibernet.core.fiber import Fiber\nfrom fibernet.core.fiber_network_profile import (\n    FiberNetworkProfile, FiberNetworkProjectionLimits, FiberNetworkProjectionError,\n)\n"
+    },
+    {
+      "before": "    \"Material\", \"Fiber\", \"FiberNetwork\", \"Crosslink\",\n",
+      "after": "    \"Material\", \"Fiber\", \"FiberNetwork\", \"Crosslink\",\n    \"FiberNetworkProfile\", \"FiberNetworkProjectionLimits\", \"FiberNetworkProjectionError\",\n"
+    }
+  ]
+}

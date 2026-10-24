@@ -123,7 +123,10 @@ def test_legacy_geometry_ids_omission_radii_metadata_and_crosslinks():
     graph = scene()
     before = graph_state(graph)
     network = graph.to_fiber_network()
-    assert list(inspect.signature(StructureGraph.to_fiber_network).parameters) == ['self']
+    parameters = inspect.signature(StructureGraph.to_fiber_network).parameters
+    assert list(parameters) == ['self', 'profile']
+    assert parameters['profile'].kind is inspect.Parameter.KEYWORD_ONLY
+    assert parameters['profile'].default is None
     assert (graph.num_nodes, graph.num_edges, network.num_fibers) == (8, 6, 5)
     assert sum(e.internal_points is not None and len(e.internal_points) > 0
                for e in graph.edges.values()) == 3

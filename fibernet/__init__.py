@@ -41,6 +41,9 @@ from fibernet.core.material import Material
 from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.fiber import Fiber
+from fibernet.core.fiber_network_profile import (
+    FiberNetworkProfile, FiberNetworkProjectionLimits, FiberNetworkProjectionError,
+)
 
 # --- Transforms ---
 from fibernet.core.transforms import (
@@ -139,6 +142,7 @@ __all__ = [
     # Core
     "StructureGraph", "SNode", "SEdge",
     "Material", "Fiber", "FiberNetwork", "Crosslink",
+    "FiberNetworkProfile", "FiberNetworkProjectionLimits", "FiberNetworkProjectionError",
     # Transforms
     "translate", "rotate", "mirror", "mirror_x", "mirror_y", "mirror_z",
     "scale", "compose",

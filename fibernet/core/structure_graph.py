@@ -878,8 +878,17 @@ class StructureGraph:
         radii = np.array([e.radius for e in self._edges.values()])
         return positions, edges, radii
 
-    def to_fiber_network(self):
-        """Convert to a FiberNetwork for legacy compatibility."""
+    def to_fiber_network(self, *, profile=None):
+        """Convert through the existing endpoint-chord compatibility bridge.
+
+        With no profile, return the unchanged legacy ``FiberNetwork``.
+        ``FiberNetworkProfile`` opts into bounded, explicit loss acceptance and
+        returns ``(FiberNetwork, detached_report)``. The report describes this
+        conversion only, not downstream mesh export or a lossless roundtrip.
+        """
+        if profile is not None:
+            from fibernet.core.fiber_network_profile import _checked_to_fiber_network
+            return _checked_to_fiber_network(self, profile)
         from fibernet.core.fiber import Fiber
         from fibernet.core.network import FiberNetwork, Crosslink
 
