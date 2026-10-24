@@ -53,7 +53,8 @@ def forecast_cg_fiber_only(prepared, runtime, limits=ResourceLimits(), *,
     is a caller planning budget, not a newly enforced export limit. CPU/time and
     actual RSS are unknown. A fitting forecast is neither execution permission nor
     runtime, physics or whole-workflow qualification. All existing caps/bytes stay
-    unchanged. record_state=False does not avoid current transient state creation.
+    unchanged. Raw parsed history remains retained; record_state=False avoids full
+    converted-state materialization. Memory estimates remain conservative.
     """
     if type(prepared) is not PreparedRun or type(limits) is not ResourceLimits:
         raise LAMMPSContractError('planning requires PreparedRun and ResourceLimits')
@@ -113,7 +114,7 @@ def forecast_cg_fiber_only(prepared, runtime, limits=ResourceLimits(), *,
                                        counted_text_bytes=_PLANNING_TEXT_BYTES),
         integration_steps=prepared.steps, native_frames=frames, output_frames=frames,
         thermo_frames=frames, node_frames=n*frames, record_state=record_state,
-        transient_state_scope='full state is constructed even when record_state=False',
+        transient_state_scope='raw parsed history remains retained; record_state=False avoids full converted-state materialization; memory estimates remain conservative',
         prepared_bytes=prepared_bytes, metadata_base_bytes=metadata_base_bytes,
         metadata_forecast_bytes=metadata_forecast,
         native_type_pair_cutoff_payload_lower_bound_bytes=table,

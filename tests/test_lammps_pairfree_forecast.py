@@ -300,6 +300,9 @@ class TestPairFreeForecast(unittest.TestCase):
     def test_record_false_full_transient_accounting_and_unknowns(self):
         unrecorded = self.plan(self.small, record_state=False)
         recorded = self.plan(self.small, record_state=True)
+        self.assertEqual(unrecorded['transient_state_scope'],
+                         'raw parsed history remains retained; record_state=False avoids full converted-state materialization; memory estimates remain conservative')
+        self.assertEqual(recorded['transient_state_scope'], unrecorded['transient_state_scope'])
         self.assertFalse(unrecorded['record_state'])
         self.assertTrue(recorded['record_state'])
         self.assertEqual(unrecorded['planned_memory_bytes'], recorded['planned_memory_bytes'])
