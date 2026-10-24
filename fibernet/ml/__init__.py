@@ -115,6 +115,7 @@ def __getattr__(name):
         "FiberGNN": "fibernet.ml.gnn",
         "graph_from_structure": "fibernet.ml.gnn",
         "train_gnn": "fibernet.ml.gnn",
+        "predict_gnn": "fibernet.ml.gnn",
         # Generative
         "FiberVAE": "fibernet.ml.generative",
         "FiberCVAE": "fibernet.ml.generative",
