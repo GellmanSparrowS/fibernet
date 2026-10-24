@@ -170,3 +170,10 @@ function AST with deterministic protocol doubles. They check non-monotonic losse
 independent state copies, ties, no/invalid validation, zero epochs, errors and default
 return compatibility without importing a learning backend or fitting a model. They
 do not establish Torch integration or predictive accuracy.
+
+## Checked prediction
+
+The additive [checked prediction helper](gnn-checked-prediction-usage.md) accepts
+the existing training_data record as input_contract and GraphBatch v1 inputs.
+It checks the declared raw XYZ+dimension compatibility fields without changing
+low-level forward or authenticating historical preprocessing/model provenance.
