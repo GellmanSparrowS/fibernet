@@ -24,6 +24,7 @@ tests/fixtures/spring_coefficient_provenance_v1/accelerated_delta.json -text
 # Reviewed optional facade sources and exact source snapshots retain Git bytes.
 fibernet/sim/__init__.py -text
 tests/fixtures/optional_facades_v2/*.txt -text
+tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json -text
 adapters/mcp/tests/fixtures/provenance_v1_outputs.json -text
 
 # The reviewed explicit stretch-ratio API fixture retains exact source bytes.

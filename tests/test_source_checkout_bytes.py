@@ -16,6 +16,7 @@ PROTECTED = (
     'fibernet/sim/thermoelastic.py',
     'fibernet/sim/_thermoelastic.py',
     'tests/fixtures/optional_facades_v2/sim_thermoelastic.py.txt',
+    'tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json',
     'tests/fixtures/optional_facades_v2/root.py.txt',
     'tests/fixtures/optional_facades_v2/sim.py.txt',
     'tests/fixtures/optional_facades_v2/sim_nodal_controls.py.txt',
