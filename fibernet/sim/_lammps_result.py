@@ -1,4 +1,4 @@
-"""Explicit CLI harmonic-bead adapter; no engine discovery or material inference."""
+"""Explicit CLI harmonic/CG adapter; no engine discovery or material inference."""
 import copy
 import hashlib
 import json
@@ -38,26 +38,82 @@ def _network_schedule(value, steps):
 
 
 def source_capabilities():
-    """Descriptive source support only, never installed/runtime/physics readiness."""
+    """Detached source declarations for this bounded dispatcher, not readiness.
+
+    The legacy ``profile`` label names only the harmonic route. ``models``
+    describes both routes; schedules distinguish native observations from
+    exported states. No native runtime is discovered, admitted or executed.
+    """
+    from fibernet.integrations import _lammps_cg as cg
+
+    harmonic = (_profiles.PROFILE, _profiles.SAMPLED_PROFILE,
+                _profiles.FULL_HISTORY_PROFILE)
+    every_step = {
+        'native_observations': 'every integration step',
+        'exported_states': 'every integration step when record_state=True',
+        'geometry_validation': 'observed integration-step states only; no continuous-time guarantee',
+    }
+    observations = {'harmonic_unprofiled': dict(every_step),
+                    'cg_unprofiled': dict(every_step)}
+    observations.update({p['name']: dict(every_step) for p in harmonic})
+    observations[_profiles.SAMPLED_NAME]['exported_states'] = (
+        'output_stride-selected states when record_state=True; native observations remain every step')
+    for name in _network.NAMES:
+        observations[name] = {
+            'native_observations': 'sample_every dump stride and thermo_every thermo stride',
+            'exported_states': 'dump-sampled states when record_state=True',
+            'geometry_validation': _network.SCOPE,
+        }
     return {'backend': 'lammps', 'profile': 'explicit-harmonic-beads',
+            'profile_scope': 'legacy harmonic label only; see models for both routes',
+            'source_support': 'implemented bounded input and result contracts; not runtime or physics qualification',
             'dimension': 3, 'execution': 'owned CLI child',
             'runtime_modes': ['cli', 'cli_serial_static'],
             'runtime_readiness': 'unknown', 'physics_qualification': 'not_established_by_dispatch',
-            'constraints': ['straight nonparallel edges', 'nonperiodic box',
-                            'whole-node fixity', 'constant nodal loads',
+            'constraints': ['straight edges; no duplicate endpoint edges or flattening of internal points',
+                            'nonperiodic box', 'whole-node fixity',
                             'explicit SI masses and bond coefficients',
-                            'bounded domain; every integration step retained'],
+                            'bounded domain; observation scope depends on model and profile'],
+            'models': {
+                'explicit-synthetic-or-coarse-grained-beads': {
+                    'request': 'explicit harmonic keyword arguments',
+                    'state_schema': SCHEMA,
+                    'profiles': [p['name'] for p in harmonic],
+                    'unprofiled': True,
+                    'loads': 'constant nodal loads supported',
+                    'observation_key_without_profile': 'harmonic_unprofiled',
+                },
+                cg.MODEL: {
+                    'request': 'cg_request=CGRequest(...)',
+                    'state_schema': CG_SCHEMA,
+                    'profiles': list(_network.NAMES),
+                    'unprofiled': True,
+                    'loads': 'constant nodal loads unsupported',
+                    'geometry': 'explicit cosine-angle triplets on straight graph edges; bent and branched strands allowed',
+                    'fiber_only': 'projectile_node_id=None requires empty pairs, no pair encoding and no network profile',
+                    'observation_key_without_profile': 'cg_unprofiled',
+                    'contract_capabilities': copy.deepcopy(cg.source_capabilities()),
+                },
+            },
             'harmonic_profiles': {
                 p['name']: {key: p[key] for key in ('max_nodes','max_edges',
                     'steps','max_steps','sample_every','output_stride','frames',
                     'max_output_frames','max_mass_types','max_loaded_nodes') if key in p}
-                for p in (_profiles.PROFILE, _profiles.SAMPLED_PROFILE,
-                          _profiles.FULL_HISTORY_PROFILE)},
+                for p in harmonic},
+            'cg_profiles': {p['name']: copy.deepcopy(dict(p))
+                            for p in (_network.PROFILE, _network.MIXED_PROFILE)},
+            'observations': observations,
+            'record_state': 'False omits dynamics_state and retained trajectory; final SimResult fields remain; True retains states under the selected observation schedule',
             'dependency': 'explicit independently admitted RuntimeSpec',
             'cancellation': 'hard child cancellation via direct LAMMPSTask',
+            'unsupported_scope': 'this bounded dispatcher, not legacy integrations',
             'unsupported': ['material calibration', 'material stress', 'general reactions',
-                            'work ledger', 'linked Python engine']}
+                            'work ledger', 'linked Python engine',
+                            'continuous fiber contact', 'impenetrability']}
 
+
+# Public lazy export; keep one implementation and the existing accessor.
+lammps_source_capabilities = source_capabilities
 
 def _real_array(value, name, shape):
     from .accelerated import _finite_real_array
