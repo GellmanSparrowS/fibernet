@@ -23,6 +23,8 @@ PROTECTED = (
     'adapters/mcp/tests/fixtures/provenance_v1_outputs.json',
     'fibernet/easy.py',
     'tests/fixtures/easy_rl_failure_v1/easy.py.txt',
+    'tests/fixtures/taichi_geometry_policy_v1/easy_delta.json',
+    'tests/fixtures/taichi_geometry_policy_v1/accelerated_delta.json',
     'fibernet/api.py',
     'tests/fixtures/public_api_contract_v2/fibernet/__init__.py.txt',
     'tests/fixtures/public_api_contract_v2/fibernet/easy.py.txt',

@@ -42,5 +42,8 @@ fibernet/sim/saved_temperature.py -text
 fibernet/sim/thermoelastic.py -text
 fibernet/sim/_thermoelastic.py -text
 
+# Reviewed geometry-policy deltas retain exact UTF-8 bytes.
+tests/fixtures/taichi_geometry_policy_v1/*.json -text
+
 # Exact native-core bindings cover every package Python source.
 fibernet/**/*.py -text

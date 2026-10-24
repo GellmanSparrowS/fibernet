@@ -39,7 +39,7 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 239
+assert len(manifest) == 240
 records = []
 lazy_rejection_checked = False
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
@@ -68,6 +68,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('sim/saved_temperature.py', None))
     cases.append(('sim/thermoelastic.py', None))
     cases.append(('sim/_thermoelastic.py', None))
+    cases.append(('sim/_taichi_geometry.py', None))
     cases.append(('sim/__init__.py', None))
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
     cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))

@@ -1,6 +1,7 @@
 """Pure export-contract checks; no native runtime or physics steps."""
 import json
 from pathlib import Path
+from types import SimpleNamespace
 import warnings
 
 import numpy as np
@@ -83,12 +84,13 @@ def test_actual_electrical_export_is_not_mechanical(tmp_path):
 
 @pytest.mark.parametrize('explicit', [False, True])
 def test_dynamics_legacy_damping_warns_only_when_explicit(explicit):
-    # Invalid observer stops before any runtime/graph work, after argument warning.
+    # Straight geometry preflight precedes the legacy warning and observer check.
+    graph = SimpleNamespace(edges={17: SimpleNamespace(internal_points=None)})
     kwargs = {'damping': .3} if explicit else {}
     with warnings.catch_warnings(record=True) as seen:
         warnings.simplefilter('always')
         with pytest.raises(TypeError, match='state_observer'):
-            m.TaichiEngine.dynamics(object(), None, state_observer=1, **kwargs)
+            m.TaichiEngine.dynamics(object(), graph, state_observer=1, **kwargs)
     assert len(seen) == int(explicit)
     if explicit:
         assert 'metadata-only' in str(seen[0].message)
@@ -96,6 +98,7 @@ def test_dynamics_legacy_damping_warns_only_when_explicit(explicit):
 
 @pytest.mark.parametrize('explicit', [False, True])
 def test_stretch_preserves_omission_and_active_defaults(monkeypatch, explicit):
+    graph = SimpleNamespace(edges={17: SimpleNamespace(internal_points=None)})
     captured = {}
     class Engine:
         def dynamics(self, graph, **kwargs):
@@ -106,10 +109,11 @@ def test_stretch_preserves_omission_and_active_defaults(monkeypatch, explicit):
     kwargs = {'damping': .6} if explicit else {}
     with warnings.catch_warnings(record=True) as seen:
         warnings.simplefilter('always')
-        value = m.TaichiEngine.stretch_test(Engine(), None, num_steps=1, **kwargs)
+        value = m.TaichiEngine.stretch_test(Engine(), graph, num_steps=1, **kwargs)
     assert value == (.6 if explicit else .3)
     assert len(seen) == int(explicit)
     assert 'dashpot' not in captured and 'drag' not in captured
+    assert captured['geometry_policy'] == 'reject_internal_points'
 
 
 def test_legacy_fem_unavailable_stretches_stay_empty(tmp_path):

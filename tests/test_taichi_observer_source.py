@@ -3,6 +3,7 @@ import ast,pathlib,time,json,types,sys,dataclasses,copy,warnings
 import numpy as np
 from _source_check_support import run_source_check
 from test_taichi_event_compat_source import restore_historical_save
+from geometry_policy.support import H as GEOMETRY_HELPERS
 
 def peak_rss_kib():
     try:
@@ -52,7 +53,7 @@ def run_checks():
     normalized_args.defaults[default_index]=copy.deepcopy(oldmethod.args.defaults[default_index])
     check('all other old positional arguments unchanged',[ast.dump(x) for x in oldmethod.args.args]==[ast.dump(x) for x in normalized_args.args]
           and [ast.dump(x) for x in oldmethod.args.defaults]==[ast.dump(x) for x in normalized_args.defaults])
-    check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer','initial_velocities_by_id','rest_lengths_by_id','material','reference_areas_by_id','max_abs_strain'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-6]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
+    check('keyword-only addition preserves prior ordering/defaults',[x.arg for x in newmethod.args.kwonlyargs]==[x.arg for x in oldmethod.args.kwonlyargs]+['state_observer','initial_velocities_by_id','rest_lengths_by_id','material','reference_areas_by_id','max_abs_strain','geometry_policy'] and [ast.dump(x) for x in newmethod.args.kw_defaults[:-7]]==[ast.dump(x) for x in oldmethod.args.kw_defaults])
     class Result:
      def __init__(self,**kwargs):self.__dict__.update(kwargs)
      def compute_detailed(self,*a,**k):pass
@@ -66,7 +67,7 @@ def run_checks():
     def load(txt,label):
      tree=parse(txt);wanted={'_legacy_damping','_native_axial_event_dataclass','_finite_real_array','_strict_state_ids','_state_units','_validated_fixed_rows','_resolve_nodal_masses','_normalize_spring_stiffness','NativeAxialObserverEvent','_emit_axial_observation','_spring_coefficient_record','_spring_provenance','_populate_spring_result'}
      nodes=[n for n in tree.body if getattr(n,'name',None) in wanted or (isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in ('_DAMPING_UNSET','_SPRING_PROVENANCE') for t in n.targets))];method=next(n for n in next(n for n in tree.body if getattr(n,'name',None)=='TaichiEngine').body if isinstance(n,ast.FunctionDef) and n.name=='dynamics');nodes.append(method)
-     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(warnings=warnings,_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
+     mod=types.ModuleType(label);sys.modules[label]=mod;ns=mod.__dict__;ns.update(GEOMETRY_HELPERS);ns.update(warnings=warnings,_material_options=lambda f:f,sys=sys,np=np,time=time,os=__import__('os'),dataclass=dataclasses.dataclass,field=dataclasses.field,Optional=__import__('typing').Optional,SimResult=Result,TaichiEngine=types.SimpleNamespace(_field_cache={}),_check_taichi_owner=lambda:None,_ensure_taichi=lambda*a:None,_prepare_displacement_schedule=lambda*a:{},_validate_dynamics_state=lambda s,*a:s,_checked_kinetic_energy=lambda m,v:float(.5*np.sum(m[:,None]*v*v)))
      compiled=ast.Module(body=[ast.ImportFrom(module='__future__',names=[ast.alias(name='annotations')],level=0)]+nodes,type_ignores=[]);exec(compile(ast.fix_missing_locations(compiled),'<AST-isolated actual orchestration>','exec'),ns);return ns
     
     BN=load(BASE,'baseline_isolated');CN=load(NEW,'candidate_isolated')
@@ -88,7 +89,7 @@ def run_checks():
       fields['ti_vel'].a=np.zeros_like(x);fields['ti_vel'].a[1,2]=count['steps']*.1
      fields['substep']=prescribed_mock_step
      ns['TaichiEngine']._field_cache={('mass-state-1',3,2,1):fields}
-     return types.SimpleNamespace(arch='cpu',num_threads=1),types.SimpleNamespace(num_nodes=2,edges={91:None}),fields,count
+     return types.SimpleNamespace(arch='cpu',num_threads=1),types.SimpleNamespace(num_nodes=2,edges={91:types.SimpleNamespace(internal_points=None)}),fields,count
     
     def run(ns,obs='absent',record=False,ids=(17,83),**extra):
      self,g,f,c=setup(ns,ids);kw=dict(num_steps=4,save_interval=2,dt=.125,dashpot=0.,drag=0.,record_state=record,state_units={'length':'m','time':'s','mass':'kg','frame':'world_xyz'})
@@ -108,7 +109,11 @@ def run_checks():
        schema='spring_coefficient_provenance/1',law='geometric_rest_axial/1',quantity_kind='force',
        simulation=dict(source='stiffness',representation='scalar',edge_count=1,availability='available',value=100000.),
        current_metrics={'source':'simulation'})
-      snapshot={**snapshot,'metadata':{k:v for k,v in r.metadata.items() if k!='spring_coefficient_provenance'}}
+      snapshot={**snapshot,'metadata':{k:v for k,v in snapshot['metadata'].items() if k!='spring_coefficient_provenance'}}
+     if 'taichi_geometry' in r.metadata:
+      assert r.metadata['taichi_geometry']==dict(schema='taichi_endpoint_chord/1',
+       policy='reject_internal_points',representation='endpoint_chord',ignored_internal_point_edge_ids=[])
+      snapshot={**snapshot,'metadata':{k:v for k,v in snapshot['metadata'].items() if k!='taichi_geometry'}}
      def norm(v):
       if isinstance(v,np.ndarray):return v.tolist()
       if isinstance(v,dict):return {k:norm(vv) for k,vv in v.items() if k!='time_seconds'}

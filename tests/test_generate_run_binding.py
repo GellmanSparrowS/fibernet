@@ -60,7 +60,8 @@ def test_real_radius_product_and_complete_resume(tmp_path,trace):
 @pytest.mark.parametrize('change',[{'box':(2,2)},{'stiffness':2e5},{'damping':.7},
  {'target_stretch':1.1},{'num_steps':3},{'radius_range':[.1,.2]},
  {'radius_range':[.2,.05]},{'seed':43},{'n_internal_range':[1]},
- {'grid_range':[(2,1)]},{'max_samples':1},{'units':['triangle']}])
+ {'grid_range':[(2,1)]},{'max_samples':1},{'units':['triangle']},
+ {'geometry_policy':'endpoint_chord'}])
 def test_changed_run_rejects_before_callbacks_and_writes(tmp_path,trace,change):
     run(tmp_path);trace.clear();before=snap(tmp_path)
     with pytest.raises(ValueError,match='binding mismatch'):run(tmp_path,**change)

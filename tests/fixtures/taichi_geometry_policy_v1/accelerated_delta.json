@@ -1,0 +1,37 @@
+{
+  "schema": "reviewed_taichi_geometry_source_delta/1",
+  "source": "fibernet/sim/accelerated.py",
+  "baseline_main": "30f29eb4c574a25b7d15b8540ad2d98b9cbcef36",
+  "base_sha256": "3c237a056d780a9e39876b3eaf979a425f2ae8c1f3435ab84201b3bea7ef3040",
+  "result_sha256": "12ea0357e026a6b4713e55bf4d19a786f318da00617cfb4645a95bf27d3846ba",
+  "hunks": [
+    {
+      "before": "\nfrom fibernet.core.structure_graph import StructureGraph\nfrom ._taichi_viscoelastic import material_options as _material_options\n\n\ndef _finite_real_array(value, name, shape=None):\n",
+      "after": "\nfrom fibernet.core.structure_graph import StructureGraph\nfrom ._taichi_viscoelastic import material_options as _material_options\nfrom ._taichi_geometry import preflight_taichi_geometry\n\n\ndef _finite_real_array(value, name, shape=None):\n"
+    },
+    {
+      "before": "        material=None,\n        reference_areas_by_id=None,\n        max_abs_strain=None,\n    ) -> SimResult:\n        \"\"\"Run mass-spring dynamics with dashpot damping and air drag.\n\n",
+      "after": "        material=None,\n        reference_areas_by_id=None,\n        max_abs_strain=None,\n        geometry_policy: str = \"reject_internal_points\",\n    ) -> SimResult:\n        \"\"\"Run mass-spring dynamics with dashpot damping and air drag.\n\n"
+    },
+    {
+      "before": "            carry stable IDs and declared units. Exceptions propagate and stop\n            the call. Ledger and nonempty schedules are initially unsupported.\n            None adds no snapshot exports and leaves sampling/results unchanged.\n        \"\"\"\n        damping = _legacy_damping(damping)\n        material_mode = material is not None\n        if material_mode:\n",
+      "after": "            carry stable IDs and declared units. Exceptions propagate and stop\n            the call. Ledger and nonempty schedules are initially unsupported.\n            None adds no snapshot exports and leaves sampling/results unchanged.\n        geometry_policy : str, keyword-only\n            \"reject_internal_points\" (default) rejects nonempty edge-owned\n            internal_points before owner/array work. Explicit \"endpoint_chord\"\n            ignores those points mechanically without mutating the graph.\n            Actual-node straight edges remain accepted; no curved mechanics\n            or mechanical equivalence is implied.\n        \"\"\"\n        geometry_record = preflight_taichi_geometry(\n            graph, geometry_policy=geometry_policy)\n        damping = _legacy_damping(damping)\n        material_mode = material is not None\n        if material_mode:\n"
+    },
+    {
+      "before": "                     for i, ms in enumerate(max_stretch_history)],\n            metadata={\"node_ids\": list(node_ids), \"edge_ids\": list(graph.edges),\n                      \"stiffness\": float(stiffness), \"damping\": float(damping),\n                      \"dt\": float(dt), \"num_steps\": int(num_steps)},\n        )\n        if material_mode:\n            result.metadata.pop('stiffness', None)\n",
+      "after": "                     for i, ms in enumerate(max_stretch_history)],\n            metadata={\"node_ids\": list(node_ids), \"edge_ids\": list(graph.edges),\n                      \"stiffness\": float(stiffness), \"damping\": float(damping),\n                      \"dt\": float(dt), \"num_steps\": int(num_steps),\n                      \"taichi_geometry\": geometry_record},\n        )\n        if material_mode:\n            result.metadata.pop('stiffness', None)\n"
+    },
+    {
+      "before": "        ramp_fraction: float = 0.2,\n        auto_steps: bool = True,\n        max_nodes: int = 20000,\n    ) -> SimResult:\n        \"\"\"Displacement-controlled uniaxial stretch with automatic step calculation.\n\n",
+      "after": "        ramp_fraction: float = 0.2,\n        auto_steps: bool = True,\n        max_nodes: int = 20000,\n        *,\n        geometry_policy: str = \"reject_internal_points\",\n    ) -> SimResult:\n        \"\"\"Displacement-controlled uniaxial stretch with automatic step calculation.\n\n"
+    },
+    {
+      "before": "            Fraction of total steps for ramp phase (default 0.2 = 20%)\n        auto_steps : bool\n            Auto-calculate steps based on graph diameter if num_steps is None\n\n        Returns\n        -------\n        SimResult\n            Result with deformed_positions and trajectory\n        \"\"\"\n        _check_taichi_owner()\n        if not np.isfinite(ramp_fraction) or not 0 <= ramp_fraction <= 1:\n            raise ValueError(\"ramp_fraction must be finite and between 0 and 1\")\n",
+      "after": "            Fraction of total steps for ramp phase (default 0.2 = 20%)\n        auto_steps : bool\n            Auto-calculate steps based on graph diameter if num_steps is None\n        geometry_policy : str, keyword-only\n            Strict default rejects nonempty edge-owned internal_points.\n            Explicit \"endpoint_chord\" ignores them mechanically without\n            changing the graph; this does not supply curved-fiber mechanics.\n\n        Returns\n        -------\n        SimResult\n            Result with deformed_positions and trajectory\n        \"\"\"\n        preflight_taichi_geometry(graph, geometry_policy=geometry_policy)\n        _check_taichi_owner()\n        if not np.isfinite(ramp_fraction) or not 0 <= ramp_fraction <= 1:\n            raise ValueError(\"ramp_fraction must be finite and between 0 and 1\")\n"
+    },
+    {
+      "before": "            num_steps=num_steps,\n            save_interval=save_interval,\n            max_nodes=max_nodes,\n        )\n\n    @staticmethod\n",
+      "after": "            num_steps=num_steps,\n            save_interval=save_interval,\n            max_nodes=max_nodes,\n            geometry_policy=geometry_policy,\n        )\n\n    @staticmethod\n"
+    }
+  ]
+}
