@@ -56,3 +56,7 @@ tests/fixtures/saved_electrothermal_v1/*.gz.b64 -text
 # The deformation preparation golden retains its pinned UTF-8 bytes.
 tests/fixtures/deformed_transport_preparation_v1/planar_golden.json -text
 tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt -text
+
+# This retained scientific witness is verified by its exact original SHA-256.
+# Preserve repository bytes even when a checkout uses core.autocrlf=true.
+/tests/fixtures/dynamic_viscoelastic_generalized_summary.json -text

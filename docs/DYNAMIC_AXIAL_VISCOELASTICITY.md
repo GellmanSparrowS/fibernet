@@ -52,6 +52,39 @@ Exceptions abort rather than return a shortened successful trajectory.
 Both summary and detailed `SimResult.save`/`load` retain and validate the full
 material record. Loading is not a restart certificate: this slice cannot resume
 material dynamics. An elastic stiffness override cannot overwrite material U.
+For every noninitial saved state, validation also checks its last physical-loss
+increment against the committed Maxwell branch stresses. It uses the producer
+order `q = E * (strain - viscous_strain)`, `S = sum(q**2 / E / tau)`,
+`d = dt * S`, then `d * (A0 * L0)`. The interval is one native `dt`, not the
+gap between saved samples. This is an algebraic read, never a material trial.
+
+The local binary64 allowance is
+`8 * ((b+1)*dt*V*ulp(S) + V*ulp(d) + ulp(max(expected, saved)))`, where `b`
+is the branch count and `V=A0*L0`. It covers different positive-sum reduction
+orders and the two subsequent products under round-to-nearest arithmetic with
+gradual underflow, assuming `b*2**-53 <= 1/16`. The budget and comparison use
+bit-decoded exact ratios of the finite binary64 values to avoid intermediate budget
+underflow or overflow. An empty or zero rate sum requires exactly zero loss;
+otherwise `ulp(0)` is the smallest subnormal, not a fixed Joule floor.
+Producer-permitted subnormal and underflow-to-zero results are retained;
+nonfinite producer intermediates and nonpositive/nonfinite reference volumes
+are rejected. This does not extend the separate stress/stored-energy check's
+numerical domain or change the producer's operation order.
+Subnormal operands or potentially underflowed intermediates require gradual
+underflow; if unavailable, validation reports an arithmetic-environment error
+rather than a record inconsistency or a silently accepted zero. Ordinary
+normal-valued arithmetic does not require this environment probe. Validation
+does not change the process floating-point mode. Because this schema records
+no producer floating-point mode, this is not a universal compatibility claim
+for historical extreme-valued records across hosts.
+
+The endpoint check does not certify cumulative physical loss, cumulative BE
+loss, cumulative endpoint work, or cumulative dynamic bookkeeping. Sparse
+saved endpoints cannot reconstruct the omitted intervals, and a branch with
+zero stress at every saved endpoint cannot authenticate its relaxation time
+through this check. No full-history authenticity or cumulative closure claim
+is implied.
+
 The backward-Euler identity separates physical material dissipation from
 constitutive discretization loss; signed integration/projection residuals are
 not mislabeled as either. This implementation uses host NumPy updates and
