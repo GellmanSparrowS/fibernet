@@ -12,6 +12,10 @@ Features (60 total):
 
 All features work for both 2D and 3D structures (3D features degrade
 gracefully for 2D inputs).
+
+Graph inputs must be simple and undirected. StructureGraph inputs with parallel
+physical edges are rejected because collapsing them changes fiber counts and
+total length. The existing FiberNetwork centerline conversion remains supported.
 """
 
 from typing import Dict, List, Optional
@@ -35,6 +39,11 @@ except ImportError:
 
 class GraphFeatureExtractor3D:
     """Extract 60-dimensional 3D-aware feature vector from structure graphs.
+
+    Accepts simple undirected ``networkx.Graph`` objects with ``pos`` node
+    attributes, or ``StructureGraph`` objects without parallel physical edges.
+    ``FiberNetwork`` inputs retain the existing centerline-segment conversion.
+    StructureGraph edges use straight endpoint chords in this feature schema.
     
     Parameters
     ----------
@@ -87,8 +96,15 @@ class GraphFeatureExtractor3D:
             raise ImportError("GraphFeatureExtractor3D requires networkx")
     
     def _to_nx(self, obj):
-        """Convert StructureGraph or FiberNetwork to NetworkX graph."""
+        """Convert supported inputs without silently collapsing physical edges."""
         if isinstance(obj, nx.Graph):
+            if obj.is_multigraph() or obj.is_directed():
+                raise ValueError(
+                    "The 60-feature GraphFeatureExtractor3D requires a simple "
+                    "undirected graph. MultiGraph and directed inputs are not "
+                    "supported; make any topology projection explicit before "
+                    "extracting this feature schema."
+                )
             return obj
         
         # StructureGraph
@@ -99,6 +115,15 @@ class GraphFeatureExtractor3D:
                 G.add_node(nid, pos=tuple(pos))
             for eid in obj.edges:
                 e = obj.edges[eid]
+                if G.has_edge(e.node_i, e.node_j):
+                    raise ValueError(
+                        "The 60-feature GraphFeatureExtractor3D cannot preserve "
+                        f"parallel physical edges between nodes {e.node_i} "
+                        f"and {e.node_j}. Use a feature set that preserves "
+                        "physical edge identity, or explicitly construct a "
+                        "simple NetworkX graph if a topology projection is "
+                        "intended."
+                    )
                 G.add_edge(e.node_i, e.node_j, radius=e.radius)
             return G
         except AttributeError:
@@ -562,7 +587,9 @@ class GraphFeatureExtractor3D:
         Parameters
         ----------
         obj : StructureGraph, FiberNetwork, or nx.Graph
-            The structure to analyze.
+            The structure to analyze. Graph inputs must be simple and undirected,
+            without parallel physical edges. StructureGraph edges use endpoint
+            chords; FiberNetwork inputs use the existing centerline segments.
             
         Returns
         -------

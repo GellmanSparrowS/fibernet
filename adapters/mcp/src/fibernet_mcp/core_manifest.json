@@ -14,7 +14,7 @@
   "analysis/_archived/topology.py": "b82df9c452b7e3dc2d0d0a9500e0e09e02ced736f62672b3a0e1388ffe132917",
   "analysis/geometry_paths.py": "7434237e5218153a3e3a248f9d734546920c6f6fcf2e681c1c7b80c07c2f6c6e",
   "analysis/graph_features.py": "f8b9ec2130bf8387cf8c57c7c7c33d0ec11d11d8952f8ab5753765d98040ade9",
-  "analysis/graph_features_3d.py": "429253afc1dd1cb7262af6727e0c23d8825dbb9774d7ffcb400fd73e5ded1321",
+  "analysis/graph_features_3d.py": "6230d4b9e107525725b14059563630f93317b2081aea74ac0bf35d6d8c7ed300",
   "analysis/snapshot_features.py": "6a72e6554588b3b4020f8ca3e0945150b7d2f52c1e97f4dd918c0d57ffda2946",
   "analysis/spectrum_metrics.py": "97fe6c808c1b25b9072bacbe799407f86a1e7171aee48c378e656b49084cbf73",
   "analysis/tensile_recruitment.py": "37cc417ea1928f3a19b11cc8eab9148b3ff592f761338b9f26be15dd92205c33",
