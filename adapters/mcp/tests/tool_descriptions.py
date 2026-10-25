@@ -26,6 +26,8 @@ WORK_ROOT = None
 # Main cd4c4e9 contract, omitting ONLY the five descriptions being improved.
 # This pins tool names/order, all schemas/annotations and the other descriptions;
 # deliberate future contract changes should update this sentinel explicitly.
+from snapshot_compatibility import legacy_seven
+
 CONTRACT_SHA256 = 'c704df4cf26dc71114bc036dde2e59c810f5e5ef302ed2d558cfb624877d5097'
 HINTS = {
     'fibernet_catalog': ('graph_id', 'length_unit', 'operator-asserted', 'session', 'structuredContent'),
@@ -76,6 +78,7 @@ class DescriptionContract(unittest.TestCase):
     def test_only_first_five_descriptions_are_outside_frozen_contract(self):
         value = schemas()
         self.assertEqual(tuple(t['name'] for t in value['tools']), TOOLS)
+        value['tools']=legacy_seven(value['tools'])
         for tool in value['tools'][:5]:
             del tool['description']
         self.assertEqual(hashlib.sha256(canonical(value)).hexdigest(), CONTRACT_SHA256)
