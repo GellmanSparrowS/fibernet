@@ -9,6 +9,7 @@ import importlib.abc
 import json
 import math
 from pathlib import Path
+import struct
 import sys
 
 import numpy as np
@@ -16,6 +17,17 @@ import pytest
 
 SAVED = Path(__file__).with_name('fixtures') / 'dynamic_viscoelastic_generalized_summary.json'
 SAVED_SHA256 = '359027655bd4c14212a8b83caaafcb2c1a7757dcf54667af2bf08de4f2785448'
+
+
+def _subnormal(units=1):
+    # Construct stored binary64 bits, not an arithmetic result: math.ulp,
+    # ldexp, or multiplication can flush these fixtures to zero on FTZ hosts.
+    return struct.unpack('>d', struct.pack('>Q', units))[0]
+
+
+@pytest.mark.parametrize('units', [1, 16, 128])
+def test_subnormal_fixtures_preserve_binary64_bits(units):
+    assert struct.pack('>d', _subnormal(units)) == struct.pack('>Q', units)
 
 
 @pytest.fixture
@@ -151,7 +163,7 @@ def test_zero_rate_requires_exact_zero(api, tiny_domain, q, needs_tiny):
         _check(api, q, increment=0.)
     message = 'inconsistent with committed endpoint' if tiny_domain else 'arithmetic unavailable'
     with pytest.raises(ValueError, match=message):
-        _check(api, q, increment=math.ulp(0.))
+        _check(api, q, increment=_subnormal())
 
 
 def test_normal_ulp_allowance_has_a_finite_boundary(api):
@@ -174,12 +186,12 @@ def test_positive_sum_reduction_allowance(api):
 
 def test_subnormal_final_loss_and_underflow_zero(api, tiny_domain):
     q = [math.ldexp(1., -500)]
-    _tiny_check(api, tiny_domain, q, dt=math.ldexp(1., -70), increment=math.ldexp(1., -1070))
+    _tiny_check(api, tiny_domain, q, dt=math.ldexp(1., -70), increment=_subnormal(16))
     _tiny_check(api, tiny_domain, q, dt=math.ldexp(1., -100), increment=0.)
-    _tiny_check(api, tiny_domain, [1.], volume=math.ulp(0.), increment=math.ulp(0.))
+    _tiny_check(api, tiny_domain, [1.], volume=_subnormal(), increment=_subnormal())
     message = 'inconsistent with committed endpoint' if tiny_domain else 'arithmetic unavailable'
     with pytest.raises(ValueError, match=message):
-        _check(api, q, dt=math.ldexp(1., -100), increment=128*math.ulp(0.))
+        _check(api, q, dt=math.ldexp(1., -100), increment=_subnormal(128))
 
 
 def test_subnormal_density_allowance_propagates_through_large_volume(api, tiny_domain):
@@ -252,7 +264,7 @@ def test_endpoint_requires_gradual_underflow(api, monkeypatch):
 
 
 @pytest.mark.parametrize('area,rest,needs_tiny', [
-    (math.ulp(0.), math.ldexp(1., -39), True),
+    (_subnormal(), math.ldexp(1., -39), True),
     (math.ldexp(1., 1023), 2., False),
 ])
 def test_record_reference_volume_product_must_be_finite_positive(api, tiny_domain, area, rest, needs_tiny):
