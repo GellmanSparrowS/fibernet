@@ -187,7 +187,14 @@ def parameter_study(
     Returns
     -------
     dict
-        Dictionary with 'params', 'results', 'errors'.
+        Existing keys retain their historical ordering: ``params`` contains all
+        successfully generated cases; ``results`` contains only successful
+        simulations; simulation ``errors[*]['index']`` indexes ``params``.
+        Join ``successful_params`` with ``results`` (not ``params``). Each
+        ``success_indices`` entry indexes ``params`` and selects the matching
+        successful result. ``generation_errors`` records rejected generations
+        with their original Cartesian-grid ``index``, parameter dictionary,
+        exception type and message; those indices do not index ``params``.
 
     Examples
     --------
@@ -220,14 +227,20 @@ def parameter_study(
     # Generate networks
     networks = []
     params_list = []
-    for combo in combinations:
+    generation_errors = []
+    for combination_index, combo in enumerate(combinations):
         params = dict(zip(param_names, combo))
         try:
             net = generator_func(**params)
             networks.append(net)
             params_list.append(params)
         except Exception as e:
-            # Skip failed generations
+            generation_errors.append({
+                'index': combination_index,
+                'params': params,
+                'error_type': type(e).__name__,
+                'error': str(e),
+            })
             continue
     
     # Run simulations
@@ -239,8 +252,13 @@ def parameter_study(
         show_progress=True,
     )
     
+    failed_indices = {error['index'] for error in batch_result.errors}
+    success_indices = [i for i in range(len(params_list)) if i not in failed_indices]
     return {
         'params': params_list,
         'results': batch_result.results,
         'errors': batch_result.errors,
+        'success_indices': success_indices,
+        'successful_params': [params_list[i] for i in success_indices],
+        'generation_errors': generation_errors,
     }

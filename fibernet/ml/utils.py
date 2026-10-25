@@ -50,18 +50,20 @@ def train_predictor(
     test_size : float
         Fraction for test set.
     random_state : int
-        Random seed.
+        Seed for the data split and stochastic estimator (SVR has no seed).
     feature_names : list of str, optional
         Feature names for interpretability.
     **model_kwargs
-        Extra keyword arguments passed to the model constructor.
+        Extra keyword arguments passed to the estimator constructor. Unknown
+        options raise TypeError. MLP accepts legacy hidden as an alias for
+        hidden_layer_sizes; supplying both is an error.
 
     Returns
     -------
     model : sklearn estimator
         Trained model.
     metrics : dict
-        Keys: r2, rmse, mae, test_size.
+        Keys: r2, rmse, mae, n_train, n_test.
 
     Examples
     --------
@@ -83,7 +85,7 @@ def train_predictor(
         X, y, test_size=test_size, random_state=random_state
     )
 
-    model = _build_model(model_type, **model_kwargs)
+    model = _build_model(model_type, **_seeded_model_kwargs(model_type, random_state, model_kwargs))
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
@@ -124,7 +126,7 @@ def cross_validate(
     cv : int
         Number of folds.
     random_state : int
-        Random seed.
+        Seed for the data split and stochastic estimator (SVR has no seed).
 
     Returns
     -------
@@ -145,7 +147,7 @@ def cross_validate(
     fold_rmses = []
 
     for train_idx, test_idx in kf.split(X):
-        model = _build_model(model_type, **model_kwargs)
+        model = _build_model(model_type, **_seeded_model_kwargs(model_type, random_state, model_kwargs))
         model.fit(X[train_idx], y[train_idx])
         y_pred = model.predict(X[test_idx])
         fold_r2s.append(r2_score(y[test_idx], y_pred))
@@ -174,7 +176,7 @@ def compare_models(
     Parameters
     ----------
     model_types : list of str, optional
-        Default: ["rf", "ridge", "gb", "svm"].
+        Default: ["rf", "ridge", "gb"].
 
     Returns
     -------
@@ -196,7 +198,7 @@ def compare_models(
     results = {}
     for mt in model_types:
         try:
-            model = _build_model(mt)
+            model = _build_model(mt, **_seeded_model_kwargs(mt, random_state, {}))
             model.fit(X_train, y_train)
             y_pred = model.predict(X_test)
             from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
@@ -597,6 +599,14 @@ def predict_from_csv(
 # Internal helpers
 # ======================================================================
 
+def _seeded_model_kwargs(model_type, random_state, model_kwargs):
+    """Use the public seed consistently without passing unsupported SVR options."""
+    params = dict(model_kwargs)
+    if model_type in ("rf", "gb", "ridge", "mlp"):
+        params["random_state"] = random_state
+    return params
+
+
 def _build_model(model_type: str, **kwargs):
     """Build a sklearn model by name."""
     from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
@@ -615,7 +625,7 @@ def _build_model(model_type: str, **kwargs):
     elif model_type == "ridge":
         return Pipeline([
             ("scaler", StandardScaler()),
-            ("ridge", Ridge(alpha=kwargs.get("alpha", 1.0)))
+            ("ridge", Ridge(**{"alpha": 1.0, **kwargs}))
         ])
     elif model_type == "gb":
         params = {**defaults["gb"], **kwargs}
@@ -624,18 +634,19 @@ def _build_model(model_type: str, **kwargs):
         from sklearn.svm import SVR
         return Pipeline([
             ("scaler", StandardScaler()),
-            ("svm", SVR(kernel=kwargs.get("kernel", "rbf"),
-                        C=kwargs.get("C", 1.0)))
+            ("svm", SVR(**{"kernel": "rbf", "C": 1.0, **kwargs}))
         ])
     elif model_type == "mlp":
         from sklearn.neural_network import MLPRegressor
+        if "hidden" in kwargs:
+            if "hidden_layer_sizes" in kwargs:
+                raise ValueError("Specify only one of hidden and hidden_layer_sizes")
+            kwargs["hidden_layer_sizes"] = kwargs.pop("hidden")
+        params = {"hidden_layer_sizes": (64, 32), "max_iter": 500,
+                  "random_state": 42, **kwargs}
         return Pipeline([
             ("scaler", StandardScaler()),
-            ("mlp", MLPRegressor(
-                hidden_layer_sizes=kwargs.get("hidden", (64, 32)),
-                max_iter=kwargs.get("max_iter", 500),
-                random_state=42
-            ))
+            ("mlp", MLPRegressor(**params))
         ])
     else:
         raise ValueError(f"Unknown model_type '{model_type}'. "
