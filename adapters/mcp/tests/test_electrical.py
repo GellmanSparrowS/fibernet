@@ -211,7 +211,7 @@ def test_real_sdk_near_cap_native_parity_and_invalid_inputs(tmp_path):
             async with stdio_client(parameters(manifest,output)) as (reader,writer):
                 async with ClientSession(reader,writer) as session:
                     assert (await session.initialize()).protocolVersion=='2025-11-25'
-                    tools=await session.list_tools();assert len(tools.tools)==6
+                    tools=await session.list_tools();assert len(tools.tools)==7
                     definition=next(t for t in tools.tools if t.name=='fibernet_solve_linear_transport')
                     assert definition.execution.taskSupport=='forbidden'
                     cap=await session.read_resource('fibernet://capabilities')
