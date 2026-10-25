@@ -423,6 +423,32 @@ def reviewed_archived_ge_facade(reverse=None):
     return source
 
 
+def reviewed_easy_show_source(reverse=None):
+    """Admit only the pinned show/import delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/easy_show_dimension_v1/easy_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'f7f619fb7982682a6a2998db83e909a0531f2ea7d48ac3e1c450dbd3f2bcb2c8', 'reviewed dimension-aware show source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_easy_show_source_delta/1'
+    assert delta['source'] == 'fibernet/easy.py'
+    assert delta['baseline_main'] == 'a39cc3b0806abe2978f3c7e6ad6ad87aff87c2d3'
+    base = reviewed_taichi_geometry_source('fibernet/easy.py')
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'dimension-aware show source delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'dimension-aware show source inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'dimension-aware show source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'dimension-aware show source delta result changed'
+    if reverse is not None:
+        assert source == base, 'dimension-aware show source inverse changed historical bytes'
+    return source
+
+
 # Byte-pinned deltas from the immutable public-main source chain. Historical
 # fixtures are retained verbatim; only these two exact candidate versions enter.
 TAICHI_GEOMETRY_SOURCE_PINS = {
@@ -486,7 +512,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative)), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -570,7 +596,7 @@ class StretchRatioSourceAdmission(unittest.TestCase):
         old = public_baseline('fibernet/easy.py').read_bytes()
         new = reviewed_easy_stretch_ratio_source()
         self.assertIn((ROOT/'fibernet/easy.py').read_bytes(),
-                      (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py')))
+                      (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py'), reviewed_easy_show_source()))
         self.assertNotEqual(old, new)
         require_public_source('fibernet/easy.py', old)
         require_public_source('fibernet/easy.py', new)
@@ -646,7 +672,7 @@ class RLFailureSourceAdmission(unittest.TestCase):
         stretch = reviewed_easy_stretch_ratio_source()
         failure = reviewed_easy_rl_failure_source()
         current = reviewed_taichi_geometry_source('fibernet/easy.py')
-        self.assertEqual((ROOT/'fibernet/easy.py').read_bytes(), current)
+        self.assertEqual(reviewed_easy_show_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()), current)
         require_public_source('fibernet/easy.py', current)
         self.assertEqual(len({old, stretch, failure}), 3)
         for raw in (old, stretch, failure):
@@ -703,7 +729,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
         for relative in TAICHI_GEOMETRY_SOURCE_PINS:
             with self.subTest(source=relative):
                 expected = (reviewed_saved_energy_diagnostics_source() if relative == 'fibernet/sim/accelerated.py'
-                            else reviewed_taichi_geometry_source(relative))
+                            else reviewed_easy_show_source())
                 self.assertEqual((ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
@@ -1167,6 +1193,29 @@ class SourceShape(unittest.TestCase):
             with patch.object(Path, 'read_bytes', changed_read):
                 with self.assertRaisesRegex(AssertionError, 'reviewed archived GE facade delta changed'):
                     reviewed_archived_ge_facade()
+
+    def test_dimension_aware_show_is_exact_and_reversible(self):
+        raw = reviewed_easy_show_source()
+        self.assertEqual(raw, (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_easy_show_source(reverse=raw),
+                         reviewed_taichi_geometry_source('fibernet/easy.py'))
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'graph.dimension == 3', b'graph.dimension == 2', 1),
+                        raw.replace(b'signature(renderer).bind', b'signature(renderer).bind_partial', 1),
+                        raw.replace(b'kwargs.setdefault("dpi", 150)', b'kwargs.setdefault("dpi", 10)', 1),
+                        raw.replace(b'def simulate(', b'def changed_simulate(', 1)):
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/easy.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_easy_show_source(reverse=changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/easy_show_dimension_v1/easy_delta.json'
+        def mutated(path):
+            raw = original(path)
+            return raw+b'\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', mutated):
+            with self.assertRaisesRegex(AssertionError, 'dimension-aware show source delta changed'):
+                reviewed_easy_show_source()
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))

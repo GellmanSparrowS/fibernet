@@ -9,6 +9,7 @@ import fibernet as fn
 from fibernet.core.material import Material
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.tiling import tile_2d, tile_3d, tile_with_transforms
+from fibernet.gen import pattern
 
 
 TILERS = [tile_2d, tile_3d, tile_with_transforms]
@@ -162,7 +163,14 @@ def test_cyclic_metadata_is_copied_without_being_used_as_identity_evidence():
 @pytest.mark.parametrize("unit,nodes,edges", [
     ("square", 9, 12), ("honeycomb", 18, 22), ("kagome", 25, 40),
 ])
-def test_regular_2d_lattice_counts_are_unchanged(unit, nodes, edges):
+def test_regular_2d_lattice_counts_are_unchanged(unit, nodes, edges, monkeypatch):
+    # APP callers can register different cells under these public names.
+    factories = {
+        "square": pattern._unit_square,
+        "honeycomb": pattern._unit_honeycomb,
+        "kagome": pattern._unit_kagome,
+    }
+    monkeypatch.setitem(pattern._UNIT_FACTORIES, unit, factories[unit])
     graph = fn.pattern_2d(unit=unit, box=(10, 10), grid=(2, 2), n_internal=4)
     assert (graph.num_nodes, graph.num_edges) == (nodes, edges)
 

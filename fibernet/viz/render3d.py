@@ -13,6 +13,20 @@ from typing import Optional, List, Tuple, Dict
 from fibernet.core.network import FiberNetwork
 
 
+def _require_pyvista():
+    """Load only on an explicit render call; do not mask broken installations."""
+    try:
+        import pyvista
+    except ModuleNotFoundError as exc:
+        if exc.name != "pyvista":
+            raise
+        raise ImportError(
+            "PyVista rendering requires the optional visualization dependency; "
+            "install it with: python -m pip install 'fibernet[viz]'"
+        ) from exc
+    return pyvista
+
+
 def render_network_3d(
     network: FiberNetwork,
     color_by: str = "uniform",
@@ -39,13 +53,9 @@ def render_network_3d(
     
     Returns
     -------
-    PyVista Plotter or None if PyVista not available.
+    PyVista Plotter. Missing PyVista raises an actionable ImportError.
     """
-    try:
-        import pyvista as pv
-    except ImportError:
-        print("PyVista not installed. Install with: pip install pyvista")
-        return None
+    pv = _require_pyvista()
     
     plotter = pv.Plotter(off_screen=off_screen, window_size=window_size)
     plotter.background_color = background
@@ -127,10 +137,7 @@ def render_deformation(
     off_screen: bool = True,
 ) -> Optional[object]:
     """Render deformed fiber network."""
-    try:
-        import pyvista as pv
-    except ImportError:
-        return None
+    pv = _require_pyvista()
     
     plotter = pv.Plotter(off_screen=off_screen)
     plotter.background_color = "white"
@@ -194,11 +201,7 @@ def render_structure_graph_3d(
     show_nodes : bool
         Render node junctions as spheres.
     """
-    try:
-        import pyvista as pv
-    except ImportError:
-        print("PyVista not installed. Install with: pip install pyvista")
-        return None
+    pv = _require_pyvista()
 
     from fibernet.viz.render import _align_result
     sim_result = _align_result(graph, sim_result, require_edges=color_by in ("stress", "stretch"))
