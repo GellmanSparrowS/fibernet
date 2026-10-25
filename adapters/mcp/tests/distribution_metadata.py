@@ -28,7 +28,7 @@ TOOLS = (
     'fibernet_artifact_info', 'fibernet_artifact_read',
     'fibernet_solve_linear_transport', 'fibernet_prepare_deformed_transport',
 )
-NATIVE_SOURCE_COUNT = 244
+NATIVE_SOURCE_COUNT = 245
 FORBIDDEN = frozenset((
     'fibernet', 'numpy', 'scipy', 'networkx', 'matplotlib', 'torch',
     'torch_geometric', 'taichi', 'lammps', 'exudyn', 'mujoco', 'pybullet',

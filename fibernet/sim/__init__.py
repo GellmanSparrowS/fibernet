@@ -8,6 +8,8 @@ Core backend:
 
 # Keep importing a simulation contract independent of unrelated native engines.
 _LAZY_EXPORTS = {
+    "import_archived_ge_state": "fibernet.sim.archived_ge",
+    "ArchivedGEProjection": "fibernet.sim.archived_ge",
     "lammps_source_capabilities": "fibernet.sim._lammps_result",
     "ThermoelasticSizeLimits": "fibernet.sim.thermoelastic",
     "ThermoelasticSnapshot": "fibernet.sim.thermoelastic",
