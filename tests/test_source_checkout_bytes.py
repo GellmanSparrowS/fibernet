@@ -9,6 +9,8 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
+    'tests/fixtures/saved_electrothermal_v1/axial_chain.json.gz.b64',
+    'tests/fixtures/saved_electrothermal_v1/planar_network.json.gz.b64',
     'fibernet/core/structure_graph.py',
     'fibernet/__init__.py',
     'fibernet/sim/__init__.py',
