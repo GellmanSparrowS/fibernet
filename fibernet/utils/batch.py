@@ -68,6 +68,12 @@ def batch_simulate(
         Whether to show progress (requires tqdm).
     raise_on_error : bool, optional
         Whether to raise exceptions immediately. Default False (collect errors).
+        On an exceptional parallel exit, queued calls are cancelled without
+        waiting for calls already running. Running calls cannot be forcibly
+        stopped and may still perform side effects; callers needing cooperative
+        cancellation must provide it in ``simulation_func``. Normal completion
+        (including collected task errors) waits for executor cleanup. Python may
+        still wait for running executor threads when the interpreter exits.
 
     Returns
     -------
@@ -101,32 +107,42 @@ def batch_simulate(
         # Note: ProcessPoolExecutor has issues with pickling custom objects
         executor = ThreadPoolExecutor(max_workers=max_workers)
         
-        futures = {executor.submit(simulation_func, net): i for i, net in enumerate(networks)}
-        
-        if show_progress:
-            try:
-                from tqdm import tqdm
-                future_iter = tqdm(as_completed(futures), total=len(futures), desc="Simulating")
-            except ImportError:
+        try:
+            futures = {executor.submit(simulation_func, net): i for i, net in enumerate(networks)}
+            
+            if show_progress:
+                try:
+                    from tqdm import tqdm
+                    future_iter = tqdm(as_completed(futures), total=len(futures), desc="Simulating")
+                except ImportError:
+                    future_iter = as_completed(futures)
+            else:
                 future_iter = as_completed(futures)
-        else:
-            future_iter = as_completed(futures)
-        
-        for future in future_iter:
-            idx = futures[future]
+            
+            for future in future_iter:
+                idx = futures[future]
+                try:
+                    result = future.result()
+                    results.append((idx, result))
+                except Exception as e:
+                    if raise_on_error:
+                        raise
+                    errors.append({
+                        'index': idx,
+                        'error': str(e),
+                        'traceback': traceback.format_exc(),
+                    })
+        except BaseException:
+            # Return promptly: running calls cannot be killed by a thread pool.
+            # Cancel queued work without letting a cleanup failure replace the
+            # original task/submission/progress exception (including interrupts).
             try:
-                result = future.result()
-                results.append((idx, result))
-            except Exception as e:
-                if raise_on_error:
-                    raise
-                errors.append({
-                    'index': idx,
-                    'error': str(e),
-                    'traceback': traceback.format_exc(),
-                })
-        
-        executor.shutdown()
+                executor.shutdown(wait=False, cancel_futures=True)
+            except BaseException:
+                pass
+            raise
+        else:
+            executor.shutdown()
     else:
         # Sequential execution
         iterator = enumerate(networks)

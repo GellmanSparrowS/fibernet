@@ -221,7 +221,7 @@
   "trimesh_integration.py": "f2cb16d776e1c4e62cf733af8b9a9e4004112a1ed9e2b1a3a0e2fc632a750997",
   "units.py": "5d7facb9af710e6af8f380f553b70ba0c5fc3bbf34844845e492ffeb1501b963",
   "utils/__init__.py": "400da359031c05684cae18696b0a9528da7b9905a98d87a03b23356584d79512",
-  "utils/batch.py": "150bc4a219c7f869c161b1302dac45210af75cdbaac84ddffaf1f96129f212dc",
+  "utils/batch.py": "9a6be050b8cfcae8dd010fe07158fe8783667a63d5dc4639e1b98be168d25538",
   "utils/config.py": "be7a58e42cf944cfcf10867c178267b267e0a8d4dbff784ecb33ecb801dd1da5",
   "utils/ensemble.py": "6b4a01535a006f90d5e07a0e924f240844c966cfc9e8a4a6fa6b608466875103",
   "utils/exceptions.py": "5647543d7934e00149a864d8348be4d523d8a34f4bee259330916cfa7c07fa0e",
