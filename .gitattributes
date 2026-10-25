@@ -62,3 +62,4 @@ tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt -te
 /tests/fixtures/dynamic_viscoelastic_generalized_summary.json -text
 tests/fixtures/optional_facades_v2/sim_archived_ge_delta.json -text
 tests/fixtures/easy_show_dimension_v1/easy_delta.json -text
+tests/fixtures/native_io_dispatch_v1/api_delta.json -text

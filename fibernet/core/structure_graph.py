@@ -887,7 +887,7 @@ class StructureGraph:
         radii : (M,) float64
         """
         if not self._nodes:
-            return np.empty((0, 3)), np.empty((0, 2), dtype=int), np.empty((0,))
+            return np.empty((0, 3)), np.empty((0, 2), dtype=np.int32), np.empty((0,))
         id_list = sorted(self._nodes.keys())
         id_to_idx = {nid: idx for idx, nid in enumerate(id_list)}
         positions = np.array([self._nodes[nid].position for nid in id_list])
@@ -1102,9 +1102,15 @@ class StructureGraph:
         return g
 
     def save_json(self, path: str):
-        """Save graph to a JSON file."""
+        """Save graph JSON, preserving an existing file if serialization fails.
+
+        Serialization completes before opening the destination. Parent directories
+        are not created. This protects against serialization errors, not partial
+        filesystem writes or interruption after the destination has been opened.
+        """
+        payload = json.dumps(self.to_dict(), indent=2)
         with open(path, "w") as f:
-            json.dump(self.to_dict(), f, indent=2)
+            f.write(payload)
 
     @classmethod
     def load_json(cls, path: str) -> "StructureGraph":

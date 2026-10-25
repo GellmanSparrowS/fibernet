@@ -1938,6 +1938,8 @@ def pattern_2d(
     -------
     StructureGraph
     """
+    if not isinstance(boundary_mode, str) or boundary_mode not in ("none", "extend", "error"):
+        raise ValueError("boundary_mode must be 'none', 'extend', or 'error'")
     if unit is None and points is None:
         raise ValueError("Must specify either 'unit' or 'points'")
     if unit is not None and points is not None:

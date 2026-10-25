@@ -14,12 +14,14 @@ Quick Start
 For current simulations, prepare a StructureGraph and use ``fibernet.simulate``.
 """
 
+import json as _json
 import numpy as np
 from typing import Optional, Dict, List, Union, Tuple, Callable, Any
 from pathlib import Path
 from dataclasses import dataclass, field
 
 from fibernet.core.network import FiberNetwork
+from fibernet.core.structure_graph import StructureGraph as _StructureGraph
 from fibernet.core.fiber import Fiber
 from fibernet.core.material import Material
 from fibernet import gen
@@ -694,17 +696,20 @@ def analyze(network: FiberNetwork) -> Dict:
 
 
 def export(
-    network: FiberNetwork,
+    network: Union[FiberNetwork, _StructureGraph],
     filename: str,
     format: str = None,
     **kwargs,
 ) -> str:
-    """Export network to file.
-    
+    """Export a native network or graph without implicit representation conversion.
+
+    StructureGraph supports JSON here; use its explicit interoperability methods
+    for other formats. Unknown extensions require an explicit supported format.
+
     Parameters
     ----------
-    network : FiberNetwork
-        Fiber network.
+    network : FiberNetwork or StructureGraph
+        Native representation to save.
     filename : str
         Output filename.
     format : str, optional
@@ -723,8 +728,17 @@ def export(
             '.pdb': 'pdb',
             '.msh': 'gmsh',
         }
-        format = format_map.get(ext, 'json')
-    
+        if ext not in format_map:
+            raise ValueError(f"Cannot infer export format from extension {ext!r}; "
+                             "use a supported extension or specify format explicitly")
+        format = format_map[ext]
+
+    if not isinstance(network, (FiberNetwork, _StructureGraph)):
+        raise TypeError("export requires FiberNetwork or StructureGraph")
+    if isinstance(network, _StructureGraph) and format != 'json':
+        raise ValueError("StructureGraph supports only JSON in fibernet.api.export; "
+                         "use an explicit StructureGraph interoperability exporter")
+
     if format == 'json':
         network.save_json(filename)
     elif format == 'lammps':
@@ -751,8 +765,15 @@ def export(
     return filename
 
 
-def load(filename: str, format: str = None) -> FiberNetwork:
-    """Load network from file.
+def load(filename: str, format: str = None) -> Union[FiberNetwork, _StructureGraph]:
+    """Load a native representation without silently discarding graph data.
+
+    JSON dispatch preserves StructureGraph nodes/edges or legacy FiberNetwork
+    fibers/crosslinks. Mixed or unknown representation shapes are rejected;
+    version handling follows each native reader. Additional legacy header fields
+    remain tolerated by those readers; this dispatch is not schema certification.
+    LAMMPS and PDB readers return FiberNetwork. Unknown extensions require an
+    explicit supported format.
     
     Parameters
     ----------
@@ -769,10 +790,30 @@ def load(filename: str, format: str = None) -> FiberNetwork:
             '.data': 'lammps',
             '.pdb': 'pdb',
         }
-        format = format_map.get(ext, 'json')
-    
+        if ext not in format_map:
+            raise ValueError(f"Cannot infer load format from extension {ext!r}; "
+                             "use a supported extension or specify format explicitly")
+        format = format_map[ext]
+
     if format == 'json':
-        return FiberNetwork.load_json(filename)
+        with open(filename) as stream:
+            data = _json.load(stream)
+        if not isinstance(data, dict):
+            raise ValueError("native JSON must be a StructureGraph or FiberNetwork object")
+        graph_fields = {'nodes', 'edges'} & data.keys()
+        network_fields = {'fibers', 'crosslinks'} & data.keys()
+        if graph_fields and network_fields:
+            raise ValueError("ambiguous JSON mixes StructureGraph and FiberNetwork fields")
+        if graph_fields:
+            if not all(isinstance(data.get(key), list) for key in ('nodes', 'edges')):
+                raise ValueError("StructureGraph JSON requires nodes and edges arrays")
+            return _StructureGraph.from_dict(data)
+        if network_fields:
+            if (not isinstance(data.get('fibers'), list)
+                    or not isinstance(data.get('crosslinks', []), list)):
+                raise ValueError("FiberNetwork JSON requires a fibers array and optional crosslinks array")
+            return FiberNetwork.from_dict(data)
+        raise ValueError("unrecognized native JSON: expected nodes/edges or fibers/crosslinks")
     elif format == 'lammps':
         from fibernet.io.lammps import from_lammps
         return from_lammps(filename)
