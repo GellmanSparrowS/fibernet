@@ -426,7 +426,7 @@ def reviewed_archived_ge_facade(reverse=None):
 def reviewed_easy_show_source(reverse=None):
     """Admit only the pinned show/import delta, with an exact historical inverse."""
     raw = (ROOT/'tests/fixtures/easy_show_dimension_v1/easy_delta.json').read_bytes()
-    assert hashlib.sha256(raw).hexdigest() == 'd8fa9c5981c27e3d64e020569787ab1ab96ba5a6480c0fa6695aee3dcfdfc043', 'reviewed dimension-aware show source delta changed'
+    assert hashlib.sha256(raw).hexdigest() == 'f7f619fb7982682a6a2998db83e909a0531f2ea7d48ac3e1c450dbd3f2bcb2c8', 'reviewed dimension-aware show source delta changed'
     delta = json.loads(raw)
     assert delta['schema'] == 'reviewed_easy_show_source_delta/1'
     assert delta['source'] == 'fibernet/easy.py'

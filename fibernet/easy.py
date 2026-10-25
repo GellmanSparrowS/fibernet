@@ -22,9 +22,10 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
-if TYPE_CHECKING:
+if _TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 import numpy as np
