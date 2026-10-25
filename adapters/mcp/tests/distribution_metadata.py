@@ -28,7 +28,7 @@ TOOLS = (
     'fibernet_artifact_info', 'fibernet_artifact_read',
     'fibernet_solve_linear_transport', 'fibernet_prepare_deformed_transport',
 )
-NATIVE_SOURCE_COUNT = 245
+NATIVE_SOURCE_COUNT = 246
 FORBIDDEN = frozenset((
     'fibernet', 'numpy', 'scipy', 'networkx', 'matplotlib', 'torch',
     'torch_geometric', 'taichi', 'lammps', 'exudyn', 'mujoco', 'pybullet',
@@ -89,6 +89,7 @@ def inspect_wheels(directory, adapter):
     expected_adapter = package_payload(source)
     manifest = json.loads((source / 'core_manifest.json').read_bytes())
     assert len(manifest) == NATIVE_SOURCE_COUNT
+    assert 'examples/linear_static_network.py' in manifest
     assert 'sim/deformed_transport.py' in manifest
     license_bytes = (adapter / 'LICENSE').read_bytes()
     adapter_wheels = list(directory.glob('fibernet_mcp-*.whl'))

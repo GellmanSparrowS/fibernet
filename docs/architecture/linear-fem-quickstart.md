@@ -102,3 +102,60 @@ residuals are small. A finished solve or successful reload certifies none of the
 See [row identity](raw-array-identity-migration.md),
 [force shapes](fem-force-shape-contract.md), and
 [diagnostic semantics](fem-linear-diagnostics-usage.md).
+
+## A representative 81-node static network
+
+From an installed development build, run:
+
+```bash
+python -m fibernet.examples.linear_static_network --output-dir static_network
+```
+
+From a checkout, the same implementation is also available as
+`python -m examples.linear_fem_quickstart --case network81 --output-dir static_network`.
+The default four-node example is unchanged. Both commands require a new output
+directory and run exactly two fixed load cases, F and 2F. Only the base NumPy,
+SciPy, NetworkX and Matplotlib dependencies are needed; no native provider or
+learning backend is selected.
+
+This synthetic case contains an 8×8 triangular cell array (81 nodes, 208 straight
+members) over 0.2 m × 0.2 m. Circular radii are 0.5 mm and the explicitly supplied
+Young's modulus is 1 GPa. All three planar DOFs of the nine left nodes are clamped.
+The nine right nodes receive nonuniform forces in N, with zero applied nodal
+moments. `case.json` records the exact recipe, units and checks. Graph material
+records match the explicit modulus; the solver does not infer it from metadata.
+
+The existing public `solve_thermoelastic_network_snapshot` API is used with
+uniform 300 K reference/current temperature and zero expansion coefficient, so
+thermal strain is zero. This is a linear welded Euler–Bernoulli frame with no
+numerical regularization or added geometric stiffness. It is not a buckling,
+mesh-convergence or experimental material validation.
+
+The example checks free-DOF residuals, global forces and moments (including
+support couples and force lever arms), small displacement/rotation, doubled
+response and fourfold energy. An independent analytic integral of linear axial
+strain and cubic Hermite curvature is compared with half the external work;
+it does not reuse the solver stiffness matrix. Failed checks raise rather than
+changing the parameters or retrying.
+
+Outputs include `graph.json`, `case.json`, both full `snapshot_F*.json` files,
+stable-ID nodal CSV, per-member energy JSON, `summary.json`, and A4 editable SVG/PNG under `figures/`.
+The graph is reloaded through `StructureGraph.load_json`; snapshot JSON is only
+checked for field readback equality, not accepted as a native restart format.
+Failure leaves partial new output for inspection and best-effort `failure.json`,
+without deleting files or replacing the original exception.
+
+Redraw saved F fields into another **new** figure directory without generating
+or solving:
+
+```bash
+python -m fibernet.examples.linear_static_network --output-dir static_network \
+  --plot-only --figure-dir redrawn_figures
+```
+
+The upper panel colors true-scale geometry by displacement magnitude in µm.
+The lower panel explicitly magnifies displacement ×10,000 for visibility; it
+does not change the numerical result. Force arrows in both panels are schematic
+and located at the undeformed reference nodes. Missing or inconsistent saved
+fields fail rather than trigger another solve. Existing figure directories are
+refused, so repeat rendering cannot silently overwrite user files.
