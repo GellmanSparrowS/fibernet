@@ -570,6 +570,65 @@ def validate_result(result):
     return record
 
 
+def energy_diagnostics(result):
+    """Read existing records; never infer missing interval accounting bounds."""
+    if 'native_axial_viscoelastic' not in result.metadata:
+        raise ValueError('viscoelastic energy diagnostics require native axial viscoelastic results')
+    record = validate_result(result)
+    # Reuse only scalar arithmetic, NOT the memoryless ledger's closure gate.
+    # Exact differences of binary64 operands are integer multiples of the least
+    # subnormal, so a nonzero residual cannot disappear through underflow.
+    from ._energy_accounting import rational, nearest
+
+    initial = record['samples'][0]
+    initial_u = [rational(value) for value in initial['stored_energy_J']]
+    initial_k = rational(initial['kinetic_energy_J'])
+    per_edge, constitutive, dynamic, combined = [], [], [], []
+
+    def displayed(value):
+        try:
+            return nearest(value)
+        except ValueError as exc:
+            raise ValueError('viscoelastic energy diagnostic residual is outside finite binary64 range') from exc
+
+    for state in record['samples']:
+        cumulative = state['cumulative']
+        work = [rational(value) for value in cumulative['endpoint_work_J']]
+        residuals = [rational(u) - u0 + rational(p) + rational(b) - w
+                     for u, u0, p, b, w in zip(state['stored_energy_J'], initial_u,
+                         cumulative['physical_dissipation_J'],
+                         cumulative['be_numerical_dissipation_J'], work)]
+        channels = state['dynamic_cumulative']
+        balance = sum((-1 if key == 'projection_force_work_J' else 1) * rational(channels[key])
+                      for key in DYNAMIC_FIELDS)
+        c = sum(residuals)
+        d = rational(state['kinetic_energy_J']) - initial_k + sum(work) - balance
+        per_edge.append([displayed(value) for value in residuals])
+        constitutive.append(displayed(c))
+        dynamic.append(displayed(d))
+        combined.append(displayed(c + d))
+
+    return dict(
+        source_schema=record['schema'], units=dict(energy='J', time='s'),
+        steps=[state['step'] for state in record['samples']],
+        times_s=[state['time'] for state in record['samples']],
+        edge_ids=list(record['edge_ids']), initial_kinetic_energy_J=initial['kinetic_energy_J'],
+        constitutive_cumulative_residual_J_by_edge=per_edge,
+        constitutive_cumulative_residual_J=constitutive,
+        dynamic_bookkeeping_cumulative_residual_J=dynamic,
+        combined_cumulative_residual_J=combined,
+        coverage=dict(record_validation='passed', cumulative_consistency='not_certified',
+                      omitted_intervals='not_reconstructed'),
+        arithmetic='exact_stored_binary64_operands_then_one_nearest_binary64_rounding',
+        definitions=dict(
+            constitutive='(U-U0)+P+B-W; aggregate is sum over edges',
+            dynamic_bookkeeping='(K-K0)+sum(W)-(E+G+Q-H+R+S)',
+            combined='dynamic_bookkeeping+sum(constitutive), before display rounding',
+            dynamic_channels='E external force work; G numerical drag energy change; '
+                'Q projection kinetic energy change; H projection force work; '
+                'R kick drift residual; S old stress endpoint residual'))
+
+
 def source_capabilities():
     """Static capability declaration, never a runtime or accuracy certificate."""
     return dict(schema='native_axial_viscoelastic_capabilities/1',

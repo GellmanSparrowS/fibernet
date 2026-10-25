@@ -788,6 +788,18 @@ class SimResult:
 
         return self
 
+    def viscoelastic_energy_diagnostics(self) -> Dict:
+        """Inspect cumulative energy residuals at saved material endpoints.
+
+        Returns detached lists/dictionaries in joules, without simulation or
+        material advancement. Residuals are observations, not a cumulative
+        consistency certificate or a solver-accuracy test. Sparse samples do
+        not reconstruct omitted intervals. Only native axial viscoelastic v1
+        results are supported; the separate elastic ledger is not interpreted.
+        """
+        from ._taichi_viscoelastic import energy_diagnostics
+        return energy_diagnostics(self)
+
     def to_dict(self, detailed: bool = False) -> Dict:
         """Convert to dictionary for CSV/JSON export.
 

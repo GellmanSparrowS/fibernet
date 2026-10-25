@@ -426,6 +426,32 @@ def reviewed_taichi_geometry_source(relative):
     return source
 
 
+# One exact additive saved-result method; no generic method exclusion.
+SAVED_ENERGY_DIAGNOSTICS_METHOD = '    def viscoelastic_energy_diagnostics(self) -> Dict:\n        """Inspect cumulative energy residuals at saved material endpoints.\n\n        Returns detached lists/dictionaries in joules, without simulation or\n        material advancement. Residuals are observations, not a cumulative\n        consistency certificate or a solver-accuracy test. Sparse samples do\n        not reconstruct omitted intervals. Only native axial viscoelastic v1\n        results are supported; the separate elastic ledger is not interpreted.\n        """\n        from ._taichi_viscoelastic import energy_diagnostics\n        return energy_diagnostics(self)\n\n'
+
+
+def reviewed_saved_energy_diagnostics_source():
+    base = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
+    assert hashlib.sha256(base).hexdigest() == '12ea0357e026a6b4713e55bf4d19a786f318da00617cfb4645a95bf27d3846ba', 'saved diagnostics baseline changed'
+    anchor = b'    def to_dict(self, detailed: bool = False) -> Dict:\n'
+    assert base.count(anchor) == 1, 'saved diagnostics insertion is not unique'
+    result = base.replace(anchor, SAVED_ENERGY_DIAGNOSTICS_METHOD.encode('utf-8') + anchor, 1)
+    assert hashlib.sha256(result).hexdigest() == 'a5bdc54048c2012f4582c79e514b835c1967746276236d093b0d0ea353985e71', 'reviewed saved diagnostics source changed'
+    return result
+
+
+def remove_reviewed_saved_energy_diagnostics(result_node):
+    node = copy.deepcopy(result_node)
+    methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+               and n.name == 'viscoelastic_energy_diagnostics']
+    assert len(methods) <= 1, 'duplicate saved diagnostics method'
+    if methods:
+        expected = ast.parse('class SimResult:\n' + SAVED_ENERGY_DIAGNOSTICS_METHOD).body[0].body[0]
+        assert canonical_ast(methods[0]) == canonical_ast(expected), 'saved diagnostics method changed'
+        node.body.remove(methods[0])
+    return node
+
+
 def require_public_source(relative, raw):
     if relative == 'fibernet/__init__.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_facade(relative), reviewed_fiber_network_profile_facade()), 'public source bytes changed: '+relative
@@ -442,7 +468,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative)), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -487,7 +513,7 @@ def remove_public_lammps_branch(function, key):
 
 def restore_historical_save(result_node):
     """Validate the public result contract before comparing the old remainder."""
-    node=copy.deepcopy(result_node)
+    node=remove_reviewed_saved_energy_diagnostics(result_node)
     expected=ast.parse(public_baseline('fibernet/sim/accelerated.py').read_text(encoding='utf-8'))
     expected_result=next(n for n in expected.body if getattr(n,'name',None)=='SimResult')
     save=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='save')
@@ -650,7 +676,8 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
     def test_current_sources_match_only_the_exact_reviewed_deltas(self):
         for relative in TAICHI_GEOMETRY_SOURCE_PINS:
             with self.subTest(source=relative):
-                expected = reviewed_taichi_geometry_source(relative)
+                expected = (reviewed_saved_energy_diagnostics_source() if relative == 'fibernet/sim/accelerated.py'
+                            else reviewed_taichi_geometry_source(relative))
                 self.assertEqual((ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
@@ -750,6 +777,46 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
                 reviewed_taichi_geometry_source(relative)
 
 
+class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
+    def test_only_the_exact_additive_method_is_admitted(self):
+        prior = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
+        current = reviewed_saved_energy_diagnostics_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        require_public_source('fibernet/sim/accelerated.py', prior)
+        require_public_source('fibernet/sim/accelerated.py', current)
+        old, new = ast.parse(prior), ast.parse(current)
+        index = next(i for i, n in enumerate(new.body) if isinstance(n, ast.ClassDef) and n.name == 'SimResult')
+        new.body[index] = remove_reviewed_saved_energy_diagnostics(new.body[index])
+        self.assertEqual(canonical_ast(old), canonical_ast(new))
+
+    def test_changed_method_and_unrelated_source_are_refused(self):
+        raw = reviewed_saved_energy_diagnostics_source()
+        for before, after in ((b'viscoelastic_energy_diagnostics(self)', b'viscoelastic_energy_diagnostics(self, tolerance=1.)'),
+                              (b'from ._taichi_viscoelastic import energy_diagnostics', b'from ._taichi_viscoelastic import source_capabilities as energy_diagnostics'),
+                              (b'return energy_diagnostics(self)', b'return energy_diagnostics(None)')):
+            self.assertIn(before, raw)
+            changed = raw.replace(before, after, 1)
+            with self.subTest(mutation=before), self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', changed)
+            result = next(n for n in ast.parse(changed).body if isinstance(n, ast.ClassDef) and n.name == 'SimResult')
+            with self.subTest(normalization=before), self.assertRaises(AssertionError):
+                restore_historical_save(result)
+        for changed in (raw+b'\n# unreviewed\n', raw.replace(b'\n', b'\r\n')):
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', changed)
+
+    def test_duplicate_method_and_fixture_literal_tampering_are_refused(self):
+        result = next(n for n in ast.parse(reviewed_saved_energy_diagnostics_source()).body
+                      if isinstance(n, ast.ClassDef) and n.name == 'SimResult')
+        method = next(n for n in result.body if isinstance(n, ast.FunctionDef) and n.name == 'viscoelastic_energy_diagnostics')
+        result.body.append(copy.deepcopy(method))
+        with self.assertRaisesRegex(AssertionError, 'duplicate saved diagnostics'):
+            restore_historical_save(result)
+        with patch.dict(globals(), SAVED_ENERGY_DIAGNOSTICS_METHOD=SAVED_ENERGY_DIAGNOSTICS_METHOD+'    # unreviewed\n'):
+            with self.assertRaisesRegex(AssertionError, 'reviewed saved diagnostics source changed'):
+                reviewed_saved_energy_diagnostics_source()
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -768,7 +835,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_taichi_geometry_source('fibernet/sim/accelerated.py'), SOURCE.read_bytes())
+        self.assertEqual(reviewed_saved_energy_diagnostics_source(), SOURCE.read_bytes())
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -804,7 +871,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_taichi_geometry_source('fibernet/sim/accelerated.py'), SOURCE.read_bytes())
+        self.assertEqual(reviewed_saved_energy_diagnostics_source(), SOURCE.read_bytes())
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())
