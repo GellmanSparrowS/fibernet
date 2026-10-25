@@ -49,3 +49,6 @@ tests/fixtures/taichi_geometry_policy_v1/*.json -text
 
 # Exact native-core bindings cover every package Python source.
 fibernet/**/*.py -text
+
+# Bundled saved-electrothermal containers retain their exact encoded bytes.
+tests/fixtures/saved_electrothermal_v1/*.gz.b64 -text
