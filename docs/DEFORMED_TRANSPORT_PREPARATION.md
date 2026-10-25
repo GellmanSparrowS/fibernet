@@ -141,8 +141,13 @@ solver call. Prepare again if inputs or output geometry change.
 Focused tests exercise analytical sparse/reordered-ID series/parallel controls,
 units, translations, preservation/ownership, lookup identity, rejection behavior,
 and provider tripwires. A compact retained 25-node/56-edge fixture compares the
-actual public preparation to retained full graph/order hashes, edge lengths,
-conductances, and the prior electrical input identity. It does not rerun the
+actual public preparation to retained full graph/order hashes and an independent
+same-host frozen-law arithmetic reference. Historical lengths, conductances, and
+the prior electrical input identity are verified separately without changing
+their bytes. Both arithmetic records satisfy input-derived rational accuracy
+bounds; candidate values must additionally equal the host reference exactly.
+The current-host electrical input digest is not claimed to be the historical
+physical input digest across Python versions. It does not rerun the
 three retained electrical solves or any thermal/mechanical solver.
 The retained-output identity chain is pinned review → terminal hash → artifact
 manifest → preparation/deformed-output bytes.

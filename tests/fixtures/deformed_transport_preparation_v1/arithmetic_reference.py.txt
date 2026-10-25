@@ -1,0 +1,215 @@
+"""Independent, fixture-specific arithmetic reference; not a solver or API owner.
+
+Frozen law provenance: original preparation.py SHA256
+3e5c51be9521c6b9a28edf20c602c8963e403babf00d85765d50869dd6043cfc,
+raw_prepare lines 69-89. The host reference independently spells its math.dist,
+left-associated G * reference_length / derived_length, and unchanged override.
+
+The conservative accuracy envelope follows CPython v3.9.13's finite vector_norm
+operation order, including endpoint subtraction, not observed ULP differences.
+https://github.com/python/cpython/blob/v3.9.13/Modules/mathmodule.c
+Git blob: 1f16849a3e6f6ecf413f8d9ec6144692ccb463f9
+Raw source SHA256: 186ea6ad998705e4881d0a46170c0bf32c7f7f404f2def597acf5bf5e2d88336
+The interval is a fixture accuracy ceiling, not an emulation or assertion of a
+host's norm implementation. Binary64 nearest rounding and correctly rounded
+basic sqrt are explicit assumptions. No cross-host bitwise equality is promised.
+"""
+from decimal import Decimal, localcontext
+from fractions import Fraction as F
+import hashlib
+import json
+import math
+import struct
+import sys
+
+# Exact rational outward propagation. For round-to-nearest binary64,
+# |RN(x)-x| <= u*|x| for normal results, and <= 2**-1075 for underflow.
+# The sum of both terms is a conservative uniform bound; it is not fit to data.
+U=F(1,2**53);TINY=F(1,2**1075);MAX=F.from_float(sys.float_info.max)
+def scalar(x):
+    if isinstance(x,F):return x
+    return F.from_float(x) if isinstance(x,float) else F(x)
+def point(x):x=scalar(x);return (x,x)
+def rounded(interval):
+    lo,hi=interval;assert lo<=hi
+    if lo==hi==0:return interval
+    magnitude=max(abs(lo),abs(hi));assert magnitude<MAX
+    error=U*magnitude+TINY
+    return lo-error,hi+error
+def add(a,b,rounding=True):
+    out=(a[0]+b[0],a[1]+b[1]);return rounded(out) if rounding else out
+def sub(a,b,rounding=True):
+    out=(a[0]-b[1],a[1]-b[0]);return rounded(out) if rounding else out
+def mul(a,b,rounding=True):
+    values=[x*y for x in a for y in b];out=(min(values),max(values))
+    return rounded(out) if rounding else out
+def div(a,b,rounding=True):
+    assert b[0]>0 or b[1]<0
+    values=[x/y for x in a for y in b];out=(min(values),max(values))
+    return rounded(out) if rounding else out
+def absolute(a):
+    if a[0]>=0:return a
+    if a[1]<=0:return -a[1],-a[0]
+    return F(0),max(-a[0],a[1])
+def sqrt_rational_bounds(value,precision):
+    assert value>=0
+    if value==0:return point(0)
+    with localcontext() as context:
+        context.prec=precision
+        estimate=(Decimal(value.numerator)/Decimal(value.denominator)).sqrt()
+        quantum=Decimal(1).scaleb(estimate.adjusted()-precision+1)
+        lo=F(estimate-quantum);hi=F(estimate+quantum)
+    # Certificate uses exact rational squares, not Decimal agreement alone.
+    assert lo>=0 and lo*lo<=value<=hi*hi
+    return lo,hi
+def sqrt_interval(a,precision=100,rounding=True):
+    assert a[0]>=0
+    result=(sqrt_rational_bounds(a[0],precision)[0],sqrt_rational_bounds(a[1],precision)[1])
+    return rounded(result) if rounding else result
+def exact_chord(p,q,precision):
+    total=sum((scalar(x)-scalar(y))**2 for x,y in zip(p,q))
+    return sqrt_rational_bounds(total,precision)
+def interval_chord39(p,q):
+    # Include endpoint subtraction rounding, then bound the complete 3.9 path.
+    values=[absolute(sub(point(x),point(y))) for x,y in zip(p,q)]
+    largest=(max(v[0] for v in values),max(v[1] for v in values))
+    assert largest[0]>0
+    total=point(1);correction=point(0)
+    for value in values:
+        normalized=div(value,largest)
+        square=mul(normalized,normalized)
+        previous=total;total=add(total,square)
+        correction=add(correction,add(sub(previous,total),square))
+    accumulated=add(sub(total,point(1)),correction)
+    assert accumulated[0]>0
+    return mul(largest,sqrt_interval(accumulated))
+def law(g,old,new):return g if old==new else g*old/new
+def within(value,interval):return interval[0]<=scalar(value)<=interval[1]
+def ulps(a,b):
+    assert a>0 and b>0 and math.isfinite(a) and math.isfinite(b)
+    return abs(struct.unpack('>Q',struct.pack('>d',a))[0]-struct.unpack('>Q',struct.pack('>d',b))[0])
+def text_fraction(x):
+    with localcontext() as context:
+        context.prec=40
+        return str(Decimal(x.numerator)/Decimal(x.denominator))
+def digest_identity(record,positions,conductance,boundary):
+    node_ids=sorted(positions);edge_ids=[e['id'] for e in record['edges']]
+    identity=dict(node_ids=node_ids,edge_ids=edge_ids,
+        endpoints=[(e['node_i'],e['node_j']) for e in record['edges']],
+        conductance_S=[conductance[e] for e in edge_ids],prescribed_voltage_V=boundary,
+        coordinates=[positions[n] for n in node_ids],length_unit='m')
+    return hashlib.sha256(json.dumps(identity,sort_keys=True,allow_nan=False).encode()).hexdigest()
+
+def inputs(retained):
+    assert sys.float_info.radix == 2 and sys.float_info.mant_dig == 53
+    assert sys.float_info.rounds == 1
+    record = retained['source_graph_insertion_record']
+    assert retained['length_unit'] == 'm'
+    assert len(record['nodes']) == 25 and len(record['edges']) == 56
+    old = {n['id']: [float(x) for x in n['position']] for n in record['nodes']}
+    translations = {int(n): u for n, u in retained['translations_m_by_id'].items()}
+    new = {n: [p[0] + translations[n][0], p[1] + translations[n][1], p[2]]
+           for n, p in old.items()}
+    assert all(math.isfinite(x) for p in list(old.values()) + list(new.values()) for x in p)
+    assert len({p[2] for p in old.values()}) == len({p[2] for p in new.values()}) == 1
+    for edge in record['edges']:
+        for positions in (old, new):
+            values = [abs(x-y) for x, y in zip(positions[edge['node_i']], positions[edge['node_j']])]
+            largest = max(values)
+            assert sys.float_info.min < largest < sys.float_info.max
+            assert all(v == 0 or (sys.float_info.min < v and sys.float_info.min < v/largest <= 1)
+                       for v in values)
+    gs = {int(k): v for k, v in retained['reference_conductance_S'].items()}
+    assert all(type(g) is float and sys.float_info.min < g < sys.float_info.max for g in gs.values())
+    boundaries = sorted((int(k), v) for k, v in retained['prescribed_voltage_V_for_identity_only'].items())
+    return record, old, new, gs, boundaries
+
+
+def accuracy_envelopes(retained):
+    """Derive from sealed inputs BEFORE host/reference or candidate evaluation.
+
+    Every operation widens by 2**-53 * maxabs + 2**-1075. Sqrt endpoints
+    have exact rational square certificates; 100/160-digit agreement is an
+    additional stability check, not the proof. G covers both rounded product
+    and division. The original-G override is explicitly included as a separate
+    possible branch, without widening the non-override law bound to arbitrary G.
+    """
+    record, old, new, gs, _ = inputs(retained)
+    result = {}
+    for edge in record['edges']:
+        eid, a, b = edge['id'], edge['node_i'], edge['node_j']
+        old_bound = interval_chord39(old[a], old[b])
+        new_bound = interval_chord39(new[a], new[b])
+        old100, old160 = exact_chord(old[a], old[b], 100), exact_chord(old[a], old[b], 160)
+        new100, new160 = exact_chord(new[a], new[b], 100), exact_chord(new[a], new[b], 160)
+        for coarse, fine, bound in ((old100, old160, old_bound), (new100, new160, new_bound)):
+            assert coarse[0] <= fine[0] <= fine[1] <= coarse[1]
+            assert bound[0] <= fine[0] <= fine[1] <= bound[1]
+        product = mul(point(gs[eid]), old_bound)
+        result[eid] = dict(reference_lengths_m=old_bound, derived_lengths_m=new_bound,
+                           frozen_sigma_A_S_m=product, conductance_S=div(product, new_bound),
+                           override=point(gs[eid]),
+                           ideal_reference=old160, ideal_derived=new160,
+                           ideal_conductance=div(mul(point(gs[eid]), old160, False), new160, False))
+    return result
+
+
+def same_host_reference(retained):
+    """Independent original law, never reading candidate output or importing it."""
+    record, old, new, gs, boundaries = inputs(retained)
+    fields = {name: {} for name in ('reference_lengths_m', 'derived_lengths_m',
+                                    'frozen_sigma_A_S_m', 'conductance_S')}
+    for edge in record['edges']:
+        eid, a, b = edge['id'], edge['node_i'], edge['node_j']
+        reference_length = float(math.dist(old[a], old[b]))
+        derived_length = float(math.dist(new[a], new[b]))
+        product = gs[eid] * reference_length
+        conductance = gs[eid] if reference_length == derived_length else product / derived_length
+        for name, value in zip(fields, (reference_length, derived_length, product, conductance)):
+            assert type(value) is float and math.isfinite(value) and value > 0
+            fields[name][eid] = value
+    ids = sorted(old)
+    edge_ids = sorted(fields['conductance_S'])
+    edge_order = [edge['id'] for edge in record['edges']]
+    endpoints = {edge['id']: [edge['node_i'], edge['node_j']] for edge in record['edges']}
+    return dict(fields, node_ids=ids, edge_ids=edge_ids, node_order=list(old),
+                edge_order=edge_order, endpoints=[endpoints[eid] for eid in edge_ids],
+                positions=new, reference_conductance_S=gs,
+                current_host_electrical_input_sha256=digest_identity(record, new, fields['conductance_S'], boundaries))
+
+
+def accuracy_failure(eid, name, value, bound):
+    detail = dict(edge_id=eid, field=name, actual_hex=value.hex(),
+                  actual_decimal=repr(value), formula_low=text_fraction(bound[0]),
+                  formula_high=text_fraction(bound[1]),
+                  reason='outside input-derived rational accuracy envelope')
+    raise AssertionError(json.dumps(detail, sort_keys=True, separators=(',', ':')))
+
+
+def check_accuracy(fields, envelopes):
+    assert set(fields['conductance_S']) == set(envelopes)
+    for eid, bound in envelopes.items():
+        for name in ('reference_lengths_m', 'derived_lengths_m', 'frozen_sigma_A_S_m'):
+            if not within(fields[name][eid], bound[name]):
+                accuracy_failure(eid, name, fields[name][eid], bound[name])
+        old, new = fields['reference_lengths_m'][eid], fields['derived_lengths_m'][eid]
+        selected = bound['override'] if old == new else bound['conductance_S']
+        if not within(fields['conductance_S'][eid], selected):
+            accuracy_failure(eid, 'conductance_S', fields['conductance_S'][eid], selected)
+
+
+def check_historical_integrity(retained, envelopes):
+    """The saved physical input remains historical, not host adapted."""
+    record, _, new, gs, boundaries = inputs(retained)
+    expected = retained['expected']
+    fields = {name: {int(k): v for k, v in expected[name].items()}
+              for name in ('reference_lengths_m', 'derived_lengths_m', 'conductance_S')}
+    fields['frozen_sigma_A_S_m'] = {eid: gs[eid] * length
+                                    for eid, length in fields['reference_lengths_m'].items()}
+    for eid, g in fields['conductance_S'].items():
+        assert g.hex() == law(gs[eid], fields['reference_lengths_m'][eid],
+                              fields['derived_lengths_m'][eid]).hex()
+    check_accuracy(fields, envelopes)
+    digest = digest_identity(record, new, fields['conductance_S'], boundaries)
+    assert digest == expected['electrical_input_sha256'] == '4da200bbbada54901e02ada01c8fdb7a295dc24a5a6a56b5e5eb456afd3377ec'
+    return digest

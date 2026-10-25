@@ -190,7 +190,7 @@
   "sim/_energy_accounting.py": "12f0f769ec2839c4fa211df8750b7dd4259047a9ccbe7f7af57c8c09735d79a6",
   "sim/_exudyn_contract.py": "a2b98952f9d46726d4ddac8b1a4820acc945a46fb08da5f2b5862f9ff3a3f860",
   "sim/_exudyn_mapping.py": "d084168a3826b2a7503238d8f7b1300be58a6c8f59fce3adc96d64188da9d388",
-  "sim/_fem_archive.py": "210e679eb617f49514f46b260bf53478f9141cd84f64949a8cf8066eb55b099c",
+  "sim/_fem_archive.py": "ba459562e65589a90ba7f808a2bc3a1feb554ec6c13105b00644da62dfef3165",
   "sim/_frame_linear_common.py": "fb8d229b90532ddc61e863a7e2348ef7be0eedf53d496c24cf99602382ff844b",
   "sim/_lammps_result.py": "476710257ec6d395a2c909efd2db976c14a14dc49888fd07212bc11983c4cbe6",
   "sim/_roundoff.py": "f74489a7378a9952da0f31cb6ce8769f68bab16635c2021a4773e8ef90e791f7",

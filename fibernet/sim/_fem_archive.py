@@ -359,13 +359,20 @@ class BeamFEM:
         return forces, stresses, strains
 
     def _build_deformed_graph(self, u: np.ndarray, scale: float = 1.0) -> StructureGraph:
-        """Create a deformed StructureGraph with displaced node positions."""
+        """Create a visualization graph with displaced node positions.
+
+        Translated positions must be finite and representable by the graph's
+        spatial lookup. Rotations are ignored, and internal points retain the
+        legacy straight-line interpolation, including at zero display scale.
+        """
         g = self._graph.copy()
         for i, nid in enumerate(self._node_ids):
             dx = u[3 * i] * scale
             dy = u[3 * i + 1] * scale
-            g.nodes[nid].position[0] += dx
-            g.nodes[nid].position[1] += dy
+            position = g.nodes[nid].position.copy()
+            position[0] += dx
+            position[1] += dy
+            g.set_node_positions({nid: position})
 
             # Update internal points proportionally
             for eid, edge in g.edges.items():
