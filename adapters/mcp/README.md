@@ -1,6 +1,6 @@
 # FiberNet MCP adapter
 
-A separate optional Linux stdio adapter exposing six bounded native graph, electrical and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. It exposes no electrothermal or mechanical execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
+A separate optional Linux stdio adapter exposing seven bounded native graph, electrical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. It exposes no electrothermal or mechanical execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
 
 ## Install with the matching native core
 
@@ -38,12 +38,15 @@ This command speaks MCP over stdin/stdout; configure it as a local stdio server 
 
 Exact schemas: src/fibernet_mcp/tool_schemas.json. tools/list uses the same schemas with unreachable local definitions removed to fit the reply limit.
 
+The seventh tool, `fibernet_prepare_deformed_transport`, returns one immutable native geometry/conductance/binding bundle without running a solver. Its exact ID, unit, source-round-trip, limit and cancellation contract is documented in [Deformed transport preparation](DEFORMED_TRANSPORT.md). Existing electrical limits are unchanged.
+
 - fibernet_catalog: approved graph summaries and limits
 - fibernet_validate: valid/invalid serialization-and-topology report, not solver readiness
 - fibernet_analyze_topology: native scalar summary plus complete ID-aligned JSON artifact
 - fibernet_artifact_info: manifest only
 - fibernet_artifact_read: offset/length byte chunks, base64, maximum32768 bytes per chunk
 - fibernet_solve_linear_transport: the existing bounded steady-DC electrical tool; see [Electrical method and limits](ELECTRICAL.md)
+- fibernet_prepare_deformed_transport: native prepare-only geometry/conductance/binding bundle; see [Deformed transport preparation](DEFORMED_TRANSPORT.md)
 
 resources/read supports fibernet://capabilities, fibernet://provenance/1 and fibernet://artifacts/{artifact_id}; the latter returns a small manifest, not unbounded artifact contents. No other resource schemes are read. Complete data are reconstructed through chunks and verified against SHA256. structuredContent is authoritative; text content is a concise pointer rather than duplicating up to44KiB base64. Errors carry stable categories/codes and no raw exception/path/metadata. Unknown tool names and unknown resources use protocol errors. Validation may successfully report an invalid graph; analysis of it returns a domain error.
 
@@ -124,7 +127,7 @@ The standalone adapter wheel includes the repository MIT copyright and permissio
 ## Historical native-core compatibility notes
 
 The following notes describe earlier core additions and their five-tool adapter
-surface. The current six-tool surface is listed above. The saved-electrothermal
+surface. The current seven-tool surface is listed above. The saved-electrothermal
 bridge changes the native source binding, not the MCP tool surface; it adds no
 electrothermal or mechanical MCP execution tool.
 

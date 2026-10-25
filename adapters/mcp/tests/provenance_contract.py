@@ -69,14 +69,14 @@ def public(value):
 def server_namespace():
     s=NEW
     tree=ast.parse((SOURCE/'server.py').read_text())
-    names={'envelope','failure','_verified_worker_result','ManagedStore','Supervisor'}
+    names={'envelope','failure','_verified_worker_result','ArtifactStage','ArtifactLimitError','ManagedStore','Supervisor'}
     constants={'VERSION','TREE','MAX_SESSION','ID','PROVENANCE_URI'}
     body=[n for n in tree.body if isinstance(n,(ast.FunctionDef,ast.ClassDef)) and n.name in names
           or isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id in constants for t in n.targets)]
     ns={k:getattr(s,k) for k in ('ContractError','MAX_BYTES','canonical','graph_preflight','open_directory','read_at','read_file','sha','strict_json','write_at')}
     ns.update(os=os,sys=sys,Path=Path,re=re,json=json,time=time,uuid=uuid,contextlib=contextlib,
               importlib=SimpleNamespace(metadata=SimpleNamespace(version=lambda _: '1.29.0')),
-              base64=base64,anyio=SimpleNamespace(CancelScope=CancelScope,sleep=fake_sleep),
+              base64=base64,dataclass=dataclass,anyio=SimpleNamespace(CancelScope=CancelScope,sleep=fake_sleep),
               subprocess=SimpleNamespace(DEVNULL=-3),signal=SimpleNamespace(SIGTERM=15,SIGKILL=9),
               jsonschema=jsonschema,
               mt=SimpleNamespace(**{k:Model for k in ('Resource','Annotations','ResourceTemplate','ErrorData','CallToolResult','TextContent','Tool')}),
@@ -84,6 +84,10 @@ def server_namespace():
     ns['_verify_core_result']=NEW._verify_core_result
     ns['TransportContractError']=type('TransportContractError',(NEW.ContractError,),{})
     ns['MAX_TRANSPORT_RESULT_BYTES']=1024*1024
+    ns['PreparationContractError']=type('PreparationContractError',(NEW.ContractError,),{})
+    schema=json.loads((SOURCE/'tool_schemas.json').read_text())['tools'][0]['outputSchema']
+    limits=schema['oneOf'][0]['properties']['limits']['properties']['preparation']['properties']
+    ns['PREPARATION_LIMITS']={key:value['const'] for key,value in limits.items()}
     exec(compile(ast.Module(body=body,type_ignores=[]),'<extracted-server-source>','exec'),ns)
     serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
     # Extract callbacks, not serve() or SDK setup/transport. No actual server exists.
@@ -285,7 +289,24 @@ class ProvenanceContract(unittest.TestCase):
         current_outputs=json.loads(json.dumps(outputs))
         # The DC route is additive. Keep the frozen original five-tool fixture
         # immutable and prove exact legacy outputs after explicit extensions only.
-        self.assertEqual(len(outputs['tool_definitions']), 6)
+        self.assertEqual(len(outputs['tool_definitions']), 7)
+        preparation_tool=outputs['tool_definitions'].pop()
+        self.assertEqual(preparation_tool['name'], 'fibernet_prepare_deformed_transport')
+        for tool in outputs['tool_definitions']:
+            artifact=tool['outputSchema']['$defs'].get('Artifact')
+            if artifact:
+                self.assertEqual(artifact['properties']['kind']['enum'].pop(), 'deformed_transport_preparation')
+        catalog=outputs['tool_definitions'][0]['outputSchema']['oneOf'][0]['properties']
+        self.assertEqual(catalog['capabilities']['const'].pop(), 'prepare_deformed_transport')
+        preparation_schema=catalog['limits']['properties'].pop('preparation')
+        self.assertEqual({key:value['const'] for key,value in preparation_schema['properties'].items()}, server_namespace()['PREPARATION_LIMITS'])
+        catalog['limits']['required'].remove('preparation')
+        self.assertEqual(outputs['fibernet_catalog']['structuredContent']['capabilities'].pop(), 'prepare_deformed_transport')
+        self.assertEqual(outputs['fibernet_catalog']['structuredContent']['limits'].pop('preparation'), server_namespace()['PREPARATION_LIMITS'])
+        preparation_capabilities=json.loads(outputs['capabilities'][0]['content'])
+        self.assertEqual(preparation_capabilities.pop('preparation'), ['caller_prescribed_deformed_transport'])
+        self.assertEqual(preparation_capabilities.pop('preparation_limits'), server_namespace()['PREPARATION_LIMITS'])
+        outputs['capabilities'][0]['content']=NEW.canonical(preparation_capabilities).decode()
         new_tool=outputs['tool_definitions'].pop()
         self.assertEqual(new_tool['name'], 'fibernet_solve_linear_transport')
         for tool in outputs['tool_definitions']:
@@ -328,7 +349,7 @@ class ProvenanceContract(unittest.TestCase):
                     def wait(self): calls.append('reaped');return 0
                 def synthetic_popen(command,**kwargs):
                     calls.append('synthetic_popen')
-                    Path(command[5]).write_bytes(NEW.canonical(payload))
+                    Path(command[command.index('fibernet_mcp.worker')+3]).write_bytes(NEW.canonical(payload))
                     return FinishedProcess()
                 ns['subprocess'].Popen=synthetic_popen
                 ns['sup']=ns['Supervisor'](store)
@@ -534,7 +555,7 @@ class ProvenanceContract(unittest.TestCase):
                         return 0
 
                 def fake(command, **kw):
-                    Path(command[5]).write_bytes(NEW.canonical(p))
+                    Path(command[command.index('fibernet_mcp.worker')+3]).write_bytes(NEW.canonical(p))
                     calls.append('fake')
                     return Process()
                 ns['subprocess'].Popen = fake
