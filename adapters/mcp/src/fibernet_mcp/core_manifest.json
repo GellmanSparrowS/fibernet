@@ -38,6 +38,7 @@
   "easy.py": "fea8496a65d68b9ee706418b538a242fad22992fa41763beefb6f21df1736c85",
   "examples/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "examples/basic_usage.py": "953db401437d9f208d6c75b2daca4cb98fd7256a7c961bee20d85788d3512037",
+  "examples/linear_static_network.py": "fa7d5758e95b106f0e057507ef32c22151173420ae7b08b87080fceeedefba1d",
   "gen/__init__.py": "e897bdf50e6e9379675230d3204e24c49733fb0bb6670f3713b70804c3c6806c",
   "gen/_fixes.py": "a89b2f09209fe7e9cdeb69888b1fccb6b53f1baaf6ea71bd600f3a7a536176fe",
   "gen/_graph_builder.py": "0a5af3d7d2808f9f28d0253ee961e77d6c7d1557c912ef87cc861f60934b6d47",
