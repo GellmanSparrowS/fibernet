@@ -15,27 +15,24 @@ FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界�
 
 ## 快速开始
 
-### 安装 Python 库
+### 安装并运行源码入门示例
 
-**已发布版本：4.2.0**
-
-```bash
-python -m pip install fibernet==4.2.0
-```
-
-**开发版源码：4.3.0**
+**开发版源码：4.3.0——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
 cd fibernet
 python -m pip install -e .
+python -m examples.open_source_workflow --output-dir demo_output
 ```
 
-需要 Python 3.9 及以上版本。可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
+需要 Python 3.9 及以上版本和基础依赖，本例不需要 Torch 或 Taichi。运行成功后，终端会显示 **18 个节点、22 条边**，`demo_output/` 中会生成 `network.png`、`fem_result.json` 和 `summary.json`。流程会保存并重新读取 FEM 结果，再进行招募分析。[示例与输出](examples/open_source_workflow.py)
 
-### 开发版源码示例：生成、模拟、保存
+可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
 
-以下示例需要上方通过 `python -m pip install -e .` 安装的开发版源码。已发布的 PyPI 4.2.0 不支持这里的 `stretch_ratio` 参数。
+### Python 示例：生成、模拟、保存
+
+完成上方源码安装后，可在 Python 或 Notebook 中运行：
 
 ```python
 import fibernet as fn
@@ -56,13 +53,15 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` 指 1% 伸长；`nonlinear=False` 明确选择小变形线性梁 FEM。坐标和半径按米解释，`E=1e9` Pa，`nu=0.3` 无量纲，输出位移为米、力为牛顿；程序不自动换算单位，也不从图的材料记录读取模量。省略拉伸比仍使用兼容默认值 2.0，二维会进入未验证最终平衡的实验增量路径，不适合作为线性入门调用。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-在源码目录运行完整流程：
+### 已发布版本：4.2.0
+
+如果应用使用已发布的 API，可选择下面的安装方式，**无需再安装上方源码版**：
 
 ```bash
-python -m examples.open_source_workflow --output-dir demo_output
+python -m pip install fibernet==4.2.0
 ```
 
-[示例与输出](examples/open_source_workflow.py)
+请使用与版本对应的 [4.2.0 入门示例](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/PYPI_README.md#generate-simulate-save-and-analyze)。该版本的 FEM 示例使用 `strain=1.01`，上方源码示例使用 `stretch_ratio=1.01`。
 
 ## 1. 生成网络
 
@@ -135,27 +134,24 @@ FiberNet is a Python library for fiber-network modeling. FiberScope provides a d
 
 ## Quick start
 
-### Install the Python library
+### Install and run the source quick start
 
-**Published release: 4.2.0**
-
-```bash
-python -m pip install fibernet==4.2.0
-```
-
-**Development checkout: 4.3.0**
+**Development checkout: 4.3.0 — recommended for this page**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
 cd fibernet
 python -m pip install -e .
+python -m examples.open_source_workflow --output-dir demo_output
 ```
 
-Python 3.9+. Optional extras include `.[ml]` and `.[manufacturing]`.
+Python 3.9+ and the base dependencies are sufficient; this example needs no Torch or Taichi. On success, the terminal reports **18 nodes, 22 edges**, and `demo_output/` contains `network.png`, `fem_result.json`, and `summary.json`. The workflow saves and reloads the FEM result before analyzing recruitment. [Example and outputs](examples/open_source_workflow.py)
 
-### Development-checkout example: generate, simulate, and save
+Optional extras include `.[ml]` and `.[manufacturing]`.
 
-Use the development checkout installed with `python -m pip install -e .` above for this example. The published PyPI 4.2.0 API does not accept the `stretch_ratio` keyword.
+### Python example: generate, simulate, and save
+
+After the same source installation, use this example in Python or a notebook:
 
 ```python
 import fibernet as fn
@@ -176,13 +172,15 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` means 1% extension; `nonlinear=False` explicitly selects small-deformation linear beam FEM. Coordinates and radii are in m, `E=1e9` is in Pa, and `nu=0.3` is dimensionless; displacements are in m and forces in N. Units are not converted automatically, and graph material records do not supply the modulus. Omitting the ratio retains the legacy default 2.0, which selects an experimental 2-D incremental path with unverified final equilibrium, not the linear introductory example. [FEM contract](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-Complete workflow, from the checkout:
+### Published release: 4.2.0
+
+For an application that uses the published API, install this version **instead of** the source checkout:
 
 ```bash
-python -m examples.open_source_workflow --output-dir demo_output
+python -m pip install fibernet==4.2.0
 ```
 
-[Example and outputs](examples/open_source_workflow.py)
+Follow the version-matched [4.2.0 quick start](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/PYPI_README.md#generate-simulate-save-and-analyze). Its FEM example uses `strain=1.01`; the source example above uses `stretch_ratio=1.01`.
 
 ## 1. Generate networks
 
