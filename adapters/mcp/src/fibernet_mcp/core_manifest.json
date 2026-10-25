@@ -84,7 +84,7 @@
   "integrations/_lammps_cg.py": "ef09090ede530f4bfa31c8bd218bfe83f18189cc010ccca36bc3befcdcf2328d",
   "integrations/_lammps_forecast.py": "7e6028499f781c6e9cdced05cce72b63cb4434d6f7bca9d8cf4d6c133a01a745",
   "integrations/_lammps_worker.py": "5a47ffa60a2c048ba77abc1b2c2b6293ae2ac213ecc4d52d6bd2e820bb059d5f",
-  "integrations/lammps_backend.py": "cd70c9f5bb71daea3f739fcf376cf9f5f968ece15fdd1d036d9a3a0ec0b7f25c",
+  "integrations/lammps_backend.py": "3a8b7290803bbb35780c24a2cb4ed7338b76081452bbb36e638fe67cb8d15b7d",
   "integrations/lammps_integration.py": "211ca5506341e1a16b156cf7aa1e7a0cc386b5838e08cc51f748d362c138ff6b",
   "integrations/lammps_planning.py": "2d9f46694d5362cda9ad18b527d18ea86c84aef837d94035c3ccdbb40663f64d",
   "integrations/mdanalysis_integration.py": "23b5068bf119b611a94259f1b66576c5b5c7fdd3dea3d32f7d783547bb885642",

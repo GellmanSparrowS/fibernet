@@ -500,7 +500,8 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 values = tuple(float(x) for x in parts)
                 if not all(math.isfinite(x) for x in values) or values[0] != int(values[0]) or values[1] != len(prepared.node_ids):
                     raise LAMMPSContractError('invalid thermo values/count')
-                if values[3] < 0 or not math.isclose(values[4],values[2]+values[3],rel_tol=1e-12,abs_tol=0.0):
+                if ((contract.get('model') != 'conservative-ball-cosine-strand-cg/1' and values[2] < 0)
+                        or values[3] < 0 or not math.isclose(values[4],values[2]+values[3],rel_tol=1e-12,abs_tol=0.0)):
                     raise LAMMPSContractError('inconsistent native energy values')
                 thermo.append(ThermoFrame(int(values[0]), *values[2:5], values[5:]))
         thermo_expected = list(range(0,prepared.steps+1,contract['thermo_every'])) if contract.get('profile',{}).get('name') in ('cg_network_sampled_v1','cg_network_mixed_sampled_v1') else expected
