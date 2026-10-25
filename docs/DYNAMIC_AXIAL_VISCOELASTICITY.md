@@ -120,3 +120,47 @@ The network evidence establishes discrete identities and three-grid
 self-convergence, not an experimental calibration or continuous-reference
 error bound. No contact, adhesion, full-web, finite-strain polymer, bending,
 torsion, plasticity, or large-rotation accuracy is claimed or exposed here.
+
+## Inspecting saved cumulative energy residuals
+
+```python
+from fibernet.sim import SimResult
+
+result = SimResult.load('saved-result.json')
+report = result.viscoelastic_energy_diagnostics()
+steps = report['steps']
+constitutive = report['constitutive_cumulative_residual_J_by_edge']
+dynamic = report['dynamic_bookkeeping_cumulative_residual_J']
+```
+
+This read-only method works with existing v1 summary and detailed files. It
+returns detached plain dictionaries/lists; it does not run a simulation,
+advance material history, or add fields to the saved result. Rows follow saved
+steps/times and per-edge columns follow `edge_ids`. All residuals are in joules.
+
+The constitutive sign follows the producer's interval diagnostic:
+`C_e = (U_e-U_e0) + P_e + B_e - W_e`. Its aggregate is the sum over edges.
+The separate dynamic bookkeeping curve is
+`D = (K-K0) + sum(W_e) - (E+G+Q-H+R+S)`, retaining the initial kinetic
+energy and the negative projection-force-work term. The combined curve is
+`D + sum(C_e)`. Here E is external force work, G numerical drag energy change,
+Q projection kinetic energy change, H projection force work, R kick-drift
+residual, and S old-stress endpoint residual. These signed terms are not one
+physical dissipation channel. Endpoint W is constitutive, not external work.
+
+Residuals are evaluated exactly from the stored binary64 operands and rounded
+once for display; aggregate and combined values need not equal sums of their
+already-rounded displayed components. Unrepresentable residuals raise
+`ValueError` rather than becoming infinity. Existing record validation runs on
+each call, including on a result modified after loading; missing material or
+unsupported records are refused.
+
+`coverage['cumulative_consistency']` is always `not_certified` for this v1 API,
+even for an exactly zero residual. No cumulative numerical-error budget or
+pass/fail tolerance is inferred. The curves can reveal inconsistencies but do
+not authenticate history or prove solver accuracy. Saved `dynamic_interval`
+residuals remain single-last-interval observations, not these cumulative
+curves; sparse sample intervals must not be summed or interpolated to recover
+omitted updates. Constitutive and dynamic channels are checked separately so
+one does not obscure the other, and per-edge values expose cross-edge
+cancellation.
