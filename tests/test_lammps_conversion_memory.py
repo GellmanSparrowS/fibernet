@@ -101,6 +101,21 @@ def test_discarded_intermediate_thermo_is_still_checked(record, attr, value):
         adapter.to_sim_result(p, replace(raw, thermo=tuple(thermo)), RUNTIME, 0., record)
 
 
+
+@pytest.mark.parametrize('record', [False, True])
+def test_discarded_balanced_negative_harmonic_potential_is_still_checked(record):
+    p = prepared_case('harmonic_sampled_v1')
+    raw = typed_raw(p)
+    # Valid output retains steps 0 and 2, not the observed native step 1.
+    intact = adapter.to_sim_result(p, raw, RUNTIME, 0., True)
+    assert intact.dynamics_state['steps'] == [0, 2]
+    thermo = list(raw.thermo)
+    assert thermo[1].step == 1 and thermo[1].kinetic_J == 2.
+    thermo[1] = replace(thermo[1], potential_J=-1., total_J=1.)
+    with pytest.raises(ValueError, match='inconsistent native frame energy'):
+        adapter.to_sim_result(p, replace(raw, thermo=tuple(thermo)), RUNTIME, 0., record)
+
+
 def test_json_view_is_repeatable_and_only_converts_requested_frame():
     calls = []
     view = adapter._ConvertedFrames(range(3), lambda n: calls.append(n) or [n])
