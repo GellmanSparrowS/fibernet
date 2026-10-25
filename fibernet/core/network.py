@@ -465,9 +465,15 @@ class FiberNetwork:
         return net
 
     def save_json(self, filepath: str):
-        """Save network to JSON file."""
+        """Save network JSON, preserving an existing file if serialization fails.
+
+        Serialization completes before opening the destination. Parent directories
+        are not created. This protects against serialization errors, not partial
+        filesystem writes or interruption after the destination has been opened.
+        """
+        payload = json.dumps(self.to_dict(), indent=2)
         with open(filepath, 'w') as f:
-            json.dump(self.to_dict(), f, indent=2)
+            f.write(payload)
 
     @classmethod
     def load_json(cls, filepath: str) -> "FiberNetwork":

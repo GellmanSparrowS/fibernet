@@ -449,6 +449,32 @@ def reviewed_easy_show_source(reverse=None):
     return source
 
 
+def reviewed_native_io_source(reverse=None):
+    """Admit only the pinned native IO/import delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/native_io_dispatch_v1/api_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '68455aeb2e1f3a0b3f55c123e7c8ca192f5503444bd98e9a1b5851654b485f9d', 'reviewed native IO source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_native_io_source_delta/1'
+    assert delta['source'] == 'fibernet/api.py'
+    assert delta['baseline_main'] == 'a39cc3b0806abe2978f3c7e6ad6ad87aff87c2d3'
+    base = public_baseline('fibernet/api.py').read_bytes()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'native IO source delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'native IO source inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'native IO source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'native IO source delta result changed'
+    if reverse is not None:
+        assert source == base, 'native IO source inverse changed historical bytes'
+    return source
+
+
 # Byte-pinned deltas from the immutable public-main source chain. Historical
 # fixtures are retained verbatim; only these two exact candidate versions enter.
 TAICHI_GEOMETRY_SOURCE_PINS = {
@@ -513,6 +539,9 @@ def require_public_source(relative, raw):
         return
     if relative == 'fibernet/easy.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source()), 'public source bytes changed: '+relative
+        return
+    if relative == 'fibernet/api.py':
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1216,6 +1245,28 @@ class SourceShape(unittest.TestCase):
         with patch.object(Path, 'read_bytes', mutated):
             with self.assertRaisesRegex(AssertionError, 'dimension-aware show source delta changed'):
                 reviewed_easy_show_source()
+
+    def test_native_io_source_is_exact_and_reversible(self):
+        raw = reviewed_native_io_source()
+        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),
+                        raw.replace(b'if graph_fields and network_fields:', b'if False:', 1),
+                        raw.replace(b'def analyze(', b'def changed_analyze(', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/api.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_native_io_source(reverse=changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/native_io_dispatch_v1/api_delta.json'
+        def mutated(path):
+            raw = original(path)
+            return raw+b'\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', mutated):
+            with self.assertRaisesRegex(AssertionError, 'native IO source delta changed'):
+                reviewed_native_io_source()
 
     def test_lazy_easy_all_extension(self):
         tree=ast.parse((ROOT/'fibernet/easy.py').read_text(encoding='utf-8'))
