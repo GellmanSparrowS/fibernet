@@ -138,11 +138,25 @@ def test_post_weld_graph_built_once(tmp_path, engine, monkeypatch):
 def test_numeric_canonicalization_and_unused_fields():
     a = graph(); b = copy.deepcopy(a)
     for n in b.nodes.values(): n.position = n.position.astype('>f8'); n.position[2] = 99
-    for e in b.edges.values(): e.radius = 123; e.internal_points = np.ones((2, 3))
+    for e in b.edges.values(): e.radius = 123; e.internal_points = np.empty((0, 3))
     b._nodes = dict(reversed(list(b.nodes.items())))
     assert tag(a) == tag(b)
     b.metadata['weld_triplets'] = np.empty((0, 3), dtype='>i8')
     assert tag(a) == tag(b)
+
+
+@pytest.mark.parametrize('change', ['nonplanar', 'internal_points'])
+def test_unsupported_geometry_cannot_reuse_a_planar_cache(change, tmp_path, engine):
+    factory = Factory(graph())
+    initial = sc.run_stretch(factory, cache_dir=str(tmp_path))
+    assert not initial.cache_hit and len(engine) == 1
+    if change == 'nonplanar':
+        factory.g.nodes[0].position[2] = 1.
+    else:
+        factory.g.edges[0].internal_points = np.array([[1., 2., 0.]])
+    with pytest.raises(ValueError, match='XY plane|actual graph nodes'):
+        sc.run_stretch(factory, cache_dir=str(tmp_path))
+    assert len(engine) == 1
 
 
 @pytest.mark.parametrize('bad', ['bool_id', 'float_id', 'overflow_id', 'float_endpoint',

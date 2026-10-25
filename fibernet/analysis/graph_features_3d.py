@@ -14,11 +14,8 @@ All features work for both 2D and 3D structures (3D features degrade
 gracefully for 2D inputs).
 """
 
-import warnings
 from typing import Dict, List, Optional
 import numpy as np
-
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     import networkx as nx
