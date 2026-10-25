@@ -3,7 +3,7 @@
   "tools": [
     {
       "name": "fibernet_catalog",
-      "description": "fibernet catalog",
+      "description": "List operator-approved graphs and limits with no arguments ({}). Use the returned graph_id handles for validation, topology, electrical or prepare-only requests; file paths and uploads are not accepted. Summaries include source_sha256, node/edge counts and declared length_unit/frame_id. Units and frames are operator-asserted or unknown, not verified. Graph and artifact handles are session-local and expire at shutdown. Read tool results from structuredContent; errors set isError=true and include structuredContent.error.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -680,7 +680,7 @@
     },
     {
       "name": "fibernet_validate",
-      "description": "fibernet validate",
+      "description": "Validate the native serialization and topology of a graph_id from fibernet_catalog. Read validation_status, counts and issues from structuredContent. An invalid graph can be a successful report with validation_status=invalid; request or worker failures instead set isError=true. This checks serialization_and_topology only, not geometric or mechanical validity, solver readiness, materials or units. No graph repair or physics solve is performed.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -1325,7 +1325,7 @@
     },
     {
       "name": "fibernet_analyze_topology",
-      "description": "fibernet analyze topology",
+      "description": "Analyze a graph_id from fibernet_catalog with the native topology API. structuredContent contains scalar counts and an artifact descriptor for the complete ID-aligned JSON metrics, preserving physical-edge identity. Counts and degrees are dimensionless; no geometry, materials or physics are inferred. Invalid graphs return a domain error with isError=true. Fetch full metrics using the returned artifact_id with fibernet_artifact_read; the artifact URI exposes only its manifest, not the full data.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -1944,7 +1944,7 @@
     },
     {
       "name": "fibernet_artifact_info",
-      "description": "fibernet artifact info",
+      "description": "Get the stored manifest for an artifact_id returned by an analysis, electrical or preparation result in this session. structuredContent.artifact includes kind, byte_size, SHA256, source_sha256, producer and URI; it does not include artifact contents. Reading fibernet://artifacts/{artifact_id} also returns a manifest only. Use fibernet_artifact_read for data chunks. Handles and stored data expire at session shutdown; unknown or expired handles return an error with isError=true.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
@@ -2551,7 +2551,7 @@
     },
     {
       "name": "fibernet_artifact_read",
-      "description": "fibernet artifact read",
+      "description": "Read an immutable artifact_id from this session using a byte offset (start at 0) and optional length of 1..32768 bytes (default 32768). structuredContent.data is base64 for that byte chunk, not JSON text; decode each chunk and concatenate bytes, advancing to next_offset until eof. Verify the complete bytes against total_bytes and sha256, which describes the whole artifact rather than each chunk. Offset past EOF or unknown handles return isError=true. Export needed data before shutdown: session artifacts are ephemeral.",
       "inputSchema": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",

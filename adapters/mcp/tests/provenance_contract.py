@@ -323,6 +323,20 @@ class ProvenanceContract(unittest.TestCase):
         self.assertEqual(value['physics'], ['steady_linear_electrical_conductance'])
         value['physics']=[]
         outputs['capabilities'][0]['content']=NEW.canonical(value).decode()
+        # Undo ONLY the five reviewed description edits for this historical fixture.
+        # Exact hashes reject unreviewed text; all other legacy bytes stay pinned.
+        description_updates = {
+            'fibernet_catalog': ('a87f451eead4824a9186eb38815e3d811c3f82639034cb3195363fef6a4a0a81', 'fibernet catalog'),
+            'fibernet_validate': ('788a033bc699387b48141f719edd259ab68f7417b2fd978a48329aa1bc0c46c1', 'fibernet validate'),
+            'fibernet_analyze_topology': ('436e194cd4ce6f241fe5c5cb9a8600df06fe662f52defe0ee1feed386d05c492', 'fibernet analyze topology'),
+            'fibernet_artifact_info': ('b041c02d2fb2d6a134135dbd1a98f8e929ce50dc0fd8d28583e087cb58ae6ec7', 'fibernet artifact info'),
+            'fibernet_artifact_read': ('33c661bb2aaa6f77125d6e7bffcf0f4ffe74ac2ab0e78fb8f366819ec9c60478', 'fibernet artifact read'),
+        }
+        self.assertEqual([tool['name'] for tool in outputs['tool_definitions']], list(description_updates))
+        for tool in outputs['tool_definitions']:
+            expected_sha256, legacy_text = description_updates[tool['name']]
+            self.assertEqual(hashlib.sha256(tool['description'].encode('utf-8')).hexdigest(), expected_sha256)
+            tool['description'] = legacy_text
         raw=json.dumps(outputs,indent=2,sort_keys=True).encode()+b'\n'
         self.assertEqual(FIXTURE.read_bytes(),raw)
         self.assertEqual(hashlib.sha256(FIXTURE.read_bytes()).hexdigest(),
