@@ -2,17 +2,22 @@
 
 The complete source module is imported with its optional Taichi import disabled.
 This is not qualification of a supported FEM facade or a deformed-transport model.
-Golden strings preserve exact legacy save_json bytes for prescribed inputs.
+A separately pinned historical method excerpt supplies a same-host oracle.
+Static golden strings remain an additional guard, with narrowly checked
+historical subnormal-to-zero differences only; candidate parity is exact.
 """
 import builtins
 import copy
+from decimal import Decimal
 import hashlib
 import importlib.util
 import json
 import os
+import re
 from pathlib import Path
 import sys
 from unittest.mock import patch
+from typing import NamedTuple
 
 import numpy as np
 import pytest
@@ -22,6 +27,124 @@ from fibernet.core.structure_graph import StructureGraph
 
 FIXTURE = json.loads((Path(__file__).parent / "fixtures" /
                       "legacy_deformed_graph_golden.json").read_text())
+
+
+# This literal is copied from the independently verified historical owner.
+# Pin normalized-LF source text rather than version-dependent AST dump hashes.
+HISTORICAL_METHOD_SHA256 = "cb8f174424f2fb90c15e7b66a21cb691b53f5093a3e5cabdf9971e7a6bd08513"
+HISTORICAL_MODULE_SHA256 = "210e679eb617f49514f46b260bf53478f9141cd84f64949a8cf8066eb55b099c"
+_MIN_NORMAL = Decimal.from_float(sys.float_info.min)
+_JSON_TOKENS = re.compile(
+    r'"(?:\\.|[^"\\])*"|(?P<number>-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)'
+)
+_SUBNORMAL_PATHS = frozenset({
+    ("nodes", 0, "position", 0),
+    ("nodes", 0, "position", 1),
+    ("edges", 0, "internal_points", 0, 1),
+    ("edges", 0, "internal_points", 1, 1),
+})
+
+
+class _NumberToken(NamedTuple):
+    kind: str
+    text: str
+
+
+class _ObjectPairs(tuple):
+    """Retain JSON object order and duplicate keys for strict comparison."""
+
+
+def _json_tokens(raw):
+    def invalid_constant(value):
+        raise AssertionError(f"Nonfinite JSON constant: {value}")
+
+    return json.loads(
+        raw, object_pairs_hook=_ObjectPairs,
+        parse_int=lambda value: _NumberToken("int", value),
+        parse_float=lambda value: _NumberToken("float", value),
+        parse_constant=invalid_constant,
+    )
+
+
+def _assert_historical_golden(reference, expected, case_name):
+    """Allow only observed historical-host subnormal-to-zero differences.
+
+    The candidate never uses this exception. It must equal the historical
+    reference byte for byte, including zero signs and all numeric tokens.
+    Decimal/token checks do not depend on the host's subnormal float mode.
+    """
+    if reference == expected:
+        return []
+    differences = []
+    number_tokens = []
+    replacements = {}
+
+    def compare(actual, old, path=()):
+        assert type(actual) is type(old), (path, "JSON type changed")
+        if isinstance(old, _ObjectPairs):
+            assert tuple(key for key, _ in actual) == tuple(key for key, _ in old), (
+                path, "JSON object keys/order changed")
+            for (key, value), (_, old_value) in zip(actual, old):
+                compare(value, old_value, path + (key,))
+        elif isinstance(old, list):
+            assert len(actual) == len(old), (path, "JSON array size changed")
+            for index, (value, old_value) in enumerate(zip(actual, old)):
+                compare(value, old_value, path + (index,))
+        elif isinstance(old, _NumberToken):
+            token_index = len(number_tokens)
+            number_tokens.append(old.text)
+            if actual == old:
+                return
+            value = Decimal(old.text)
+            allowed = (
+                case_name == "tiny_signed" and path in _SUBNORMAL_PATHS
+                and old.kind == actual.kind == "float"
+                and value.is_finite() and not value.is_zero()
+                and value.copy_abs() < _MIN_NORMAL
+                and actual.text in ("0.0", "-0.0")
+            )
+            assert allowed, (path, "Unexpected numeric token change", old, actual)
+            replacements[token_index] = actual.text
+            differences.append({"path": path, "golden": old.text,
+                                "historical_host": actual.text})
+        else:
+            assert actual == old, (path, "JSON value changed")
+
+    compare(_json_tokens(reference), _json_tokens(expected))
+    # Prove every other byte remains exact, including whitespace and escaping.
+    # The lexer consumes quoted strings before considering numeric tokens.
+    expected_text = expected.decode("utf-8")
+    matches = [match for match in _JSON_TOKENS.finditer(expected_text)
+               if match.group("number") is not None]
+    assert [match.group("number") for match in matches] == number_tokens
+    parts = []
+    cursor = 0
+    for index, match in enumerate(matches):
+        if index in replacements:
+            parts.extend((expected_text[cursor:match.start()], replacements[index]))
+            cursor = match.end()
+    parts.append(expected_text[cursor:])
+    assert "".join(parts).encode("utf-8") == reference
+    return differences
+
+
+def _assert_same_host_json(candidate, historical):
+    """No numeric or platform exceptions apply to candidate/reference parity."""
+    assert candidate == historical
+
+
+@pytest.fixture(scope="module")
+def historical_reference():
+    path = Path(__file__).parent / "fixtures/legacy_deformed_graph_reference.py.txt"
+    # read_text performs universal-newline decoding on every supported platform.
+    source = path.read_text(encoding="utf-8")
+    assert hashlib.sha256(source.encode("utf-8")).hexdigest() == HISTORICAL_METHOD_SHA256
+    assert FIXTURE["source_module_sha256"] == HISTORICAL_MODULE_SHA256
+    assert FIXTURE["source_commit"] == "39b3c493293ca58d77c311f1eead1d5c7f3b6895"
+    namespace = {"np": np, "StructureGraph": StructureGraph}
+    exec(compile(source, str(path), "exec"), namespace)
+    return namespace["_build_deformed_graph"]
+
 
 
 def load_archive(path, module_name):
@@ -80,20 +203,38 @@ def assert_membership_exact(graph):
 
 @pytest.mark.parametrize("case", FIXTURE["cases"],
                          ids=lambda case: f'{case["name"]}:{case["scale"]}')
-def test_legacy_numeric_json_bytes_and_exact_membership(archive, case, tmp_path):
+def test_legacy_numeric_json_bytes_and_exact_membership(
+        archive, historical_reference, case, tmp_path, record_property):
+    # Execute the literal historical method first, on independent identical input.
+    reference_graph = input_graph()
+    reference_before = snapshot(reference_graph)
+    reference_fem = archive.BeamFEM(reference_graph)
+    assert reference_fem._node_ids == FIXTURE["node_order"] == [4, 9]
+    legacy = historical_reference(reference_fem, np.array(case["u"]), case["scale"])
+    historical = json.dumps(legacy.to_dict(), indent=2).encode("utf-8")
+    legacy_path = tmp_path / "historical.json"
+    legacy.save_json(legacy_path)
+    assert snapshot(reference_graph) == reference_before
+    expected = case["json"].encode("utf-8")
+    assert hashlib.sha256(expected).hexdigest() == case["sha256"]
+    differences = _assert_historical_golden(historical, expected, case["name"])
+    record_property("historical_subnormal_zero_differences", json.dumps(differences))
+    assert legacy_path.read_bytes() == historical.replace(
+        b"\n", os.linesep.encode("ascii"))
+
     graph = input_graph()
     before = snapshot(graph)
+    assert before == reference_before
     fem = archive.BeamFEM(graph)
-    assert fem._node_ids == FIXTURE["node_order"] == [4, 9]
+    assert fem._node_ids == reference_fem._node_ids
     assert list(graph.nodes) == [9, 4]  # Distinct from the DOF ordering.
     result = fem._build_deformed_graph(np.array(case["u"]), case["scale"])
     path = tmp_path / "deformed.json"
     result.save_json(path)
-    expected = case["json"].encode()
-    assert hashlib.sha256(expected).hexdigest() == case["sha256"]
-    assert json.dumps(result.to_dict(), indent=2).encode("utf-8") == expected
-    # save_json keeps platform-native text newlines; do not normalize numbers.
-    assert path.read_bytes() == expected.replace(b"\n", os.linesep.encode("ascii"))
+    # No subnormal, signed-zero, numeric or platform exception applies here.
+    _assert_same_host_json(
+        json.dumps(result.to_dict(), indent=2).encode("utf-8"), historical)
+    assert path.read_bytes() == legacy_path.read_bytes()
     assert snapshot(graph) == before
     assert_membership_exact(result)
     assert list(result.nodes) == list(graph.nodes)
@@ -217,3 +358,65 @@ def test_finite_inputs_overflowing_to_nonfinite_are_rejected(archive):
         with pytest.raises(ValueError, match="position must be finite"):
             archive.BeamFEM(graph)._build_deformed_graph(u, 2.0)
     assert snapshot(graph) == before
+
+
+@pytest.mark.parametrize("expected,reference,paths", [
+    (b'{"nodes":[{"position":[5e-324,-5e-324,0.0]}]}',
+     b'{"nodes":[{"position":[0.0,-0.0,0.0]}]}',
+     [("nodes", 0, "position", 0), ("nodes", 0, "position", 1)]),
+    (b'{"edges":[{"internal_points":[[0.0,5e-324,0.0],[0.0,-5e-324,0.0]]}]}',
+     b'{"edges":[{"internal_points":[[0.0,-0.0,0.0],[0.0,0.0,0.0]]}]}',
+     [("edges", 0, "internal_points", 0, 1),
+      ("edges", 0, "internal_points", 1, 1)]),
+])
+def test_historical_golden_allows_only_observed_coordinate_flush(expected, reference, paths):
+    changes = _assert_historical_golden(reference, expected, "tiny_signed")
+    assert [change["path"] for change in changes] == paths
+
+
+@pytest.mark.parametrize("label,expected,reference,case_name", [
+    ("normal_to_zero", b'{"nodes":[{"position":[0.25]}]}',
+     b'{"nodes":[{"position":[0.0]}]}', "tiny_signed"),
+    ("different_nonzero_subnormal", b'{"nodes":[{"position":[5e-324]}]}',
+     b'{"nodes":[{"position":[1e-323]}]}', "tiny_signed"),
+    ("metadata", b'{"metadata":{"value":5e-324}}',
+     b'{"metadata":{"value":0.0}}', "tiny_signed"),
+    ("wrong_coordinate", b'{"nodes":[{"position":[0.0,0.0,5e-324]}]}',
+     b'{"nodes":[{"position":[0.0,0.0,0.0]}]}', "tiny_signed"),
+    ("wrong_node", b'{"nodes":[{}, {"position":[5e-324]}]}',
+     b'{"nodes":[{}, {"position":[0.0]}]}', "tiny_signed"),
+    ("integer_zero", b'{"nodes":[{"position":[5e-324]}]}',
+     b'{"nodes":[{"position":[0]}]}', "tiny_signed"),
+    ("bool_zero", b'{"nodes":[{"position":[5e-324]}]}',
+     b'{"nodes":[{"position":[false]}]}', "tiny_signed"),
+    ("zero_spelling", b'{"nodes":[{"position":[5e-324]}]}',
+     b'{"nodes":[{"position":[0e0]}]}', "tiny_signed"),
+    ("zero_sign", b'{"nodes":[{"position":[0.0]}]}',
+     b'{"nodes":[{"position":[-0.0]}]}', "tiny_signed"),
+    ("zero_to_subnormal", b'{"nodes":[{"position":[0.0]}]}',
+     b'{"nodes":[{"position":[5e-324]}]}', "tiny_signed"),
+    ("wrong_case", b'{"nodes":[{"position":[5e-324]}]}',
+     b'{"nodes":[{"position":[0.0]}]}', "baseline"),
+    ("array_order", b'{"labels":["a","b"]}',
+     b'{"labels":["b","a"]}', "tiny_signed"),
+    ("object_order", b'{"a":1,"b":2}', b'{"b":2,"a":1}', "tiny_signed"),
+    ("extra_key", b'{"a":1}', b'{"a":1,"b":2}', "tiny_signed"),
+    ("duplicate_key", b'{"a":1}', b'{"a":1,"a":1}', "tiny_signed"),
+    ("normal_float_spelling", b'{"a":1.0}', b'{"a":1.00}', "tiny_signed"),
+    ("integer_float_type", b'{"a":1}', b'{"a":1.0}', "tiny_signed"),
+    ("nonfinite", b'{"a":1.0}', b'{"a":NaN}', "tiny_signed"),
+    ("whitespace", b'{"a":1.0}', b'{ "a":1.0}', "tiny_signed"),
+    ("string_escape", b'{"a":"x"}', b'{"a":"\\u0078"}', "tiny_signed"),
+])
+def test_historical_golden_rejects_unrelated_drift(label, expected, reference, case_name):
+    with pytest.raises(AssertionError):
+        _assert_historical_golden(reference, expected, case_name)
+
+
+@pytest.mark.parametrize("historical,candidate", [
+    (b'{"nodes":[{"position":[5e-324]}]}', b'{"nodes":[{"position":[0.0]}]}'),
+    (b'{"nodes":[{"position":[0.0]}]}', b'{"nodes":[{"position":[-0.0]}]}'),
+])
+def test_candidate_cannot_use_the_historical_golden_exception(historical, candidate):
+    with pytest.raises(AssertionError):
+        _assert_same_host_json(candidate, historical)
