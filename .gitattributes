@@ -52,3 +52,7 @@ fibernet/**/*.py -text
 
 # Bundled saved-electrothermal containers retain their exact encoded bytes.
 tests/fixtures/saved_electrothermal_v1/*.gz.b64 -text
+
+# The deformation preparation golden retains its pinned UTF-8 bytes.
+tests/fixtures/deformed_transport_preparation_v1/planar_golden.json -text
+tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt -text
