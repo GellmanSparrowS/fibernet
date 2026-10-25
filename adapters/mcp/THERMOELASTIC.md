@@ -104,7 +104,13 @@ network at 300 K with zero thermal expansion reproduced all 36 native snapshot
 fields: the canonical 222,998-byte artifact matched the retained F1 result
 byte-for-byte. The reference result and F2 were not recomputed for this check.
 
-Nonzero-temperature forwarding is covered by mocks, not by a nonzero-temperature
-end-to-end case. Metadata discovery and topology checks are separate from this
-mechanical execution check. The tool consumes a prescribed temperature field;
-it does not solve the thermal field or certify stability.
+A separate installed SDK call for a 25-node/56-edge network used a saved
+nonuniform temperature field from 300 to 300.327082162793 K, a 300 K stress-free
+reference and an expansion coefficient of 1e-6/K. All 36 native fields matched
+the retained frame-10 mechanical snapshot byte-for-byte in a 63,809-byte
+canonical artifact. The case exercises stable-ID temperature transfer and the
+complete mechanical result with nonzero thermal strain in all 56 members.
+
+Metadata discovery and topology checks remain separate from these mechanical
+execution checks. Neither case solves a new thermal field, feeds deformation
+back into electrical or thermal calculations, or establishes stability.
