@@ -21,7 +21,12 @@ class FiberNetworkSavePreservationTests(unittest.TestCase):
     def test_normal_formatted_bytes_and_roundtrip_unchanged(self):
         data = self.network.to_dict()
         self.network.save_json(self.path)
-        self.assertEqual(self.path.read_bytes(), json.dumps(data, indent=2).encode())
+        reference = self.root / 'legacy-reference.json'
+        # Use the original writer's platform encoding/newline behavior, then
+        # compare raw bytes: this must not normalize away any format change.
+        with open(reference, 'w') as stream:
+            json.dump(data, stream, indent=2)
+        self.assertEqual(self.path.read_bytes(), reference.read_bytes())
         self.assertFalse(self.path.read_bytes().endswith(b'\n'))
         self.assertEqual(FiberNetwork.load_json(self.path).to_dict(), data)
 
@@ -65,7 +70,7 @@ class FiberNetworkSavePreservationTests(unittest.TestCase):
         after = self.path.stat()
         self.assertTrue(link.is_symlink())
         self.assertEqual(before.st_ino, after.st_ino)
-        self.assertEqual(stat.S_IMODE(after.st_mode), 0o640)
+        self.assertEqual(stat.S_IMODE(after.st_mode), stat.S_IMODE(before.st_mode))
         self.assertEqual(FiberNetwork.load_json(self.path).num_fibers, 1)
 
     def test_write_failure_still_propagates_not_claimed_atomic(self):
