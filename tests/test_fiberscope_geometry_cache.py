@@ -159,6 +159,45 @@ def test_unsupported_geometry_cannot_reuse_a_planar_cache(change, tmp_path, engi
     assert len(engine) == 1
 
 
+@pytest.mark.parametrize('weld', [False, True])
+@pytest.mark.parametrize('change', ['nonplanar', 'internal_points'])
+def test_unsupported_source_geometry_rejects_before_weld_and_cache(
+        change, weld, tmp_path, monkeypatch):
+    from fslab.welding import IntersectionWelder
+    factory = Factory(graph())
+    if change == 'nonplanar':
+        factory.g.nodes[0].position[2] = 1.
+    else:
+        factory.g.edges[0].internal_points = np.array([[1., 2., 0.]])
+
+    def unexpected(*args, **kwargs):
+        pytest.fail('unsupported source geometry reached welding, cache or solver')
+    monkeypatch.setattr(IntersectionWelder, 'apply', unexpected)
+    monkeypatch.setattr(factory, 'key', unexpected)
+    for name in ('cache_tag', '_engine_input_digest', '_load_cache', 'Engine2'):
+        monkeypatch.setattr(sc, name, unexpected)
+    cache = tmp_path / 'cache'
+    with pytest.raises(ValueError, match='XY plane|actual graph nodes'):
+        sc.run_stretch(factory, sc.RunConfig(weld_intersections=weld),
+                       cache_dir=str(cache))
+    assert factory.builds == 1 and not cache.exists()
+
+
+@pytest.mark.parametrize('weld', [False, True])
+def test_discretized_planar_factory_runs_and_caches_with_weld_option(
+        weld, tmp_path, engine):
+    factory = StructureFactory(unit='square', grid_x=1, grid_y=1,
+        n_pts_per_side=3, line_displacements=[[0., .1], [0., .2], [0., .1]])
+    cfg = sc.RunConfig(weld_intersections=weld)
+    fresh = sc.run_stretch(factory, cfg, cache_dir=str(tmp_path))
+    cached = sc.run_stretch(factory, cfg, cache_dir=str(tmp_path))
+    assert not fresh.cache_hit and cached.cache_hit and len(engine) == 1
+    assert fresh.cache_key == cached.cache_key
+    assert fresh.frames_xy.shape[1] > 4 and np.isfinite(fresh.frames_xy).all()
+    assert np.array_equal(fresh.frames_xy, cached.frames_xy)
+    assert all(e.internal_points is None for e in engine[0].edges.values())
+
+
 @pytest.mark.parametrize('bad', ['bool_id', 'float_id', 'overflow_id', 'float_endpoint',
     'missing_endpoint', 'nan', 'inf', 'masked_xy', 'masked_trip', 'float_trip', 'bool_trip',
     'missing_trip', 'bad_trip_shape', 'nested_masked_trip'])
