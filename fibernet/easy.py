@@ -23,6 +23,10 @@ import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+if _TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 import numpy as np
 
@@ -43,8 +47,8 @@ def show(
     save_path: Optional[str] = None,
     title: str = "",
     **kwargs,
-) -> None:
-    """一行出图：可视化 StructureGraph。
+) -> "Figure":
+    """Render a StructureGraph with its declared 2-D or 3-D dimension.
 
     Parameters
     ----------
@@ -53,9 +57,20 @@ def show(
     theme : str
         主题: "dark" (紫黑), "light" (白底), "blueprint", "publication"。
     save_path : str, optional
-        保存路径，默认不保存。
+        Optional image path; missing parent directories are created by the renderer.
     title : str
-        标题。
+        Plot title.
+    **kwargs
+        Forwarded unchanged to render_graph for dimension=2 or render_graph_3d
+        for dimension=3. Renderer-specific options are not interchangeable:
+        e.g. color_by is 2-D-only; elevation/azimuth are 3-D-only. Unsupported
+        options raise TypeError rather than being silently ignored. For an
+        explicit XY projection of a 3-D graph, call render_graph directly.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure, available for notebook display or further customization.
 
     Examples
     --------
@@ -64,12 +79,20 @@ def show(
     >>> show(g)
     >>> show(g, theme="light", save_path="honeycomb.png")
     """
-    from fibernet.viz.render import render_graph
+    from inspect import signature
+    from fibernet.viz.render import render_graph, render_graph_3d
 
-    fig = render_graph(graph, theme=theme, title=title, **kwargs)
+    renderer = render_graph_3d if graph.dimension == 3 else render_graph
+    kwargs.setdefault("dpi", 150)
+    try:
+        signature(renderer).bind(graph, theme=theme, title=title, save_path=save_path, **kwargs)
+    except TypeError as exc:
+        raise TypeError(
+            f"show() uses {renderer.__name__} for a {graph.dimension}D graph: {exc}. "
+            "Use render_graph(graph, ...) for an explicit 2-D XY projection."
+        ) from exc
+    fig = renderer(graph, theme=theme, title=title, save_path=save_path, **kwargs)
     if save_path:
-        fig.savefig(save_path, dpi=150, bbox_inches='tight',
-                    facecolor=fig.get_facecolor())
         print(f"Saved to {save_path}")
     return fig
 

@@ -61,3 +61,4 @@ tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt -te
 # Preserve repository bytes even when a checkout uses core.autocrlf=true.
 /tests/fixtures/dynamic_viscoelastic_generalized_summary.json -text
 tests/fixtures/optional_facades_v2/sim_archived_ge_delta.json -text
+tests/fixtures/easy_show_dimension_v1/easy_delta.json -text
