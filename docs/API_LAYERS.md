@@ -1,5 +1,7 @@
 # API layers and supported simulation routes
 
+[Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
