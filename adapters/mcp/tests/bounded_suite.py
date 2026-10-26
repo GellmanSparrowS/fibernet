@@ -17,9 +17,9 @@ import uuid
 import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ('provenance_contract.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
+SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
            'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
-           'test_preparation.py', 'test_shared_lifecycle.py')
+           'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py')
 DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384

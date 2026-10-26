@@ -263,11 +263,75 @@ def simulate(
     return result
 
 
+def _batch_report_inputs(configs, output, report_path, mode, strain):
+    """Detach JSON-safe inputs and reject destination aliases before any work."""
+    import os
+    import stat
+
+    destination = Path(report_path)
+    csv_path = Path(output)
+    if (destination.resolve() == csv_path.resolve() or
+            (destination.exists() and csv_path.exists() and
+             os.path.samefile(destination, csv_path))):
+        raise ValueError("report_path must differ from the CSV output path")
+    if not destination.parent.is_dir():
+        raise ValueError("report_path parent directory must already exist")
+    if destination.is_symlink() or (destination.exists() and
+            not stat.S_ISREG(destination.stat().st_mode)):
+        raise ValueError("report_path must be a regular file, not a symlink or special file")
+
+    def validate(value):
+        if value is None or type(value) in (str, bool, int, float):
+            return
+        if type(value) in (list, tuple):
+            for item in value:
+                validate(item)
+            return
+        if type(value) is dict and all(type(key) is str for key in value):
+            for item in value.values():
+                validate(item)
+            return
+        raise ValueError("report inputs must contain only JSON-safe values with string keys")
+
+    try:
+        validate(configs)
+        validate(mode)
+        validate(strain)
+        if not isinstance(configs, (list, tuple)) or not all(type(c) is dict for c in configs):
+            raise ValueError("report configs must be a sequence of dictionaries")
+        detached = json.loads(json.dumps(configs, allow_nan=False))
+        json.dumps({'mode': mode, 'strain': strain}, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ValueError("report inputs must be finite, acyclic JSON-safe values") from exc
+    return destination, detached
+
+
+def _write_batch_report(destination, report):
+    """Atomic single-file private JSON; not a CSV/report transaction."""
+    import os
+    import tempfile
+
+    payload = json.dumps(report, indent=2, allow_nan=False)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                dir=destination.parent, prefix=".batch-report-", suffix=".tmp",
+                delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
     mode: str = "stretch",
     strain: float = 2.0,
+    *,
+    report_path: Optional[str] = None,
 ) -> str:
     """Run independent FEM stretch cases and write their measured outputs to CSV.
 
@@ -281,6 +345,20 @@ def batch_simulate(
         模拟模式。
     strain : float
         施加应变。
+
+    report_path : str, optional
+        Opt-in private JSON diagnostic report. Parent must exist; cannot alias
+        output. Configs must be finite JSON-safe dictionaries (tuples become
+        arrays). Includes every original input index/config, error type/message
+        without traceback, and zero-based successful CSV data-row links.
+        Configs and exception messages may contain user data: review before
+        sharing. No report is written by default. All-failed writes the report
+        then raises without writing a CSV. Report failures propagate; CSV and
+        report publication are not a two-file atomic transaction. A CSV write
+        or output-stream failure can stop the call before report publication;
+        this is not crash-complete recording. success_indices describes cases
+        with status success; csv_indices describes rows actually saved (a
+        progress-print error can follow row collection).
 
     Returns
     -------
@@ -299,6 +377,11 @@ def batch_simulate(
     """
     import csv
 
+    report_destination = None
+    if report_path is not None:
+        report_destination, report_configs = _batch_report_inputs(
+            configs, output, report_path, mode, strain)
+    cases = []
     rows = []
     for i, cfg in enumerate(configs):
         unit = cfg.get("unit", "honeycomb")
@@ -306,10 +389,13 @@ def batch_simulate(
         grid = cfg.get("grid", (4, 4))
         seed = cfg.get("seed", 42)
 
+        stage = "generation"
         try:
             g = pattern_2d(unit=unit, box=box, grid=grid, seed=seed, **cfg.get("kwargs", {}))
+            stage = "simulation"
             result = simulate(g, mode=mode, strain=strain, backend="fem")
 
+            stage = "result"
             row = {
                 "id": i,
                 "unit": unit,
@@ -324,9 +410,20 @@ def batch_simulate(
                 "strain": strain,
             }
             rows.append(row)
+            if report_destination is not None:
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'success', 'csv_row': len(rows) - 1,
+                              'csv_id': i})
+            stage = "progress"
             print(f"{i+1}/{len(configs)}: {unit} (max_force={row['max_force']:.2e})")
 
         except Exception as e:
+            if report_destination is not None:
+                prior = cases.pop() if cases and cases[-1]['index'] == i else {}
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'failure', 'stage': stage,
+                              'error_type': type(e).__name__, 'message': str(e),
+                              'csv_row': prior.get('csv_row'), 'csv_id': prior.get('csv_id')})
             print(f"{i+1}/{len(configs)}: {unit} failed: {e}")
 
     if rows:
@@ -335,7 +432,24 @@ def batch_simulate(
             writer.writeheader()
             writer.writerows(rows)
         print(f"Saved {len(rows)} results to {output}")
-    else:
+    if report_destination is not None:
+        import hashlib
+        report = {'schema': 'fibernet.batch_report/1',
+                  'mode': mode, 'strain': strain,
+                  'status': 'completed' if rows else 'all_failed',
+                  'success_count': sum(c['status'] == 'success' for c in cases),
+                  'failure_count': sum(c['status'] == 'failure' for c in cases),
+                  'success_indices': [c['index'] for c in cases if c['status'] == 'success'],
+                  'csv_indices': [row['id'] for row in rows],
+                  'csv_written': bool(rows),
+                  'csv_sha256': hashlib.sha256(Path(output).read_bytes()).hexdigest() if rows else None,
+                  'cases': cases}
+        try:
+            _write_batch_report(report_destination, report)
+        except Exception as exc:
+            raise RuntimeError("Batch diagnostic report could not be written; "
+                               "the CSV may already have been written") from exc
+    if not rows:
         raise RuntimeError('All batch simulations failed; no CSV was written')
 
     return output

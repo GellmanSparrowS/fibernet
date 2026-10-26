@@ -449,6 +449,32 @@ def reviewed_easy_show_source(reverse=None):
     return source
 
 
+def reviewed_easy_batch_report_source(reverse=None):
+    """Admit only the pinned batch report delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/easy_batch_report_v1/easy_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '21479533442333ce88a5a4a19bbcb55627f747bce7828fd12714e0d765bb2383', 'reviewed batch report source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_easy_batch_report_source_delta/1'
+    assert delta['source'] == 'fibernet/easy.py'
+    assert delta['baseline_main'] == '427c98bed8ce98bb78bd2bf05d63cd5d7585d373'
+    base = reviewed_easy_show_source()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'batch report source delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'batch report source inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'batch report source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'batch report source delta result changed'
+    if reverse is not None:
+        assert source == base, 'batch report source inverse changed historical bytes'
+    return source
+
+
 def reviewed_native_io_source(reverse=None):
     """Admit only the pinned native IO/import delta, with an exact historical inverse."""
     raw = (ROOT/'tests/fixtures/native_io_dispatch_v1/api_delta.json').read_bytes()
@@ -538,7 +564,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source()), 'public source bytes changed: '+relative
@@ -625,7 +651,7 @@ class StretchRatioSourceAdmission(unittest.TestCase):
         old = public_baseline('fibernet/easy.py').read_bytes()
         new = reviewed_easy_stretch_ratio_source()
         self.assertIn((ROOT/'fibernet/easy.py').read_bytes(),
-                      (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py'), reviewed_easy_show_source()))
+                      (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py'), reviewed_easy_show_source(), reviewed_easy_batch_report_source()))
         self.assertNotEqual(old, new)
         require_public_source('fibernet/easy.py', old)
         require_public_source('fibernet/easy.py', new)
@@ -701,7 +727,7 @@ class RLFailureSourceAdmission(unittest.TestCase):
         stretch = reviewed_easy_stretch_ratio_source()
         failure = reviewed_easy_rl_failure_source()
         current = reviewed_taichi_geometry_source('fibernet/easy.py')
-        self.assertEqual(reviewed_easy_show_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()), current)
+        self.assertEqual(reviewed_easy_show_source(reverse=reviewed_easy_batch_report_source(reverse=(ROOT/'fibernet/easy.py').read_bytes())), current)
         require_public_source('fibernet/easy.py', current)
         self.assertEqual(len({old, stretch, failure}), 3)
         for raw in (old, stretch, failure):
@@ -758,7 +784,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
         for relative in TAICHI_GEOMETRY_SOURCE_PINS:
             with self.subTest(source=relative):
                 expected = (reviewed_saved_energy_diagnostics_source() if relative == 'fibernet/sim/accelerated.py'
-                            else reviewed_easy_show_source())
+                            else reviewed_easy_batch_report_source())
                 self.assertEqual((ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
@@ -1225,7 +1251,7 @@ class SourceShape(unittest.TestCase):
 
     def test_dimension_aware_show_is_exact_and_reversible(self):
         raw = reviewed_easy_show_source()
-        self.assertEqual(raw, (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(raw, reviewed_easy_batch_report_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()))
         self.assertEqual(reviewed_easy_show_source(reverse=raw),
                          reviewed_taichi_geometry_source('fibernet/easy.py'))
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
@@ -1245,6 +1271,29 @@ class SourceShape(unittest.TestCase):
         with patch.object(Path, 'read_bytes', mutated):
             with self.assertRaisesRegex(AssertionError, 'dimension-aware show source delta changed'):
                 reviewed_easy_show_source()
+
+    def test_batch_report_source_is_exact_and_reversible(self):
+        raw = reviewed_easy_batch_report_source()
+        self.assertEqual(raw, (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_easy_batch_report_source(reverse=raw), reviewed_easy_show_source())
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'report_path: Optional[str] = None', b'report_path: Optional[str] = "shared.json"', 1),
+                        raw.replace(b'os.path.samefile(destination, csv_path)', b'False', 1),
+                        raw.replace(b'allow_nan=False', b'allow_nan=True', 1),
+                        raw.replace(b'def simulate(', b'def changed_simulate(', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/easy.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_easy_batch_report_source(reverse=changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/easy_batch_report_v1/easy_delta.json'
+        def mutated(path):
+            raw = original(path)
+            return raw+b'\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', mutated):
+            with self.assertRaisesRegex(AssertionError, 'batch report source delta changed'):
+                reviewed_easy_batch_report_source()
 
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()

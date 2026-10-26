@@ -28,6 +28,10 @@ from .preparation import (MAX_PREPARATION_REQUEST_BYTES,
 from .electrical import (MAX_TRANSPORT_REQUEST_BYTES,
                          MAX_TRANSPORT_RESULT_BYTES, TransportContractError, transport_request)
 
+from .thermoelastic import (PROFILE as SNAPSHOT_PROFILE, SNAPSHOT_LIMITS,
+    MAX_SNAPSHOT_SOURCE_BYTES, MAX_SNAPSHOT_REQUEST_BYTES, MAX_SNAPSHOT_ENVELOPE_BYTES,
+    SnapshotContractError, snapshot_request, validate_worker_snapshot)
+
 VERSION = 'fibernet.mcp/1'
 TREE = '6eabb154cd37d95c7c447a568b1b737c3ec883c8'
 MAX_SESSION = 48 * 1024 * 1024
@@ -71,6 +75,20 @@ async def publish_preparation(store, gid, bundle, provenance, validate_reply):
     validate_reply(reply)
     # Cancellation already delivered here wins. After commit it cannot erase a
     # published result, even if delivery of the success response is interrupted.
+    await anyio.lowlevel.checkpoint()
+    store.commit_artifact(stage)
+    return reply
+
+
+async def publish_snapshot(store, gid, snapshot, provenance, request, validate_reply):
+    """Validate before the final cancellation checkpoint and sole commit."""
+    stage = store.stage_artifact(gid, snapshot, provenance, kind='thermoelastic_network_snapshot')
+    reply = envelope(graph_id=gid, source_sha256=store.graphs[gid]['source_sha256'],
+        request_sha256=sha(canonical(request)), native_input_sha256=snapshot['input_sha256'],
+        status='solved', profile=SNAPSHOT_PROFILE, length_unit=request['length_unit'],
+        frame_id=request['frame_id'], frame_provenance=request['frame_provenance'],
+        unit_provenance=request['unit_provenance'], artifact=stage.descriptor())
+    validate_reply(reply)
     await anyio.lowlevel.checkpoint()
     store.commit_artifact(stage)
     return reply
@@ -129,16 +147,16 @@ class ManagedStore:
         if self.total + len(raw) > MAX_SESSION: raise ArtifactLimitError('session storage limit')
         write_at(self.fd,name,raw); self.files.add(name); self.total += len(raw)
 
-    def source(self,gid):
+    def source(self,gid,limit=None):
         if gid not in self.graphs: raise ContractError('unknown handle')
-        raw = read_at(self.fd,gid)
+        raw = read_at(self.fd,gid,limit) if limit is not None else read_at(self.fd,gid)
         if sha(raw) != self.graphs[gid]['source_sha256']: raise ContractError('source integrity failure')
         return self.graphs[gid]
 
     def stage_artifact(self, gid, metrics, core_provenance, kind='topology_metrics'):
-        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation'):
+        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation', 'thermoelastic_network_snapshot'):
             raise ContractError('invalid artifact kind')
-        self.source(gid)
+        self.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if kind == 'thermoelastic_network_snapshot' else self.source(gid)
         identity = canonical(self.core_provenance)
         if canonical(core_provenance) != identity:
             raise ContractError('worker core provenance mismatch')
@@ -210,7 +228,7 @@ class Supervisor:
     async def run(self,operation,gid,request=None):
         if len(self.audit)>=128: return failure('WORKER_LIMIT','resource')
         if self.active is not None: return failure('BUSY','resource',True)
-        self.store.source(gid)
+        self.store.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if operation == 'thermoelastic_snapshot' else self.store.source(gid)
         out='worker-'+uuid.uuid4().hex
         env={k:os.environ[k] for k in ('PATH','PYTHONPATH','MPLCONFIGDIR','XDG_CACHE_HOME') if k in os.environ}
         env.update(OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1',NUMEXPR_NUM_THREADS='1',PYTHONDONTWRITEBYTECODE='1')
@@ -226,9 +244,11 @@ class Supervisor:
             else: raise ContractError('worker output already exists')
             if request is not None:
                 raw=canonical(request)
-                cap = MAX_PREPARATION_REQUEST_BYTES if operation == 'prepare_deformed_transport' else MAX_TRANSPORT_REQUEST_BYTES
+                cap = (MAX_PREPARATION_REQUEST_BYTES if operation == 'prepare_deformed_transport' else
+                       MAX_SNAPSHOT_REQUEST_BYTES if operation == 'thermoelastic_snapshot' else MAX_TRANSPORT_REQUEST_BYTES)
                 if len(raw)>cap or self.store.total+len(raw)>MAX_SESSION:
-                    return failure('PREPARATION_REQUEST_LIMIT' if operation == 'prepare_deformed_transport' else 'TRANSPORT_REQUEST_LIMIT','resource')
+                    return failure('PREPARATION_REQUEST_LIMIT' if operation == 'prepare_deformed_transport' else
+                                   'SNAPSHOT_REQUEST_LIMIT' if operation == 'thermoelastic_snapshot' else 'TRANSPORT_REQUEST_LIMIT','resource')
                 request_name='request-'+uuid.uuid4().hex
                 write_at(self.store.fd,request_name,raw)
                 request_owned=True
@@ -247,11 +267,12 @@ class Supervisor:
                 await anyio.sleep(.02)
             if p.returncode != 0: reason='failed';return failure('WORKER_FAILED','internal')
             cap = (MAX_PREPARATION_ENVELOPE_BYTES if operation == 'prepare_deformed_transport' else
+                   MAX_SNAPSHOT_ENVELOPE_BYTES if operation == 'thermoelastic_snapshot' else
                    MAX_TRANSPORT_RESULT_BYTES+4096 if operation == 'linear_transport' else MAX_BYTES)
             try: raw=read_at(self.store.fd,out,cap)
             except ContractError:
-                if operation != 'prepare_deformed_transport': raise
-                reason='failed';return failure('PREPARATION_RESULT_LIMIT','resource')
+                if operation not in ('prepare_deformed_transport', 'thermoelastic_snapshot'): raise
+                reason='failed';return failure('SNAPSHOT_RESULT_LIMIT' if operation == 'thermoelastic_snapshot' else 'PREPARATION_RESULT_LIMIT','resource')
             try:
                 return _verified_worker_result(strict_json(raw), self.store.core_provenance)
             except ContractError:
@@ -335,7 +356,7 @@ async def serve(args):
     @server.read_resource()
     async def resource(uri):
         u=str(uri)
-        if u=='fibernet://capabilities': data={'schema_version':VERSION,'protocol':'2025-11-25','source_tree':TREE,'physics':['steady_linear_electrical_conductance'],'preparation':['caller_prescribed_deformed_transport'],'preparation_limits':PREPARATION_LIMITS,'transport':'stdio','platform':'linux'}
+        if u=='fibernet://capabilities': data={'schema_version':VERSION,'protocol':'2025-11-25','source_tree':TREE,'physics':['steady_linear_electrical_conductance','prescribed_temperature_linear_planar_welded_snapshot'],'preparation':['caller_prescribed_deformed_transport'],'preparation_limits':PREPARATION_LIMITS,'thermoelastic_limits':SNAPSHOT_LIMITS,'transport':'stdio','platform':'linux'}
         elif u==PROVENANCE_URI: data=store.core_provenance
         elif re.fullmatch(r'fibernet://artifacts/[a-f0-9]{32}',u):
             try: data=store.info(u.rsplit('/',1)[1])
@@ -349,7 +370,7 @@ async def serve(args):
             if name not in indexed: raise ContractError('unknown tool')
             jsonschema.Draft202012Validator(indexed[name]['inputSchema']).validate(arguments)
             if name=='fibernet_catalog':
-                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536,'preparation':PREPARATION_LIMITS},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport','prepare_deformed_transport'])
+                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536,'preparation':PREPARATION_LIMITS,'thermoelastic':SNAPSHOT_LIMITS},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport','prepare_deformed_transport','solve_thermoelastic_network_snapshot'])
             elif name in ('fibernet_validate','fibernet_analyze_topology'):
                 gid=arguments['graph_id'];g=store.source(gid)
                 result=await sup.run('validate' if name=='fibernet_validate' else 'topology',gid)
@@ -360,6 +381,31 @@ async def serve(args):
                 else:
                     metrics=result['metrics'];a=store.artifact(gid,metrics,result['_core_provenance'])
                     data=envelope(graph_id=gid,source_sha256=g['source_sha256'],metrics={k:metrics[k] for k in ['schema','n_nodes','n_physical_edges','n_unique_connections','n_components','n_isolates','cycle_rank_physical','largest_component_fraction']},artifact=a)
+            elif name=='fibernet_solve_thermoelastic_network_snapshot':
+                gid=arguments['graph_id'];g=store.graphs[gid]
+                if not (2 <= g['node_count'] <= 192 and 1 <= g['edge_count'] <= 256):
+                    raise SnapshotContractError('SNAPSHOT_GRAPH_LIMIT')
+                source_size=os.stat(gid,dir_fd=store.fd,follow_symlinks=False).st_size
+                if source_size > MAX_SNAPSHOT_SOURCE_BYTES:
+                    raise SnapshotContractError('SNAPSHOT_SOURCE_LIMIT')
+                source_raw=read_at(store.fd,gid,MAX_SNAPSHOT_SOURCE_BYTES)
+                if sha(source_raw) != g['source_sha256']: raise ContractError('source integrity failure')
+                source_data=strict_json(source_raw)
+                request=snapshot_request(g,arguments,source_data,source_size)
+                result=await sup.run('thermoelastic_snapshot',gid,request)
+                if 'error' in result: data=result
+                else:
+                    validate_worker_snapshot(result,source_data,request,g['source_sha256'],store.core_provenance)
+                    if 'error_code' in result: data=failure(result['error_code'],result['error_category'])
+                    else:
+                        def validate_reply(reply):
+                            try: jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(reply)
+                            except jsonschema.ValidationError:
+                                raise SnapshotContractError('OUTPUT_CONTRACT_FAILURE') from None
+                            prospective=mt.CallToolResult(content=[mt.TextContent(type='text',text='FiberNet result: see structuredContent')],structuredContent=reply,isError=False)
+                            if len(prospective.model_dump_json(by_alias=True,exclude_none=True).encode()) > 60000:
+                                raise SnapshotContractError('SNAPSHOT_RESULT_LIMIT')
+                        data=await publish_snapshot(store,gid,result['snapshot'],result['_core_provenance'],request,validate_reply)
             elif name=='fibernet_solve_linear_transport':
                 gid=arguments['graph_id'];g=store.source(gid)
                 request=transport_request(g,arguments)
@@ -400,12 +446,13 @@ async def serve(args):
                 if offset>len(raw): raise ContractError('offset past EOF')
                 chunk=raw[offset:offset+arguments.get('length',32768)];n=offset+len(chunk)
                 data=envelope(artifact_id=aid,offset=offset,next_offset=n,eof=n==len(raw),encoding='base64',data=base64.b64encode(chunk).decode(),sha256=a['sha256'],total_bytes=len(raw))
-        except ArtifactLimitError: data=failure('PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name=='fibernet_prepare_deformed_transport' else 'contract')
+        except SnapshotContractError as exc: data=failure(exc.code,exc.category)
+        except ArtifactLimitError: data=failure('SNAPSHOT_RESOURCE_LIMIT' if name=='fibernet_solve_thermoelastic_network_snapshot' else 'PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name in ('fibernet_prepare_deformed_transport','fibernet_solve_thermoelastic_network_snapshot') else 'contract')
         except PreparationContractError as exc: data=failure(exc.code,exc.category)
         except TransportContractError as exc: data=failure(exc.code,exc.category)
         except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError,OSError): data=failure('INVALID_ARGUMENT_OR_HANDLE')
         except Exception: data=failure('INTERNAL_FAILURE','internal')
-        if name in indexed and not (name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared'):
+        if name in indexed and not ((name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared') or (name=='fibernet_solve_thermoelastic_network_snapshot' and data.get('status')=='solved')):
             try: jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(data)
             except jsonschema.ValidationError: data=failure('OUTPUT_CONTRACT_FAILURE','internal')
         # Avoid duplicating potentially44KiB base64 in textual fallback.

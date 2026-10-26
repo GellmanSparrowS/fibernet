@@ -27,8 +27,9 @@ TOOLS = (
     'fibernet_catalog', 'fibernet_validate', 'fibernet_analyze_topology',
     'fibernet_artifact_info', 'fibernet_artifact_read',
     'fibernet_solve_linear_transport', 'fibernet_prepare_deformed_transport',
+    'fibernet_solve_thermoelastic_network_snapshot',
 )
-NATIVE_SOURCE_COUNT = 245
+NATIVE_SOURCE_COUNT = 246
 FORBIDDEN = frozenset((
     'fibernet', 'numpy', 'scipy', 'networkx', 'matplotlib', 'torch',
     'torch_geometric', 'taichi', 'lammps', 'exudyn', 'mujoco', 'pybullet',
@@ -89,6 +90,7 @@ def inspect_wheels(directory, adapter):
     expected_adapter = package_payload(source)
     manifest = json.loads((source / 'core_manifest.json').read_bytes())
     assert len(manifest) == NATIVE_SOURCE_COUNT
+    assert 'examples/linear_static_network.py' in manifest
     assert 'sim/deformed_transport.py' in manifest
     license_bytes = (adapter / 'LICENSE').read_bytes()
     adapter_wheels = list(directory.glob('fibernet_mcp-*.whl'))
@@ -255,6 +257,7 @@ def main():
         import anyio
         import fibernet_mcp
         from fibernet_mcp.preparation import PREPARATION_LIMITS
+        from fibernet_mcp.thermoelastic import SNAPSHOT_LIMITS
         from fibernet_mcp.safety import verify_core
         from fibernet_mcp.server import TREE
         from mcp import ClientSession, StdioServerParameters
@@ -314,9 +317,10 @@ def main():
                                         actual = json.loads(capabilities.contents[0].text)
                                         assert actual == {'schema_version': 'fibernet.mcp/1',
                                             'protocol': '2025-11-25', 'source_tree': TREE,
-                                            'physics': ['steady_linear_electrical_conductance'],
+                                            'physics': ['steady_linear_electrical_conductance','prescribed_temperature_linear_planar_welded_snapshot'],
                                             'preparation': ['caller_prescribed_deformed_transport'],
                                             'preparation_limits': PREPARATION_LIMITS,
+                                            'thermoelastic_limits': SNAPSHOT_LIMITS,
                                             'transport': 'stdio', 'platform': 'linux'}
                                     except BaseException as error:
                                         record_exception(area, 'sdk-request-error', error)

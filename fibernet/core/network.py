@@ -444,7 +444,19 @@ class FiberNetwork:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "FiberNetwork":
-        """Create FiberNetwork from dictionary."""
+        """Create FiberNetwork from its native dictionary representation.
+
+        Explicit StructureGraph node/edge arrays without either legacy network
+        field are rejected rather than silently discarded. Other legacy header
+        and version handling is unchanged; this is not full schema validation.
+        """
+        if (isinstance(data.get("nodes"), list)
+                and isinstance(data.get("edges"), list)
+                and "fibers" not in data and "crosslinks" not in data):
+            raise ValueError(
+                "StructureGraph nodes/edges cannot be loaded as FiberNetwork; "
+                "use StructureGraph.from_dict(), StructureGraph.load_json(), "
+                "or fibernet.api.load()")
         net = cls(
             dimension=data.get("dimension", 3),
             periodic=data.get("periodic", False),
