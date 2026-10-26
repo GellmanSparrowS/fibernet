@@ -36,7 +36,9 @@ def _arrays(factory):
 
 
 def export_json(factory, path):
-    pos, edges = _arrays(factory)
+    g = factory.build()
+    pos = np.asarray(g.node_positions(), float)[:, :2]
+    edges = np.asarray(g.edge_array(), int)[:, :2]
     doc = {
         "app": "FiberScope", "version": 1,
         "spec": {k: getattr(factory, k) for k in
@@ -47,6 +49,8 @@ def export_json(factory, path):
         "nodes": [[round(float(x), 4), round(float(y), 4)] for x, y in pos],
         "edges": [[int(a), int(b)] for a, b in edges],
     }
+    if 'generator_identity' in g.metadata:
+        doc['generator_identity'] = g.metadata['generator_identity']
     from .structure import CUSTOM_CELLS
     if factory.unit in CUSTOM_CELLS:
         doc['custom_cell'] = CUSTOM_CELLS[factory.unit]
