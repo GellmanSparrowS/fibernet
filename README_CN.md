@@ -1,5 +1,7 @@
 [English / 中文 · 仓库首页](README.md)
 
+[Feature availability and checked dataset selections](docs/FEATURE_AVAILABILITY.md)
+
 <!-- locale:zh:start -->
 [快速开始](#快速开始) · [生成](#1-生成网络) → [模拟](#2-模拟响应) → [分析与学习](#3-分析与学习) → [设计与导出](#4-设计与导出) · [功能索引](#选择研究流程)
 

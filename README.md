@@ -5,6 +5,8 @@
 </td></tr>
 </table>
 
+[Feature availability and checked dataset selections](docs/FEATURE_AVAILABILITY.md)
+
 <details>
 <summary>中文</summary>
 

@@ -307,6 +307,50 @@ class FiberNetDataset:
                 values[row, column] = value
         return values
 
+    def feature_matrix_checked(self, names=None, *, allow_reasons=()) -> np.ndarray:
+        """Opt-in comparable, available legacy94 selection; never changes training defaults.
+
+        Full94 selection rejects the31 explicitly unaudited fields. A finite
+        reviewed subset can be selected by name. Metadata is declared provenance,
+        not authentication; dependencies are recorded, not numerical equivalence.
+        """
+        from fibernet.analysis.graph_features import (
+            GraphFeatureExtractor, _checked_feature_contract, _checked_feature_policy)
+        selected = self.feature_names if names is None else names
+        if isinstance(selected, (str, bytes)) or not isinstance(selected, Sequence):
+            raise ValueError("Selected feature names must be a sequence")
+        selected = list(selected)
+        seen = set()
+        for name in selected:
+            if not isinstance(name, str) or name not in GraphFeatureExtractor.FEATURE_COLS:
+                raise ValueError(f"Unsupported selected legacy94 feature name: {name!r}")
+            if name in seen:
+                raise ValueError(f"Duplicate selected feature name: {name!r}")
+            seen.add(name)
+        allowed = _checked_feature_policy(allow_reasons)
+        reference = None
+        for row, sample in enumerate(self.samples):
+            context = f"sample {sample.sample_id!r} (row {row})"
+            if not isinstance(sample.metadata, Mapping) or "feature_contract" not in sample.metadata:
+                raise ValueError(f"{context}: legacy.status_absent")
+            contract = sample.metadata["feature_contract"]
+            try:
+                identity = _checked_feature_contract(contract)
+            except ValueError as exc:
+                raise ValueError(f"{context}: {exc}") from exc
+            if reference is None:
+                reference = identity
+            elif identity != reference:
+                raise ValueError(f"{context}: incompatible feature space; six actual parameters must match")
+            for name in selected:
+                status = contract["status"][name]
+                pair = (status["state"], status["reason"])
+                if status["state"] not in ("computed", "defined_empty") and pair not in allowed:
+                    raise ValueError(f"{context}, feature {name!r}: {pair[0]}/{pair[1]}")
+        # Always enforce presence, scalar type and finite values, even under an
+        # explicit allowed finite convention. No zero/NaN repair is performed.
+        return self._selected_matrix("features", selected)
+
     @property
     def features(self) -> np.ndarray:
         """Finite feature matrix (n_samples, n_features); missing values fail."""
