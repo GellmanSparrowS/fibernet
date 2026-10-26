@@ -75,7 +75,7 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 This small honeycomb example has 18 nodes and 22 edges. The source workflow also saves `network.png` and a recruitment `summary.json`. The generation, linear-FEM result round trip, snapshot descriptors, and native graph JSON round trip have been exercised together on this fixed example.
 
-`stretch_ratio=1.01` means 1% extension. The explicit `nonlinear=False` selects the small-deformation beam solver. Displacement is in meters and force in newtons; units are not converted automatically. Choose material parameters for your own problem. See the [FEM model and output definitions](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/METHODS_BEAM_FEM_CONTRACT.md).
+`stretch_ratio=1.01` means 1% extension. The explicit `nonlinear=False` selects the small-deformation beam solver. SI convention: coordinates and radius in m; E in Pa; forces in N. Displacement is in meters; units are not converted automatically. Choose material parameters for your own problem. See the [FEM model and output definitions](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/METHODS_BEAM_FEM_CONTRACT.md).
 
 ## Choose an analysis
 
@@ -97,6 +97,8 @@ Legacy `FiberNetwork` LAMMPS export (`to_lammps`, `api.export(..., format="lammp
 Legacy Abaqus/ANSYS beam export accepts its documented straight-fiber domain; Gmsh export writes geometry-only line meshes. These exports do not qualify external solver execution or supply a complete mechanical model. The legacy FEA-LAMMPS template is disabled. The [explicit StructureGraph LAMMPS backend](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/integrations/LAMMPS_HARMONIC_CLI.md) is a separate integration. See [legacy FEA export scope](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/LEGACY_FEA_EXPORT.md).
 
 ## Documentation and support
+
+[API layers and simulation modes (verified source)](https://github.com/GellmanSparrowS/fibernet/blob/0586e23ad57d2edff577ab64c7f33910b091fc2f/docs/API_LAYERS.md)
 
 [Source quick start](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/quickstart.rst) · [Examples](https://github.com/GellmanSparrowS/fibernet/tree/main/examples) · [Issues](https://github.com/GellmanSparrowS/fibernet/issues) · [MIT license](https://github.com/GellmanSparrowS/fibernet/blob/main/LICENSE)
 
