@@ -371,6 +371,32 @@ def reviewed_fiber_network_profile_facade(reverse=None):
     return source
 
 
+def reviewed_octet_fcc_facade(reverse=None):
+    """Admit only the pinned additive octet export; retain its exact inverse."""
+    raw = (ROOT/'tests/fixtures/standard_octet_v1/root_facade_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '56aa9fe12ce9fc46fc0f9b6a8243802e4aa0d79423034b20da4b7f21773d23e0', 'reviewed octet FCC facade delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_octet_fcc_facade_delta/1'
+    assert delta['source'] == 'fibernet/__init__.py'
+    assert delta['baseline_main'] == '1a5e69c031810126a56e2a87a25a70748ba4c4bf'
+    base = reviewed_fiber_network_profile_facade()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'octet facade delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'octet facade inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'octet facade delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'octet facade delta result changed'
+    if reverse is not None:
+        assert source == base, 'octet facade inverse changed historical bytes'
+    return source
+
+
 def reviewed_lammps_capability_facade(reverse=None):
     """Admit only the pinned lazy alias delta, with an exact historical inverse."""
     raw = (ROOT/'tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json').read_bytes()
@@ -501,6 +527,32 @@ def reviewed_native_io_source(reverse=None):
     return source
 
 
+def reviewed_legacy_analysis_source(reverse=None):
+    """Admit only the pinned legacy summary delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/legacy_analysis_v1/api_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'b15343961605399630fb5acc5f8b988b32f1d4449684d87ef78fb68de3384662', 'reviewed legacy summary source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_legacy_analysis_source_delta/1'
+    assert delta['source'] == 'fibernet/api.py'
+    assert delta['baseline_main'] == '59a160f7959144656dd8b2b249faf80cf5395c5f'
+    base = reviewed_native_io_source()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'legacy summary source delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'legacy summary source inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'legacy summary source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'legacy summary source delta result changed'
+    if reverse is not None:
+        assert source == base, 'legacy summary source inverse changed historical bytes'
+    return source
+
+
 # Byte-pinned deltas from the immutable public-main source chain. Historical
 # fixtures are retained verbatim; only these two exact candidate versions enter.
 TAICHI_GEOMETRY_SOURCE_PINS = {
@@ -558,7 +610,7 @@ def remove_reviewed_saved_energy_diagnostics(result_node):
 
 def require_public_source(relative, raw):
     if relative == 'fibernet/__init__.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_facade(relative), reviewed_fiber_network_profile_facade()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_facade(relative), reviewed_fiber_network_profile_facade(), reviewed_octet_fcc_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/sim/__init__.py':
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
@@ -567,7 +619,7 @@ def require_public_source(relative, raw):
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1164,7 +1216,7 @@ class SourceShape(unittest.TestCase):
     def test_reviewed_fiber_network_profile_facade_is_exact_and_reversible(self):
         relative = 'fibernet/__init__.py'
         raw = reviewed_fiber_network_profile_facade()
-        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        self.assertEqual(raw, reviewed_octet_fcc_facade(reverse=(ROOT/relative).read_bytes()))
         self.assertEqual(reviewed_fiber_network_profile_facade(reverse=raw),
                          reviewed_facade(relative))
         for admitted in (public_baseline(relative).read_bytes(), reviewed_facade(relative), raw):
@@ -1189,6 +1241,44 @@ class SourceShape(unittest.TestCase):
             with patch.object(Path, 'read_bytes', changed_read):
                 with self.assertRaisesRegex(AssertionError, 'reviewed FiberNetwork profile facade delta changed'):
                     reviewed_fiber_network_profile_facade()
+
+    def test_reviewed_octet_fcc_facade_is_exact_and_reversible(self):
+        relative = 'fibernet/__init__.py'
+        raw = reviewed_octet_fcc_facade()
+        base = reviewed_fiber_network_profile_facade()
+        self.assertEqual(raw, (ROOT/relative).read_bytes())
+        self.assertEqual(reviewed_octet_fcc_facade(reverse=raw), base)
+        self.assertEqual(reviewed_fiber_network_profile_facade(reverse=base),
+                         reviewed_facade(relative))
+        for admitted in (public_baseline(relative).read_bytes(), reviewed_facade(relative), base, raw):
+            require_public_source(relative, admitted)
+        import_line = b'from fibernet.gen.standard_lattice import octet_fcc_v1\n'
+        export_line = b'__all__.append("octet_fcc_v1")\n'
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(import_line, b'', 1), raw.replace(export_line, b'', 1),
+                        raw.replace(import_line, import_line+import_line, 1),
+                        raw.replace(export_line, export_line+export_line, 1),
+                        raw.replace(b'fibernet.gen.standard_lattice', b'fibernet.gen.pattern', 1),
+                        raw.replace(b'octet_fcc_v1', b'wrong_octet', 1),
+                        raw.replace(export_line, b'__all__.append("wrong_octet")\n', 1),
+                        raw.replace(b'FiberNetworkProfile', b'WrongProfile', 1),
+                        raw.replace(b'def __getattr__(name):', b'def __getattr__(name): # changed', 1),
+                        raw.replace(b'_LAZY_EXPORTS = {', b'_LAZY_EXPORTS = { # changed', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source(relative, changed)
+            with self.assertRaises(AssertionError):
+                reviewed_octet_fcc_facade(reverse=changed)
+        original = Path.read_bytes
+        fixture = ROOT/'tests/fixtures/standard_octet_v1/root_facade_delta.json'
+        for mutation in (lambda value: value+b'\n',
+                         lambda value: value.replace(b'octet_fcc_v1', b'wrong_octet', 1)):
+            def changed_read(path):
+                value = original(path)
+                return mutation(value) if path == fixture else value
+            with patch.object(Path, 'read_bytes', changed_read):
+                with self.assertRaisesRegex(AssertionError, 'reviewed octet FCC facade delta changed'):
+                    reviewed_octet_fcc_facade()
 
     def test_reviewed_lammps_capability_facade_is_exact_and_reversible(self):
         relative = 'fibernet/sim/__init__.py'
@@ -1295,9 +1385,21 @@ class SourceShape(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'batch report source delta changed'):
                 reviewed_easy_batch_report_source()
 
+    def test_legacy_analysis_source_is_exact_and_reversible(self):
+        raw = reviewed_legacy_analysis_source()
+        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_legacy_analysis_source(reverse=raw), reviewed_native_io_source())
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'return analyze_legacy_endpoints(network)', b'return {}', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/api.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_legacy_analysis_source(reverse=changed)
+
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()
-        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
         self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),

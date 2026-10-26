@@ -212,3 +212,7 @@ def __getattr__(name):
 def __dir__():
     return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)
                   | set(_LAZY_MODULES) | {"_HAS_RL"})
+
+# Additive standard geometry API; no change to legacy lattice names.
+from fibernet.gen.standard_lattice import octet_fcc_v1
+__all__.append("octet_fcc_v1")

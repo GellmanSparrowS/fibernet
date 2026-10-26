@@ -9,6 +9,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
+    'tests/fixtures/legacy_analysis_v1/api_delta.json',
     'tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt',
     'tests/fixtures/deformed_transport_preparation_v1/planar_golden.json',
     'tests/fixtures/saved_electrothermal_v1/axial_chain.json.gz.b64',

@@ -1,0 +1,21 @@
+{
+  "schema": "reviewed_legacy_analysis_source_delta/1",
+  "source": "fibernet/api.py",
+  "baseline_main": "59a160f7959144656dd8b2b249faf80cf5395c5f",
+  "base_sha256": "48dd9783c177be7711a2dd4b509c48539f36bffe02f1394b45618985eca43e7d",
+  "result_sha256": "ed4775cae2183e6d4f247042730e80efda438353e7bd753014047bfa9d0efd46",
+  "hunks": [
+    {
+      "before": "from typing import Optional, Dict, List, Union, Tuple, Callable, Any",
+      "after": "from typing import Optional, Dict, List, Union, Tuple, Callable, Any, Literal, TYPE_CHECKING, overload"
+    },
+    {
+      "before": "from fibernet.core import transform\n",
+      "after": "from fibernet.core import transform\n\nif TYPE_CHECKING:\n    from fibernet.analysis.topology_metrics import TopologyMetricsV1\n"
+    },
+    {
+      "before": "def analyze(network: FiberNetwork) -> Dict:\n    \"\"\"Analyze network structure.\n    \n    Returns\n    -------\n    dict\n        Analysis results with keys: num_fibers, num_crosslinks,\n        nematic_order, mean_length, total_length, volume_fraction, etc.\n    \"\"\"\n    from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer\n    \n    morph = MorphologyAnalyzer(network)\n    topo = TopologyAnalyzer(network)\n    \n    morph_report = morph.full_report()\n    try:\n        topo_report = topo.full_report()\n    except ImportError:\n        topo_report = {}\n    \n    return {\n        'num_fibers': network.num_fibers,\n        'num_crosslinks': network.num_crosslinks,\n        'dimension': network.dimension,\n        'nematic_order': morph_report.get('nematic_order', 0),\n        'mean_length': morph_report.get('mean_length', 0),\n        'total_length': morph_report.get('total_length', 0),\n        'mean_tortuosity': morph_report.get('mean_tortuosity', 1.0),\n        'num_nodes': topo_report.get('num_nodes', 0),\n        'num_edges': topo_report.get('num_edges', 0),\n        'mean_degree': topo_report.get('degree_stats', {}).get('mean', 0),\n        'is_connected': topo_report.get('is_connected', False),\n        'num_components': topo_report.get('num_components', 0),\n    }\n",
+      "after": "@overload\ndef analyze(network: FiberNetwork, *, kind: None = None) -> Dict: ...\n\n\n@overload\ndef analyze(network: _StructureGraph, *, kind: Literal['topology']) -> 'TopologyMetricsV1': ...\n\n\ndef analyze(network: Union[FiberNetwork, _StructureGraph], *,\n            kind: Optional[str] = None) -> Union[Dict, 'TopologyMetricsV1']:\n    \"\"\"Analyze an explicit representation without implicit conversion.\n\n    StructureGraph requires kind='topology' and returns the unchanged\n    TopologyMetricsV1 result, not a comprehensive geometry/material report.\n    Use analyze_geometry_paths with explicit length_unit/coordinate_frame and\n    analyze_spectrum separately for their declared units and resource budgets.\n\n    FiberNetwork requires omitted/None kind and returns the historical twelve\n    fields for a nonperiodic, crosslink-free endpoint network. Arc lengths use\n    caller coordinate units; interior crossings are not junctions. Ambiguous\n    rounded endpoints, parallel fibers and degenerate chords raise. Empty means\n    are zero by convention, is_connected is False; no volume fraction is implied.\n    Crosslinked legacy input is unsupported, and from_fiber_network is only an\n    approximate endpoint projection, not a lossless migration helper.\n    \"\"\"\n    if isinstance(network, _StructureGraph):\n        if kind != 'topology':\n            raise ValueError(\"StructureGraph analysis requires kind='topology'; \"\n                             \"geometry and spectrum use their explicit analysis entry points\")\n        from fibernet.analysis import analyze_topology\n        return analyze_topology(network)\n    if not isinstance(network, FiberNetwork):\n        raise TypeError('analyze requires FiberNetwork or StructureGraph; no conversion is performed')\n    if kind is not None:\n        raise ValueError('FiberNetwork analysis requires omitted/None kind; '\n                         \"kind='topology' requires StructureGraph\")\n    from fibernet.analysis._legacy_summary import analyze_legacy_endpoints\n    return analyze_legacy_endpoints(network)\n"
+    }
+  ]
+}

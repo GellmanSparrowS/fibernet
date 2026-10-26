@@ -1,0 +1,283 @@
+{
+  "reference_sha256": "f32c0b50a0af3e1d9e70d7c92cb1b31073b6ba9ad093d269df2557f81be6cc80",
+  "reference_version": "e2v13",
+  "current_version": "e2v14",
+  "current_engine_hash": "a35e2dffdbee",
+  "source_sha256": {
+    "FiberScope/fslab/engine2.py": "87d9014d7c66c8368c49691ba49e1c9c184ebe256fc8a468ee9ab420bf87da9d",
+    "FiberScope/fslab/simcache.py": "350350ac99acd258aa151076144050c59d8b24cc638f37e864ed90e04d29a07b",
+    "FiberScope/fslab/structure.py": "05aeda13ac53c2f22fcb7b8a1b71b45e433283a16f7a60850c36220b98e5dc50",
+    "FiberScope/fslab/cell_rules.py": "e7c123fa6d79f0d8c70356d5dcc90cc01d1636ced460a88cc57c5f5e65c76aee",
+    "FiberScope/fslab/manufacturing.py": "dbd17590b4468985839977bde5c5d2a103ef76cf81ea7191c3d56bef42cd4e96",
+    "FiberScope/fslab/cell_cycles.py": "4214f3b84bc48da2bcf15aed66d26c39a3f7911137114e02c30de1bdb9045980",
+    "FiberScope/fslab/welding.py": "a32443ac1de960a4193dad21c7295ed5a3db8d95cff87e6bdb813fbe774b7c5b",
+    "fibernet/core/structure_graph.py": "38972c5ef3f7e4e5fd29c464e5f5be1d7ef981b5eb7192da0f967076269ea486",
+    "fibernet/gen/spectrum.py": "6c0ad37a24c0d38671c06aa2149aab54cd6472d7bc0ca3ad2636edd154c55e19",
+    "fibernet/gen/cell_rules.py": "3935b24ee0048d8694f1f4737d991ab2e3b5a7a694bb6a3915e013a30c6d474d",
+    "fibernet/gen/cell_cycles.py": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70",
+    "fibernet/gen/manufacturing.py": "e33364a0a5d7f012a840be4f950c401c2b60a96db16c1963a4c6e76a2f4929e6",
+    "fibernet/gen/surface_geometry.py": "6194bc5ee501186d08c96554a0ec0b77e030346650d4632cc59789c217ce6668",
+    "fibernet/sim/reduced_beam.py": "b4d4a57affde9f453ca59538ac13da2d43fd5e66251b6cd0bd0a69646cf081f9"
+  },
+  "driver_normalized_sha256": "f52925df1a81f7101f66ea98b013303665f06232d86c682331026dfa732e866f",
+  "cases": [
+    [
+      "qs_square",
+      "square",
+      3,
+      5,
+      7,
+      {
+        "target_stretch": 2.0,
+        "num_steps": 3000,
+        "n_increments": 30,
+        "save_interval": 250
+      }
+    ],
+    [
+      "qs_bow",
+      "auxetic_bow",
+      3,
+      5,
+      7,
+      {
+        "target_stretch": 1.8,
+        "num_steps": 3000,
+        "n_increments": 30,
+        "save_interval": 250
+      }
+    ],
+    [
+      "qs_chiral",
+      "chiral",
+      3,
+      2,
+      7,
+      {
+        "target_stretch": 2.2,
+        "num_steps": 3000,
+        "n_increments": 30,
+        "save_interval": 250
+      }
+    ],
+    [
+      "ramp_reentrant",
+      "reentrant",
+      3,
+      2,
+      7,
+      {
+        "target_stretch": 1.8,
+        "num_steps": 3000,
+        "n_increments": 0,
+        "save_interval": 250,
+        "ramp_fraction": 0.3
+      }
+    ]
+  ],
+  "arrays": {
+    "qs_square_force": [
+      31
+    ],
+    "qs_square_strain": [
+      31
+    ],
+    "qs_square_ccounts": [
+      31
+    ],
+    "qs_square_final": [
+      136,
+      2
+    ],
+    "qs_square_estrain": [
+      144
+    ],
+    "qs_square_e_axial": [
+      31
+    ],
+    "qs_square_e_bend": [
+      31
+    ],
+    "qs_square_e_contact": [
+      31
+    ],
+    "qs_square_e_kinetic": [
+      31
+    ],
+    "qs_square_e_work": [
+      31
+    ],
+    "qs_bow_force": [
+      31
+    ],
+    "qs_bow_strain": [
+      31
+    ],
+    "qs_bow_ccounts": [
+      31
+    ],
+    "qs_bow_final": [
+      196,
+      2
+    ],
+    "qs_bow_estrain": [
+      216
+    ],
+    "qs_bow_e_axial": [
+      31
+    ],
+    "qs_bow_e_bend": [
+      31
+    ],
+    "qs_bow_e_contact": [
+      31
+    ],
+    "qs_bow_e_kinetic": [
+      31
+    ],
+    "qs_bow_e_work": [
+      31
+    ],
+    "qs_chiral_force": [
+      31
+    ],
+    "qs_chiral_strain": [
+      31
+    ],
+    "qs_chiral_ccounts": [
+      31
+    ],
+    "qs_chiral_final": [
+      376,
+      2
+    ],
+    "qs_chiral_estrain": [
+      432
+    ],
+    "qs_chiral_e_axial": [
+      31
+    ],
+    "qs_chiral_e_bend": [
+      31
+    ],
+    "qs_chiral_e_contact": [
+      31
+    ],
+    "qs_chiral_e_kinetic": [
+      31
+    ],
+    "qs_chiral_e_work": [
+      31
+    ],
+    "ramp_reentrant_force": [
+      13
+    ],
+    "ramp_reentrant_strain": [
+      13
+    ],
+    "ramp_reentrant_ccounts": [
+      13
+    ],
+    "ramp_reentrant_final": [
+      186,
+      2
+    ],
+    "ramp_reentrant_estrain": [
+      198
+    ],
+    "ramp_reentrant_e_axial": [
+      13
+    ],
+    "ramp_reentrant_e_bend": [
+      13
+    ],
+    "ramp_reentrant_e_contact": [
+      13
+    ],
+    "ramp_reentrant_e_kinetic": [
+      13
+    ],
+    "ramp_reentrant_e_work": [
+      13
+    ]
+  },
+  "reference_metadata": {
+    "engine_version": "e2v13",
+    "cases": [
+      {
+        "name": "qs_square",
+        "unit": "square",
+        "grid": 3,
+        "pts": 5,
+        "seed": 7,
+        "kw": {
+          "target_stretch": 2.0,
+          "num_steps": 3000,
+          "n_increments": 30,
+          "save_interval": 250
+        },
+        "seconds": 0.14,
+        "n_frames": 31,
+        "n_edges": 144,
+        "n_nodes": 136
+      },
+      {
+        "name": "qs_bow",
+        "unit": "auxetic_bow",
+        "grid": 3,
+        "pts": 5,
+        "seed": 7,
+        "kw": {
+          "target_stretch": 1.8,
+          "num_steps": 3000,
+          "n_increments": 30,
+          "save_interval": 250
+        },
+        "seconds": 0.32,
+        "n_frames": 31,
+        "n_edges": 216,
+        "n_nodes": 196
+      },
+      {
+        "name": "qs_chiral",
+        "unit": "chiral",
+        "grid": 3,
+        "pts": 2,
+        "seed": 7,
+        "kw": {
+          "target_stretch": 2.2,
+          "num_steps": 3000,
+          "n_increments": 30,
+          "save_interval": 250
+        },
+        "seconds": 0.38,
+        "n_frames": 31,
+        "n_edges": 432,
+        "n_nodes": 376
+      },
+      {
+        "name": "ramp_reentrant",
+        "unit": "reentrant",
+        "grid": 3,
+        "pts": 2,
+        "seed": 7,
+        "kw": {
+          "target_stretch": 1.8,
+          "num_steps": 3000,
+          "n_increments": 0,
+          "save_interval": 250,
+          "ramp_fraction": 0.3
+        },
+        "seconds": 0.27,
+        "n_frames": 13,
+        "n_edges": 198,
+        "n_nodes": 186
+      }
+    ]
+  },
+  "provenance": {
+    "reference_repository_commit": "dab33cfe3517863eaa623efb2400961a99c51a14",
+    "repository_attributed_engine_hash": "145d34434c1a",
+    "note": "NPZ embeds version only, not source hash; this is repository attribution."
+  }
+}
