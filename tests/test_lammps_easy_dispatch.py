@@ -144,6 +144,65 @@ class AdapterTests(unittest.TestCase):
             r=mapped();change(r)
             with self.assertRaises(ValueError):r.to_dict(True)
 
+    def test_geometry_metadata_persistence_with_or_without_recorded_state(self):
+        # The default no-state result must retain the same unit declarations.
+        # All frames are the existing synthetic fixture, not a native run.
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'result.json'
+            for unit in ('m', 'mm'):
+                other_unit = 'mm' if unit == 'm' else 'm'
+                other_scale = .001 if unit == 'm' else 1.
+                for record in (False, True):
+                    for detailed in (False, True):
+                        with self.subTest(unit=unit, record_state=record, detailed=detailed):
+                            original = mapped(unit=unit, record=record)
+                            valid = original.to_dict(detailed)
+                            self.assertEqual('dynamics_state' in valid, record)
+                            original.save(path, detailed=detailed)
+                            loaded = SimResult.load(path)
+                            self.assertEqual(loaded.to_dict(detailed), valid)
+                            self.assertEqual(loaded.dynamics_state is not None, record)
+                            for mutation in ('scale', 'field_unit'):
+                                with self.subTest(mutation=mutation):
+                                    changed = copy.deepcopy(original)
+                                    payload = copy.deepcopy(valid)
+                                    if mutation == 'scale':
+                                        changed.metadata['original_graph_length_to_m'] = other_scale
+                                        payload['original_graph_length_to_m'] = other_scale
+                                    else:
+                                        changed.metadata['field_units']['displacements'] = other_unit
+                                        payload['field_units']['displacements'] = other_unit
+                                    with self.assertRaisesRegex(ValueError, 'inconsistent LAMMPS geometry units'):
+                                        changed.to_dict(detailed)
+                                    # Rejection precedes persistence and must not replace a destination.
+                                    path.write_text('unchanged destination', encoding='utf-8')
+                                    with self.assertRaisesRegex(ValueError, 'inconsistent LAMMPS geometry units'):
+                                        changed.save(path, detailed=detailed)
+                                    self.assertEqual(path.read_text(encoding='utf-8'), 'unchanged destination')
+                                    path.write_text(json.dumps(payload), encoding='utf-8')
+                                    with self.assertRaisesRegex(ValueError, 'inconsistent LAMMPS geometry units'):
+                                        SimResult.load(path)
+
+    def test_geometry_metadata_guard_preserves_legacy_and_other_backend_results(self):
+        # A historical label is not proof of the modern LAMMPS model contract.
+        metadata_cases = [
+            {'backend': 'lammps'},
+            {'backend': 'lammps', 'model_contract': {'model': 'historical-external'}},
+            {'backend': 'spring', 'original_graph_length_unit': 'legacy',
+             'original_graph_length_to_m': 'legacy'},
+            {'backend': 'fem', 'original_graph_length_unit': 'legacy'},
+            {},
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'result.json'
+            for metadata in metadata_cases:
+                for detailed in (False, True):
+                    with self.subTest(metadata=metadata, detailed=detailed):
+                        result = SimResult(n_nodes=2, n_edges=1, metadata=copy.deepcopy(metadata))
+                        expected = result.to_dict(detailed)
+                        result.save(path, detailed=detailed)
+                        self.assertEqual(SimResult.load(path).to_dict(detailed), expected)
+
     def test_native_axial_schema_unchanged(self):
         state=dict(schema='native_axial_state/1',representation='summary',availability='summary_only',
             units=None,dt=.01,final=dict(step=0,time=0.,potential_energy=0.,kinetic_energy=0.,total_energy=0.,near_cutoff=False),
