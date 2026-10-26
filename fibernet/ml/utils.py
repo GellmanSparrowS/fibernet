@@ -217,6 +217,18 @@ def compare_models(
 # Visualization
 # ======================================================================
 
+def _plot_figure(show, *, figsize, nrows=1, ncols=1):
+    """Create a private export figure, or use the caller's interactive backend."""
+    if show:
+        import matplotlib.pyplot as plt
+        return plt.subplots(nrows, ncols, figsize=figsize)
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    fig = Figure(figsize=figsize)
+    FigureCanvasAgg(fig)
+    return fig, fig.subplots(nrows, ncols)
+
+
 def plot_predictions(
     y_true: np.ndarray,
     y_pred: np.ndarray,
@@ -241,16 +253,14 @@ def plot_predictions(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, a detached, editable/exportable figure that does not
+        change the pyplot backend, registry, or current figure. Later pyplot.show()
+        does not display it; use show=True for pyplot-managed interactive display.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
 
-    fig, ax = plt.subplots(figsize=(8, 8))
+    fig, ax = _plot_figure(show, figsize=(8, 8))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
 
@@ -273,11 +283,12 @@ def plot_predictions(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
@@ -355,12 +366,10 @@ def plot_feature_importance(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, a detached, editable/exportable figure that does not
+        change the pyplot backend, registry, or current figure. Later pyplot.show()
+        does not display it; use show=True for pyplot-managed interactive display.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     importances, importance_label = _feature_importance_values(model, feature_names)
     if importances is None:
         raise ValueError("Model has no feature_importances_ or coef_ attribute")
@@ -374,7 +383,7 @@ def plot_feature_importance(
     names = [feature_names[i] for i in indices]
     values = [importances[i] for i in indices]
 
-    fig, ax = plt.subplots(figsize=(10, max(4, top_k * 0.35)))
+    fig, ax = _plot_figure(show, figsize=(10, max(4, top_k * 0.35)))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
 
@@ -390,11 +399,12 @@ def plot_feature_importance(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
@@ -412,17 +422,15 @@ def plot_residuals(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, a detached, editable/exportable figure that does not
+        change the pyplot backend, registry, or current figure. Later pyplot.show()
+        does not display it; use show=True for pyplot-managed interactive display.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     y_true = np.asarray(y_true)
     y_pred = np.asarray(y_pred)
     residuals = y_true - y_pred
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
+    fig, (ax1, ax2) = _plot_figure(show, ncols=2, figsize=(14, 5))
     fig.patch.set_facecolor("#0a0a0f")
 
     for ax in [ax1, ax2]:
@@ -448,11 +456,12 @@ def plot_residuals(
     ax2.set_title("Residual Distribution", color="#ddd")
 
     fig.suptitle(title, color="#ddd", fontsize=14)
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
@@ -473,12 +482,10 @@ def plot_learning_curve(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, a detached, editable/exportable figure that does not
+        change the pyplot backend, registry, or current figure. Later pyplot.show()
+        does not display it; use show=True for pyplot-managed interactive display.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     try:
         from sklearn.model_selection import learning_curve
     except ImportError:
@@ -493,7 +500,7 @@ def plot_learning_curve(
         n_jobs=-1
     )
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = _plot_figure(show, figsize=(8, 6))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
 
@@ -520,11 +527,12 @@ def plot_learning_curve(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
