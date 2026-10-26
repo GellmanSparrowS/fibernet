@@ -75,3 +75,13 @@ Outputs are individual writes, not an atomic artifact bundle. A failed call can
 leave partial outputs. Use a new output directory when separating runs, and
 inspect `importance_plot` rather than assuming an old image belongs to the latest
 run.
+
+## Plot ownership
+
+The four `fibernet.ml.utils` plot helpers return a Matplotlib `Figure`. With the
+default `show=False`, this is a detached Agg-backed figure: edit its axes or call
+`fig.savefig(...)` to export it. The helper does not switch your plotting backend,
+register the new figure with pyplot, or change your current pyplot figure. This
+replaces the earlier pyplot-registration behavior; later `plt.show()` will not
+display a detached figure. Use `show=True` for pyplot-managed interactive display
+with your selected backend. Returned figures are not cleared by the helper.
