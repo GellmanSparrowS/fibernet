@@ -74,8 +74,14 @@ for isolated fibers. Optional `weight` remains the constant `1.0` and warns that
 it is not contact stiffness or strength. Material laws and full crosslink data
 are not encoded. Optional centrality is computed once; its errors propagate.
 
-Nonfinite derived geometry, float32 overflow and nonzero-to-zero underflow are
-rejected. Coordinates retain the `Fiber` constructor's float64 storage contract.
+Nonfinite derived geometry and float32 overflow are rejected. Feature values must
+be signed zero or lie within the float32 normal range: every nonzero magnitude
+below `2**-126` is rejected before casting, even if its subnormal bits could be
+stored on a particular platform. Cast output is also checked for nonfinite,
+subnormal or nonzero-to-zero results. The normal-or-zero range provides consistent input bounds across floating-point
+runtimes; `1e-40` is not an accepted feature value. No process floating-point mode is changed.
+These checks do not claim that all preceding geometry arithmetic is immune to
+platform-dependent subnormal handling. Coordinates retain the `Fiber` constructor's float64 storage contract.
 No automatic unit conversion, clipping or rescaling is performed. The caller
 must choose any rescaling and maintain its units and model-input contract.
 

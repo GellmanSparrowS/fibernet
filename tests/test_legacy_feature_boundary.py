@@ -1,6 +1,4 @@
-"""Tiny hand-built legacy feature boundary tests; no generators or numerical solvers.
-
-Prepared for an admitted, guarded runner. Collection count: 76 pytest cases.
+"""Regression coverage for the legacy feature boundary.
 """
 import builtins
 import importlib
@@ -307,12 +305,21 @@ def test_extreme_numerical_rejection(case, monkeypatch):
         gnn(**kwargs).extract_graph(net)
 
 
-@pytest.mark.parametrize('radius', [float(np.finfo(np.float32).max), 1e-40])
-def test_float32_representable_boundary(radius):
+@pytest.mark.parametrize('radius', [float(np.finfo(np.float32).max), 2.0 ** -126])
+def test_float32_portable_normal_boundary(radius):
     result = gnn().extract_graph(network([fiber(radius=radius)]))
     check_output(result, 1, 0)
     assert result['node_features'][0, -1] != 0
     assert result['node_features'][0, -1] == np.float32(radius)
+
+
+def test_float32_subnormal_radius_requires_explicit_rescaling():
+    prior = np.geterr()
+    try:
+        with pytest.raises(ValueError, match='below the portable float32 normal range; rescale'):
+            gnn().extract_graph(network([fiber(radius=1e-40)]))
+    finally:
+        assert np.geterr() == prior
 
 
 @pytest.mark.parametrize('fail', [False, True])

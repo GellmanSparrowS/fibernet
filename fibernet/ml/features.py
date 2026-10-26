@@ -27,16 +27,30 @@ def _checked_norm(vector, quantity):
 
 
 def _float32_features(values, shape, quantity):
-    """Cast only when finite values stay finite and nonzero values stay nonzero."""
+    """Return finite float32 zeros/normal values; reject nonportable subnormals."""
     values = np.asarray(values, dtype=np.float64).reshape(shape)
     _require_finite(values, quantity)
+    # Inspect stored bits: floating comparisons can treat subnormals as zero
+    # under an inherited denormals-are-zero mode. Both signed zeros are valid.
+    nonzero = (values.view(np.uint64) & np.uint64(0x7fffffffffffffff)) != 0
+    if np.any(nonzero & (np.abs(values) < 2.0 ** -126)):
+        raise ValueError(
+            f'Legacy GNN {quantity} is below the portable float32 normal range; '
+            'rescale the input explicitly'
+        )
     if np.any(np.abs(values) > np.finfo(np.float32).max):
         raise ValueError(f'Legacy GNN {quantity} exceeds float32 range; rescale the input explicitly')
-    # Subnormal rounding is checked below rather than returned as a false zero.
     with np.errstate(under='ignore'):
         result = values.astype(np.float32)
-    if np.any((values != 0) & (result == 0)):
-        raise ValueError(f'Legacy GNN {quantity} underflows float32; rescale the input explicitly')
+    magnitude = result.view(np.uint32) & np.uint32(0x7fffffff)
+    exponent = magnitude & np.uint32(0x7f800000)
+    if np.any(exponent == np.uint32(0x7f800000)):
+        raise ValueError(f'Legacy GNN {quantity} cast is not finite; rescale the input explicitly')
+    if np.any((nonzero & (magnitude == 0)) | ((magnitude != 0) & (exponent == 0))):
+        raise ValueError(
+            f'Legacy GNN {quantity} cast is outside the portable float32 normal range; '
+            'rescale the input explicitly'
+        )
     return result
 
 
@@ -198,7 +212,7 @@ class GNNFeatureExtractor:
     order: position, degree, centrality, then length/radius for nodes; length,
     angle, weight for edges. Empty lists retain the historical default selection.
     Each undirected edge appears once; no reverse edges are added for ML tools.
-    Nonfinite derived geometry and float32 overflow/round-to-zero underflow are
+    Nonfinite derived geometry and values outside the float32 normal-or-zero range are
     rejected rather than clipped or replaced. Caller-directed rescaling must
     include its own unit/schema policy; this class never rescales automatically.
     
