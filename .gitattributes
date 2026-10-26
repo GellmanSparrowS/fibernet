@@ -70,3 +70,6 @@ tests/fixtures/standard_octet_v1/root_facade_delta.json -text
 
 # Reviewed legacy summary facade delta.
 tests/fixtures/legacy_analysis_v1/api_delta.json -text
+
+# Exact reviewed LAMMPS persistence source delta.
+tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json -text

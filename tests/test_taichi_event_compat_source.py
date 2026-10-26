@@ -596,6 +596,40 @@ def reviewed_saved_energy_diagnostics_source():
     return result
 
 
+def lammps_metadata_source_delta():
+    raw = (ROOT/'tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == '80c3393734c3cf0081bb820c2a07ea6bbe61111ed02db6d713b394c4d9d46bca', 'reviewed LAMMPS metadata delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_lammps_metadata_source_delta/1'
+    assert delta['source'] == 'fibernet/sim/accelerated.py'
+    assert delta['baseline_main'] == 'a3e77458415f741fa19af79913e2707cefd6b002'
+    assert len(delta['hunks']) == 2, 'LAMMPS metadata delta requires two insertions'
+    return delta
+
+
+def reviewed_lammps_metadata_source():
+    delta = lammps_metadata_source_delta()
+    source = reviewed_saved_energy_diagnostics_source()
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'LAMMPS metadata delta base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'LAMMPS metadata insertion is not unique'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'reviewed LAMMPS metadata source changed'
+    return source
+
+
+def restore_reviewed_lammps_metadata_source(source):
+    delta = lammps_metadata_source_delta()
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'unreviewed LAMMPS metadata source'
+    for hunk in reversed(delta['hunks']):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert after and source.count(after) == 1, 'LAMMPS metadata removal is not unique'
+        source = source.replace(after, before, 1)
+    assert source == reviewed_saved_energy_diagnostics_source(), 'LAMMPS metadata inverse changed prior source'
+    return source
+
+
 def remove_reviewed_saved_energy_diagnostics(result_node):
     node = copy.deepcopy(result_node)
     methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
@@ -627,7 +661,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -686,11 +720,14 @@ def restore_historical_save(result_node):
     # metadata delta, before comparing the historical engine. No loose removal.
     provenance_tree = ast.parse(reviewed_spring_provenance_source().decode('utf-8'))
     provenance_result = next(n for n in provenance_tree.body if getattr(n,'name',None)=='SimResult')
+    metadata_tree = ast.parse(reviewed_lammps_metadata_source().decode('utf-8'))
+    metadata_result = next(n for n in metadata_tree.body if getattr(n,'name',None)=='SimResult')
     for name in ('to_dict', 'load'):
         method=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name==name)
         expected_method=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         provenance_method=next(n for n in provenance_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
-        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method)), 'public result method changed: '+name
+        metadata_method=next(n for n in metadata_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method), canonical_ast(metadata_method)), 'public result method changed: '+name
         old_method=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         node.body[node.body.index(method)]=old_method
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
@@ -835,7 +872,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
     def test_current_sources_match_only_the_exact_reviewed_deltas(self):
         for relative in TAICHI_GEOMETRY_SOURCE_PINS:
             with self.subTest(source=relative):
-                expected = (reviewed_saved_energy_diagnostics_source() if relative == 'fibernet/sim/accelerated.py'
+                expected = (reviewed_lammps_metadata_source() if relative == 'fibernet/sim/accelerated.py'
                             else reviewed_easy_batch_report_source())
                 self.assertEqual((ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
@@ -940,7 +977,7 @@ class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
     def test_only_the_exact_additive_method_is_admitted(self):
         prior = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
         current = reviewed_saved_energy_diagnostics_source()
-        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(current, restore_reviewed_lammps_metadata_source(SOURCE.read_bytes()))
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
         old, new = ast.parse(prior), ast.parse(current)
@@ -976,6 +1013,80 @@ class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
                 reviewed_saved_energy_diagnostics_source()
 
 
+class LammpsMetadataSourceAdmission(unittest.TestCase):
+    def result_node(self, raw):
+        return next(n for n in ast.parse(raw).body if isinstance(n, ast.ClassDef) and n.name == 'SimResult')
+
+    def test_exact_reversible_delta_changes_only_two_methods(self):
+        prior = reviewed_saved_energy_diagnostics_source()
+        current = reviewed_lammps_metadata_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(restore_reviewed_lammps_metadata_source(current), prior)
+        require_public_source('fibernet/sim/accelerated.py', prior)
+        require_public_source('fibernet/sim/accelerated.py', current)
+        old, new = ast.parse(prior), ast.parse(current)
+        old_result, new_result = self.result_node(prior), self.result_node(current)
+        old_methods = {n.name:n for n in old_result.body if isinstance(n, ast.FunctionDef)}
+        new_methods = {n.name:n for n in new_result.body if isinstance(n, ast.FunctionDef)}
+        self.assertEqual(set(old_methods), set(new_methods))
+        self.assertEqual({name for name in old_methods if canonical_ast(old_methods[name]) != canonical_ast(new_methods[name])}, {'to_dict', 'load'})
+        for name in ('to_dict', 'load'):
+            new_result.body[new_result.body.index(new_methods[name])] = old_methods[name]
+        new.body[next(i for i,n in enumerate(new.body) if isinstance(n,ast.ClassDef) and n.name == 'SimResult')] = new_result
+        self.assertEqual(canonical_ast(old), canonical_ast(new))
+        self.assertEqual(canonical_ast(restore_historical_save(self.result_node(prior))),
+                         canonical_ast(restore_historical_save(self.result_node(current))))
+
+    def test_guard_import_name_target_and_unrelated_statements_are_rejected(self):
+        current = reviewed_lammps_metadata_source()
+        for name, target in (('to_dict', 'self.metadata'), ('load', 'data')):
+            method = next(n for n in self.result_node(current).body if isinstance(n,ast.FunctionDef) and n.name == name)
+            start, end = method.lineno-1, method.end_lineno
+            lines = current.decode('utf-8').splitlines(keepends=True)
+            original = ''.join(lines[start:end])
+            mutations = (
+                (target + ".get('backend') == 'lammps'", target + ".get('backend') == 'spring'"),
+                ('from ._lammps_result import validate_persisted_metadata', 'from ._other_result import validate_persisted_metadata'),
+                ('from ._lammps_result import validate_persisted_metadata', 'from ._lammps_result import validate_other_metadata as validate_persisted_metadata'),
+                ('validate_persisted_metadata(' + target + ')', 'validate_other_metadata(' + target + ')'),
+                ('validate_persisted_metadata(' + target + ')', 'validate_persisted_metadata(None)'),
+                ('validate_persisted_metadata(' + target + ')', 'pass'),
+            )
+            for before, after in mutations:
+                with self.subTest(method=name, mutation=before, replacement=after):
+                    self.assertEqual(original.count(before), 1)
+                    changed = (''.join(lines[:start])+original.replace(before,after,1)+''.join(lines[end:])).encode('utf-8')
+                    with self.assertRaises(AssertionError): require_public_source('fibernet/sim/accelerated.py', changed)
+                    with self.assertRaises(AssertionError): restore_reviewed_lammps_metadata_source(changed)
+                    with self.assertRaises(AssertionError): restore_historical_save(self.result_node(changed))
+            changed = self.result_node(current)
+            changed_method = next(n for n in changed.body if isinstance(n,ast.FunctionDef) and n.name == name)
+            changed_method.body.append(ast.Pass())
+            with self.subTest(method=name, mutation='unrelated appended statement'), self.assertRaises(AssertionError):
+                restore_historical_save(changed)
+
+    def test_fixture_and_source_bytes_are_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw+b'\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'reviewed LAMMPS metadata delta changed'):
+                reviewed_lammps_metadata_source()
+        raw = reviewed_lammps_metadata_source()
+        for changed in (raw+b'\n# unreviewed\n', raw.replace(b'\n',b'\r\n'),
+                        raw.replace(b'def _interpolate_schedule(schedule, step, total_steps):',
+                                    b'def _interpolate_schedule(schedule, step, total_steps, extra=None):',1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError): require_public_source('fibernet/sim/accelerated.py', changed)
+            with self.assertRaises(AssertionError): restore_reviewed_lammps_metadata_source(changed)
+
+    def test_new_fixture_has_an_exact_byte_preserving_attribute(self):
+        rule = 'tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json -text'
+        self.assertEqual((ROOT/'.gitattributes').read_text(encoding='utf-8').splitlines().count(rule), 1)
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -994,7 +1105,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_saved_energy_diagnostics_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_lammps_metadata_source(), SOURCE.read_bytes())
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -1030,7 +1141,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_saved_energy_diagnostics_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_lammps_metadata_source(), SOURCE.read_bytes())
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())

@@ -1,0 +1,17 @@
+{
+  "schema": "reviewed_lammps_metadata_source_delta/1",
+  "source": "fibernet/sim/accelerated.py",
+  "baseline_main": "a3e77458415f741fa19af79913e2707cefd6b002",
+  "base_sha256": "a5bdc54048c2012f4582c79e514b835c1967746276236d093b0d0ea353985e71",
+  "result_sha256": "b77aaa7b37216174d97805b4529f1dbaec3d3099106f630221b60147124ccf82",
+  "hunks": [
+    {
+      "before": "            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                      self.dynamics_state, vars(self))\n",
+      "after": "            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                      self.dynamics_state, vars(self))\n            from ._lammps_result import validate_persisted_metadata\n            validate_persisted_metadata(self.metadata)\n"
+    },
+    {
+      "before": "            if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)\n",
+      "after": "            if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)\n            from ._lammps_result import validate_persisted_metadata\n            validate_persisted_metadata(data)\n"
+    }
+  ]
+}
