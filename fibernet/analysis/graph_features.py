@@ -67,6 +67,32 @@ def _image_unavailable(status, names, missing_reason):
                  "dependency_missing.cv2" if not HAS_CV2 else missing_reason)
 
 
+class FeatureUnavailableError(RuntimeError):
+    """Ordinary extraction encountered unavailable audited features.
+
+    ``unavailable_features`` is a tuple in FEATURE_COLS order; ``reasons`` maps
+    every unavailable name to its status reason in the same stable order.
+    """
+
+    def __init__(self, reasons):
+        self.reasons = dict(reasons)
+        self.unavailable_features = tuple(self.reasons)
+        details = "; ".join(f"{name}: {reason}" for name, reason in self.reasons.items())
+        super().__init__(
+            "Graph features are unavailable: " + details + ". "
+            "For dependency_missing.cv2, install opencv-python-headless "
+            "(pip install opencv-python-headless). For input.no_positions or "
+            "render_missing, provide positioned nodes and check rendering. "
+            "Use extract_with_status() to inspect values and reasons, or pass "
+            "allow_unavailable=True explicitly to retain legacy placeholders."
+        )
+
+
+def _validate_allow_unavailable(value):
+    if type(value) is not bool:
+        raise TypeError("allow_unavailable must be a bool")
+
+
 class GraphFeatureExtractor:
     """Extract 94-dimensional feature vector from fiber network graphs.
 
@@ -939,7 +965,7 @@ class GraphFeatureExtractor:
 
     # ==================== Public API ====================
 
-    def extract(self, obj) -> Dict[str, float]:
+    def extract(self, obj, *, allow_unavailable: bool = False) -> Dict[str, float]:
         """Extract 94-dimensional feature vector.
 
         Parameters
@@ -948,6 +974,12 @@ class GraphFeatureExtractor:
             Simple undirected network without parallel physical edges.
             NetworkX nodes must have a ``pos`` attribute. Only XY coordinates
             and straight endpoint chords enter this historical feature set.
+
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
 
         Returns
         -------
@@ -961,7 +993,16 @@ class GraphFeatureExtractor:
         >>> features = ext.extract(G)
         >>> assert len(features) == 94
         """
-        return self._extract(obj)
+        _validate_allow_unavailable(allow_unavailable)
+        if allow_unavailable:
+            return self._extract(obj)
+        result = self.extract_with_status(obj)
+        reasons = {name: result["status"][name]["reason"]
+                   for name in self.FEATURE_COLS
+                   if result["status"][name]["state"] == "unavailable"}
+        if reasons:
+            raise FeatureUnavailableError(reasons)
+        return result["values"]
 
     def _extract(self, obj, *, _status=None):
         G = self._to_graph(obj)
@@ -1019,7 +1060,7 @@ class GraphFeatureExtractor:
                 "parameters": parameters, "dependencies": dependencies,
                 "status": status, "values": values}
 
-    def extract_vector(self, obj) -> np.ndarray:
+    def extract_vector(self, obj, *, allow_unavailable: bool = False) -> np.ndarray:
         """Extract features as ordered numpy array.
 
         Parameters
@@ -1027,15 +1068,23 @@ class GraphFeatureExtractor:
         obj : nx.Graph or StructureGraph
             The network to analyze.
 
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
+
         Returns
         -------
         np.ndarray
             94-element feature vector ordered by FEATURE_COLS.
         """
-        feat = self.extract(obj)
+        _validate_allow_unavailable(allow_unavailable)
+        feat = (self.extract(obj, allow_unavailable=True) if allow_unavailable
+                else self.extract(obj))
         return np.array([feat.get(k, 0.0) for k in self.FEATURE_COLS])
 
-    def batch_extract(self, networks) -> List[Dict[str, float]]:
+    def batch_extract(self, networks, *, allow_unavailable: bool = False) -> List[Dict[str, float]]:
         """Extract features from multiple networks.
 
         Parameters
@@ -1043,14 +1092,22 @@ class GraphFeatureExtractor:
         networks : list
             List of simple nx.Graph or StructureGraph objects.
 
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
+
         Returns
         -------
         list of dict
             Feature dictionaries.
         """
-        return [self.extract(net) for net in networks]
+        _validate_allow_unavailable(allow_unavailable)
+        return [(self.extract(net, allow_unavailable=True) if allow_unavailable
+                 else self.extract(net)) for net in networks]
 
-    def batch_extract_matrix(self, networks) -> np.ndarray:
+    def batch_extract_matrix(self, networks, *, allow_unavailable: bool = False) -> np.ndarray:
         """Extract features as a matrix.
 
         Parameters
@@ -1058,12 +1115,20 @@ class GraphFeatureExtractor:
         networks : list
             List of simple nx.Graph or StructureGraph objects.
 
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
+
         Returns
         -------
         np.ndarray
             Matrix of shape (n_networks, 94).
         """
-        vectors = [self.extract_vector(net) for net in networks]
+        _validate_allow_unavailable(allow_unavailable)
+        vectors = [(self.extract_vector(net, allow_unavailable=True) if allow_unavailable
+                    else self.extract_vector(net)) for net in networks]
         return np.vstack(vectors) if vectors else np.empty((0, len(self.FEATURE_COLS)))
 
 

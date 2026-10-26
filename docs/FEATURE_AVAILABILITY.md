@@ -5,9 +5,23 @@ on optional image dependencies or on whether its measurement domain exists.
 Then use `FiberNetDataset.feature_matrix_checked()` to select compatible, finite
 columns explicitly. A missing OpenCV dependency is not a measured zero.
 
-These methods are opt-in. Existing `extract()`, `extract_vector()`, batch methods,
-`dataset.features`, training defaults, and the separate 14-feature schema retain
-their existing behavior.
+Ordinary `extract()`, `extract_vector()`, `batch_extract()` and
+`batch_extract_matrix()` raise `FeatureUnavailableError` when any recorded state
+is `unavailable`, including when OpenCV is missing. Install the image dependency
+with `pip install opencv-python-headless`, or inspect the result with
+`extract_with_status()`. The exception is importable from
+`fibernet.analysis.graph_features`; its `unavailable_features` tuple and `reasons`
+mapping contain every unavailable feature in `FEATURE_COLS` order.
+
+To reproduce historical placeholder values deliberately, pass the keyword-only
+boolean `allow_unavailable=True` to any of those four methods. The constructor
+is unchanged. The default guard does not reject `unknown`, `fallback`,
+`defined_empty` or `not_applicable`; it is not the stricter checked-column policy
+below. Empty batches return an empty list or a `(0, 94)` matrix.
+
+`extract_with_status()` and checked dataset selection remain opt-in.
+`dataset.features`, raw persistence, training defaults, and the separate
+14-feature schema retain their existing behavior.
 
 ## Extract, retain provenance, select columns
 
