@@ -282,6 +282,50 @@ def plot_predictions(
     return fig
 
 
+def _feature_importance_values(model, feature_names=None):
+    """Return an aligned vector/kind, or (None, None) for unsupported models.
+
+    Only the built-in, column-preserving StandardScaler pipeline is admitted.
+    Arbitrary preprocessing must not relabel transformed coefficients as input
+    features. Malformed supported importance is an error, not an absent feature.
+    """
+    import sys
+
+    scaled = False
+    # An actual Pipeline instance already has its defining module loaded. Avoid
+    # adding a sklearn dependency to direct-estimator plotting (or interpreting
+    # an unrelated estimator's own `steps` attribute as a sklearn pipeline).
+    pipeline_type = getattr(sys.modules.get("sklearn.pipeline"), "Pipeline", ())
+    if isinstance(model, pipeline_type):
+        from sklearn.preprocessing import StandardScaler
+        if (len(model.steps) != 2 or
+                type(model.steps[0][1]) is not StandardScaler):
+            raise ValueError("Importance supports only a feature-preserving "
+                             "StandardScaler -> estimator pipeline")
+        scaled = True
+        model = model.steps[-1][1]
+
+    if hasattr(model, "feature_importances_"):
+        raw_values = np.asarray(model.feature_importances_)
+        kind = "Feature importance"
+    elif hasattr(model, "coef_"):
+        raw_values = np.asarray(model.coef_)
+        kind = ("Absolute coefficient (model feature space)" if scaled else
+                "Absolute coefficient")
+    else:
+        return None, None
+    if np.iscomplexobj(raw_values):
+        raise ValueError("Importance must be real-valued, not complex")
+    values = np.asarray(raw_values, dtype=float)
+    if kind.startswith("Absolute coefficient"):
+        values = np.abs(values)
+    if values.ndim != 1 or not values.size or not np.isfinite(values).all():
+        raise ValueError("Importance must be a nonempty finite one-dimensional vector")
+    if feature_names is not None and len(feature_names) != values.size:
+        raise ValueError("Importance vector length must match feature_names")
+    return values, kind
+
+
 def plot_feature_importance(
     model: Any,
     feature_names: Optional[List[str]] = None,
@@ -296,7 +340,11 @@ def plot_feature_importance(
     Parameters
     ----------
     model : sklearn estimator
-        Must have feature_importances_ or coef_ attribute.
+        Must have feature_importances_ or one-dimensional coef_, either directly
+        or on the final estimator of a StandardScaler pipeline. Coefficients in
+        that pipeline describe model feature space, not physical sensitivities.
+        The built-in Ridge default uses standardized features; other scaler
+        settings may center without scaling or leave the original values intact.
     feature_names : list of str, optional
         Feature names.
     top_k : int
@@ -313,21 +361,8 @@ def plot_feature_importance(
         matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    # Extract importance
-    if hasattr(model, "feature_importances_"):
-        importances = model.feature_importances_
-    elif hasattr(model, "coef_"):
-        importances = np.abs(model.coef_).flatten()
-        if hasattr(model, "named_steps"):
-            # Pipeline — try to get the actual model
-            for name, step in model.named_steps.items():
-                if hasattr(step, "feature_importances_"):
-                    importances = step.feature_importances_
-                    break
-                elif hasattr(step, "coef_"):
-                    importances = np.abs(step.coef_).flatten()
-                    break
-    else:
+    importances, importance_label = _feature_importance_values(model, feature_names)
+    if importances is None:
         raise ValueError("Model has no feature_importances_ or coef_ attribute")
 
     n_features = len(importances)
@@ -347,7 +382,7 @@ def plot_feature_importance(
     ax.set_yticks(range(len(names)))
     ax.set_yticklabels(names, fontsize=9, color="#aaa")
     ax.invert_yaxis()
-    ax.set_xlabel("Importance", color="#aaa")
+    ax.set_xlabel(importance_label, color="#aaa")
     ax.set_title(title, color="#ddd", fontsize=14)
     ax.tick_params(colors="#888")
     ax.spines["bottom"].set_color("#333")
@@ -512,20 +547,26 @@ def predict_from_csv(
     Parameters
     ----------
     csv_path : str
-        Path to CSV (output of batch_simulate or pipeline).
+        Path to CSV with prefixed feature columns. For batch_simulate output,
+        use train_model with explicit features, e.g. ["grid_x", "grid_y", "strain"].
     target : str
-        Target column name.
+        Exact target column name; Dataset CSV labels use label_<target>.
     model_type : str
         Model type.
     feature_prefix : str
-        Columns starting with this are features.
+        Columns starting with this are features. The target and reserved label_
+        columns must not match. No target or numeric-column selection is inferred.
     output_dir : str, optional
         Directory to save results. If None, returns without saving.
 
     Returns
     -------
     dict
-        Keys: model, metrics, feature_names, cv_results.
+        Keys: model, metrics, feature_names, cv_results, target, n_samples,
+        importance_plot. The latter reports written, skipped, or not_requested.
+        RBF SVR/MLP have no native importance: only that optional plot is skipped.
+        A prior importance.png is left untouched and explicitly not updated.
+        Other plotting/IO errors propagate; outputs are not an atomic bundle.
     """
     try:
         import pandas as pd
@@ -533,10 +574,25 @@ def predict_from_csv(
         raise ImportError("pandas required: pip install pandas")
 
     df = pd.read_csv(csv_path)
+    if not isinstance(target, str) or not target.strip() or target not in df.columns:
+        raise ValueError("Missing or invalid target column; pass its exact name "
+                         "explicitly (Dataset CSVs use label_<target>)")
+    if not isinstance(feature_prefix, str):
+        raise ValueError("feature_prefix must be a string")
+    feature_cols = [c for c in df.columns if c.startswith(feature_prefix)]
+    if target in feature_cols:
+        raise ValueError("Selected features must not include the target column; "
+                         "choose a feature_prefix that excludes it")
+    if any(c.startswith("label_") for c in feature_cols):
+        raise ValueError("Selected features must not include reserved label_ columns")
     df = df.replace([np.inf, -np.inf], np.nan).dropna(subset=[target])
 
-    feature_cols = [c for c in df.columns if c.startswith(feature_prefix)]
     feature_cols = [c for c in feature_cols if df[c].std() > 1e-12]
+    if not feature_cols:
+        raise ValueError("No nonconstant feature columns match feature_prefix. "
+                         "For batch_simulate CSVs use train_model(csv_path, "
+                         "target='max_force', features=['grid_x', 'grid_y', 'strain']); "
+                         "otherwise provide varying prefixed input columns")
 
     X = df[feature_cols].fillna(0).values
     y = df[target].values
@@ -556,24 +612,13 @@ def predict_from_csv(
         "feature_names": feature_cols,
         "target": target,
         "n_samples": len(df),
+        "importance_plot": {"status": "not_requested"},
     }
 
     if output_dir:
+        importance_values, _ = _feature_importance_values(model, feature_cols)
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
-
-        # Save metrics
-        import json
-        with open(out / "metrics.json", "w") as f:
-            json.dump({
-                "model_type": model_type,
-                "target": target,
-                "metrics": metrics,
-                "cv_results": {k: v for k, v in cv_results.items()
-                               if not isinstance(v, list)},
-                "n_samples": len(df),
-                "n_features": len(feature_cols),
-            }, f, indent=2)
 
         # Save model
         import pickle
@@ -587,8 +632,31 @@ def predict_from_csv(
         )
         y_pred = model.predict(X_test)
         plot_predictions(y_test, y_pred, save_path=str(out / "predictions.png"))
-        plot_feature_importance(model, feature_cols, save_path=str(out / "importance.png"))
+        if importance_values is None:
+            result["importance_plot"] = {
+                "status": "skipped",
+                "reason": "Estimator has no native feature importance or coefficients; "
+                          "importance.png was not updated (any prior file is unchanged).",
+            }
+            print(result["importance_plot"]["reason"])
+        else:
+            plot_feature_importance(model, feature_cols, save_path=str(out / "importance.png"))
+            result["importance_plot"] = {"status": "written"}
         plot_residuals(y_test, y_pred, save_path=str(out / "residuals.png"))
+
+        # Record written only after the corresponding plot call succeeded.
+        import json
+        with open(out / "metrics.json", "w") as f:
+            json.dump({
+                "model_type": model_type,
+                "target": target,
+                "metrics": metrics,
+                "cv_results": {k: v for k, v in cv_results.items()
+                               if not isinstance(v, list)},
+                "n_samples": len(df),
+                "n_features": len(feature_cols),
+                "importance_plot": result["importance_plot"],
+            }, f, indent=2)
 
         print(f"✓ Results saved to {out}")
 
