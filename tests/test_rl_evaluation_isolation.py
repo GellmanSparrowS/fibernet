@@ -28,7 +28,47 @@ def load_algorithms():
     return module
 
 
-class UntouchedEnv:
+class Env:
+    """Inert nominal Gymnasium base; no backend is imported."""
+
+
+class Space:
+    @property
+    def __class__(self):
+        raise AssertionError("Space classification must use the actual type")
+
+
+class Box(Space):
+    pass
+
+
+class Discrete(Space):
+    pass
+
+
+class MultiDiscrete(Space):
+    pass
+
+
+class MultiBinary(Space):
+    pass
+
+
+class Dict(Space):
+    pass
+
+
+class Tuple(Space):
+    pass
+
+
+class VecEnv:
+    action_space = Box()
+
+
+class UntouchedEnv(Env):
+    action_space = Box()
+
     def reset(self, *args, **kwargs):
         raise AssertionError("Inert regression must not reset an environment")
 
@@ -65,11 +105,11 @@ def fake_sb3(monkeypatch):
         def __init__(self, env):
             self.env = env
 
-    class VecEnvWrapper(UntouchedEnv):
+    class VecEnvWrapper(UntouchedEnv, VecEnv):
         def __init__(self, venv):
             self.venv = venv
 
-    class DummyVecEnv(UntouchedEnv):
+    class DummyVecEnv(UntouchedEnv, VecEnv):
         def __init__(self, envs):
             self.envs = envs
 
@@ -115,6 +155,11 @@ def fake_sb3(monkeypatch):
             "stable_baselines3.common.vec_env",
         )
     }
+    modules["gymnasium"].Env = Env
+    modules["gymnasium"].spaces = SimpleNamespace(
+        Space=Space, Box=Box, Discrete=Discrete, MultiDiscrete=MultiDiscrete,
+        MultiBinary=MultiBinary, Dict=Dict, Tuple=Tuple,
+    )
     modules["gymnasium"].Wrapper = Wrapper
     sb3 = modules["stable_baselines3"]
     for name in ("PPO", "SAC", "TD3", "A2C", "DDPG"):
@@ -127,6 +172,7 @@ def fake_sb3(monkeypatch):
     sb3.common.callbacks.CallbackList = CallbackList
     sb3.common.vec_env.VecEnvWrapper = VecEnvWrapper
     sb3.common.vec_env.DummyVecEnv = DummyVecEnv
+    sb3.common.vec_env.VecEnv = VecEnv
     for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
     return SimpleNamespace(
@@ -498,15 +544,21 @@ def test_missing_sb3_error_is_actionable_and_leaf_import_is_optional(monkeypatch
     assert attempted == ["stable_baselines3"]
 
 
-def test_no_eval_does_not_import_wrapper_dependencies(algorithms, fake_sb3, monkeypatch):
+def test_no_eval_does_not_walk_or_import_isolation_wrappers(algorithms, fake_sb3, monkeypatch):
     original_import = builtins.__import__
 
     def without_wrappers(name, *args, **kwargs):
-        if name == "gymnasium" or name.startswith("stable_baselines3.common.vec_env"):
+        fromlist = kwargs.get("fromlist", args[2] if len(args) > 2 else ())
+        if ((name == "gymnasium" and "Wrapper" in fromlist)
+                or name.startswith("stable_baselines3.common.vec_env")):
             raise AssertionError("No eval_env must not import wrapper dependencies")
         return original_import(name, *args, **kwargs)
 
+    def no_isolation_walk(*args):
+        raise AssertionError("No eval_env must not walk environment aliases")
+
     monkeypatch.setattr(builtins, "__import__", without_wrappers)
+    monkeypatch.setattr(algorithms, "_check_eval_env_isolation", no_isolation_walk)
     model, _ = algorithms.train_rl(UntouchedEnv())
     assert model.saved == []
 
