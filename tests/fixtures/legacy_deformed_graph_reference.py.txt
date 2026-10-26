@@ -1,0 +1,24 @@
+def _build_deformed_graph(self, u: np.ndarray, scale: float = 1.0) -> StructureGraph:
+    """Create a deformed StructureGraph with displaced node positions."""
+    g = self._graph.copy()
+    for i, nid in enumerate(self._node_ids):
+        dx = u[3 * i] * scale
+        dy = u[3 * i + 1] * scale
+        g.nodes[nid].position[0] += dx
+        g.nodes[nid].position[1] += dy
+
+        # Update internal points proportionally
+        for eid, edge in g.edges.items():
+            if edge.internal_points is not None:
+                if edge.node_i == nid or edge.node_j == nid:
+                    pi = g.nodes[edge.node_i].position
+                    pj = g.nodes[edge.node_j].position
+                    n_ip = edge.internal_points.shape[0]
+                    t = np.linspace(0, 1, n_ip + 2)[1:-1]
+                    edge.internal_points = (
+                        pi[None, :] * (1 - t[:, None]) + pj[None, :] * t[:, None]
+                    )
+
+    g._metadata["deformed"] = True
+    g._metadata["deformation_scale"] = scale
+    return g

@@ -76,6 +76,23 @@ class CGTests(unittest.TestCase):
         state=r.dynamics_state.copy();state['schema']='lammps_harmonic_state/1'
         with self.assertRaises(ValueError):adapter.validate_state(state)
 
+    def test_text_parser_preserves_signed_cg_potential(self):
+        from test_lammps_backend_contract import fixture as harmonic_texts
+        g, q = fixture(False, steps=2)
+        p = prepare_cg(g, q)
+        dump, log = harmonic_texts(p)
+        lines = log.splitlines()
+        for step in (0, 1, 2):
+            old = f'{step} 4 1 2 3 4 5 6 7 8 9'
+            self.assertEqual(lines.count(old), 1)
+            lines[lines.index(old)] = f'{step} 4 -0.25 2 1.75 4 5 6 7 8 9'
+        parsed = b.parse_outputs(p, dump, '\n'.join(lines)+'\n')
+        self.assertEqual([frame.potential_J for frame in parsed.thermo], [-.25]*3)
+        for record in (False, True):
+            with self.subTest(record_state=record):
+                result = adapter.to_sim_result(p, parsed, RUNTIME, 0., record)
+                self.assertEqual(result.energy, -.25)
+
     def test_morse_shifted_energy(self):
         c=(1.,2.,1.,3.);rc=c[3]
         self.assertEqual(morse_energy(rc,c),0)

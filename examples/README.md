@@ -131,3 +131,14 @@ net = gen.auxetic_structure(
     num_cells=(5, 5),
 )
 ```
+
+## Fixed 81-node static network
+
+`python -m fibernet.examples.linear_static_network --output-dir static_network`
+runs a synthetic 208-member planar welded frame at F and 2F, checks balance and
+independent strain energy, and saves complete fields plus an A4 SVG/PNG.
+The installed-package entry point and the checkout alias
+`python -m examples.linear_fem_quickstart --case network81 --output-dir static_network`
+use one implementation. Output directories must be new. See the
+[linear FEM guide](../docs/architecture/linear-fem-quickstart.md#a-representative-81-node-static-network)
+for SI inputs, model limits and saved-only rendering.

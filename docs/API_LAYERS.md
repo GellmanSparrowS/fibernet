@@ -1,5 +1,7 @@
 # API layers and supported simulation routes
 
+[Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
@@ -24,6 +26,21 @@ not two different solvers. CPU/GPU is a Taichi device choice, not a physical mod
 from a legacy network is approximate, not lossless preservation of curved fibers
 or every crosslink. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
+
+`graph.to_fiber_network()` returns a legacy endpoint-chord projection with
+independently owned box and per-fiber material data, including nested material
+records and tensors. Editing these returned values does not edit the source
+graph or another converted fiber, even when source edges share a material.
+Coordinates and graph metadata also remain detached. Custom materials follow
+their `deepcopy` implementation, as in the graph's per-edge copy policy.
+This does not make the conversion lossless: source internal points, stable IDs,
+per-node/per-edge metadata and isolated nodes are not preserved as graph records;
+endpoint chords shorter than `1e-12` in the supplied coordinate units remain
+omitted. Fiber IDs are dense rows, and the existing discretization and junction
+crosslink construction remain unchanged. Geometry coordinates, radii and box
+values are copied without unit conversion or unit inference. Keep the original
+`StructureGraph` or its native serialization for authoritative geometry and IDs.
+Legacy OBJ export still writes endpoint cylinders, not the stored source curves.
 
 ### Edit geometry before preparing solver controls
 

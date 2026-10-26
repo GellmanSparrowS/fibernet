@@ -892,35 +892,17 @@ def graphs_from_batch(batch, *, source_groups):
     return result
 
 
-def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
-                         val_split, early_stopping):
-    """Validate explicit CPU scalar group mode before creating an optimizer."""
-    from numbers import Integral, Real
+def _gnn_model_description(model):
+    """Existing CPU/scalar admission and recorded settings, not architecture proof."""
     if type(model) is not FiberGNN:
-        raise ValueError('group mode requires the supported FiberGNN class')
-    for name, value, minimum in (('epochs', epochs, 1), ('batch_size', batch_size, 1),
-                                 ('early_stopping', early_stopping, 0)):
-        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
-            raise ValueError(name + ' must be a nonbool integer in the supported range')
-    for name, value in (('lr', lr), ('val_split', val_split)):
-        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) or not math.isfinite(value) or value <= 0:
-            raise ValueError(name + ' must be a finite positive real')
-    if val_split >= 1:
-        raise ValueError('group val_split must be between zero and one')
-    if not isinstance(graphs, (list, tuple)) or not graphs or any(type(g) is not dict for g in graphs):
-        raise ValueError('group mode requires a nonempty list/tuple of graph dictionaries')
-    n = len(graphs)
-    if (not isinstance(groups, (list, tuple)) or len(groups) != n
-            or any(type(g) is not str or not g.strip() for g in groups)
-            or len(set(groups)) < 2):
-        raise ValueError('groups must name every graph and include at least two source groups')
+        raise ValueError('requires the supported FiberGNN class')
     if any(p.device.type != 'cpu' or p.dtype != torch.float32 or not torch.isfinite(p).all()
            for p in model.parameters()):
-        raise ValueError('group mode requires finite CPU float32 model parameters')
+        raise ValueError('requires finite CPU float32 model parameters')
     width = model.input_proj.in_features
     hidden = model.input_proj.out_features
     if model.head[-1].out_features != 1:
-        raise ValueError('group mode requires scalar model output width=1')
+        raise ValueError('requires scalar model output width=1')
     if (model.layer_type not in ('gcn', 'gat', 'sage') or model.pooling not in ('mean', 'max', 'attention')
             or len(model.layers) != model.n_layers or len(model.norms) != model.n_layers or model.n_layers < 1):
         raise ValueError('unsupported FiberGNN layer configuration')
@@ -943,6 +925,16 @@ def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
                 raise ValueError('unsupported SAGE aggregator')
             conf['aggregator'] = layer.aggregator
         layer_configs.append(conf)
+    return {'class': 'FiberGNN', 'node_dim': int(width), 'hidden': int(hidden),
+                  'n_outputs': 1, 'n_layers': int(model.n_layers), 'layer_type': model.layer_type,
+                  'pooling': model.pooling, 'dropout': float(model.dropout.p),
+                  'head_dropout': float(model.head[2].p), 'layers': layer_configs}
+
+
+def _gnn_input_description(model, graphs, groups):
+    """Shared declarations/tensor checks; no fitting, splitting or sklearn import."""
+    n = len(graphs)
+    width = model.input_proj.in_features
     schema = 'fibernet.fibergnn.xyz_dimension.v1'
     marked = ['input_schema' in g for g in graphs]
     tagged = any(marked)
@@ -985,6 +977,35 @@ def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
                 raise ValueError('GCN adjacency must be finite CPU float32 sparse COO with local indices')
         elif 'adjacency' not in g:
             raise ValueError('graph dictionary must include adjacency key')
+    return {'input_schema': schema if tagged else 'caller-legacy',
+            'feature_names': names, 'graph_ids': graph_ids,
+            'length_unit': unit, 'coordinate_frame': frame}
+
+
+def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
+                         val_split, early_stopping):
+    """Validate explicit CPU scalar group mode before creating an optimizer."""
+    from numbers import Integral, Real
+    if type(model) is not FiberGNN:
+        raise ValueError('requires the supported FiberGNN class')
+    for name, value, minimum in (('epochs', epochs, 1), ('batch_size', batch_size, 1),
+                                 ('early_stopping', early_stopping, 0)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral) or value < minimum:
+            raise ValueError(name + ' must be a nonbool integer in the supported range')
+    for name, value in (('lr', lr), ('val_split', val_split)):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real) or not math.isfinite(value) or value <= 0:
+            raise ValueError(name + ' must be a finite positive real')
+    if val_split >= 1:
+        raise ValueError('group val_split must be between zero and one')
+    if not isinstance(graphs, (list, tuple)) or not graphs or any(type(g) is not dict for g in graphs):
+        raise ValueError('group mode requires a nonempty list/tuple of graph dictionaries')
+    n = len(graphs)
+    if (not isinstance(groups, (list, tuple)) or len(groups) != n
+            or any(type(g) is not str or not g.strip() for g in groups)
+            or len(set(groups)) < 2):
+        raise ValueError('groups must name every graph and include at least two source groups')
+    model_description = _gnn_model_description(model)
+    input_description = _gnn_input_description(model, graphs, groups)
     if np.ma.isMaskedArray(labels):
         raise ValueError('labels must not be a MaskedArray')
     raw = np.asarray(labels)
@@ -1009,9 +1030,7 @@ def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
         raise ValueError('group split requires nonempty disjoint train and validation groups')
     record = {
         'schema': 'fibernet.gnn_group_training.v1',
-        'input_schema': schema if tagged else 'caller-legacy',
-        'feature_names': names, 'graph_ids': graph_ids,
-        'length_unit': unit, 'coordinate_frame': frame,
+        **input_description,
         'split': {'method': 'group', 'random_state': 42, 'validation_role': 'validation',
                   'requested_group_fraction': float(val_split), 'groups': list(groups),
                   'train_indices': train.tolist(), 'validation_indices': val.tolist(),
@@ -1021,9 +1040,97 @@ def _gnn_group_preflight(model, graphs, labels, groups, epochs, lr, batch_size,
                      'lr': float(lr), 'early_stopping': int(early_stopping),
                      'optimizer': 'AdamW', 'weight_decay': 1e-4, 'gradient_clip': 1.0,
                      'best_state_restored': False},
-        'model': {'class': 'FiberGNN', 'node_dim': int(width), 'hidden': int(hidden),
-                  'n_outputs': 1, 'n_layers': int(model.n_layers), 'layer_type': model.layer_type,
-                  'pooling': model.pooling, 'dropout': float(model.dropout.p),
-                  'head_dropout': float(model.head[2].p), 'layers': layer_configs},
+        'model': model_description,
     }
     return targets, train, val, record
+
+
+
+def _same_recorded_setting(declared, current):
+    """Compare the existing JSON-native configuration without bool/int aliases."""
+    if type(current) is dict:
+        return (type(declared) is dict and set(declared) == set(current)
+                and all(_same_recorded_setting(declared[k], v) for k, v in current.items()))
+    if type(current) is list:
+        return (type(declared) is list and len(declared) == len(current)
+                and all(_same_recorded_setting(a, b) for a, b in zip(declared, current)))
+    if type(current) is float:
+        try:
+            return (type(declared) in (int, float) and math.isfinite(declared)
+                    and declared == current)
+        except (OverflowError, TypeError, ValueError):
+            return False
+    return type(declared) is type(current) and declared == current
+
+
+def predict_gnn(model, batch, *, source_groups, input_contract, target_name):
+    """Predict from GraphBatch v1 against a caller-declared raw-input contract.
+
+    Accept the compatibility fields of an existing ``training_data`` record, or
+    a fresh declaration with input_schema, feature_names, length_unit,
+    coordinate_frame and model. No training history is required. Only the raw
+    ordered XYZ+dimension schema is supported; no fitted preprocessing, unit
+    conversion or target transformation is inferred. The model's recorded
+    configuration fields are compared, not its full architecture or provenance.
+
+    Returns JSON-ready graph-aligned scalar predictions in model-output space.
+    target_name is caller-declared; target unit/transform remain unknown. This
+    does not authenticate historical training tensors, model/record pairing,
+    independent source groups, or scientific validity. Only use a record whose
+    declared raw-input meaning is appropriate for this model.
+
+    Existing low-level forward remains unchanged. This helper uses CPU float32
+    eval/no_grad with CPU autocast disabled, then restores every module's prior
+    training flag even on failure. It does not guarantee purity of caller hooks.
+    """
+    _require_torch()
+    required = {'input_schema', 'feature_names', 'length_unit', 'coordinate_frame', 'model'}
+    bookkeeping = {'schema', 'graph_ids', 'split', 'training', 'model_selection'}
+    if (type(input_contract) is not dict or not required <= set(input_contract)
+            or set(input_contract) - required - bookkeeping):
+        raise ValueError('input_contract requires known compatibility fields only')
+    if ('schema' in input_contract
+            and (type(input_contract['schema']) is not str
+                 or input_contract['schema'] != 'fibernet.gnn_group_training.v1')):
+        raise ValueError('unsupported input_contract record schema')
+    if (type(input_contract['input_schema']) is not str
+            or input_contract['input_schema'] != 'fibernet.fibergnn.xyz_dimension.v1'
+            or not _same_recorded_setting(input_contract['feature_names'],
+                                          ['x', 'y', 'z', 'dimension'])):
+        raise ValueError('only the ordered raw XYZ+dimension input schema is supported')
+    for name in ('length_unit', 'coordinate_frame'):
+        value = input_contract[name]
+        if type(value) is not str or not value.strip():
+            raise ValueError(name + ' must be explicit in input_contract')
+    if type(target_name) is not str or not target_name.strip():
+        raise ValueError('target_name must be a nonempty caller-declared string')
+    current_model = _gnn_model_description(model)
+    if not _same_recorded_setting(input_contract['model'], current_model):
+        raise ValueError('recorded model configuration fields do not match')
+    graphs = graphs_from_batch(batch, source_groups=source_groups)
+    actual = _gnn_input_description(model, graphs, source_groups)
+    for name in ('input_schema', 'feature_names', 'length_unit', 'coordinate_frame'):
+        if actual[name] != input_contract[name]:
+            raise ValueError(name + ' differs from the declared input contract')
+    # Copy only compatibility declarations, never caller training bookkeeping.
+    checked = {name: copy.deepcopy(input_contract[name]) for name in sorted(required)}
+    modes = [(module, module.training) for module in model.modules()]
+    try:
+        model.eval()
+        with torch.no_grad(), torch.autocast(device_type='cpu', enabled=False):
+            output = model(graphs)
+        if (not isinstance(output, torch.Tensor) or output.layout != torch.strided
+                or output.device.type != 'cpu' or output.dtype != torch.float32
+                or tuple(output.shape) != (len(graphs), 1)
+                or not torch.isfinite(output).all()):
+            raise ValueError('prediction must be finite CPU float32 with shape (n_graphs, 1)')
+        predictions = output.detach().reshape(-1).tolist()
+    finally:
+        for module, training in modes:
+            module.training = training
+    return {'predictions': predictions, 'graph_ids': list(batch.graph_ids),
+            'source_groups': list(source_groups), 'target_name': target_name,
+            'target_name_source': 'caller_declared', 'prediction_space': 'model_output',
+            'target_unit': None, 'target_transform': None,
+            'target_unit_status': 'unknown', 'target_transform_status': 'unknown',
+            'validation': 'declared_input_contract_only', 'input_contract': checked}

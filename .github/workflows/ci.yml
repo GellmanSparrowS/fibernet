@@ -131,6 +131,18 @@ jobs:
             "tests/test_training_contracts.py",
             "tests/test_training_metric_availability.py",
             "tests/test_edge_gine_state_io.py",
+            "tests/test_gnn_checked_prediction.py",
+            # Interface-only regression nodes: deliberately no optimizer smoke.
+            "tests/test_gnn_graph_batch.py::test_identity_masks_copy_and_parallel_adjacency",
+            "tests/test_gnn_graph_batch.py::test_strict_integer_arrays",
+            "tests/test_gnn_graph_batch.py::test_masked_arrays_rejected",
+            "tests/test_gnn_graph_batch.py::test_float32_range_rejected",
+            "tests/test_gnn_graph_batch.py::test_forged_and_empty_inputs",
+            "tests/test_gnn_graph_batch.py::test_unsigned_out_of_range_and_cross_graph_messages",
+            "tests/test_gnn_graph_batch.py::test_permutations_and_reversed_parallel_members",
+            "tests/test_gnn_graph_batch.py::test_lazy_and_missing_torch",
+            "tests/test_gnn_group_training.py::test_preflight_before_optimizer",
+            "tests/test_gnn_group_training.py::test_missing_sklearn_and_legacy_groups_error",
         ], plugins=[NoSkippedTests()])
         assert not any(name in sys.modules for name in ("taichi", "gmsh", "lammps"))
         raise SystemExit(result)

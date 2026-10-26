@@ -30,7 +30,7 @@ async def positive(environment, output):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
-                assert len((await session.list_tools()).tools) == 6
+                assert len((await session.list_tools()).tools) == 8
                 result = await session.call_tool('fibernet_catalog', {})
                 assert not result.isError
                 graph = result.structuredContent['graphs'][0]
@@ -39,7 +39,8 @@ async def positive(environment, output):
 
 original = Path(verify_core())
 manifest = json.loads((ROOT / 'src/fibernet_mcp/core_manifest.json').read_text())
-assert len(manifest) == 241
+assert set(manifest) == {str(path.relative_to(original))
+                         for path in original.rglob('*.py')}
 records = []
 lazy_rejection_checked = False
 with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as temporary:
@@ -71,6 +72,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('sim/_thermoelastic.py', None))
     cases.append(('sim/_taichi_geometry.py', None))
     cases.append(('sim/__init__.py', None))
+    cases.append(('core/fiber_network_profile.py', None))
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
     cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))
     cases.append(('io/mesh_export.py', b'vertex_offset = 0  # Convert to one-based OBJ indices only when writing.'))

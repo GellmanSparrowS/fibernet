@@ -163,7 +163,9 @@ def base_edge_lengths(unit):
     """Undeformed corner-graph edge lengths of one classic base unit."""
     ensure_fibernet()
     from fibernet.gen.pattern import pattern_2d
-    g = pattern_2d(unit=unit, grid=(1, 1), n_pts_per_side=0,
+    from fslab.structure import _resolve_pattern_unit
+    lookup = _resolve_pattern_unit(unit)[0]
+    g = pattern_2d(unit=lookup, grid=(1, 1), n_pts_per_side=0,
                    box=(CELL, CELL), seed=7)
     pos = np.asarray(g.node_positions(), float)[:, :2]
     ed = np.asarray(g.edge_array(), int)[:, :2]

@@ -41,6 +41,9 @@ from fibernet.core.material import Material
 from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.fiber import Fiber
+from fibernet.core.fiber_network_profile import (
+    FiberNetworkProfile, FiberNetworkProjectionLimits, FiberNetworkProjectionError,
+)
 
 # --- Transforms ---
 from fibernet.core.transforms import (
@@ -139,6 +142,7 @@ __all__ = [
     # Core
     "StructureGraph", "SNode", "SEdge",
     "Material", "Fiber", "FiberNetwork", "Crosslink",
+    "FiberNetworkProfile", "FiberNetworkProjectionLimits", "FiberNetworkProjectionError",
     # Transforms
     "translate", "rotate", "mirror", "mirror_x", "mirror_y", "mirror_z",
     "scale", "compose",
@@ -208,3 +212,7 @@ def __getattr__(name):
 def __dir__():
     return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)
                   | set(_LAZY_MODULES) | {"_HAS_RL"})
+
+# Additive standard geometry API; no change to legacy lattice names.
+from fibernet.gen.standard_lattice import octet_fcc_v1
+__all__.append("octet_fcc_v1")

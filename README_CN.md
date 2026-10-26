@@ -1,5 +1,7 @@
 [English / 中文 · 仓库首页](README.md)
 
+[Feature availability and checked dataset selections](docs/FEATURE_AVAILABILITY.md)
+
 <!-- locale:zh:start -->
 [快速开始](#快速开始) · [生成](#1-生成网络) → [模拟](#2-模拟响应) → [分析与学习](#3-分析与学习) → [设计与导出](#4-设计与导出) · [功能索引](#选择研究流程)
 
@@ -7,27 +9,24 @@ FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界�
 
 ## 快速开始
 
-### 安装 Python 库
+### 安装并运行源码入门示例
 
-**已发布版本：4.2.0**
-
-```bash
-python -m pip install fibernet==4.2.0
-```
-
-**开发版源码：4.3.0**
+**开发版源码：4.3.0——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
 cd fibernet
 python -m pip install -e .
+python -m examples.open_source_workflow --output-dir demo_output
 ```
 
-需要 Python 3.9 及以上版本。可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
+需要 Python 3.9 及以上版本和基础依赖，本例不需要 Torch 或 Taichi。运行成功后，终端会显示 **18 个节点、22 条边**，`demo_output/` 中会生成 `network.png`、`fem_result.json` 和 `summary.json`。流程会保存并重新读取 FEM 结果，再进行招募分析。[示例与输出](examples/open_source_workflow.py)
 
-### 开发版源码示例：生成、模拟、保存
+可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
 
-以下示例需要上方通过 `python -m pip install -e .` 安装的开发版源码。已发布的 PyPI 4.2.0 不支持这里的 `stretch_ratio` 参数。
+### Python 示例：生成、模拟、保存
+
+完成上方源码安装后，可在 Python 或 Notebook 中运行：
 
 ```python
 import fibernet as fn
@@ -48,13 +47,15 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` 指 1% 伸长；`nonlinear=False` 明确选择小变形线性梁 FEM。坐标和半径按米解释，`E=1e9` Pa，`nu=0.3` 无量纲，输出位移为米、力为牛顿；程序不自动换算单位，也不从图的材料记录读取模量。省略拉伸比仍使用兼容默认值 2.0，二维会进入未验证最终平衡的实验增量路径，不适合作为线性入门调用。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-在源码目录运行完整流程：
+### 已发布版本：4.2.0
+
+如果应用使用已发布的 API，可选择下面的安装方式，**无需再安装上方源码版**：
 
 ```bash
-python -m examples.open_source_workflow --output-dir demo_output
+python -m pip install fibernet==4.2.0
 ```
 
-[示例与输出](examples/open_source_workflow.py)
+请使用与版本对应的 [4.2.0 入门示例](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/PYPI_README.md#generate-simulate-save-and-analyze)。该版本的 FEM 示例使用 `strain=1.01`，上方源码示例使用 `stretch_ratio=1.01`。
 
 ## 1. 生成网络
 

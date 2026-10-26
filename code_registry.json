@@ -4265,5 +4265,140 @@
    "PublicReleaseCheck"
   ],
   "sha256": "cd613e11d05e9cc2398c341be3b3f08c697cb71afeb80a47593b907997d33daf"
+ },
+ "fibernet/sim/saved_electrothermal.py": {
+  "purpose": "Strict saved electrothermal fields, followed by explicit one-way mechanics.",
+  "status": "active",
+  "symbols": [
+   "_json",
+   "_hash",
+   "_digest",
+   "_integer",
+   "_number",
+   "_list",
+   "_ids",
+   "_id_map",
+   "_unique",
+   "_reject_constant",
+   "_decode",
+   "read_saved_electrothermal_json",
+   "_graph_record",
+   "_bounded_shape",
+   "_law",
+   "_endpoints",
+   "_validate_history",
+   "_validate",
+   "export_saved_electrothermal",
+   "SavedElectrothermalTemperatureSnapshot",
+   "prepare_saved_electrothermal_temperature"
+  ],
+  "sha256": "113afa9374e9f63d6376055f139e0ffef14a82f071446790705bbd5924375386"
+ },
+ "tests/test_saved_electrothermal.py": {
+  "purpose": "Saved-byte/API regression only: every numerical owner is forbidden/stubbed.",
+  "status": "active",
+  "symbols": [
+   "rehash",
+   "no_physics",
+   "saved_fixture",
+   "prepare",
+   "mechanical_kwargs",
+   "native_from_saved",
+   "test_saved_binding_is_detached_exact_and_order_independent",
+   "test_export_native_only_detached_and_exact",
+   "test_public_facade_and_owner_error_propagation",
+   "test_changed_graph_rejects_before_delegation",
+   "mutate",
+   "test_corruption_rejects_before_mechanics",
+   "test_exact_existing_frame_required",
+   "test_explicit_matching_units_required",
+   "test_one_frame_partial_and_explicit_failure_preserved",
+   "test_native_fixed_diagnostic_nan_only_becomes_null",
+   "test_three_dimensional_graph_rejected_without_projection",
+   "test_reported_native_hash_is_not_claimed_authenticated",
+   "test_native_law_hash_uses_integer_keys_not_lexical_strings",
+   "test_strict_reader",
+   "test_reader_size_ceiling",
+   "test_module_import_is_stdlib_only",
+   "test_partial_failure_known_dt_must_match_grid",
+   "test_recaptured_coordinate_tamper_still_fails_electrical_binding",
+   "test_partial_without_failure_context_does_not_invent_it",
+   "test_saved_hash_tampering_and_resource_shapes_reject_early",
+   "test_partial_retention_failure_can_keep_terminal_trial_history"
+  ],
+  "sha256": "40353f3ccc64ee306cd72fd2b0ed9c9d515af2b49a889c8961c977af7881ad9a"
+ },
+ "tests/test_saved_electrothermal_replay.py": {
+  "purpose": "Saved-byte replay contracts, with every numerical provider disabled.",
+  "status": "active",
+  "symbols": [
+   "no_physics",
+   "test_exact_saved_fixture_replay",
+   "test_replay_requires_existing_explicit_frames",
+   "test_cli_reports_only_saved_binding",
+   "test_replay_rejects_corrupt_saved_content",
+   "test_native_module_matches_saved_fixture_implementation",
+   "test_replay_import_is_stdlib_only",
+   "test_plain_json_cli_still_uses_original_reader",
+   "test_generic_json_path_does_not_accept_encoded_fixture",
+   "test_cli_requires_exactly_one_input_route",
+   "test_bundled_replay_preserves_decoded_identity",
+   "test_bundled_temporary_json_is_removed_on_success_and_error"
+  ],
+  "sha256": "89e54febda77236f20934e0da985a24fbd77f6165d355a0975f481e7d5360043"
+ },
+ "benchmarks/saved_electrothermal_replay.py": {
+  "purpose": "Replay saved electrothermal bindings without running any physics solver.",
+  "status": "active",
+  "symbols": [
+   "_file_sha256",
+   "replay_saved_electrothermal",
+   "replay_bundled_fixture",
+   "main"
+  ],
+  "sha256": "93c2ec7f8edfb393f325d1f124bdd6a0c01792f35218fb88941465d67006e373"
+ },
+ "benchmarks/saved_electrothermal_fixtures.py": {
+  "purpose": "Bounded access to exact bundled saved JSON bytes, not a native input format.",
+  "status": "active",
+  "symbols": [
+   "FixtureSpec",
+   "_decode",
+   "fixture_bytes"
+  ],
+  "sha256": "23f7e80ab481b0fb51e8ba1e5db4c7ee7a759a9d2f04c1cc8575e4921c86f000"
+ },
+ "tests/test_saved_electrothermal_fixtures.py": {
+  "purpose": "Bundled electrothermal fixture storage controls; no native solver calls.",
+  "status": "active",
+  "symbols": [
+   "packed",
+   "encoded",
+   "spec_for",
+   "test_exact_saved_identity_and_deterministic_storage",
+   "test_encoded_file_read_is_bounded_and_unknown_name_is_not_a_path",
+   "test_encoded_framing_and_base64_rejected",
+   "test_gzip_boundary_size_and_raw_identity_rejected",
+   "test_expansion_is_capped_before_full_payload_is_returned",
+   "test_fixture_loader_import_is_stdlib_only"
+  ],
+  "sha256": "0d8d50634e6e3fc577b4d6f735542e73c767a01da2eb2d142d304fcaead9b1ca"
+ },
+ "fibernet/sim/deformed_transport.py": {
+  "purpose": "Bounded prepare-only transport geometry from caller-prescribed SI translations.",
+  "status": "active",
+  "symbols": [
+   "_json",
+   "_hash",
+   "_identifier",
+   "_number",
+   "_array",
+   "_frame_labels",
+   "_index_gate",
+   "_preflight",
+   "_complete_map",
+   "prepare_deformed_transport"
+  ],
+  "sha256": "5611345cfcf3c1872a9bb763534cc23b1d8f192c5df0e7fa603429de05c62d4e"
  }
 }

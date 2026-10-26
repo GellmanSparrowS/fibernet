@@ -175,7 +175,7 @@ class RendererTests(unittest.TestCase):
         aligned={'np':np}
         extract('fibernet/viz/render.py',{'_identity_order','_aligned_array','_align_result'},aligned)
         namespace={'np':np}
-        extract('fibernet/viz/render3d.py',{'render_structure_graph_3d'},namespace)
+        extract('fibernet/viz/render3d.py',{'_require_pyvista', 'render_structure_graph_3d'},namespace)
         g=graph();g.add_node([2,0,0]);g.add_edge(40,41,n_internal=0)
         d=g.to_dict();d['edges'][1]['id']=15;g=StructureGraph.from_dict(d)
         r=SimResult(deformed_positions=np.array([[0,0,0],[1.1,0,0],[2,0,0]]),edge_forces=np.array([1.,3.]),
