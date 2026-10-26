@@ -305,6 +305,15 @@ class StructureGraph:
             (0, 0, 0), (1, 0, 0), (-1, 0, 0),
             (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
         ]
+        # Nearby points can lie across an edge or corner of a hash cell.
+        # Keep the existing center/axis search order when several nodes match.
+        offsets.extend(
+            (dx, dy, dz)
+            for dx in (-1, 0, 1)
+            for dy in (-1, 0, 1)
+            for dz in (-1, 0, 1)
+            if (dx != 0) + (dy != 0) + (dz != 0) >= 2
+        )
         return [(kx + dx, ky + dy, kz + dz) for dx, dy, dz in offsets]
 
     def _checked_position_key(self, position):
@@ -671,10 +680,20 @@ class StructureGraph:
         """Sum of all edge lengths."""
         return float(self.edge_lengths().sum()) if self._edges else 0.0
 
+    def _adjacency_lists(self) -> Dict[int, List[int]]:
+        """Build operation-local neighbor lists in physical-edge order."""
+        adjacency = {nid: [] for nid in self._nodes}
+        for edge in self._edges.values():
+            adjacency.setdefault(edge.node_i, []).append(edge.node_j)
+            if edge.node_j != edge.node_i:
+                adjacency.setdefault(edge.node_j, []).append(edge.node_i)
+        return adjacency
+
     def is_connected(self) -> bool:
-        """Check if the graph is connected."""
+        """Check connectivity in O(nodes + physical edges) time."""
         if not self._nodes:
             return True
+        adjacency = self._adjacency_lists()
         visited = set()
         start = next(iter(self._nodes))
         stack = [start]
@@ -683,11 +702,12 @@ class StructureGraph:
             if nid in visited:
                 continue
             visited.add(nid)
-            stack.extend(self.neighbors(nid))
+            stack.extend(adjacency[nid])
         return len(visited) == len(self._nodes)
 
     def connected_components(self) -> List[set]:
-        """Return list of connected component node sets."""
+        """Return component node sets in node insertion order, in O(N + E)."""
+        adjacency = self._adjacency_lists()
         visited = set()
         components = []
         for start in self._nodes:
@@ -701,7 +721,7 @@ class StructureGraph:
                     continue
                 visited.add(nid)
                 comp.add(nid)
-                stack.extend(n for n in self.neighbors(nid) if n not in visited)
+                stack.extend(n for n in adjacency[nid] if n not in visited)
             components.append(comp)
         return components
 

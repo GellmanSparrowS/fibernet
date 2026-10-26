@@ -875,6 +875,8 @@ class BeamFrameFEM:
         Parameters
         ----------
         graph : StructureGraph
+            Straight members between graph nodes. Nonempty edge-owned
+            internal_points are not a curved-beam discretization and reject.
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
@@ -889,6 +891,18 @@ class BeamFrameFEM:
             boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
             x_range: float (for displacement calculation)
         """
+        curved_edges = [
+            edge_id for edge_id, edge in graph.edges.items()
+            if edge.internal_points is not None and len(edge.internal_points)
+        ]
+        if curved_edges:
+            raise ValueError(
+                'BeamFrameFEM supports straight graph members; nonempty '
+                'internal_points would be ignored on edge IDs '
+                + repr(tuple(curved_edges))
+                + '. Represent the fiber with actual intermediate graph nodes '
+                'and straight edges, with separately specified mechanics.'
+            )
         from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
         pos, elements, _, _ = _graph_to_arrays(graph)
         edge_index = elements.T.astype(np.int64)

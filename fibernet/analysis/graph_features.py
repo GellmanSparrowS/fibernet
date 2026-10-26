@@ -4,7 +4,11 @@
 Extracts structural, pore, and contact features from fiber network graphs
 for machine learning and structure-property analysis.
 
-Accepts both NetworkX Graph and FiberNetwork objects directly.
+Accepts simple undirected NetworkX Graph and StructureGraph objects directly.
+This historical feature set uses the XY projection and straight endpoint chords;
+it does not describe three-dimensional or curved-fiber geometry. Parallel
+physical edges are rejected because collapsing them would change fiber counts
+and total length without changing the feature schema.
 
 Based on the original Features.py implementation, adapted for FiberNet.
 
@@ -19,13 +23,10 @@ Optional dependencies:
 """
 
 import math
-import warnings
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     import networkx as nx
@@ -53,8 +54,11 @@ except ImportError:
 class GraphFeatureExtractor:
     """Extract 94-dimensional feature vector from fiber network graphs.
 
-    Accepts ``networkx.Graph`` objects with ``pos`` node attributes,
-    or ``FiberNetwork`` objects (auto-converted to graphs).
+    Accepts simple undirected ``networkx.Graph`` objects with ``pos`` node
+    attributes, or ``StructureGraph`` objects without parallel edges.
+    Coordinates are projected onto XY and edges are represented by endpoint
+    chords. Use a geometry-aware feature set when curve shape or 3D geometry
+    matters; this class preserves the historical 94-feature definitions.
 
     Parameters
     ----------
@@ -215,25 +219,37 @@ class GraphFeatureExtractor:
         return {(int(y + min_y), int(x + min_x)) for y, x in zip(ys, xs)}
 
     def _to_graph(self, obj) -> "nx.Graph":
-        """Convert input to NetworkX Graph with pos attributes."""
+        """Convert supported inputs without silently collapsing physical edges."""
         if not HAS_NETWORKX:
             raise ImportError("networkx is required: pip install networkx")
 
         if isinstance(obj, nx.Graph):
+            if obj.is_multigraph() or obj.is_directed():
+                raise ValueError(
+                    "The 94-feature GraphFeatureExtractor requires a simple "
+                    "undirected graph. MultiGraph and directed inputs are not "
+                    "supported; make any topology projection explicit before "
+                    "extracting this historical feature schema."
+                )
             return obj
 
-        # Try StructureGraph
-        try:
-            from fibernet.core.structure_graph import StructureGraph
-            if isinstance(obj, StructureGraph):
-                G = nx.Graph()
-                for nid, node in obj.nodes.items():
-                    G.add_node(nid, pos=tuple(node.position[:2]))
-                for edge in obj.edges.values():
-                    G.add_edge(edge.node_i, edge.node_j)
-                return G
-        except (ImportError, TypeError, AttributeError):
-            pass
+        from fibernet.core.structure_graph import StructureGraph
+        if isinstance(obj, StructureGraph):
+            G = nx.Graph()
+            for nid, node in obj.nodes.items():
+                G.add_node(nid, pos=tuple(node.position[:2]))
+            for edge in obj.edges.values():
+                if G.has_edge(edge.node_i, edge.node_j):
+                    raise ValueError(
+                        "The 94-feature GraphFeatureExtractor cannot preserve "
+                        f"parallel physical edges between nodes {edge.node_i} "
+                        f"and {edge.node_j}. Use a feature set that preserves "
+                        "physical edge identity, or explicitly construct a "
+                        "simple NetworkX graph if a topology projection is "
+                        "intended."
+                    )
+                G.add_edge(edge.node_i, edge.node_j)
+            return G
 
         raise TypeError(f"Expected nx.Graph or StructureGraph, got {type(obj).__name__}")
 
@@ -824,9 +840,10 @@ class GraphFeatureExtractor:
 
         Parameters
         ----------
-        obj : nx.Graph or FiberNetwork
-            The network to analyze. For nx.Graph, nodes must have
-            a ``pos`` attribute (2D or 3D tuple).
+        obj : nx.Graph or StructureGraph
+            Simple undirected network without parallel physical edges.
+            NetworkX nodes must have a ``pos`` attribute. Only XY coordinates
+            and straight endpoint chords enter this historical feature set.
 
         Returns
         -------
@@ -866,7 +883,7 @@ class GraphFeatureExtractor:
 
         Parameters
         ----------
-        obj : nx.Graph or FiberNetwork
+        obj : nx.Graph or StructureGraph
             The network to analyze.
 
         Returns
@@ -883,7 +900,7 @@ class GraphFeatureExtractor:
         Parameters
         ----------
         networks : list
-            List of nx.Graph or FiberNetwork objects.
+            List of simple nx.Graph or StructureGraph objects.
 
         Returns
         -------
@@ -898,7 +915,7 @@ class GraphFeatureExtractor:
         Parameters
         ----------
         networks : list
-            List of nx.Graph or FiberNetwork objects.
+            List of simple nx.Graph or StructureGraph objects.
 
         Returns
         -------

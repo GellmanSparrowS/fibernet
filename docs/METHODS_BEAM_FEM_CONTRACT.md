@@ -116,6 +116,18 @@ This validation does not add a finite-rotation or constitutive benchmark.
 
 ## Direct loads and material scope
 
+Graph-based beam inputs accept straight members between actual graph nodes.
+Nonempty edge-owned `internal_points` are rejected before array conversion,
+including collinear visualization points. The beam assembly does not use these
+points as finite-element nodes. To model a curved centerline with straight
+elements, supply actual intermediate graph nodes, their connections, and the
+intended joint and material assumptions. This discretization still requires
+resolution and mechanical-model checks.
+
+Earlier graph-based stretch calls ignored `internal_points` and solved the
+endpoint chord while rendering could show the curve. Results from those inputs
+should be recomputed with an explicitly constructed beam mesh.
+
 `BeamFrameFEM.solve_2d` accepts `forces` with exactly `(N, 2)` columns
 `Fx, Fy`; `solve_3d` requires `(N, 3)` columns `Fx, Fy, Fz`. Rows follow
 `node_pos` array order, not numerical stable node IDs. `None` means zero load.

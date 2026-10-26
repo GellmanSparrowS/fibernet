@@ -660,73 +660,6 @@ if HAS_TORCH:
 
             return history
 
-    # ==================================================================
-    # Default Reward Functions
-    # ==================================================================
-
-    def connectivity_reward(state: StructureState) -> float:
-        """Reward based on graph connectivity and density.
-
-        Higher reward for well-connected structures with moderate density.
-        """
-        n = state.n_nodes
-        e = state.n_edges
-        if n < 2:
-            return 0.1
-
-        # Check connectivity via BFS
-        adj = {i: set() for i in range(n)}
-        for (i, j) in state.edges:
-            adj[i].add(j)
-            adj[j].add(i)
-
-        visited = set()
-        queue = [0]
-        while queue:
-            node = queue.pop(0)
-            if node in visited:
-                continue
-            visited.add(node)
-            queue.extend(adj[node] - visited)
-
-        connectivity = len(visited) / n
-        # Reward connected, moderate density
-        max_edges = n * (n - 1) / 2
-        density = e / max(max_edges, 1)
-        density_bonus = math.exp(-10 * (density - 0.3) ** 2)  # peak at 30%
-
-        return float(connectivity * density_bonus * n)
-
-    def property_target_reward(state: StructureState,
-                                target_n_nodes: int = 15,
-                                target_n_edges: int = 20,
-                                target_connectivity: float = 1.0) -> float:
-        """Reward targeting specific structural properties."""
-        n = state.n_nodes
-        e = state.n_edges
-        if n < 2:
-            return 0.1
-
-        node_score = math.exp(-0.1 * (n - target_n_nodes) ** 2)
-        edge_score = math.exp(-0.05 * (e - target_n_edges) ** 2)
-
-        # Connectivity
-        adj = {i: set() for i in range(n)}
-        for (i, j) in state.edges:
-            adj[i].add(j)
-            adj[j].add(i)
-        visited = set()
-        queue = [0]
-        while queue:
-            nd = queue.pop(0)
-            if nd in visited:
-                continue
-            visited.add(nd)
-            queue.extend(adj[nd] - visited)
-        conn = len(visited) / n
-
-        return float(node_score * edge_score * conn * 10)
-
 else:
     class PolicyNetwork:
         def __init__(self, *a, **kw):
@@ -743,3 +676,69 @@ else:
     class GFlowNetTrainer:
         def __init__(self, *a, **kw):
             _require_torch()
+
+
+# Pure structural rewards are available without the optional learning backend.
+def connectivity_reward(state: StructureState) -> float:
+    """Reward based on graph connectivity and density.
+
+    Higher reward for well-connected structures with moderate density.
+    """
+    n = state.n_nodes
+    e = state.n_edges
+    if n < 2:
+        return 0.1
+
+    # Check connectivity via BFS
+    adj = {i: set() for i in range(n)}
+    for (i, j) in state.edges:
+        adj[i].add(j)
+        adj[j].add(i)
+
+    visited = set()
+    queue = [0]
+    while queue:
+        node = queue.pop(0)
+        if node in visited:
+            continue
+        visited.add(node)
+        queue.extend(adj[node] - visited)
+
+    connectivity = len(visited) / n
+    # Reward connected, moderate density
+    max_edges = n * (n - 1) / 2
+    density = e / max(max_edges, 1)
+    density_bonus = math.exp(-10 * (density - 0.3) ** 2)  # peak at 30%
+
+    return float(connectivity * density_bonus * n)
+
+
+def property_target_reward(state: StructureState,
+                           target_n_nodes: int = 15,
+                           target_n_edges: int = 20,
+                           target_connectivity: float = 1.0) -> float:
+    """Reward targeting specific structural properties."""
+    n = state.n_nodes
+    e = state.n_edges
+    if n < 2:
+        return 0.1
+
+    node_score = math.exp(-0.1 * (n - target_n_nodes) ** 2)
+    edge_score = math.exp(-0.05 * (e - target_n_edges) ** 2)
+
+    # Connectivity
+    adj = {i: set() for i in range(n)}
+    for (i, j) in state.edges:
+        adj[i].add(j)
+        adj[j].add(i)
+    visited = set()
+    queue = [0]
+    while queue:
+        nd = queue.pop(0)
+        if nd in visited:
+            continue
+        visited.add(nd)
+        queue.extend(adj[nd] - visited)
+    conn = len(visited) / n
+
+    return float(node_score * edge_score * conn * 10)
