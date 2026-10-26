@@ -2,7 +2,7 @@
 LAMMPS data file I/O.
 
 The legacy FiberNetwork writer is unsupported and fails before file I/O.
-The existing reader remains available unchanged; this does not validate it.
+The legacy reader also fails before file I/O; original inputs are untouched.
 """
 
 import numpy as np
@@ -39,123 +39,19 @@ def to_lammps(
 
 
 def from_lammps(filename: str, bead_spacing: float = 1.0) -> FiberNetwork:
-    """Import fiber network from LAMMPS data file.
-    
-    Reads bonded chains and converts them to fibers.
-    
-    Parameters
-    ----------
-    filename : str
-        Input LAMMPS data file.
-    bead_spacing : float
-        Used to estimate fiber radius if not available.
+    """Unsupported legacy reader; rejects before opening the input file.
+
+    Historical parsing and chain reconstruction could silently change positions,
+    discard atoms/bonds and invent welded connections. Keep the original LAMMPS
+    file. Native JSON preserves an original FiberNet graph only when one exists;
+    it cannot recover information lost in an earlier import. A future explicit
+    geometry-only reader needs its own supported-format and topology contract.
     """
-    with open(filename, 'r') as f:
-        lines = f.readlines()
-    
-    atoms = {}
-    bonds = []
-    atom_types = {}
-    
-    section = None
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith('#'):
-            continue
-        
-        if 'atoms' in line and not section:
-            continue
-        if 'bonds' in line and not section:
-            continue
-        
-        if line.startswith('Atoms'):
-            section = 'atoms'
-            continue
-        elif line.startswith('Bonds'):
-            section = 'bonds'
-            continue
-        elif line.startswith('Masses') or line.startswith('Bond') or line.startswith('Angles'):
-            section = None
-            continue
-        
-        if section == 'atoms':
-            parts = line.split()
-            if len(parts) >= 5:
-                try:
-                    aid = int(parts[0])
-                    atype = int(parts[1])
-                    x = float(parts[-3])
-                    y = float(parts[-2])
-                    z = float(parts[-1])
-                    atoms[aid] = {'type': atype, 'pos': np.array([x, y, z])}
-                    if atype not in atom_types:
-                        atom_types[atype] = atype
-                except (ValueError, IndexError):
-                    pass
-        
-        elif section == 'bonds':
-            parts = line.split()
-            if len(parts) >= 4:
-                try:
-                    bid = int(parts[0])
-                    btype = int(parts[1])
-                    i = int(parts[2])
-                    j = int(parts[3])
-                    bonds.append({'i': i, 'j': j, 'type': btype})
-                except (ValueError, IndexError):
-                    pass
-    
-    if not atoms:
-        return FiberNetwork()
-    
-    # Build adjacency
-    adj = {}
-    for b in bonds:
-        i, j = b['i'], b['j']
-        if i not in adj:
-            adj[i] = []
-        if j not in adj:
-            adj[j] = []
-        adj[i].append(j)
-        adj[j].append(i)
-    
-    # Trace chains
-    visited = set()
-    chains = []
-    
-    for start_id in atoms:
-        if start_id in visited:
-            continue
-        
-        chain = [start_id]
-        visited.add(start_id)
-        
-        current = start_id
-        while True:
-            neighbors = [n for n in adj.get(current, []) if n not in visited]
-            if not neighbors:
-                break
-            next_id = neighbors[0]
-            chain.append(next_id)
-            visited.add(next_id)
-            current = next_id
-        
-        if len(chain) >= 2:
-            chains.append(chain)
-    
-    # Create network
-    net = FiberNetwork(dimension=3)
-    
-    for c_idx, chain in enumerate(chains):
-        positions = np.array([atoms[aid]['pos'] for aid in chain])
-        radius = bead_spacing * 0.5
-        
-        fiber = Fiber(
-            centerline=positions,
-            radius=radius,
-            fiber_id=c_idx,
-        )
-        net.add_fiber(fiber)
-    
-    net.auto_crosslink(threshold=3.0 * bead_spacing)
-    return net
+    raise NotImplementedError(
+        'legacy from_lammps import is unsupported: atom-style parsing and '
+        'topology reconstruction can silently lose or invent data; no input '
+        'file was opened. Retain the original LAMMPS file. If an original '
+        'FiberNet graph exists, preserve it with native JSON; JSON cannot '
+        'recover data lost by an earlier import. There is no automatic '
+        'replacement importer.'
+    )
