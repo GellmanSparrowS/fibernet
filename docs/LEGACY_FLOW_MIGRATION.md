@@ -59,7 +59,9 @@ does not mean every historical execution mode is supported.
 This preflight replaces late import failures with actionable errors; it does
 **not** restore the retired models. It does not silently drop requested analysis,
 substitute a solver, convert representations, or alias legacy feature vectors
-onto the unrelated 94-feature extractor. `api.analyze` remains migration work.
+onto the unrelated 94-feature extractor. `api.analyze` now supports an explicit native graph analysis kind and the
+documented legacy endpoint summary; this does not restore configuration-based
+analysis modes. See `LEGACY_ANALYSIS_SUMMARY.md`.
 For the separate counts-only `ml.FeatureExtractor` boundary, unsupported legacy
 groups and the explicit GNN projection, see
 [Legacy ML feature boundary](LEGACY_ML_FEATURE_BOUNDARY.md). This does not restore
