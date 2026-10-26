@@ -369,7 +369,7 @@ class MLTab(QWidget):
                                 0, self.mode_combo.currentData(), self.acquisition)
         return os.path.join(_cache_dir(), 'ml_' + config_id(config) + '.npz')
 
-    def start_gen(self):
+    def start_gen(self, *, autostart=True):
         if self._busy():
             return
         unit = self.unit_combo.currentData()
@@ -388,7 +388,10 @@ class MLTab(QWidget):
         self._set_busy(True)
         self.progress.setValue(0)
         self.status.setText(_T()['busy_gen'])
-        self.gen_worker.start()
+        worker = self.gen_worker
+        if autostart:
+            worker.start()
+        return worker
 
     def _gen_progress(self, i, n):
         self.progress.setValue(int(100 * i / max(n, 1)))
@@ -413,7 +416,7 @@ class MLTab(QWidget):
             QTimer.singleShot(0, self.start_train)
 
     # ---------------- training ----------------
-    def start_train(self):
+    def start_train(self, *, autostart=True):
         if self._busy():
             return
         if self.X is None or self.X.shape[0] < 5 or self.label_mode != 'physics' or not np.isfinite(self.Y).all():
@@ -440,7 +443,10 @@ class MLTab(QWidget):
         self.loss_plot.setLabel('bottom', self._progress_kind)
         self.progress.setRange(0, 0)          # busy indicator
         self.status.setText(_T()['busy_train'])
-        self.train_worker.start()
+        worker = self.train_worker
+        if autostart:
+            worker.start()
+        return worker
 
     def _on_epoch(self, ep, tr, va):
         # live update of the loss curves (setData, pyqtgraph 0.14-safe)

@@ -296,7 +296,7 @@ class DesignTab(QWidget):
         self.target_combo.setCurrentText(target)
         self._preview_target()
 
-    def start_run(self):
+    def start_run(self, *, autostart=True):
         if self.worker is not None and self.worker.isRunning():
             return
         if self.selected_model is not None and self.model_provider:
@@ -337,7 +337,10 @@ class DesignTab(QWidget):
         self.worker.progress.connect(self._on_progress)
         self.worker.finished_ok.connect(self._on_done)
         self.worker.failed.connect(self._on_fail)
-        self.worker.start()
+        worker = self.worker
+        if autostart:
+            worker.start()
+        return worker
 
     def _request_stop(self):
         if self.worker is not None and self.worker.isRunning():
