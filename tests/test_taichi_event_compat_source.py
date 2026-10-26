@@ -527,6 +527,32 @@ def reviewed_native_io_source(reverse=None):
     return source
 
 
+def reviewed_legacy_analysis_source(reverse=None):
+    """Admit only the pinned legacy summary delta, with an exact historical inverse."""
+    raw = (ROOT/'tests/fixtures/legacy_analysis_v1/api_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'b15343961605399630fb5acc5f8b988b32f1d4449684d87ef78fb68de3384662', 'reviewed legacy summary source delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_legacy_analysis_source_delta/1'
+    assert delta['source'] == 'fibernet/api.py'
+    assert delta['baseline_main'] == '59a160f7959144656dd8b2b249faf80cf5395c5f'
+    base = reviewed_native_io_source()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'legacy summary source delta base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'legacy summary source inverse input changed'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'legacy summary source delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    digest = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == digest, 'legacy summary source delta result changed'
+    if reverse is not None:
+        assert source == base, 'legacy summary source inverse changed historical bytes'
+    return source
+
+
 # Byte-pinned deltas from the immutable public-main source chain. Historical
 # fixtures are retained verbatim; only these two exact candidate versions enter.
 TAICHI_GEOMETRY_SOURCE_PINS = {
@@ -593,7 +619,7 @@ def require_public_source(relative, raw):
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1359,9 +1385,21 @@ class SourceShape(unittest.TestCase):
             with self.assertRaisesRegex(AssertionError, 'batch report source delta changed'):
                 reviewed_easy_batch_report_source()
 
+    def test_legacy_analysis_source_is_exact_and_reversible(self):
+        raw = reviewed_legacy_analysis_source()
+        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_legacy_analysis_source(reverse=raw), reviewed_native_io_source())
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+                        raw.replace(b'return analyze_legacy_endpoints(network)', b'return {}', 1)):
+            self.assertNotEqual(changed, raw)
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/api.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_legacy_analysis_source(reverse=changed)
+
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()
-        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
         self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),
