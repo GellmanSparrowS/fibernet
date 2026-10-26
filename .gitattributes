@@ -67,3 +67,6 @@ tests/fixtures/easy_batch_report_v1/easy_delta.json -text
 
 # Exact additive octet facade delta preserves its reviewed Git bytes.
 tests/fixtures/standard_octet_v1/root_facade_delta.json -text
+
+# Reviewed legacy summary facade delta.
+tests/fixtures/legacy_analysis_v1/api_delta.json -text
