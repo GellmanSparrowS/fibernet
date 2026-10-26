@@ -2,6 +2,10 @@
 """
 import builtins
 import importlib
+import json
+import os
+from pathlib import Path
+import subprocess
 import sys
 
 import numpy as np
@@ -61,24 +65,56 @@ def check_output(result, n, e, node_width=6, edge_width=2):
     assert np.isfinite(result['edge_features']).all()
 
 
-def test_import_isolation(monkeypatch):
-    assert 'fibernet.ml.features' not in sys.modules, 'requires cold feature-module import'
-    original = builtins.__import__
-    forbidden = ('fibernet.analysis._archived', 'fibernet.analysis.morphology',
-                 'fibernet.analysis.topology', 'fibernet.analysis.advanced')
-    attempts = []
-    def guarded(name, globals=None, locals=None, fromlist=(), level=0):
-        if any(name == prefix or name.startswith(prefix + '.') for prefix in forbidden):
-            attempts.append(name)
-            raise AssertionError('deleted/archived analyzer import: ' + name)
-        return original(name, globals, locals, fromlist, level)
-    monkeypatch.setattr(builtins, '__import__', guarded)
-    module = importlib.import_module('fibernet.ml.features')
-    ml = importlib.import_module('fibernet.ml')
-    assert ml.FeatureExtractor is module.FeatureExtractor
-    assert callable(module.extract_features) and callable(module.GNNFeatureExtractor)
-    assert not attempts
-    assert not any(name.startswith('fibernet.analysis._archived') for name in sys.modules)
+@pytest.mark.parametrize('parent_preloaded', [False, True])
+def test_import_isolation(parent_preloaded):
+    # Another test may legitimately use archived morphology/topology first.
+    # Test the ML import boundary in a fresh interpreter, never global suite state.
+    if parent_preloaded:
+        importlib.import_module('fibernet.analysis._archived.morphology')
+        importlib.import_module('fibernet.analysis._archived.topology')
+        importlib.import_module('fibernet.ml.features')
+    parent_modules = {name: module for name, module in sys.modules.items()
+                      if name.startswith('fibernet.analysis._archived')
+                      or name == 'fibernet.ml.features'}
+    root = Path(__file__).resolve().parents[1]
+    script = r"""
+import builtins
+import importlib
+import json
+from pathlib import Path
+import sys
+root = Path(sys.argv[1]).resolve()
+sys.path.insert(0, str(root))
+assert not any(name == 'fibernet' or name.startswith('fibernet.') for name in sys.modules)
+original = builtins.__import__
+forbidden = ('fibernet.analysis._archived', 'fibernet.analysis.morphology',
+             'fibernet.analysis.topology', 'fibernet.analysis.advanced')
+attempts = []
+def guarded(name, globals=None, locals=None, fromlist=(), level=0):
+    if any(name == prefix or name.startswith(prefix + '.') for prefix in forbidden):
+        attempts.append(name)
+        raise AssertionError('deleted/archived analyzer import: ' + name)
+    return original(name, globals, locals, fromlist, level)
+builtins.__import__ = guarded
+module = importlib.import_module('fibernet.ml.features')
+ml = importlib.import_module('fibernet.ml')
+assert Path(module.__file__).resolve() == root / 'fibernet/ml/features.py'
+assert ml.FeatureExtractor is module.FeatureExtractor
+assert callable(module.extract_features) and callable(module.GNNFeatureExtractor)
+assert not attempts
+assert not any(name.startswith('fibernet.analysis._archived') for name in sys.modules)
+print(json.dumps({'cold_import': True, 'forbidden_attempts': attempts}))
+"""
+    env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
+    for name in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+                 'NUMEXPR_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS'):
+        env[name] = '1'
+    result = subprocess.run([sys.executable, '-I', '-B', '-c', script, str(root)],
+                            capture_output=True, text=True, timeout=30, env=env)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not result.stderr
+    assert json.loads(result.stdout) == {'cold_import': True, 'forbidden_attempts': []}
+    assert all(sys.modules.get(name) is module for name, module in parent_modules.items())
 
 
 @pytest.mark.parametrize('nonempty', [False, True])
