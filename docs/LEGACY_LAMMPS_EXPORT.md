@@ -1,4 +1,4 @@
-# Legacy FiberNetwork LAMMPS export is unsupported
+# Legacy FiberNetwork LAMMPS I/O
 
 `fibernet.io.to_lammps` now raises `NotImplementedError` immediately, without
 resampling, computing parameters or opening a destination. The same applies to
@@ -35,7 +35,20 @@ runtime/resource contracts (see `prepare_harmonic_beads` in
 mode='dynamics', ...)`). This requires an intentional model; it is not an
 automatic FiberNetwork migration or equivalent replacement.
 
-The existing `from_lammps` reader is unchanged and remains importable; this patch
-does not qualify its format coverage or round-trip fidelity. The separately
-unsupported `export_to_lammps_fea` template and modern backend are not rerouted.
-No LAMMPS executable, solver or physics model is introduced by this change.
+## Legacy import also fails closed
+
+`from_lammps(filename, bead_spacing=1.0)` remains importable with its existing
+signature but now raises `NotImplementedError` before opening the input. This
+also applies through `fibernet.io.from_lammps` and `fibernet.api.load` with inferred
+`.data`/`.lammps` or explicit `format='lammps'`. Existing input files are untouched.
+This is a deliberate behavior break: the old reader could interpret image flags
+as coordinates, drop commented atom rows, lose chain atoms/bonds depending on row
+order, omit branch/cycle edges and invent welded connections from proximity.
+
+Retain the original LAMMPS file. Native JSON is a preservation option only if you
+already have the original FiberNet graph; it cannot recover data lost during a
+previous import. No automatic replacement importer is provided.
+
+The separately unsupported `export_to_lammps_fea` template, legacy execution
+bridge, modern explicit StructureGraph backend and its result readers are not
+rerouted or changed. No LAMMPS executable, solver or physics model is introduced.
