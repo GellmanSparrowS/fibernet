@@ -80,11 +80,11 @@ def test_missing_cv2_real_original_parity(monkeypatch, kind):
     old, new = B(canvas_size=64), C(canvas_size=64)
     g = graph(kind)
     expected = old.extract(g)
-    actual = new.extract(g)
+    actual = new.extract(g, allow_unavailable=True)
     result = new.extract_with_status(g)
     equal_values(expected, actual)
     equal_values(old.extract(g), result['values'])
-    np.testing.assert_equal(old.extract_vector(g), new.extract_vector(g))
+    np.testing.assert_equal(old.extract_vector(g), new.extract_vector(g, allow_unavailable=True))
     assert len(result['status']) == len(result['values']) == 94
     assert len(result['audited_names']) == 63
     unknown = [n for n, r in result['status'].items() if r['state'] == 'unknown']
@@ -93,10 +93,10 @@ def test_missing_cv2_real_original_parity(monkeypatch, kind):
         assert result['status'][n] == {'state': 'unavailable', 'reason': 'dependency_missing.cv2'}
     for n in C.CONTACT_CONFIGURATION:
         assert result['status'][n] == {'state': 'computed', 'reason': 'input_recorded'}
-    old_batch, new_batch = old.batch_extract([g]), new.batch_extract([g])
+    old_batch, new_batch = old.batch_extract([g]), new.batch_extract([g], allow_unavailable=True)
     assert isinstance(new_batch, list)
     equal_values(old_batch[0], new_batch[0])
-    np.testing.assert_equal(old.batch_extract_matrix([g]), new.batch_extract_matrix([g]))
+    np.testing.assert_equal(old.batch_extract_matrix([g]), new.batch_extract_matrix([g], allow_unavailable=True))
     candidate._checked_feature_contract({k: v for k, v in result.items() if k != 'values'})
     json.dumps(result, allow_nan=False)  # this specific missing-cv2 fixture is finite
 
@@ -303,4 +303,4 @@ def test_frozen_named_partition_and_no_new_wildcard_imports():
         if n.startswith('contact_') and n not in C.CONTACT_CONFIGURATION)
     assert len(set(C.AUDITED_NAMES)) == 63
     assert C.FEATURE_COLS == B.FEATURE_COLS
-    assert {n for n in vars(candidate) if not n.startswith('_')} == {n for n in vars(baseline) if not n.startswith('_')}
+    assert {n for n in vars(candidate) if not n.startswith('_')} == {n for n in vars(baseline) if not n.startswith('_')} | {'FeatureUnavailableError'}
