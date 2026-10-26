@@ -64,3 +64,6 @@ tests/fixtures/optional_facades_v2/sim_archived_ge_delta.json -text
 tests/fixtures/easy_show_dimension_v1/easy_delta.json -text
 tests/fixtures/native_io_dispatch_v1/api_delta.json -text
 tests/fixtures/easy_batch_report_v1/easy_delta.json -text
+
+# Exact additive octet facade delta preserves its reviewed Git bytes.
+tests/fixtures/standard_octet_v1/root_facade_delta.json -text

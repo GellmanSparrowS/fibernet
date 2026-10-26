@@ -1,5 +1,5 @@
 {
-  "__init__.py": "0ea04c0e27c3ebdda23deef8ef7f9eb3d8b47f1de226f61049b4330ca33daffe",
+  "__init__.py": "ddcec745609991587e6343f6c9bb34634d064775605b588f9be48faf5ae4010c",
   "analysis/__init__.py": "e0d62c28bb14089dd83754ba1b6b5c716f4e58fd4648a1b7dc54d6d38a5f35fe",
   "analysis/_archived/advanced.py": "6b5f6f9af6373e3ee51d1aae419d63a94cb40b268269cd5dfb998ba7fc56ec93",
   "analysis/_archived/comparison.py": "693ba2f4d5fdc818810b95f915f078777a37b9f21d5d8931830587ede489beb9",
@@ -39,7 +39,7 @@
   "examples/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "examples/basic_usage.py": "92c33e7dc8c1a13f6594437c78f100cd9f5c4edab5cebe265b5d867e6db81fdb",
   "examples/linear_static_network.py": "fa7d5758e95b106f0e057507ef32c22151173420ae7b08b87080fceeedefba1d",
-  "gen/__init__.py": "e897bdf50e6e9379675230d3204e24c49733fb0bb6670f3713b70804c3c6806c",
+  "gen/__init__.py": "2c19578df05617b97d39b36a2bf1888b0b09fbea0de5e3d731a7494f6f176eaf",
   "gen/_fixes.py": "a89b2f09209fe7e9cdeb69888b1fccb6b53f1baaf6ea71bd600f3a7a536176fe",
   "gen/_graph_builder.py": "0a5af3d7d2808f9f28d0253ee961e77d6c7d1557c912ef87cc861f60934b6d47",
   "gen/advanced.py": "af8b1e3ee2849920fe3940ef4854ebe54e07bb1dc821463cd50767e37646ecd2",
@@ -67,6 +67,7 @@
   "gen/solid_export.py": "0639c833f73e4ef728705127863a959d4fc174cbc9b43897def717f2cb6236f1",
   "gen/specialized.py": "b28085f3cb2ea8aee99dbedd76bb8310d0573f46e8486b02b6fd3cbfd4382e08",
   "gen/spectrum.py": "6c0ad37a24c0d38671c06aa2149aab54cd6472d7bc0ca3ad2636edd154c55e19",
+  "gen/standard_lattice.py": "4082528f58e82b2c22fd79093b21bcdf400eca79b764c17c497e3fe49e86bf04",
   "gen/surface_geometry.py": "6194bc5ee501186d08c96554a0ec0b77e030346650d4632cc59789c217ce6668",
   "gen/surface_mapping.py": "1f61f919783539fa8c4d84b7efba6db2c1ebdfeb88c59dd6a532c24f4a5601d6",
   "gen/tpms.py": "4b270263e526eab01e8ebd3f22f304db6bfa8266635c0f58922117aa3f367a4a",
