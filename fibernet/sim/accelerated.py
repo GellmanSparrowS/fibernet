@@ -818,6 +818,8 @@ class SimResult:
             from fibernet.integrations import _harmonic_profile as hp
             profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
                                       self.dynamics_state, vars(self))
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(self.metadata)
         d = {
             "mode": self.mode,
             "energy": self.energy,
@@ -962,6 +964,8 @@ class SimResult:
             if selected != requested:
                 raise ValueError('profile-bearing result requires explicit matching load profile')
             if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(data)
         elif requested:
             raise ValueError('explicit harmonic profile requires a LAMMPS result')
         # Older FEM summary files stored [axial, shear, moment] resultants

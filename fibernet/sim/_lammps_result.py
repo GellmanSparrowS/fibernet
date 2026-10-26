@@ -273,6 +273,32 @@ def validate_result(result):
     return _validate_result(result)
 
 
+def _validate_geometry_metadata(metadata):
+    """Check the existing graph/SI declarations without requiring saved state."""
+    from fibernet.integrations.lammps_backend import LENGTH_FACTORS
+    contract = metadata.get('model_contract', {})
+    unit = metadata.get('original_graph_length_unit')
+    scale = metadata.get('original_graph_length_to_m')
+    if not isinstance(scale, (int, float)) or isinstance(scale, bool) or not np.isfinite(scale) or scale <= 0:
+        raise ValueError('invalid graph-to-SI length scale')
+    if (unit not in LENGTH_FACTORS or scale != LENGTH_FACTORS[unit] or
+            contract.get('length_unit') != unit or contract.get('length_to_m') != scale or
+            metadata.get('field_units') != field_units(unit)):
+        raise ValueError('inconsistent LAMMPS geometry units')
+
+
+def validate_persisted_metadata(metadata):
+    """Validate units for recognized modern contracts, including no-state exports.
+
+    A historical backend label alone does not establish this modern contract.
+    Profile guards and any available state validation remain separate layers.
+    """
+    contract = metadata.get('model_contract')
+    if isinstance(contract, dict) and contract.get('model') in (
+            'explicit-synthetic-or-coarse-grained-beads', CG_MODEL):
+        _validate_geometry_metadata(metadata)
+
+
 def _validate_result(result, *, with_summary=False):
     _profiles.result_guard(result.metadata,result.n_nodes,result.n_edges,result.dynamics_state,vars(result))
     from .accelerated import SimResult
@@ -288,7 +314,6 @@ def _validate_result(result, *, with_summary=False):
         raise ValueError('LAMMPS state/result provenance or energy mismatch')
     if result.algorithmic_energy_ledger is not None:
         raise ValueError('LAMMPS does not provide a native-axial algorithmic ledger')
-    from fibernet.integrations.lammps_backend import LENGTH_FACTORS
     contract = result.metadata.get('model_contract', {})
     if (record['schema'] == CG_SCHEMA) != (contract.get('model') == CG_MODEL):
         raise ValueError('LAMMPS state/model schema mismatch')
@@ -298,14 +323,8 @@ def _validate_result(result, *, with_summary=False):
             raise ValueError('CG network state/model observation schedule mismatch')
         if _network.record(result.metadata.get('profile')) != profile:
             raise ValueError('CG network result/profile mismatch')
-    unit = result.metadata.get('original_graph_length_unit')
+    _validate_geometry_metadata(result.metadata)
     scale = result.metadata.get('original_graph_length_to_m')
-    if not isinstance(scale, (int, float)) or isinstance(scale, bool) or not np.isfinite(scale) or scale <= 0:
-        raise ValueError('invalid graph-to-SI length scale')
-    if (unit not in LENGTH_FACTORS or scale != LENGTH_FACTORS[unit] or
-            contract.get('length_unit') != unit or contract.get('length_to_m') != scale or
-            result.metadata.get('field_units') != field_units(unit)):
-        raise ValueError('inconsistent LAMMPS geometry units')
     if (contract.get('timestep_s') != record['dt'] or
             contract.get('steps') != record['final']['step']):
         raise ValueError('LAMMPS state/model time contract mismatch')

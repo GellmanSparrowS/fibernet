@@ -174,6 +174,10 @@ Model/source identity and the runtime inventory receipt are separate.
 `result.save(path)` retain only summary scalars; loading a summary never
 reconstructs missing positions, velocities, forces, or pressure tensors.
 `record_state=False` retains no native state or trajectory arrays.
+For the modern harmonic and CG model contracts, export and load still validate
+the original graph length unit, its SI scale, and the geometry field-unit labels
+when state is omitted. Recording state is not required to check these metadata
+declarations; this does not reconstruct missing state or authenticate a source hash.
 
 This convenience call is synchronous. For asynchronous cancellation use the
 existing direct `LAMMPSTask` API. Terminal failures never become a successful
