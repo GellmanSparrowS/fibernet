@@ -1,0 +1,2605 @@
+{
+  "schema": "fibernet.api-homepage-presentation/1",
+  "canonicalRegistry": "code_registry.json",
+  "comment": "A selective bilingual guide to representative interfaces. code_registry.json remains the module inventory; this overlay supplies workflow grouping, public ownership names and usage descriptions.",
+  "groups": [
+    {
+      "id": "geometry",
+      "label": "Geometry",
+      "title": {
+        "en": "Geometry",
+        "zh": "几何生成"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "contracts",
+      "label": "Data contracts",
+      "title": {
+        "en": "Data contracts",
+        "zh": "数据约定"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "simulation",
+      "label": "Simulation",
+      "title": {
+        "en": "Simulation",
+        "zh": "物理模拟"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "analysis",
+      "label": "Analysis",
+      "title": {
+        "en": "Analysis",
+        "zh": "结构分析"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "learning",
+      "label": "Learning & search",
+      "title": {
+        "en": "Learning & search",
+        "zh": "学习与搜索"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "manufacturing",
+      "label": "Manufacturing",
+      "title": {
+        "en": "Manufacturing",
+        "zh": "制造导出"
+      },
+      "kind": "group"
+    },
+    {
+      "id": "exchange",
+      "label": "I/O & visualization",
+      "title": {
+        "en": "I/O & visualization",
+        "zh": "读写与可视化"
+      },
+      "kind": "group"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "graph",
+      "group": "contracts",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "StructureGraph",
+      "publicNamespace": "fibernet.StructureGraph",
+      "kind": "class",
+      "label": "StructureGraph",
+      "title": {
+        "en": "Shared structure",
+        "zh": "共享结构"
+      },
+      "description": {
+        "en": "Authoritative 2D/3D geometry, stable node/edge identities, and stored provenance.",
+        "zh": "统一保存二维、三维几何、稳定节点与边 ID 及来源信息。"
+      },
+      "input": {
+        "en": "Dimension, tolerance, nodes and physical edges.",
+        "zh": "维度、合并容差、节点和物理边。"
+      },
+      "output": {
+        "en": "One StructureGraph reused by downstream adapters.",
+        "zh": "供下游接口复用的 StructureGraph。"
+      },
+      "caveat": {
+        "en": "Geometry storage does not select a physical model or convert units.",
+        "zh": "保存几何不等于选择物理模型，也不会自动换算单位。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "example": "import fibernet as fn\n\ngraph = fn.pattern_2d(\n    unit=\"honeycomb\", box=(10, 10), grid=(2, 2), radius=0.05, seed=23\n)",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "pattern_2d",
+      "group": "geometry",
+      "registryKey": "fibernet/gen/pattern.py",
+      "sourceSymbol": "pattern_2d",
+      "publicNamespace": "fibernet.pattern_2d",
+      "kind": "function",
+      "label": "pattern_2d",
+      "title": {
+        "en": "Planar patterns",
+        "zh": "平面结构生成"
+      },
+      "description": {
+        "en": "Build a planar unit, transform it, and tile the resulting graph.",
+        "zh": "构建平面基元，变换并平铺为结构图。"
+      },
+      "input": {
+        "en": "Unit or points, box, grid, radius, material, seed.",
+        "zh": "基元名称或点列、尺寸、网格数、半径、材料、随机种子。"
+      },
+      "output": {
+        "en": "StructureGraph (2D).",
+        "zh": "二维 StructureGraph。"
+      },
+      "caveat": {
+        "en": "n_pts_per_side creates graph nodes; n_internal stores edge interior points.",
+        "zh": "n_pts_per_side 生成图节点；n_internal 保存边内点，两者含义不同。"
+      },
+      "docsPath": "README.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "pattern_3d",
+      "group": "geometry",
+      "registryKey": "fibernet/gen/pattern.py",
+      "sourceSymbol": "pattern_3d",
+      "publicNamespace": "fibernet.pattern_3d",
+      "kind": "function",
+      "label": "pattern_3d",
+      "title": {
+        "en": "Spatial patterns",
+        "zh": "三维结构生成"
+      },
+      "description": {
+        "en": "Build and tile a registered three-dimensional unit.",
+        "zh": "构建并平铺已注册的三维基元。"
+      },
+      "input": {
+        "en": "3D unit, box, grid, radius, material and seed.",
+        "zh": "三维基元、尺寸、网格数、半径、材料和随机种子。"
+      },
+      "output": {
+        "en": "StructureGraph (3D).",
+        "zh": "三维 StructureGraph。"
+      },
+      "caveat": {
+        "en": "HCP/TPMS post-tile repairs are recorded; they do not certify mechanical stability.",
+        "zh": "HCP、TPMS 平铺后的连接修复有单独记录，不代表力学稳定性已验证。"
+      },
+      "docsPath": "README.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "octet",
+      "group": "geometry",
+      "registryKey": "fibernet/gen/standard_lattice.py",
+      "sourceSymbol": "octet_fcc_v1",
+      "publicNamespace": "fibernet.octet_fcc_v1",
+      "kind": "function",
+      "label": "octet_fcc_v1",
+      "title": {
+        "en": "Versioned FCC lattice",
+        "zh": "版本化 FCC 晶格"
+      },
+      "description": {
+        "en": "Generate the finite closed FCC nearest-neighbor graph defined by v1.",
+        "zh": "按 v1 定义生成有限、闭边界的 FCC 最近邻结构图。"
+      },
+      "input": {
+        "en": "a and radius in m, integer grid, Material.",
+        "zh": "以米为单位的 a 与半径、整数网格数、Material。"
+      },
+      "output": {
+        "en": "Versioned StructureGraph in SI metres.",
+        "zh": "采用 SI 米制的版本化 StructureGraph。"
+      },
+      "caveat": {
+        "en": "Distinct from the historical pattern_3d(unit='octet') geometry.",
+        "zh": "与历史 pattern_3d(unit='octet') 几何定义不同。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "register_unit",
+      "group": "geometry",
+      "registryKey": "fibernet/gen/pattern.py",
+      "sourceSymbol": "register_unit",
+      "publicNamespace": "fibernet.register_unit",
+      "kind": "function",
+      "label": "register_unit",
+      "title": {
+        "en": "Custom pattern units",
+        "zh": "注册自定义基元"
+      },
+      "description": {
+        "en": "Register a callable factory for the 2D pattern namespace.",
+        "zh": "将可调用的二维基元工厂加入 pattern 名称表。"
+      },
+      "input": {
+        "en": "Name and callable factory.",
+        "zh": "名称和可调用的基元工厂。"
+      },
+      "output": {
+        "en": "Registry update consumed by pattern_2d.",
+        "zh": "更新后的名称表供 pattern_2d 使用。"
+      },
+      "caveat": {
+        "en": "Existing valid names may be replaced; this is not a solver registry.",
+        "zh": "允许替换已有名称；这不是求解器注册表。"
+      },
+      "docsPath": "fibernet/gen/pattern.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "tile",
+      "group": "geometry",
+      "registryKey": "fibernet/core/tiling.py",
+      "sourceSymbol": "tile_2d",
+      "publicNamespace": "fibernet.tile_2d",
+      "kind": "function",
+      "label": "tile_2d",
+      "title": {
+        "en": "Tile and weld",
+        "zh": "平铺与节点焊接"
+      },
+      "description": {
+        "en": "Tile an existing unit graph while retaining independent parallel fibers.",
+        "zh": "平铺已有基元图，保留独立的平行物理纤维。"
+      },
+      "input": {
+        "en": "Unit StructureGraph, grid, box size and tolerance.",
+        "zh": "基元 StructureGraph、网格数、尺寸和容差。"
+      },
+      "output": {
+        "en": "Tiled StructureGraph with welded nodes.",
+        "zh": "节点焊接后的平铺 StructureGraph。"
+      },
+      "caveat": {
+        "en": "Shared fibers merge only when physical records and oriented geometry agree.",
+        "zh": "只有物理记录与有向几何匹配时才合并共享纤维。"
+      },
+      "docsPath": "fibernet/core/tiling.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "custom_cells",
+      "group": "geometry",
+      "registryKey": "fibernet/gen/custom_cells.py",
+      "sourceSymbol": "CustomCellRegistry",
+      "publicNamespace": "fibernet.gen.custom_cells.CustomCellRegistry",
+      "kind": "class",
+      "label": "CustomCellRegistry",
+      "title": {
+        "en": "Reusable cell records",
+        "zh": "可复用基元记录"
+      },
+      "description": {
+        "en": "Read and maintain the existing key-to-cell JSON format.",
+        "zh": "读写现有的“名称—基元”JSON 格式。"
+      },
+      "input": {
+        "en": "Registry path and validated CustomCell records.",
+        "zh": "注册文件路径和有效 CustomCell 记录。"
+      },
+      "output": {
+        "en": "Named cells; CustomCell.to_graph() builds geometry.",
+        "zh": "命名基元；通过 CustomCell.to_graph() 生成几何。"
+      },
+      "caveat": {
+        "en": "Stored cell names are not automatically root-package exports.",
+        "zh": "保存的基元名称不会自动变成包根目录的 API。"
+      },
+      "docsPath": "docs/METHODS_CUSTOM_CELL_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/gen/custom_cells.py"
+    },
+    {
+      "id": "snode",
+      "group": "contracts",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "SNode",
+      "publicNamespace": "fibernet.SNode",
+      "kind": "class",
+      "label": "SNode",
+      "title": {
+        "en": "Nodes and boundary faces",
+        "zh": "节点与几何边界"
+      },
+      "description": {
+        "en": "Store a junction position, stable ID, face flags and metadata.",
+        "zh": "保存节点坐标、稳定 ID、边界面标记和元数据。"
+      },
+      "input": {
+        "en": "Position, node_id, six boundary flags, metadata.",
+        "zh": "坐标、node_id、六个边界面标记和元数据。"
+      },
+      "output": {
+        "en": "Node record owned by StructureGraph.",
+        "zh": "StructureGraph 中的节点记录。"
+      },
+      "caveat": {
+        "en": "Boundary flags describe geometric faces, not mechanical supports.",
+        "zh": "边界标记描述几何面，不是力学支座约束。"
+      },
+      "docsPath": "docs/STABLE_NODAL_CONTROLS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "sedge",
+      "group": "contracts",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "SEdge",
+      "publicNamespace": "fibernet.SEdge",
+      "kind": "class",
+      "label": "SEdge",
+      "title": {
+        "en": "Physical edges",
+        "zh": "物理边"
+      },
+      "description": {
+        "en": "Store endpoints, stable edge ID, radius, material and interior geometry.",
+        "zh": "保存端点、稳定边 ID、半径、材料和边内几何。"
+      },
+      "input": {
+        "en": "Endpoint IDs, radius, Material, internal_points and segments.",
+        "zh": "端点 ID、半径、Material、internal_points 与 segments。"
+      },
+      "output": {
+        "en": "Physical-edge record; parallel edges can remain distinct.",
+        "zh": "物理边记录；平行边可以保留独立身份。"
+      },
+      "caveat": {
+        "en": "Stored curve points do not establish curved-beam support in every solver.",
+        "zh": "保存曲线内点不代表所有求解器都支持曲梁。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "material",
+      "group": "contracts",
+      "registryKey": "fibernet/core/material.py",
+      "sourceSymbol": "Material",
+      "publicNamespace": "fibernet.Material",
+      "kind": "class",
+      "label": "Material",
+      "title": {
+        "en": "Stored material properties",
+        "zh": "材料属性记录"
+      },
+      "description": {
+        "en": "Describe mechanical, thermal and electrical material properties.",
+        "zh": "记录力学、热学和电学材料属性。"
+      },
+      "input": {
+        "en": "Named properties such as E, density and conductivity.",
+        "zh": "E、密度、电导率等带有物理含义的属性。"
+      },
+      "output": {
+        "en": "Material record attached to edges or used by explicit adapters.",
+        "zh": "可附于边或传入明确接口的 Material 记录。"
+      },
+      "caveat": {
+        "en": "Graph material records do not silently supply FEM modulus, spring coefficients or conductance.",
+        "zh": "图中的材料记录不会自动提供 FEM 模量、弹簧系数或边电导。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "visco_material",
+      "group": "contracts",
+      "registryKey": "fibernet/core/viscoelastic.py",
+      "sourceSymbol": "LinearViscoelasticMaterial",
+      "publicNamespace": "fibernet.LinearViscoelasticMaterial",
+      "kind": "class",
+      "label": "LinearViscoelasticMaterial",
+      "title": {
+        "en": "Viscoelastic law",
+        "zh": "线性黏弹性材料"
+      },
+      "description": {
+        "en": "Combine an equilibrium spring, Maxwell branches and an optional dashpot.",
+        "zh": "组合平衡弹簧、Maxwell 分支与可选并联黏壶。"
+      },
+      "input": {
+        "en": "Moduli in Pa, relaxation times in s, viscosity in Pa·s.",
+        "zh": "Pa 单位的模量、s 单位的松弛时间、Pa·s 单位的黏度。"
+      },
+      "output": {
+        "en": "Explicit constitutive record for supported history/dynamics routes.",
+        "zh": "供受支持历史或动力学路径使用的本构记录。"
+      },
+      "caveat": {
+        "en": "Numerical damping is not material viscosity; no calibration is implied.",
+        "zh": "数值阻尼不是材料黏度；该记录不代表已经完成材料标定。"
+      },
+      "docsPath": "docs/DYNAMIC_AXIAL_VISCOELASTICITY.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "units",
+      "group": "contracts",
+      "registryKey": "fibernet/units.py",
+      "sourceSymbol": "convert_length",
+      "publicNamespace": "fibernet.units.convert_length",
+      "kind": "function",
+      "label": "convert_length",
+      "title": {
+        "en": "Explicit unit conversion",
+        "zh": "显式单位换算"
+      },
+      "description": {
+        "en": "Convert a supplied length between named units.",
+        "zh": "按指定的源单位与目标单位换算长度。"
+      },
+      "input": {
+        "en": "Value, from_unit and to_unit.",
+        "zh": "数值、from_unit 和 to_unit。"
+      },
+      "output": {
+        "en": "Converted numerical length.",
+        "zh": "换算后的长度数值。"
+      },
+      "caveat": {
+        "en": "Does not rescale a graph, material, result or solver input automatically.",
+        "zh": "不会自动缩放图、材料、结果或求解器输入。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/units.py"
+    },
+    {
+      "id": "controls",
+      "group": "contracts",
+      "registryKey": "fibernet/sim/nodal_controls.py",
+      "sourceSymbol": "prepare_nodal_controls",
+      "publicNamespace": "fibernet.sim.prepare_nodal_controls",
+      "kind": "function",
+      "label": "prepare_nodal_controls",
+      "title": {
+        "en": "Supports and nodal loads",
+        "zh": "支座与节点载荷"
+      },
+      "description": {
+        "en": "Translate stable-ID supports and forces into existing solver row controls.",
+        "zh": "将稳定 ID 的支座与节点力映射为已有求解器的行控制参数。"
+      },
+      "input": {
+        "en": "Graph, fixed_node_ids, forces_by_id and dimension.",
+        "zh": "图、fixed_node_ids、forces_by_id 和维度。"
+      },
+      "output": {
+        "en": "PreparedNodalControls.",
+        "zh": "PreparedNodalControls。"
+      },
+      "caveat": {
+        "en": "Reprepare after graph changes or reload; no unit conversion or model equivalence.",
+        "zh": "图修改或重新读取后须重新准备；不换算单位，也不保证不同模型等价。"
+      },
+      "docsPath": "docs/STABLE_NODAL_CONTROLS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/sim/__init__.py"
+    },
+    {
+      "id": "prepared_controls",
+      "group": "contracts",
+      "registryKey": "fibernet/sim/nodal_controls.py",
+      "sourceSymbol": "PreparedNodalControls",
+      "publicNamespace": "fibernet.sim.PreparedNodalControls",
+      "kind": "class",
+      "label": "PreparedNodalControls",
+      "title": {
+        "en": "Checked control handoff",
+        "zh": "经过校验的控制交接"
+      },
+      "description": {
+        "en": "Retain graph binding and expose Taichi/FEM row-ordered keyword arguments.",
+        "zh": "保留图绑定，并提供 Taichi、FEM 的行序关键字参数。"
+      },
+      "input": {
+        "en": "Factory output from prepare_nodal_controls.",
+        "zh": "prepare_nodal_controls 的返回值。"
+      },
+      "output": {
+        "en": "taichi_kwargs(graph), fem_kwargs(graph), provenance dictionary.",
+        "zh": "taichi_kwargs(graph)、fem_kwargs(graph) 与来源记录。"
+      },
+      "caveat": {
+        "en": "The provenance dictionary is not an executable restart checkpoint.",
+        "zh": "来源记录不是可执行的重启检查点。"
+      },
+      "docsPath": "docs/STABLE_NODAL_CONTROLS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/sim/__init__.py"
+    },
+    {
+      "id": "sim_result",
+      "group": "contracts",
+      "registryKey": "fibernet/sim/accelerated.py",
+      "sourceSymbol": "SimResult",
+      "publicNamespace": "fibernet.SimResult",
+      "kind": "class",
+      "label": "SimResult",
+      "title": {
+        "en": "Identity-aware mechanical result",
+        "zh": "含身份映射的力学结果"
+      },
+      "description": {
+        "en": "Carry displacements, edge response and backend-specific metadata.",
+        "zh": "保存位移、边响应与后端专属元数据。"
+      },
+      "input": {
+        "en": "Supported spring, FEM or LAMMPS producer output.",
+        "zh": "受支持的弹簧、FEM 或 LAMMPS 路径输出。"
+      },
+      "output": {
+        "en": "Result arrays, identity maps and optional detailed JSON.",
+        "zh": "结果数组、身份映射与可选详细 JSON。"
+      },
+      "caveat": {
+        "en": "Energy/force meanings differ by model; save() defaults to summary, not restart state.",
+        "zh": "不同模型的能量与力含义不同；save() 默认保存摘要，不是重启状态。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "graph_batch_type",
+      "group": "contracts",
+      "registryKey": "fibernet/ml/graph_data.py",
+      "sourceSymbol": "GraphBatch",
+      "publicNamespace": "fibernet.ml.GraphBatch",
+      "kind": "class",
+      "label": "GraphBatch",
+      "title": {
+        "en": "Detached graph snapshot",
+        "zh": "独立的图快照"
+      },
+      "description": {
+        "en": "Keep geometry, physical-edge identity, directed messages and optional provenance aligned.",
+        "zh": "对齐保存几何、物理边身份、双向消息及可选来源信息。"
+      },
+      "input": {
+        "en": "Validated graph_batch output.",
+        "zh": "graph_batch 校验后的输出。"
+      },
+      "output": {
+        "en": "Read-only numerical snapshot for adapters and learning inputs.",
+        "zh": "供接口和学习输入使用的只读数值快照。"
+      },
+      "caveat": {
+        "en": "A derived view, not a second editable graph or a full graph persistence format.",
+        "zh": "它是派生视图，不是第二套可编辑图，也不是完整图存储格式。"
+      },
+      "docsPath": "docs/GRAPH_TRAINING_CONTRACT.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "simulate",
+      "group": "simulation",
+      "registryKey": "fibernet/easy.py",
+      "sourceSymbol": "simulate",
+      "publicNamespace": "fibernet.simulate",
+      "kind": "function",
+      "label": "simulate",
+      "title": {
+        "en": "Explicit simulation route",
+        "zh": "选择明确的模拟路径"
+      },
+      "description": {
+        "en": "Dispatch supported combinations of backend, loading protocol and material controls.",
+        "zh": "分派受支持的后端、加载方式与材料控制组合。"
+      },
+      "input": {
+        "en": "StructureGraph, explicit backend/mode and route-specific controls.",
+        "zh": "StructureGraph、明确的 backend/mode 及对应控制参数。"
+      },
+      "output": {
+        "en": "SimResult or ViscoelasticResult, according to route.",
+        "zh": "按路径返回 SimResult 或 ViscoelasticResult。"
+      },
+      "caveat": {
+        "en": "stretch_ratio=1.01 means 1% extension; omitted ratio retains 2.0. Backends are not interchangeable.",
+        "zh": "stretch_ratio=1.01 表示 1% 伸长；省略时仍为 2.0。各后端不能任意互换。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "taichi",
+      "group": "simulation",
+      "registryKey": "fibernet/sim/accelerated.py",
+      "sourceSymbol": "TaichiEngine",
+      "publicNamespace": "fibernet.TaichiEngine",
+      "kind": "class",
+      "label": "TaichiEngine",
+      "title": {
+        "en": "Axial spring dynamics",
+        "zh": "轴向弹簧动力学"
+      },
+      "description": {
+        "en": "Run the Taichi axial-spring route with explicit device and physical inputs.",
+        "zh": "采用明确设备与物理输入运行 Taichi 轴向弹簧路径。"
+      },
+      "input": {
+        "en": "Graph, coefficients, masses, supports, forces and time controls.",
+        "zh": "图、系数、质量、支座、力和时间控制。"
+      },
+      "output": {
+        "en": "SimResult with selected history/state records.",
+        "zh": "包含所选历史或状态记录的 SimResult。"
+      },
+      "caveat": {
+        "en": "Requires the supported Taichi runtime; imports do not prove readiness or GPU speedup.",
+        "zh": "需要受支持的 Taichi 运行时；导入成功不证明运行就绪或 GPU 加速效果。"
+      },
+      "docsPath": "docs/TAICHI_API_DISPATCH.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "fem",
+      "group": "simulation",
+      "registryKey": "fibernet/ml/beam_frame_fem.py",
+      "sourceSymbol": "BeamFrameFEM",
+      "publicNamespace": "fibernet.ml.BeamFrameFEM",
+      "kind": "class",
+      "label": "BeamFrameFEM",
+      "title": {
+        "en": "Beam-frame mechanics",
+        "zh": "梁框架力学"
+      },
+      "description": {
+        "en": "Expose raw beam-frame solves and an explicit 2D viscoelastic history route.",
+        "zh": "提供梁框架原始求解与明确的二维黏弹性历史路径。"
+      },
+      "input": {
+        "en": "E/nu or history material, geometry, DOF constraints and loads.",
+        "zh": "E/nu 或历史材料、几何、自由度约束与载荷。"
+      },
+      "output": {
+        "en": "Raw frame results, SimResult adapter or ViscoelasticResult.",
+        "zh": "原始框架结果、SimResult 转换结果或 ViscoelasticResult。"
+      },
+      "caveat": {
+        "en": "3D stretch is linear-only; raw row controls and stable-ID history controls differ.",
+        "zh": "三维拉伸只支持线性；原始行控制与稳定 ID 历史控制不同。"
+      },
+      "docsPath": "docs/METHODS_BEAM_FEM_CONTRACT.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "reduced",
+      "group": "simulation",
+      "registryKey": "fibernet/sim/reduced_beam.py",
+      "sourceSymbol": "Engine2",
+      "publicNamespace": "fibernet.ReducedBeamSolver",
+      "kind": "class",
+      "label": "ReducedBeamSolver",
+      "title": {
+        "en": "Shared reduced model",
+        "zh": "共享简化模型"
+      },
+      "description": {
+        "en": "Run the shared NumPy axial, degree-2 bending and node-contact model.",
+        "zh": "运行共享的 NumPy 轴向、二度节点弯曲与节点接触简化模型。"
+      },
+      "input": {
+        "en": "Planar graph and ReducedBeamConfig.",
+        "zh": "平面图和 ReducedBeamConfig。"
+      },
+      "output": {
+        "en": "ReducedBeamResult: frames, edge strain, force curve and energy records.",
+        "zh": "ReducedBeamResult：帧、边应变、力曲线和能量记录。"
+      },
+      "caveat": {
+        "en": "A reduced model, not a general nonlinear beam/contact solver.",
+        "zh": "这是简化模型，不是通用非线性梁或接触求解器。"
+      },
+      "docsPath": "docs/METHODS_CURVE_INVERSE_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "transport",
+      "group": "simulation",
+      "registryKey": "fibernet/sim/linear_transport.py",
+      "sourceSymbol": "solve_linear_transport",
+      "publicNamespace": "fibernet.solve_linear_transport",
+      "kind": "function",
+      "label": "solve_linear_transport",
+      "title": {
+        "en": "Electrical transport",
+        "zh": "电传输"
+      },
+      "description": {
+        "en": "Solve the resistor network with explicit edge conductance and voltage boundaries.",
+        "zh": "用显式边电导与电压边界求解电阻网络。"
+      },
+      "input": {
+        "en": "Graph, conductance_S by edge ID, node voltages, length_unit.",
+        "zh": "图、按边 ID 给出的 conductance_S、节点电压、length_unit。"
+      },
+      "output": {
+        "en": "LinearTransportResult with ID-aligned voltages, currents and power.",
+        "zh": "含 ID 对齐电压、电流和功率的 LinearTransportResult。"
+      },
+      "caveat": {
+        "en": "Conductance is supplied in S, not inferred from conductivity S/m; floating components reject.",
+        "zh": "输入是 S 单位的边电导，不从 S/m 电导率推断；浮置分量会被拒绝。"
+      },
+      "docsPath": "docs/ONE_WAY_JOULE_HEATING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "joule",
+      "group": "simulation",
+      "registryKey": "fibernet/sim/joule_heating.py",
+      "sourceSymbol": "run_joule_heating",
+      "publicNamespace": "fibernet.run_joule_heating",
+      "kind": "function",
+      "label": "run_joule_heating",
+      "title": {
+        "en": "One-way Joule heating",
+        "zh": "单向焦耳热"
+      },
+      "description": {
+        "en": "Transfer an existing electrical result into transient thermal evolution.",
+        "zh": "将已有电求解结果作为热源，计算瞬态温度演化。"
+      },
+      "input": {
+        "en": "Original graph, electrical_result, J/K capacities, W/K conductances, initial temperatures, times_s, mandatory endpoint_weights and length_unit.",
+        "zh": "原始 graph、electrical_result、J/K 热容、W/K 热导、初始温度、times_s，以及必填的 endpoint_weights 和 length_unit。"
+      },
+      "output": {
+        "en": "JouleHeatingRun with heat_load and thermal result.",
+        "zh": "含 heat_load 与热结果的 JouleHeatingRun。"
+      },
+      "caveat": {
+        "en": "One-way coupling: temperature is not fed back into electrical conductance.",
+        "zh": "单向耦合：温度不会反向更新电导。"
+      },
+      "docsPath": "docs/ONE_WAY_JOULE_HEATING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "lammps_prepare",
+      "group": "simulation",
+      "registryKey": "fibernet/integrations/lammps_backend.py",
+      "sourceSymbol": "prepare_harmonic_beads",
+      "publicNamespace": "fibernet.integrations.lammps_backend.prepare_harmonic_beads",
+      "kind": "function",
+      "label": "prepare_harmonic_beads",
+      "title": {
+        "en": "Prepare a bounded LAMMPS model",
+        "zh": "准备有界 LAMMPS 模型"
+      },
+      "description": {
+        "en": "Compile a declared 3D bead-and-harmonic-bond model without starting a native run.",
+        "zh": "编译明确指定的三维珠粒—谐键模型，不启动原生运行。"
+      },
+      "input": {
+        "en": "Graph, length_unit, maximum_bond_length_m, masses_kg, HarmonicBond maps and RunSpec; optional controls and bounded profile.",
+        "zh": "Graph、length_unit、maximum_bond_length_m、masses_kg、HarmonicBond 映射及 RunSpec；可选控制项与有界 profile。"
+      },
+      "output": {
+        "en": "PreparedRun containing model and identity records.",
+        "zh": "包含模型与身份记录的 PreparedRun。"
+      },
+      "caveat": {
+        "en": "Straight, nonperiodic 3D geometry; no automatic chemistry or material-to-force-field conversion.",
+        "zh": "限直边、非周期三维几何；不自动生成化学模型或将材料转换为力场。"
+      },
+      "docsPath": "docs/integrations/LAMMPS_HARMONIC_CLI.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/integrations/lammps_backend.py"
+    },
+    {
+      "id": "lammps_task",
+      "group": "simulation",
+      "registryKey": "fibernet/integrations/lammps_backend.py",
+      "sourceSymbol": "LAMMPSTask",
+      "publicNamespace": "fibernet.integrations.lammps_backend.LAMMPSTask",
+      "kind": "class",
+      "label": "LAMMPSTask",
+      "title": {
+        "en": "Bounded native task",
+        "zh": "有界原生任务"
+      },
+      "description": {
+        "en": "Manage the explicit one-shot native CLI lifecycle and parse its bounded outputs.",
+        "zh": "管理明确的一次性原生 CLI 生命周期并解析有界输出。"
+      },
+      "input": {
+        "en": "PreparedRun, RuntimeSpec, owned workdir and ResourceLimits.",
+        "zh": "PreparedRun、RuntimeSpec、专用工作目录与 ResourceLimits。"
+      },
+      "output": {
+        "en": "Task state and LAMMPSRunResult after successful completion.",
+        "zh": "任务状态及成功完成后的 LAMMPSRunResult。"
+      },
+      "caveat": {
+        "en": "Runtime readiness and physical qualification require separate evidence; construction does not run the engine.",
+        "zh": "运行就绪与物理适用性需要独立证据；构造对象不会运行引擎。"
+      },
+      "docsPath": "docs/integrations/LAMMPS_HARMONIC_CLI.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/integrations/lammps_backend.py"
+    },
+    {
+      "id": "features94",
+      "group": "analysis",
+      "registryKey": "fibernet/analysis/graph_features.py",
+      "sourceSymbol": "GraphFeatureExtractor",
+      "publicNamespace": "fibernet.GraphFeatureExtractor",
+      "kind": "class",
+      "label": "GraphFeatureExtractor",
+      "title": {
+        "en": "Features with availability",
+        "zh": "含可用性状态的特征"
+      },
+      "description": {
+        "en": "Extract the legacy 94-feature schema with explicit status through extract_with_status().",
+        "zh": "通过 extract_with_status() 取得旧版 94 特征及其状态。"
+      },
+      "input": {
+        "en": "Supported graph and raster/extraction settings.",
+        "zh": "受支持的图与栅格、提取参数。"
+      },
+      "output": {
+        "en": "Values plus schema, parameters and per-feature status.",
+        "zh": "数值、模式、参数与逐特征状态。"
+      },
+      "caveat": {
+        "en": "Only 63 names are covered by the availability contract; missing dependencies are not measured zeros.",
+        "zh": "可用性约定覆盖其中 63 项；缺少依赖不等于测得零值。"
+      },
+      "docsPath": "docs/FEATURE_AVAILABILITY.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "snapshot",
+      "group": "analysis",
+      "registryKey": "fibernet/analysis/snapshot_features.py",
+      "sourceSymbol": "SnapshotFeatureExtractor",
+      "publicNamespace": "fibernet.analysis.SnapshotFeatureExtractor",
+      "kind": "class",
+      "label": "SnapshotFeatureExtractor",
+      "title": {
+        "en": "Planar snapshot features",
+        "zh": "平面快照特征"
+      },
+      "description": {
+        "en": "Measure structure, planar pores and optional finite-width overlap in a bounded snapshot.",
+        "zh": "在给定规模内测量结构、平面孔隙与可选有限宽度重叠。"
+      },
+      "input": {
+        "en": "Planar graph or positions and dense-row edges; optional region/contact settings.",
+        "zh": "平面图或坐标与稠密行边数组；可选区域与接触设置。"
+      },
+      "output": {
+        "en": "Snapshot feature dictionary.",
+        "zh": "快照特征字典。"
+      },
+      "caveat": {
+        "en": "Shares the caller's length units; not the legacy 94-feature schema.",
+        "zh": "沿用调用方的长度单位；不是旧版 94 特征模式。"
+      },
+      "docsPath": "examples/snapshot_features_workflow.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/analysis/__init__.py"
+    },
+    {
+      "id": "topology",
+      "group": "analysis",
+      "registryKey": "fibernet/analysis/topology_metrics.py",
+      "sourceSymbol": "analyze_topology",
+      "publicNamespace": "fibernet.analysis.analyze_topology",
+      "kind": "function",
+      "label": "analyze_topology",
+      "title": {
+        "en": "Physical topology metrics",
+        "zh": "物理拓扑度量"
+      },
+      "description": {
+        "en": "Measure topology on the authoritative physical-edge graph.",
+        "zh": "基于主结构图中的物理边统计拓扑。"
+      },
+      "input": {
+        "en": "StructureGraph.",
+        "zh": "StructureGraph。"
+      },
+      "output": {
+        "en": "TopologyMetricsV1.",
+        "zh": "TopologyMetricsV1。"
+      },
+      "caveat": {
+        "en": "Topology measurements do not establish stiffness, equilibrium or material response.",
+        "zh": "拓扑度量不能证明刚度、平衡或材料响应。"
+      },
+      "docsPath": "docs/architecture/topology-metrics.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/analysis/__init__.py"
+    },
+    {
+      "id": "paths",
+      "group": "analysis",
+      "registryKey": "fibernet/analysis/geometry_paths.py",
+      "sourceSymbol": "analyze_geometry_paths",
+      "publicNamespace": "fibernet.analysis.analyze_geometry_paths",
+      "kind": "function",
+      "label": "analyze_geometry_paths",
+      "title": {
+        "en": "Geometry and paths",
+        "zh": "几何与路径"
+      },
+      "description": {
+        "en": "Measure XYZ chord/polyline lengths and selected undirected shortest paths.",
+        "zh": "测量 XYZ 弦长、折线长及指定节点对的无向最短路径。"
+      },
+      "input": {
+        "en": "Graph, explicit length_unit/frame, node pairs and distance_mode.",
+        "zh": "图、明确的长度单位与坐标系、节点对和 distance_mode。"
+      },
+      "output": {
+        "en": "GeometryPathMetricsV1.",
+        "zh": "GeometryPathMetricsV1。"
+      },
+      "caveat": {
+        "en": "Polyline means stored points, not an inferred smooth curve; budgets are explicit.",
+        "zh": "折线指已保存点列，不是推断的光滑曲线；规模预算需明确。"
+      },
+      "docsPath": "docs/architecture/geometry-paths.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/analysis/__init__.py"
+    },
+    {
+      "id": "recruitment",
+      "group": "analysis",
+      "registryKey": "fibernet/analysis/tensile_recruitment.py",
+      "sourceSymbol": "analyze_tensile_recruitment",
+      "publicNamespace": "fibernet.analysis.analyze_tensile_recruitment",
+      "kind": "function",
+      "label": "analyze_tensile_recruitment",
+      "title": {
+        "en": "Strain recruitment",
+        "zh": "应变招募分析"
+      },
+      "description": {
+        "en": "Track positive-strain edge recruitment and grip-connected paths across frames.",
+        "zh": "逐帧分析正应变边的招募与夹持端间连通路径。"
+      },
+      "input": {
+        "en": "Frame×edge strain, aligned edges, grip rows and threshold controls.",
+        "zh": "帧×边应变、对齐边数组、夹持节点行号和阈值参数。"
+      },
+      "output": {
+        "en": "PercolationResult.",
+        "zh": "PercolationResult。"
+      },
+      "caveat": {
+        "en": "Keep strain columns and edge rows aligned; thresholds define recruitment rather than a new constitutive law.",
+        "zh": "应变列与边行必须对齐；阈值定义招募规则，不是新的本构定律。"
+      },
+      "docsPath": "examples/tensile_recruitment_quickstart.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/analysis/__init__.py"
+    },
+    {
+      "id": "graph_batch",
+      "group": "learning",
+      "registryKey": "fibernet/ml/graph_data.py",
+      "sourceSymbol": "graph_batch",
+      "publicNamespace": "fibernet.ml.graph_batch",
+      "kind": "function",
+      "label": "graph_batch",
+      "title": {
+        "en": "Graph-to-learning handoff",
+        "zh": "图到学习输入的交接"
+      },
+      "description": {
+        "en": "Snapshot graphs with physical-edge identity and both message directions intact.",
+        "zh": "保留物理边身份及双向消息，生成图的独立快照。"
+      },
+      "input": {
+        "en": "Graphs, graph_ids, units/frame, optional edge features/provenance.",
+        "zh": "图集合、graph_ids、单位与坐标系、可选边特征和来源记录。"
+      },
+      "output": {
+        "en": "GraphBatch v1 or provenance-bearing v2.",
+        "zh": "GraphBatch v1 或含来源记录的 v2。"
+      },
+      "caveat": {
+        "en": "Does not infer labels, mechanical constraints or numerical material features.",
+        "zh": "不推断标签、力学约束或数值材料特征。"
+      },
+      "docsPath": "docs/GRAPH_TRAINING_CONTRACT.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "dataset",
+      "group": "learning",
+      "registryKey": "fibernet/ml/dataset.py",
+      "sourceSymbol": "FiberNetDataset",
+      "publicNamespace": "fibernet.ml.FiberNetDataset",
+      "kind": "class",
+      "label": "FiberNetDataset",
+      "title": {
+        "en": "Feature-and-label dataset",
+        "zh": "特征与标签数据集"
+      },
+      "description": {
+        "en": "Store samples, feature selections, targets and provenance with matching persistence APIs.",
+        "zh": "用配套读写接口保存样本、特征选择、目标和来源信息。"
+      },
+      "input": {
+        "en": "DatasetSample records, feature_names and target_names.",
+        "zh": "DatasetSample 记录、feature_names 与 target_names。"
+      },
+      "output": {
+        "en": "Selected matrices, splits and saved dataset files.",
+        "zh": "所选矩阵、数据划分和保存的数据集文件。"
+      },
+      "caveat": {
+        "en": "Use feature_matrix_checked() for the explicit availability policy; ordinary matrices retain legacy behavior.",
+        "zh": "显式可用性检查使用 feature_matrix_checked()；普通矩阵仍沿用原有行为。"
+      },
+      "docsPath": "docs/FEATURE_AVAILABILITY.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "physical_dataset",
+      "group": "learning",
+      "registryKey": "fibernet/ml/physical_dataset.py",
+      "sourceSymbol": "PlanarPhysicalDataset",
+      "publicNamespace": "fibernet.ml.PlanarPhysicalDataset",
+      "kind": "class",
+      "label": "PlanarPhysicalDataset",
+      "title": {
+        "en": "Resumable physical labels",
+        "zh": "可续算物理标签"
+      },
+      "description": {
+        "en": "Generate bounded planar samples using the shared reduced-solver workflow.",
+        "zh": "通过共享简化求解流程生成受限规模的平面样本。"
+      },
+      "input": {
+        "en": "Planar configuration, seed, mode, acquisition policy and optional cache path.",
+        "zh": "平面配置、种子、模式、采样策略和可选缓存路径。"
+      },
+      "output": {
+        "en": "X: 14 features; Y: maximum force, stiffness and force–stretch work.",
+        "zh": "X：14 个特征；Y：最大力、刚度与力—伸长比积分。"
+      },
+      "caveat": {
+        "en": "Labels belong to the configured reduced model, not universal material properties.",
+        "zh": "标签属于所配置的简化模型，不是通用材料属性。"
+      },
+      "docsPath": "examples/physical_dataset_workflow.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "light_features",
+      "group": "learning",
+      "registryKey": "fibernet/ml/physical_surrogate.py",
+      "sourceSymbol": "light_features",
+      "publicNamespace": "fibernet.ml.light_features",
+      "kind": "function",
+      "label": "light_features",
+      "title": {
+        "en": "14 structural descriptors",
+        "zh": "14 维结构描述符"
+      },
+      "description": {
+        "en": "Compute endpoint-based planar structural descriptors with NumPy.",
+        "zh": "用 NumPy 计算基于端点的平面结构描述符。"
+      },
+      "input": {
+        "en": "Finite positions and integer dense-row endpoint pairs.",
+        "zh": "有限坐标与整数稠密行端点对。"
+      },
+      "output": {
+        "en": "14-element float64 feature vector.",
+        "zh": "14 维 float64 特征向量。"
+      },
+      "caveat": {
+        "en": "Input edges use row indices, not arbitrary stable IDs.",
+        "zh": "输入边使用行索引，不是任意稳定 ID。"
+      },
+      "docsPath": "examples/physical_learning_workflow.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "regressor",
+      "group": "learning",
+      "registryKey": "fibernet/ml/physical_learning.py",
+      "sourceSymbol": "Regressor",
+      "publicNamespace": "fibernet.ml.PhysicalRegressor",
+      "kind": "class",
+      "label": "PhysicalRegressor",
+      "title": {
+        "en": "Physical-response surrogate",
+        "zh": "物理响应代理模型"
+      },
+      "description": {
+        "en": "Train a three-target regressor with training-only normalization and held-out rows.",
+        "zh": "用仅训练集拟合的归一化与留出行训练三目标回归模型。"
+      },
+      "input": {
+        "en": "train(X, Y): at least five finite sample rows in X and a matching three-column target matrix Y.",
+        "zh": "train(X, Y)：X 至少包含五行有限样本，Y 为行数对应的三列目标矩阵。"
+      },
+      "output": {
+        "en": "Fitted predictor, training history and held-out information.",
+        "zh": "拟合后的预测器、训练历史与留出信息。"
+      },
+      "caveat": {
+        "en": "Performance depends on the dataset and split; API presence does not establish accuracy.",
+        "zh": "性能取决于数据和划分；API 存在不代表预测精度已获验证。"
+      },
+      "docsPath": "examples/physical_learning_workflow.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "curve_inverse",
+      "group": "learning",
+      "registryKey": "fibernet/ml/curve_inverse.py",
+      "sourceSymbol": "CurveInverseDesigner",
+      "publicNamespace": "fibernet.ml.CurveInverseDesigner",
+      "kind": "class",
+      "label": "CurveInverseDesigner",
+      "title": {
+        "en": "Target-curve search",
+        "zh": "目标曲线搜索"
+      },
+      "description": {
+        "en": "Search graph-builder parameters with a fixed evaluation budget.",
+        "zh": "在固定评估预算内搜索图构建参数。"
+      },
+      "input": {
+        "en": "Caller graph builder, target curve/name, budget and optional evaluator.",
+        "zh": "调用方图构建器、目标曲线或名称、预算与可选评估器。"
+      },
+      "output": {
+        "en": "Search records and best-found candidate.",
+        "zh": "搜索记录与当前最优候选。"
+      },
+      "caveat": {
+        "en": "A best-found candidate is not a global-optimum or fabrication guarantee.",
+        "zh": "当前最优候选不代表全局最优或制造可行性保证。"
+      },
+      "docsPath": "docs/METHODS_CURVE_INVERSE_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/ml/__init__.py"
+    },
+    {
+      "id": "rl_train",
+      "group": "learning",
+      "registryKey": "fibernet/rl/algorithms.py",
+      "sourceSymbol": "train_rl",
+      "publicNamespace": "fibernet.rl.train_rl",
+      "kind": "function",
+      "label": "rl.train_rl",
+      "title": {
+        "en": "Policy training",
+        "zh": "策略训练"
+      },
+      "description": {
+        "en": "Train through the optional SB3 wrapper using a caller-managed compatible environment.",
+        "zh": "通过可选 SB3 包装器，在调用方管理的兼容环境中训练策略。"
+      },
+      "input": {
+        "en": "Environment, algorithm, time-step budget and optional independent eval_env.",
+        "zh": "环境、算法、步数预算与可选独立 eval_env。"
+      },
+      "output": {
+        "en": "Trained policy model and training metadata.",
+        "zh": "训练后的策略模型与训练元数据。"
+      },
+      "caveat": {
+        "en": "The caller supplies the physical evaluator; this is distinct from fibernet.train_rl.",
+        "zh": "物理评估器由调用方提供；此接口与 fibernet.train_rl 不同。"
+      },
+      "docsPath": "docs/RL_COMPATIBILITY.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/rl/__init__.py"
+    },
+    {
+      "id": "legacy_rl",
+      "group": "learning",
+      "registryKey": "fibernet/easy.py",
+      "sourceSymbol": "train_rl",
+      "publicNamespace": "fibernet.train_rl",
+      "kind": "function",
+      "label": "train_rl (legacy)",
+      "title": {
+        "en": "Historical rollout wrapper",
+        "zh": "历史随机采样包装器"
+      },
+      "description": {
+        "en": "Preserve the old random-rollout name; it does not train a policy.",
+        "zh": "保留旧的随机采样入口名称，不训练策略。"
+      },
+      "input": {
+        "en": "Historical env_config and episode count.",
+        "zh": "历史 env_config 与回合数。"
+      },
+      "output": {
+        "en": "Current built-in E*/ν* path raises NotImplementedError before simulation.",
+        "zh": "当前内置 E*/ν* 路径在模拟前抛出 NotImplementedError。"
+      },
+      "caveat": {
+        "en": "Unavailable: installing optional dependencies does not enable this built-in route.",
+        "zh": "当前不可用：安装可选依赖也不能启用这条内置路径。"
+      },
+      "docsPath": "docs/RL_COMPATIBILITY.md",
+      "availability": "unavailable_legacy",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "manufacturing_config",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing.py",
+      "sourceSymbol": "PlanarManufacturingConfig",
+      "publicNamespace": "fibernet.PlanarManufacturingConfig",
+      "kind": "class",
+      "label": "PlanarManufacturingConfig",
+      "title": {
+        "en": "Planar route configuration",
+        "zh": "平面路径配置"
+      },
+      "description": {
+        "en": "Configure the package's shared planar topology and deformation controls.",
+        "zh": "配置库中共享的平面拓扑与几何变形参数。"
+      },
+      "input": {
+        "en": "Unit, grid, seed, displacement spectrum and topology.",
+        "zh": "基元、网格数、种子、位移谱和拓扑。"
+      },
+      "output": {
+        "en": "Configuration for compile_planar()/manufacturable_graph().",
+        "zh": "供 compile_planar()/manufacturable_graph() 使用的配置。"
+      },
+      "caveat": {
+        "en": "The unit-cell scale is 10 in input coordinates; a route constraint is not printability certification.",
+        "zh": "输入坐标的基元尺度为 10；满足路径约束不等于通过可打印性验证。"
+      },
+      "docsPath": "docs/METHODS_MANUFACTURING_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "compile_planar",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing.py",
+      "sourceSymbol": "compile_planar",
+      "publicNamespace": "fibernet.compile_planar",
+      "kind": "function",
+      "label": "compile_planar",
+      "title": {
+        "en": "Compile a planar route model",
+        "zh": "编译平面路径模型"
+      },
+      "description": {
+        "en": "Build the shared manufacturing topology from its configuration/factory.",
+        "zh": "从配置或工厂构建共享的制造拓扑。"
+      },
+      "input": {
+        "en": "Planar configuration/factory and boundary_twins option.",
+        "zh": "平面配置或工厂及 boundary_twins 选项。"
+      },
+      "output": {
+        "en": "ManufacturingNetwork.",
+        "zh": "ManufacturingNetwork。"
+      },
+      "caveat": {
+        "en": "This generator may build its own topology; use graph adapters to retain an existing graph unchanged.",
+        "zh": "该生成器会构建自己的拓扑；保留已有图不变应使用图适配接口。"
+      },
+      "docsPath": "docs/METHODS_MANUFACTURING_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "compile_surface",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing.py",
+      "sourceSymbol": "compile_surface",
+      "publicNamespace": "fibernet.compile_surface",
+      "kind": "function",
+      "label": "compile_surface",
+      "title": {
+        "en": "Map units to a surface",
+        "zh": "将基元映射到曲面"
+      },
+      "description": {
+        "en": "Map closed units to a validated quadrilateral surface mesh.",
+        "zh": "将闭合基元映射到通过校验的四边形曲面网格。"
+      },
+      "input": {
+        "en": "3D vertices, quad faces, configuration/factory and overscale.",
+        "zh": "三维顶点、四边形面、配置或工厂及 overscale。"
+      },
+      "output": {
+        "en": "Surface ManufacturingNetwork.",
+        "zh": "曲面 ManufacturingNetwork。"
+      },
+      "caveat": {
+        "en": "Shares only prescribed mesh-corner identities; budgets and geometry checks apply.",
+        "zh": "仅共享规定的网格角点身份；须满足规模预算和几何检查。"
+      },
+      "docsPath": "docs/METHODS_MANUFACTURING_UNIFIED.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "route_from_graph",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing_bridge.py",
+      "sourceSymbol": "manufacturing_from_graph",
+      "publicNamespace": "fibernet.manufacturing_from_graph",
+      "kind": "function",
+      "label": "manufacturing_from_graph",
+      "title": {
+        "en": "Preserve a graph in a closed route",
+        "zh": "从原图生成闭合路径"
+      },
+      "description": {
+        "en": "Adapt an existing connected, all-even graph without topology repair.",
+        "zh": "将已有连通、全偶度图转换为路径，不修补拓扑。"
+      },
+      "input": {
+        "en": "StructureGraph, graph_id, explicit m/mm and coordinate frame.",
+        "zh": "StructureGraph、graph_id、明确的 m/mm 单位与坐标系。"
+      },
+      "output": {
+        "en": "(ManufacturingNetwork, GraphBatch v2 snapshot).",
+        "zh": "(ManufacturingNetwork, GraphBatch v2 快照)。"
+      },
+      "caveat": {
+        "en": "Nonempty edge interior points reject; IDs, material and radius provenance stay attached.",
+        "zh": "拒绝非空边内点；保留 ID、材料和半径来源记录。"
+      },
+      "docsPath": "docs/MANUFACTURING_GRAPH_MAPPING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "export_route",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing_bridge.py",
+      "sourceSymbol": "export_mapped_route",
+      "publicNamespace": "fibernet.export_mapped_route",
+      "kind": "function",
+      "label": "export_mapped_route",
+      "title": {
+        "en": "Export a mapped closed route",
+        "zh": "导出带映射的闭合路径"
+      },
+      "description": {
+        "en": "Write a millimetre-coordinate CSV and stable-ID JSON sidecar.",
+        "zh": "输出毫米坐标 CSV 与稳定 ID 映射 JSON。"
+      },
+      "input": {
+        "en": "Bound network/snapshot pair and two fresh destination paths.",
+        "zh": "绑定的 network/snapshot 对与两个全新目标路径。"
+      },
+      "output": {
+        "en": "CSV, sidecar and returned mapping metadata.",
+        "zh": "CSV、配套 JSON 与返回的映射元数据。"
+      },
+      "caveat": {
+        "en": "CSV legacy IDs are dense rows; the sidecar resolves stable IDs. Not G-code or machine qualification.",
+        "zh": "CSV 旧列名中的 ID 为稠密行号，稳定 ID 由 JSON 映射；不是 G-code 或设备认证。"
+      },
+      "docsPath": "docs/MANUFACTURING_GRAPH_MAPPING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "trails_from_graph",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing_trails.py",
+      "sourceSymbol": "manufacturing_trails_from_graph",
+      "publicNamespace": "fibernet.manufacturing_trails_from_graph",
+      "kind": "function",
+      "label": "manufacturing_trails_from_graph",
+      "title": {
+        "en": "Edge-once multiple strokes",
+        "zh": "物理边仅走一次的多段路径"
+      },
+      "description": {
+        "en": "Route connected odd-degree graphs without adding physical fibers.",
+        "zh": "为连通的奇度图生成多段路径，不添加物理纤维。"
+      },
+      "input": {
+        "en": "Connected nonempty graph, graph_id, explicit m/mm and frame.",
+        "zh": "连通非空图、graph_id、明确的 m/mm 单位与坐标系。"
+      },
+      "output": {
+        "en": "(ManufacturingTrails, GraphBatch v2 snapshot).",
+        "zh": "(ManufacturingTrails, GraphBatch v2 快照)。"
+      },
+      "caveat": {
+        "en": "Stroke breaks are discontinuities; no travel segment is generated between them.",
+        "zh": "分段处是明确断点，不会自动生成段间行程。"
+      },
+      "docsPath": "docs/MULTISTROKE_MANUFACTURING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "export_trails",
+      "group": "manufacturing",
+      "registryKey": "fibernet/gen/manufacturing_trails.py",
+      "sourceSymbol": "export_mapped_trails",
+      "publicNamespace": "fibernet.export_mapped_trails",
+      "kind": "function",
+      "label": "export_mapped_trails",
+      "title": {
+        "en": "Export mapped strokes",
+        "zh": "导出带映射的多段路径"
+      },
+      "description": {
+        "en": "Write stroke-aware mm CSV and complete stable-ID JSON mapping.",
+        "zh": "输出含分段信息的毫米 CSV 与完整稳定 ID JSON 映射。"
+      },
+      "input": {
+        "en": "Bound trails/snapshot pair and two fresh destination paths.",
+        "zh": "绑定的 trails/snapshot 对与两个全新目标路径。"
+      },
+      "output": {
+        "en": "Stroke CSV, JSON sidecar and mapping metadata.",
+        "zh": "分段 CSV、配套 JSON 和映射元数据。"
+      },
+      "caveat": {
+        "en": "No connection between strokes; valid sidecar plus matching CSV hash records completion.",
+        "zh": "各段之间没有连接；有效 JSON 与匹配 CSV 哈希共同表示导出完成。"
+      },
+      "docsPath": "docs/MULTISTROKE_MANUFACTURING.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "save_graph",
+      "group": "exchange",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "StructureGraph",
+      "publicNamespace": "fibernet.StructureGraph.save_json",
+      "kind": "method",
+      "label": "StructureGraph.save_json",
+      "title": {
+        "en": "Save the authoritative graph",
+        "zh": "保存主结构图"
+      },
+      "description": {
+        "en": "Serialize the native graph record before opening the destination.",
+        "zh": "在打开目标文件前完成原生图记录序列化。"
+      },
+      "input": {
+        "en": "StructureGraph and a destination with an existing parent.",
+        "zh": "StructureGraph 与父目录已存在的目标路径。"
+      },
+      "output": {
+        "en": "Native graph JSON file.",
+        "zh": "原生图 JSON 文件。"
+      },
+      "caveat": {
+        "en": "Not an atomic filesystem transaction or solver restart checkpoint.",
+        "zh": "不是原子文件事务，也不是求解器重启检查点。"
+      },
+      "docsPath": "fibernet/core/structure_graph.py",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "load_graph",
+      "group": "exchange",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "StructureGraph",
+      "publicNamespace": "fibernet.StructureGraph.load_json",
+      "kind": "method",
+      "label": "StructureGraph.load_json",
+      "title": {
+        "en": "Reload native geometry",
+        "zh": "重新读取原生几何"
+      },
+      "description": {
+        "en": "Reconstruct a graph from the matching native JSON schema.",
+        "zh": "从配套的原生 JSON 模式重建图。"
+      },
+      "input": {
+        "en": "Native StructureGraph JSON path.",
+        "zh": "原生 StructureGraph JSON 路径。"
+      },
+      "output": {
+        "en": "StructureGraph.",
+        "zh": "StructureGraph。"
+      },
+      "caveat": {
+        "en": "Rebuild prepared row controls after reload; do not assume old insertion order.",
+        "zh": "重新读取后须重新准备行控制，不能假设仍是旧的插入顺序。"
+      },
+      "docsPath": "docs/STABLE_NODAL_CONTROLS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "networkx",
+      "group": "exchange",
+      "registryKey": "fibernet/core/structure_graph.py",
+      "sourceSymbol": "StructureGraph",
+      "publicNamespace": "fibernet.StructureGraph.to_networkx_lossless",
+      "kind": "method",
+      "label": "StructureGraph.to_networkx_lossless",
+      "title": {
+        "en": "Native NetworkX interchange",
+        "zh": "原生 NetworkX 互换"
+      },
+      "description": {
+        "en": "Export a detached MultiGraph carrying the native-v1 records.",
+        "zh": "导出携带 native-v1 记录的独立 MultiGraph。"
+      },
+      "input": {
+        "en": "StructureGraph.",
+        "zh": "StructureGraph。"
+      },
+      "output": {
+        "en": "NetworkX MultiGraph with stable identities and ordering records.",
+        "zh": "含稳定身份与顺序记录的 NetworkX MultiGraph。"
+      },
+      "caveat": {
+        "en": "Round-trip through from_networkx_lossless; arbitrary NetworkX topology edits are outside this protocol.",
+        "zh": "通过 from_networkx_lossless 回读；任意 NetworkX 拓扑编辑不在该协议范围内。"
+      },
+      "docsPath": "docs/API_LAYERS.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "show",
+      "group": "exchange",
+      "registryKey": "fibernet/easy.py",
+      "sourceSymbol": "show",
+      "publicNamespace": "fibernet.show",
+      "kind": "function",
+      "label": "show",
+      "title": {
+        "en": "Render a graph",
+        "zh": "绘制结构图"
+      },
+      "description": {
+        "en": "Select the 2D or 3D renderer from the declared graph dimension.",
+        "zh": "按图声明的维度选择二维或三维绘制器。"
+      },
+      "input": {
+        "en": "StructureGraph, theme and optional image path.",
+        "zh": "StructureGraph、主题与可选图片路径。"
+      },
+      "output": {
+        "en": "Matplotlib Figure and optional saved image.",
+        "zh": "Matplotlib Figure 与可选保存的图片。"
+      },
+      "caveat": {
+        "en": "Renderer options differ by dimension; no simulation is performed.",
+        "zh": "不同维度的绘制参数不同；该调用不进行模拟。"
+      },
+      "docsPath": "README.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    },
+    {
+      "id": "deformation",
+      "group": "exchange",
+      "registryKey": "fibernet/viz/render.py",
+      "sourceSymbol": "render_deformation",
+      "publicNamespace": "fibernet.render_deformation",
+      "kind": "function",
+      "label": "render_deformation",
+      "title": {
+        "en": "Compare geometry states",
+        "zh": "比较几何状态"
+      },
+      "description": {
+        "en": "Render original and deformed graphs side by side.",
+        "zh": "并排绘制原始与变形后的结构图。"
+      },
+      "input": {
+        "en": "Two graphs; optional displacement array and node_ids.",
+        "zh": "两张图；可选位移数组与 node_ids。"
+      },
+      "output": {
+        "en": "Matplotlib Figure.",
+        "zh": "Matplotlib Figure。"
+      },
+      "caveat": {
+        "en": "Caller supplies the deformed graph and identity-aligned data; plotting is not a solve.",
+        "zh": "变形图与身份对齐数据由调用方提供；绘图不是求解。"
+      },
+      "docsPath": "docs/architecture/result-identity-contract.md",
+      "availability": "source_documented_not_runtime_certified",
+      "exportPath": "fibernet/__init__.py"
+    }
+  ],
+  "edges": [
+    {
+      "source": "contracts",
+      "target": "graph",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "pattern_2d",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "pattern_3d",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "octet",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "register_unit",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "tile",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "geometry",
+      "target": "custom_cells",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "snode",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "sedge",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "material",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "visco_material",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "units",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "controls",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "prepared_controls",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "sim_result",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "contracts",
+      "target": "graph_batch_type",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "simulate",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "taichi",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "fem",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "reduced",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "transport",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "joule",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "lammps_prepare",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "simulation",
+      "target": "lammps_task",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "analysis",
+      "target": "features94",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "analysis",
+      "target": "snapshot",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "analysis",
+      "target": "topology",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "analysis",
+      "target": "paths",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "analysis",
+      "target": "recruitment",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "graph_batch",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "dataset",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "physical_dataset",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "light_features",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "regressor",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "curve_inverse",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "rl_train",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "learning",
+      "target": "legacy_rl",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "manufacturing_config",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "compile_planar",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "compile_surface",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "route_from_graph",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "export_route",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "trails_from_graph",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "manufacturing",
+      "target": "export_trails",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "exchange",
+      "target": "save_graph",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "exchange",
+      "target": "load_graph",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "exchange",
+      "target": "networkx",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "exchange",
+      "target": "show",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "exchange",
+      "target": "deformation",
+      "type": "containment",
+      "label": {
+        "en": "Workflow group",
+        "zh": "流程分组"
+      }
+    },
+    {
+      "source": "pattern_2d",
+      "target": "graph",
+      "type": "dataflow",
+      "label": {
+        "en": "produces 2D graph",
+        "zh": "生成二维图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "pattern_3d",
+      "target": "graph",
+      "type": "dataflow",
+      "label": {
+        "en": "produces 3D graph",
+        "zh": "生成三维图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "octet",
+      "target": "graph",
+      "type": "dataflow",
+      "label": {
+        "en": "produces versioned geometry",
+        "zh": "生成版本化几何"
+      },
+      "automatic": false
+    },
+    {
+      "source": "register_unit",
+      "target": "pattern_2d",
+      "type": "dataflow",
+      "label": {
+        "en": "registers a unit factory",
+        "zh": "注册基元工厂"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "tile",
+      "type": "dataflow",
+      "label": {
+        "en": "unit-cell input",
+        "zh": "基元图输入"
+      },
+      "automatic": false
+    },
+    {
+      "source": "tile",
+      "target": "graph",
+      "type": "dataflow",
+      "label": {
+        "en": "tiled graph",
+        "zh": "平铺后的图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "material",
+      "target": "pattern_2d",
+      "type": "dataflow",
+      "label": {
+        "en": "explicit material argument",
+        "zh": "显式材料参数"
+      },
+      "automatic": false
+    },
+    {
+      "source": "material",
+      "target": "pattern_3d",
+      "type": "dataflow",
+      "label": {
+        "en": "explicit material argument",
+        "zh": "显式材料参数"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "controls",
+      "type": "dataflow",
+      "label": {
+        "en": "binds support/load IDs",
+        "zh": "绑定支座与载荷 ID"
+      },
+      "automatic": false
+    },
+    {
+      "source": "controls",
+      "target": "prepared_controls",
+      "type": "dataflow",
+      "label": {
+        "en": "returns prepared controls",
+        "zh": "返回已准备的控制"
+      },
+      "automatic": false
+    },
+    {
+      "source": "prepared_controls",
+      "target": "taichi",
+      "type": "dataflow",
+      "label": {
+        "en": "taichi_kwargs(graph)",
+        "zh": "taichi_kwargs(graph)"
+      },
+      "automatic": false
+    },
+    {
+      "source": "prepared_controls",
+      "target": "fem",
+      "type": "dataflow",
+      "label": {
+        "en": "fem_kwargs(graph) for raw solve",
+        "zh": "通过 fem_kwargs(graph) 传入原始求解"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "simulate",
+      "type": "dataflow",
+      "label": {
+        "en": "geometry input",
+        "zh": "几何输入"
+      },
+      "automatic": false
+    },
+    {
+      "source": "simulate",
+      "target": "taichi",
+      "type": "dataflow",
+      "label": {
+        "en": "spring/taichi route",
+        "zh": "spring/taichi 路径"
+      },
+      "automatic": false
+    },
+    {
+      "source": "simulate",
+      "target": "fem",
+      "type": "dataflow",
+      "label": {
+        "en": "fem route",
+        "zh": "fem 路径"
+      },
+      "automatic": false
+    },
+    {
+      "source": "simulate",
+      "target": "sim_result",
+      "type": "dataflow",
+      "label": {
+        "en": "supported mechanical result",
+        "zh": "受支持的力学结果"
+      },
+      "automatic": false
+    },
+    {
+      "source": "taichi",
+      "target": "sim_result",
+      "type": "dataflow",
+      "label": {
+        "en": "spring result",
+        "zh": "弹簧结果"
+      },
+      "automatic": false
+    },
+    {
+      "source": "fem",
+      "target": "sim_result",
+      "type": "dataflow",
+      "label": {
+        "en": "to_sim_result(...) adapter",
+        "zh": "通过 to_sim_result(...) 转换"
+      },
+      "automatic": false
+    },
+    {
+      "source": "visco_material",
+      "target": "fem",
+      "type": "dataflow",
+      "label": {
+        "en": "history(material=...)",
+        "zh": "history(material=...)"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "reduced",
+      "type": "dataflow",
+      "label": {
+        "en": "planar geometry",
+        "zh": "平面几何"
+      },
+      "automatic": false
+    },
+    {
+      "source": "reduced",
+      "target": "recruitment",
+      "type": "dataflow",
+      "label": {
+        "en": "extract aligned strain/edge/grip arrays",
+        "zh": "提取对齐的应变、边与夹持数组"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "transport",
+      "type": "dataflow",
+      "label": {
+        "en": "geometry and stable IDs",
+        "zh": "几何与稳定 ID"
+      },
+      "automatic": false
+    },
+    {
+      "source": "transport",
+      "target": "joule",
+      "type": "dataflow",
+      "label": {
+        "en": "electrical result as heat source",
+        "zh": "以电结果构造热源"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "lammps_prepare",
+      "type": "dataflow",
+      "label": {
+        "en": "explicit 3D geometry",
+        "zh": "明确的三维几何"
+      },
+      "automatic": false
+    },
+    {
+      "source": "lammps_prepare",
+      "target": "lammps_task",
+      "type": "dataflow",
+      "label": {
+        "en": "PreparedRun",
+        "zh": "PreparedRun"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "features94",
+      "type": "dataflow",
+      "label": {
+        "en": "supported feature input",
+        "zh": "受支持的特征输入"
+      },
+      "automatic": false
+    },
+    {
+      "source": "features94",
+      "target": "dataset",
+      "type": "dataflow",
+      "label": {
+        "en": "wrap values and feature_contract metadata in DatasetSample records",
+        "zh": "将特征值与 feature_contract 元数据封装为 DatasetSample 记录"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "snapshot",
+      "type": "dataflow",
+      "label": {
+        "en": "extract_graph(graph)",
+        "zh": "extract_graph(graph)"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "topology",
+      "type": "dataflow",
+      "label": {
+        "en": "physical topology",
+        "zh": "物理拓扑"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "paths",
+      "type": "dataflow",
+      "label": {
+        "en": "stored XYZ geometry",
+        "zh": "已保存的 XYZ 几何"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "graph_batch",
+      "type": "dataflow",
+      "label": {
+        "en": "snapshots authoritative graphs",
+        "zh": "创建主结构图快照"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph_batch",
+      "target": "graph_batch_type",
+      "type": "dataflow",
+      "label": {
+        "en": "returns GraphBatch",
+        "zh": "返回 GraphBatch"
+      },
+      "automatic": false
+    },
+    {
+      "source": "physical_dataset",
+      "target": "regressor",
+      "type": "dataflow",
+      "label": {
+        "en": "arrays(): X and Y",
+        "zh": "arrays()：X 与 Y"
+      },
+      "automatic": false
+    },
+    {
+      "source": "light_features",
+      "target": "regressor",
+      "type": "dataflow",
+      "label": {
+        "en": "stack 14-element vectors into X rows; supply matching Y labels",
+        "zh": "将 14 维向量逐行组成 X，并提供对应的 Y 标签"
+      },
+      "automatic": false
+    },
+    {
+      "source": "reduced",
+      "target": "physical_dataset",
+      "type": "dataflow",
+      "label": {
+        "en": "configured physics labels",
+        "zh": "所配置的物理标签"
+      },
+      "automatic": false
+    },
+    {
+      "source": "manufacturing_config",
+      "target": "compile_planar",
+      "type": "dataflow",
+      "label": {
+        "en": "configuration/factory",
+        "zh": "配置或工厂"
+      },
+      "automatic": false
+    },
+    {
+      "source": "manufacturing_config",
+      "target": "compile_surface",
+      "type": "dataflow",
+      "label": {
+        "en": "configuration/factory",
+        "zh": "配置或工厂"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "route_from_graph",
+      "type": "dataflow",
+      "label": {
+        "en": "connected all-even graph",
+        "zh": "连通全偶度图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "route_from_graph",
+      "target": "export_route",
+      "type": "dataflow",
+      "label": {
+        "en": "network + bound snapshot",
+        "zh": "network 与绑定快照"
+      },
+      "automatic": false
+    },
+    {
+      "source": "route_from_graph",
+      "target": "graph_batch_type",
+      "type": "dataflow",
+      "label": {
+        "en": "returns provenance snapshot",
+        "zh": "返回来源快照"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "trails_from_graph",
+      "type": "dataflow",
+      "label": {
+        "en": "connected graph, odd degrees allowed",
+        "zh": "允许奇度节点的连通图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "trails_from_graph",
+      "target": "export_trails",
+      "type": "dataflow",
+      "label": {
+        "en": "trails + bound snapshot",
+        "zh": "trails 与绑定快照"
+      },
+      "automatic": false
+    },
+    {
+      "source": "trails_from_graph",
+      "target": "graph_batch_type",
+      "type": "dataflow",
+      "label": {
+        "en": "returns provenance snapshot",
+        "zh": "返回来源快照"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "save_graph",
+      "type": "dataflow",
+      "label": {
+        "en": "native graph serialization",
+        "zh": "原生图序列化"
+      },
+      "automatic": false
+    },
+    {
+      "source": "save_graph",
+      "target": "load_graph",
+      "type": "dataflow",
+      "label": {
+        "en": "matching native JSON file",
+        "zh": "配套原生 JSON 文件"
+      },
+      "automatic": false
+    },
+    {
+      "source": "load_graph",
+      "target": "graph",
+      "type": "dataflow",
+      "label": {
+        "en": "reconstructed graph",
+        "zh": "重建的结构图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "networkx",
+      "type": "dataflow",
+      "label": {
+        "en": "native-record MultiGraph view",
+        "zh": "携带原生记录的 MultiGraph 视图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "show",
+      "type": "dataflow",
+      "label": {
+        "en": "declared graph dimension",
+        "zh": "图声明的维度"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "deformation",
+      "type": "dataflow",
+      "label": {
+        "en": "original + caller's deformed graph",
+        "zh": "原图与调用方提供的变形图"
+      },
+      "automatic": false
+    },
+    {
+      "source": "graph",
+      "target": "snode",
+      "type": "containment",
+      "label": {
+        "en": "owns node records",
+        "zh": "拥有节点记录"
+      },
+      "meaning": "data-model containment"
+    },
+    {
+      "source": "graph",
+      "target": "sedge",
+      "type": "containment",
+      "label": {
+        "en": "owns physical-edge records",
+        "zh": "拥有物理边记录"
+      },
+      "meaning": "data-model containment"
+    },
+    {
+      "source": "curve_inverse",
+      "target": "reduced",
+      "type": "dataflow",
+      "label": {
+        "en": "default candidate evaluator",
+        "zh": "默认候选评估器"
+      },
+      "automatic": false
+    }
+  ],
+  "sourceCommit": "0e017c22265da60e57dce7ce4119dd8ea6915e19"
+}
