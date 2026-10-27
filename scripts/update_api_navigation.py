@@ -155,6 +155,23 @@ def strip_navigation(readme):
     return readme
 
 
+def insert_section(document, language, content):
+    """Insert generated content in the document's style; preserve other bytes."""
+    remainder = document.replace("\r\n", "")
+    if "\r" in remainder or ("\r\n" in document and "\n" in remainder):
+        raise ValueError("Mixed or unsupported document line endings")
+    newline = "\r\n" if "\r\n" in document else "\n"
+    anchor = "<!-- locale:" + language + ":start -->"
+    if document.count(anchor) != 1:
+        raise ValueError("Expected exactly one locale anchor: " + language)
+    begin = "<!-- api-navigation:" + language + ":start -->"
+    end = "<!-- api-navigation:" + language + ":end -->"
+    if begin in document or end in document:
+        raise ValueError("Remove the previous navigation block before insertion")
+    block = begin + "\n\n" + content + "\n" + end
+    return document.replace(anchor, anchor + block.replace("\n", newline), 1)
+
+
 def build_outputs(repo_root):
     repo_root = Path(repo_root)
     overlay_path = repo_root / OVERLAY
@@ -163,15 +180,12 @@ def build_outputs(repo_root):
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("sourceCommit must be a full lowercase Git commit")
     data = derive(repo_root, overlay_path, commit)
-    readme = strip_navigation((repo_root / "README.md").read_text(encoding="utf-8"))
+    readme = strip_navigation((repo_root / "README.md").read_bytes().decode("utf-8"))
     for language in ("en", "zh"):
-        anchor = "<!-- locale:" + language + ":start -->"
-        if readme.count(anchor) != 1:
-            raise ValueError("Expected exactly one locale anchor: " + language)
-        block = ("<!-- api-navigation:" + language + ":start -->\n\n"
-                 + section(data, language) + "\n<!-- api-navigation:" + language + ":end -->")
-        readme = readme.replace(anchor, anchor + block, 1)
-    return {"README.md": readme,
+        readme = insert_section(readme, language, section(data, language))
+    chinese = strip_navigation((repo_root / "README_CN.md").read_bytes().decode("utf-8"))
+    chinese = insert_section(chinese, "zh", section(data, "zh"))
+    return {"README.md": readme, "README_CN.md": chinese,
             ASSETS[0]: overview(data, "en"), ASSETS[1]: overview(data, "zh")}
 
 
