@@ -606,8 +606,8 @@
         "zh": "按路径返回 SimResult 或 ViscoelasticResult。"
       },
       "caveat": {
-        "en": "stretch_ratio=1.01 means 1% extension; omitted ratio retains 2.0. Backends are not interchangeable.",
-        "zh": "stretch_ratio=1.01 表示 1% 伸长；省略时仍为 2.0。各后端不能任意互换。"
+        "en": "stretch_ratio=1.01 means 1% extension; omitted ratio retains 2.0. Spring/taichi defaults to geometry_policy='reject_internal_points'; explicit 'endpoint_chord' ignores edge interior points mechanically, not curved-fiber mechanics. Backends are not interchangeable.",
+        "zh": "stretch_ratio=1.01 表示 1% 伸长；省略时仍为 2.0。spring/taichi 默认采用 geometry_policy='reject_internal_points'；显式选择 'endpoint_chord' 会在力学计算中忽略边内部点，并不提供曲纤维力学。各后端不能任意互换。"
       },
       "docsPath": "docs/API_LAYERS.md",
       "availability": "source_documented_not_runtime_certified",
@@ -638,8 +638,8 @@
         "zh": "包含所选历史或状态记录的 SimResult。"
       },
       "caveat": {
-        "en": "Requires the supported Taichi runtime; imports do not prove readiness or GPU speedup.",
-        "zh": "需要受支持的 Taichi 运行时；导入成功不证明运行就绪或 GPU 加速效果。"
+        "en": "Both dynamics() and stretch_test() default to geometry_policy='reject_internal_points'; explicit 'endpoint_chord' ignores edge interior points mechanically, not curved-fiber mechanics. Requires the supported Taichi runtime; imports do not prove readiness or GPU speedup.",
+        "zh": "dynamics() 和 stretch_test() 均默认采用 geometry_policy='reject_internal_points'；显式选择 'endpoint_chord' 会在力学计算中忽略边内部点，并不提供曲纤维力学。需要受支持的 Taichi 运行时；导入成功不证明运行就绪或 GPU 加速效果。"
       },
       "docsPath": "docs/TAICHI_API_DISPATCH.md",
       "availability": "source_documented_not_runtime_certified",
@@ -694,16 +694,16 @@
         "zh": "运行共享的 NumPy 轴向、二度节点弯曲与节点接触简化模型。"
       },
       "input": {
-        "en": "Planar graph and ReducedBeamConfig.",
-        "zh": "平面图和 ReducedBeamConfig。"
+        "en": "Graph in one XY plane, with straight edges and empty internal_points; ReducedBeamConfig.",
+        "zh": "位于同一 XY 平面的图，边为直线且 internal_points 为空；ReducedBeamConfig。"
       },
       "output": {
         "en": "ReducedBeamResult: frames, edge strain, force curve and energy records.",
         "zh": "ReducedBeamResult：帧、边应变、力曲线和能量记录。"
       },
       "caveat": {
-        "en": "A reduced model, not a general nonlinear beam/contact solver.",
-        "zh": "这是简化模型，不是通用非线性梁或接触求解器。"
+        "en": "Represent stored curve points as actual graph nodes and straight edges before this route; no automatic conversion occurs. A reduced model, not a general nonlinear beam/contact solver.",
+        "zh": "采用此路径前，应将存储的曲线点表示为实际图节点与直边，不会自动转换。这是简化模型，不是通用非线性梁或接触求解器。"
       },
       "docsPath": "docs/METHODS_CURVE_INVERSE_UNIFIED.md",
       "availability": "source_documented_not_runtime_certified",
@@ -1174,16 +1174,16 @@
         "zh": "在固定评估预算内搜索图构建参数。"
       },
       "input": {
-        "en": "Caller graph builder, target curve/name, budget and optional evaluator.",
-        "zh": "调用方图构建器、目标曲线或名称、预算与可选评估器。"
+        "en": "Construct with factory_builder(unit, pert, line_displacements) -> graph, optional unit_keys and budget. Call .run(target_name=..., evaluator=...) using `J`, `C`, `linear`, `max_peak`, `min_peak`, `max_stiffness`, `min_stiffness` or `max_toughness`.",
+        "zh": "构造时传入 factory_builder(unit, pert, line_displacements) -> graph，可选 unit_keys 和预算。调用 .run(target_name=..., evaluator=...) 时选择 `J`、`C`、`linear`、`max_peak`、`min_peak`、`max_stiffness`、`min_stiffness` 或 `max_toughness`。"
       },
       "output": {
         "en": "Search records and best-found candidate.",
         "zh": "搜索记录与当前最优候选。"
       },
       "caveat": {
-        "en": "A best-found candidate is not a global-optimum or fabrication guarantee.",
-        "zh": "当前最优候选不代表全局最优或制造可行性保证。"
+        "en": "Target-curve arrays are not accepted. Supply unit_keys at construction or fixed_unit to .run(). evaluator(graph, target_name) must return (objective_to_minimize, run), with a finite scalar objective; lower is better. Negate a custom maximization score before returning it. A best-found candidate is not a global-optimum or fabrication guarantee.",
+        "zh": "不接受目标曲线数组。构造时提供 unit_keys，或向 .run() 提供 fixed_unit。evaluator(graph, target_name) 必须返回 (objective_to_minimize, run)，其中目标值须为有限标量，越小越好；自定义最大化分数应先取负再返回。当前最优候选不代表全局最优或制造可行性保证。"
       },
       "docsPath": "docs/METHODS_CURVE_INVERSE_UNIFIED.md",
       "availability": "source_documented_not_runtime_certified",
@@ -2205,8 +2205,8 @@
       "target": "simulate",
       "type": "dataflow",
       "label": {
-        "en": "geometry input",
-        "zh": "几何输入"
+        "en": "geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only",
+        "zh": "几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦"
       },
       "automatic": false
     },
@@ -2275,8 +2275,8 @@
       "target": "reduced",
       "type": "dataflow",
       "label": {
-        "en": "planar geometry",
-        "zh": "平面几何"
+        "en": "one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first",
+        "zh": "同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边"
       },
       "automatic": false
     },
