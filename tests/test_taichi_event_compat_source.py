@@ -630,6 +630,28 @@ def restore_reviewed_lammps_metadata_source(source):
     return source
 
 
+# Exact host-control validation change; no native kernel or result normalization.
+_TAICHI_CONTROLS_BEFORE = "        if explicit_mass or record_state or units is not None:\n            fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)\n            _strict_state_ids(list(node_ids))\n            for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):\n                scalar = _finite_real_array(value, name, ())\n                if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):\n                    raise ValueError(f'{name} is outside the supported mass/state range')\n            if external_force is not None:\n                external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))\n"
+_TAICHI_CONTROLS_AFTER = "        if explicit_mass or record_state or units is not None:\n            _strict_state_ids(list(node_ids))\n\n        # Caller controls have the same contract with or without mass/state output.\n        fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)\n        for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):\n            scalar = _finite_real_array(value, name, ())\n            if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):\n                raise ValueError(f'{name} is outside the supported range')\n        if external_force is not None:\n            external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))\n"
+
+
+def reviewed_taichi_controls_source(reverse=None):
+    base = reviewed_lammps_metadata_source()
+    assert hashlib.sha256(base).hexdigest() == 'b77aaa7b37216174d97805b4529f1dbaec3d3099106f630221b60147124ccf82', 'controls baseline changed'
+    before = _TAICHI_CONTROLS_BEFORE.encode('utf-8')
+    after = _TAICHI_CONTROLS_AFTER.encode('utf-8')
+    assert before and base.count(before) == 1, 'controls insertion is not unique'
+    current = base.replace(before, after, 1)
+    assert hashlib.sha256(current).hexdigest() == '59c8761ccef2840a4437aebbacece9e93c94f3f4f6a051d74c31c114381c4a65', 'reviewed controls source changed'
+    if reverse is None:
+        return current
+    assert reverse == current, 'unreviewed controls source'
+    assert after and reverse.count(after) == 1, 'controls removal is not unique'
+    restored = reverse.replace(after, before, 1)
+    assert restored == base, 'controls inverse changed prior source'
+    return restored
+
+
 def remove_reviewed_saved_energy_diagnostics(result_node):
     node = copy.deepcopy(result_node)
     methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
@@ -661,7 +683,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -872,7 +894,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
     def test_current_sources_match_only_the_exact_reviewed_deltas(self):
         for relative in TAICHI_GEOMETRY_SOURCE_PINS:
             with self.subTest(source=relative):
-                expected = (reviewed_lammps_metadata_source() if relative == 'fibernet/sim/accelerated.py'
+                expected = (reviewed_taichi_controls_source() if relative == 'fibernet/sim/accelerated.py'
                             else reviewed_easy_batch_report_source())
                 self.assertEqual((ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
@@ -977,7 +999,8 @@ class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
     def test_only_the_exact_additive_method_is_admitted(self):
         prior = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
         current = reviewed_saved_energy_diagnostics_source()
-        self.assertEqual(current, restore_reviewed_lammps_metadata_source(SOURCE.read_bytes()))
+        self.assertEqual(current, restore_reviewed_lammps_metadata_source(
+            reviewed_taichi_controls_source(reverse=SOURCE.read_bytes())))
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
         old, new = ast.parse(prior), ast.parse(current)
@@ -1020,7 +1043,7 @@ class LammpsMetadataSourceAdmission(unittest.TestCase):
     def test_exact_reversible_delta_changes_only_two_methods(self):
         prior = reviewed_saved_energy_diagnostics_source()
         current = reviewed_lammps_metadata_source()
-        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(current, reviewed_taichi_controls_source(reverse=SOURCE.read_bytes()))
         self.assertEqual(restore_reviewed_lammps_metadata_source(current), prior)
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
@@ -1087,6 +1110,55 @@ class LammpsMetadataSourceAdmission(unittest.TestCase):
         self.assertEqual((ROOT/'.gitattributes').read_text(encoding='utf-8').splitlines().count(rule), 1)
 
 
+class TaichiControlsSourceAdmission(unittest.TestCase):
+    def test_exact_reversible_delta_changes_only_dynamics_body(self):
+        prior = reviewed_lammps_metadata_source()
+        current = reviewed_taichi_controls_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(reviewed_taichi_controls_source(reverse=current), prior)
+        require_public_source('fibernet/sim/accelerated.py', prior)
+        require_public_source('fibernet/sim/accelerated.py', current)
+        old, new = ast.parse(prior), ast.parse(current)
+        def dynamics(tree):
+            engine = next(n for n in tree.body if isinstance(n, ast.ClassDef)
+                          and n.name == 'TaichiEngine')
+            return next(n for n in engine.body if isinstance(n, ast.FunctionDef)
+                        and n.name == 'dynamics')
+        old_method, new_method = dynamics(old), dynamics(new)
+        self.assertEqual(canonical_ast(old_method.args), canonical_ast(new_method.args))
+        new_method.body = old_method.body
+        self.assertEqual(canonical_ast(old), canonical_ast(new))
+
+    def test_controls_and_unrelated_mutations_are_refused(self):
+        raw = reviewed_taichi_controls_source()
+        mutations = (
+            (b'_validated_fixed_rows(fixed_nodes, num_nodes)', b'list(fixed_nodes or [])'),
+            (b"name == 'dt' and scalar <= 0", b"name == 'dt' and scalar < 0"),
+            (b"scalar = _finite_real_array(value, name, ())", b'scalar = value'),
+            (b"_finite_real_array(external_force, 'external_force', (num_nodes, dim))",
+             b'np.asarray(external_force)'),
+            (b'fixed_arr[ni] = 1', b'fixed_arr[ni] = 0'),
+            (b'def _interpolate_schedule(schedule, step, total_steps):',
+             b'def _interpolate_schedule(schedule, step, total_steps, extra=None):'),
+        )
+        changed_sources = [raw + b'\npass\n', raw.replace(b'\n', b'\r\n')]
+        for before, after in mutations:
+            self.assertIn(before, raw)
+            changed_sources.append(raw.replace(before, after, 1))
+        for changed in changed_sources:
+            with self.subTest(digest=hashlib.sha256(changed).hexdigest()):
+                with self.assertRaises(AssertionError):
+                    require_public_source('fibernet/sim/accelerated.py', changed)
+                with self.assertRaises(AssertionError):
+                    reviewed_taichi_controls_source(reverse=changed)
+
+    def test_delta_literals_are_not_self_accepting(self):
+        for name in ('_TAICHI_CONTROLS_BEFORE', '_TAICHI_CONTROLS_AFTER'):
+            with self.subTest(name=name), patch.dict(globals(), {name: globals()[name] + '\npass\n'}):
+                with self.assertRaises(AssertionError):
+                    reviewed_taichi_controls_source()
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -1105,7 +1177,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_lammps_metadata_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_taichi_controls_source(), SOURCE.read_bytes())
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -1141,7 +1213,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_lammps_metadata_source(), SOURCE.read_bytes())
+        self.assertEqual(reviewed_taichi_controls_source(), SOURCE.read_bytes())
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())
