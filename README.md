@@ -27,60 +27,60 @@
 
 | 来源接口 | 目标接口 | 数据传递契约 | 源码参考 |
 | --- | --- | --- | --- |
-| [`fibernet.octet_fcc_v1`](#api-zh-octet) | [`fibernet.StructureGraph`](#api-zh-graph) | 生成版本化几何 | [来源][api-zh-src-octet] / [目标][api-zh-src-graph] |
-| [`fibernet.pattern_2d`](#api-zh-pattern_2d) | [`fibernet.StructureGraph`](#api-zh-graph) | 生成二维图 | [来源][api-zh-src-pattern_2d] / [目标][api-zh-src-graph] |
-| [`fibernet.pattern_3d`](#api-zh-pattern_3d) | [`fibernet.StructureGraph`](#api-zh-graph) | 生成三维图 | [来源][api-zh-src-pattern_3d] / [目标][api-zh-src-graph] |
-| [`fibernet.register_unit`](#api-zh-register_unit) | [`fibernet.pattern_2d`](#api-zh-pattern_2d) | 注册基元工厂 | [来源][api-zh-src-register_unit] / [目标][api-zh-src-pattern_2d] |
-| [`fibernet.tile_2d`](#api-zh-tile) | [`fibernet.StructureGraph`](#api-zh-graph) | 平铺后的图 | [来源][api-zh-src-tile] / [目标][api-zh-src-graph] |
-| [`fibernet.sim.prepare_nodal_controls`](#api-zh-controls) | [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) | 返回已准备的控制 | [来源][api-zh-src-controls] / [目标][api-zh-src-prepared_controls] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.sim.prepare_nodal_controls`](#api-zh-controls) | 绑定支座与载荷 ID | [来源][api-zh-src-graph] / [目标][api-zh-src-controls] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.render_deformation`](#api-zh-deformation) | 原图与调用方提供的变形图 | [来源][api-zh-src-graph] / [目标][api-zh-src-deformation] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.GraphFeatureExtractor`](#api-zh-features94) | 受支持的特征输入 | [来源][api-zh-src-graph] / [目标][api-zh-src-features94] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.ml.graph_batch`](#api-zh-graph_batch) | 创建主结构图快照 | [来源][api-zh-src-graph] / [目标][api-zh-src-graph_batch] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-zh-lammps_prepare) | 明确的三维几何 | [来源][api-zh-src-graph] / [目标][api-zh-src-lammps_prepare] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.StructureGraph.to_networkx_lossless`](#api-zh-networkx) | 携带原生记录的 MultiGraph 视图 | [来源][api-zh-src-graph] / [目标][api-zh-src-networkx] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.analysis.analyze_geometry_paths`](#api-zh-paths) | 已保存的 XYZ 几何 | [来源][api-zh-src-graph] / [目标][api-zh-src-paths] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.ReducedBeamSolver`](#api-zh-reduced) | 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 | [来源][api-zh-src-graph] / [目标][api-zh-src-reduced] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) | 连通全偶度图 | [来源][api-zh-src-graph] / [目标][api-zh-src-route_from_graph] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.StructureGraph.save_json`](#api-zh-save_graph) | 原生图序列化 | [来源][api-zh-src-graph] / [目标][api-zh-src-save_graph] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.show`](#api-zh-show) | 图声明的维度 | [来源][api-zh-src-graph] / [目标][api-zh-src-show] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.simulate`](#api-zh-simulate) | 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 | [来源][api-zh-src-graph] / [目标][api-zh-src-simulate] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.analysis.SnapshotFeatureExtractor`](#api-zh-snapshot) | extract_graph(graph) | [来源][api-zh-src-graph] / [目标][api-zh-src-snapshot] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.tile_2d`](#api-zh-tile) | 基元图输入 | [来源][api-zh-src-graph] / [目标][api-zh-src-tile] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.analysis.analyze_topology`](#api-zh-topology) | 物理拓扑 | [来源][api-zh-src-graph] / [目标][api-zh-src-topology] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) | 允许奇度节点的连通图 | [来源][api-zh-src-graph] / [目标][api-zh-src-trails_from_graph] |
-| [`fibernet.StructureGraph`](#api-zh-graph) | [`fibernet.solve_linear_transport`](#api-zh-transport) | 几何与稳定 ID | [来源][api-zh-src-graph] / [目标][api-zh-src-transport] |
-| [`fibernet.Material`](#api-zh-material) | [`fibernet.pattern_2d`](#api-zh-pattern_2d) | 显式材料参数 | [来源][api-zh-src-material] / [目标][api-zh-src-pattern_2d] |
-| [`fibernet.Material`](#api-zh-material) | [`fibernet.pattern_3d`](#api-zh-pattern_3d) | 显式材料参数 | [来源][api-zh-src-material] / [目标][api-zh-src-pattern_3d] |
-| [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) | [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) | 通过 fem_kwargs(graph) 传入原始求解 | [来源][api-zh-src-prepared_controls] / [目标][api-zh-src-fem] |
-| [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) | [`fibernet.TaichiEngine`](#api-zh-taichi) | taichi_kwargs(graph) | [来源][api-zh-src-prepared_controls] / [目标][api-zh-src-taichi] |
-| [`fibernet.LinearViscoelasticMaterial`](#api-zh-visco_material) | [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) | history(material=...) | [来源][api-zh-src-visco_material] / [目标][api-zh-src-fem] |
-| [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) | [`fibernet.SimResult`](#api-zh-sim_result) | 通过 to_sim_result(...) 转换 | [来源][api-zh-src-fem] / [目标][api-zh-src-sim_result] |
-| [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-zh-lammps_prepare) | [`fibernet.integrations.lammps_backend.LAMMPSTask`](#api-zh-lammps_task) | PreparedRun | [来源][api-zh-src-lammps_prepare] / [目标][api-zh-src-lammps_task] |
-| [`fibernet.ReducedBeamSolver`](#api-zh-reduced) | [`fibernet.ml.PlanarPhysicalDataset`](#api-zh-physical_dataset) | 所配置的物理标签 | [来源][api-zh-src-reduced] / [目标][api-zh-src-physical_dataset] |
-| [`fibernet.ReducedBeamSolver`](#api-zh-reduced) | [`fibernet.analysis.analyze_tensile_recruitment`](#api-zh-recruitment) | 提取对齐的应变、边与夹持数组 | [来源][api-zh-src-reduced] / [目标][api-zh-src-recruitment] |
-| [`fibernet.simulate`](#api-zh-simulate) | [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) | fem 路径 | [来源][api-zh-src-simulate] / [目标][api-zh-src-fem] |
-| [`fibernet.simulate`](#api-zh-simulate) | [`fibernet.SimResult`](#api-zh-sim_result) | 受支持的力学结果 | [来源][api-zh-src-simulate] / [目标][api-zh-src-sim_result] |
-| [`fibernet.simulate`](#api-zh-simulate) | [`fibernet.TaichiEngine`](#api-zh-taichi) | spring/taichi 路径 | [来源][api-zh-src-simulate] / [目标][api-zh-src-taichi] |
-| [`fibernet.TaichiEngine`](#api-zh-taichi) | [`fibernet.SimResult`](#api-zh-sim_result) | 弹簧结果 | [来源][api-zh-src-taichi] / [目标][api-zh-src-sim_result] |
-| [`fibernet.solve_linear_transport`](#api-zh-transport) | [`fibernet.run_joule_heating`](#api-zh-joule) | 以电结果构造热源 | [来源][api-zh-src-transport] / [目标][api-zh-src-joule] |
-| [`fibernet.GraphFeatureExtractor`](#api-zh-features94) | [`fibernet.ml.FiberNetDataset`](#api-zh-dataset) | 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 | [来源][api-zh-src-features94] / [目标][api-zh-src-dataset] |
-| [`fibernet.ml.CurveInverseDesigner`](#api-zh-curve_inverse) | [`fibernet.ReducedBeamSolver`](#api-zh-reduced) | 默认候选评估器 | [来源][api-zh-src-curve_inverse] / [目标][api-zh-src-reduced] |
-| [`fibernet.ml.graph_batch`](#api-zh-graph_batch) | [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) | 返回 GraphBatch | [来源][api-zh-src-graph_batch] / [目标][api-zh-src-graph_batch_type] |
-| [`fibernet.ml.light_features`](#api-zh-light_features) | [`fibernet.ml.PhysicalRegressor`](#api-zh-regressor) | 将 14 维向量逐行组成 X，并提供对应的 Y 标签 | [来源][api-zh-src-light_features] / [目标][api-zh-src-regressor] |
-| [`fibernet.ml.PlanarPhysicalDataset`](#api-zh-physical_dataset) | [`fibernet.ml.PhysicalRegressor`](#api-zh-regressor) | arrays()：X 与 Y | [来源][api-zh-src-physical_dataset] / [目标][api-zh-src-regressor] |
-| [`fibernet.PlanarManufacturingConfig`](#api-zh-manufacturing_config) | [`fibernet.compile_planar`](#api-zh-compile_planar) | 配置或工厂 | [来源][api-zh-src-manufacturing_config] / [目标][api-zh-src-compile_planar] |
-| [`fibernet.PlanarManufacturingConfig`](#api-zh-manufacturing_config) | [`fibernet.compile_surface`](#api-zh-compile_surface) | 配置或工厂 | [来源][api-zh-src-manufacturing_config] / [目标][api-zh-src-compile_surface] |
-| [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) | [`fibernet.export_mapped_route`](#api-zh-export_route) | network 与绑定快照 | [来源][api-zh-src-route_from_graph] / [目标][api-zh-src-export_route] |
-| [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) | [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) | 返回来源快照 | [来源][api-zh-src-route_from_graph] / [目标][api-zh-src-graph_batch_type] |
-| [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) | [`fibernet.export_mapped_trails`](#api-zh-export_trails) | trails 与绑定快照 | [来源][api-zh-src-trails_from_graph] / [目标][api-zh-src-export_trails] |
-| [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) | [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) | 返回来源快照 | [来源][api-zh-src-trails_from_graph] / [目标][api-zh-src-graph_batch_type] |
-| [`fibernet.StructureGraph.load_json`](#api-zh-load_graph) | [`fibernet.StructureGraph`](#api-zh-graph) | 重建的结构图 | [来源][api-zh-src-load_graph] / [目标][api-zh-src-graph] |
-| [`fibernet.StructureGraph.save_json`](#api-zh-save_graph) | [`fibernet.StructureGraph.load_json`](#api-zh-load_graph) | 配套原生 JSON 文件 | [来源][api-zh-src-save_graph] / [目标][api-zh-src-load_graph] |
+| [`fibernet.octet_fcc_v1`](#user-content-api-zh-octet) | [`fibernet.StructureGraph`](#user-content-api-zh-graph) | 生成版本化几何 | [来源][api-zh-src-octet] / [目标][api-zh-src-graph] |
+| [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) | [`fibernet.StructureGraph`](#user-content-api-zh-graph) | 生成二维图 | [来源][api-zh-src-pattern_2d] / [目标][api-zh-src-graph] |
+| [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) | [`fibernet.StructureGraph`](#user-content-api-zh-graph) | 生成三维图 | [来源][api-zh-src-pattern_3d] / [目标][api-zh-src-graph] |
+| [`fibernet.register_unit`](#user-content-api-zh-register_unit) | [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) | 注册基元工厂 | [来源][api-zh-src-register_unit] / [目标][api-zh-src-pattern_2d] |
+| [`fibernet.tile_2d`](#user-content-api-zh-tile) | [`fibernet.StructureGraph`](#user-content-api-zh-graph) | 平铺后的图 | [来源][api-zh-src-tile] / [目标][api-zh-src-graph] |
+| [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) | [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) | 返回已准备的控制 | [来源][api-zh-src-controls] / [目标][api-zh-src-prepared_controls] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) | 绑定支座与载荷 ID | [来源][api-zh-src-graph] / [目标][api-zh-src-controls] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.render_deformation`](#user-content-api-zh-deformation) | 原图与调用方提供的变形图 | [来源][api-zh-src-graph] / [目标][api-zh-src-deformation] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) | 受支持的特征输入 | [来源][api-zh-src-graph] / [目标][api-zh-src-features94] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) | 创建主结构图快照 | [来源][api-zh-src-graph] / [目标][api-zh-src-graph_batch] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) | 明确的三维几何 | [来源][api-zh-src-graph] / [目标][api-zh-src-lammps_prepare] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-zh-networkx) | 携带原生记录的 MultiGraph 视图 | [来源][api-zh-src-graph] / [目标][api-zh-src-networkx] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) | 已保存的 XYZ 几何 | [来源][api-zh-src-graph] / [目标][api-zh-src-paths] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) | 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 | [来源][api-zh-src-graph] / [目标][api-zh-src-reduced] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) | 连通全偶度图 | [来源][api-zh-src-graph] / [目标][api-zh-src-route_from_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) | 原生图序列化 | [来源][api-zh-src-graph] / [目标][api-zh-src-save_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.show`](#user-content-api-zh-show) | 图声明的维度 | [来源][api-zh-src-graph] / [目标][api-zh-src-show] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.simulate`](#user-content-api-zh-simulate) | 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 | [来源][api-zh-src-graph] / [目标][api-zh-src-simulate] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-zh-snapshot) | extract_graph(graph) | [来源][api-zh-src-graph] / [目标][api-zh-src-snapshot] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.tile_2d`](#user-content-api-zh-tile) | 基元图输入 | [来源][api-zh-src-graph] / [目标][api-zh-src-tile] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.analysis.analyze_topology`](#user-content-api-zh-topology) | 物理拓扑 | [来源][api-zh-src-graph] / [目标][api-zh-src-topology] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) | 允许奇度节点的连通图 | [来源][api-zh-src-graph] / [目标][api-zh-src-trails_from_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-zh-graph) | [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) | 几何与稳定 ID | [来源][api-zh-src-graph] / [目标][api-zh-src-transport] |
+| [`fibernet.Material`](#user-content-api-zh-material) | [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) | 显式材料参数 | [来源][api-zh-src-material] / [目标][api-zh-src-pattern_2d] |
+| [`fibernet.Material`](#user-content-api-zh-material) | [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) | 显式材料参数 | [来源][api-zh-src-material] / [目标][api-zh-src-pattern_3d] |
+| [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) | 通过 fem_kwargs(graph) 传入原始求解 | [来源][api-zh-src-prepared_controls] / [目标][api-zh-src-fem] |
+| [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) | [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) | taichi_kwargs(graph) | [来源][api-zh-src-prepared_controls] / [目标][api-zh-src-taichi] |
+| [`fibernet.LinearViscoelasticMaterial`](#user-content-api-zh-visco_material) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) | history(material=...) | [来源][api-zh-src-visco_material] / [目标][api-zh-src-fem] |
+| [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) | [`fibernet.SimResult`](#user-content-api-zh-sim_result) | 通过 to_sim_result(...) 转换 | [来源][api-zh-src-fem] / [目标][api-zh-src-sim_result] |
+| [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) | [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-zh-lammps_task) | PreparedRun | [来源][api-zh-src-lammps_prepare] / [目标][api-zh-src-lammps_task] |
+| [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) | [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) | 所配置的物理标签 | [来源][api-zh-src-reduced] / [目标][api-zh-src-physical_dataset] |
+| [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) | [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-zh-recruitment) | 提取对齐的应变、边与夹持数组 | [来源][api-zh-src-reduced] / [目标][api-zh-src-recruitment] |
+| [`fibernet.simulate`](#user-content-api-zh-simulate) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) | fem 路径 | [来源][api-zh-src-simulate] / [目标][api-zh-src-fem] |
+| [`fibernet.simulate`](#user-content-api-zh-simulate) | [`fibernet.SimResult`](#user-content-api-zh-sim_result) | 受支持的力学结果 | [来源][api-zh-src-simulate] / [目标][api-zh-src-sim_result] |
+| [`fibernet.simulate`](#user-content-api-zh-simulate) | [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) | spring/taichi 路径 | [来源][api-zh-src-simulate] / [目标][api-zh-src-taichi] |
+| [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) | [`fibernet.SimResult`](#user-content-api-zh-sim_result) | 弹簧结果 | [来源][api-zh-src-taichi] / [目标][api-zh-src-sim_result] |
+| [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) | [`fibernet.run_joule_heating`](#user-content-api-zh-joule) | 以电结果构造热源 | [来源][api-zh-src-transport] / [目标][api-zh-src-joule] |
+| [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) | [`fibernet.ml.FiberNetDataset`](#user-content-api-zh-dataset) | 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 | [来源][api-zh-src-features94] / [目标][api-zh-src-dataset] |
+| [`fibernet.ml.CurveInverseDesigner`](#user-content-api-zh-curve_inverse) | [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) | 默认候选评估器 | [来源][api-zh-src-curve_inverse] / [目标][api-zh-src-reduced] |
+| [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) | [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) | 返回 GraphBatch | [来源][api-zh-src-graph_batch] / [目标][api-zh-src-graph_batch_type] |
+| [`fibernet.ml.light_features`](#user-content-api-zh-light_features) | [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) | 将 14 维向量逐行组成 X，并提供对应的 Y 标签 | [来源][api-zh-src-light_features] / [目标][api-zh-src-regressor] |
+| [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) | [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) | arrays()：X 与 Y | [来源][api-zh-src-physical_dataset] / [目标][api-zh-src-regressor] |
+| [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) | [`fibernet.compile_planar`](#user-content-api-zh-compile_planar) | 配置或工厂 | [来源][api-zh-src-manufacturing_config] / [目标][api-zh-src-compile_planar] |
+| [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) | [`fibernet.compile_surface`](#user-content-api-zh-compile_surface) | 配置或工厂 | [来源][api-zh-src-manufacturing_config] / [目标][api-zh-src-compile_surface] |
+| [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) | [`fibernet.export_mapped_route`](#user-content-api-zh-export_route) | network 与绑定快照 | [来源][api-zh-src-route_from_graph] / [目标][api-zh-src-export_route] |
+| [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) | [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) | 返回来源快照 | [来源][api-zh-src-route_from_graph] / [目标][api-zh-src-graph_batch_type] |
+| [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) | [`fibernet.export_mapped_trails`](#user-content-api-zh-export_trails) | trails 与绑定快照 | [来源][api-zh-src-trails_from_graph] / [目标][api-zh-src-export_trails] |
+| [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) | [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) | 返回来源快照 | [来源][api-zh-src-trails_from_graph] / [目标][api-zh-src-graph_batch_type] |
+| [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) | [`fibernet.StructureGraph`](#user-content-api-zh-graph) | 重建的结构图 | [来源][api-zh-src-load_graph] / [目标][api-zh-src-graph] |
+| [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) | [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) | 配套原生 JSON 文件 | [来源][api-zh-src-save_graph] / [目标][api-zh-src-load_graph] |
 
 **记录归属（containment，非数据传递）：**
-- [`fibernet.StructureGraph`](#api-zh-graph) → [`fibernet.SNode`](#api-zh-snode) — 拥有节点记录
-- [`fibernet.StructureGraph`](#api-zh-graph) → [`fibernet.SEdge`](#api-zh-sedge) — 拥有物理边记录
+- [`fibernet.StructureGraph`](#user-content-api-zh-graph) → [`fibernet.SNode`](#user-content-api-zh-snode) — 拥有节点记录
+- [`fibernet.StructureGraph`](#user-content-api-zh-graph) → [`fibernet.SEdge`](#user-content-api-zh-sedge) — 拥有物理边记录
 
 另有 49 条接口与流程分组的归属关系，见下方分支；分组不表示类继承。
 
@@ -150,9 +150,9 @@
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- → [`fibernet.StructureGraph`](#api-zh-graph) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- ← [`fibernet.register_unit`](#api-zh-register_unit) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1099)
-- ← [`fibernet.Material`](#api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.register_unit`](#user-content-api-zh-register_unit) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1099)
+- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
 
 </details>
 
@@ -176,8 +176,8 @@
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.StructureGraph`](#api-zh-graph) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- ← [`fibernet.Material`](#api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
 
 </details>
 
@@ -201,7 +201,7 @@
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.StructureGraph`](#api-zh-graph) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -225,7 +225,7 @@
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.pattern_2d`](#api-zh-pattern_2d) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
 
 </details>
 
@@ -249,8 +249,8 @@
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.StructureGraph`](#api-zh-graph) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -304,28 +304,28 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 22</summary>
 
-- ← [`fibernet.pattern_2d`](#api-zh-pattern_2d) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
-- ← [`fibernet.pattern_3d`](#api-zh-pattern_3d) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
-- ← [`fibernet.octet_fcc_v1`](#api-zh-octet) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/standard_lattice.py#L99)
-- → [`fibernet.tile_2d`](#api-zh-tile) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
-- ← [`fibernet.tile_2d`](#api-zh-tile) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
-- → [`fibernet.sim.prepare_nodal_controls`](#api-zh-controls) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.simulate`](#api-zh-simulate) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.ReducedBeamSolver`](#api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
-- → [`fibernet.solve_linear_transport`](#api-zh-transport) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
-- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-zh-lammps_prepare) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
-- → [`fibernet.GraphFeatureExtractor`](#api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
-- → [`fibernet.analysis.SnapshotFeatureExtractor`](#api-zh-snapshot) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/snapshot_features.py#L677)
-- → [`fibernet.analysis.analyze_topology`](#api-zh-topology) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/topology_metrics.py#L36)
-- → [`fibernet.analysis.analyze_geometry_paths`](#api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/geometry_paths.py#L74)
-- → [`fibernet.ml.graph_batch`](#api-zh-graph_batch) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
-- → [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
-- → [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
-- → [`fibernet.StructureGraph.save_json`](#api-zh-save_graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
-- ← [`fibernet.StructureGraph.load_json`](#api-zh-load_graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
-- → [`fibernet.StructureGraph.to_networkx_lossless`](#api-zh-networkx) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L861)
-- → [`fibernet.show`](#api-zh-show) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L43)
-- → [`fibernet.render_deformation`](#api-zh-deformation) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/viz/render.py#L388)
+- ← [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- ← [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
+- ← [`fibernet.octet_fcc_v1`](#user-content-api-zh-octet) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/standard_lattice.py#L99)
+- → [`fibernet.tile_2d`](#user-content-api-zh-tile) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
+- ← [`fibernet.tile_2d`](#user-content-api-zh-tile) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
+- → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.simulate`](#user-content-api-zh-simulate) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
+- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
+- → [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
+- → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-zh-snapshot) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/snapshot_features.py#L677)
+- → [`fibernet.analysis.analyze_topology`](#user-content-api-zh-topology) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/topology_metrics.py#L36)
+- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/geometry_paths.py#L74)
+- → [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
+- → [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- → [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
+- ← [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
+- → [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-zh-networkx) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L861)
+- → [`fibernet.show`](#user-content-api-zh-show) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L43)
+- → [`fibernet.render_deformation`](#user-content-api-zh-deformation) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/viz/render.py#L388)
 
 </details>
 
@@ -383,8 +383,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.pattern_2d`](#api-zh-pattern_2d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
-- → [`fibernet.pattern_3d`](#api-zh-pattern_3d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
+- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- → [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
 
 </details>
 
@@ -408,7 +408,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -449,8 +449,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
 
 </details>
 
@@ -474,9 +474,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.sim.prepare_nodal_controls`](#api-zh-controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.TaichiEngine`](#api-zh-taichi) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- → [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- ← [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -500,9 +500,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.simulate`](#api-zh-simulate) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- ← [`fibernet.TaichiEngine`](#api-zh-taichi) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- ← [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- ← [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- ← [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -526,9 +526,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.ml.graph_batch`](#api-zh-graph_batch) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
-- ← [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
-- ← [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
@@ -557,10 +557,10 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.TaichiEngine`](#api-zh-taichi) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- → [`fibernet.ml.BeamFrameFEM`](#api-zh-fem) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
-- → [`fibernet.SimResult`](#api-zh-sim_result) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
 
 </details>
 
@@ -584,9 +584,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#api-zh-simulate) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.SimResult`](#api-zh-sim_result) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
 
 </details>
 
@@ -610,10 +610,10 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#api-zh-prepared_controls) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#api-zh-simulate) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.SimResult`](#api-zh-sim_result) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
-- ← [`fibernet.LinearViscoelasticMaterial`](#api-zh-visco_material) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/viscoelastic.py#L21)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.LinearViscoelasticMaterial`](#user-content-api-zh-visco_material) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/viscoelastic.py#L21)
 
 </details>
 
@@ -637,10 +637,10 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.analysis.analyze_tensile_recruitment`](#api-zh-recruitment) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/tensile_recruitment.py#L130)
-- → [`fibernet.ml.PlanarPhysicalDataset`](#api-zh-physical_dataset) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.CurveInverseDesigner`](#api-zh-curve_inverse) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/curve_inverse.py#L248)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-zh-recruitment) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/tensile_recruitment.py#L130)
+- → [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.CurveInverseDesigner`](#user-content-api-zh-curve_inverse) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/curve_inverse.py#L248)
 
 </details>
 
@@ -664,8 +664,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.run_joule_heating`](#api-zh-joule) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/joule_heating.py#L384)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.run_joule_heating`](#user-content-api-zh-joule) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/joule_heating.py#L384)
 
 </details>
 
@@ -689,7 +689,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.solve_linear_transport`](#api-zh-transport) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
+- ← [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
 
 </details>
 
@@ -713,8 +713,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#api-zh-lammps_task) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L691)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-zh-lammps_task) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L691)
 
 </details>
 
@@ -738,7 +738,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-zh-lammps_prepare) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
+- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
 
 </details>
 
@@ -767,8 +767,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.ml.FiberNetDataset`](#api-zh-dataset) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/dataset.py#L230)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.ml.FiberNetDataset`](#user-content-api-zh-dataset) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/dataset.py#L230)
 
 </details>
 
@@ -792,7 +792,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -816,7 +816,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -840,7 +840,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -864,7 +864,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.ReducedBeamSolver`](#api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -893,8 +893,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -918,7 +918,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.GraphFeatureExtractor`](#api-zh-features94) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
+- ← [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
 
 </details>
 
@@ -942,8 +942,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#api-zh-regressor) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
-- ← [`fibernet.ReducedBeamSolver`](#api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -967,7 +967,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#api-zh-regressor) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
 
 </details>
 
@@ -991,8 +991,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.ml.PlanarPhysicalDataset`](#api-zh-physical_dataset) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.light_features`](#api-zh-light_features) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_surrogate.py#L4)
+- ← [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.light_features`](#user-content-api-zh-light_features) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_surrogate.py#L4)
 
 </details>
 
@@ -1016,7 +1016,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ReducedBeamSolver`](#api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -1079,8 +1079,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.compile_planar`](#api-zh-compile_planar) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L291)
-- → [`fibernet.compile_surface`](#api-zh-compile_surface) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L400)
+- → [`fibernet.compile_planar`](#user-content-api-zh-compile_planar) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L291)
+- → [`fibernet.compile_surface`](#user-content-api-zh-compile_surface) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L400)
 
 </details>
 
@@ -1104,7 +1104,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
@@ -1128,7 +1128,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
@@ -1152,9 +1152,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.export_mapped_route`](#api-zh-export_route) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L296)
-- → [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.export_mapped_route`](#user-content-api-zh-export_route) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L296)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -1178,7 +1178,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.manufacturing_from_graph`](#api-zh-route_from_graph) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
 
 </details>
 
@@ -1202,9 +1202,9 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.export_mapped_trails`](#api-zh-export_trails) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L282)
-- → [`fibernet.ml.GraphBatch`](#api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.export_mapped_trails`](#user-content-api-zh-export_trails) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L282)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -1228,7 +1228,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.manufacturing_trails_from_graph`](#api-zh-trails_from_graph) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
@@ -1257,8 +1257,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.StructureGraph.load_json`](#api-zh-load_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
 
 </details>
 
@@ -1282,8 +1282,8 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph.save_json`](#api-zh-save_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
-- → [`fibernet.StructureGraph`](#api-zh-graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1307,7 +1307,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1331,7 +1331,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1355,7 +1355,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-zh-graph) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1503,60 +1503,60 @@ Each row is a directed dataflow handoff supplied by the caller, not an automatic
 
 | From API | To API | Handoff contract | Source references |
 | --- | --- | --- | --- |
-| [`fibernet.octet_fcc_v1`](#api-en-octet) | [`fibernet.StructureGraph`](#api-en-graph) | produces versioned geometry | [From][api-en-src-octet] / [To][api-en-src-graph] |
-| [`fibernet.pattern_2d`](#api-en-pattern_2d) | [`fibernet.StructureGraph`](#api-en-graph) | produces 2D graph | [From][api-en-src-pattern_2d] / [To][api-en-src-graph] |
-| [`fibernet.pattern_3d`](#api-en-pattern_3d) | [`fibernet.StructureGraph`](#api-en-graph) | produces 3D graph | [From][api-en-src-pattern_3d] / [To][api-en-src-graph] |
-| [`fibernet.register_unit`](#api-en-register_unit) | [`fibernet.pattern_2d`](#api-en-pattern_2d) | registers a unit factory | [From][api-en-src-register_unit] / [To][api-en-src-pattern_2d] |
-| [`fibernet.tile_2d`](#api-en-tile) | [`fibernet.StructureGraph`](#api-en-graph) | tiled graph | [From][api-en-src-tile] / [To][api-en-src-graph] |
-| [`fibernet.sim.prepare_nodal_controls`](#api-en-controls) | [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) | returns prepared controls | [From][api-en-src-controls] / [To][api-en-src-prepared_controls] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.sim.prepare_nodal_controls`](#api-en-controls) | binds support/load IDs | [From][api-en-src-graph] / [To][api-en-src-controls] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.render_deformation`](#api-en-deformation) | original + caller's deformed graph | [From][api-en-src-graph] / [To][api-en-src-deformation] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.GraphFeatureExtractor`](#api-en-features94) | supported feature input | [From][api-en-src-graph] / [To][api-en-src-features94] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.ml.graph_batch`](#api-en-graph_batch) | snapshots authoritative graphs | [From][api-en-src-graph] / [To][api-en-src-graph_batch] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-en-lammps_prepare) | explicit 3D geometry | [From][api-en-src-graph] / [To][api-en-src-lammps_prepare] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.StructureGraph.to_networkx_lossless`](#api-en-networkx) | native-record MultiGraph view | [From][api-en-src-graph] / [To][api-en-src-networkx] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.analysis.analyze_geometry_paths`](#api-en-paths) | stored XYZ geometry | [From][api-en-src-graph] / [To][api-en-src-paths] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.ReducedBeamSolver`](#api-en-reduced) | one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first | [From][api-en-src-graph] / [To][api-en-src-reduced] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) | connected all-even graph | [From][api-en-src-graph] / [To][api-en-src-route_from_graph] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.StructureGraph.save_json`](#api-en-save_graph) | native graph serialization | [From][api-en-src-graph] / [To][api-en-src-save_graph] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.show`](#api-en-show) | declared graph dimension | [From][api-en-src-graph] / [To][api-en-src-show] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.simulate`](#api-en-simulate) | geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only | [From][api-en-src-graph] / [To][api-en-src-simulate] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.analysis.SnapshotFeatureExtractor`](#api-en-snapshot) | extract_graph(graph) | [From][api-en-src-graph] / [To][api-en-src-snapshot] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.tile_2d`](#api-en-tile) | unit-cell input | [From][api-en-src-graph] / [To][api-en-src-tile] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.analysis.analyze_topology`](#api-en-topology) | physical topology | [From][api-en-src-graph] / [To][api-en-src-topology] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) | connected graph, odd degrees allowed | [From][api-en-src-graph] / [To][api-en-src-trails_from_graph] |
-| [`fibernet.StructureGraph`](#api-en-graph) | [`fibernet.solve_linear_transport`](#api-en-transport) | geometry and stable IDs | [From][api-en-src-graph] / [To][api-en-src-transport] |
-| [`fibernet.Material`](#api-en-material) | [`fibernet.pattern_2d`](#api-en-pattern_2d) | explicit material argument | [From][api-en-src-material] / [To][api-en-src-pattern_2d] |
-| [`fibernet.Material`](#api-en-material) | [`fibernet.pattern_3d`](#api-en-pattern_3d) | explicit material argument | [From][api-en-src-material] / [To][api-en-src-pattern_3d] |
-| [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) | [`fibernet.ml.BeamFrameFEM`](#api-en-fem) | fem_kwargs(graph) for raw solve | [From][api-en-src-prepared_controls] / [To][api-en-src-fem] |
-| [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) | [`fibernet.TaichiEngine`](#api-en-taichi) | taichi_kwargs(graph) | [From][api-en-src-prepared_controls] / [To][api-en-src-taichi] |
-| [`fibernet.LinearViscoelasticMaterial`](#api-en-visco_material) | [`fibernet.ml.BeamFrameFEM`](#api-en-fem) | history(material=...) | [From][api-en-src-visco_material] / [To][api-en-src-fem] |
-| [`fibernet.ml.BeamFrameFEM`](#api-en-fem) | [`fibernet.SimResult`](#api-en-sim_result) | to_sim_result(...) adapter | [From][api-en-src-fem] / [To][api-en-src-sim_result] |
-| [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-en-lammps_prepare) | [`fibernet.integrations.lammps_backend.LAMMPSTask`](#api-en-lammps_task) | PreparedRun | [From][api-en-src-lammps_prepare] / [To][api-en-src-lammps_task] |
-| [`fibernet.ReducedBeamSolver`](#api-en-reduced) | [`fibernet.ml.PlanarPhysicalDataset`](#api-en-physical_dataset) | configured physics labels | [From][api-en-src-reduced] / [To][api-en-src-physical_dataset] |
-| [`fibernet.ReducedBeamSolver`](#api-en-reduced) | [`fibernet.analysis.analyze_tensile_recruitment`](#api-en-recruitment) | extract aligned strain/edge/grip arrays | [From][api-en-src-reduced] / [To][api-en-src-recruitment] |
-| [`fibernet.simulate`](#api-en-simulate) | [`fibernet.ml.BeamFrameFEM`](#api-en-fem) | fem route | [From][api-en-src-simulate] / [To][api-en-src-fem] |
-| [`fibernet.simulate`](#api-en-simulate) | [`fibernet.SimResult`](#api-en-sim_result) | supported mechanical result | [From][api-en-src-simulate] / [To][api-en-src-sim_result] |
-| [`fibernet.simulate`](#api-en-simulate) | [`fibernet.TaichiEngine`](#api-en-taichi) | spring/taichi route | [From][api-en-src-simulate] / [To][api-en-src-taichi] |
-| [`fibernet.TaichiEngine`](#api-en-taichi) | [`fibernet.SimResult`](#api-en-sim_result) | spring result | [From][api-en-src-taichi] / [To][api-en-src-sim_result] |
-| [`fibernet.solve_linear_transport`](#api-en-transport) | [`fibernet.run_joule_heating`](#api-en-joule) | electrical result as heat source | [From][api-en-src-transport] / [To][api-en-src-joule] |
-| [`fibernet.GraphFeatureExtractor`](#api-en-features94) | [`fibernet.ml.FiberNetDataset`](#api-en-dataset) | wrap values and feature_contract metadata in DatasetSample records | [From][api-en-src-features94] / [To][api-en-src-dataset] |
-| [`fibernet.ml.CurveInverseDesigner`](#api-en-curve_inverse) | [`fibernet.ReducedBeamSolver`](#api-en-reduced) | default candidate evaluator | [From][api-en-src-curve_inverse] / [To][api-en-src-reduced] |
-| [`fibernet.ml.graph_batch`](#api-en-graph_batch) | [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) | returns GraphBatch | [From][api-en-src-graph_batch] / [To][api-en-src-graph_batch_type] |
-| [`fibernet.ml.light_features`](#api-en-light_features) | [`fibernet.ml.PhysicalRegressor`](#api-en-regressor) | stack 14-element vectors into X rows; supply matching Y labels | [From][api-en-src-light_features] / [To][api-en-src-regressor] |
-| [`fibernet.ml.PlanarPhysicalDataset`](#api-en-physical_dataset) | [`fibernet.ml.PhysicalRegressor`](#api-en-regressor) | arrays(): X and Y | [From][api-en-src-physical_dataset] / [To][api-en-src-regressor] |
-| [`fibernet.PlanarManufacturingConfig`](#api-en-manufacturing_config) | [`fibernet.compile_planar`](#api-en-compile_planar) | configuration/factory | [From][api-en-src-manufacturing_config] / [To][api-en-src-compile_planar] |
-| [`fibernet.PlanarManufacturingConfig`](#api-en-manufacturing_config) | [`fibernet.compile_surface`](#api-en-compile_surface) | configuration/factory | [From][api-en-src-manufacturing_config] / [To][api-en-src-compile_surface] |
-| [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) | [`fibernet.export_mapped_route`](#api-en-export_route) | network + bound snapshot | [From][api-en-src-route_from_graph] / [To][api-en-src-export_route] |
-| [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) | [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) | returns provenance snapshot | [From][api-en-src-route_from_graph] / [To][api-en-src-graph_batch_type] |
-| [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) | [`fibernet.export_mapped_trails`](#api-en-export_trails) | trails + bound snapshot | [From][api-en-src-trails_from_graph] / [To][api-en-src-export_trails] |
-| [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) | [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) | returns provenance snapshot | [From][api-en-src-trails_from_graph] / [To][api-en-src-graph_batch_type] |
-| [`fibernet.StructureGraph.load_json`](#api-en-load_graph) | [`fibernet.StructureGraph`](#api-en-graph) | reconstructed graph | [From][api-en-src-load_graph] / [To][api-en-src-graph] |
-| [`fibernet.StructureGraph.save_json`](#api-en-save_graph) | [`fibernet.StructureGraph.load_json`](#api-en-load_graph) | matching native JSON file | [From][api-en-src-save_graph] / [To][api-en-src-load_graph] |
+| [`fibernet.octet_fcc_v1`](#user-content-api-en-octet) | [`fibernet.StructureGraph`](#user-content-api-en-graph) | produces versioned geometry | [From][api-en-src-octet] / [To][api-en-src-graph] |
+| [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) | [`fibernet.StructureGraph`](#user-content-api-en-graph) | produces 2D graph | [From][api-en-src-pattern_2d] / [To][api-en-src-graph] |
+| [`fibernet.pattern_3d`](#user-content-api-en-pattern_3d) | [`fibernet.StructureGraph`](#user-content-api-en-graph) | produces 3D graph | [From][api-en-src-pattern_3d] / [To][api-en-src-graph] |
+| [`fibernet.register_unit`](#user-content-api-en-register_unit) | [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) | registers a unit factory | [From][api-en-src-register_unit] / [To][api-en-src-pattern_2d] |
+| [`fibernet.tile_2d`](#user-content-api-en-tile) | [`fibernet.StructureGraph`](#user-content-api-en-graph) | tiled graph | [From][api-en-src-tile] / [To][api-en-src-graph] |
+| [`fibernet.sim.prepare_nodal_controls`](#user-content-api-en-controls) | [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) | returns prepared controls | [From][api-en-src-controls] / [To][api-en-src-prepared_controls] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.sim.prepare_nodal_controls`](#user-content-api-en-controls) | binds support/load IDs | [From][api-en-src-graph] / [To][api-en-src-controls] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.render_deformation`](#user-content-api-en-deformation) | original + caller's deformed graph | [From][api-en-src-graph] / [To][api-en-src-deformation] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) | supported feature input | [From][api-en-src-graph] / [To][api-en-src-features94] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.ml.graph_batch`](#user-content-api-en-graph_batch) | snapshots authoritative graphs | [From][api-en-src-graph] / [To][api-en-src-graph_batch] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-en-lammps_prepare) | explicit 3D geometry | [From][api-en-src-graph] / [To][api-en-src-lammps_prepare] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-en-networkx) | native-record MultiGraph view | [From][api-en-src-graph] / [To][api-en-src-networkx] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-en-paths) | stored XYZ geometry | [From][api-en-src-graph] / [To][api-en-src-paths] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) | one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first | [From][api-en-src-graph] / [To][api-en-src-reduced] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) | connected all-even graph | [From][api-en-src-graph] / [To][api-en-src-route_from_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.StructureGraph.save_json`](#user-content-api-en-save_graph) | native graph serialization | [From][api-en-src-graph] / [To][api-en-src-save_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.show`](#user-content-api-en-show) | declared graph dimension | [From][api-en-src-graph] / [To][api-en-src-show] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.simulate`](#user-content-api-en-simulate) | geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only | [From][api-en-src-graph] / [To][api-en-src-simulate] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-en-snapshot) | extract_graph(graph) | [From][api-en-src-graph] / [To][api-en-src-snapshot] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.tile_2d`](#user-content-api-en-tile) | unit-cell input | [From][api-en-src-graph] / [To][api-en-src-tile] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.analysis.analyze_topology`](#user-content-api-en-topology) | physical topology | [From][api-en-src-graph] / [To][api-en-src-topology] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) | connected graph, odd degrees allowed | [From][api-en-src-graph] / [To][api-en-src-trails_from_graph] |
+| [`fibernet.StructureGraph`](#user-content-api-en-graph) | [`fibernet.solve_linear_transport`](#user-content-api-en-transport) | geometry and stable IDs | [From][api-en-src-graph] / [To][api-en-src-transport] |
+| [`fibernet.Material`](#user-content-api-en-material) | [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) | explicit material argument | [From][api-en-src-material] / [To][api-en-src-pattern_2d] |
+| [`fibernet.Material`](#user-content-api-en-material) | [`fibernet.pattern_3d`](#user-content-api-en-pattern_3d) | explicit material argument | [From][api-en-src-material] / [To][api-en-src-pattern_3d] |
+| [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) | fem_kwargs(graph) for raw solve | [From][api-en-src-prepared_controls] / [To][api-en-src-fem] |
+| [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) | [`fibernet.TaichiEngine`](#user-content-api-en-taichi) | taichi_kwargs(graph) | [From][api-en-src-prepared_controls] / [To][api-en-src-taichi] |
+| [`fibernet.LinearViscoelasticMaterial`](#user-content-api-en-visco_material) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) | history(material=...) | [From][api-en-src-visco_material] / [To][api-en-src-fem] |
+| [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) | [`fibernet.SimResult`](#user-content-api-en-sim_result) | to_sim_result(...) adapter | [From][api-en-src-fem] / [To][api-en-src-sim_result] |
+| [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-en-lammps_prepare) | [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-en-lammps_task) | PreparedRun | [From][api-en-src-lammps_prepare] / [To][api-en-src-lammps_task] |
+| [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) | [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-en-physical_dataset) | configured physics labels | [From][api-en-src-reduced] / [To][api-en-src-physical_dataset] |
+| [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) | [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-en-recruitment) | extract aligned strain/edge/grip arrays | [From][api-en-src-reduced] / [To][api-en-src-recruitment] |
+| [`fibernet.simulate`](#user-content-api-en-simulate) | [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) | fem route | [From][api-en-src-simulate] / [To][api-en-src-fem] |
+| [`fibernet.simulate`](#user-content-api-en-simulate) | [`fibernet.SimResult`](#user-content-api-en-sim_result) | supported mechanical result | [From][api-en-src-simulate] / [To][api-en-src-sim_result] |
+| [`fibernet.simulate`](#user-content-api-en-simulate) | [`fibernet.TaichiEngine`](#user-content-api-en-taichi) | spring/taichi route | [From][api-en-src-simulate] / [To][api-en-src-taichi] |
+| [`fibernet.TaichiEngine`](#user-content-api-en-taichi) | [`fibernet.SimResult`](#user-content-api-en-sim_result) | spring result | [From][api-en-src-taichi] / [To][api-en-src-sim_result] |
+| [`fibernet.solve_linear_transport`](#user-content-api-en-transport) | [`fibernet.run_joule_heating`](#user-content-api-en-joule) | electrical result as heat source | [From][api-en-src-transport] / [To][api-en-src-joule] |
+| [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) | [`fibernet.ml.FiberNetDataset`](#user-content-api-en-dataset) | wrap values and feature_contract metadata in DatasetSample records | [From][api-en-src-features94] / [To][api-en-src-dataset] |
+| [`fibernet.ml.CurveInverseDesigner`](#user-content-api-en-curve_inverse) | [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) | default candidate evaluator | [From][api-en-src-curve_inverse] / [To][api-en-src-reduced] |
+| [`fibernet.ml.graph_batch`](#user-content-api-en-graph_batch) | [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) | returns GraphBatch | [From][api-en-src-graph_batch] / [To][api-en-src-graph_batch_type] |
+| [`fibernet.ml.light_features`](#user-content-api-en-light_features) | [`fibernet.ml.PhysicalRegressor`](#user-content-api-en-regressor) | stack 14-element vectors into X rows; supply matching Y labels | [From][api-en-src-light_features] / [To][api-en-src-regressor] |
+| [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-en-physical_dataset) | [`fibernet.ml.PhysicalRegressor`](#user-content-api-en-regressor) | arrays(): X and Y | [From][api-en-src-physical_dataset] / [To][api-en-src-regressor] |
+| [`fibernet.PlanarManufacturingConfig`](#user-content-api-en-manufacturing_config) | [`fibernet.compile_planar`](#user-content-api-en-compile_planar) | configuration/factory | [From][api-en-src-manufacturing_config] / [To][api-en-src-compile_planar] |
+| [`fibernet.PlanarManufacturingConfig`](#user-content-api-en-manufacturing_config) | [`fibernet.compile_surface`](#user-content-api-en-compile_surface) | configuration/factory | [From][api-en-src-manufacturing_config] / [To][api-en-src-compile_surface] |
+| [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) | [`fibernet.export_mapped_route`](#user-content-api-en-export_route) | network + bound snapshot | [From][api-en-src-route_from_graph] / [To][api-en-src-export_route] |
+| [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) | [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) | returns provenance snapshot | [From][api-en-src-route_from_graph] / [To][api-en-src-graph_batch_type] |
+| [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) | [`fibernet.export_mapped_trails`](#user-content-api-en-export_trails) | trails + bound snapshot | [From][api-en-src-trails_from_graph] / [To][api-en-src-export_trails] |
+| [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) | [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) | returns provenance snapshot | [From][api-en-src-trails_from_graph] / [To][api-en-src-graph_batch_type] |
+| [`fibernet.StructureGraph.load_json`](#user-content-api-en-load_graph) | [`fibernet.StructureGraph`](#user-content-api-en-graph) | reconstructed graph | [From][api-en-src-load_graph] / [To][api-en-src-graph] |
+| [`fibernet.StructureGraph.save_json`](#user-content-api-en-save_graph) | [`fibernet.StructureGraph.load_json`](#user-content-api-en-load_graph) | matching native JSON file | [From][api-en-src-save_graph] / [To][api-en-src-load_graph] |
 
 **Record ownership (containment, not dataflow):**
-- [`fibernet.StructureGraph`](#api-en-graph) → [`fibernet.SNode`](#api-en-snode) — owns node records
-- [`fibernet.StructureGraph`](#api-en-graph) → [`fibernet.SEdge`](#api-en-sedge) — owns physical-edge records
+- [`fibernet.StructureGraph`](#user-content-api-en-graph) → [`fibernet.SNode`](#user-content-api-en-snode) — owns node records
+- [`fibernet.StructureGraph`](#user-content-api-en-graph) → [`fibernet.SEdge`](#user-content-api-en-sedge) — owns physical-edge records
 
 The 49 API-to-workflow memberships appear in the branches below; grouping is not class inheritance.
 
@@ -1626,9 +1626,9 @@ Build a planar unit, transform it, and tile the resulting graph.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- → [`fibernet.StructureGraph`](#api-en-graph) — produces 2D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- ← [`fibernet.register_unit`](#api-en-register_unit) — registers a unit factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1099)
-- ← [`fibernet.Material`](#api-en-material) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-en-graph) — produces 2D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.register_unit`](#user-content-api-en-register_unit) — registers a unit factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1099)
+- ← [`fibernet.Material`](#user-content-api-en-material) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
 
 </details>
 
@@ -1652,8 +1652,8 @@ Build and tile a registered three-dimensional unit.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- → [`fibernet.StructureGraph`](#api-en-graph) — produces 3D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- ← [`fibernet.Material`](#api-en-material) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-en-graph) — produces 3D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.Material`](#user-content-api-en-material) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/material.py#L14)
 
 </details>
 
@@ -1677,7 +1677,7 @@ Generate the finite closed FCC nearest-neighbor graph defined by v1.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.StructureGraph`](#api-en-graph) — produces versioned geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph`](#user-content-api-en-graph) — produces versioned geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1701,7 +1701,7 @@ Register a callable factory for the 2D pattern namespace.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.pattern_2d`](#api-en-pattern_2d) — registers a unit factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- → [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) — registers a unit factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
 
 </details>
 
@@ -1725,8 +1725,8 @@ Tile an existing unit graph while retaining independent parallel fibers.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — unit-cell input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.StructureGraph`](#api-en-graph) — tiled graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — unit-cell input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph`](#user-content-api-en-graph) — tiled graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -1780,28 +1780,28 @@ graph = fn.pattern_2d(
 <details>
 <summary>Documented handoffs · 22</summary>
 
-- ← [`fibernet.pattern_2d`](#api-en-pattern_2d) — produces 2D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
-- ← [`fibernet.pattern_3d`](#api-en-pattern_3d) — produces 3D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
-- ← [`fibernet.octet_fcc_v1`](#api-en-octet) — produces versioned geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/standard_lattice.py#L99)
-- → [`fibernet.tile_2d`](#api-en-tile) — unit-cell input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
-- ← [`fibernet.tile_2d`](#api-en-tile) — tiled graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
-- → [`fibernet.sim.prepare_nodal_controls`](#api-en-controls) — binds support/load IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.simulate`](#api-en-simulate) — geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.ReducedBeamSolver`](#api-en-reduced) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
-- → [`fibernet.solve_linear_transport`](#api-en-transport) — geometry and stable IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
-- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-en-lammps_prepare) — explicit 3D geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
-- → [`fibernet.GraphFeatureExtractor`](#api-en-features94) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
-- → [`fibernet.analysis.SnapshotFeatureExtractor`](#api-en-snapshot) — extract_graph(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/snapshot_features.py#L677)
-- → [`fibernet.analysis.analyze_topology`](#api-en-topology) — physical topology · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/topology_metrics.py#L36)
-- → [`fibernet.analysis.analyze_geometry_paths`](#api-en-paths) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/geometry_paths.py#L74)
-- → [`fibernet.ml.graph_batch`](#api-en-graph_batch) — snapshots authoritative graphs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
-- → [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) — connected all-even graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
-- → [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) — connected graph, odd degrees allowed · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
-- → [`fibernet.StructureGraph.save_json`](#api-en-save_graph) — native graph serialization · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
-- ← [`fibernet.StructureGraph.load_json`](#api-en-load_graph) — reconstructed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
-- → [`fibernet.StructureGraph.to_networkx_lossless`](#api-en-networkx) — native-record MultiGraph view · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L861)
-- → [`fibernet.show`](#api-en-show) — declared graph dimension · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L43)
-- → [`fibernet.render_deformation`](#api-en-deformation) — original + caller's deformed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/viz/render.py#L388)
+- ← [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) — produces 2D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- ← [`fibernet.pattern_3d`](#user-content-api-en-pattern_3d) — produces 3D graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
+- ← [`fibernet.octet_fcc_v1`](#user-content-api-en-octet) — produces versioned geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/standard_lattice.py#L99)
+- → [`fibernet.tile_2d`](#user-content-api-en-tile) — unit-cell input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
+- ← [`fibernet.tile_2d`](#user-content-api-en-tile) — tiled graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/tiling.py#L252)
+- → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-en-controls) — binds support/load IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.simulate`](#user-content-api-en-simulate) — geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.solve_linear_transport`](#user-content-api-en-transport) — geometry and stable IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
+- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-en-lammps_prepare) — explicit 3D geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
+- → [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
+- → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-en-snapshot) — extract_graph(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/snapshot_features.py#L677)
+- → [`fibernet.analysis.analyze_topology`](#user-content-api-en-topology) — physical topology · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/topology_metrics.py#L36)
+- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-en-paths) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/geometry_paths.py#L74)
+- → [`fibernet.ml.graph_batch`](#user-content-api-en-graph_batch) — snapshots authoritative graphs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
+- → [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) — connected all-even graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) — connected graph, odd degrees allowed · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- → [`fibernet.StructureGraph.save_json`](#user-content-api-en-save_graph) — native graph serialization · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
+- ← [`fibernet.StructureGraph.load_json`](#user-content-api-en-load_graph) — reconstructed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
+- → [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-en-networkx) — native-record MultiGraph view · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L861)
+- → [`fibernet.show`](#user-content-api-en-show) — declared graph dimension · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L43)
+- → [`fibernet.render_deformation`](#user-content-api-en-deformation) — original + caller's deformed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/viz/render.py#L388)
 
 </details>
 
@@ -1859,8 +1859,8 @@ Describe mechanical, thermal and electrical material properties.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- → [`fibernet.pattern_2d`](#api-en-pattern_2d) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
-- → [`fibernet.pattern_3d`](#api-en-pattern_3d) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
+- → [`fibernet.pattern_2d`](#user-content-api-en-pattern_2d) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L1867)
+- → [`fibernet.pattern_3d`](#user-content-api-en-pattern_3d) — explicit material argument · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/pattern.py#L2275)
 
 </details>
 
@@ -1884,7 +1884,7 @@ Combine an equilibrium spring, Maxwell branches and an optional dashpot.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.ml.BeamFrameFEM`](#api-en-fem) — history(material=...) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) — history(material=...) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -1925,8 +1925,8 @@ Translate stable-ID supports and forces into existing solver row controls.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — binds support/load IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) — returns prepared controls · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — binds support/load IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) — returns prepared controls · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
 
 </details>
 
@@ -1950,9 +1950,9 @@ Retain graph binding and expose Taichi/FEM row-ordered keyword arguments.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.sim.prepare_nodal_controls`](#api-en-controls) — returns prepared controls · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.TaichiEngine`](#api-en-taichi) — taichi_kwargs(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- → [`fibernet.ml.BeamFrameFEM`](#api-en-fem) — fem_kwargs(graph) for raw solve · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- ← [`fibernet.sim.prepare_nodal_controls`](#user-content-api-en-controls) — returns prepared controls · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.TaichiEngine`](#user-content-api-en-taichi) — taichi_kwargs(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) — fem_kwargs(graph) for raw solve · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -1976,9 +1976,9 @@ Carry displacements, edge response and backend-specific metadata.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.simulate`](#api-en-simulate) — supported mechanical result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- ← [`fibernet.TaichiEngine`](#api-en-taichi) — spring result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- ← [`fibernet.ml.BeamFrameFEM`](#api-en-fem) — to_sim_result(...) adapter · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- ← [`fibernet.simulate`](#user-content-api-en-simulate) — supported mechanical result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- ← [`fibernet.TaichiEngine`](#user-content-api-en-taichi) — spring result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- ← [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) — to_sim_result(...) adapter · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
 
 </details>
 
@@ -2002,9 +2002,9 @@ Keep geometry, physical-edge identity, directed messages and optional provenance
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.ml.graph_batch`](#api-en-graph_batch) — returns GraphBatch · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
-- ← [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
-- ← [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.ml.graph_batch`](#user-content-api-en-graph_batch) — returns GraphBatch · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L210)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
@@ -2033,10 +2033,10 @@ Dispatch supported combinations of backend, loading protocol and material contro
 <details>
 <summary>Documented handoffs · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.TaichiEngine`](#api-en-taichi) — spring/taichi route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
-- → [`fibernet.ml.BeamFrameFEM`](#api-en-fem) — fem route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
-- → [`fibernet.SimResult`](#api-en-sim_result) — supported mechanical result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.TaichiEngine`](#user-content-api-en-taichi) — spring/taichi route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L1223)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-en-fem) — fem route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/beam_frame_fem.py#L46)
+- → [`fibernet.SimResult`](#user-content-api-en-sim_result) — supported mechanical result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
 
 </details>
 
@@ -2060,9 +2060,9 @@ Run the Taichi axial-spring route with explicit device and physical inputs.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) — taichi_kwargs(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#api-en-simulate) — spring/taichi route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.SimResult`](#api-en-sim_result) — spring result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) — taichi_kwargs(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-en-simulate) — spring/taichi route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.SimResult`](#user-content-api-en-sim_result) — spring result · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
 
 </details>
 
@@ -2086,10 +2086,10 @@ Expose raw beam-frame solves and an explicit 2D viscoelastic history route.
 <details>
 <summary>Documented handoffs · 4</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#api-en-prepared_controls) — fem_kwargs(graph) for raw solve · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#api-en-simulate) — fem route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
-- → [`fibernet.SimResult`](#api-en-sim_result) — to_sim_result(...) adapter · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
-- ← [`fibernet.LinearViscoelasticMaterial`](#api-en-visco_material) — history(material=...) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/viscoelastic.py#L21)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-en-prepared_controls) — fem_kwargs(graph) for raw solve · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-en-simulate) — fem route · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/easy.py#L100)
+- → [`fibernet.SimResult`](#user-content-api-en-sim_result) — to_sim_result(...) adapter · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/accelerated.py#L620)
+- ← [`fibernet.LinearViscoelasticMaterial`](#user-content-api-en-visco_material) — history(material=...) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/viscoelastic.py#L21)
 
 </details>
 
@@ -2113,10 +2113,10 @@ Run the shared NumPy axial, degree-2 bending and node-contact model.
 <details>
 <summary>Documented handoffs · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.analysis.analyze_tensile_recruitment`](#api-en-recruitment) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/tensile_recruitment.py#L130)
-- → [`fibernet.ml.PlanarPhysicalDataset`](#api-en-physical_dataset) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.CurveInverseDesigner`](#api-en-curve_inverse) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/curve_inverse.py#L248)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-en-recruitment) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/tensile_recruitment.py#L130)
+- → [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-en-physical_dataset) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.CurveInverseDesigner`](#user-content-api-en-curve_inverse) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/curve_inverse.py#L248)
 
 </details>
 
@@ -2140,8 +2140,8 @@ Solve the resistor network with explicit edge conductance and voltage boundaries
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — geometry and stable IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.run_joule_heating`](#api-en-joule) — electrical result as heat source · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/joule_heating.py#L384)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — geometry and stable IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.run_joule_heating`](#user-content-api-en-joule) — electrical result as heat source · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/joule_heating.py#L384)
 
 </details>
 
@@ -2165,7 +2165,7 @@ Transfer an existing electrical result into transient thermal evolution.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.solve_linear_transport`](#api-en-transport) — electrical result as heat source · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
+- ← [`fibernet.solve_linear_transport`](#user-content-api-en-transport) — electrical result as heat source · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/linear_transport.py#L125)
 
 </details>
 
@@ -2189,8 +2189,8 @@ Compile a declared 3D bead-and-harmonic-bond model without starting a native run
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — explicit 3D geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#api-en-lammps_task) — PreparedRun · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L691)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — explicit 3D geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-en-lammps_task) — PreparedRun · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L691)
 
 </details>
 
@@ -2214,7 +2214,7 @@ Manage the explicit one-shot native CLI lifecycle and parse its bounded outputs.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#api-en-lammps_prepare) — PreparedRun · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
+- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-en-lammps_prepare) — PreparedRun · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/integrations/lammps_backend.py#L135)
 
 </details>
 
@@ -2243,8 +2243,8 @@ Extract the legacy 94-feature schema with explicit status through extract_with_s
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.ml.FiberNetDataset`](#api-en-dataset) — wrap values and feature_contract metadata in DatasetSample records · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/dataset.py#L230)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.ml.FiberNetDataset`](#user-content-api-en-dataset) — wrap values and feature_contract metadata in DatasetSample records · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/dataset.py#L230)
 
 </details>
 
@@ -2268,7 +2268,7 @@ Measure structure, planar pores and optional finite-width overlap in a bounded s
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — extract_graph(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — extract_graph(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2292,7 +2292,7 @@ Measure topology on the authoritative physical-edge graph.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — physical topology · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — physical topology · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2316,7 +2316,7 @@ Measure XYZ chord/polyline lengths and selected undirected shortest paths.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2340,7 +2340,7 @@ Track positive-strain edge recruitment and grip-connected paths across frames.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.ReducedBeamSolver`](#api-en-reduced) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -2369,8 +2369,8 @@ Snapshot graphs with physical-edge identity and both message directions intact.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — snapshots authoritative graphs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) — returns GraphBatch · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — snapshots authoritative graphs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) — returns GraphBatch · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -2394,7 +2394,7 @@ Store samples, feature selections, targets and provenance with matching persiste
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.GraphFeatureExtractor`](#api-en-features94) — wrap values and feature_contract metadata in DatasetSample records · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
+- ← [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) — wrap values and feature_contract metadata in DatasetSample records · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/analysis/graph_features.py#L96)
 
 </details>
 
@@ -2418,8 +2418,8 @@ Generate bounded planar samples using the shared reduced-solver workflow.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#api-en-regressor) — arrays(): X and Y · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
-- ← [`fibernet.ReducedBeamSolver`](#api-en-reduced) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-en-regressor) — arrays(): X and Y · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -2443,7 +2443,7 @@ Compute endpoint-based planar structural descriptors with NumPy.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#api-en-regressor) — stack 14-element vectors into X rows; supply matching Y labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-en-regressor) — stack 14-element vectors into X rows; supply matching Y labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_learning.py#L89)
 
 </details>
 
@@ -2467,8 +2467,8 @@ Train a three-target regressor with training-only normalization and held-out row
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.ml.PlanarPhysicalDataset`](#api-en-physical_dataset) — arrays(): X and Y · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.light_features`](#api-en-light_features) — stack 14-element vectors into X rows; supply matching Y labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_surrogate.py#L4)
+- ← [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-en-physical_dataset) — arrays(): X and Y · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.light_features`](#user-content-api-en-light_features) — stack 14-element vectors into X rows; supply matching Y labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/physical_surrogate.py#L4)
 
 </details>
 
@@ -2492,7 +2492,7 @@ Search graph-builder parameters with a fixed evaluation budget.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.ReducedBeamSolver`](#api-en-reduced) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
@@ -2555,8 +2555,8 @@ Configure the package's shared planar topology and deformation controls.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- → [`fibernet.compile_planar`](#api-en-compile_planar) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L291)
-- → [`fibernet.compile_surface`](#api-en-compile_surface) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L400)
+- → [`fibernet.compile_planar`](#user-content-api-en-compile_planar) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L291)
+- → [`fibernet.compile_surface`](#user-content-api-en-compile_surface) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L400)
 
 </details>
 
@@ -2580,7 +2580,7 @@ Build the shared manufacturing topology from its configuration/factory.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#api-en-manufacturing_config) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-en-manufacturing_config) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
@@ -2604,7 +2604,7 @@ Map closed units to a validated quadrilateral surface mesh.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#api-en-manufacturing_config) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-en-manufacturing_config) — configuration/factory · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
@@ -2628,9 +2628,9 @@ Adapt an existing connected, all-even graph without topology repair.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — connected all-even graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.export_mapped_route`](#api-en-export_route) — network + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L296)
-- → [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — connected all-even graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.export_mapped_route`](#user-content-api-en-export_route) — network + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L296)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -2654,7 +2654,7 @@ Write a millimetre-coordinate CSV and stable-ID JSON sidecar.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.manufacturing_from_graph`](#api-en-route_from_graph) — network + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) — network + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_bridge.py#L154)
 
 </details>
 
@@ -2678,9 +2678,9 @@ Route connected odd-degree graphs without adding physical fibers.
 <details>
 <summary>Documented handoffs · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — connected graph, odd degrees allowed · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.export_mapped_trails`](#api-en-export_trails) — trails + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L282)
-- → [`fibernet.ml.GraphBatch`](#api-en-graph_batch_type) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — connected graph, odd degrees allowed · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.export_mapped_trails`](#user-content-api-en-export_trails) — trails + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L282)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-en-graph_batch_type) — returns provenance snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/ml/graph_data.py#L118)
 
 </details>
 
@@ -2704,7 +2704,7 @@ Write stroke-aware mm CSV and complete stable-ID JSON mapping.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.manufacturing_trails_from_graph`](#api-en-trails_from_graph) — trails + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) — trails + bound snapshot · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
@@ -2733,8 +2733,8 @@ Serialize the native graph record before opening the destination.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — native graph serialization · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
-- → [`fibernet.StructureGraph.load_json`](#api-en-load_graph) — matching native JSON file · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — native graph serialization · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- → [`fibernet.StructureGraph.load_json`](#user-content-api-en-load_graph) — matching native JSON file · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1116)
 
 </details>
 
@@ -2758,8 +2758,8 @@ Reconstruct a graph from the matching native JSON schema.
 <details>
 <summary>Documented handoffs · 2</summary>
 
-- ← [`fibernet.StructureGraph.save_json`](#api-en-save_graph) — matching native JSON file · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
-- → [`fibernet.StructureGraph`](#api-en-graph) — reconstructed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph.save_json`](#user-content-api-en-save_graph) — matching native JSON file · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L1104)
+- → [`fibernet.StructureGraph`](#user-content-api-en-graph) — reconstructed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2783,7 +2783,7 @@ Export a detached MultiGraph carrying the native-v1 records.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — native-record MultiGraph view · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — native-record MultiGraph view · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2807,7 +2807,7 @@ Select the 2D or 3D renderer from the declared graph dimension.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — declared graph dimension · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — declared graph dimension · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 
@@ -2831,7 +2831,7 @@ Render original and deformed graphs side by side.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#api-en-graph) — original + caller's deformed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
+- ← [`fibernet.StructureGraph`](#user-content-api-en-graph) — original + caller's deformed graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/0e017c22265da60e57dce7ce4119dd8ea6915e19/fibernet/core/structure_graph.py#L199)
 
 </details>
 

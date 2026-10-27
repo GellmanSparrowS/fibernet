@@ -4,6 +4,8 @@ The README presents 49 representative interfaces in seven workflows. Its nested 
 
 The SVGs are static directed chord summaries, not clickable navigation or runtime call graphs. Native branches, links and a complete linear handoff list provide the navigation. Relationship links target the corresponding API entry in the same language, with separate source links. Entry anchors use stable node IDs (`api-en-<id>` / `api-zh-<id>`), not translated labels. If GitHub leaves a destination hidden, expand its workflow group; this guide does not promise automatic disclosure expansion or synchronized language/view switching. English remains visible; Chinese is a native same-page disclosure.
 
+GitHub renders an authored `<a name="api-en-graph"></a>` as `name="user-content-api-en-graph"`. Keep `entry_anchor()` names unchanged, and use `entry_href()` for relationship destinations such as `#user-content-api-en-graph`. The linear table and per-entry handoffs follow this same rule in both languages. This targets GitHub's rendered README anchors without changing disclosure defaults; other Markdown renderers may handle anchor names differently.
+
 `code_registry.json` remains the module inventory. `navigation-overlay.json` contains only the selected interfaces, their public ownership names, bilingual usage descriptions and explicit data handoffs. A handoff describes a connection the caller makes, not an automatic conversion or a claim that different physical models are interchangeable.
 
 ## Relationship projection and acceptance

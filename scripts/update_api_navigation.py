@@ -105,6 +105,10 @@ def entry_anchor(node_id, language):
         raise ValueError('Invalid API entry anchor')
     return 'api-' + language + '-' + node_id
 
+def entry_href(node_id, language):
+    """Target GitHub's rendered name while keeping the authored name stable."""
+    return '#user-content-' + entry_anchor(node_id, language)
+
 def relationships(data):
     """One deterministic projection of the existing nodes and typed edges."""
     nodes = {n['id']: n for n in data['nodes']}
@@ -207,7 +211,7 @@ def handoff_list(data, l):
             '| --- | --- | --- | --- |']
     def node_link(node_id):
         node = nodes[node_id]
-        return f'[`{node["namespace"]}`](#{entry_anchor(node_id, l)})'
+        return f'[`{node["namespace"]}`]({entry_href(node_id, l)})'
     used = set()
     for edge in handoffs:
         source, target = edge['source'], edge['target']
@@ -246,7 +250,7 @@ def section(data, l):
                 for edge in links:
                     other=next(x for x in data['nodes'] if x['id']==(edge['target'] if edge['source']==n['id'] else edge['source']))
                     direction='→' if edge['source']==n['id'] else '←'
-                    s += [f'- {direction} [`{other["namespace"]}`](#{entry_anchor(other["id"], l)}) — {text(edge["label"],l)} · [{"源码" if zh else "Source"}]({other["sourceUrl"]})']
+                    s += [f'- {direction} [`{other["namespace"]}`]({entry_href(other["id"], l)}) — {text(edge["label"],l)} · [{"源码" if zh else "Source"}]({other["sourceUrl"]})']
                 s += ['','</details>','']
             s += [f'[{"源码" if zh else "Source"}]({n["sourceUrl"]}) · [{"公共导出" if zh else "Public export"}]({n["publicExportUrl"]})'+(f' · [{"文档" if zh else "Documentation"}]({n["docsUrl"]})' if n.get('docsUrl') else ''),'','</details>','']
         s += ['</details>','']

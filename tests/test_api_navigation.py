@@ -189,13 +189,13 @@ class APINavigationTests(unittest.TestCase):
                         continue
                     other_id = edge['target'] if edge['source'] == node['id'] else edge['source']
                     other = by_id[other_id]
-                    anchor = NAV.entry_anchor(other_id, language)
-                    expected_links.append((other['namespace'], anchor))
+                    href = NAV.entry_href(other_id, language)
+                    expected_links.append((other['namespace'], href))
                     source_label = 'Source' if language == 'en' else '源码'
-                    suffix = (f'](#{anchor}) — {edge["label"][language]} · '
+                    suffix = (f']({href}) — {edge["label"][language]} · '
                               f'[{source_label}]({other["sourceUrl"]})')
                     self.assertIn(suffix, entry)
-                actual_links = re.findall(r'\[`([^`]+)`\]\(#(api-[^)]+)\)', entry)
+                actual_links = re.findall(r'\[`([^`]+)`\]\((#user-content-api-[^)]+)\)', entry)
                 self.assertCountEqual(actual_links, expected_links)
         for path, count in (('README.md', 98), ('README_CN.md', 49)):
             anchors = re.findall(pattern, self.outputs[path])
@@ -206,11 +206,34 @@ class APINavigationTests(unittest.TestCase):
     def test_anchor_validation_and_static_wording(self):
         self.assertEqual(NAV.entry_anchor('curve_inverse', 'en'), 'api-en-curve_inverse')
         self.assertEqual(NAV.entry_anchor('curve_inverse', 'zh'), 'api-zh-curve_inverse')
+        self.assertEqual(NAV.entry_href('curve_inverse', 'en'), '#user-content-api-en-curve_inverse')
+        self.assertEqual(NAV.entry_href('curve_inverse', 'zh'), '#user-content-api-zh-curve_inverse')
         for node_id, language in (('Graph', 'en'), ('x/y', 'en'), ('', 'en'), ('graph', 'fr')):
             with self.subTest(node_id=node_id, language=language), self.assertRaises(ValueError):
                 NAV.entry_anchor(node_id, language)
+            with self.subTest(node_id=node_id, language=language), self.assertRaises(ValueError):
+                NAV.entry_href(node_id, language)
         for language, phrase in (('en', 'static directed chord summary'), ('zh', '静态有向弦图')):
             self.assertIn(phrase, NAV.section(self.data, language))
+
+    def test_github_sanitized_relationship_targets_match_authored_names(self):
+        for language in ('en', 'zh'):
+            section = NAV.section(self.data, language)
+            anchors = set(re.findall(r'<a name="(api-(?:en|zh)-[a-z][a-z0-9_]*)"></a>', section))
+            links = re.findall(r'\]\((#user-content-api-[^)]+)\)', section)
+            # 50 table rows x two endpoints + 50 handoffs x two entries +
+            # two ownership rows x two endpoints. No raw or double-prefixed hrefs.
+            self.assertEqual(len(links), 204)
+            self.assertNotRegex(section, r'\]\(#api-(?:en|zh)-')
+            self.assertNotIn('#user-content-user-content-', section)
+            self.assertNotIn('<a name="user-content-', section)
+            prefix = '#user-content-'
+            for href in links:
+                self.assertTrue(href.startswith(prefix))
+                authored = href[len(prefix):]  # Strip this exact prefix once only.
+                self.assertIn(authored, anchors)
+                self.assertTrue(authored.startswith('api-' + language + '-'))
+            self.assertIn('](#user-content-api-' + language + '-graph)', section)
 
     def test_chord_projection_accounts_for_all_typed_edges(self):
         nodes, handoffs, pairs, ownership = NAV.relationships(self.data)
@@ -261,8 +284,8 @@ class APINavigationTests(unittest.TestCase):
             for row, edge in zip(rows, handoffs):
                 for key in ('source', 'target'):
                     node_id = edge[key]
-                    anchor = NAV.entry_anchor(node_id, language)
-                    self.assertIn(f'[`{nodes[node_id]["namespace"]}`](#{anchor})', row)
+                    href = NAV.entry_href(node_id, language)
+                    self.assertIn(f'[`{nodes[node_id]["namespace"]}`]({href})', row)
                     self.assertIn(f'[api-{language}-src-{node_id}]', row)
                     self.assertIn(f'[api-{language}-src-{node_id}]: {nodes[node_id]["sourceUrl"]}', block)
                 self.assertIn(edge['label'][language].replace('|', r'\|').replace('\n', ' '), row)
