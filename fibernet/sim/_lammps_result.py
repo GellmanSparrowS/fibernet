@@ -322,18 +322,69 @@ def _state_summary_from_validated(record):
     return summary
 
 
-def _plain_json_tree(value, depth=0):
+def _plain_json_tree(value, depth=0, budget=None):
     """Conservative hook-free fast path; every other accepted type falls back."""
+    if budget is not None:
+        budget[0] -= 1
+        if budget[0] < 0:
+            return False
     if depth > 64:
         return False
     if type(value) in (str, int, float, bool, type(None)):
         return True
     if type(value) in (list, tuple):
-        return all(_plain_json_tree(item, depth + 1) for item in value)
+        return all(_plain_json_tree(item, depth + 1, budget) for item in value)
     if type(value) is dict:
-        return all(type(key) is str and _plain_json_tree(item, depth + 1)
+        return all(type(key) is str and _plain_json_tree(item, depth + 1, budget)
                    for key, item in value.items())
     return False
+
+
+
+def _plain_full_history_export(result, detailed):
+    """Eligibility only, never validation or a cache across export calls.
+
+    The detailed projection must not invoke user coercion or mutation hooks
+    between full validation and use of its detached record. Other types retain
+    the original validation order, including the post-projection guard.
+    """
+    from .accelerated import SimResult, _SPRING_PROVENANCE
+    if (type(result) is not SimResult or detailed is not True
+            or type(vars(result)) is not dict
+            or len(vars(result)) != len(SimResult.__dataclass_fields__)
+            or any(type(key) is not str for key in vars(result))
+            or set(vars(result)) != set(SimResult.__dataclass_fields__)
+            or type(result.metadata) is not dict
+            or type(result.dynamics_state) is not dict
+            or type(result.history) is not list
+            or type(result.positions_trajectory) is not list
+            or len(result.positions_trajectory) > _profiles.FULL_HISTORY_PROFILE['max_output_frames']
+            or result.algorithmic_energy_ledger is not None):
+        return False
+    arrays = ('edge_forces', 'edge_stretches', 'displacements', 'deformed_positions')
+    def plain_array(value):
+        return type(value) is np.ndarray and value.dtype.kind in 'fiu'
+    if (any(value is not None and not plain_array(value)
+            for value in (getattr(result, key) for key in arrays))
+            or any(not plain_array(frame) for frame in result.positions_trajectory)):
+        return False
+    remaining = set(SimResult.__dataclass_fields__) - set(arrays) - {'positions_trajectory'}
+    # Eligibility must itself terminate on wide/aliased JSON trees before the
+    # authoritative byte guard. Exhaustion merely selects the original path.
+    budget = [2*1024*1024]
+    if not all(_plain_json_tree(getattr(result, key), budget=budget) for key in remaining):
+        return False
+    # Do not look up user-controlled mapping keys before proving exact strings.
+    if (type(result.dynamics_state.get('schema')) is not str
+            or result.dynamics_state['schema'] != SCHEMA
+            or type(result.metadata.get('profile')) is not dict
+            or type(result.metadata['profile'].get('name')) is not str
+            or result.metadata['profile']['name'] != _profiles.FULL_HISTORY_NAME
+            or any(k in result.metadata for k in
+                   ('native_axial_inputs', 'native_axial_viscoelastic',
+                    _SPRING_PROVENANCE))):
+        return False
+    return True
 
 
 def validate_result(result):

@@ -297,6 +297,32 @@ def reviewed_spring_provenance_source():
     return source
 
 
+RESULT_PROCESSING_DELTA_PIN = 'f9af4731055f6a07c1d691cf562998b5c69a1eafe89a4498c1f55bf81a74cc98'
+
+
+def candidate_result_processing_source(reverse=None):
+    raw = (ROOT/'tests/fixtures/result_processing_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == RESULT_PROCESSING_DELTA_PIN, 'result processing delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'candidate_result_processing_delta/1'
+    source = reviewed_lammps_reference_source()
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'result processing base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'result processing delta not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'result processing source changed'
+    if reverse is None:
+        return source
+    assert reverse == source, 'unreviewed result processing source'
+    for hunk in reversed(delta['hunks']):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert after and reverse.count(after) == 1, 'result processing inverse not uniquely located'
+        reverse = reverse.replace(after, before, 1)
+    assert reverse == reviewed_lammps_reference_source(), 'result processing inverse changed prior source'
+    return reverse
+
+
 def normalize_result_identity_method(function):
     """Qualify the complete reviewed prefix; retain every appended statement."""
     historical = result_detail_method(public_baseline('fibernet/sim/accelerated.py').read_bytes())
@@ -936,7 +962,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source(), candidate_result_processing_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -997,12 +1023,15 @@ def restore_historical_save(result_node):
     provenance_result = next(n for n in provenance_tree.body if getattr(n,'name',None)=='SimResult')
     metadata_tree = ast.parse(reviewed_lammps_metadata_source().decode('utf-8'))
     metadata_result = next(n for n in metadata_tree.body if getattr(n,'name',None)=='SimResult')
+    processing_tree = ast.parse(candidate_result_processing_source())
+    processing_result = next(n for n in processing_tree.body if getattr(n,'name',None)=='SimResult')
     for name in ('to_dict', 'load'):
         method=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name==name)
         expected_method=next(n for n in expected_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         provenance_method=next(n for n in provenance_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         metadata_method=next(n for n in metadata_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
-        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method), canonical_ast(metadata_method)), 'public result method changed: '+name
+        processing_method = next(n for n in processing_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
+        assert canonical_ast(method) in (canonical_ast(expected_method), canonical_ast(provenance_method), canonical_ast(metadata_method), canonical_ast(processing_method)), 'public result method changed: '+name
         old_method=next(n for n in old_result.body if isinstance(n,ast.FunctionDef) and n.name==name)
         node.body[node.body.index(method)]=old_method
     detailed=next(n for n in node.body if isinstance(n,ast.FunctionDef) and n.name=='compute_detailed')
@@ -1194,7 +1223,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
             with self.subTest(source=relative):
                 expected = (reviewed_taichi_controls_source() if relative == 'fibernet/sim/accelerated.py'
                             else reviewed_easy_optional_import_source())
-                self.assertEqual(reviewed_lammps_reference_source(reverse=(ROOT/relative).read_bytes())
+                self.assertEqual(reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=(ROOT/relative).read_bytes()))
                                  if relative == 'fibernet/sim/accelerated.py' else (ROOT/relative).read_bytes(), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
@@ -1299,7 +1328,7 @@ class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
         prior = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
         current = reviewed_saved_energy_diagnostics_source()
         self.assertEqual(current, restore_reviewed_lammps_metadata_source(
-            reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=SOURCE.read_bytes()))))
+            reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=SOURCE.read_bytes())))))
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
         old, new = ast.parse(prior), ast.parse(current)
@@ -1342,7 +1371,7 @@ class LammpsMetadataSourceAdmission(unittest.TestCase):
     def test_exact_reversible_delta_changes_only_two_methods(self):
         prior = reviewed_saved_energy_diagnostics_source()
         current = reviewed_lammps_metadata_source()
-        self.assertEqual(current, reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=SOURCE.read_bytes())))
+        self.assertEqual(current, reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=SOURCE.read_bytes()))))
         self.assertEqual(restore_reviewed_lammps_metadata_source(current), prior)
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
@@ -1413,7 +1442,7 @@ class TaichiControlsSourceAdmission(unittest.TestCase):
     def test_exact_reversible_delta_changes_only_dynamics_body(self):
         prior = reviewed_lammps_metadata_source()
         current = reviewed_taichi_controls_source()
-        self.assertEqual(current, reviewed_lammps_reference_source(reverse=SOURCE.read_bytes()))
+        self.assertEqual(current, reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=SOURCE.read_bytes())))
         self.assertEqual(reviewed_taichi_controls_source(reverse=current), prior)
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
@@ -1466,7 +1495,7 @@ class LammpsReferenceSourceAdmission(unittest.TestCase):
     def test_exact_current_forward_inverse_and_historical_admission(self):
         prior = reviewed_taichi_controls_source()
         current = reviewed_lammps_reference_source()
-        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(current, candidate_result_processing_source(reverse=SOURCE.read_bytes()))
         self.assertEqual(reviewed_lammps_reference_source(reverse=current), prior)
         for raw in (prior, current):
             require_public_source('fibernet/sim/accelerated.py', raw)
@@ -1549,7 +1578,7 @@ class LammpsReferenceControlsComposition(unittest.TestCase):
         combined = reviewed_lammps_reference_source()
         controls = reviewed_lammps_reference_source(reverse=combined)
         baseline = reviewed_taichi_controls_source(reverse=controls)
-        self.assertEqual(combined, SOURCE.read_bytes())
+        self.assertEqual(combined, candidate_result_processing_source(reverse=SOURCE.read_bytes()))
         self.assertEqual(baseline, reviewed_lammps_metadata_source())
         self.assertEqual(hashlib.sha256(baseline).hexdigest(),
                          'b77aaa7b37216174d97805b4529f1dbaec3d3099106f630221b60147124ccf82')
@@ -1595,14 +1624,14 @@ class BackendLazySourceComposition(unittest.TestCase):
     def test_current_pair_preserves_both_ordered_lineages(self):
         accelerated = SOURCE.read_bytes()
         easy = (ROOT/'fibernet/easy.py').read_bytes()
-        self.assertEqual(hashlib.sha256(accelerated).hexdigest(), LAMMPS_REFERENCE_RESULT_SHA256)
+        self.assertEqual(hashlib.sha256(candidate_result_processing_source(reverse=accelerated)).hexdigest(), LAMMPS_REFERENCE_RESULT_SHA256)
         self.assertEqual(hashlib.sha256(easy).hexdigest(), EASY_OPTIONAL_IMPORT_SHA256)
-        self.assertEqual(accelerated, reviewed_lammps_reference_source())
+        self.assertEqual(accelerated, candidate_result_processing_source())
         self.assertEqual(easy, reviewed_easy_optional_import_source())
         require_public_source('fibernet/sim/accelerated.py', accelerated)
         require_public_source('fibernet/easy.py', easy)
         self.assertEqual(reviewed_taichi_controls_source(
-            reverse=reviewed_lammps_reference_source(reverse=accelerated)),
+            reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=accelerated))),
             reviewed_lammps_metadata_source())
         self.assertEqual(reviewed_easy_optional_import_source(reverse=easy),
                          reviewed_easy_batch_report_source())
@@ -1617,6 +1646,54 @@ class BackendLazySourceComposition(unittest.TestCase):
                 with self.subTest(source=relative, digest=hashlib.sha256(changed).hexdigest()):
                     with self.assertRaises(AssertionError):
                         require_public_source(relative, changed)
+
+
+class ResultProcessingSourceAdmission(unittest.TestCase):
+    def test_exact_candidate_and_prior_sources_are_admitted(self):
+        current = candidate_result_processing_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(candidate_result_processing_source(reverse=current), reviewed_lammps_reference_source())
+        with self.assertRaises(AssertionError):
+            candidate_result_processing_source(reverse=reviewed_lammps_reference_source())
+        for raw in (reviewed_lammps_reference_source(), current):
+            require_public_source('fibernet/sim/accelerated.py', raw)
+
+    def test_only_to_dict_differs(self):
+        def without_to_dict(raw):
+            tree = ast.parse(raw)
+            result = next(n for n in tree.body if getattr(n, 'name', None)=='SimResult')
+            result.body = [n for n in result.body if getattr(n, 'name', None)!='to_dict']
+            return canonical_ast(tree)
+        self.assertEqual(without_to_dict(reviewed_lammps_reference_source()),
+                         without_to_dict(candidate_result_processing_source()))
+
+    def test_unapproved_shortcuts_and_unrelated_changes_refused(self):
+        raw = candidate_result_processing_source()
+        replacements = (
+            (b'if _plain_full_history_export(self, detailed):', b'if True:'),
+            (b'record = validate_result(self)', b'record = self.dynamics_state'),
+            (b'if record is None:', b'if False:'),
+            (b'            validate_persisted_metadata(self.metadata)', b'            pass'),
+            (b"hp.json_bytes(d, profile['export_bytes'], indent=2)", b'pass'),
+            (b'json.dump(data, f, indent=2, default=convert)', b'pass'),
+        )
+        for before, after in replacements:
+            self.assertEqual(raw.count(before), 1)
+            with self.subTest(mutation=before), self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', raw.replace(before, after, 1))
+        for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n')):
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', changed)
+
+    def test_delta_digest_is_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/result_processing_v1/accelerated_delta.json'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw+b'\n' if path==fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'result processing delta changed'):
+                candidate_result_processing_source()
 
 
 class SourceShape(unittest.TestCase):
@@ -1637,7 +1714,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=SOURCE.read_bytes()))
+        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=SOURCE.read_bytes())))
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -1673,7 +1750,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=SOURCE.read_bytes()))
+        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=SOURCE.read_bytes())))
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())

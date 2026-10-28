@@ -73,3 +73,6 @@ tests/fixtures/legacy_analysis_v1/api_delta.json -text
 
 # Exact reviewed LAMMPS persistence source delta.
 tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json -text
+
+# Exact result-processing source delta composed on current main.
+tests/fixtures/result_processing_v1/accelerated_delta.json -text
