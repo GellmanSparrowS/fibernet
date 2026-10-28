@@ -51,6 +51,18 @@ stable IDs. Node and edge IDs in the returned result identify the arrays.
 The wrapper preserves the graph, its parallel members and the result unchanged.
 It does not convert a FiberNetwork or silently reindex a graph.
 
+Dynamics validates these caller controls even without explicit masses, state
+recording or declared units: `fixed_nodes` must contain nonnegative integer rows
+below the node count (not booleans); `dt` must be a finite positive real scalar;
+`dashpot` and `drag` must be finite nonnegative real scalars; and a supplied
+`external_force` must be a finite real array of shape `(N, 3)`. Invalid controls
+raise `ValueError` before dynamics field allocation. Negative row indices no
+longer select nodes from the end, and boolean rows no longer act as NumPy masks.
+This is not a stability check. The public wrapper constructs the engine first,
+so these checks do not promise rejection before Taichi runtime initialization.
+For stable-ID supports and loads, use
+`prepare_nodal_controls(...).taichi_kwargs(graph)` rather than passing IDs as rows.
+
 The underlying model remains straight endpoint axial dynamics with its existing
 kick/drift, damping and projection conventions. This alias adds no bending,
 contact, prestress, initial velocity, new boundary/load model or material law.

@@ -289,7 +289,7 @@ def plot_dynamics_result(
         for node_i, node_j in edges:
             lines.append([positions[node_i][:2], positions[node_j][:2]])
         
-        cmap = matplotlib.colormaps.get_cmap(colormap)
+        cmap = plt.get_cmap(colormap)
         norm = Normalize(vmin=strains.min(), vmax=strains.max())
         lc = LineCollection(
             lines, linewidths=1.5, cmap=cmap, norm=norm,
@@ -375,7 +375,7 @@ def plot_metamaterial(
         orientations.append(angle)
     
     orientations = np.array(orientations)
-    cmap = matplotlib.colormaps.get_cmap(colormap)
+    cmap = plt.get_cmap(colormap)
     norm = Normalize(vmin=-np.pi, vmax=np.pi)
     
     lc = LineCollection(

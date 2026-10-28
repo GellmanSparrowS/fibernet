@@ -718,6 +718,10 @@ class SnapshotFeatureExtractor:
         """Analyze a StructureGraph or a legacy dense-row graph-like object.
 
         StructureGraph IDs are mapped to sorted position rows by to_numpy().
+        Nonempty edge-owned internal_points reject instead of silently becoming
+        endpoint chords. For piecewise-straight analysis, explicitly represent
+        sampled points as graph nodes joined by straight edges; this changes
+        node/edge counts and is not an equivalent feature-schema conversion.
         Other objects must supply edge_array() endpoints as zero-based row
         indices into node_positions(); arbitrary node identity is not inferred.
         """
@@ -726,6 +730,20 @@ class SnapshotFeatureExtractor:
 
         is_structure_graph = isinstance(graph, StructureGraph)
         if is_structure_graph:
+            internal_point_edge_ids = tuple(
+                edge_id for edge_id, edge in graph.edges.items()
+                if edge.internal_points is not None and len(edge.internal_points)
+            )
+            if internal_point_edge_ids:
+                raise ValueError(
+                    "SnapshotFeatureExtractor.extract_graph requires straight graph edges; "
+                    "nonempty internal_points on edge IDs "
+                    + repr(internal_point_edge_ids)
+                    + " would be silently discarded. Explicitly discretize the path "
+                    "into graph nodes joined by straight edges before analysis. "
+                    "Discretization changes node/edge counts; it is not an equivalent "
+                    "feature-schema conversion."
+                )
             positions, edges, _ = graph.to_numpy()
         else:
             positions = graph.node_positions()

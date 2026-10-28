@@ -31,13 +31,33 @@ if _TYPE_CHECKING:
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
+import fibernet.sim as _sim
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
 from fibernet.sim._taichi_geometry import (
     preflight_taichi_geometry as _preflight_taichi_geometry,
     validate_geometry_policy as _validate_geometry_policy,
 )
+
+
+# Keep provider-independent utilities usable without probing a native engine.
+# Explicit alias access still returns the original implementation object.
+_LAZY_EXPORTS = {
+    "TaichiEngine": "fibernet.sim.accelerated",
+    "SimResult": "fibernet.sim.accelerated",
+    "render_graph": "fibernet.viz.render",
+    "render_deformation": "fibernet.viz.render",
+}
+for _name in _LAZY_EXPORTS:
+    globals().pop(_name, None)
+del _name
+
+
+def _taichi_engine_class():
+    # Preserve caller/test overrides of the historical module-level alias.
+    if "TaichiEngine" in globals():
+        return globals()["TaichiEngine"]
+    return __getattr__("TaichiEngine")
 
 
 def show(
@@ -106,7 +126,7 @@ def simulate(
     *,
     stretch_ratio: Optional[float] = None,
     **kwargs,
-) -> Union[SimResult, _ViscoelasticResult]:
+) -> Union[_sim.SimResult, _ViscoelasticResult]:
     """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
 
     Parameters
@@ -224,7 +244,8 @@ def simulate(
         if (isinstance(num_threads, (bool, np.bool_)) or
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
-        method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        engine_class = _taichi_engine_class()
+        method = engine_class.stretch_test if mode == "stretch" else engine_class.dynamics
         kwargs.setdefault("geometry_policy", "reject_internal_points")
         method_kwargs = dict(kwargs)
         if mode == "stretch":
@@ -233,7 +254,7 @@ def simulate(
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
         _preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])
-        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
+        engine = engine_class(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
         else:
@@ -1469,7 +1490,7 @@ def batch_simulate_from_json(
     if not pending:
         return str(csv_file)
 
-    engine = TaichiEngine()
+    engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
 
     def write_checkpoint():
@@ -1548,21 +1569,24 @@ def batch_simulate_from_json(
 
 
 def __getattr__(name):
-    # Preserve the historical easy-module re-exports without loading plotting
-    # for simulate(), training helpers, or importing the top-level package.
-    if name in {"render_graph", "render_deformation"}:
+    # Preserve historical aliases; propagate the owning implementation's error.
+    if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module("fibernet.viz.render"), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__():
-    return sorted(set(globals()) | {"render_graph", "render_deformation"})
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
 # Preserve the historical wildcard surface, including incidental public imports.
 # A wildcard explicitly requests the renderers; importing this module does not.
 __all__ = [name for name in globals() if not name.startswith("_")]
+# Retain the original wildcard order as well as its public names.
+_index = __all__.index("pattern_3d") + 1
+__all__[_index:_index] = ["TaichiEngine", "SimResult"]
+del _index
 __all__ += ["render_graph", "render_deformation"]

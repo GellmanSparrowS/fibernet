@@ -54,6 +54,9 @@ def test_lazy_json_and_byte_budget_match_eager_state(kind, monkeypatch):
     p = case(kind)
     raw = typed_raw(p)
     state = adapter.to_sim_result(p, raw, RUNTIME, 0., True).dynamics_state
+    # Only recorded results retain the new original-SI reference. The transient
+    # no-state validation view deliberately remains reference-absent.
+    state.pop('displacement_reference')
     eager_bytes = profiles.json_bytes(state, 1024**2)
     original = profiles.json_bytes
     observed = []
