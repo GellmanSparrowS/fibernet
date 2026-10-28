@@ -123,5 +123,6 @@ addopts = "--forked"
 include = ["fibernet*"]
 
 [tool.setuptools.package-data]
+"fibernet" = ["py.typed"]
 "fibernet.sim.fracture" = ["PROVENANCE.json", "NOTICE.md"]
 "fibernet.integrations" = ["LAMMPS_NOTICE.md"]
