@@ -3,6 +3,7 @@
 The fixture is NOT an actual Matplotlib 3.5 runtime. PyVista is a call recorder,
 not a renderer: these tests do not require PyVista, VTK, a display, or a GPU.
 """
+from collections.abc import Mapping
 from io import BytesIO
 from types import SimpleNamespace
 import unittest
@@ -158,8 +159,8 @@ class TestColormapCompatibility(unittest.TestCase):
         self.assertTrue(output.getvalue().startswith(b'\x89PNG\r\n\x1a\n'))
 
 
-class Registry35Surface:
-    """Expose documented 3.5 dict lookup, deliberately without get_cmap.
+class Registry35Surface(Mapping):
+    """Expose the 3.5 mapping interface, deliberately without get_cmap.
 
     Palette data still comes from installed Matplotlib. This is NOT an actual
     Matplotlib 3.5 runtime or a substitute for testing that supported version.
@@ -169,6 +170,29 @@ class Registry35Surface:
 
     def __getitem__(self, name):
         return self.registry[name]
+
+    def __iter__(self):
+        return iter(self.registry)
+
+    def __len__(self):
+        return len(self.registry)
+
+
+class TestRegistry35SurfaceContract(unittest.TestCase):
+    def test_mapping_names_lookup_and_membership(self):
+        registry = matplotlib.colormaps
+        surface = Registry35Surface(registry)
+        # Newer Matplotlib also checks membership while creating collections.
+        self.assertIn('plasma', surface)
+        self.assertNotIn('definitely-not-a-colormap', surface)
+        self.assertEqual(list(surface), list(registry))
+        self.assertEqual(len(surface), len(registry))
+        self.assertEqual(surface['plasma'].name, 'plasma')
+        with self.assertRaises(KeyError):
+            surface['definitely-not-a-colormap']
+
+    def test_post35_get_cmap_remains_unavailable(self):
+        self.assertFalse(hasattr(Registry35Surface(matplotlib.colormaps), 'get_cmap'))
 
 
 class TestRegistry35SurfaceCompatibility(TestColormapCompatibility):

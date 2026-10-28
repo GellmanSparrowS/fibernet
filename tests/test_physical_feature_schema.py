@@ -209,7 +209,7 @@ def test_ui_fresh_generation_declares_canonical_but_unchecked_cache_resets(tmp_p
 
 
 def test_ui_initializes_unknown_and_forwards_its_current_declaration():
-    tree = ast.parse((ROOT / 'FiberScope/studio/ml_tab.py').read_text())
+    tree = ast.parse((ROOT / 'FiberScope/studio/ml_tab.py').read_text(encoding='utf-8'))
     cls = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'MLTab')
     init = next(n for n in cls.body if isinstance(n, ast.FunctionDef) and n.name == '__init__')
     assert any(isinstance(n, ast.Assign) and isinstance(n.value, ast.Constant) and n.value.value is None
