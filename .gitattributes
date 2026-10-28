@@ -24,6 +24,8 @@ tests/fixtures/spring_coefficient_provenance_v1/accelerated_delta.json -text
 # Reviewed optional facade sources and exact source snapshots retain Git bytes.
 fibernet/sim/__init__.py -text
 tests/fixtures/optional_facades_v2/*.txt -text
+tests/fixtures/optional_facades_v2/sim_lammps_capabilities_delta.json -text
+tests/fixtures/optional_facades_v2/root_fiber_network_profile_delta.json -text
 adapters/mcp/tests/fixtures/provenance_v1_outputs.json -text
 
 # The reviewed explicit stretch-ratio API fixture retains exact source bytes.
@@ -32,5 +34,45 @@ tests/fixtures/easy_stretch_ratio_v1/easy.py.txt -text
 # The reviewed random-rollout failure fixture retains exact source bytes.
 tests/fixtures/easy_rl_failure_v1/easy.py.txt -text
 
-# Exact private result-processing source delta.
+# Atomic graph edits are bound to their exact reviewed source bytes.
+fibernet/core/structure_graph.py -text
+
+# The saved-temperature transfer owner is included in exact native-core bindings.
+fibernet/sim/saved_temperature.py -text
+
+# Thermoelastic API and owner are included in exact native-core bindings.
+fibernet/sim/thermoelastic.py -text
+fibernet/sim/_thermoelastic.py -text
+
+# Reviewed geometry-policy deltas retain exact UTF-8 bytes.
+tests/fixtures/taichi_geometry_policy_v1/*.json -text
+
+# Exact native-core bindings cover every package Python source.
+fibernet/**/*.py -text
+
+# Bundled saved-electrothermal containers retain their exact encoded bytes.
+tests/fixtures/saved_electrothermal_v1/*.gz.b64 -text
+
+# The deformation preparation golden retains its pinned UTF-8 bytes.
+tests/fixtures/deformed_transport_preparation_v1/planar_golden.json -text
+tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt -text
+
+# This retained scientific witness is verified by its exact original SHA-256.
+# Preserve repository bytes even when a checkout uses core.autocrlf=true.
+/tests/fixtures/dynamic_viscoelastic_generalized_summary.json -text
+tests/fixtures/optional_facades_v2/sim_archived_ge_delta.json -text
+tests/fixtures/easy_show_dimension_v1/easy_delta.json -text
+tests/fixtures/native_io_dispatch_v1/api_delta.json -text
+tests/fixtures/easy_batch_report_v1/easy_delta.json -text
+
+# Exact additive octet facade delta preserves its reviewed Git bytes.
+tests/fixtures/standard_octet_v1/root_facade_delta.json -text
+
+# Reviewed legacy summary facade delta.
+tests/fixtures/legacy_analysis_v1/api_delta.json -text
+
+# Exact reviewed LAMMPS persistence source delta.
+tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json -text
+
+# Exact result-processing source delta composed on current main.
 tests/fixtures/result_processing_v1/accelerated_delta.json -text

@@ -6,6 +6,23 @@ shared regression scorer: uniform-average per-output R² and RMSE across all
 entries. Exact constant targets score R²=1; inexact constants score 0. A
 validation set with fewer than two rows has R²=None and valid RMSE.
 
+## Default loss shape contract
+
+When `loss_fn` is omitted or `None`, `train_model` uses MSE and requires exact
+prediction/target shapes after normalizing only scalar `(B,)` versus `(B, 1)`.
+Equal multioutput shapes remain valid; `(B, 2)` versus `(B, 1)` and
+`(B, 1, 1)` versus `(B, 1)` raise `ValueError` rather than broadcasting or
+guessing axes. Training checks run before backward/optimizer step; validation
+checks run before checkpoint selection. This is not a rollback guarantee:
+ordinary setup and model forward side effects may occur, and validation errors
+do not undo preceding valid training.
+
+Explicitly supplied losses, including an explicit `torch.nn.MSELoss`, retain
+their existing shape semantics and normalization. This supports uncertainty
+losses whose prediction and target widths intentionally differ. A
+`metric_prediction` adapter cannot repair an implicit-default loss mismatch;
+it is used only for metrics.
+
 ## Declaring a prediction adapter
 
 Both train_model and cross_validate_torch accept the keyword-only

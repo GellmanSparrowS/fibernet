@@ -1,4 +1,4 @@
-"""Explicit CLI harmonic-bead adapter; no engine discovery or material inference."""
+"""Explicit CLI harmonic/CG adapter; no engine discovery or material inference."""
 import copy
 import hashlib
 import json
@@ -11,6 +11,11 @@ from fibernet.integrations import _cg_network_profile as _network
 
 SCHEMA = 'lammps_harmonic_state/1'
 CG_SCHEMA = 'lammps_cg_state/1'
+REFERENCE_SCHEMA = 'lammps_original_si_reference/1'
+REFERENCE_DECLARATIONS = {
+    'schema': REFERENCE_SCHEMA, 'basis': 'prepared_graph', 'units': 'm',
+    'arithmetic': 'binary64_subtract_then_divide',
+}
 CG_MODEL = 'conservative-ball-cosine-strand-cg/1'
 UNITS = {'positions': 'm', 'velocities': 'm/s', 'nodal_forces': 'N',
          'time': 's', 'energy': 'J', 'pressure_tensor': 'Pa'}
@@ -38,26 +43,83 @@ def _network_schedule(value, steps):
 
 
 def source_capabilities():
-    """Descriptive source support only, never installed/runtime/physics readiness."""
+    """Detached source declarations for this bounded dispatcher, not readiness.
+
+    The legacy ``profile`` label names only the harmonic route. ``models``
+    describes both routes; schedules distinguish native observations from
+    exported states. No native runtime is discovered, admitted or executed.
+    """
+    from fibernet.integrations import _lammps_cg as cg
+
+    harmonic = (_profiles.PROFILE, _profiles.SAMPLED_PROFILE,
+                _profiles.FULL_HISTORY_PROFILE)
+    every_step = {
+        'native_observations': 'every integration step',
+        'exported_states': 'every integration step when record_state=True',
+        'geometry_validation': 'observed integration-step states only; no continuous-time guarantee',
+    }
+    observations = {'harmonic_unprofiled': dict(every_step),
+                    'cg_unprofiled': dict(every_step)}
+    observations.update({p['name']: dict(every_step) for p in harmonic})
+    observations[_profiles.SAMPLED_NAME]['exported_states'] = (
+        'output_stride-selected states when record_state=True; native observations remain every step')
+    for name in _network.NAMES:
+        observations[name] = {
+            'native_observations': 'sample_every dump stride and thermo_every thermo stride',
+            'exported_states': 'dump-sampled states when record_state=True',
+            'geometry_validation': _network.SCOPE,
+        }
     return {'backend': 'lammps', 'profile': 'explicit-harmonic-beads',
+            'profile_scope': 'legacy harmonic label only; see models for both routes',
+            'source_support': 'implemented bounded input and result contracts; not runtime or physics qualification',
             'dimension': 3, 'execution': 'owned CLI child',
             'runtime_modes': ['cli', 'cli_serial_static'],
             'runtime_readiness': 'unknown', 'physics_qualification': 'not_established_by_dispatch',
-            'constraints': ['straight nonparallel edges', 'nonperiodic box',
-                            'whole-node fixity', 'constant nodal loads',
+            'constraints': ['straight edges; no duplicate endpoint edges or flattening of internal points',
+                            'nonperiodic box', 'whole-node fixity',
                             'explicit SI masses and bond coefficients',
-                            'bounded domain; every integration step retained'],
+                            'bounded domain; observation scope depends on model and profile'],
+            'models': {
+                'explicit-synthetic-or-coarse-grained-beads': {
+                    'request': 'explicit harmonic keyword arguments',
+                    'state_schema': SCHEMA,
+                    'profiles': [p['name'] for p in harmonic],
+                    'unprofiled': True,
+                    'loads': 'constant nodal loads supported',
+                    'observation_key_without_profile': 'harmonic_unprofiled',
+                },
+                cg.MODEL: {
+                    'request': 'cg_request=CGRequest(...)',
+                    'state_schema': CG_SCHEMA,
+                    'profiles': list(_network.NAMES),
+                    'unprofiled': True,
+                    'loads': 'constant nodal loads unsupported',
+                    'geometry': 'explicit cosine-angle triplets on straight graph edges; bent and branched strands allowed',
+                    'fiber_only': 'projectile_node_id=None requires empty pairs, no pair encoding and no network profile',
+                    'observation_key_without_profile': 'cg_unprofiled',
+                    'contract_capabilities': copy.deepcopy(cg.source_capabilities()),
+                },
+            },
             'harmonic_profiles': {
                 p['name']: {key: p[key] for key in ('max_nodes','max_edges',
                     'steps','max_steps','sample_every','output_stride','frames',
                     'max_output_frames','max_mass_types','max_loaded_nodes') if key in p}
-                for p in (_profiles.PROFILE, _profiles.SAMPLED_PROFILE,
-                          _profiles.FULL_HISTORY_PROFILE)},
+                for p in harmonic},
+            'cg_profiles': {p['name']: copy.deepcopy(dict(p))
+                            for p in (_network.PROFILE, _network.MIXED_PROFILE)},
+            'observations': observations,
+            'record_state': 'False omits dynamics_state and retained trajectory; final SimResult fields remain; True retains states under the selected observation schedule',
+            'saved_displacement_consistency': 'new sampled states retain the exact original SI reference; legacy and no-state relationships remain unavailable; internal consistency is not authenticity or native accuracy',
             'dependency': 'explicit independently admitted RuntimeSpec',
             'cancellation': 'hard child cancellation via direct LAMMPSTask',
+            'unsupported_scope': 'this bounded dispatcher, not legacy integrations',
             'unsupported': ['material calibration', 'material stress', 'general reactions',
-                            'work ledger', 'linked Python engine']}
+                            'work ledger', 'linked Python engine',
+                            'continuous fiber contact', 'impenetrability']}
 
+
+# Public lazy export; keep one implementation and the existing accessor.
+lammps_source_capabilities = source_capabilities
 
 def _real_array(value, name, shape):
     from .accelerated import _finite_real_array
@@ -70,6 +132,58 @@ def _real_array(value, name, shape):
             for child in item.flat: check(child)
     check(value)
     return _finite_real_array(value, name, shape)
+
+
+def _validate_reference(reference, state):
+    """Check a declared original-SI reference; absence is a legacy capability gap.
+
+    Source digests retain their existing provenance semantics. This checks saved
+    internal consistency, not authenticity of the graph or native accuracy.
+    """
+    from .accelerated import _strict_state_ids
+    sampled = state['representation'] == 'sampled'
+    fields = set(REFERENCE_DECLARATIONS) | {'availability', 'source_identity'}
+    fields |= {'node_ids', 'positions'} if sampled else {'reason'}
+    if not isinstance(reference, dict) or set(reference) != fields:
+        raise ValueError('invalid LAMMPS displacement reference fields')
+    if (any(reference[k] != v for k, v in REFERENCE_DECLARATIONS.items()) or
+            reference['source_identity'] != state['source_identity']):
+        raise ValueError('invalid LAMMPS displacement reference declarations or source identity')
+    if sampled:
+        if reference['availability'] != 'available':
+            raise ValueError('sampled LAMMPS displacement reference must be available')
+        ids = _strict_state_ids(reference['node_ids'], 'reference node_ids', nonnegative=True)
+        if ids != list(state['node_ids']) or any(n >= 2**31 for n in ids):
+            raise ValueError('LAMMPS displacement reference node identity mismatch')
+        _real_array(reference['positions'], 'reference positions', (len(ids), 3))
+    elif (reference['availability'] != 'unavailable' or
+          reference['reason'] != 'omitted_from_summary'):
+        raise ValueError('invalid LAMMPS summary reference availability')
+
+
+def _mapped_displacements(final, reference, scale):
+    """The declared binary64 operation order; not an inverse geometry inference."""
+    with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+        delta = np.subtract(final, reference, dtype=np.float64)
+        expected = np.divide(delta, np.float64(scale), dtype=np.float64)
+    if not np.isfinite(expected).all():
+        raise ValueError('nonfinite LAMMPS displacement reference arithmetic')
+    return expected
+
+
+def displacement_relationship_status(result):
+    """Inspect saved consistency without synthesizing a missing reference."""
+    if result.metadata.get('backend') != 'lammps':
+        raise ValueError('saved displacement/reference status requires a LAMMPS result')
+    validate_persisted_metadata(result.metadata)
+    record = validate_result(result) if result.dynamics_state is not None else None
+    reference = record.get('displacement_reference') if record is not None else None
+    if reference is None:
+        return {'availability': 'unavailable', 'reason': 'not_recorded'}
+    if reference['availability'] == 'unavailable':
+        return {'availability': 'unavailable', 'reason': reference['reason']}
+    return {'availability': 'available', 'relationship': 'consistent',
+            'schema': REFERENCE_SCHEMA}
 
 
 def validate_state(value, n_nodes=None, node_ids=None):
@@ -130,6 +244,8 @@ def validate_state(value, n_nodes=None, node_ids=None):
             _profiles.shape(value.get('pressure_tensor'),(count,6),'pressure_tensor')
             _profiles.shape(value.get('final',{}).get('pressure_tensor'),(6,),'final pressure_tensor')
         _profiles.json_bytes(value,p['export_bytes'])
+    if 'displacement_reference' in value:
+        common.add('displacement_reference')
     if set(value) != common | (arrays if sampled else set()):
         raise ValueError('LAMMPS state has missing or unknown fields')
     if (value['backend'] != 'lammps' or value['units'] != UNITS or
@@ -181,6 +297,8 @@ def validate_state(value, n_nodes=None, node_ids=None):
             if not np.array_equal(final[key], value[key][-1]):
                 raise ValueError('LAMMPS final/sample mismatch')
         if final['time'] != value['times'][-1]: raise ValueError('LAMMPS final time mismatch')
+    if 'displacement_reference' in value:
+        _validate_reference(value['displacement_reference'], value)
     return json.loads(json.dumps(value, allow_nan=False))
 
 
@@ -195,8 +313,13 @@ def _state_summary_from_validated(record):
     if 'profile' in record: keys += ('profile',)
     if 'output_stride' in record: keys += ('output_stride','native_frames','output_frames')
     if record['schema'] == CG_SCHEMA and 'profile' in record: keys += NETWORK_FIELDS
-    return dict({k: record[k] for k in keys}, representation='summary', availability='summary_only',
+    summary = dict({k: record[k] for k in keys}, representation='summary', availability='summary_only',
                 final={k: record['final'][k] for k in ('step', 'time', 'potential_energy', 'kinetic_energy', 'total_energy')})
+    if 'displacement_reference' in record:
+        summary['displacement_reference'] = dict(REFERENCE_DECLARATIONS,
+            availability='unavailable', reason='omitted_from_summary',
+            source_identity=copy.deepcopy(record['source_identity']))
+    return summary
 
 
 def _plain_json_tree(value, depth=0, budget=None):
@@ -268,6 +391,32 @@ def validate_result(result):
     return _validate_result(result)
 
 
+def _validate_geometry_metadata(metadata):
+    """Check the existing graph/SI declarations without requiring saved state."""
+    from fibernet.integrations.lammps_backend import LENGTH_FACTORS
+    contract = metadata.get('model_contract', {})
+    unit = metadata.get('original_graph_length_unit')
+    scale = metadata.get('original_graph_length_to_m')
+    if not isinstance(scale, (int, float)) or isinstance(scale, bool) or not np.isfinite(scale) or scale <= 0:
+        raise ValueError('invalid graph-to-SI length scale')
+    if (unit not in LENGTH_FACTORS or scale != LENGTH_FACTORS[unit] or
+            contract.get('length_unit') != unit or contract.get('length_to_m') != scale or
+            metadata.get('field_units') != field_units(unit)):
+        raise ValueError('inconsistent LAMMPS geometry units')
+
+
+def validate_persisted_metadata(metadata):
+    """Validate units for recognized modern contracts, including no-state exports.
+
+    A historical backend label alone does not establish this modern contract.
+    Profile guards and any available state validation remain separate layers.
+    """
+    contract = metadata.get('model_contract')
+    if isinstance(contract, dict) and contract.get('model') in (
+            'explicit-synthetic-or-coarse-grained-beads', CG_MODEL):
+        _validate_geometry_metadata(metadata)
+
+
 def _validate_result(result, *, with_summary=False):
     _profiles.result_guard(result.metadata,result.n_nodes,result.n_edges,result.dynamics_state,vars(result))
     from .accelerated import SimResult
@@ -283,7 +432,6 @@ def _validate_result(result, *, with_summary=False):
         raise ValueError('LAMMPS state/result provenance or energy mismatch')
     if result.algorithmic_energy_ledger is not None:
         raise ValueError('LAMMPS does not provide a native-axial algorithmic ledger')
-    from fibernet.integrations.lammps_backend import LENGTH_FACTORS
     contract = result.metadata.get('model_contract', {})
     if (record['schema'] == CG_SCHEMA) != (contract.get('model') == CG_MODEL):
         raise ValueError('LAMMPS state/model schema mismatch')
@@ -293,20 +441,31 @@ def _validate_result(result, *, with_summary=False):
             raise ValueError('CG network state/model observation schedule mismatch')
         if _network.record(result.metadata.get('profile')) != profile:
             raise ValueError('CG network result/profile mismatch')
-    unit = result.metadata.get('original_graph_length_unit')
+    _validate_geometry_metadata(result.metadata)
     scale = result.metadata.get('original_graph_length_to_m')
-    if not isinstance(scale, (int, float)) or isinstance(scale, bool) or not np.isfinite(scale) or scale <= 0:
-        raise ValueError('invalid graph-to-SI length scale')
-    if (unit not in LENGTH_FACTORS or scale != LENGTH_FACTORS[unit] or
-            contract.get('length_unit') != unit or contract.get('length_to_m') != scale or
-            result.metadata.get('field_units') != field_units(unit)):
-        raise ValueError('inconsistent LAMMPS geometry units')
     if (contract.get('timestep_s') != record['dt'] or
             contract.get('steps') != record['final']['step']):
         raise ValueError('LAMMPS state/model time contract mismatch')
     if result.displacements is not None:
         _real_array(result.displacements, 'displacements', (result.n_nodes, 3))
     if record['representation'] == 'sampled':
+        if 'displacement_reference' in record:
+            from .accelerated import _strict_state_ids
+            row_ids = _strict_state_ids(result.metadata.get('node_ids'),
+                                        'metadata node_ids', nonnegative=True)
+            if (row_ids != record['displacement_reference']['node_ids'] or
+                    any(n >= 2**31 for n in row_ids)):
+                raise ValueError('LAMMPS displacement reference/result node identity mismatch')
+            if result.displacements is None:
+                raise ValueError('available LAMMPS reference requires displacements')
+            reference = _real_array(record['displacement_reference']['positions'],
+                                    'reference positions', (result.n_nodes, 3))
+            final = _real_array(record['final']['positions'], 'final positions',
+                                (result.n_nodes, 3))
+            expected = _mapped_displacements(final, reference, scale)
+            actual = _real_array(result.displacements, 'displacements', (result.n_nodes, 3))
+            if not np.array_equal(actual, expected):
+                raise ValueError('LAMMPS saved displacement/reference mismatch')
         if record['schema'] == CG_SCHEMA:
             import math
             expected_norm = max(math.hypot(*v) for v in record['final']['nodal_forces'])
@@ -331,6 +490,26 @@ def field_units(length_unit):
     return {'displacements':length_unit, 'deformed_positions':length_unit,
             'positions_trajectory':length_unit, 'max_displacement':length_unit,
             'edge_forces':'N', 'edge_stretches':'1', 'energy':'J', 'time_seconds':'s wall time'}
+
+
+class _ConvertedFrames(list):
+    """Re-iterable JSON list view, converting at most one frame per iteration.
+
+    The base list owns only frame references. Its real length also preserves the
+    JSON encoder's empty-list handling and the existing JSON budget prewalk.
+    This is conversion-copy avoidance, not streaming native-output parsing.
+    """
+
+    def __init__(self, frames, convert):
+        super().__init__(frames)
+        self._convert = convert
+
+    def __iter__(self):
+        for frame in super().__iter__():
+            yield self._convert(frame)
+
+    def __getitem__(self, index):
+        return self._convert(super().__getitem__(index))
 
 
 def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
@@ -425,14 +604,33 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         elif _profiles.variable_steps(selected):
             state.update({k:contract[k] for k in ('output_stride','native_frames','output_frames')})
     for key, attr in [('positions','positions_m'), ('velocities','velocities_m_s'), ('nodal_forces','forces_N')]:
-        state[key] = [np.asarray(getattr(f, attr)).tolist() for f in trajectory]
+        convert = lambda f, attr=attr: np.asarray(getattr(f, attr)).tolist()
+        state[key] = ([convert(f) for f in trajectory] if record_state
+                      else _ConvertedFrames(trajectory, convert))
     for key, attr in [('potential_energy','potential_J'), ('kinetic_energy','kinetic_J'), ('total_energy','total_J'), ('pressure_tensor','pressure_tensor_Pa')]:
         state[key] = [getattr(f, attr) for f in thermo]
-    state['pressure_tensor'] = [list(v) for v in state['pressure_tensor']]
+    state['pressure_tensor'] = ([list(v) for v in state['pressure_tensor']] if record_state
+                                else _ConvertedFrames(state['pressure_tensor'], list))
     state['final'] = dict(step=expected[-1], time=state['times'][-1], **{k: state[k][-1] for k in ('positions','velocities','nodal_forces','potential_energy','kinetic_energy','total_energy','pressure_tensor')})
-    state = validate_state(state, len(ids), ids)
+    # Preserve the exact original SI operands used below, not sample 0 (which
+    # is only tolerance-close), and detach them from caller-owned geometry.
     original = {n['id']: np.asarray(n['position'])*contract['length_to_m'] for n in graph['nodes']}
-    positions = np.asarray(state['positions'][-1]); displacement = positions-np.asarray([original[n] for n in ids])
+    original_si = np.asarray([original[n] for n in ids], dtype=np.float64)
+    if record_state:
+        state['displacement_reference'] = dict(REFERENCE_DECLARATIONS,
+            availability='available', source_identity=copy.deepcopy(identity),
+            node_ids=list(ids), positions=original_si.tolist())
+        state = validate_state(state, len(ids), ids)
+    else:
+        # Prepared metadata and every raw frame have already been checked above.
+        # Preserve the old serialization/type and profile byte-budget failures
+        # without building or detaching an unrequested full SI history.
+        if selected:
+            _profiles.json_bytes(state, selected['export_bytes'])
+        else:
+            for _ in json.JSONEncoder(allow_nan=False).iterencode(state):
+                pass
+    positions = np.asarray(state['final']['positions']); displacement = positions-original_si
     row = {n:i for i,n in enumerate(ids)}; topology = {e['id']:e for e in graph['edges']}; bonds = dict(contract['bonds'])
     lengths = np.asarray([np.linalg.norm(positions[row[topology[e]['node_j']]]-positions[row[topology[e]['node_i']]]) for e in edges])
     coefficients = np.asarray([bonds[e] for e in edges]).reshape((-1,2)); forces = coefficients[:,0]*(lengths-coefficients[:,1]); stretches = lengths/coefficients[:,1]

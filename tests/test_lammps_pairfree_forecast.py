@@ -53,19 +53,31 @@ class TestPairFreeForecast(unittest.TestCase):
             prepared, self.runtime, LIMITS, export_budget_bytes=EXPORT, **kwargs
         )
 
+    @staticmethod
+    def with_reference(expected, n):
+        # Keep the historical golden file unchanged; only the declared saved
+        # reference and its four-copy estimate may change these old forecasts.
+        result = dict(expected)
+        extra = 4*n*64+2048
+        result['detailed_export_forecast_bytes'] += extra
+        result['planned_memory_bytes'] += 4*extra
+        if 'selected_copy_memory_bytes' in result:
+            result['selected_copy_memory_bytes'] += 4*extra
+        return result
+
     def test_existing_harmonic_forecasts_exact(self):
         golden = json.loads((FIXTURES / 'lammps_forecast_legacy_values.json').read_text())
         for case in golden['harmonic']:
             with self.subTest(args=case['args']):
                 self.assertEqual(
-                    harmonic.resource_forecast(*case['args']), case['expected']
+                    harmonic.resource_forecast(*case['args']), self.with_reference(case['expected'], case['args'][0])
                 )
 
     def test_existing_network_forecasts_exact(self):
         golden = json.loads((FIXTURES / 'lammps_forecast_legacy_values.json').read_text())
         for case in golden['network']:
             with self.subTest(args=case['args']):
-                self.assertEqual(network.forecast(*case['args']), case['expected'])
+                self.assertEqual(network.forecast(*case['args']), self.with_reference(case['expected'], case['args'][0]))
 
     def test_run_zero_zero_edges(self):
         graph, request = capped_case(n=2, edge_count=0, angle_count=0, steps=0)
@@ -300,9 +312,16 @@ class TestPairFreeForecast(unittest.TestCase):
     def test_record_false_full_transient_accounting_and_unknowns(self):
         unrecorded = self.plan(self.small, record_state=False)
         recorded = self.plan(self.small, record_state=True)
+        self.assertEqual(unrecorded['transient_state_scope'],
+                         'raw parsed history remains retained; record_state=False avoids full converted-state materialization; memory estimates remain conservative')
+        self.assertEqual(recorded['transient_state_scope'], unrecorded['transient_state_scope'])
         self.assertFalse(unrecorded['record_state'])
         self.assertTrue(recorded['record_state'])
-        self.assertEqual(unrecorded['planned_memory_bytes'], recorded['planned_memory_bytes'])
+        reference_bytes = 4*recorded['nodes']*64+2048
+        self.assertEqual(recorded['planned_memory_bytes']-unrecorded['planned_memory_bytes'],
+                         4*reference_bytes)
+        self.assertEqual(recorded['detailed_export_forecast_bytes']-unrecorded['detailed_export_forecast_bytes'],
+                         reference_bytes)
         self.assertEqual(unrecorded['parsed_state_memory_bytes'], 201 * (9 * 7 + 16) * 64)
         self.assertEqual(unrecorded['runtime_readiness'], 'not_checked')
         for name in ('actual_cpu_seconds', 'actual_peak_rss_bytes', 'predicted_cpu_seconds'):

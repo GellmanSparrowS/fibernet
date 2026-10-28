@@ -28,6 +28,7 @@ from fibernet.core.structure_graph import StructureGraph
 SOURCES = {
     "fibernet/easy.py",
     "fibernet/sim/accelerated.py",
+    "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py",
     "fibernet/core/material.py",
 }
@@ -35,6 +36,7 @@ DEFAULT_PARAMETERS = {
     "backend": "spring", "mode": "stretch", "target_stretch": 1.5,
     "stiffness": 1e5, "damping": 0.3, "num_steps": 1000,
     "save_interval": 200, "auto_steps": False,
+    "geometry_policy": "reject_internal_points",
 }
 
 
@@ -190,8 +192,10 @@ def test_public_signature_and_native_graph_dispatch_are_unchanged(batch):
     signature = inspect.signature(fn.batch_simulate_from_json)
     assert list(signature.parameters) == [
         "json_dir", "output_dir", "mode", "target_stretch", "stiffness",
-        "damping", "num_steps", "save_interval", "backend",
+        "damping", "num_steps", "save_interval", "backend", "geometry_policy",
     ]
+    assert signature.parameters["geometry_policy"].kind == inspect.Parameter.KEYWORD_ONLY
+    assert signature.parameters["geometry_policy"].default == "reject_internal_points"
     assert signature.parameters["num_steps"].default == 1000
     assert signature.parameters["save_interval"].default == 200
     path = batch.add()
@@ -233,6 +237,7 @@ def test_each_failure_outcome_has_truthful_binding_and_is_not_retried(batch, fai
 @pytest.mark.parametrize("kwargs", [
     {"target_stretch": 1.6}, {"stiffness": 2e5}, {"damping": 0.4},
     {"num_steps": 1001}, {"save_interval": 201},
+    {"geometry_policy": "endpoint_chord"},
 ])
 def test_each_effective_parameter_change_rejects_existing_outcomes(batch, kwargs):
     batch.add()

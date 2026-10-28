@@ -1,0 +1,13 @@
+{
+  "schema": "reviewed_archived_ge_facade_delta/1",
+  "source": "fibernet/sim/__init__.py",
+  "baseline_main": "ef6a83ddb72021295c126610d21f96113de4a218",
+  "base_sha256": "133f39585e3e2c59e4b2518cc6180e27b12a392dd5916acd3e412515a2d7b3dc",
+  "result_sha256": "68fe1a4d079304f861593da365dcc45d21808b2241616734a44e07ed45d34f01",
+  "hunks": [
+    {
+      "before": "_LAZY_EXPORTS = {\n",
+      "after": "_LAZY_EXPORTS = {\n    \"import_archived_ge_state\": \"fibernet.sim.archived_ge\",\n    \"ArchivedGEProjection\": \"fibernet.sim.archived_ge\",\n"
+    }
+  ]
+}

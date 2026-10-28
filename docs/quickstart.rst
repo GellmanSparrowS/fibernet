@@ -55,7 +55,7 @@ The solver does not convert units or infer moduli from graph material records.
 Omitting the ratio retains the legacy default 2.0, which automatically selects
 experimental 2-D updated-geometry increments with unverified final equilibrium.
 That route is not a validated nonlinear beam solver. The warning switch at
-|stretch-1| > 0.3 is not a physical validity bound; no warning does not certify
+``abs(stretch - 1) > 0.3`` is not a physical validity bound; no warning does not certify
 that a structure remains within small-deformation assumptions.
 The example checks the software workflow; it is not a calibrated material
 prediction. ``max_force`` is the largest individual beam axial force, not a

@@ -85,20 +85,33 @@ def to_networkx(network: FiberNetwork, include_material: bool = True) -> "nx.Gra
 def from_networkx(G: "nx.Graph", 
                   material: Optional[Material] = None,
                   pos_attr: str = "pos") -> FiberNetwork:
-    """Convert NetworkX Graph to FiberNetwork.
-    
-    Interprets the graph as a fiber network where:
-    - Each maximal path (sequence of degree-2 nodes) = one Fiber
-    - Branch points (degree ≥ 3) and endpoints (degree 1) = Crosslinks
-    
-    For simple graphs, each edge becomes a fiber segment.
+    """Project NetworkX edges and shared endpoints into a FiberNetwork.
+
+    Each edge becomes one straight, two-point Fiber; parallel edges remain
+    separate fibers. At each source node, all incident fiber pairs receive a
+    welded Crosslink, including degree-2 junctions. Connectivity follows node
+    identity, not coincident positions. Maximal paths are not combined.
+
+    This is a legacy, lossy projection, not a graph roundtrip. Isolated nodes
+    have no FiberNetwork representation; degree-1 nodes remain fiber endpoints
+    without crosslinks. Directed inputs are treated as undirected incidences.
+    Only node positions and edge ``radius``/``youngs_modulus`` are read; curves,
+    IDs, other metadata and edge material records are not transferred. The
+    default material contributes only name, modulus, Poisson ratio and density.
+    Self-loops and zero-length edges retain legacy degenerate-fiber behavior;
+    this importer does not validate them for simulation. ``to_networkx`` is a
+    separate crosslink-only projection and does not reconstruct source nodes.
+
+    Keep a StructureGraph and use its ``to_networkx_lossless`` /
+    ``from_networkx_lossless`` methods for native-record preservation (including
+    isolates, curves, full materials and metadata), not this compatibility API.
     
     Parameters
     ----------
-    G : nx.Graph
-        Graph with 'pos' node attribute.
+    G : nx.Graph or nx.MultiGraph
+        Graph with 2D or 3D positions in the ``pos_attr`` node attribute.
     material : Material, optional
-        Default material for all fibers. If None, uses generic polymer.
+        Default material fields described above. If None, uses generic polymer.
     pos_attr : str
         Name of the position attribute on nodes.
     
@@ -126,41 +139,20 @@ def from_networkx(G: "nx.Graph",
             pos = np.append(pos, 0.0)
         positions[node] = pos
     
-    # Build fibers from connected paths
-    # Simple approach: each edge → fiber segment, shared endpoints → crosslinks
+    # Keep legacy edge fibers, collecting every endpoint incidence by node ID.
     fibers = []
     crosslinks = []
-    node_to_cl = {}  # node_id -> crosslink_index
-    
-    # Find nodes that are crosslinks (degree ≠ 2, or all nodes for simple approach)
-    cl_nodes = set()
-    for node in G.nodes():
-        deg = G.degree(node)
-        if deg != 2:  # endpoints and branch points
-            cl_nodes.add(node)
-    
-    # For simple graphs, treat all nodes as potential crosslinks
-    if not cl_nodes:
-        cl_nodes = set(G.nodes())
-    
-    # Create crosslinks
-    for node in cl_nodes:
-        cl_idx = len(crosslinks)
-        node_to_cl[node] = cl_idx
-        crosslinks.append(
-            Crosslink(position=positions[node], fiber_i=-1, fiber_j=-1, 
-                      param_i=0.0, param_j=0.0)
-        )
+    node_to_fibers = {node: [] for node in G.nodes()}
     
     # Create fibers along edges
-    for u, v in G.edges():
+    for u, v, data in G.edges(data=True):
         pos_u = positions[u]
         pos_v = positions[v]
         centerline = np.array([pos_u, pos_v])
         
         # Get radius from edge data if available
-        radius = G.edges[u, v].get('radius', 0.1)
-        E = G.edges[u, v].get('youngs_modulus', material.youngs_modulus)
+        radius = data.get('radius', 0.1)
+        E = data.get('youngs_modulus', material.youngs_modulus)
         
         fiber_mat = Material(name=material.name, youngs_modulus=E, 
                             poissons_ratio=material.poissons_ratio, 
@@ -170,26 +162,20 @@ def from_networkx(G: "nx.Graph",
         fiber = Fiber(centerline=centerline, radius=radius, material=fiber_mat)
         fibers.append(fiber)
         
-        # Link crosslinks
-        if u in node_to_cl:
-            crosslinks[node_to_cl[u]].fiber_i = fi
-            crosslinks[node_to_cl[u]].param_i = 0.0
-        if v in node_to_cl:
-            cl = crosslinks[node_to_cl[v]]
-            if cl.fiber_i == -1:
-                cl.fiber_i = fi
-                cl.param_i = 1.0
-            else:
-                cl.fiber_j = fi
-                cl.param_j = 1.0
-    
-    # Clean up crosslinks with missing fiber references
-    valid_cls = []
-    for cl in crosslinks:
-        if cl.fiber_i >= 0 and cl.fiber_j >= 0:
-            valid_cls.append(cl)
-    
-    return FiberNetwork(fibers=fibers, crosslinks=valid_cls)
+        node_to_fibers[u].append((fi, 0.0))
+        node_to_fibers[v].append((fi, 1.0))
+
+    # Match StructureGraph.to_fiber_network's pairwise junction convention,
+    # without changing this legacy importer's centerlines or material defaults.
+    for node, incidences in node_to_fibers.items():
+        for i, (fi, pi) in enumerate(incidences):
+            for fj, pj in incidences[i + 1:]:
+                crosslinks.append(Crosslink(
+                    position=positions[node].copy(), fiber_i=fi, fiber_j=fj,
+                    param_i=pi, param_j=pj,
+                ))
+
+    return FiberNetwork(fibers=fibers, crosslinks=crosslinks)
 
 
 def save_graph_json(network_or_graph: Union[FiberNetwork, "nx.Graph"],

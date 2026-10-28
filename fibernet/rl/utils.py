@@ -13,6 +13,7 @@ Examples
 
 from __future__ import annotations
 
+import inspect as _inspect
 import json
 import pickle
 from pathlib import Path
@@ -257,6 +258,50 @@ def plot_action_distribution(
 # Agent Evaluation
 # ======================================================================
 
+def _evaluation_action(agent: Any) -> Callable[[Any], Any]:
+    """Resolve the declared action protocol without invoking the agent."""
+    if hasattr(agent, "predict"):
+        predict = agent.predict
+    elif hasattr(agent, "act"):
+        if not callable(agent.act):
+            raise TypeError("Agent act must be callable as act(obs)")
+        return agent.act
+    elif isinstance(agent, dict) and "model" in agent:
+        predict = getattr(agent["model"], "predict", None)
+    else:
+        raise ValueError("Agent must have predict() or act() method")
+
+    message = (
+        "Agent predict must have an inspectable signature supporting predict(obs) "
+        "or predict(obs, deterministic=True); wrap unsupported callables in "
+        "an explicit predict(obs) adapter"
+    )
+    if not callable(predict):
+        raise TypeError(message)
+    try:
+        signature = _inspect.signature(predict)
+    except (TypeError, ValueError) as exc:
+        raise TypeError(message) from exc
+    placeholder = object()
+    try:
+        signature.bind(placeholder, deterministic=True)
+    except TypeError:
+        try:
+            signature.bind(placeholder)
+        except TypeError as exc:
+            raise TypeError(message) from exc
+        kwargs = {}
+    else:
+        kwargs = {"deterministic": True}
+
+    def action_for(obs: Any) -> Any:
+        # Deliberately do not catch errors from the actual prediction call.
+        action = predict(obs, **kwargs)
+        return action[0] if isinstance(action, tuple) else action
+
+    return action_for
+
+
 def evaluate_agent(
     agent: Any,
     env: Any,
@@ -272,6 +317,10 @@ def evaluate_agent(
     agent : object
         Must have a ``predict(obs)`` or ``act(obs)`` method,
         or be a dict with a ``model`` key (e.g. from save_agent).
+        Predict signatures must be inspectable. ``deterministic=True`` is
+        passed when supported, otherwise only ``obs`` is passed. Prediction
+        errors propagate without retries; tuple predictions use their first
+        item as the action.
     env : gymnasium-compatible environment
         The RL environment.
     n_episodes : int
@@ -287,6 +336,7 @@ def evaluate_agent(
         Keys: mean_reward, std_reward, max_reward, min_reward,
         rewards (list), episode_infos (list of info dicts).
     """
+    action_for = _evaluation_action(agent)
     rewards = []
     episode_infos = []
 
@@ -297,21 +347,7 @@ def evaluate_agent(
         steps = 0
 
         while not done:
-            # Get action
-            if hasattr(agent, "predict"):
-                action = agent.predict(obs, deterministic=True)
-                if isinstance(action, tuple):
-                    action = action[0]
-            elif hasattr(agent, "act"):
-                action = agent.act(obs)
-            elif isinstance(agent, dict) and "model" in agent:
-                # Loaded agent
-                model = agent["model"]
-                action = model.predict(obs, deterministic=True)
-                if isinstance(action, tuple):
-                    action = action[0]
-            else:
-                raise ValueError("Agent must have predict() or act() method")
+            action = action_for(obs)
 
             obs, reward, terminated, truncated, info = env.step(action)
             total_reward += reward

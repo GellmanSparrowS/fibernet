@@ -1,15 +1,15 @@
 {
   "schema": "candidate_result_processing_delta/1",
-  "base_sha256": "3c237a056d780a9e39876b3eaf979a425f2ae8c1f3435ab84201b3bea7ef3040",
-  "result_sha256": "fb854b3ec27f564f78374133f7134e91f0b6916a959cc038aeb33f362099f6ab",
+  "base_sha256": "e86c85d10d8e05057b1752df189ab8cb210c15a1269a2a1a21a70ae7a680f48f",
+  "result_sha256": "9a5ede0ec36d841b824702db4b605508e18166ca3b008938aa4df78044f003b0",
   "hunks": [
     {
       "before": "        profile = None\n        if self.metadata.get('backend') == 'lammps':\n",
       "after": "        profile = None\n        record = None\n        if self.metadata.get('backend') == 'lammps':\n"
     },
     {
-      "before": "            from fibernet.integrations import _harmonic_profile as hp\n            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                      self.dynamics_state, vars(self))\n        d = {\n",
-      "after": "            from fibernet.integrations import _harmonic_profile as hp\n            from ._lammps_result import _plain_full_history_export, validate_result\n            if _plain_full_history_export(self, detailed):\n                # Full validation includes result_guard; retain its detached\n                # state only for this hook-free projection, never on self.\n                record = validate_result(self)\n                profile = hp.contract_profile(self.metadata['model_contract'])\n            else:\n                profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                          self.dynamics_state, vars(self))\n        d = {\n"
+      "before": "            from fibernet.integrations import _harmonic_profile as hp\n            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                      self.dynamics_state, vars(self))\n",
+      "after": "            from fibernet.integrations import _harmonic_profile as hp\n            from ._lammps_result import _plain_full_history_export, validate_result\n            if _plain_full_history_export(self, detailed):\n                # Full validation includes result_guard; retain its detached\n                # state only for this hook-free projection, never on self.\n                record = validate_result(self)\n                profile = hp.contract_profile(self.metadata['model_contract'])\n            else:\n                profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,\n                                          self.dynamics_state, vars(self))\n"
     },
     {
       "before": "        if self.dynamics_state is not None:\n            record = _validate_result_state(self)\n            d['dynamics_state'] = record if detailed else _dynamics_state_summary(record)\n",

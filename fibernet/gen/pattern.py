@@ -1146,7 +1146,18 @@ def _unit_octet_3d(
     n_internal=0,
     **kwargs,
 ):
-    """Octet truss unit cell (cubic + body center)."""
+    """Octet truss: explicit displacements cover 12 outer then 8 center edges."""
+    n_total_pts = 20 * n_pts_per_side
+    n_displacements = 0 if point_displacements is None else len(point_displacements)
+    if n_displacements and n_displacements != n_total_pts:
+        raise ValueError(
+            f"Expected {n_total_pts} point_displacements "
+            f"(20 octet edges x {n_pts_per_side} pts), got {n_displacements}"
+        )
+    outer_displacements = center_displacements = point_displacements
+    if n_displacements:
+        outer_displacements = point_displacements[:12 * n_pts_per_side]
+        center_displacements = point_displacements[12 * n_pts_per_side:]
     mat = material or Material()
     w, h, d = box
     g = StructureGraph(dimension=3, box_size=[w, h, d])
@@ -1160,13 +1171,13 @@ def _unit_octet_3d(
         (4, 5), (5, 6), (6, 7), (7, 4),
         (0, 4), (1, 5), (2, 6), (3, 7),
     ]
-    _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
+    _add_3d_edges(g, nids, edges_12, n_pts_per_side, outer_displacements,
                   radius, mat, n_internal, seed)
     center = g.add_node([w / 2, h / 2, d / 2])
     center_edges = [(i, len(nids)) for i in range(len(nids))]
     nids_with_center = nids + [center]
     _add_3d_edges(g, nids_with_center, center_edges, n_pts_per_side,
-                  point_displacements, radius * 0.7, mat, n_internal, seed)
+                  center_displacements, radius * 0.7, mat, n_internal, seed)
     g._metadata["unit_type"] = "octet"
     return g
 
@@ -1615,6 +1626,13 @@ def _make_tpms_factory(tpms_kind):
         voxel_factor=2.0,
         **kwargs,
     ):
+        if (n_internal != 0 or n_pts_per_side != 0 or
+                (point_displacements is not None and len(point_displacements) != 0)):
+            raise ValueError(
+                "TPMS units require n_internal=0, n_pts_per_side=0, and "
+                "None or empty point_displacements; subdivision and explicit "
+                "intermediate-node displacements are unsupported."
+            )
         g = _build_tpms_unit(
             tpms_kind,
             box=box,
@@ -1928,7 +1946,10 @@ def pattern_2d(
     boundary_mode : str
         ``"none"``, ``"extend"``, or ``"error"``.
     fit_to_box : bool
-        Scale custom points to fit within the box.
+        Scale custom points to fit within the box. For custom points this
+        requires n_pts_per_side=0 and no point displacements (None, an empty
+        list/tuple, or an empty (0, 2) array). Combining fitting with
+        intermediate-node displacements is unsupported.
     unit_kwargs : dict, optional
         Extra kwargs for the unit factory (e.g., ``angle=20`` for reentrant).
         These override top-level factory arguments, including ``seed``. For
@@ -1938,10 +1959,26 @@ def pattern_2d(
     -------
     StructureGraph
     """
+    if not isinstance(boundary_mode, str) or boundary_mode not in ("none", "extend", "error"):
+        raise ValueError("boundary_mode must be 'none', 'extend', or 'error'")
     if unit is None and points is None:
         raise ValueError("Must specify either 'unit' or 'points'")
     if unit is not None and points is not None:
         raise ValueError("Cannot specify both 'unit' and 'points'")
+    if points is not None and fit_to_box:
+        empty_displacements = (
+            isinstance(point_displacements, (list, tuple)) and len(point_displacements) == 0
+        ) or (
+            isinstance(point_displacements, np.ndarray) and point_displacements.shape == (0, 2)
+        )
+        if n_pts_per_side != 0 or (point_displacements is not None and not empty_displacements):
+            raise ValueError(
+                "Custom points with fit_to_box=True require n_pts_per_side=0 and "
+                "no point_displacements (None, an empty list/tuple, or an empty "
+                "(0, 2) array). Fit the source points explicitly before requesting "
+                "intermediate graph nodes or displacements, then use fit_to_box=False. "
+                "Displacement-before/after-fit semantics are not inferred."
+            )
 
     mat = material or Material()
     ukw = unit_kwargs or {}
@@ -2066,20 +2103,46 @@ def _post_tile_connectivity_repair(
     graph : StructureGraph
         Tiled structure (modified in-place).
     max_bridge_dist : float
-        Maximum distance for bridge edges.
+        Maximum distance for bridge edges, in raw graph coordinate units.
     radius : float, optional
         Bridge edge radius. Default: median of existing edge radii.
     material : Material, optional
         Bridge material. Default: first edge's material.
+
+    Notes
+    -----
+    The graph's ``post_tile_connectivity_repair`` metadata describes this
+    invocation. Only newly added physical edges receive the same metadata key.
+    No physical length unit is inferred and no coordinate conversion is applied.
+    Completion does not guarantee connectivity or mechanical stability.
     """
+    report = {
+        "version": 1,
+        "status": "incomplete",
+        "coordinate_space": "graph_coordinates",
+        "length_unit": None,
+        "unit_conversion_applied": False,
+        "max_bridge_dist": float(max_bridge_dist),
+        "dangling_max_dist": float(max_bridge_dist * 2),
+        "distance_comparison": "strictly_less_than",
+        "components_before": None,
+        "components_after": None,
+        "added_edge_ids": [],
+        "added_node_ids": [],
+        "merged_node_ids": [],
+        "removed_edge_ids": [],
+    }
+    graph.metadata["post_tile_connectivity_repair"] = report
     try:
         from scipy.spatial import cKDTree
     except ImportError:
+        report.update(status="skipped_missing_dependency", missing_dependency="scipy")
         return graph
     
     try:
         import networkx as _nx
     except ImportError:
+        report.update(status="skipped_missing_dependency", missing_dependency="networkx")
         return graph
     
     # Check if already connected
@@ -2091,7 +2154,9 @@ def _post_tile_connectivity_repair(
         G_nx.add_edge(e.node_i, e.node_j)
     
     comps = list(_nx.connected_components(G_nx))
+    report["components_before"] = len(comps)
     if len(comps) <= 1:
+        report.update(status="not_needed", components_after=len(comps))
         return graph
     
     # Default radius/material from existing edges
@@ -2172,11 +2237,24 @@ def _post_tile_connectivity_repair(
             
             # Check not already connected
             if frozenset([main_nid, other_nid]) not in existing_edges:
-                graph.add_edge(main_nid, other_nid, radius=radius, material=material)
+                edge_count = graph.num_edges
+                eid = graph.add_edge(
+                    main_nid, other_nid, radius=radius, material=material,
+                    post_tile_connectivity_repair={
+                        "version": 1,
+                        "reason": "connect_disconnected_components",
+                        "distance_at_addition": float(dists[valid][best_other]),
+                        "distance_limit": float(max_bridge_dist),
+                        "coordinate_space": "graph_coordinates",
+                        "length_unit": None,
+                    },
+                )
+                if graph.num_edges > edge_count:
+                    report["added_edge_ids"].append(eid)
                 existing_edges.add(frozenset([main_nid, other_nid]))
                 main_comp = main_comp | other_set
     
-    # Repair dangling (degree-1) nodes by connecting to nearest non-boundary neighbor
+    # Process degree-1 candidates using the pre-pass adjacency (no boundary filter).
     G_check = _nx.Graph()
     for nid in graph.nodes:
         G_check.add_node(nid)
@@ -2208,8 +2286,25 @@ def _post_tile_connectivity_repair(
                     best_nid = other_nid
             
             if best_nid is not None:
-                graph.add_edge(d_nid, best_nid, radius=radius, material=material)
+                edge_count = graph.num_edges
+                eid = graph.add_edge(
+                    d_nid, best_nid, radius=radius, material=material,
+                    post_tile_connectivity_repair={
+                        "version": 1,
+                        "reason": "connect_degree_one_node",
+                        "distance_at_addition": float(best_dist),
+                        "distance_limit": float(max_bridge_dist * 2),
+                        "coordinate_space": "graph_coordinates",
+                        "length_unit": None,
+                    },
+                )
+                # add_edge may return an existing physical edge for this pair.
+                if graph.num_edges > edge_count:
+                    report["added_edge_ids"].append(eid)
 
+    # Update only the report after the unchanged dangling-node traversal.
+    G_check.add_edges_from((e.node_i, e.node_j) for e in graph.edges.values())
+    report.update(status="completed", components_after=_nx.number_connected_components(G_check))
     return graph
 
 def pattern_3d(
@@ -2237,10 +2332,18 @@ def pattern_3d(
         Grid dimensions.
     n_internal : int
         Internal points per edge (for FEM deformation).
+        TPMS units support only 0.
     n_pts_per_side : int
         Intermediate graph nodes per edge (affects structure topology).
+        TPMS units support only 0.
     point_displacements : list of (dx, dy, dz), optional
-        Explicit displacement per intermediate node.
+        Explicit displacement per intermediate node. For non-TPMS built-in
+        units, a nonempty sequence must have exactly one entry per requested
+        intermediate node; mismatches raise ValueError, including when zero
+        nodes are requested. None or an empty sequence retains seeded automatic
+        displacement generation when n_pts_per_side > 0, and is a no-op at 0.
+        For octet, entries cover the 12 outer edges then the 8 center edges.
+        TPMS units support only None or an empty sequence.
     radius : float
         Beam radius.
     material : Material, optional
@@ -2253,6 +2356,15 @@ def pattern_3d(
     Returns
     -------
     StructureGraph
+
+    Notes
+    -----
+    HCP and TPMS units run a post-tile connectivity repair. Its report is in
+    ``graph.metadata["post_tile_connectivity_repair"]``; added physical edges
+    carry the same metadata key with their reason and distance at addition.
+    The existing limits are 3.0 for component bridges and 6.0 for the subsequent
+    degree-one pass, in raw graph coordinate units, not inferred metres or mm.
+    These reports do not describe tiling welds or certify mechanical stability.
     """
     if isinstance(grid, int):
         grid = (grid, grid, grid)
@@ -2320,9 +2432,16 @@ def _add_3d_edges(
 ):
     """Add 3D edges with optional intermediate nodes."""
     n_total_pts = len(edge_pairs) * n_pts_per_side
+    n_displacements = 0 if point_displacements is None else len(point_displacements)
+    if n_displacements and n_displacements != n_total_pts:
+        raise ValueError(
+            f"Expected {n_total_pts} point_displacements "
+            f"({len(edge_pairs)} edges x {n_pts_per_side} pts), "
+            f"got {n_displacements}"
+        )
     if n_pts_per_side > 0:
-        if point_displacements is not None and len(point_displacements) >= n_total_pts:
-            all_disp = list(point_displacements[:n_total_pts])
+        if point_displacements is not None and (n_displacements or n_total_pts == 0):
+            all_disp = list(point_displacements)
         else:
             # Auto-generate 3D displacements
             effective_seed = seed if seed is not None else 0

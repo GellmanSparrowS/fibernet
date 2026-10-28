@@ -17,6 +17,7 @@ Examples
 >>> ds = FiberNetDataset.generate(
 ...     units=["honeycomb", "square", "reentrant"],
 ...     grid_range=[(3,3), (5,5)],
+...     n_internal_range=[0],
 ...     save_dir="datasets/sweep_v1",
 ... )
 >>> X, y = ds.features, ds.labels("max_force")
@@ -306,6 +307,50 @@ class FiberNetDataset:
                 values[row, column] = value
         return values
 
+    def feature_matrix_checked(self, names=None, *, allow_reasons=()) -> np.ndarray:
+        """Opt-in comparable, available legacy94 selection; never changes training defaults.
+
+        Full94 selection rejects the31 explicitly unaudited fields. A finite
+        reviewed subset can be selected by name. Metadata is declared provenance,
+        not authentication; dependencies are recorded, not numerical equivalence.
+        """
+        from fibernet.analysis.graph_features import (
+            GraphFeatureExtractor, _checked_feature_contract, _checked_feature_policy)
+        selected = self.feature_names if names is None else names
+        if isinstance(selected, (str, bytes)) or not isinstance(selected, Sequence):
+            raise ValueError("Selected feature names must be a sequence")
+        selected = list(selected)
+        seen = set()
+        for name in selected:
+            if not isinstance(name, str) or name not in GraphFeatureExtractor.FEATURE_COLS:
+                raise ValueError(f"Unsupported selected legacy94 feature name: {name!r}")
+            if name in seen:
+                raise ValueError(f"Duplicate selected feature name: {name!r}")
+            seen.add(name)
+        allowed = _checked_feature_policy(allow_reasons)
+        reference = None
+        for row, sample in enumerate(self.samples):
+            context = f"sample {sample.sample_id!r} (row {row})"
+            if not isinstance(sample.metadata, Mapping) or "feature_contract" not in sample.metadata:
+                raise ValueError(f"{context}: legacy.status_absent")
+            contract = sample.metadata["feature_contract"]
+            try:
+                identity = _checked_feature_contract(contract)
+            except ValueError as exc:
+                raise ValueError(f"{context}: {exc}") from exc
+            if reference is None:
+                reference = identity
+            elif identity != reference:
+                raise ValueError(f"{context}: incompatible feature space; six actual parameters must match")
+            for name in selected:
+                status = contract["status"][name]
+                pair = (status["state"], status["reason"])
+                if status["state"] not in ("computed", "defined_empty") and pair not in allowed:
+                    raise ValueError(f"{context}, feature {name!r}: {pair[0]}/{pair[1]}")
+        # Always enforce presence, scalar type and finite values, even under an
+        # explicit allowed finite convention. No zero/NaN repair is performed.
+        return self._selected_matrix("features", selected)
+
     @property
     def features(self) -> np.ndarray:
         """Finite feature matrix (n_samples, n_features); missing values fail."""
@@ -583,6 +628,7 @@ class FiberNetDataset:
         max_samples: Optional[int] = None,
         seed: int = 42,
         verbose: bool = True,
+        geometry_policy: str = "reject_internal_points",
     ) -> "FiberNetDataset":
         """Generate a labeled dataset by sweeping over structure parameters.
 
@@ -602,6 +648,8 @@ class FiberNetDataset:
             Sampling v2: explicit Cartesian radius dimension; default [0.05, 0.1, 0.2].
         n_internal_range : list of int
             Internal points per edge. Defaults to [0, 2, 4].
+            This default is unchanged: strict geometry acceptance rejects a
+            selected built-in plan containing nonzero internal-point counts.
         box : (w, h)
             Unit cell dimensions.
         target_stretch : float
@@ -622,6 +670,12 @@ class FiberNetDataset:
             Random seed.
         verbose : bool
             Print progress.
+        geometry_policy : {"reject_internal_points", "endpoint_chord"}
+            Strict by default: reject nonempty edge-owned internal points before
+            solving. Explicit endpoint_chord ignores those points mechanically;
+            it does not preserve or establish curved-beam mechanics. Actual
+            intermediate graph nodes connected by straight edges remain eligible.
+            The policy and helper implementation are bound into checkpoints.
 
         Returns
         -------
@@ -629,12 +683,14 @@ class FiberNetDataset:
         """
         from fibernet.gen import pattern
         from . import _generate_contract as contract
+        from fibernet.sim._taichi_geometry import preflight_taichi_geometry, GeometryPolicyError
 
         declaration, solver, param_combos = contract.make_plan(
             units=units, grid_range=grid_range, radius_range=radius_range,
             n_internal_range=n_internal_range, box=box, target_stretch=target_stretch,
             stiffness=stiffness, damping=damping, num_steps=num_steps,
-            max_samples=max_samples, seed=seed, checkpoint_every=checkpoint_every)
+            max_samples=max_samples, seed=seed, checkpoint_every=checkpoint_every,
+            geometry_policy=geometry_policy)
         if any(u.lower() not in pattern._UNIT_FACTORIES for u in declaration['units']):
             raise ValueError('unknown generation unit')
         run_binding = None
@@ -662,6 +718,9 @@ class FiberNetDataset:
             elif any((Path(save_dir) / name).exists()
                      for name in ('features.npy', 'labels.npy', 'metadata.json')):
                 raise ValueError('existing Dataset has no bound checkpoint; use a new save_dir')
+        # Preserve checkpoint mismatch precedence, but reject an incompatible
+        # selected built-in plan before any graph, provider, or output writes.
+        contract.validate_plan_geometry(pattern, param_combos, solver['geometry_policy'])
         complete_resume = checkpoint_loaded and all(
             contract.sample_id(p) in existing_ids for p in param_combos)
 
@@ -684,13 +743,15 @@ class FiberNetDataset:
             sd = params["seed"]
 
             try:
-                if engine is None:
-                    from fibernet.sim.accelerated import TaichiEngine
-                    engine = TaichiEngine()
                 g = pattern.pattern_2d(
                     unit=unit, box=params['box'], grid=grid, radius=params['radius'],
                     n_internal=n_int, seed=sd,
                 )
+                geometry_record = preflight_taichi_geometry(
+                    g, geometry_policy=solver['geometry_policy'])
+                if engine is None:
+                    from fibernet.sim.accelerated import TaichiEngine
+                    engine = TaichiEngine()
 
                 result = engine.stretch_test(
                     g,
@@ -700,6 +761,7 @@ class FiberNetDataset:
                     num_steps=solver['num_steps'],
                     save_interval=solver['save_interval'],
                     auto_steps=False,
+                    geometry_policy=solver['geometry_policy'],
                 )
 
                 feat = _extract_graph_features(g)
@@ -731,7 +793,8 @@ class FiberNetDataset:
                     params=params,
                     features=feat,
                     labels=labels,
-                    metadata={"time_s": float(getattr(result, "time_seconds", 0))},
+                    metadata={"time_s": float(getattr(result, "time_seconds", 0)),
+                              "taichi_geometry": geometry_record},
                 )
                 # Reject nonfinite accepted rows before they enter a checkpoint.
                 contract.validate_rows([{
@@ -746,6 +809,10 @@ class FiberNetDataset:
                     print(f"  [{n_done}/{n_total}] {unit} grid={grid} "
                           f"max_force={labels['max_force']:.1f}")
 
+            except GeometryPolicyError:
+                # Geometry-policy rejection must not become a silently partial
+                # dataset, including when a registered custom factory is used.
+                raise
             except Exception as exc:
                 n_failed += 1
                 n_done += 1

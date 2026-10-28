@@ -1,4 +1,5 @@
 """Fabricated-array identity/persistence checks. Never run a physical solver."""
+import ast
 import copy
 import json
 from pathlib import Path
@@ -9,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
-from fibernet.ml.beam_frame_fem import BeamFrameFEM
+from fibernet.ml.beam_frame_fem import BeamFrameFEM, _beam_resultant_contract
 from fibernet.sim.accelerated import SimResult, TaichiEngine
 
 
@@ -432,6 +433,74 @@ class ResultIdentityContractTests(unittest.TestCase):
                 self.assertEqual(restored.metadata['beam_resultant_contract'],
                                  result.metadata['beam_resultant_contract'])
                 np.testing.assert_array_equal(restored.metadata['beam_resultants'], result.metadata['beam_resultants'])
+
+    def raw_contract_expression(self, method):
+        # Evaluate only the actual producer's metadata expression, never its
+        # assembly/solve/recovery. This source-backed fixture is API evidence,
+        # not numerical or physics qualification.
+        source = Path(__file__).resolve().parents[1] / 'fibernet/ml/beam_frame_fem.py'
+        tree = ast.parse(source.read_text(encoding='utf-8'))
+        owner = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == 'BeamFrameFEM')
+        function = next(n for n in owner.body if isinstance(n, ast.FunctionDef) and n.name == method)
+        if method == 'solve_2d_nonlinear':
+            assignments = [n for n in function.body if isinstance(n, ast.Assign)
+                           and isinstance(n.targets[0], ast.Subscript)
+                           and isinstance(n.targets[0].slice, ast.Constant)
+                           and n.targets[0].slice.value == 'beam_resultant_contract']
+            self.assertEqual(len(assignments), 1)
+            expression = assignments[0].value
+        else:
+            returned = next(n.value for n in reversed(function.body) if isinstance(n, ast.Return))
+            expressions = [value for key, value in zip(returned.keys, returned.values)
+                           if isinstance(key, ast.Constant) and key.value == 'beam_resultant_contract']
+            self.assertEqual(len(expressions), 1)
+            expression = expressions[0]
+        return compile(ast.Expression(expression), str(source), 'eval')
+
+    def test_source_backed_raw_contracts_match_adapter_and_persistence(self):
+        for dim in (2, 3):
+            with self.subTest(dimension=dim):
+                graph = self.graph(dim=dim)
+                raw = self.raw_fem(graph, dim=dim)
+                # Nonzero sentinels must not turn uncomputed 3-D slots available.
+                if dim == 3:
+                    raw['edge_forces'][:, 1:] = 37.
+                original = raw['edge_forces'].copy()
+                raw['beam_resultant_contract'] = eval(
+                    self.raw_contract_expression('solve_%dd' % dim),
+                    {'_beam_resultant_contract': _beam_resultant_contract})
+                result = BeamFrameFEM(E=100.).to_sim_result(raw, graph)
+                self.assertEqual(raw['beam_resultant_contract'], result.metadata['beam_resultant_contract'])
+                self.assert_contract_roundtrip(result)
+                np.testing.assert_array_equal(raw['edge_forces'], original)
+                np.testing.assert_array_equal(result.metadata['beam_resultants'], original)
+                raw['beam_resultant_contract']['components'][0]['status'] = 'changed'
+                self.assertEqual(result.metadata['beam_resultant_contract']['components'][0]['status'], 'available')
+                fresh = _beam_resultant_contract(dim)
+                self.assertEqual(fresh, result.metadata['beam_resultant_contract'])
+
+    def test_source_backed_nonlinear_contract_refreshes_qualification(self):
+        graph = self.graph()
+        raw = self.raw_fem(graph)
+        raw['beam_resultant_contract'] = _beam_resultant_contract(2)
+        raw['field_status'] = {'edge_forces': {'status': 'approximate'}}
+        raw['solver_status'] = {'equilibrium': 'unverified'}
+        raw['beam_resultant_contract'] = eval(
+            self.raw_contract_expression('solve_2d_nonlinear'),
+            {'_beam_resultant_contract': _beam_resultant_contract, 'result': raw})
+        result = BeamFrameFEM(E=100.).to_sim_result(raw, graph)
+        self.assertEqual(raw['beam_resultant_contract'], result.metadata['beam_resultant_contract'])
+        self.assertEqual([c['status'] for c in raw['beam_resultant_contract']['components']], ['approximate'] * 3)
+        self.assertEqual(result.metadata['solver_status'], {'equilibrium': 'unverified'})
+        self.assert_contract_roundtrip(result)
+
+    def test_unrecognized_resultant_width_does_not_gain_contract(self):
+        graph = self.graph()
+        raw = self.raw_fem(graph)
+        raw['edge_forces'] = raw['edge_forces'][:, :2]
+        result = BeamFrameFEM(E=100.).to_sim_result(raw, graph)
+        self.assertNotIn('beam_resultant_contract', result.metadata)
+        np.testing.assert_array_equal(result.edge_forces, raw['edge_forces'][:, 0])
 
     def test_2d_resultant_contract_distinguishes_force_and_moment(self):
         graph = self.graph()

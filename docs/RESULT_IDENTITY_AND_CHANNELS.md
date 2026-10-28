@@ -47,6 +47,8 @@ Summary validation scans available coefficients for validity but neither copies 
 
 ## FEM resultants
 
+Raw `solve_2d`, `solve_3d` and `solve_2d_nonlinear` dictionaries include the same `beam_resultant_contract` component metadata as the adapter. Nonlinear recovery retains its approximate qualification. Each contract is detached; changing the raw component contract does not change the converted component contract.
+
 New conversions retain the existing numeric `metadata['beam_resultants']` array and add `metadata['beam_resultant_contract']` with schema version, dimension and ordered components:
 
 - 2-D: signed axial `N` (force), shear `V` (force), and `(M_i + M_j)/2` (moment). The last column is a mean, not either endpoint moment.
@@ -57,3 +59,5 @@ New conversions retain the existing numeric `metadata['beam_resultants']` array 
 A component status of `available` means that its column is provided or recovered under the recognized producer layout; it does not establish solver validity, numerical accuracy, equilibrium or convergence. Producer-authored `field_status` and `solver_status` remain separate: they are preserved when present and remain absent when absent, and an existing `approximate` qualification is not upgraded.
 
 Legacy files lacking this component contract remain readable, including historical three-column FEM `edge_forces` exports. The loader retains that original array separately and extracts axial force as before; it does not invent dimension-specific availability for old records.
+
+Generic field-prediction training accepts caller-supplied numeric targets; it does not ingest this contract or mask unavailable components. Callers must select and qualify their labels, rather than treating placeholder or unknown components as measurements. The existing `physical_dataset` labels are force-curve summaries, not these three resultant columns.

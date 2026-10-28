@@ -3,7 +3,7 @@ Parametric Structure Environment for RL.
 
 Wraps FiberNet's pattern_2d with point_displacements for reinforcement learning.
 Supports continuous action spaces where each action dimension controls the
-(dx, dy) displacement of an internal point on the structure edges.
+(dx, dy) displacement of an intermediate graph node on the structure sides.
 
 Examples
 --------
@@ -34,13 +34,16 @@ except ImportError:
 from fibernet.gen.pattern import pattern_2d
 from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.core.structure_graph import StructureGraph
+from fibernet.sim._taichi_geometry import (
+    GeometryPolicyError, preflight_taichi_geometry, validate_geometry_policy,
+)
 
 
 class ParametricStructureEnv:
     """RL environment for parametric fiber structure optimization.
 
     The action space is a continuous vector of (dx, dy) displacements
-    for each internal point on the structure edges. This directly controls
+    for each intermediate graph node on the structure sides. This directly controls
     beam geometry, enabling fine-grained structural optimization.
 
     Parameters
@@ -52,7 +55,8 @@ class ParametricStructureEnv:
     grid : tuple of int
         Tiling grid (nx, ny).
     n_pts_per_side : int
-        Internal points per edge (controls action space dimensionality).
+        Intermediate graph nodes per side (controls action space dimensionality),
+        not edge-owned internal_points.
     target_stretch : float
         Stretch ratio for evaluation.
     stiffness : float
@@ -69,6 +73,10 @@ class ParametricStructureEnv:
         "uniform_stretch": reward = -std_stretch (uniform deformation)
     unit_kwargs : dict, optional
         Extra kwargs for pattern_2d (e.g., n_seeds for voronoi).
+    geometry_policy : str, keyword-only
+        "reject_internal_points" (default) rejects edge-owned internal_points.
+        "endpoint_chord" explicitly ignores them mechanically. Segmented actual
+        graph nodes remain eligible; neither policy proves curve equivalence.
 
     Examples
     --------
@@ -93,7 +101,10 @@ class ParametricStructureEnv:
         displacement_range: float = 0.3,
         reward_mode: str = "minimize_force",
         unit_kwargs: Optional[Dict] = None,
+        *,
+        geometry_policy: str = "reject_internal_points",
     ):
+        self.geometry_policy = validate_geometry_policy(geometry_policy)
         self.unit = unit
         self.box = box
         self.grid = grid
@@ -106,7 +117,8 @@ class ParametricStructureEnv:
         self.reward_mode = reward_mode
         self.unit_kwargs = unit_kwargs or {}
 
-        self.engine = TaichiEngine()
+        # The generated graph, not a sampling option, decides acceptance.
+        self.engine = None
 
         # Calculate action space dimensionality
         self.n_sides = self._get_n_sides()
@@ -139,6 +151,8 @@ class ParametricStructureEnv:
             g = pattern_2d(unit=self.unit, box=self.box, grid=(1, 1),
                           n_pts_per_side=0, seed=0, **self.unit_kwargs)
             return g.num_edges
+        except GeometryPolicyError:
+            raise
         except Exception:
             return 4
 
@@ -183,16 +197,26 @@ class ParametricStructureEnv:
                 point_displacements=displacements,
                 seed=self._step_count, **self.unit_kwargs,
             )
+        except GeometryPolicyError:
+            raise
         except Exception as e:
             return None, None, -1e6, {"error": str(e), "max_force": 1e10}
 
         try:
+            geometry_record = preflight_taichi_geometry(
+                g, geometry_policy=self.geometry_policy,
+            )
+            if self.engine is None:
+                self.engine = TaichiEngine()
             r = self.engine.stretch_test(
                 g, target_stretch=self.target_stretch,
                 stiffness=self.stiffness, damping=self.damping,
                 num_steps=self.num_steps, save_interval=self.num_steps,
                 auto_steps=False,
+                geometry_policy=self.geometry_policy,
             )
+        except GeometryPolicyError:
+            raise
         except Exception as e:
             return g, None, -1e6, {"error": str(e), "max_force": 1e10}
 
@@ -213,6 +237,7 @@ class ParametricStructureEnv:
             "n_nodes": g.num_nodes,
             "n_edges": g.num_edges,
             "displacements": displacements,
+            "taichi_geometry": geometry_record,
         }
 
         self._current_graph = g
@@ -226,6 +251,8 @@ def create_rl_environment(
     grid: Tuple[int, int] = (3, 3),
     n_pts_per_side: int = 5,
     reward_mode: str = "minimize_force",
+    *,
+    geometry_policy: str = "reject_internal_points",
     **kwargs,
 ) -> ParametricStructureEnv:
     """Convenience function to create a parametric RL environment.
@@ -238,5 +265,5 @@ def create_rl_environment(
     """
     return ParametricStructureEnv(
         unit=unit, grid=grid, n_pts_per_side=n_pts_per_side,
-        reward_mode=reward_mode, **kwargs,
+        reward_mode=reward_mode, geometry_policy=geometry_policy, **kwargs,
     )

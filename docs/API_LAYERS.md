@@ -1,5 +1,7 @@
 # API layers and supported simulation routes
 
+[Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
@@ -24,6 +26,35 @@ not two different solvers. CPU/GPU is a Taichi device choice, not a physical mod
 from a legacy network is approximate, not lossless preservation of curved fibers
 or every crosslink. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
+
+`graph.to_fiber_network()` returns a legacy endpoint-chord projection with
+independently owned box and per-fiber material data, including nested material
+records and tensors. Editing these returned values does not edit the source
+graph or another converted fiber, even when source edges share a material.
+Coordinates and graph metadata also remain detached. Custom materials follow
+their `deepcopy` implementation, as in the graph's per-edge copy policy.
+This does not make the conversion lossless: source internal points, stable IDs,
+per-node/per-edge metadata and isolated nodes are not preserved as graph records;
+endpoint chords shorter than `1e-12` in the supplied coordinate units remain
+omitted. Fiber IDs are dense rows, and the existing discretization and junction
+crosslink construction remain unchanged. Geometry coordinates, radii and box
+values are copied without unit conversion or unit inference. Keep the original
+`StructureGraph` or its native serialization for authoritative geometry and IDs.
+Legacy OBJ export still writes endpoint cylinders, not the stored source curves.
+
+### Edit geometry before preparing solver controls
+
+Use `graph.displace_node(node_id, [dx, dy])`,
+`graph.set_node_position(node_id, [x, y, z])`, or
+`graph.set_node_positions({node_id: [x, y]})` with stable node IDs. These
+coordinates use the graph's existing units; no conversion is performed.
+Rejected edits leave geometry, merge lookup and ID counters unchanged. A batch
+with a rejected ID or coordinate is rejected before any node is changed.
+Valid edits retain IDs, boundary labels and internal edge points; they do not
+recompute boundary membership or deform a curved edge's internal geometry.
+Prepare supports and loads after editing. Existing prepared controls must be
+prepared again when the graph changes, as described in
+[stable-ID nodal controls](STABLE_NODAL_CONTROLS.md).
 
 ## Mechanical facade capability matrix
 
@@ -216,6 +247,30 @@ matching loader; `SimResult.load` is not a universal loader for electrical,
 thermal or viscoelastic results. Neither summary nor detailed export is a
 general restart checkpoint or a certificate that material dynamics can resume.
 
+### Saved LAMMPS displacement/reference consistency
+
+New `record_state=True` results retain `dynamics_state.displacement_reference`
+(`lammps_original_si_reference/1`): the exact original graph coordinates in SI,
+stable node-row IDs, declared arithmetic and existing prepared/graph source IDs.
+Detailed export/load checks numeric binary64 `(final_SI - original_SI) / scale`
+in that operation order; signed zero is equivalent. Sample 0 is only
+tolerance-close to the original graph and is **not** the displacement reference.
+
+`result.lammps_displacement_relationship()` reports `consistent` only when that
+saved relationship is checked. This is internal consistency, **not** graph
+authenticity, native accuracy or physics qualification. Malformed declared
+references and inconsistent displacements raise, including before summary save.
+Summary export projects `dynamics_state.displacement_reference` without its
+coordinate and node-ID arrays, retaining an `unavailable / omitted_from_summary`
+descriptor. Unrelated historical user metadata keeps its existing behavior. Historical reference-absent
+results remain readable and reference-absent (`unavailable / not_recorded`);
+loading them does not retroactively certify or invalidate their physics.
+Removing an optional descriptor likewise loses checkability and reports
+`unavailable`, never `consistent`; the format is not tamper-authenticating.
+`record_state=False` likewise has no exact saved-reference check. Neither export
+is a restart. Storage forecasts include the new reference and conversion copies;
+resource caps and native behavior are unchanged.
+
 ## Minimal explicit example
 
 ```python
@@ -233,3 +288,16 @@ result.save("frame_detailed.json", detailed=True)
 This is a small-strain beam-frame example, not a material calibration or a unit
 conversion. For advanced controls use the linked complete examples instead of
 adding unsupported mode/material/backend combinations to this call.
+
+
+## Prescribed-temperature mechanics
+
+`fibernet.sim.thermoelastic` exposes the existing experimental planar sparse
+thermoelastic owner and its detached snapshot type. The network entry point
+keeps its 192-node/256-edge defaults; an explicit `ThermoelasticSizeLimits`
+record can select different node and physical-edge ceilings; the conservative
+assembly-contribution ceiling is derived read-only metadata. The saved-temperature adapter accepts the same record and delegates
+to that owner. There is no new graph class, backend registry entry,
+`simulate(...)` dispatch or task supervisor. Size limits do not guarantee
+factorization memory/time or confer a large-task MCP capability. See
+[THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for contracts and units.

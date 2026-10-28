@@ -43,10 +43,11 @@ from fibernet.rl.utils import (
     run_bayesian_optimization,
 )
 
-from fibernet.rl.parametric import (
-    ParametricStructureEnv,
-    create_rl_environment,
-)
+# A utility import must not probe Gym or native simulation providers.
+# Drop cached aliases on reload; explicit access resolves their real owner.
+for _name in ("ParametricStructureEnv", "create_rl_environment"):
+    globals().pop(_name, None)
+del _name
 
 __all__ = [
     # Utils
@@ -66,6 +67,8 @@ __all__ = [
 def __getattr__(name):
     _submodules = {
         # Environments
+        "ParametricStructureEnv": "fibernet.rl.parametric",
+        "create_rl_environment": "fibernet.rl.parametric",
         "FiberStructureEnv": "fibernet.rl.env",
         "FiberDesignEnv": "fibernet.rl.env",
         "make_env": "fibernet.rl.env",
@@ -104,3 +107,7 @@ def __getattr__(name):
         return getattr(mod, name)
 
     raise AttributeError(f"module 'fibernet.rl' has no attribute '{name}'")
+
+
+def __dir__():
+    return sorted(set(globals()) | {"ParametricStructureEnv", "create_rl_environment"})

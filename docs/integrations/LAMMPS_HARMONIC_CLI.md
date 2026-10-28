@@ -161,7 +161,9 @@ geometric rest lengths. The geometric-rest-length
 StructureGraph PyVista renderer uses the existing stable-ID alignment helper.
 
 `record_state=True` opts into `dynamics_state` schema `lammps_harmonic_state/1`:
-all integration steps, physical seconds, SI positions/velocities, native net
+states under the selected export schedule (every integration step except the
+output-stride-selected `harmonic_sampled_v1` profile), physical seconds, SI
+positions/velocities, native net
 nodal forces, PE/KE/total energy, and global box pressure (Pa, compression
 positive, components xx/yy/zz/xy/xz/yz). Pressure is not material stress; net
 nodal forces are not general support reactions. Stress, reactions and work
@@ -172,6 +174,10 @@ Model/source identity and the runtime inventory receipt are separate.
 `result.save(path)` retain only summary scalars; loading a summary never
 reconstructs missing positions, velocities, forces, or pressure tensors.
 `record_state=False` retains no native state or trajectory arrays.
+For the modern harmonic and CG model contracts, export and load still validate
+the original graph length unit, its SI scale, and the geometry field-unit labels
+when state is omitted. Recording state is not required to check these metadata
+declarations; this does not reconstruct missing state or authenticate a source hash.
 
 This convenience call is synchronous. For asynchronous cancellation use the
 existing direct `LAMMPSTask` API. Terminal failures never become a successful
@@ -188,3 +194,41 @@ For explicitly selected cosine-angle bending without a projectile, use
 mode="dynamics", cg_request=request, ...)`. See the complete
 [pure-fiber example and scope](LAMMPS_CG_FIBER_ONLY.md).
 This is a bead model, not continuum beam/torsion or contact mechanics.
+
+
+## Source capability discovery
+
+```python
+from fibernet.sim import lammps_source_capabilities
+capabilities = lammps_source_capabilities()
+```
+
+This detached metadata describes the bounded `simulate(..., backend="lammps",
+mode="dynamics")` dispatcher, not the separate legacy linked-engine bridge.
+`models` lists the explicit harmonic route and `cg_request=CGRequest(...)`
+route. The old `profile="explicit-harmonic-beads"` metadata label remains for
+compatibility and describes only the harmonic route, not every accepted model.
+`harmonic_profiles` retains its existing limit dictionaries; `cg_profiles`
+contains copies of the authoritative network profile declarations. Profile
+bounds are source input ceilings, not evidence of feasible memory, speed,
+installed runtime readiness, or physical validation.
+
+Read `observations` with the chosen model/profile: harmonic runs observe every
+integration step, but `harmonic_sampled_v1` exports only output-stride-selected
+states. Unprofiled CG observes every integration step; CG network profiles use
+separate native dump and thermo strides and validate sampled geometry only.
+`record_state=False` omits `dynamics_state` and the retained trajectory; final
+`SimResult` arrays, scalars and metadata remain.
+None of these schedules establishes continuous-time geometry or no-crossing.
+
+Both routes retain straight graph edges, reject duplicate endpoint edges and reject flattening
+internal points. CG can build bent or branched strands from explicit straight
+edges and cosine-angle triplets, but accepts no constant nodal loads. Its
+selected nodal pair interactions are not continuous fiber contact or
+impenetrability. Fiber-only CG excludes network profiles and pair encoding.
+
+Calling the accessor does not discover or admit a runtime or run a solver.
+`runtime_readiness` stays `unknown`; `physics_qualification` stays
+`not_established_by_dispatch`. Actual execution still requires independently
+admitted, explicit runtime and resource contracts. Mutating any returned
+metadata does not change subsequent calls or accepted model/profile limits.

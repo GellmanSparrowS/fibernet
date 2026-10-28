@@ -1,5 +1,6 @@
 """Source and mocked lifecycle checks; never import or execute native LAMMPS."""
 from dataclasses import replace
+import copy
 import json
 import math
 import tempfile
@@ -75,6 +76,53 @@ class CGTests(unittest.TestCase):
         with self.assertRaises(ValueError):r.compute_detailed(g)
         state=r.dynamics_state.copy();state['schema']='lammps_harmonic_state/1'
         with self.assertRaises(ValueError):adapter.validate_state(state)
+
+    def test_static_geometry_metadata_with_and_without_recorded_state(self):
+        # This is one synthetic step-zero frame, not a static native evaluation.
+        g, q = fixture(False, steps=0)
+        p = prepare_cg(g, q)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'result.json'
+            for record in (False, True):
+                for detailed in (False, True):
+                    with self.subTest(record_state=record, detailed=detailed):
+                        result = adapter.to_sim_result(p, raw(p), RUNTIME, 0., record)
+                        valid = result.to_dict(detailed)
+                        result.save(path, detailed=detailed)
+                        self.assertEqual(SimResult.load(path).to_dict(detailed), valid)
+                        self.assertEqual(result.energy, -.25)
+                        self.assertEqual('dynamics_state' in valid, record)
+                        for mutation in ('scale', 'field_unit'):
+                            changed = copy.deepcopy(result)
+                            payload = copy.deepcopy(valid)
+                            if mutation == 'scale':
+                                changed.metadata['original_graph_length_to_m'] = .001
+                                payload['original_graph_length_to_m'] = .001
+                            else:
+                                changed.metadata['field_units']['displacements'] = 'mm'
+                                payload['field_units']['displacements'] = 'mm'
+                            with self.assertRaisesRegex(ValueError, 'inconsistent LAMMPS geometry units'):
+                                changed.to_dict(detailed)
+                            path.write_text(json.dumps(payload), encoding='utf-8')
+                            with self.assertRaisesRegex(ValueError, 'inconsistent LAMMPS geometry units'):
+                                SimResult.load(path)
+
+    def test_text_parser_preserves_signed_cg_potential(self):
+        from test_lammps_backend_contract import fixture as harmonic_texts
+        g, q = fixture(False, steps=2)
+        p = prepare_cg(g, q)
+        dump, log = harmonic_texts(p)
+        lines = log.splitlines()
+        for step in (0, 1, 2):
+            old = f'{step} 4 1 2 3 4 5 6 7 8 9'
+            self.assertEqual(lines.count(old), 1)
+            lines[lines.index(old)] = f'{step} 4 -0.25 2 1.75 4 5 6 7 8 9'
+        parsed = b.parse_outputs(p, dump, '\n'.join(lines)+'\n')
+        self.assertEqual([frame.potential_J for frame in parsed.thermo], [-.25]*3)
+        for record in (False, True):
+            with self.subTest(record_state=record):
+                result = adapter.to_sim_result(p, parsed, RUNTIME, 0., record)
+                self.assertEqual(result.energy, -.25)
 
     def test_morse_shifted_energy(self):
         c=(1.,2.,1.,3.);rc=c[3]

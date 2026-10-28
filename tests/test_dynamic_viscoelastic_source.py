@@ -15,6 +15,7 @@ import time
 import types
 import warnings
 import numpy as np
+from geometry_policy.support import H as GEOMETRY_HELPERS
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -87,7 +88,7 @@ def run_checks():
         for value in vars(cls).values():
             if hasattr(value, '__builtins__'):
                 value.__builtins__['__import__'] = imports
-    ns = dict(warnings=warnings, np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
+    ns = dict(GEOMETRY_HELPERS, warnings=warnings, np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
         __builtins__=dict(vars(builtins), __import__=imports), SimResult=Result,
         _material_options=mod.material_options, _check_taichi_owner=lambda: None,
         _ensure_taichi=lambda *a: None, _prepare_force_feedback=lambda *a: None,
@@ -112,7 +113,7 @@ def run_checks():
     x0 = np.array([[0.,0.,0.],[1.,0.,0.]])
     graph = types.SimpleNamespace(num_nodes=2,
         nodes={17:types.SimpleNamespace(position=x0[0]), 83:types.SimpleNamespace(position=x0[1])},
-        edges={91:types.SimpleNamespace(node_i=17, node_j=83)})
+        edges={91:types.SimpleNamespace(node_i=17, node_j=83, internal_points=None)})
     ns['_graph_to_arrays'] = lambda g:(x0.copy(), np.array([[0,1]]), [17,83], None)
     fields = None
     steps = None
@@ -155,6 +156,10 @@ def run_checks():
     check('actual interval dt is passed unchanged', all(c[3] == .125 for c in material.calls))
     check('state history is chained once, not by sample schedule', [float(c[2][0,0]) for c in material.calls] == [0.,.01,.02])
     check('result uses sentinel committed stress and U, not elastic stiffness', result.edge_forces.tolist() == [5.25] and result.energy == 1.5)
+    check('geometry interpretation coexists with material state',
+        result.metadata['taichi_geometry'] == dict(schema='taichi_endpoint_chord/1',
+            policy='reject_internal_points', representation='endpoint_chord',
+            ignored_internal_point_edge_ids=[]))
     record = result.metadata['native_axial_viscoelastic']
     check('sampled material state includes initial, sampled and final state', [s['step'] for s in record['samples']] == [0,2,3])
     check('stable IDs, geometry and final branch/x/v state retained', record['node_ids'] == [17,83] and record['edge_ids'] == [91] and record['final']['viscous_strain'] == [[.03]] and len(record['final_velocities_m_per_s']) == 2)

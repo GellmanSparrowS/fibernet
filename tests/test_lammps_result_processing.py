@@ -305,3 +305,57 @@ def test_extra_instance_fields_select_original_validation_path():
     with patch.object(profiles, 'result_guard', wraps=profiles.result_guard) as guard:
         r.to_dict(True)
         assert guard.call_count == 2
+
+
+@pytest.mark.parametrize('use_fallback', [False, True])
+@pytest.mark.parametrize('detailed', [False, True])
+@pytest.mark.parametrize('change', [
+    lambda r: r.metadata.__setitem__('original_graph_length_unit', 'unknown'),
+    lambda r: r.metadata.__setitem__('original_graph_length_to_m', 2.),
+    lambda r: r.metadata['field_units'].__setitem__('displacements', 'unknown'),
+])
+def test_current_metadata_validation_survives_fast_fallback_and_no_state(
+        use_fallback, detailed, change):
+    for recorded in (False, True):
+        p = small(4)
+        r = adapter.to_sim_result(p, typed_raw(p), RUNTIME, 0., recorded)
+        if use_fallback:
+            r = fallback(r)
+        # Prove this actual converter-produced control is accepted before the
+        # metadata mutation; an unrelated profile refusal is not evidence.
+        r.to_dict(detailed)
+        change(r)
+        with pytest.raises(ValueError, match='inconsistent LAMMPS geometry units'):
+            r.to_dict(detailed)
+
+
+@pytest.mark.parametrize('use_fallback', [False, True])
+@pytest.mark.parametrize('change', [
+    lambda r: r.dynamics_state['displacement_reference']['node_ids'].reverse(),
+    lambda r: r.dynamics_state['displacement_reference']['positions'][0].__setitem__(0, .5),
+    lambda r: r.displacements.__setitem__((0, 0), .5),
+    lambda r: setattr(r, 'displacements', None),
+])
+def test_current_reference_validation_survives_fast_and_fallback(use_fallback, change):
+    r = result()
+    if use_fallback:
+        r = fallback(r)
+    r.to_dict(True)
+    change(r)
+    with pytest.raises(ValueError, match='reference'):
+        r.to_dict(True)
+
+
+@pytest.mark.parametrize('detailed', [1, np.bool_(True)])
+def test_nonliteral_detailed_flags_keep_fallback(detailed):
+    r = result()
+    assert not adapter._plain_full_history_export(r, detailed)
+    assert encoded(r, detailed) == encoded(fallback(r), detailed)
+
+
+def test_reference_status_and_bytes_match_current_fallback():
+    r = result()
+    assert adapter._plain_full_history_export(r, True)
+    slow = fallback(r)
+    assert r.lammps_displacement_relationship() == slow.lammps_displacement_relationship()
+    assert encoded(r) == encoded(slow)

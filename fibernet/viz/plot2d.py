@@ -111,26 +111,63 @@ def plot_orientation_distribution(
     save_path: Optional[str] = None,
     figsize: Tuple[float, float] = (6, 6),
 ) -> plt.Figure:
-    """Plot polar histogram of fiber orientations."""
-    from fibernet.analysis.morphology import MorphologyAnalyzer
-    
-    analyzer = MorphologyAnalyzer(network)
-    angles, counts = analyzer.orientation_distribution()
-    
-    if len(angles) == 0:
-        fig, ax = plt.subplots(figsize=figsize, subplot_kw={'projection': 'polar'})
-        ax.set_title("No fibers")
-        return fig
-    
+    """Plot the density of XY-projected, undirected endpoint orientations.
+
+    Accepts a 2D or 3D FiberNetwork; this is not a spherical 3D distribution.
+    Each fiber has equal weight, irrespective of arc length or sampling. Curved
+    fibers contribute their endpoint chord, not their local tangent directions.
+    There are 36 bins over [0, pi), with density in inverse radians (bar heights
+    times bin widths sum to one). Reversing a fiber leaves its bin unchanged.
+
+    Undefined endpoint directions or XY projections raise ValueError rather
+    than being replaced by an artificial direction or silently omitted. The
+    1e-12 threshold matches Fiber.direction in the input coordinate units.
+    Empty networks produce a "No fibers" polar figure, also saved if requested.
+    """
+    if not HAS_MATPLOTLIB:
+        raise ImportError("matplotlib is required: pip install matplotlib")
+    if not isinstance(network, FiberNetwork):
+        raise TypeError("plot_orientation_distribution requires FiberNetwork")
+    if network.dimension not in (2, 3):
+        raise ValueError("network.dimension must be 2 or 3")
+
+    # Fiber.direction substitutes the x axis for very short chords. Validate
+    # raw geometry first so closed curves cannot become false x-alignment.
+    for index, fiber in enumerate(network.fibers):
+        points = np.asarray(fiber.centerline, dtype=float)
+        if (points.ndim != 2 or points.shape[1] != 3 or len(points) < 2
+                or not np.all(np.isfinite(points))):
+            raise ValueError(f"fiber {index}: centerline must contain at least two finite 3D points")
+        with np.errstate(over='ignore', invalid='ignore'):
+            chord = points[-1] - points[0]
+            norm = np.linalg.norm(chord)
+            xy_norm = np.linalg.norm(chord[:2])
+        if not np.all(np.isfinite(chord)) or not np.isfinite(norm) or not np.isfinite(xy_norm):
+            raise ValueError(f"fiber {index}: endpoint chord and its norms must be finite")
+        if norm <= 1e-12:
+            raise ValueError(f"fiber {index}: endpoint direction is undefined (chord norm <= 1e-12)")
+        if xy_norm <= 1e-12:
+            raise ValueError(f"fiber {index}: XY endpoint projection is undefined (norm <= 1e-12)")
+
+    orientations = network.fiber_orientations()
     fig, ax = plt.subplots(figsize=figsize, subplot_kw={'projection': 'polar'})
-    
-    bars = ax.bar(angles, counts, width=np.pi / len(counts), alpha=0.7, color='steelblue')
-    ax.set_title("Fiber Orientation Distribution", pad=20)
-    ax.set_rlabel_position(45)
-    
+    if len(orientations) == 0:
+        ax.set_title("No fibers")
+    else:
+        # Choose one representative per undirected XY axis before atan2.
+        # Applying modulo to opposite signed angles can round across bin edges.
+        xy = orientations[:, :2].copy()
+        reverse = (xy[:, 1] < 0) | ((xy[:, 1] == 0) & (xy[:, 0] < 0))
+        xy[reverse] *= -1
+        angles = np.mod(np.arctan2(xy[:, 1], xy[:, 0]), np.pi)
+        bins = np.linspace(0, np.pi, 37)
+        density, _ = np.histogram(angles, bins=bins, density=True)
+        centers = 0.5 * (bins[:-1] + bins[1:])
+        ax.bar(centers, density, width=np.pi / 36, alpha=0.7, color='steelblue')
+        ax.set_title("XY-projected endpoint orientation\nDensity (rad$^{-1}$)", pad=20)
+        ax.set_rlabel_position(22.5)
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches='tight')
-    
     return fig
 
 
@@ -252,7 +289,7 @@ def plot_dynamics_result(
         for node_i, node_j in edges:
             lines.append([positions[node_i][:2], positions[node_j][:2]])
         
-        cmap = matplotlib.colormaps.get_cmap(colormap)
+        cmap = plt.get_cmap(colormap)
         norm = Normalize(vmin=strains.min(), vmax=strains.max())
         lc = LineCollection(
             lines, linewidths=1.5, cmap=cmap, norm=norm,
@@ -338,7 +375,7 @@ def plot_metamaterial(
         orientations.append(angle)
     
     orientations = np.array(orientations)
-    cmap = matplotlib.colormaps.get_cmap(colormap)
+    cmap = plt.get_cmap(colormap)
     norm = Normalize(vmin=-np.pi, vmax=np.pi)
     
     lc = LineCollection(

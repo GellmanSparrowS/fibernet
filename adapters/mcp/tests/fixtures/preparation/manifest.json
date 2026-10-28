@@ -1,0 +1,35 @@
+{
+  "schema": "fibernet.mcp.preparation_test_fixture/1",
+  "scope": "retained native preparation output for a procedural planar graph; prescribed translations and reference conductances, not solver or physical validation",
+  "nodes": 1423,
+  "physical_edges": 2012,
+  "length_unit": "m",
+  "native_helper_sha256": "5611345cfcf3c1872a9bb763534cc23b1d8f192c5df0e7fa603429de05c62d4e",
+  "files": {
+    "source.json.gz": {
+      "bytes": 50466,
+      "sha256": "d323868c51415775ca0e1345baddcbf81d8253eed8f0ef659c70cb021c410531",
+      "uncompressed_bytes": 746048,
+      "uncompressed_sha256": "2d0550429aba412bad6d84b8522e65dc74f6b38c666c22c94927f8a2d943a014"
+    },
+    "shear-bundle.json.gz": {
+      "bytes": 189454,
+      "sha256": "1c4a004bb3b5fe3f16f0c78afc8a27078d280c89b0763014e398fe3ab1d3db86",
+      "uncompressed_bytes": 1154891,
+      "uncompressed_sha256": "b5cb015bf5e765dbb481a514886a732e7ae207a39e80bc1300f0a710b6155016"
+    }
+  },
+  "core_provenance": {
+    "canonical_core_manifest_sha256": "f7d7bc89eff7de73acbcf64f3ef0bfda1e06e894aeb2a3128f54a060df67380d",
+    "schema_version": "fibernet.core-provenance/1",
+    "scope": "fibernet_python_sources",
+    "source_file_count": 244
+  },
+  "encoding": {
+    "format": "gzip",
+    "compression_level": 9,
+    "mtime": 0,
+    "embedded_filename": false
+  },
+  "license": "MIT; Copyright (c) 2026 FiberNet Contributors; see adapter LICENSE"
+}

@@ -1,11 +1,20 @@
-# Exact result-processing source admission
+# Result-processing source fixture
 
-This candidate delta admits only SimResult.to_dict's one-operation, hook-free
-full-history detailed projection. It is a private review candidate, not a
-release approval or native-runtime qualification. The immutable historical
-API, result identity and spring provenance fixtures remain unchanged.
+`accelerated_delta.json` records the exact `SimResult.to_dict` change for
+eligible plain full-history exports. The optimized path reuses the detached
+state returned by per-call validation. Other accepted representations retain
+their existing validation and export path.
 
-The test guard pins this delta separately, verifies its exact prior and result
-SHA256, and compares complete approved methods. Mutation refusal, source
-checkout byte preservation, all state/result validators and byte limits remain
-in force. No atomic-save, solver, physics, Graph or other backend rewrite.
+The delta composes after `reviewed_lammps_reference_source()`. Its inverse
+removes only the result-processing change, preserving the preceding metadata,
+nodal-control and original-SI displacement-reference contracts.
+
+Source identities:
+
+- Parent SHA-256: `e86c85d10d8e05057b1752df189ab8cb210c15a1269a2a1a21a70ae7a680f48f`
+- Result SHA-256: `9a5ede0ec36d841b824702db4b605508e18166ca3b008938aa4df78044f003b0`
+- Delta SHA-256: `f9af4731055f6a07c1d691cf562998b5c69a1eafe89a4498c1f55bf81a74cc98`
+
+Byte-preserving Git attributes and exact forward/inverse checks bind this
+fixture to those source identities. Public signatures and serialized result
+fields remain unchanged.

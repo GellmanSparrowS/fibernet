@@ -60,6 +60,94 @@ jobs:
       if: runner.os == 'Windows'
       run: pytest tests/ -v --tb=short -o addopts="" -k "not (TestSimulation3D or TestVisualization3D or TestEnergyComputation or TestOOMGuard)"
 
+  training-cpu-contracts:
+    name: CPU training contracts (Python 3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CUDA_VISIBLE_DEVICES: ""
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+      NUMEXPR_NUM_THREADS: "1"
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install development and CPU-only training dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install -e ".[dev]"
+        # Resolve the verified CPU wheel's ordinary Python dependency closure
+        # from PyPI, then admit only the pinned official CPU Torch wheel.
+        python -m pip install "filelock==4.2.4" "fsspec==2026.9.0" "jinja2==3.1.6" "markupsafe==3.0.4" "typing-extensions>=4.10.0" "setuptools>=77.0.3" "sympy>=1.13.3" "networkx>=2.5.1"
+        python -m pip install --force-reinstall --no-deps --only-binary=:all: --index-url https://download.pytorch.org/whl/cpu "torch==2.14.1+cpu"
+        # Pure-Python PyG plus its ordinary dependencies only; no optional
+        # compiled PyG extensions and no CUDA packages. Never let PyG replace Torch.
+        python -m pip install "aiohttp" "fsspec" "jinja2" "numpy" "psutil" "pyparsing" "requests" "tqdm" "xxhash==3.8.1"
+        python -m pip install --no-deps --only-binary=:all: --index-url https://pypi.org/simple "torch-geometric==2.7.0"
+        python -m pip check
+
+    - name: Verify CPU runtime and run focused training contracts without skips
+      run: |
+        python - <<'PY'
+        import importlib.metadata
+        from pathlib import Path
+        import sys
+        import pytest
+        import torch
+        import torch_geometric
+
+        distribution = importlib.metadata.distribution("torch")
+        assert distribution.version == torch.__version__ == "2.14.1+cpu"
+        assert torch.version.cuda is None
+        assert Path(torch.__file__).resolve() == Path(distribution.locate_file("torch/__init__.py")).resolve()
+        pyg_distribution = importlib.metadata.distribution("torch-geometric")
+        assert pyg_distribution.version == torch_geometric.__version__ == "2.7.0"
+        assert Path(torch_geometric.__file__).resolve() == Path(pyg_distribution.locate_file("torch_geometric/__init__.py")).resolve()
+        assert importlib.metadata.version("xxhash") == "3.8.1"
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        print("Python:", sys.executable)
+        print("Torch:", torch.__version__, "origin:", torch.__file__)
+        print("PyG:", torch_geometric.__version__, "origin:", torch_geometric.__file__)
+        print("CPU threads:", torch.get_num_threads(), torch.get_num_interop_threads())
+
+        class NoSkippedTests:
+            def pytest_sessionfinish(self, session, exitstatus):
+                reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+                if reporter.stats.get("skipped"):
+                    session.exitstatus = 1
+
+        result = pytest.main([
+            "-q", "--noconftest", "-o", "addopts=", "-p", "no:cacheprovider",
+            "--basetemp", "${{ runner.temp }}/fibernet-training-contracts",
+            "tests/test_training_default_mse_shapes.py",
+            "tests/test_training_contracts.py",
+            "tests/test_training_metric_availability.py",
+            "tests/test_edge_gine_state_io.py",
+            "tests/test_gnn_checked_prediction.py",
+            # Interface-only regression nodes: deliberately no optimizer smoke.
+            "tests/test_gnn_graph_batch.py::test_identity_masks_copy_and_parallel_adjacency",
+            "tests/test_gnn_graph_batch.py::test_strict_integer_arrays",
+            "tests/test_gnn_graph_batch.py::test_masked_arrays_rejected",
+            "tests/test_gnn_graph_batch.py::test_float32_range_rejected",
+            "tests/test_gnn_graph_batch.py::test_forged_and_empty_inputs",
+            "tests/test_gnn_graph_batch.py::test_unsigned_out_of_range_and_cross_graph_messages",
+            "tests/test_gnn_graph_batch.py::test_permutations_and_reversed_parallel_members",
+            "tests/test_gnn_graph_batch.py::test_lazy_and_missing_torch",
+            "tests/test_gnn_group_training.py::test_preflight_before_optimizer",
+            "tests/test_gnn_group_training.py::test_missing_sklearn_and_legacy_groups_error",
+        ], plugins=[NoSkippedTests()])
+        assert not any(name in sys.modules for name in ("taichi", "gmsh", "lammps"))
+        raise SystemExit(result)
+        PY
+
   build:
     needs: test
     runs-on: ubuntu-latest

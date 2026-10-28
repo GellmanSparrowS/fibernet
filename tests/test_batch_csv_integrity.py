@@ -51,7 +51,9 @@ def batch(tmp_path, monkeypatch):
     monkeypatch.setattr(easy, "TaichiEngine", Engine)
     monkeypatch.setattr(
         easy.StructureGraph, "from_dict",
-        lambda data: SimpleNamespace(name=data["name"], num_nodes=4, num_edges=3),
+        lambda data: SimpleNamespace(
+            name=data["name"], num_nodes=4, num_edges=3,
+            edges={eid: SimpleNamespace(internal_points=None) for eid in (9, 2, 17)}),
     )
 
     def add(*names):

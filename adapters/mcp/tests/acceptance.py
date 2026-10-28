@@ -33,7 +33,7 @@ async def run(timeout=10,audit='acceptance.json',cancel=False,force_kill=False):
     async with stdio_client(p) as (r,w):
         async with ClientSession(r,w) as session:
             init=await session.initialize();assert init.protocolVersion=='2025-11-25'
-            listing=await session.list_tools();assert len(listing.tools)==6
+            listing=await session.list_tools();assert len(listing.tools)==8
             assert len((await session.list_resource_templates()).resourceTemplates)==1
             await session.read_resource('fibernet://capabilities')
             expected = expected_core_provenance(json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text()))

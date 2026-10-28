@@ -15,7 +15,7 @@ from fslab.structure import StructureFactory,all_unit_keys,unit_display
 from fslab.simcache import RunConfig,run_stretch
 from fslab.features import compute_features,feature_name
 from fslab.mlmodel import gen_dataset,TARGET_NAMES
-from fslab.learning import Regressor,MODEL_SPECS,ACQUISITIONS
+from fslab.learning import Regressor,MODEL_SPECS,ACQUISITIONS,FEATURE_SCHEMA
 from fslab.inverse import run_inverse,curve_of,target_curve
 from fslab.surface_mapping import load_obj,subdivide_quads
 from fslab.manufacturing import compile_planar,compile_surface
@@ -76,7 +76,7 @@ class Demo:
         def report(*args):
             if args and isinstance(args[0],(int,float)):progress(min(float(args[0])/count,.95),desc='生成并物理标注')
         X,Y=gen_dataset(factory.unit,n=count,seed0=factory.seed,path=str(path),mode='physics',acquisition=acquisition,progress_cb=report)
-        estimator=Regressor(model,params=params,seed=factory.seed);estimator.train(X,Y,epochs=150)
+        estimator=Regressor(model,params=params,seed=factory.seed);estimator.train(X,Y,epochs=150,feature_schema=FEATURE_SCHEMA)
         ids=estimator.val_indices;pred=estimator.predict(X[ids]);truth=Y[ids]
         score=[];figure=go.Figure()
         for i,label in enumerate(TARGET_NAMES):
@@ -178,7 +178,7 @@ def create_app():
     demo=StudioDemo()
     with gr.Blocks(title='FiberScope 3.0 · 纤维网络材料设计',theme=gr.themes.Soft(primary_hue='blue'),delete_cache=(3600,86400),css=".gradio-container {max-width:1440px!important} #hero {background:linear-gradient(120deg,#101e35,#174c68);padding:32px;border-radius:20px;margin-bottom:20px} #hero h1,#hero h3,#hero p {color:white!important} .tab-nav button {padding:14px!important} footer {display:none!important}") as app:
         gr.Markdown('# FiberScope 3.0\n### 从基本单元到可制造的纤维网络\nDESIGN · SIMULATE · LEARN · MANUFACTURE',elem_id='hero')
-        gr.Markdown('### 线上展示 Demo · 桌面版为完整版本\n此页面用于体验核心流程。完整功能与大型任务，请下载桌面版。\n\n[GitHub 开源代码](https://github.com/GellmanSparrowS/fibernet) · [下载 Windows 完整版](https://github.com/GellmanSparrowS/fibernet/releases/tag/fiberscope-v3.0.0)')
+        gr.Markdown('### 线上展示 Demo · 桌面版为完整版本\n此页面用于体验核心流程。完整功能与大型任务，请下载桌面版。\n\n[GitHub 开源代码](https://github.com/GellmanSparrowS/fibernet) · [下载 Windows 完整版](https://github.com/GellmanSparrowS/fibernet/releases/tag/v4.2.0)')
         state=gr.State({},time_to_live=14400,delete_callback=cleanup_session)
         with gr.Tab('1 · 结构生成'):
             with gr.Row():
