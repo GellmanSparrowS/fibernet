@@ -8,7 +8,7 @@ import fibernet
 
 
 def _literal_list_declaration(text, section, key):
-    """Read the two simple string-list declarations checked here, not full TOML.
+    """Read the simple string-list declarations checked here, not full TOML.
 
     Python 3.9 stdlib only: neither tomllib nor an extra TOML dependency is needed.
     Literal single/double-quoted strings, multiline lists and comments are accepted.
@@ -46,3 +46,25 @@ class TestTypedPackageData(unittest.TestCase):
             ['setuptools>=61.0'],
         )
         self.assertTrue((Path(fibernet.__file__).resolve().parent / 'py.typed').is_file())
+
+    def test_requirements_file_matches_test_runner_constraints(self):
+        project_root = Path(__file__).resolve().parents[1]
+        dev = _literal_list_declaration(
+            (project_root / 'pyproject.toml').read_text(encoding='utf-8'),
+            'project.optional-dependencies', 'dev',
+        )
+        requirements = [
+            line.strip()
+            for line in (project_root / 'requirements-dev.txt')
+            .read_text(encoding='utf-8').splitlines()
+            if line.strip() and not line.lstrip().startswith('#')
+        ]
+        for name in ('pytest', 'pytest-forked'):
+            with self.subTest(requirement=name):
+                pattern = re.compile(
+                    r'^' + re.escape(name) + r'(?=[<>=!~;\[\s]|$)'
+                )
+                expected = [item for item in dev if pattern.match(item)]
+                actual = [item for item in requirements if pattern.match(item)]
+                self.assertEqual(len(expected), 1)
+                self.assertEqual(actual, expected)
