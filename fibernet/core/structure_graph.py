@@ -732,17 +732,25 @@ class StructureGraph:
     # ------------------------------------------------------------------
 
     def discretize_edges(self, n_points_per_edge: int = 8) -> "StructureGraph":
-        """Return a new graph where every edge has n_points_per_edge internal points.
+        """Return a copy, filling edges that have no stored internal samples.
 
-        This is essential for deformation visualization: when simulation
-        displaces nodes, the internal points can be displaced proportionally
-        to show the deformed shape of each beam.
+        Edges with ``internal_points=None`` or an empty array receive
+        ``n_points_per_edge`` equally spaced endpoint-linear samples. Existing
+        nonempty samples are preserved exactly, including collinear points;
+        their count need not equal ``n_points_per_edge``. In particular, zero
+        requests no new samples and does not clear stored geometry.
+
+        Physical nodes, edges, IDs, materials and ``segments`` are unchanged.
+        These geometry samples are not additional mechanical nodes and do not
+        supply an interior displacement field.
         """
         g = self.copy()
         for eid, edge in g._edges.items():
             pi = g._nodes[edge.node_i].position
             pj = g._nodes[edge.node_j].position
             t = np.linspace(0, 1, n_points_per_edge + 2)[1:-1]
+            if edge.internal_points is not None and len(edge.internal_points) > 0:
+                continue
             edge.internal_points = (
                 pi[None, :] * (1 - t[:, None]) + pj[None, :] * t[:, None]
             )
