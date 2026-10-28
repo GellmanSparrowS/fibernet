@@ -788,6 +788,15 @@ class SimResult:
 
         return self
 
+    def lammps_displacement_relationship(self) -> Dict:
+        """Inspect saved displacement/reference consistency, not native accuracy.
+
+        Missing historical/no-state references remain unavailable and are never
+        synthesized. Malformed declared references raise rather than downgrade.
+        """
+        from ._lammps_result import displacement_relationship_status
+        return displacement_relationship_status(self)
+
     def viscoelastic_energy_diagnostics(self) -> Dict:
         """Inspect cumulative energy residuals at saved material endpoints.
 
@@ -1492,14 +1501,16 @@ class TaichiEngine:
             observer_node_ids = tuple(_strict_state_ids(node_ids))
             observer_units = None if units is None else tuple(sorted(units.items()))
         if explicit_mass or record_state or units is not None:
-            fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
             _strict_state_ids(list(node_ids))
-            for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
-                scalar = _finite_real_array(value, name, ())
-                if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
-                    raise ValueError(f'{name} is outside the supported mass/state range')
-            if external_force is not None:
-                external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
+
+        # Caller controls have the same contract with or without mass/state output.
+        fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
+        for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
+            scalar = _finite_real_array(value, name, ())
+            if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
+                raise ValueError(f'{name} is outside the supported range')
+        if external_force is not None:
+            external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
 
         schedules = _prepare_displacement_schedule(
             displacement_schedule, num_nodes, dim

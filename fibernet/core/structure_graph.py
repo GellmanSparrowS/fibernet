@@ -435,7 +435,7 @@ class StructureGraph:
         """Batch-set positions, validating every update before changing any.
 
         Rejected edits leave positions, merge lookup and stable IDs unchanged.
-        Coordinate normalization retains the existing method semantics.
+        Coordinates are flattened and normalized as in ``add_node``.
 
         Parameters
         ----------
@@ -450,9 +450,11 @@ class StructureGraph:
         for nid, value in positions.items():
             if nid not in self._nodes:
                 raise KeyError(f"Node {nid} not found")
-            pos = np.asarray(value, dtype=float)
+            pos = np.asarray(value, dtype=np.float64).ravel()
             if len(pos) == 2:
                 pos = np.append(pos, 0.0)
+            if len(pos) != 3:
+                raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
             pos = pos.copy()
             new_key = self._checked_position_key(pos)
             old_key = self._pos_key(self._nodes[nid].position)

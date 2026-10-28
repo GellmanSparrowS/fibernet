@@ -118,7 +118,7 @@ fn.list_units_3d()
 #  'schwarz_d', 'schwarz_p']
 </code></pre>
 <h2>Parametric Control</h2>
-<p>Each unit edge supports <code>n_pts_per_side</code> internal nodes with programmable <code>(dx, dy)</code> displacement:</p>
+<p>Supported edge-based units accept <code>n_pts_per_side</code> intermediate graph nodes, distinct from edge-owned interior points controlled by <code>n_internal</code>. The 2D example below uses programmable <code>(dx, dy)</code> displacements. The six TPMS units listed above require <code>n_internal=0</code>, <code>n_pts_per_side=0</code>, and <code>point_displacements=None</code> or an empty sequence; unsupported nondefault controls raise <code>ValueError</code> before geometry generation rather than being silently ignored.</p>
 <pre><code>
 g = fn.pattern_2d(
 unit="square",

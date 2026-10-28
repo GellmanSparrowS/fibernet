@@ -126,8 +126,8 @@
         "zh": "二维 StructureGraph。"
       },
       "caveat": {
-        "en": "n_pts_per_side creates graph nodes; n_internal stores edge interior points.",
-        "zh": "n_pts_per_side 生成图节点；n_internal 保存边内点，两者含义不同。"
+        "en": "n_pts_per_side creates graph nodes; n_internal stores edge interior points. With custom points, fit_to_box=True requires n_pts_per_side=0 and point_displacements set to None, an empty list/tuple, or an empty (0, 2) array. To add intermediate nodes or displacements, fit the source points explicitly first, then use fit_to_box=False.",
+        "zh": "n_pts_per_side 生成图节点；n_internal 保存边内点。自定义 points 使用 fit_to_box=True 时，要求 n_pts_per_side=0，point_displacements 为 None、空列表、空元组或形状为 (0, 2) 的空数组。若需添加中间节点或位移，请先显式缩放源点，再使用 fit_to_box=False。"
       },
       "docsPath": "README.md",
       "availability": "source_documented_not_runtime_certified",
@@ -886,16 +886,16 @@
         "zh": "在给定规模内测量结构、平面孔隙与可选有限宽度重叠。"
       },
       "input": {
-        "en": "Planar graph or positions and dense-row edges; optional region/contact settings.",
-        "zh": "平面图或坐标与稠密行边数组；可选区域与接触设置。"
+        "en": "Planar straight-edge graph or positions and dense-row edges; optional region/contact settings.",
+        "zh": "平面直边图，或坐标与稠密行边数组；可选区域与接触设置。"
       },
       "output": {
         "en": "Snapshot feature dictionary.",
         "zh": "快照特征字典。"
       },
       "caveat": {
-        "en": "Shares the caller's length units; not the legacy 94-feature schema.",
-        "zh": "沿用调用方的长度单位；不是旧版 94 特征模式。"
+        "en": "For StructureGraph inputs, extract_graph rejects nonempty edge internal_points. Represent sampled paths as graph nodes joined by straight edges; this changes node/edge counts. Shares the caller's length units; not the legacy 94-feature schema.",
+        "zh": "extract_graph 要求 StructureGraph 的边不含非空 internal_points。采样路径需显式表示为图节点和直边，这会改变节点数与边数。沿用调用方的长度单位；不是旧版 94 特征模式。"
       },
       "docsPath": "examples/snapshot_features_workflow.py",
       "availability": "source_documented_not_runtime_certified",
@@ -2601,5 +2601,5 @@
       "automatic": false
     }
   ],
-  "sourceCommit": "0e017c22265da60e57dce7ce4119dd8ea6915e19"
+  "sourceCommit": "7040885edcc525bf839423b1ebbceab9756dc7e0"
 }

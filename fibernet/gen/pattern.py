@@ -1146,7 +1146,18 @@ def _unit_octet_3d(
     n_internal=0,
     **kwargs,
 ):
-    """Octet truss unit cell (cubic + body center)."""
+    """Octet truss: explicit displacements cover 12 outer then 8 center edges."""
+    n_total_pts = 20 * n_pts_per_side
+    n_displacements = 0 if point_displacements is None else len(point_displacements)
+    if n_displacements and n_displacements != n_total_pts:
+        raise ValueError(
+            f"Expected {n_total_pts} point_displacements "
+            f"(20 octet edges x {n_pts_per_side} pts), got {n_displacements}"
+        )
+    outer_displacements = center_displacements = point_displacements
+    if n_displacements:
+        outer_displacements = point_displacements[:12 * n_pts_per_side]
+        center_displacements = point_displacements[12 * n_pts_per_side:]
     mat = material or Material()
     w, h, d = box
     g = StructureGraph(dimension=3, box_size=[w, h, d])
@@ -1160,13 +1171,13 @@ def _unit_octet_3d(
         (4, 5), (5, 6), (6, 7), (7, 4),
         (0, 4), (1, 5), (2, 6), (3, 7),
     ]
-    _add_3d_edges(g, nids, edges_12, n_pts_per_side, point_displacements,
+    _add_3d_edges(g, nids, edges_12, n_pts_per_side, outer_displacements,
                   radius, mat, n_internal, seed)
     center = g.add_node([w / 2, h / 2, d / 2])
     center_edges = [(i, len(nids)) for i in range(len(nids))]
     nids_with_center = nids + [center]
     _add_3d_edges(g, nids_with_center, center_edges, n_pts_per_side,
-                  point_displacements, radius * 0.7, mat, n_internal, seed)
+                  center_displacements, radius * 0.7, mat, n_internal, seed)
     g._metadata["unit_type"] = "octet"
     return g
 
@@ -1615,6 +1626,13 @@ def _make_tpms_factory(tpms_kind):
         voxel_factor=2.0,
         **kwargs,
     ):
+        if (n_internal != 0 or n_pts_per_side != 0 or
+                (point_displacements is not None and len(point_displacements) != 0)):
+            raise ValueError(
+                "TPMS units require n_internal=0, n_pts_per_side=0, and "
+                "None or empty point_displacements; subdivision and explicit "
+                "intermediate-node displacements are unsupported."
+            )
         g = _build_tpms_unit(
             tpms_kind,
             box=box,
@@ -1928,7 +1946,10 @@ def pattern_2d(
     boundary_mode : str
         ``"none"``, ``"extend"``, or ``"error"``.
     fit_to_box : bool
-        Scale custom points to fit within the box.
+        Scale custom points to fit within the box. For custom points this
+        requires n_pts_per_side=0 and no point displacements (None, an empty
+        list/tuple, or an empty (0, 2) array). Combining fitting with
+        intermediate-node displacements is unsupported.
     unit_kwargs : dict, optional
         Extra kwargs for the unit factory (e.g., ``angle=20`` for reentrant).
         These override top-level factory arguments, including ``seed``. For
@@ -1944,6 +1965,20 @@ def pattern_2d(
         raise ValueError("Must specify either 'unit' or 'points'")
     if unit is not None and points is not None:
         raise ValueError("Cannot specify both 'unit' and 'points'")
+    if points is not None and fit_to_box:
+        empty_displacements = (
+            isinstance(point_displacements, (list, tuple)) and len(point_displacements) == 0
+        ) or (
+            isinstance(point_displacements, np.ndarray) and point_displacements.shape == (0, 2)
+        )
+        if n_pts_per_side != 0 or (point_displacements is not None and not empty_displacements):
+            raise ValueError(
+                "Custom points with fit_to_box=True require n_pts_per_side=0 and "
+                "no point_displacements (None, an empty list/tuple, or an empty "
+                "(0, 2) array). Fit the source points explicitly before requesting "
+                "intermediate graph nodes or displacements, then use fit_to_box=False. "
+                "Displacement-before/after-fit semantics are not inferred."
+            )
 
     mat = material or Material()
     ukw = unit_kwargs or {}
@@ -2297,10 +2332,18 @@ def pattern_3d(
         Grid dimensions.
     n_internal : int
         Internal points per edge (for FEM deformation).
+        TPMS units support only 0.
     n_pts_per_side : int
         Intermediate graph nodes per edge (affects structure topology).
+        TPMS units support only 0.
     point_displacements : list of (dx, dy, dz), optional
-        Explicit displacement per intermediate node.
+        Explicit displacement per intermediate node. For non-TPMS built-in
+        units, a nonempty sequence must have exactly one entry per requested
+        intermediate node; mismatches raise ValueError, including when zero
+        nodes are requested. None or an empty sequence retains seeded automatic
+        displacement generation when n_pts_per_side > 0, and is a no-op at 0.
+        For octet, entries cover the 12 outer edges then the 8 center edges.
+        TPMS units support only None or an empty sequence.
     radius : float
         Beam radius.
     material : Material, optional
@@ -2389,9 +2432,16 @@ def _add_3d_edges(
 ):
     """Add 3D edges with optional intermediate nodes."""
     n_total_pts = len(edge_pairs) * n_pts_per_side
+    n_displacements = 0 if point_displacements is None else len(point_displacements)
+    if n_displacements and n_displacements != n_total_pts:
+        raise ValueError(
+            f"Expected {n_total_pts} point_displacements "
+            f"({len(edge_pairs)} edges x {n_pts_per_side} pts), "
+            f"got {n_displacements}"
+        )
     if n_pts_per_side > 0:
-        if point_displacements is not None and len(point_displacements) >= n_total_pts:
-            all_disp = list(point_displacements[:n_total_pts])
+        if point_displacements is not None and (n_displacements or n_total_pts == 0):
+            all_disp = list(point_displacements)
         else:
             # Auto-generate 3D displacements
             effective_seed = seed if seed is not None else 0

@@ -620,13 +620,23 @@ def _assert_distinct_lazy_train_rl_routes(root_api, rl_api, fail_owner=None):
             "    return sorted(set(globals()) | set(_RENDER_EXPORTS) | "
             "set(_LAZY_EXPORTS) | set(_LAZY_MODULES) | {'_HAS_RL'})",
         )
-        allowed = {ast.dump(ast.parse(source).body[0]) for source in allowed_root_uses}
+        allowed_rl_uses = (
+            'for _name in ("ParametricStructureEnv", "create_rl_environment"):\n'
+            '    globals().pop(_name, None)',
+            'def __dir__():\n'
+            '    return sorted(set(globals()) | {"ParametricStructureEnv", "create_rl_environment"})',
+        )
+        allowed = {ast.dump(ast.parse(source).body[0]) for source in
+                   (allowed_root_uses if root else allowed_rl_uses)}
+        seen_allowed = {statement: 0 for statement in allowed}
         dependencies = {"_LAZY_EXPORTS", "_LAZY_MODULES", "_RENDER_EXPORTS",
                         "__getattr__", "__dir__", "train_rl"}
         for statement in tree.body:
             if statement in declarations or statement in functions:
                 continue
-            if root and ast.dump(statement) in allowed:
+            statement_dump = ast.dump(statement)
+            if statement_dump in allowed:
+                seen_allowed[statement_dump] += 1
                 continue
             for node in ast.walk(statement):
                 assert not (isinstance(node, ast.Name) and node.id in dependencies), \
@@ -639,6 +649,8 @@ def _assert_distinct_lazy_train_rl_routes(root_api, rl_api, fail_owner=None):
                 assert not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                             and node.func.id in {"globals", "locals", "vars", "exec", "eval"}), \
                     "Unsupported dynamic module binding"
+        if not root:
+            assert set(seen_allowed.values()) == {1}, "Missing or duplicate reviewed RL facade statement"
         exec(compile(ast.Module(body=functions, type_ignores=[]),
                      "<isolated-facade-resolver>", "exec"), namespace)
         return namespace
@@ -689,6 +701,8 @@ def test_lazy_train_rl_routes_reject_adverse_rebindings():
         "root_import", "root_assignment", "root_duplicate_map", "root_decoy",
         "rl_owner", "rl_return", "rl_symbol", "root_subscript", "root_update",
         "root_getter_rebind", "rl_getter_rebind", "root_alias", "root_dynamic",
+        "rl_cleanup_alias", "rl_cleanup_rebind", "rl_cleanup_duplicate", "rl_cleanup_missing",
+        "rl_dir_alias", "rl_dir_rebind", "rl_dir_duplicate", "rl_dir_missing",
     ):
         root_api, rl_api = ast.parse(root_source), ast.parse(rl_source)
         target = rl_api if mutation.startswith("rl_") else root_api
@@ -703,6 +717,29 @@ def test_lazy_train_rl_routes_reject_adverse_rebindings():
                 "root_dynamic": 'globals()["train_rl"] = None',
             }[mutation]
             target.body.extend(ast.parse(statement).body)
+        elif mutation.startswith("rl_cleanup_"):
+            cleanup = next(node for node in rl_api.body if isinstance(node, ast.For))
+            if mutation == "rl_cleanup_alias":
+                cleanup.iter.elts[0].value = "train_rl"
+            elif mutation == "rl_cleanup_rebind":
+                cleanup.body.extend(ast.parse('globals()["train_rl"] = None').body)
+            elif mutation == "rl_cleanup_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(cleanup)).body[0])
+            else:
+                rl_api.body.remove(cleanup)
+        elif mutation.startswith("rl_dir_"):
+            directory = next(node for node in rl_api.body
+                             if isinstance(node, ast.FunctionDef) and node.name == "__dir__")
+            if mutation == "rl_dir_alias":
+                name = next(node for node in ast.walk(directory)
+                            if isinstance(node, ast.Constant) and node.value == "ParametricStructureEnv")
+                name.value = "train_rl"
+            elif mutation == "rl_dir_rebind":
+                directory.body.insert(0, ast.parse('globals()["train_rl"] = None').body[0])
+            elif mutation == "rl_dir_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(directory)).body[0])
+            else:
+                rl_api.body.remove(directory)
         elif mutation in ("root_owner", "root_decoy"):
             owner = next(node for node in ast.walk(root_api)
                          if isinstance(node, ast.Constant) and node.value == "fibernet.easy")

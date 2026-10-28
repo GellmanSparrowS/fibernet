@@ -13,6 +13,23 @@ from typing import Optional, List, Tuple, Dict
 from fibernet.core.network import FiberNetwork
 
 
+def _resolve_colormap(colormap):
+    """Resolve caller palettes without requiring the post-3.5 registry API."""
+    from matplotlib import colormaps, rcParams
+    from matplotlib.colors import Colormap
+
+    if isinstance(colormap, Colormap):
+        return colormap
+    if colormap is None:
+        colormap = rcParams["image.cmap"]
+    if not isinstance(colormap, str):
+        raise TypeError("colormap must be a string, Colormap, or None")
+    try:
+        return colormaps[colormap]
+    except KeyError as exc:
+        raise ValueError(f"{colormap!r} is not a registered colormap") from exc
+
+
 def _require_pyvista():
     """Load only on an explicit render call; do not mask broken installations."""
     try:
@@ -90,14 +107,12 @@ def render_network_3d(
         elif color_by == "orientation":
             d = fiber.direction
             angle = np.arctan2(d[1], d[0])
-            from matplotlib import colormaps
-            cmap = colormaps.get_cmap(colormap)
+            cmap = _resolve_colormap(colormap)
             norm_val = (angle + np.pi) / (2 * np.pi)
             color = [int(c * 255) for c in cmap(norm_val)[:3]]
             plotter.add_mesh(tube, color=color, opacity=0.9)
         elif color_by == "length":
-            from matplotlib import colormaps
-            cmap = colormaps.get_cmap(colormap)
+            cmap = _resolve_colormap(colormap)
             lengths = network.fiber_lengths()
             if len(lengths) > 0 and lengths.max() > lengths.min():
                 norm_val = (fiber.length - lengths.min()) / (lengths.max() - lengths.min())
@@ -230,26 +245,26 @@ def render_structure_graph_3d(
 
     if color_by == "stress" and sim_result is not None and sim_result.edge_forces is not None:
         edge_vals = np.abs(sim_result.edge_forces)
-        cmap = colormaps.get_cmap("RdYlBu_r")
+        cmap = colormaps["RdYlBu_r"]
         vmin, vmax = edge_vals.min(), edge_vals.max()
         if vmax - vmin < 1e-12:
             vmax = vmin + 1
     elif color_by == "stretch" and sim_result is not None and sim_result.edge_stretches is not None:
         edge_vals = sim_result.edge_stretches
-        cmap = colormaps.get_cmap("hot")
+        cmap = colormaps["hot"]
         vmin, vmax = edge_vals.min(), edge_vals.max()
         if vmax - vmin < 1e-12:
             vmax = vmin + 1
     elif color_by == "displacement" and sim_result is not None and sim_result.displacements is not None:
         edge_vals = None  # computed per-edge from displacement
-        cmap = colormaps.get_cmap("coolwarm")
+        cmap = colormaps["coolwarm"]
         disp_mags = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
         vmin, vmax = disp_mags.min(), disp_mags.max()
         if vmax - vmin < 1e-12:
             vmax = vmin + 1
     elif color_by == "orientation":
         edge_vals = None
-        cmap = colormaps.get_cmap("hsv")
+        cmap = colormaps["hsv"]
         vmin, vmax = 0, 1
     else:
         edge_vals = None

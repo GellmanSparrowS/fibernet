@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (QComboBox, QDoubleSpinBox, QFormLayout,
 from fslab import UNIT_PRESETS
 from fslab.structure import all_unit_keys, unit_display
 from fslab.mlmodel import MLP, TARGET_NAMES, gen_dataset, r2_score
-from fslab.learning import Regressor, MODEL_SPECS, ACQUISITIONS
+from fslab.learning import Regressor, MODEL_SPECS, ACQUISITIONS, FEATURE_SCHEMA
 from fslab.dataset_stream import dataset_config, config_id
 from .i18n import tr, get_lang
 from .theme import apply_plot_theme, colors
@@ -73,9 +73,10 @@ class TrainWorker(QThread):
     failed = Signal(str)
 
     def __init__(self, X, Y, hidden, lr, epochs, patience, min_delta,
-                 parent=None, algorithm='mlp', parameters=None):
+                 parent=None, algorithm='mlp', parameters=None, *, feature_schema=None):
         super().__init__(parent)
         self.X, self.Y = X, Y
+        self.feature_schema = feature_schema
         self.algorithm, self.parameters = algorithm, parameters
         self.hidden, self.lr = int(hidden), float(lr)
         self.epochs, self.patience = int(epochs), int(patience)
@@ -92,7 +93,7 @@ class TrainWorker(QThread):
                 self.X, self.Y, lr=self.lr, epochs=self.epochs,
                 patience=self.patience, min_delta=self.min_delta,
                 epoch_cb=lambda e, tr, va: self.epoch.emit(e, tr, va),
-                stop_cb=lambda: self._stop)
+                stop_cb=lambda: self._stop, feature_schema=self.feature_schema)
             self.done.emit({'model': model, 'history': hist})
         except Exception as e:
             self.failed.emit('%s: %s' % (e.__class__.__name__, e))
@@ -123,6 +124,7 @@ class MLTab(QWidget):
         self._train_after_generation = False
         self.X = None
         self.Y = None
+        self.feature_schema = None
         self.model = None
         self.history = None
         self.gen_worker = None
@@ -400,6 +402,7 @@ class MLTab(QWidget):
 
     def _gen_done(self, X, Y, path):
         self.X, self.Y = X, Y
+        self.feature_schema = FEATURE_SCHEMA
         self.label_mode = self.gen_worker.label_mode
         self._read_specs(path)
         self.model = None
@@ -428,7 +431,7 @@ class MLTab(QWidget):
             self.X, self.Y, self.hidden_spin.value(), lr,
             self.epochs_spin.value(), self.patience_spin.value(),
             self.mindelta_spin.value(), self, algorithm=self.algorithm,
-            parameters=self.parameters)
+            parameters=self.parameters, feature_schema=self.feature_schema)
         self.train_worker.epoch.connect(self._on_epoch)
         self.train_worker.done.connect(self._train_done)
         self.train_worker.failed.connect(self._worker_failed)
@@ -517,6 +520,7 @@ class MLTab(QWidget):
 
     # ---------------- results ----------------
     def _load_existing(self, *_):
+        self.feature_schema = None
         if not hasattr(self, 'mode_combo') or not hasattr(self, 'status'):
             return
         self.label_mode = self.mode_combo.currentData()

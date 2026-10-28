@@ -249,7 +249,7 @@ class RendererTests(unittest.TestCase):
             def tube(self,**kwargs):return self
         import sys
         modules={'pyvista':types.SimpleNamespace(Plotter=Plotter,Spline=Spline),
-            'matplotlib':types.SimpleNamespace(colormaps=types.SimpleNamespace(get_cmap=lambda _:lambda x:(x,0,0,1))),
+            'matplotlib':types.SimpleNamespace(colormaps={'RdYlBu_r':lambda x:(x,0,0,1)}),
             'fibernet.viz.render':types.SimpleNamespace(_align_result=aligned['_align_result'])}
         with patch.dict(sys.modules,modules):
             namespace['render_structure_graph_3d'](g,r,color_by='stress',show_nodes=False)

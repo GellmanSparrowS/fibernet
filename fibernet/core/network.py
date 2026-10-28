@@ -159,6 +159,12 @@ class FiberNetwork:
                 cl for cl in self.crosslinks
                 if cl.fiber_i != index and cl.fiber_j != index
             ]
+            # Snapshot old indices so even a repeated Crosslink reference is
+            # remapped once, while retaining each surviving object's fields.
+            endpoints = [(cl, cl.fiber_i, cl.fiber_j) for cl in self.crosslinks]
+            for cl, fiber_i, fiber_j in endpoints:
+                cl.fiber_i = fiber_i - 1 if fiber_i > index else fiber_i
+                cl.fiber_j = fiber_j - 1 if fiber_j > index else fiber_j
             for i, f in enumerate(self.fibers):
                 f.fiber_id = i
 
