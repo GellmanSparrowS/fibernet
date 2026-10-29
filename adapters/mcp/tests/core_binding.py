@@ -30,7 +30,7 @@ async def positive(environment, output):
         async with stdio_client(params) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
-                assert len((await session.list_tools()).tools) == 8
+                assert len((await session.list_tools()).tools) == 9
                 result = await session.call_tool('fibernet_catalog', {})
                 assert not result.isError
                 graph = result.structuredContent['graphs'][0]

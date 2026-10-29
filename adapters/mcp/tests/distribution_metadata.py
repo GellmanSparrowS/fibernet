@@ -28,6 +28,7 @@ TOOLS = (
     'fibernet_artifact_info', 'fibernet_artifact_read',
     'fibernet_solve_linear_transport', 'fibernet_prepare_deformed_transport',
     'fibernet_solve_thermoelastic_network_snapshot',
+    'fibernet_project_fiber_network_report',
 )
 NATIVE_SOURCE_COUNT = 248
 FORBIDDEN = frozenset((

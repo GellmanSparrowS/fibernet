@@ -19,7 +19,8 @@ import psutil
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
            'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
-           'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py')
+           'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py',
+           'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py')
 DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
@@ -250,9 +251,10 @@ def main():
             child_cpu_start = usage_cpu(resource.RUSAGE_CHILDREN)
             with (directory / (name + '.log')).open('wb') as log:
                 command = [sys.executable, '-B', str(ROOT / 'tests' / name)]
-                if name == 'test_electrical.py':
+                if name in ('test_electrical.py', 'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py'):
                     command = [sys.executable, '-B', '-m', 'pytest', '-p', 'no:cacheprovider',
-                               '-o', 'addopts=', '--basetemp', str(directory / 'electrical-pytest'),
+                               '-o', 'addopts=', '--basetemp', str(directory / (name + '-pytest')),
+                               '--junitxml', str(directory / (name + '.junit.xml')),
                                '-q', str(ROOT / 'tests' / name)]
                 result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
             stages.append({'script': name, 'returncode': result.returncode,

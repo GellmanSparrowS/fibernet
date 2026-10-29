@@ -97,14 +97,14 @@ def store_context():
 class SnapshotContract(unittest.TestCase):
     def test_exact_eighth_schema(self):
         tools=json.loads(Path(server.__file__).with_name('tool_schemas.json').read_text())['tools']
-        self.assertEqual(len(tools),8);self.assertEqual(tools[-1]['name'],'fibernet_solve_thermoelastic_network_snapshot')
+        self.assertEqual(len(tools),9);self.assertEqual(tools[7]['name'],'fibernet_solve_thermoelastic_network_snapshot')
         for tool in tools:
             for direction in ('inputSchema','outputSchema'):jsonschema.Draft202012Validator.check_schema(tool[direction])
-        jsonschema.Draft202012Validator(tools[-1]['inputSchema']).validate(args())
+        jsonschema.Draft202012Validator(tools[7]['inputSchema']).validate(args())
         for field in args():
             bad=args();del bad[field]
             with self.subTest(field=field),self.assertRaises(jsonschema.ValidationError):
-                jsonschema.Draft202012Validator(tools[-1]['inputSchema']).validate(bad)
+                jsonschema.Draft202012Validator(tools[7]['inputSchema']).validate(bad)
 
     def test_valid_wire_and_detached_native_once(self):
         req=request();original=copy.deepcopy(req)
@@ -226,7 +226,7 @@ class SnapshotContract(unittest.TestCase):
             def model_dump_json(self,**kw):
                 return json.dumps(self.__dict__,default=lambda x:x.__dict__)
         tree=ast.parse(Path(server.__file__).read_text())
-        serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
+        serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_serve_admitted')
         call=copy.deepcopy(next(n for n in serve.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='call'))
         call.decorator_list=[]
         with store_context() as (store,gid,_):

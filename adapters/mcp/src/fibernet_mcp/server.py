@@ -32,6 +32,9 @@ from .thermoelastic import (PROFILE as SNAPSHOT_PROFILE, SNAPSHOT_LIMITS,
     MAX_SNAPSHOT_SOURCE_BYTES, MAX_SNAPSHOT_REQUEST_BYTES, MAX_SNAPSHOT_ENVELOPE_BYTES,
     SnapshotContractError, snapshot_request, validate_worker_snapshot)
 
+from .projection import (MAX_PROJECTION_REQUEST_BYTES, MAX_PROJECTION_WORKER_BYTES,
+                         ProjectionContractError, projection_request, checked_report)
+
 VERSION = 'fibernet.mcp/1'
 TREE = '6eabb154cd37d95c7c447a568b1b737c3ec883c8'
 MAX_SESSION = 48 * 1024 * 1024
@@ -88,6 +91,19 @@ async def publish_snapshot(store, gid, snapshot, provenance, request, validate_r
         status='solved', profile=SNAPSHOT_PROFILE, length_unit=request['length_unit'],
         frame_id=request['frame_id'], frame_provenance=request['frame_provenance'],
         unit_provenance=request['unit_provenance'], artifact=stage.descriptor())
+    validate_reply(reply)
+    await anyio.lowlevel.checkpoint()
+    store.commit_artifact(stage)
+    return reply
+
+
+async def publish_projection(store, gid, report, provenance, request, validate_reply):
+    """Validate the real staged reply before the final cancellation checkpoint."""
+    checked_report(report, request)
+    stage = store.stage_artifact(gid, report, provenance, kind='fiber_network_projection_report')
+    reply = envelope(graph_id=gid, source_sha256=store.graphs[gid]['source_sha256'],
+        status='completed', scope='checked_projection_report_only', effective_profile=request,
+        request_sha256=sha(canonical(request)), counts=report['counts'], artifact=stage.descriptor())
     validate_reply(reply)
     await anyio.lowlevel.checkpoint()
     store.commit_artifact(stage)
@@ -154,7 +170,7 @@ class ManagedStore:
         return self.graphs[gid]
 
     def stage_artifact(self, gid, metrics, core_provenance, kind='topology_metrics'):
-        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation', 'thermoelastic_network_snapshot'):
+        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation', 'thermoelastic_network_snapshot', 'fiber_network_projection_report'):
             raise ContractError('invalid artifact kind')
         self.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if kind == 'thermoelastic_network_snapshot' else self.source(gid)
         identity = canonical(self.core_provenance)
@@ -245,10 +261,12 @@ class Supervisor:
             if request is not None:
                 raw=canonical(request)
                 cap = (MAX_PREPARATION_REQUEST_BYTES if operation == 'prepare_deformed_transport' else
-                       MAX_SNAPSHOT_REQUEST_BYTES if operation == 'thermoelastic_snapshot' else MAX_TRANSPORT_REQUEST_BYTES)
+                       MAX_SNAPSHOT_REQUEST_BYTES if operation == 'thermoelastic_snapshot' else
+                       MAX_PROJECTION_REQUEST_BYTES if operation == 'fiber_projection_report' else MAX_TRANSPORT_REQUEST_BYTES)
                 if len(raw)>cap or self.store.total+len(raw)>MAX_SESSION:
                     return failure('PREPARATION_REQUEST_LIMIT' if operation == 'prepare_deformed_transport' else
-                                   'SNAPSHOT_REQUEST_LIMIT' if operation == 'thermoelastic_snapshot' else 'TRANSPORT_REQUEST_LIMIT','resource')
+                                   'SNAPSHOT_REQUEST_LIMIT' if operation == 'thermoelastic_snapshot' else
+                                   'PROJECTION_REQUEST_LIMIT' if operation == 'fiber_projection_report' else 'TRANSPORT_REQUEST_LIMIT','resource')
                 request_name='request-'+uuid.uuid4().hex
                 write_at(self.store.fd,request_name,raw)
                 request_owned=True
@@ -268,8 +286,16 @@ class Supervisor:
             if p.returncode != 0: reason='failed';return failure('WORKER_FAILED','internal')
             cap = (MAX_PREPARATION_ENVELOPE_BYTES if operation == 'prepare_deformed_transport' else
                    MAX_SNAPSHOT_ENVELOPE_BYTES if operation == 'thermoelastic_snapshot' else
+                   MAX_PROJECTION_WORKER_BYTES if operation == 'fiber_projection_report' else
                    MAX_TRANSPORT_RESULT_BYTES+4096 if operation == 'linear_transport' else MAX_BYTES)
-            try: raw=read_at(self.store.fd,out,cap)
+            if operation == 'fiber_projection_report':
+                try:
+                    raw=read_at(self.store.fd,out,cap)
+                    strict_json(raw)
+                except (ContractError,OSError):
+                    reason='failed';return failure('PROJECTION_WORKER_OUTPUT_REJECTED','internal')
+            try:
+                if operation != 'fiber_projection_report': raw=read_at(self.store.fd,out,cap)
             except ContractError:
                 if operation not in ('prepare_deformed_transport', 'thermoelastic_snapshot'): raise
                 reason='failed';return failure('SNAPSHOT_RESULT_LIMIT' if operation == 'thermoelastic_snapshot' else 'PREPARATION_RESULT_LIMIT','resource')
@@ -317,14 +343,21 @@ async def serve(args):
     if sys.platform!='linux' or not hasattr(os,'O_NOFOLLOW'): raise ContractError('Linux confinement required')
     if importlib.metadata.version('mcp')!='1.29.0': raise ContractError('untested SDK version')
     core_verification=_verify_core_result()
-    # Refuse an unverified core before loading the protocol implementation.
+    # Admit operator-owned bytes before optional protocol setup.
+    store=ManagedStore(args.manifest,args.output_root,core_verification)
+    try:
+        await _serve_admitted(args,store)
+    finally:
+        store.close()
+
+async def _serve_admitted(args,store):
     import jsonschema
     from mcp.server.lowlevel import Server
     from mcp.server.lowlevel.helper_types import ReadResourceContents
     from mcp.server.stdio import stdio_server
     from mcp.shared.exceptions import McpError
     import mcp.types as mt
-    store=ManagedStore(args.manifest,args.output_root,core_verification);sup=Supervisor(store,args.timeout)
+    sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
     # Remove unused local definitions from each advertised schema to fit bounded list output.
     def prune(schema):
@@ -370,7 +403,7 @@ async def serve(args):
             if name not in indexed: raise ContractError('unknown tool')
             jsonschema.Draft202012Validator(indexed[name]['inputSchema']).validate(arguments)
             if name=='fibernet_catalog':
-                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536,'preparation':PREPARATION_LIMITS,'thermoelastic':SNAPSHOT_LIMITS},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport','prepare_deformed_transport','solve_thermoelastic_network_snapshot'])
+                data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536,'preparation':PREPARATION_LIMITS,'thermoelastic':SNAPSHOT_LIMITS},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport','prepare_deformed_transport','solve_thermoelastic_network_snapshot','project_fiber_network_report'])
             elif name in ('fibernet_validate','fibernet_analyze_topology'):
                 gid=arguments['graph_id'];g=store.source(gid)
                 result=await sup.run('validate' if name=='fibernet_validate' else 'topology',gid)
@@ -438,6 +471,37 @@ async def serve(args):
                             if len(prospective.model_dump_json(by_alias=True,exclude_none=True).encode()) > 60000:
                                 raise PreparationContractError('PREPARATION_RESULT_LIMIT')
                         data=await publish_preparation(store,gid,result['preparation'],result['_core_provenance'],validate_reply)
+            elif name=='fibernet_project_fiber_network_report':
+                gid=arguments['graph_id'];g=store.source(gid)
+                request=projection_request(g,arguments)
+                result=await sup.run('fiber_projection_report',gid,request)
+                if type(result) is not dict:
+                    raise ProjectionContractError('PROJECTION_OUTPUT_CONTRACT_FAILURE','internal')
+                if 'error' in result:
+                    if set(result) != {'schema_version','error'} or result['schema_version'] != VERSION:
+                        raise ProjectionContractError('PROJECTION_OUTPUT_CONTRACT_FAILURE','internal')
+                    data=result
+                elif 'error_code' in result:
+                    if (not {'error_code','error_category','_core_provenance'} <= set(result) or
+                            set(result) - {'error_code','error_category','_core_provenance','diagnostics'} or
+                            type(result['error_code']) is not str or
+                            not re.fullmatch('[A-Z_]{1,64}',result['error_code']) or
+                            result['error_category'] not in ('contract','domain','resource','internal')):
+                        raise ProjectionContractError('PROJECTION_OUTPUT_CONTRACT_FAILURE','internal')
+                    data=failure(result['error_code'],result['error_category'])
+                    if 'diagnostics' in result: data['diagnostics']=result['diagnostics']
+                else:
+                    if set(result) != {'projection_report','_core_provenance'}:
+                        raise ProjectionContractError('PROJECTION_OUTPUT_CONTRACT_FAILURE','internal')
+                    report=result['projection_report']
+                    def validate_reply(reply):
+                        try: jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(reply)
+                        except jsonschema.ValidationError:
+                            raise ProjectionContractError('PROJECTION_OUTPUT_CONTRACT_FAILURE','internal') from None
+                        prospective=mt.CallToolResult(content=[mt.TextContent(type='text',text='FiberNet result: see structuredContent')],structuredContent=reply,isError=False)
+                        if len(prospective.model_dump_json(by_alias=True,exclude_none=True).encode()) > 60000:
+                            raise ProjectionContractError('PROJECTION_RESULT_LIMIT','resource')
+                    data=await publish_projection(store,gid,report,result['_core_provenance'],request,validate_reply)
             elif name=='fibernet_artifact_info': data=envelope(artifact=store.info(arguments['artifact_id']))
             elif name=='fibernet_artifact_read':
                 aid=arguments['artifact_id'];a=store.info(aid);raw=read_at(store.fd,aid)
@@ -446,13 +510,14 @@ async def serve(args):
                 if offset>len(raw): raise ContractError('offset past EOF')
                 chunk=raw[offset:offset+arguments.get('length',32768)];n=offset+len(chunk)
                 data=envelope(artifact_id=aid,offset=offset,next_offset=n,eof=n==len(raw),encoding='base64',data=base64.b64encode(chunk).decode(),sha256=a['sha256'],total_bytes=len(raw))
+        except ProjectionContractError as exc: data=failure(exc.code,exc.category)
         except SnapshotContractError as exc: data=failure(exc.code,exc.category)
-        except ArtifactLimitError: data=failure('SNAPSHOT_RESOURCE_LIMIT' if name=='fibernet_solve_thermoelastic_network_snapshot' else 'PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name in ('fibernet_prepare_deformed_transport','fibernet_solve_thermoelastic_network_snapshot') else 'contract')
+        except ArtifactLimitError: data=failure('PROJECTION_RESOURCE_LIMIT' if name=='fibernet_project_fiber_network_report' else 'SNAPSHOT_RESOURCE_LIMIT' if name=='fibernet_solve_thermoelastic_network_snapshot' else 'PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name in ('fibernet_prepare_deformed_transport','fibernet_solve_thermoelastic_network_snapshot','fibernet_project_fiber_network_report') else 'contract')
         except PreparationContractError as exc: data=failure(exc.code,exc.category)
         except TransportContractError as exc: data=failure(exc.code,exc.category)
         except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError,OSError): data=failure('INVALID_ARGUMENT_OR_HANDLE')
         except Exception: data=failure('INTERNAL_FAILURE','internal')
-        if name in indexed and not ((name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared') or (name=='fibernet_solve_thermoelastic_network_snapshot' and data.get('status')=='solved')):
+        if name in indexed and not ((name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared') or (name=='fibernet_solve_thermoelastic_network_snapshot' and data.get('status')=='solved') or (name=='fibernet_project_fiber_network_report' and data.get('status')=='completed')):
             try: jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(data)
             except jsonschema.ValidationError: data=failure('OUTPUT_CONTRACT_FAILURE','internal')
         # Avoid duplicating potentially44KiB base64 in textual fallback.
@@ -469,12 +534,10 @@ async def serve(args):
             await server.run(*streams,server.create_initialization_options())
     finally:
         # SDK task group cancels in-flight work before this scope ends.
-        try:
-            if args.audit:
-                fd=open_directory(args.output_root)
-                try: write_at(fd,args.audit,canonical({'workers':sup.audit,'artifacts':len(store.artifacts)}))
-                finally: os.close(fd)
-        finally: store.close()
+        if args.audit:
+            fd=open_directory(args.output_root)
+            try: write_at(fd,args.audit,canonical({'workers':sup.audit,'artifacts':len(store.artifacts)}))
+            finally: os.close(fd)
 
 def main():
     if sys.platform!='linux': raise SystemExit('Linux confinement required')

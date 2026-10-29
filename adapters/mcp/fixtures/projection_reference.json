@@ -1,0 +1,22 @@
+{
+  "source_sha256": "ca338fd42aaf2af8609bb1451abc5c9785b9480db8d75902e65cbb2bf51a8247",
+  "native_report_sha256": "65fd5b7d472ad011df03693c669bc60f1e16e5fa844cdf083ec20bb5ba2357a8",
+  "native_report_bytes": 458163,
+  "native_source_tree": "99a9e7a96094adf8c55077b015810bd8b000a0c0",
+  "reference_origin": "Frozen native checked-projection acceptance. Its source save/load assertion compares payload, insertion order, curve shapes and every material field before projection. The native report contains no limit settings; this adapter uses wider admitting ceilings. No fixture generation or physical simulation is part of adapter acceptance.",
+  "profile": {
+    "length_unit": "m",
+    "coordinate_frame": "lab_xyz",
+    "geometry_policy": "endpoint_chord",
+    "short_edge_policy": "reject",
+    "missing_material_policy": "reject"
+  },
+  "source_bytes": 675329,
+  "fixture_storage": {
+    "format": "single gzip member, level 9, empty filename, mtime 0; canonical base64 ASCII plus LF",
+    "source_file": "projection_native31.json.gz.b64",
+    "report_file": "projection_report.json.gz.b64",
+    "decoder": "tests/projection_fixtures.py",
+    "scope": "Test-only storage. Decoded bytes retain the original source and native report identities above; this is not a runtime protocol format."
+  }
+}

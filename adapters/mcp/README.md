@@ -1,6 +1,6 @@
 # FiberNet MCP adapter
 
-A separate optional Linux stdio adapter exposing eight bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
+A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
 
 ## Install with the matching native core
 
@@ -51,6 +51,7 @@ The eighth tool, `fibernet_solve_thermoelastic_network_snapshot`, calls the exis
 - fibernet_solve_linear_transport: the existing bounded steady-DC electrical tool; see [Electrical method and limits](ELECTRICAL.md)
 - fibernet_prepare_deformed_transport: native prepare-only geometry/conductance/binding bundle; see [Deformed transport preparation](DEFORMED_TRANSPORT.md)
 - fibernet_solve_thermoelastic_network_snapshot: one native planar prescribed-temperature mechanical snapshot; see [Thermoelastic snapshot](THERMOELASTIC.md)
+- fibernet_project_fiber_network_report: native checked projection and loss report; see [Projection reports](PROJECTION.md)
 
 resources/read supports fibernet://capabilities, fibernet://provenance/1 and fibernet://artifacts/{artifact_id}; the latter returns a small manifest, not unbounded artifact contents. No other resource schemes are read. Complete data are reconstructed through chunks and verified against SHA256. structuredContent is authoritative; text content is a concise pointer rather than duplicating up to44KiB base64. Errors carry stable categories/codes and no raw exception/path/metadata. Unknown tool names and unknown resources use protocol errors. Validation may successfully report an invalid graph; analysis of it returns a domain error.
 
@@ -131,7 +132,7 @@ The standalone adapter wheel includes the repository MIT copyright and permissio
 ## Historical native-core compatibility notes
 
 The following notes describe earlier core additions and their five-tool adapter
-surface. The current eight-tool surface is listed above. The saved-electrothermal
+surface. The current nine-tool surface is listed above. The saved-electrothermal
 bridge changes the native source binding, not the MCP tool surface; it adds no
 electrothermal or mechanical MCP execution tool.
 
@@ -163,3 +164,11 @@ The paired core separates automatic SB3 evaluation from its training environment
 and clarifies the distinct root random-rollout helper. This refresh changes the
 whole-core source binding, not the five MCP tools: no RL execution tool or new
 optional native dependency is added.
+
+## Checked FiberNetwork projection reports
+
+Use `fibernet_project_fiber_network_report` with a catalog graph ID to obtain
+the native `StructureGraph.to_fiber_network` admission and loss report. The
+report preserves stable IDs and explicit projection policies and is read through
+the same bounded artifact resources as other results. See [Projection reports](PROJECTION.md)
+for input policies, units, limits and the complete read workflow.
