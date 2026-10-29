@@ -91,3 +91,23 @@ historical results retain documented ordering assumptions.
 Known FEM diagnostic metadata follows the same entity permutations in the
 private aligned rendering view. Metadata unrelated to entity axes is unchanged.
 See `tests/test_result_identity_rendering.py` for regression coverage.
+
+## Detailed geometric metrics
+
+`result.compute_detailed(graph, stiffness=None)` aligns node rows by the
+result's `node_ids` and selected physical edge rows by `edge_ids`. Node maps
+cover every graph node; edge maps may select an ordered subset. Native signed
+integer IDs are supported. Without maps, historical results retain graph
+insertion order.
+
+Every node record and selected edge record must carry the strict integer ID
+used as its graph key. When deformed positions are supplied, selected edges
+must have distinct reference endpoints. This exact-coincidence check adds no
+minimum edge-length threshold and does not inspect unselected edges. Invalid
+identity, shape, or nonfinite metric arithmetic raises `ValueError` before any
+result field is changed.
+
+With `stiffness=None`, geometric metrics are refreshed while force, energy and
+coefficient provenance are retained. Explicit spring coefficients follow the
+selected edge order. FEM solver channels and backend-specific result contracts
+retain their own recomputation rules.

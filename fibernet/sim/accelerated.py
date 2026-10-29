@@ -673,6 +673,9 @@ class SimResult:
         When present, node_ids and edge_ids must both be supplied in metadata.
         Node IDs cover the graph exactly; edge IDs may select an ordered subset
         of physical edges. Parallel edges are identified by ID, not endpoints.
+        Node and selected-edge records must match their strict integer graph
+        keys. Geometric recomputation requires distinct reference endpoints
+        for each selected edge; unselected edges are not validated.
         Mapless historical results use graph insertion order for all nodes and
         edges; no ID maps are inferred or added. Validate before changing any
         fields. With stiffness=None, only geometric metrics are updated; force,
@@ -702,6 +705,16 @@ class SimResult:
                 raise ValueError('edge_ids must select existing physical graph edges')
         else:
             node_ids, edge_ids = list(graph.nodes), list(graph.edges)
+        graph_node_ids = _strict_state_ids(list(graph.nodes), 'graph node keys')
+        selected = set(edge_ids)
+        _strict_state_ids([eid for eid in graph.edges if eid in selected],
+                          'selected graph edge keys')
+        record_nodes = _strict_state_ids(
+            [graph.nodes[nid].node_id for nid in graph_node_ids], 'graph node record IDs')
+        record_edges = _strict_state_ids(
+            [graph.edges[eid].edge_id for eid in edge_ids], 'selected graph edge record IDs')
+        if record_nodes != graph_node_ids or record_edges != edge_ids:
+            raise ValueError('graph node and selected edge record IDs must match their keys')
         n_nodes, n_edges = len(node_ids), len(edge_ids)
         for name, count in (('n_nodes', n_nodes), ('n_edges', n_edges)):
             value = getattr(self, name)
@@ -752,6 +765,8 @@ class SimResult:
         try:
             with np.errstate(over='raise', invalid='raise', divide='raise'):
                 if pos_def is not None:
+                    if np.any(np.all(pos_orig[elements[:, 0]] == pos_orig[elements[:, 1]], axis=1)):
+                        raise ValueError('selected graph edges must have distinct reference endpoints')
                     lengths, _ = _element_data(pos_orig, elements)
                     final_lengths = np.linalg.norm(pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
                     stretches = final_lengths / lengths
