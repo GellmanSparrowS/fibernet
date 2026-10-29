@@ -1,0 +1,13 @@
+{
+  "schema": "reviewed_lammps_capability_facade_delta/1",
+  "source": "fibernet/sim/__init__.py",
+  "baseline_main": "cfb220026e906c34e68ec41f784a65abe3524291",
+  "base_sha256": "a86c885e655b3833ba292bf89f76d481c849bc9c9f7a204d3d46896ac839c6aa",
+  "result_sha256": "133f39585e3e2c59e4b2518cc6180e27b12a392dd5916acd3e412515a2d7b3dc",
+  "hunks": [
+    {
+      "before": "_LAZY_EXPORTS = {\n",
+      "after": "_LAZY_EXPORTS = {\n    \"lammps_source_capabilities\": \"fibernet.sim._lammps_result\",\n"
+    }
+  ]
+}

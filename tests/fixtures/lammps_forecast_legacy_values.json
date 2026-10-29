@@ -1,0 +1,207 @@
+{
+  "harmonic": [
+    {
+      "args": [
+        2,
+        1,
+        1,
+        1,
+        0,
+        0
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 9448576,
+        "diagnostic_reserve_bytes": 1048576,
+        "native_aggregate_forecast_bytes": 1052612,
+        "native_frames": 2,
+        "node_frames": 4,
+        "output_frames": 2,
+        "parsed_state_memory_bytes": 4352,
+        "planned_memory_bytes": 394314496,
+        "prepared_artifact_bytes": 0,
+        "raw_parse_memory_bytes": 268435456,
+        "selected_copy_memory_bytes": 45568,
+        "serialization_memory_bytes": 125829120,
+        "thermo_bytes": 512,
+        "trajectory_bytes": 3012
+      }
+    },
+    {
+      "args": [
+        7,
+        6,
+        100,
+        1,
+        2000,
+        4000
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 10095616,
+        "diagnostic_reserve_bytes": 1048576,
+        "native_aggregate_forecast_bytes": 1372475,
+        "native_frames": 101,
+        "node_frames": 707,
+        "output_frames": 101,
+        "parsed_state_memory_bytes": 510656,
+        "planned_memory_bytes": 397416960,
+        "prepared_artifact_bytes": 4000,
+        "raw_parse_memory_bytes": 268435456,
+        "selected_copy_memory_bytes": 2633728,
+        "serialization_memory_bytes": 125829120,
+        "thermo_bytes": 25856,
+        "trajectory_bytes": 268187
+      }
+    },
+    {
+      "args": [
+        256,
+        1536,
+        1024,
+        8,
+        8388608,
+        67108864
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 35394560,
+        "diagnostic_reserve_bytes": 1048576,
+        "native_aggregate_forecast_bytes": 130871072,
+        "native_frames": 1025,
+        "node_frames": 262400,
+        "output_frames": 129,
+        "parsed_state_memory_bytes": 152192000,
+        "planned_memory_bytes": 683840512,
+        "prepared_artifact_bytes": 67108864,
+        "raw_parse_memory_bytes": 268435456,
+        "selected_copy_memory_bytes": 103829504,
+        "serialization_memory_bytes": 125829120,
+        "thermo_bytes": 262400,
+        "trajectory_bytes": 62188832
+      }
+    },
+    {
+      "args": [
+        64,
+        128,
+        128,
+        1,
+        50000,
+        70000
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 15995904,
+        "diagnostic_reserve_bytes": 1048576,
+        "native_aggregate_forecast_bytes": 3240400,
+        "native_frames": 129,
+        "node_frames": 8256,
+        "output_frames": 129,
+        "parsed_state_memory_bytes": 4887552,
+        "planned_memory_bytes": 425587008,
+        "prepared_artifact_bytes": 70000,
+        "raw_parse_memory_bytes": 268435456,
+        "selected_copy_memory_bytes": 26234880,
+        "serialization_memory_bytes": 125829120,
+        "thermo_bytes": 33024,
+        "trajectory_bytes": 2055776
+      }
+    }
+  ],
+  "network": [
+    {
+      "args": [
+        2,
+        0,
+        0,
+        1,
+        1,
+        0,
+        0
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 5251584,
+        "integration_steps": 0,
+        "native_aggregate_forecast_bytes": 1050622,
+        "native_morse_matrix_payload_lower_bound_bytes": 612,
+        "node_frames": 2,
+        "observation_scope": "sampled states only; no all-step geometry validation",
+        "output_frames": 1,
+        "planned_memory_bytes": 771789540,
+        "thermo_bytes": 256,
+        "thermo_frames": 1,
+        "trajectory_bytes": 1534
+      }
+    },
+    {
+      "args": [
+        4,
+        3,
+        1600000,
+        12500,
+        2500,
+        5000,
+        6000
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 5779840,
+        "integration_steps": 1600000,
+        "native_aggregate_forecast_bytes": 1644220,
+        "native_morse_matrix_payload_lower_bound_bytes": 1700,
+        "node_frames": 516,
+        "observation_scope": "sampled states only; no all-step geometry validation",
+        "output_frames": 129,
+        "planned_memory_bytes": 774350788,
+        "thermo_bytes": 164096,
+        "thermo_frames": 641,
+        "trajectory_bytes": 255452
+      }
+    },
+    {
+      "args": [
+        1024,
+        6144,
+        128,
+        1,
+        1,
+        4194304,
+        67108864
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 108663808,
+        "integration_steps": 128,
+        "native_aggregate_forecast_bytes": 167035424,
+        "native_morse_matrix_payload_lower_bound_bytes": 71442500,
+        "node_frames": 132096,
+        "observation_scope": "sampled states only; no all-step geometry validation",
+        "output_frames": 129,
+        "planned_memory_bytes": 1349874756,
+        "thermo_bytes": 33024,
+        "thermo_frames": 129,
+        "trajectory_bytes": 31703072
+      }
+    },
+    {
+      "args": [
+        898,
+        992,
+        1024,
+        8,
+        1,
+        100000,
+        200000
+      ],
+      "expected": {
+        "detailed_export_forecast_bytes": 95392256,
+        "integration_steps": 1024,
+        "native_aggregate_forecast_bytes": 29791742,
+        "native_morse_matrix_payload_lower_bound_bytes": 54957668,
+        "node_frames": 115842,
+        "observation_scope": "sampled states only; no all-step geometry validation",
+        "output_frames": 129,
+        "planned_memory_bytes": 1254564196,
+        "thermo_bytes": 262400,
+        "thermo_frames": 1025,
+        "trajectory_bytes": 27818366
+      }
+    }
+  ],
+  "schema": "lammps-forecast-regression-values/1"
+}

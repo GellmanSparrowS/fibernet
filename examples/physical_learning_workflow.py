@@ -12,7 +12,6 @@ from pathlib import Path
 import numpy as np
 
 from fibernet.ml import PhysicalRegressor
-from fibernet.ml.physical_learning import FEATURE_SCHEMA
 
 
 class PhysicalLearningWorkflow:
@@ -57,7 +56,8 @@ class PhysicalLearningWorkflow:
             os.replace(temporary, target)
         finally:
             temporary.unlink(missing_ok=True)
-        summary = {"source": source, "schema": FEATURE_SCHEMA,
+        summary = {"source": source, "schema": history["schema"],
+                   "feature_count": history["feature_count"],
                    "model": self.model, "seed": self.seed,
                    "samples": len(X), "validation_rows": len(ids),
                    "rmse_by_target": rmse.tolist(),

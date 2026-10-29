@@ -57,7 +57,7 @@ so shells do not interpret square brackets:
 * ``python -m pip install "fibernet[rl]"``: reinforcement-learning dependencies
 * ``python -m pip install "fibernet[accel]"``: optional Taichi backend
 * ``python -m pip install "fibernet[io]"``: HDF5 support
-* ``python -m pip install "fibernet[fracture]"``: experimental fracture backend (4.3.0 source)
+* ``python -m pip install -e ".[fracture]"``: experimental fracture backend (4.3.0 source)
 
 For a checkout, use the equivalent editable command, for example
 ``python -m pip install -e ".[ml]"``. The desktop application has its own

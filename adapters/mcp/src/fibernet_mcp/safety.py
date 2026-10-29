@@ -4,6 +4,7 @@ import json
 import math
 import os
 import stat
+from dataclasses import dataclass
 
 MAX_BYTES = 16 * 1024 * 1024
 MAX_NODES = 10000
@@ -20,7 +21,7 @@ def unique(pairs):
         out[key] = value
     return out
 
-def strict_json(raw):
+def strict_json(raw, *, electrical_rpc=False):
     if len(raw) > MAX_BYTES:
         raise ContractError('JSON byte budget exceeded')
     try:
@@ -28,8 +29,41 @@ def strict_json(raw):
                             parse_constant=lambda _: (_ for _ in ()).throw(ContractError('nonfinite JSON')))
     except (ValueError, UnicodeError, RecursionError) as exc:
         raise ContractError('invalid strict JSON') from exc
+    if electrical_rpc:
+        _normalize_electrical_rpc_values(result)
     check_tree(result)
     return result
+
+def _normalize_electrical_rpc_values(message):
+    """Only S/V fields use native float semantics; ID/frame guards stay exact.
+
+    The native solver converts physical real values to float64. JSON integer
+    and exponent encodings therefore share that conversion. An unrepresentable
+    S/V value becomes an invalid schema value, giving a structured refusal
+    rather than terminating a valid session. Strict JSON syntax, all other
+    integer fields, strings, depth and byte bounds retain their existing checks.
+    """
+    if not isinstance(message, dict) or message.get('method') != 'tools/call':
+        return
+    params = message.get('params')
+    if not isinstance(params, dict) or params.get('name') != 'fibernet_solve_linear_transport':
+        return
+    arguments = params.get('arguments')
+    if not isinstance(arguments, dict):
+        return
+    for field, scalar in (('conductance_S', 'value_S'), ('dirichlet_voltage_V', 'value_V')):
+        records = arguments.get(field)
+        if not isinstance(records, list):
+            continue
+        for record in records:
+            if not isinstance(record, dict) or type(record.get(scalar)) not in (int, float):
+                continue
+            try:
+                value = float(record[scalar])
+            except OverflowError:
+                value = None
+            record[scalar] = value if value is not None and math.isfinite(value) else None
+
 
 def check_tree(value, depth=0):
     if depth > 16:
@@ -174,14 +208,36 @@ def write_at(root, name, raw):
     finally: os.close(fd)
 
 
-def verify_core():
-    """Resolve but do not import FiberNet, then verify every shipped Python file."""
+@dataclass(frozen=True)
+class _CoreVerification:
+    root: str
+    canonical_core_manifest_sha256: str
+    source_file_count: int
+
+    def provenance(self):
+        """Return only the versioned, path-free identity of verified Python sources."""
+        return {'schema_version': 'fibernet.core-provenance/1',
+                'canonical_core_manifest_sha256': self.canonical_core_manifest_sha256,
+                'source_file_count': self.source_file_count,
+                'scope': 'fibernet_python_sources'}
+
+
+def _verify_core_result():
+    """Verify one strict manifest and return its root plus canonical identity."""
     import importlib.util
     from pathlib import Path
     spec = importlib.util.find_spec('fibernet')
     if spec is None or spec.origin is None: raise ContractError('missing native core')
     root = os.path.dirname(spec.origin)
     manifest = strict_json(read_file(str(Path(__file__).with_name('core_manifest.json'))))
+    if not isinstance(manifest, dict) or not manifest:
+        raise ContractError('invalid native core manifest')
+    for relative, expected in manifest.items():
+        if (not isinstance(relative, str) or not relative.endswith('.py')
+                or '\\' in relative or any(part in ('', '.', '..') for part in relative.split('/'))
+                or not isinstance(expected, str) or len(expected) != 64
+                or any(c not in '0123456789abcdef' for c in expected)):
+            raise ContractError('invalid native core manifest')
     # Reject extra and missing source, and fail closed if traversal is incomplete.
     actual = set()
     def traversal_error(error):
@@ -196,4 +252,9 @@ def verify_core():
     for relative, expected in manifest.items():
         if sha(read_file(os.path.join(root, relative))) != expected:
             raise ContractError('native core differs from frozen source')
-    return root
+    return _CoreVerification(root, sha(canonical(manifest)), len(manifest))
+
+
+def verify_core():
+    """Preserve the public root-path return contract without importing FiberNet."""
+    return _verify_core_result().root

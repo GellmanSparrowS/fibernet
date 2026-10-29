@@ -28,7 +28,47 @@ def load_algorithms():
     return module
 
 
-class UntouchedEnv:
+class Env:
+    """Inert nominal Gymnasium base; no backend is imported."""
+
+
+class Space:
+    @property
+    def __class__(self):
+        raise AssertionError("Space classification must use the actual type")
+
+
+class Box(Space):
+    pass
+
+
+class Discrete(Space):
+    pass
+
+
+class MultiDiscrete(Space):
+    pass
+
+
+class MultiBinary(Space):
+    pass
+
+
+class Dict(Space):
+    pass
+
+
+class Tuple(Space):
+    pass
+
+
+class VecEnv:
+    action_space = Box()
+
+
+class UntouchedEnv(Env):
+    action_space = Box()
+
     def reset(self, *args, **kwargs):
         raise AssertionError("Inert regression must not reset an environment")
 
@@ -65,11 +105,11 @@ def fake_sb3(monkeypatch):
         def __init__(self, env):
             self.env = env
 
-    class VecEnvWrapper(UntouchedEnv):
+    class VecEnvWrapper(UntouchedEnv, VecEnv):
         def __init__(self, venv):
             self.venv = venv
 
-    class DummyVecEnv(UntouchedEnv):
+    class DummyVecEnv(UntouchedEnv, VecEnv):
         def __init__(self, envs):
             self.envs = envs
 
@@ -115,6 +155,11 @@ def fake_sb3(monkeypatch):
             "stable_baselines3.common.vec_env",
         )
     }
+    modules["gymnasium"].Env = Env
+    modules["gymnasium"].spaces = SimpleNamespace(
+        Space=Space, Box=Box, Discrete=Discrete, MultiDiscrete=MultiDiscrete,
+        MultiBinary=MultiBinary, Dict=Dict, Tuple=Tuple,
+    )
     modules["gymnasium"].Wrapper = Wrapper
     sb3 = modules["stable_baselines3"]
     for name in ("PPO", "SAC", "TD3", "A2C", "DDPG"):
@@ -127,6 +172,7 @@ def fake_sb3(monkeypatch):
     sb3.common.callbacks.CallbackList = CallbackList
     sb3.common.vec_env.VecEnvWrapper = VecEnvWrapper
     sb3.common.vec_env.DummyVecEnv = DummyVecEnv
+    sb3.common.vec_env.VecEnv = VecEnv
     for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
     return SimpleNamespace(
@@ -498,17 +544,124 @@ def test_missing_sb3_error_is_actionable_and_leaf_import_is_optional(monkeypatch
     assert attempted == ["stable_baselines3"]
 
 
-def test_no_eval_does_not_import_wrapper_dependencies(algorithms, fake_sb3, monkeypatch):
+def test_no_eval_does_not_walk_or_import_isolation_wrappers(algorithms, fake_sb3, monkeypatch):
     original_import = builtins.__import__
 
     def without_wrappers(name, *args, **kwargs):
-        if name == "gymnasium" or name.startswith("stable_baselines3.common.vec_env"):
+        fromlist = kwargs.get("fromlist", args[2] if len(args) > 2 else ())
+        if ((name == "gymnasium" and "Wrapper" in fromlist)
+                or name.startswith("stable_baselines3.common.vec_env")):
             raise AssertionError("No eval_env must not import wrapper dependencies")
         return original_import(name, *args, **kwargs)
 
+    def no_isolation_walk(*args):
+        raise AssertionError("No eval_env must not walk environment aliases")
+
     monkeypatch.setattr(builtins, "__import__", without_wrappers)
+    monkeypatch.setattr(algorithms, "_check_eval_env_isolation", no_isolation_walk)
     model, _ = algorithms.train_rl(UntouchedEnv())
     assert model.saved == []
+
+
+def _assert_distinct_lazy_train_rl_routes(root_api, rl_api, fail_owner=None):
+    """Exercise only facade resolvers with inert, distinct owning objects."""
+    random_rollout, policy_trainer = object(), object()
+    owners = {
+        "fibernet.easy": SimpleNamespace(train_rl=random_rollout, evaluate_rl=object()),
+        "fibernet.rl.algorithms": SimpleNamespace(train_rl=policy_trainer, evaluate_rl=object()),
+    }
+    imported = []
+
+    def load_owner(name):
+        assert name in owners, "Unexpected train_rl owner"
+        imported.append(name)
+        if fail_owner is not None and name == fail_owner[0]:
+            raise fail_owner[1]
+        return owners[name]
+
+    def isolated_import(name, globals=None, locals=None, fromlist=(), level=0):
+        assert name == "importlib" and level == 0, "Unexpected resolver import"
+        return SimpleNamespace(import_module=load_owner)
+
+    def resolver(tree, root=False):
+        # A lazy declaration must not conceal an eager train_rl rebound.
+        for node in ast.walk(tree):
+            assert not (isinstance(node, ast.Name) and isinstance(node.ctx, ast.Store)
+                        and node.id == "train_rl"), "Eager train_rl assignment"
+            assert not (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                        and node.name == "train_rl"), "Eager train_rl definition"
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                assert all((alias.asname or alias.name.split(".")[0]) != "train_rl"
+                           for alias in node.names), "Eager train_rl import"
+        namespace = {"__builtins__": {"dict": dict, "getattr": getattr,
+                     "globals": globals, "AttributeError": AttributeError,
+                     "__import__": isolated_import}}
+        declarations = []
+        if root:
+            for name in ("_LAZY_EXPORTS", "_LAZY_MODULES", "_RENDER_EXPORTS"):
+                matches = [node for node in tree.body if isinstance(node, ast.Assign)
+                           and len(node.targets) == 1
+                           and isinstance(node.targets[0], ast.Name)
+                           and node.targets[0].id == name]
+                assert len(matches) == 1, "Ambiguous lazy declaration"
+                declarations.extend(matches)
+            exec(compile(ast.Module(body=declarations, type_ignores=[]),
+                         "<isolated-facade-declarations>", "exec"), namespace)
+            assert namespace["_LAZY_EXPORTS"].get("train_rl") == "fibernet.easy"
+        functions = [node for node in tree.body if isinstance(node, ast.FunctionDef)
+                     and node.name == "__getattr__"]
+        assert len(functions) == 1
+        # Extraction must not discard later map mutations or resolver rebinding.
+        # These are the only read/reload uses outside the extracted declarations.
+        allowed_root_uses = (
+            "for _name in (*_LAZY_EXPORTS, *_LAZY_MODULES, '_HAS_RL'):\n"
+            "    globals().pop(_name, None)",
+            "def __dir__():\n"
+            "    return sorted(set(globals()) | set(_RENDER_EXPORTS) | "
+            "set(_LAZY_EXPORTS) | set(_LAZY_MODULES) | {'_HAS_RL'})",
+        )
+        allowed_rl_uses = (
+            'for _name in ("ParametricStructureEnv", "create_rl_environment"):\n'
+            '    globals().pop(_name, None)',
+            'def __dir__():\n'
+            '    return sorted(set(globals()) | {"ParametricStructureEnv", "create_rl_environment"})',
+        )
+        allowed = {ast.dump(ast.parse(source).body[0]) for source in
+                   (allowed_root_uses if root else allowed_rl_uses)}
+        seen_allowed = {statement: 0 for statement in allowed}
+        dependencies = {"_LAZY_EXPORTS", "_LAZY_MODULES", "_RENDER_EXPORTS",
+                        "__getattr__", "__dir__", "train_rl"}
+        for statement in tree.body:
+            if statement in declarations or statement in functions:
+                continue
+            statement_dump = ast.dump(statement)
+            if statement_dump in allowed:
+                seen_allowed[statement_dump] += 1
+                continue
+            for node in ast.walk(statement):
+                assert not (isinstance(node, ast.Name) and node.id in dependencies), \
+                    "Out-of-slice route reference"
+                assert not (isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+                            and node.name in dependencies), "Out-of-slice route definition"
+                if isinstance(node, (ast.Import, ast.ImportFrom)):
+                    assert all((alias.asname or alias.name.split(".")[0]) not in dependencies
+                               for alias in node.names), "Out-of-slice route import"
+                assert not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                            and node.func.id in {"globals", "locals", "vars", "exec", "eval"}), \
+                    "Unsupported dynamic module binding"
+        if not root:
+            assert set(seen_allowed.values()) == {1}, "Missing or duplicate reviewed RL facade statement"
+        exec(compile(ast.Module(body=functions, type_ignores=[]),
+                     "<isolated-facade-resolver>", "exec"), namespace)
+        return namespace
+
+    root = resolver(root_api, root=True)
+    rl = resolver(rl_api)
+    assert root["__getattr__"]("train_rl") is random_rollout
+    assert root["train_rl"] is random_rollout  # root facade caches its owner object
+    assert rl["__getattr__"]("train_rl") is policy_trainer
+    assert random_rollout is not policy_trainer
+    assert imported == ["fibernet.easy", "fibernet.rl.algorithms"]
 
 
 def test_root_random_rollout_and_rl_trainer_routes_are_documented_not_rebound():
@@ -535,20 +688,121 @@ def test_root_random_rollout_and_rl_trainer_routes_are_documented_not_rebound():
     assert not any(call.endswith(".learn") for call in calls)
 
     root_api = ast.parse((root / "__init__.py").read_text(encoding="utf-8"))
-    assert any(
-        isinstance(node, ast.ImportFrom) and node.module == "fibernet.easy"
-        and any(alias.name == "train_rl" and alias.asname is None for alias in node.names)
-        for node in root_api.body
-    )
     rl_api = ast.parse((root / "rl" / "__init__.py").read_text(encoding="utf-8"))
-    assert any(
-        isinstance(node, ast.Dict) and any(
-            isinstance(key, ast.Constant) and key.value == "train_rl"
-            and isinstance(value, ast.Constant) and value.value == "fibernet.rl.algorithms"
-            for key, value in zip(node.keys, node.values)
-        )
-        for node in ast.walk(rl_api)
-    )
+    _assert_distinct_lazy_train_rl_routes(root_api, rl_api)
+
+
+def test_lazy_train_rl_routes_reject_adverse_rebindings():
+    root = SOURCE.parents[1]
+    root_source = (root / "__init__.py").read_text(encoding="utf-8")
+    rl_source = (root / "rl" / "__init__.py").read_text(encoding="utf-8")
+    for mutation in (
+        "root_owner", "root_missing", "root_return", "root_symbol",
+        "root_import", "root_assignment", "root_duplicate_map", "root_decoy",
+        "rl_owner", "rl_return", "rl_symbol", "root_subscript", "root_update",
+        "root_getter_rebind", "rl_getter_rebind", "root_alias", "root_dynamic",
+        "rl_cleanup_alias", "rl_cleanup_rebind", "rl_cleanup_duplicate", "rl_cleanup_missing",
+        "rl_dir_alias", "rl_dir_rebind", "rl_dir_duplicate", "rl_dir_missing",
+    ):
+        root_api, rl_api = ast.parse(root_source), ast.parse(rl_source)
+        target = rl_api if mutation.startswith("rl_") else root_api
+        if mutation in ("root_subscript", "root_update", "root_getter_rebind",
+                        "rl_getter_rebind", "root_alias", "root_dynamic"):
+            statement = {
+                "root_subscript": '_LAZY_EXPORTS["train_rl"] = "fibernet.rl.algorithms"',
+                "root_update": '_LAZY_EXPORTS.update({"train_rl": "fibernet.rl.algorithms"})',
+                "root_getter_rebind": '__getattr__ = lambda name: None',
+                "rl_getter_rebind": '__getattr__ = lambda name: None',
+                "root_alias": 'routes = _LAZY_EXPORTS; routes["train_rl"] = "fibernet.rl.algorithms"',
+                "root_dynamic": 'globals()["train_rl"] = None',
+            }[mutation]
+            target.body.extend(ast.parse(statement).body)
+        elif mutation.startswith("rl_cleanup_"):
+            cleanup = next(node for node in rl_api.body if isinstance(node, ast.For))
+            if mutation == "rl_cleanup_alias":
+                cleanup.iter.elts[0].value = "train_rl"
+            elif mutation == "rl_cleanup_rebind":
+                cleanup.body.extend(ast.parse('globals()["train_rl"] = None').body)
+            elif mutation == "rl_cleanup_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(cleanup)).body[0])
+            else:
+                rl_api.body.remove(cleanup)
+        elif mutation.startswith("rl_dir_"):
+            directory = next(node for node in rl_api.body
+                             if isinstance(node, ast.FunctionDef) and node.name == "__dir__")
+            if mutation == "rl_dir_alias":
+                name = next(node for node in ast.walk(directory)
+                            if isinstance(node, ast.Constant) and node.value == "ParametricStructureEnv")
+                name.value = "train_rl"
+            elif mutation == "rl_dir_rebind":
+                directory.body.insert(0, ast.parse('globals()["train_rl"] = None').body[0])
+            elif mutation == "rl_dir_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(directory)).body[0])
+            else:
+                rl_api.body.remove(directory)
+        elif mutation in ("root_owner", "root_decoy"):
+            owner = next(node for node in ast.walk(root_api)
+                         if isinstance(node, ast.Constant) and node.value == "fibernet.easy")
+            owner.value = "fibernet.rl.algorithms"
+            if mutation == "root_decoy":
+                root_api.body.extend(ast.parse('_UNUSED = {"train_rl": "fibernet.easy"}').body)
+        elif mutation == "root_missing":
+            exports = next(node.value for node in root_api.body
+                           if isinstance(node, ast.Assign) and any(
+                               isinstance(target, ast.Name) and target.id == "_LAZY_EXPORTS"
+                               for target in node.targets))
+            name = next(node for node in ast.walk(exports)
+                        if isinstance(node, ast.Constant) and node.value == "train_rl")
+            name.value = "not_train_rl"
+        elif mutation.endswith("_return"):
+            function = next(node for node in target.body
+                            if isinstance(node, ast.FunctionDef) and node.name == "__getattr__")
+            for node in ast.walk(function):
+                if isinstance(node, ast.Return):
+                    node.value = ast.Constant(value=None)
+        elif mutation.endswith("_symbol"):
+            function = next(node for node in target.body
+                            if isinstance(node, ast.FunctionDef) and node.name == "__getattr__")
+            call = next(node for node in ast.walk(function)
+                        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                        and node.func.id == "getattr")
+            call.args[1] = ast.Constant(value="evaluate_rl")
+        elif mutation == "root_import":
+            root_api.body.extend(ast.parse('from fibernet.rl.algorithms import train_rl').body)
+        elif mutation == "root_assignment":
+            root_api.body.extend(ast.parse('train_rl = None').body)
+        elif mutation == "root_duplicate_map":
+            root_api.body.extend(ast.parse('_LAZY_EXPORTS = {"train_rl": "fibernet.rl.algorithms"}').body)
+        elif mutation == "rl_owner":
+            routes = next(node for node in ast.walk(rl_api)
+                          if isinstance(node, ast.Dict) and any(
+                              isinstance(key, ast.Constant) and key.value == "train_rl"
+                              for key in node.keys))
+            index = next(index for index, key in enumerate(routes.keys)
+                         if isinstance(key, ast.Constant) and key.value == "train_rl")
+            routes.values[index] = ast.Constant(value="fibernet.easy")
+        ast.fix_missing_locations(root_api)
+        ast.fix_missing_locations(rl_api)
+        try:
+            _assert_distinct_lazy_train_rl_routes(root_api, rl_api)
+        except AssertionError:
+            continue
+        raise AssertionError("Route mutation was accepted: " + mutation)
+
+
+def test_lazy_train_rl_routes_preserve_owner_failures():
+    root = SOURCE.parents[1]
+    root_api = ast.parse((root / "__init__.py").read_text(encoding="utf-8"))
+    rl_api = ast.parse((root / "rl" / "__init__.py").read_text(encoding="utf-8"))
+    for owner in ("fibernet.easy", "fibernet.rl.algorithms"):
+        for kind in (ImportError, RuntimeError, AttributeError):
+            failure = kind("deliberate inert owner failure")
+            try:
+                _assert_distinct_lazy_train_rl_routes(root_api, rl_api, (owner, failure))
+            except kind as caught:
+                assert caught is failure
+            else:
+                raise AssertionError("Owner failure was hidden: " + owner)
 
 
 def test_batch_damping_documentation_preserves_resume_caveat():

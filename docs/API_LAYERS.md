@@ -1,5 +1,7 @@
 # API layers and supported simulation routes
 
+[Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
@@ -25,16 +27,52 @@ from a legacy network is approximate, not lossless preservation of curved fibers
 or every crosslink. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
 
+`graph.to_fiber_network()` returns a legacy endpoint-chord projection with
+independently owned box and per-fiber material data, including nested material
+records and tensors. Editing these returned values does not edit the source
+graph or another converted fiber, even when source edges share a material.
+Coordinates and graph metadata also remain detached. Custom materials follow
+their `deepcopy` implementation, as in the graph's per-edge copy policy.
+This does not make the conversion lossless: source internal points, stable IDs,
+per-node/per-edge metadata and isolated nodes are not preserved as graph records;
+endpoint chords shorter than `1e-12` in the supplied coordinate units remain
+omitted. Fiber IDs are dense rows, and the existing discretization and junction
+crosslink construction remain unchanged. Geometry coordinates, radii and box
+values are copied without unit conversion or unit inference. Keep the original
+`StructureGraph` or its native serialization for authoritative geometry and IDs.
+Legacy OBJ export still writes endpoint cylinders, not the stored source curves.
+
+### Edit geometry before preparing solver controls
+
+Use `graph.displace_node(node_id, [dx, dy])`,
+`graph.set_node_position(node_id, [x, y, z])`, or
+`graph.set_node_positions({node_id: [x, y]})` with stable node IDs. These
+coordinates use the graph's existing units; no conversion is performed.
+Rejected edits leave geometry, merge lookup and ID counters unchanged. A batch
+with a rejected ID or coordinate is rejected before any node is changed.
+Valid edits retain IDs, boundary labels and internal edge points; they do not
+recompute boundary membership or deform a curved edge's internal geometry.
+Prepare supports and loads after editing. Existing prepared controls must be
+prepared again when the graph changes, as described in
+[stable-ID nodal controls](STABLE_NODAL_CONTROLS.md).
+
 ## Mechanical facade capability matrix
 
 Selectors are case-sensitive. Default `simulate` is `backend="spring"`,
 `mode="stretch"`; it requires Taichi, with no silent NumPy fallback.
-`strain` means **stretch ratio λ**, not engineering strain ε: λ=1.01 means
+Prefer the keyword-only `stretch_ratio` for new stretch calls. Legacy
+`strain` means the same **stretch ratio λ**, not engineering strain ε: λ=1.01 means
 ε=0.01 (1% extension). The effective default stretch ratio is 2.0, not 2%.
 The facade default `strain=None` means unset; omission or `None` resolves to
 λ=2.0 for stretch. Every non-`None` `strain` is rejected outside stretch,
 including explicit `2.0` and NaN. Other modes take explicit controls. There is
 no facade `target_stretch` alias; direct solver methods use that parameter.
+`stretch_ratio` must be a finite positive real scalar, not a boolean, and is
+rejected outside stretch. Do not supply both non-`None` names, even with equal
+values. `None` means unset for either name; the omitted default remains 2.0.
+Legacy positional calls retain their argument order and behavior. A positive
+ratio does not establish physical applicability: choose a small deformation
+for the small-strain FEM model.
 
 | Backend | Mode | Model/material | Controls | Return |
 |---|---|---|---|---|
@@ -79,10 +117,15 @@ spring/stretch only. Neither is a general backend router.
 - FEM facade stretch infers `dim` from `graph.dimension` unless explicitly 2 or 3.
   Direct `BeamFrameFEM.stretch_test` instead defaults to 2. Its 2-D
   `nonlinear=None` selects updated-geometry increments for |λ−1|>0.3; this is not
-  a nonlinear material law. The 3-D solver is linear only: do not request
-  `nonlinear=True` (rejected before solving). In 3-D, `None` preserves the linear
-  solve; |λ−1|>0.3 emits an applicability warning. Large strain is outside
-  small-strain model assumptions.
+  a nonlinear material law. Every selected 2-D incremental call warns, including
+  explicit `nonlinear=True` at small stretch: final nonlinear equilibrium is
+  unverified and final stiffness, reactions and nodal moments are unavailable.
+  With 2-D `nonlinear=False`, |λ−1|>0.3 warns about the small-deformation linear
+  model instead. The 3-D solver is linear only: do not request `nonlinear=True`
+  (rejected before solving). In 3-D, `None` preserves the linear solve;
+  |λ−1|>0.3 emits an applicability warning. This unchanged dispatch/warning
+  threshold is not a physical validity bound, and silence is not a qualification
+  of any particular network or loading.
   `BeamFrameFEM(E=1e9, nu=0.3)` resides in
   `fibernet.ml.beam_frame_fem` for historical reasons. Its raw `solve_2d` and
   `solve_3d` expose DOFs, constraints, loads, reactions and beam resultants, not
@@ -204,15 +247,39 @@ matching loader; `SimResult.load` is not a universal loader for electrical,
 thermal or viscoelastic results. Neither summary nor detailed export is a
 general restart checkpoint or a certificate that material dynamics can resume.
 
+### Saved LAMMPS displacement/reference consistency
+
+New `record_state=True` results retain `dynamics_state.displacement_reference`
+(`lammps_original_si_reference/1`): the exact original graph coordinates in SI,
+stable node-row IDs, declared arithmetic and existing prepared/graph source IDs.
+Detailed export/load checks numeric binary64 `(final_SI - original_SI) / scale`
+in that operation order; signed zero is equivalent. Sample 0 is only
+tolerance-close to the original graph and is **not** the displacement reference.
+
+`result.lammps_displacement_relationship()` reports `consistent` only when that
+saved relationship is checked. This is internal consistency, **not** graph
+authenticity, native accuracy or physics qualification. Malformed declared
+references and inconsistent displacements raise, including before summary save.
+Summary export projects `dynamics_state.displacement_reference` without its
+coordinate and node-ID arrays, retaining an `unavailable / omitted_from_summary`
+descriptor. Unrelated historical user metadata keeps its existing behavior. Historical reference-absent
+results remain readable and reference-absent (`unavailable / not_recorded`);
+loading them does not retroactively certify or invalidate their physics.
+Removing an optional descriptor likewise loses checkability and reports
+`unavailable`, never `consistent`; the format is not tamper-authenticating.
+`record_state=False` likewise has no exact saved-reference check. Neither export
+is a restart. Storage forecasts include the new reference and conversion copies;
+resource caps and native behavior are unchanged.
+
 ## Minimal explicit example
 
 ```python
 from fibernet import pattern_2d, simulate
 
-# pattern_2d is keyword-only. Coordinates, radii and E must be consistent.
-graph = pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4))
+# SI units: coordinates and radius in m; E in Pa; forces in N.
+graph = pattern_2d(unit="honeycomb", box=(10, 10), grid=(4, 4), radius=0.05)
 result = simulate(
-    graph, backend="fem", mode="stretch", strain=1.01,
+    graph, backend="fem", mode="stretch", stretch_ratio=1.01,
     dim=2, nonlinear=False, E=1e9, nu=0.3,
 )
 result.save("frame_detailed.json", detailed=True)
@@ -221,3 +288,16 @@ result.save("frame_detailed.json", detailed=True)
 This is a small-strain beam-frame example, not a material calibration or a unit
 conversion. For advanced controls use the linked complete examples instead of
 adding unsupported mode/material/backend combinations to this call.
+
+
+## Prescribed-temperature mechanics
+
+`fibernet.sim.thermoelastic` exposes the existing experimental planar sparse
+thermoelastic owner and its detached snapshot type. The network entry point
+keeps its 192-node/256-edge defaults; an explicit `ThermoelasticSizeLimits`
+record can select different node and physical-edge ceilings; the conservative
+assembly-contribution ceiling is derived read-only metadata. The saved-temperature adapter accepts the same record and delegates
+to that owner. There is no new graph class, backend registry entry,
+`simulate(...)` dispatch or task supervisor. Size limits do not guarantee
+factorization memory/time or confer a large-task MCP capability. See
+[THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for contracts and units.

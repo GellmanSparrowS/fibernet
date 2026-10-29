@@ -32,6 +32,7 @@ except ImportError:
 
 from fibernet.core.structure_graph import StructureGraph
 from ._taichi_viscoelastic import material_options as _material_options
+from ._taichi_geometry import preflight_taichi_geometry
 
 
 def _finite_real_array(value, name, shape=None):
@@ -486,6 +487,135 @@ def _validate_mechanical_json(data):
         raise ValueError('history must be a list of records')
 
 
+_SPRING_PROVENANCE = 'spring_coefficient_provenance'
+
+
+def _spring_coefficient_record(normalized, source, scalar, edge_ids):
+    """Adopt an already detached normalized buffer, never the caller's input.
+
+    Scalar inputs retain only one value. Mapless legacy recomputation cannot
+    persist an ID-aligned array: describe that absence rather than invent IDs.
+    """
+    record = dict(source=source, representation='scalar' if scalar is not None else 'per_edge',
+                  edge_count=len(normalized), availability='available')
+    if scalar is not None:
+        record['value'] = float(scalar)
+    else:
+        record['row_map'] = 'metadata.edge_ids' if edge_ids is not None else None
+        if edge_ids is None:
+            record.update(availability='unavailable', reason='missing_edge_ids')
+        else:
+            record['values'] = normalized
+    return record
+
+
+def _spring_provenance(simulation, current_metrics):
+    return dict(schema='spring_coefficient_provenance/1',
+                law='geometric_rest_axial/1', quantity_kind='force',
+                simulation=simulation, current_metrics=current_metrics)
+
+
+def _validate_spring_provenance(value, n_edges, edge_ids, *, detailed=True, array_mode='json'):
+    """Validate v1 and detach its dictionaries; export arrays only if requested.
+
+    Existing ndarray buffers are inspected without copying or list conversion
+    on the summary path. Detailed export makes one JSON list per independent
+    array; load restores one owned float64 buffer. A simulation reference never
+    duplicates its coefficient payload. This validates provenance, not physics.
+    """
+    keys = {'schema', 'law', 'quantity_kind', 'simulation', 'current_metrics'}
+    if (not isinstance(value, dict) or set(value) != keys or
+            value['schema'] != 'spring_coefficient_provenance/1' or
+            value['law'] != 'geometric_rest_axial/1' or value['quantity_kind'] != 'force'):
+        raise ValueError('unsupported spring_coefficient_provenance record')
+    if isinstance(n_edges, (bool, np.bool_)) or not isinstance(n_edges, (int, np.integer)) or n_edges < 0:
+        raise ValueError('spring provenance requires a nonnegative edge count')
+    if edge_ids is not None:
+        ids = _strict_state_ids(edge_ids, 'edge_ids')
+        if len(ids) != n_edges:
+            raise ValueError('spring provenance edge_ids disagree with result count')
+
+    unknown = {'availability': 'unknown', 'reason': 'not_recorded'}
+
+    def coefficient(record, sources):
+        common = {'source', 'representation', 'edge_count', 'availability'}
+        if not isinstance(record, dict) or not common.issubset(record):
+            raise ValueError('invalid spring coefficient descriptor')
+        count = record['edge_count']
+        if (record['source'] not in sources or isinstance(count, (bool, np.bool_)) or
+                not isinstance(count, (int, np.integer)) or count != n_edges):
+            raise ValueError('spring coefficient source or count disagrees with result')
+        rep, availability = record['representation'], record['availability']
+        if rep == 'scalar':
+            if set(record) != common | {'value'} or availability != 'available':
+                raise ValueError('scalar spring coefficient must retain its value')
+            scalar = _finite_real_array(record['value'], 'spring coefficient', ())
+            if scalar < 0:
+                raise ValueError('spring coefficient must be nonnegative')
+            return {**record, 'edge_count': int(count), 'value': float(scalar)}
+        if rep != 'per_edge' or availability not in ('available', 'unavailable'):
+            raise ValueError('invalid spring coefficient representation or availability')
+        expected = common | {'row_map'} | ({'values'} if availability == 'available' else {'reason'})
+        if set(record) != expected:
+            raise ValueError('invalid per-edge spring coefficient fields')
+        if record['row_map'] is None:
+            if (record['source'] != 'compute_detailed.stiffness' or edge_ids is not None or
+                    availability != 'unavailable' or record.get('reason') != 'missing_edge_ids'):
+                raise ValueError('missing spring row map must remain explicitly unavailable')
+        elif record['row_map'] != 'metadata.edge_ids' or edge_ids is None:
+            raise ValueError('per-edge spring coefficients require result edge_ids')
+        if availability == 'unavailable':
+            if record['row_map'] is not None and record['reason'] != 'omitted_from_summary':
+                raise ValueError('unsupported spring coefficient unavailability reason')
+            return {**record, 'edge_count': int(count)}
+        raw = record['values']
+        if isinstance(raw, (list, tuple)) and any(isinstance(item, (bool, np.bool_)) for item in raw):
+            raise ValueError('spring coefficients must not contain booleans')
+        # Internal buffers are already normalized float64. JSON arrays are
+        # strictly validated/detached on load, not trusted as producer buffers.
+        if isinstance(raw, np.ndarray) and raw.dtype == np.dtype(np.float64) and not np.ma.isMaskedArray(raw):
+            values = raw
+        else:
+            values = _finite_real_array(raw, 'spring coefficients', (n_edges,))
+        if values.shape != (n_edges,) or not np.isfinite(values).all() or np.any(values < 0):
+            raise ValueError('spring coefficients must be finite, nonnegative and match edge rows')
+        out = {k: v for k, v in record.items() if k != 'values'}
+        out['edge_count'] = int(count)
+        if not detailed:
+            out.update(availability='unavailable', reason='omitted_from_summary')
+        elif array_mode in ('owned', 'retain'):
+            out['values'] = values.copy() if array_mode == 'owned' and values is raw else values
+        else:
+            out['values'] = values.tolist()
+        return out
+
+    simulation = value['simulation']
+    if isinstance(simulation, dict) and set(simulation) == set(unknown) and simulation == unknown:
+        simulation = dict(unknown)
+    else:
+        simulation = coefficient(simulation, ('stiffness', 'spring_k'))
+    metrics = value['current_metrics']
+    if isinstance(metrics, dict) and metrics == {'source': 'simulation'}:
+        if simulation == unknown:
+            raise ValueError('current metrics cannot reference unknown simulation coefficients')
+        metrics = {'source': 'simulation'}
+    else:
+        metrics = coefficient(metrics, ('compute_detailed.stiffness',))
+    return _spring_provenance(simulation, metrics)
+
+
+def _populate_spring_result(result, graph, normalized, source, scalar):
+    """Finish the existing metric call, then adopt its original simulation input.
+
+    This non-solving seam accepts only the engine-owned normalized coefficients.
+    The call uses the same buffer as before; no numerical input is replaced.
+    """
+    result.compute_detailed(graph, stiffness=normalized)
+    result.metadata[_SPRING_PROVENANCE] = _spring_provenance(
+        _spring_coefficient_record(normalized, source, scalar, result.metadata.get('edge_ids')),
+        {'source': 'simulation'})
+
+
 @dataclass
 class SimResult:
     """Unified result container for spring and beam-frame simulations.
@@ -507,9 +637,9 @@ class SimResult:
     positions_trajectory: List[np.ndarray] = field(default_factory=list)
 
     # Detailed fields (populated by compute_detailed or detailed=True)
-    edge_forces: np.ndarray = None       # per-edge axial force magnitude
+    edge_forces: np.ndarray = None       # signed per-edge axial force
     edge_stretches: np.ndarray = None    # per-edge stretch ratio (L/L0)
-    max_force: float = 0.0              # maximum edge force
+    max_force: float = 0.0              # maximum absolute axial edge force
     max_stretch: float = 0.0            # maximum edge stretch ratio
     mean_stretch: float = 0.0           # mean edge stretch ratio
     std_stretch: float = 0.0            # std of edge stretch ratios
@@ -526,7 +656,7 @@ class SimResult:
     algorithmic_energy_ledger: Optional[Dict] = None  # separate opt-in v1 record
 
     def compute_detailed(self, graph, stiffness: Union[float, np.ndarray] = None):
-        """Compute detailed metrics from deformed positions.
+        """Compute identity-aligned geometric-rest axial metrics.
 
         Parameters
         ----------
@@ -534,91 +664,165 @@ class SimResult:
             Original (undeformed) graph.
         stiffness : float or (number of edges,) array, optional
             Coefficients in F = k * strain and E = 0.5 * k * L0 * strain**2.
-            Arrays follow metadata['edge_ids'] when present; otherwise the
-            historical graph insertion order. ID-bearing results require both
-            node_ids and edge_ids to exactly cover the supplied graph.
+            Arrays follow the result's edge_ids order, including a selected
+            subset. FEM results accept only None: their solver forces and
+            energy are not geometric-rest spring quantities.
+
+        Notes
+        -----
+        When present, node_ids and edge_ids must both be supplied in metadata.
+        Node IDs cover the graph exactly; edge IDs may select an ordered subset
+        of physical edges. Parallel edges are identified by ID, not endpoints.
+        Node and selected-edge records must match their strict integer graph
+        keys. Geometric recomputation requires distinct reference endpoints
+        for each selected edge; unselected edges are not validated.
+        Mapless historical results use graph insertion order for all nodes and
+        edges; no ID maps are inferred or added. Validate before changing any
+        fields. With stiffness=None, only geometric metrics are updated; force,
+        energy and coefficient provenance remain unchanged. With explicit stiffness,
+        current_metrics records the new metric model without replacing the
+        original simulation coefficients. Neither is inferred from legacy
+        metadata['stiffness'].
         """
+        if self.mode == 'fem_beam_frame' and stiffness is not None:
+            raise ValueError('FEM solver force and energy channels cannot be recomputed with spring stiffness')
         if 'native_axial_viscoelastic' in self.metadata:
             from ._taichi_viscoelastic import populate_result
             return populate_result(self, self.metadata['native_axial_viscoelastic'], graph, stiffness)
         if self.metadata.get('backend') == 'lammps':
             raise ValueError('LAMMPS results use explicit equilibrium lengths; geometric-rest recomputation is unsupported')
 
-
-        if 'node_ids' in self.metadata or 'edge_ids' in self.metadata:
-            # Result arrays retain solver row order even when graph JSON has
-            # canonicalized insertion order. Bind both axes by stable identity.
-            if 'node_ids' not in self.metadata or 'edge_ids' not in self.metadata:
-                raise ValueError('detailed recomputation requires both node_ids and edge_ids')
-            node_ids = _strict_state_ids(self.metadata['node_ids'], nonnegative=True)
-            edge_ids = _strict_state_ids(self.metadata['edge_ids'], 'edge_ids', nonnegative=True)
-            if set(node_ids) != set(graph.nodes) or set(edge_ids) != set(graph.edges):
-                raise ValueError('result stable IDs must exactly match graph nodes and edges')
-            rows = {nid: i for i, nid in enumerate(node_ids)}
-            for nid in node_ids:
-                if graph.nodes[nid].node_id != nid:
-                    raise ValueError('graph node identity disagrees with its key')
-            for eid in edge_ids:
-                edge = graph.edges[eid]
-                if (edge.edge_id != eid or edge.node_i not in rows or
-                        edge.node_j not in rows or edge.node_i == edge.node_j):
-                    raise ValueError('graph edge identity or endpoints are inconsistent')
-            pos_orig = np.array([graph.nodes[nid].position for nid in node_ids])
-            elements = np.array([[rows[graph.edges[eid].node_i],
-                                  rows[graph.edges[eid].node_j]] for eid in edge_ids],
-                                dtype=int).reshape((-1, 2))
-            for name in ('deformed_positions', 'displacements'):
-                value = getattr(self, name)
-                if value is not None and np.shape(value) != pos_orig.shape:
-                    raise ValueError(name + ' shape must match result node_ids and graph coordinates')
+        mapped_nodes = 'node_ids' in self.metadata
+        mapped_edges = 'edge_ids' in self.metadata
+        if mapped_nodes != mapped_edges:
+            raise ValueError('compute_detailed requires both node_ids and edge_ids, or neither for legacy results')
+        if mapped_nodes:
+            node_ids = _strict_state_ids(self.metadata['node_ids'])
+            edge_ids = _strict_state_ids(self.metadata['edge_ids'], 'edge_ids')
+            if set(node_ids) != set(graph.nodes):
+                raise ValueError('node_ids must exactly cover graph nodes')
+            if not set(edge_ids).issubset(graph.edges):
+                raise ValueError('edge_ids must select existing physical graph edges')
         else:
-            # Historical ID-less results use graph insertion order.
-            pos_orig, elements, _, _ = _graph_to_arrays(graph)
-        pos_orig = _finite_real_array(pos_orig, 'graph positions')
-        if pos_orig.ndim != 2 or pos_orig.shape[1] != 3 or len(elements) == 0:
-            raise ValueError('detailed recomputation requires nodes and at least one edge')
-        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-            lengths = np.linalg.norm(pos_orig[elements[:, 1]] - pos_orig[elements[:, 0]], axis=1)
-        if not np.isfinite(lengths).all() or np.any(lengths <= 0):
-            raise ValueError('detailed recomputation requires positive finite edge lengths')
-        pos_def = (None if self.deformed_positions is None else
-                   _finite_real_array(self.deformed_positions, 'deformed_positions', pos_orig.shape))
-        if self.displacements is not None:
-            _finite_real_array(self.displacements, 'displacements', pos_orig.shape)
-        spring_coefficients = (None if stiffness is None or pos_def is None else
-                               _normalize_spring_stiffness(stiffness, len(elements)))
+            node_ids, edge_ids = list(graph.nodes), list(graph.edges)
+        graph_node_ids = _strict_state_ids(list(graph.nodes), 'graph node keys')
+        selected = set(edge_ids)
+        _strict_state_ids([eid for eid in graph.edges if eid in selected],
+                          'selected graph edge keys')
+        record_nodes = _strict_state_ids(
+            [graph.nodes[nid].node_id for nid in graph_node_ids], 'graph node record IDs')
+        record_edges = _strict_state_ids(
+            [graph.edges[eid].edge_id for eid in edge_ids], 'selected graph edge record IDs')
+        if record_nodes != graph_node_ids or record_edges != edge_ids:
+            raise ValueError('graph node and selected edge record IDs must match their keys')
+        n_nodes, n_edges = len(node_ids), len(edge_ids)
+        for name, count in (('n_nodes', n_nodes), ('n_edges', n_edges)):
+            value = getattr(self, name)
+            if (isinstance(value, (bool, np.bool_)) or
+                    not isinstance(value, (int, np.integer)) or value not in (0, count)):
+                raise ValueError(f'{name} disagrees with selected result rows')
 
-        # Stage every derived value before touching the result. Finite inputs
-        # can still overflow norms, reductions, forces, or energy.
-        updates = dict(n_nodes=len(pos_orig), n_edges=len(elements))
-        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
-            if pos_def is not None:
-                final_lengths = np.linalg.norm(
-                    pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
-                stretches = final_lengths / lengths
-                updates.update(
-                    edge_stretches=stretches,
-                    max_stretch=float(np.max(stretches)),
-                    mean_stretch=float(np.mean(stretches)),
-                    std_stretch=float(np.std(stretches)),
-                )
-                if spring_coefficients is not None:
-                    strain = stretches - 1.0
-                    forces = spring_coefficients * strain
-                    updates.update(
-                        edge_forces=forces,
-                        max_force=float(np.max(np.abs(forces))),
-                        energy=float(0.5 * np.sum(spring_coefficients * strain ** 2 * lengths)),
-                    )
-            if self.displacements is not None:
-                updates['max_displacement'] = float(
-                    np.max(np.linalg.norm(self.displacements, axis=1)))
-        if any(not np.isfinite(value).all() for value in updates.values()):
-            raise ValueError('detailed recomputation produced nonfinite derived metrics')
+        provenance = None
+        if _SPRING_PROVENANCE in self.metadata:
+            provenance = _validate_spring_provenance(
+                self.metadata[_SPRING_PROVENANCE], n_edges, self.metadata.get('edge_ids'),
+                array_mode='retain')
+
+        node_rows = {nid: row for row, nid in enumerate(node_ids)}
+        pos_orig = _finite_real_array(
+            np.asarray([graph.nodes[nid].position for nid in node_ids]).reshape(n_nodes, 3),
+            'graph positions', (n_nodes, 3))
+        elements = np.asarray([
+            [node_rows[graph.edges[eid].node_i], node_rows[graph.edges[eid].node_j]]
+            for eid in edge_ids], dtype=int).reshape(n_edges, 2)
+
+        def node_array(value, name):
+            if value is None:
+                return None
+            array = _finite_real_array(value, name)
+            if array.ndim != 2 or array.shape[0] != n_nodes or array.shape[1] not in (2, 3):
+                raise ValueError(f'{name} must match result node rows with 2 or 3 coordinates')
+            return array
+
+        pos_def = node_array(self.deformed_positions, 'deformed_positions')
+        displacements = node_array(self.displacements, 'displacements')
+        for name in ('edge_forces', 'edge_stretches'):
+            value = getattr(self, name)
+            if value is not None:
+                array = _finite_real_array(value, name)
+                # Historical raw FEM conversions may lack geometric stretches.
+                if name == 'edge_stretches' and self.mode == 'fem_beam_frame' and array.shape == (0,):
+                    continue
+                if array.shape != (n_edges,):
+                    raise ValueError(f'{name} must match selected result edge rows')
+        spring_coefficients = None
+        if stiffness is not None:
+            coefficients = _finite_real_array(stiffness, 'stiffness')
+            spring_coefficients = _normalize_spring_stiffness(coefficients, n_edges)
+
+        # Commit together only after all identity, shape and arithmetic checks.
+        updates = {'n_nodes': n_nodes, 'n_edges': n_edges}
+        try:
+            with np.errstate(over='raise', invalid='raise', divide='raise'):
+                if pos_def is not None:
+                    if np.any(np.all(pos_orig[elements[:, 0]] == pos_orig[elements[:, 1]], axis=1)):
+                        raise ValueError('selected graph edges must have distinct reference endpoints')
+                    lengths, _ = _element_data(pos_orig, elements)
+                    final_lengths = np.linalg.norm(pos_def[elements[:, 1]] - pos_def[elements[:, 0]], axis=1)
+                    stretches = final_lengths / lengths
+                    updates.update(edge_stretches=stretches,
+                                   max_stretch=float(stretches.max()) if n_edges else 0.0,
+                                   mean_stretch=float(stretches.mean()) if n_edges else 0.0,
+                                   std_stretch=float(stretches.std()) if n_edges else 0.0)
+                    if spring_coefficients is not None:
+                        strain = stretches - 1.0
+                        forces = spring_coefficients * strain
+                        updates.update(edge_forces=forces,
+                                       max_force=float(np.max(np.abs(forces))) if n_edges else 0.0,
+                                       energy=float(0.5 * np.sum(spring_coefficients * strain ** 2 * lengths)))
+                if displacements is not None:
+                    magnitudes = np.linalg.norm(displacements, axis=1)
+                    updates['max_displacement'] = float(magnitudes.max()) if n_nodes else 0.0
+        except FloatingPointError as exc:
+            raise ValueError('detailed metrics must remain finite') from exc
+        if 'edge_forces' in updates:
+            metrics = _spring_coefficient_record(
+                spring_coefficients, 'compute_detailed.stiffness',
+                float(coefficients) if coefficients.ndim == 0 else None,
+                self.metadata.get('edge_ids'))
+            provenance = _spring_provenance(
+                provenance['simulation'] if provenance is not None else
+                {'availability': 'unknown', 'reason': 'not_recorded'}, metrics)
+            provenance = _validate_spring_provenance(
+                provenance, n_edges, self.metadata.get('edge_ids'), array_mode='retain')
+        # Commit provenance with metrics only after every validation succeeds.
         for name, value in updates.items():
             setattr(self, name, value)
+        if 'edge_forces' in updates:
+            self.metadata[_SPRING_PROVENANCE] = provenance
 
         return self
+
+    def lammps_displacement_relationship(self) -> Dict:
+        """Inspect saved displacement/reference consistency, not native accuracy.
+
+        Missing historical/no-state references remain unavailable and are never
+        synthesized. Malformed declared references raise rather than downgrade.
+        """
+        from ._lammps_result import displacement_relationship_status
+        return displacement_relationship_status(self)
+
+    def viscoelastic_energy_diagnostics(self) -> Dict:
+        """Inspect cumulative energy residuals at saved material endpoints.
+
+        Returns detached lists/dictionaries in joules, without simulation or
+        material advancement. Residuals are observations, not a cumulative
+        consistency certificate or a solver-accuracy test. Sparse samples do
+        not reconstruct omitted intervals. Only native axial viscoelastic v1
+        results are supported; the separate elastic ledger is not interpreted.
+        """
+        from ._taichi_viscoelastic import energy_diagnostics
+        return energy_diagnostics(self)
 
     def to_dict(self, detailed: bool = False) -> Dict:
         """Convert to dictionary for CSV/JSON export.
@@ -634,10 +838,20 @@ class SimResult:
             from ._taichi_viscoelastic import validate_result as validate_material_result
             validate_material_result(self)
         profile = None
+        record = None
         if self.metadata.get('backend') == 'lammps':
             from fibernet.integrations import _harmonic_profile as hp
-            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
-                                      self.dynamics_state, vars(self))
+            from ._lammps_result import _plain_full_history_export, validate_result
+            if _plain_full_history_export(self, detailed):
+                # Full validation includes result_guard; retain its detached
+                # state only for this hook-free projection, never on self.
+                record = validate_result(self)
+                profile = hp.contract_profile(self.metadata['model_contract'])
+            else:
+                profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
+                                          self.dynamics_state, vars(self))
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(self.metadata)
         d = {
             "mode": self.mode,
             "energy": self.energy,
@@ -653,7 +867,11 @@ class SimResult:
         # Metadata shares the historical flat JSON namespace. Never let it
         # replace result fields (or smuggle detailed arrays into a summary).
         d.update({key: value for key, value in self.metadata.items()
-                  if key not in self.__dataclass_fields__})
+                  if key not in self.__dataclass_fields__ and key != _SPRING_PROVENANCE})
+        if _SPRING_PROVENANCE in self.metadata:
+            d[_SPRING_PROVENANCE] = _validate_spring_provenance(
+                self.metadata[_SPRING_PROVENANCE], self.n_edges,
+                self.metadata.get('edge_ids'), detailed=detailed)
         if 'native_axial_viscoelastic' in d:
             import copy
             d['native_axial_viscoelastic'] = copy.deepcopy(d['native_axial_viscoelastic'])
@@ -672,7 +890,8 @@ class SimResult:
         if 'native_axial_inputs' in d:
             d['native_axial_inputs'] = _validate_mass_inputs(d['native_axial_inputs'], self.n_nodes, self.metadata.get('node_ids'))
         if self.dynamics_state is not None:
-            record = _validate_result_state(self)
+            if record is None:
+                record = _validate_result_state(self)
             d['dynamics_state'] = record if detailed else _dynamics_state_summary(record)
         if self.algorithmic_energy_ledger is not None:
             from ._energy_accounting import validate_ledger, ledger_summary
@@ -778,6 +997,8 @@ class SimResult:
             if selected != requested:
                 raise ValueError('profile-bearing result requires explicit matching load profile')
             if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(data)
         elif requested:
             raise ValueError('explicit harmonic profile requires a LAMMPS result')
         # Older FEM summary files stored [axial, shear, moment] resultants
@@ -813,6 +1034,10 @@ class SimResult:
                 setattr(r, key, np.array(data[key]))
         if data.get("positions_trajectory"):
             r.positions_trajectory = [np.array(frame) for frame in data["positions_trajectory"]]
+        if _SPRING_PROVENANCE in r.metadata:
+            r.metadata[_SPRING_PROVENANCE] = _validate_spring_provenance(
+                r.metadata[_SPRING_PROVENANCE], r.n_edges, r.metadata.get('edge_ids'),
+                array_mode='owned')
         if 'native_axial_inputs' in r.metadata:
             r.metadata['native_axial_inputs'] = _validate_mass_inputs(r.metadata['native_axial_inputs'], r.n_nodes, r.metadata.get('node_ids'))
         if 'dynamics_state' in data:
@@ -1177,6 +1402,7 @@ class TaichiEngine:
         material=None,
         reference_areas_by_id=None,
         max_abs_strain=None,
+        geometry_policy: str = "reject_internal_points",
     ) -> SimResult:
         """Run mass-spring dynamics with dashpot damping and air drag.
 
@@ -1213,6 +1439,8 @@ class TaichiEngine:
             Element energy is 0.5 * k * strain**2 * rest_length. A conventional
             force/extension spring constant is k / rest_length; no automatic
             conversion from Young's modulus or graph radius is performed.
+            Effective coefficients are recorded in spring_coefficient_provenance;
+            legacy metadata['stiffness'] retains the possibly inactive argument.
         dashpot : active dashpot damping coefficient (existing softened direction)
         drag : air drag coefficient
         state_observer : optional synchronous callable, keyword-only
@@ -1221,7 +1449,15 @@ class TaichiEngine:
             carry stable IDs and declared units. Exceptions propagate and stop
             the call. Ledger and nonempty schedules are initially unsupported.
             None adds no snapshot exports and leaves sampling/results unchanged.
+        geometry_policy : str, keyword-only
+            "reject_internal_points" (default) rejects nonempty edge-owned
+            internal_points before owner/array work. Explicit "endpoint_chord"
+            ignores those points mechanically without mutating the graph.
+            Actual-node straight edges remain accepted; no curved mechanics
+            or mechanical equivalence is implied.
         """
+        geometry_record = preflight_taichi_geometry(
+            graph, geometry_policy=geometry_policy)
         damping = _legacy_damping(damping)
         material_mode = material is not None
         if material_mode:
@@ -1289,14 +1525,16 @@ class TaichiEngine:
             observer_node_ids = tuple(_strict_state_ids(node_ids))
             observer_units = None if units is None else tuple(sorted(units.items()))
         if explicit_mass or record_state or units is not None:
-            fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
             _strict_state_ids(list(node_ids))
-            for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
-                scalar = _finite_real_array(value, name, ())
-                if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
-                    raise ValueError(f'{name} is outside the supported mass/state range')
-            if external_force is not None:
-                external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
+
+        # Caller controls have the same contract with or without mass/state output.
+        fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
+        for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
+            scalar = _finite_real_array(value, name, ())
+            if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
+                raise ValueError(f'{name} is outside the supported range')
+        if external_force is not None:
+            external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
 
         schedules = _prepare_displacement_schedule(
             displacement_schedule, num_nodes, dim
@@ -1313,6 +1551,14 @@ class TaichiEngine:
         stiff_np = _normalize_spring_stiffness(
             spring_k if spring_k is not None else stiffness, num_edges
         )
+
+        # Capture input shape/value before observers can mutate caller arrays.
+        # Numerical normalization above and all kernel inputs remain unchanged.
+        spring_scalar = None
+        if not material_mode:
+            active_input = spring_k if spring_k is not None else stiffness
+            if np.ndim(active_input) == 0:
+                spring_scalar = float(stiff_np[0]) if num_edges else float(active_input)
 
         material_history = None
         if material_mode:
@@ -1696,7 +1942,8 @@ class TaichiEngine:
                      for i, ms in enumerate(max_stretch_history)],
             metadata={"node_ids": list(node_ids), "edge_ids": list(graph.edges),
                       "stiffness": float(stiffness), "damping": float(damping),
-                      "dt": float(dt), "num_steps": int(num_steps)},
+                      "dt": float(dt), "num_steps": int(num_steps),
+                      "taichi_geometry": geometry_record},
         )
         if material_mode:
             result.metadata.pop('stiffness', None)
@@ -1704,7 +1951,9 @@ class TaichiEngine:
                 graph, fixed_nodes, ext_f, drag)
             result.compute_detailed(graph)
         else:
-            result.compute_detailed(graph, stiffness=stiff_np)
+            _populate_spring_result(result, graph, stiff_np,
+                                    'spring_k' if spring_k is not None else 'stiffness',
+                                    spring_scalar)
         if explicit_mass or units is not None:
             result.metadata['native_axial_inputs'] = {
                 'schema': 'native_axial_inputs/1', 'node_ids': list(node_ids),
@@ -1737,6 +1986,8 @@ class TaichiEngine:
         ramp_fraction: float = 0.2,
         auto_steps: bool = True,
         max_nodes: int = 20000,
+        *,
+        geometry_policy: str = "reject_internal_points",
     ) -> SimResult:
         """Displacement-controlled uniaxial stretch with automatic step calculation.
 
@@ -1766,12 +2017,17 @@ class TaichiEngine:
             Fraction of total steps for ramp phase (default 0.2 = 20%)
         auto_steps : bool
             Auto-calculate steps based on graph diameter if num_steps is None
+        geometry_policy : str, keyword-only
+            Strict default rejects nonempty edge-owned internal_points.
+            Explicit "endpoint_chord" ignores them mechanically without
+            changing the graph; this does not supply curved-fiber mechanics.
 
         Returns
         -------
         SimResult
             Result with deformed_positions and trajectory
         """
+        preflight_taichi_geometry(graph, geometry_policy=geometry_policy)
         _check_taichi_owner()
         if not np.isfinite(ramp_fraction) or not 0 <= ramp_fraction <= 1:
             raise ValueError("ramp_fraction must be finite and between 0 and 1")
@@ -1843,6 +2099,7 @@ class TaichiEngine:
             num_steps=num_steps,
             save_interval=save_interval,
             max_nodes=max_nodes,
+            geometry_policy=geometry_policy,
         )
 
     @staticmethod

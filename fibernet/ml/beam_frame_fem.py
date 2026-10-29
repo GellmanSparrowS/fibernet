@@ -16,6 +16,33 @@ import sys
 import warnings
 
 
+def _beam_resultant_contract(dimension, status='available'):
+    """Return fresh component metadata for the known beam producer layout.
+
+    Availability is not an accuracy, equilibrium or unit-system assertion.
+    The caller supplies the producer dimension; array width is not evidence.
+    """
+    if dimension not in (2, 3):
+        raise ValueError('beam resultant dimension must be 2 or 3')
+    components = [{'name': 'axial_N', 'quantity_kind': 'force', 'status': status}]
+    if dimension == 2:
+        components.extend([
+            {'name': 'shear_V', 'quantity_kind': 'force', 'status': status},
+            {'name': 'mean_bending_moment', 'quantity_kind': 'moment',
+             'status': status, 'definition': '(M_i + M_j) / 2'},
+        ])
+    else:
+        components.extend([
+            {'name': name, 'quantity_kind': 'force', 'status': 'unavailable',
+             'reason': 'not_recovered_by_3d_solver'}
+            for name in ('shear_V_y', 'shear_V_z')
+        ])
+    return {
+        'schema_version': 1, 'dimension': dimension, 'components': components,
+        'unit_system': 'not_declared',
+    }
+
+
 class BeamFrameFEM:
     """Beam frames with welded joints: 2-D incremental geometry, 3-D linear only."""
     
@@ -364,6 +391,10 @@ class BeamFrameFEM:
                  damping=1e-6, deduplicate=False):
         """Solve 2D beam frame with force and/or displacement BCs.
 
+        edge_forces columns are [axial_N, shear_V, mean_bending_moment];
+        the third is (M_i + M_j) / 2, not a force or endpoint moment.
+        beam_resultant_contract describes their quantity kinds and availability.
+
         forces: None (zero loads), or an exact (n_nodes, 2) array [Fx, Fy].
         Applied nodal moments are unsupported; extra columns raise ValueError.
         
@@ -465,6 +496,7 @@ class BeamFrameFEM:
             'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
             'sigma_total': sigma_total, 'moments': moments,
             'edge_forces': edge_forces, 'node_stress': node_stress,
+            'beam_resultant_contract': _beam_resultant_contract(2),
             'node_moment': node_moment, 'reactions': reactions,
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
@@ -623,6 +655,8 @@ class BeamFrameFEM:
                 'approximation': 'original_geometry_total_displacement_linear_reference',
                 'model': model,
             }
+        result['beam_resultant_contract'] = _beam_resultant_contract(
+            2, result['field_status']['edge_forces']['status'])
         result['solver_status'] = {
             'model': model,
             'equilibrium': 'unverified',
@@ -646,6 +680,11 @@ class BeamFrameFEM:
                  prescribed_disp=None,
                  damping=1e-6, deduplicate=False):
         """Solve 3D beam frame with corrected stress computation.
+
+        edge_forces retains [axial_N, shear_V_y, shear_V_z] for compatibility.
+        Only axial_N is recovered; both shear columns are uncomputed zero
+        placeholders, not measured zero shear. beam_resultant_contract marks
+        these components unavailable. No unit system is inferred.
 
         forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
         Applied nodal moments are unsupported; extra columns raise ValueError.
@@ -818,6 +857,7 @@ class BeamFrameFEM:
             'u': u, 'sigma_axial': sigma_axial, 'sigma_bending': sigma_bending,
             'sigma_total': sigma_total, 'node_stress': node_stress,
             'reactions': reactions, 'edge_forces': edge_forces,
+            'beam_resultant_contract': _beam_resultant_contract(3),
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
             'numerical_diagnostics': self._linear_numerical_diagnostics(
@@ -835,6 +875,8 @@ class BeamFrameFEM:
         Parameters
         ----------
         graph : StructureGraph
+            Straight members between graph nodes. Nonempty edge-owned
+            internal_points are not a curved-beam discretization and reject.
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
@@ -849,6 +891,18 @@ class BeamFrameFEM:
             boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
             x_range: float (for displacement calculation)
         """
+        curved_edges = [
+            edge_id for edge_id, edge in graph.edges.items()
+            if edge.internal_points is not None and len(edge.internal_points)
+        ]
+        if curved_edges:
+            raise ValueError(
+                'BeamFrameFEM supports straight graph members; nonempty '
+                'internal_points would be ignored on edge IDs '
+                + repr(tuple(curved_edges))
+                + '. Represent the fiber with actual intermediate graph nodes '
+                'and straight edges, with separately specified mechanics.'
+            )
         from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
         pos, elements, _, _ = _graph_to_arrays(graph)
         edge_index = elements.T.astype(np.int64)
@@ -889,7 +943,11 @@ class BeamFrameFEM:
             Boundary percentage.
         nonlinear : bool or None
             In 2-D, None auto-selects incremental updated-geometry solves for
-            |stretch-1| > 0.3; True selects this path explicitly.
+            |stretch-1| > 0.3; True selects this experimental path explicitly.
+            This path warns at any stretch: final nonlinear equilibrium is
+            unverified, and final stiffness/reactions/nodal moments are unavailable.
+            False retains the small-deformation linear solve and warns when
+            |stretch-1| > 0.3. This legacy switch is not a validity bound.
             In 3-D, only the linear solver exists: True is unsupported, while
             None and False retain the linear solve. Large 3-D stretches warn
             because this small-deformation model is not a nonlinear solution.
@@ -925,12 +983,21 @@ class BeamFrameFEM:
             if nonlinear is None:
                 nonlinear = abs(target_stretch - 1.0) > 0.3
             if nonlinear:
+                warnings.warn(
+                    '2-D beam-frame stretch uses experimental incremental updated-geometry linear solves; '
+                    'final nonlinear equilibrium is unverified, and final stiffness, reactions and nodal moments '
+                    'are unavailable. For small-deformation analysis, use nonlinear=False with a suitably small '
+                    'stretch (for example, target_stretch=1.01).', UserWarning, stacklevel=2)
                 result = self.solve_2d_nonlinear(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
                     prescribed_disp=prescribed, fixed_nodes=left, n_steps=10,
                     deduplicate=deduplicate
                 )
             else:
+                if abs(target_stretch - 1.0) > 0.3:
+                    warnings.warn(
+                        '2-D beam-frame stretch uses a small-deformation linear solver even at large stretch; '
+                        'nonlinear=False does not provide a large-deformation solution.', UserWarning, stacklevel=2)
                 result = self.solve_2d(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
                     fixed_nodes=left, prescribed_disp=prescribed,
@@ -953,6 +1020,10 @@ class BeamFrameFEM:
         ``edge_forces`` contains signed axial forces. The solver's full
         three-column force/resultant array is retained as the distinct
         ``metadata['beam_resultants']`` value, including in summary exports.
+        ``beam_resultant_contract`` describes dimension, quantity kinds and
+        availability. N denotes the axial-force symbol, not an asserted newton
+        unit. In 3-D only axial N is recovered; the retained shear slots are
+        legacy placeholders, not measured zero forces. No unit system is inferred.
         Present numerical diagnostics are independently copied; input-row
         residual records become stable-node-ID records only with a graph map.
         
@@ -1069,6 +1140,13 @@ class BeamFrameFEM:
         axial_forces = (beam_forces[:, 0].copy()
                         if beam_forces.ndim == 2 and beam_forces.shape[1] >= 1
                         else np.zeros(0))
+        resultant_contract = {}
+        if (np.ndim(u) == 2 and u.shape[1] in (3, 6) and
+                beam_forces.ndim == 2 and beam_forces.shape[1] == 3):
+            dimension = 2 if u.shape[1] == 3 else 3
+            # Preserve producer qualifications, especially nonlinear approximations.
+            status = fem_result.get('field_status', {}).get('edge_forces', {}).get('status', 'available')
+            resultant_contract['beam_resultant_contract'] = _beam_resultant_contract(dimension, status)
         edge_stretches = np.zeros(0)
         
         # Approximate energy from stresses
@@ -1123,6 +1201,7 @@ class BeamFrameFEM:
                 **identity,
                 **availability,
                 **numerical,
+                **resultant_contract,
                 'sigma_axial': sigma_axial,
                 'sigma_bending': sigma_bending,
                 'sigma_total': fem_result.get('sigma_total', np.array([])),

@@ -159,6 +159,12 @@ class FiberNetwork:
                 cl for cl in self.crosslinks
                 if cl.fiber_i != index and cl.fiber_j != index
             ]
+            # Snapshot old indices so even a repeated Crosslink reference is
+            # remapped once, while retaining each surviving object's fields.
+            endpoints = [(cl, cl.fiber_i, cl.fiber_j) for cl in self.crosslinks]
+            for cl, fiber_i, fiber_j in endpoints:
+                cl.fiber_i = fiber_i - 1 if fiber_i > index else fiber_i
+                cl.fiber_j = fiber_j - 1 if fiber_j > index else fiber_j
             for i, f in enumerate(self.fibers):
                 f.fiber_id = i
 
@@ -444,7 +450,19 @@ class FiberNetwork:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "FiberNetwork":
-        """Create FiberNetwork from dictionary."""
+        """Create FiberNetwork from its native dictionary representation.
+
+        Explicit StructureGraph node/edge arrays without either legacy network
+        field are rejected rather than silently discarded. Other legacy header
+        and version handling is unchanged; this is not full schema validation.
+        """
+        if (isinstance(data.get("nodes"), list)
+                and isinstance(data.get("edges"), list)
+                and "fibers" not in data and "crosslinks" not in data):
+            raise ValueError(
+                "StructureGraph nodes/edges cannot be loaded as FiberNetwork; "
+                "use StructureGraph.from_dict(), StructureGraph.load_json(), "
+                "or fibernet.api.load()")
         net = cls(
             dimension=data.get("dimension", 3),
             periodic=data.get("periodic", False),
@@ -465,9 +483,15 @@ class FiberNetwork:
         return net
 
     def save_json(self, filepath: str):
-        """Save network to JSON file."""
+        """Save network JSON, preserving an existing file if serialization fails.
+
+        Serialization completes before opening the destination. Parent directories
+        are not created. This protects against serialization errors, not partial
+        filesystem writes or interruption after the destination has been opened.
+        """
+        payload = json.dumps(self.to_dict(), indent=2)
         with open(filepath, 'w') as f:
-            json.dump(self.to_dict(), f, indent=2)
+            f.write(payload)
 
     @classmethod
     def load_json(cls, filepath: str) -> "FiberNetwork":

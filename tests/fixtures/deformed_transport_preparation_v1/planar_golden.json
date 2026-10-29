@@ -1,0 +1,1839 @@
+{
+  "expected": {
+    "conductance_S": {
+      "102": 0.7983044416128038,
+      "11": 0.4997096187108952,
+      "115": 0.4989686317175736,
+      "128": 0.598266707982684,
+      "141": 0.6982883614069558,
+      "154": 0.7988876067450518,
+      "167": 0.49867013655739434,
+      "180": 0.5983151210771421,
+      "193": 0.6986289028821937,
+      "206": 0.7992127177680519,
+      "219": 0.4984848606271003,
+      "232": 0.5990202138899737,
+      "24": 0.599064299037892,
+      "245": 0.6997590212882846,
+      "258": 0.7996527142892328,
+      "271": 0.499774654695789,
+      "284": 0.5989346618354064,
+      "297": 0.6984850617349697,
+      "310": 0.7976965846046039,
+      "323": 0.4991643448728515,
+      "336": 0.5993378232712422,
+      "349": 0.6981773870596937,
+      "362": 0.7978678021123919,
+      "37": 0.6982819542251115,
+      "375": 0.49881532596397415,
+      "388": 0.5993158984691466,
+      "401": 0.6988127899236634,
+      "414": 0.7975796251010018,
+      "427": 0.4986642972567794,
+      "440": 0.5989606690834308,
+      "453": 0.6995506414567468,
+      "466": 0.798045878171671,
+      "479": 0.4983766321948297,
+      "492": 0.5992842700802419,
+      "50": 0.798054547686027,
+      "505": 0.6992220701187835,
+      "518": 0.7997546329441336,
+      "531": 0.49948442853424785,
+      "544": 0.5986957727849959,
+      "557": 0.6981375630039245,
+      "570": 0.7981116274179484,
+      "583": 0.4990758388872696,
+      "596": 0.5984433626709468,
+      "609": 0.6979813073438159,
+      "622": 0.7986559314584352,
+      "63": 0.49917708132171873,
+      "635": 0.4987740187847105,
+      "648": 0.5981422041272118,
+      "661": 0.698490333288651,
+      "674": 0.7990461299847139,
+      "687": 0.49849184948520603,
+      "700": 0.5983068281922663,
+      "713": 0.6994625927299932,
+      "726": 0.7995512670176549,
+      "76": 0.5985719233713951,
+      "89": 0.698187401328287
+    },
+    "derived_full_graph_sha256": "e7b097c77f6632db7fc7a60e6aa9a9b748a9796645a1741e25d84d807d422c66",
+    "derived_graph_order_envelope_sha256": "b29c5c11b6e71fe4405878eb5a7928256a862ff0034a6a6e9aac8f6d15067f90",
+    "derived_lengths_m": {
+      "102": 0.260108207038941,
+      "11": 0.2500000030494012,
+      "115": 0.25000005079208,
+      "128": 0.23012230740396714,
+      "141": 0.28010048925694603,
+      "154": 0.24046832156325182,
+      "167": 0.2704164247518381,
+      "180": 0.230122301762996,
+      "193": 0.23012228305422713,
+      "206": 0.27000001795529194,
+      "219": 0.2500000965398506,
+      "232": 0.2500000591560336,
+      "24": 0.2500000475475984,
+      "245": 0.2500000172581826,
+      "258": 0.2500000108603894,
+      "271": 0.25,
+      "284": 0.26575366953821106,
+      "297": 0.23521271625183318,
+      "310": 0.2427061695935028,
+      "323": 0.25000005303872286,
+      "336": 0.25,
+      "349": 0.23584956216397046,
+      "362": 0.27414646789657643,
+      "37": 0.25000007506483735,
+      "375": 0.2732330246519718,
+      "388": 0.25000004106335455,
+      "401": 0.25,
+      "414": 0.23584958057663905,
+      "427": 0.23584958344139428,
+      "440": 0.2369071940265758,
+      "453": 0.25000002406830896,
+      "466": 0.25,
+      "479": 0.2657537290600029,
+      "492": 0.2575000200252887,
+      "50": 0.2500000729287852,
+      "505": 0.2507987439191575,
+      "518": 0.25000000767463026,
+      "531": 0.3535534702755276,
+      "544": 0.3783187414542643,
+      "557": 0.3358944151606445,
+      "570": 0.3555366271427325,
+      "583": 0.32882374259582436,
+      "596": 0.3712479943325903,
+      "609": 0.37124798182046437,
+      "622": 0.3575262804721811,
+      "63": 0.2304886376860682,
+      "635": 0.3535534624450175,
+      "648": 0.30960668627759563,
+      "661": 0.34547981498469826,
+      "674": 0.36796744427466666,
+      "687": 0.3783187058049101,
+      "700": 0.35889598296616737,
+      "713": 0.339705800409815,
+      "726": 0.35355342643493104,
+      "76": 0.28160262126735963,
+      "89": 0.23012230917450247
+    },
+    "derived_node_AABB_m": [
+      [
+        0.0,
+        -2.378912433005073e-07,
+        0.0
+      ],
+      [
+        1.0000002047784142,
+        1.0000000845179708,
+        0.0
+      ]
+    ],
+    "electrical_input_sha256": "4da200bbbada54901e02ada01c8fdb7a295dc24a5a6a56b5e5eb456afd3377ec",
+    "reference_box_size_m": [
+      1.0,
+      1.0,
+      0.0
+    ],
+    "reference_lengths_m": {
+      "102": 0.2601081505835601,
+      "11": 0.25,
+      "115": 0.25,
+      "128": 0.23012225011936588,
+      "141": 0.2801004284180944,
+      "154": 0.24046829312822096,
+      "167": 0.2704163456597992,
+      "180": 0.23012225011936588,
+      "193": 0.23012225011936588,
+      "206": 0.27,
+      "219": 0.25,
+      "232": 0.25,
+      "24": 0.25,
+      "245": 0.25,
+      "258": 0.25,
+      "271": 0.25,
+      "284": 0.26575364531836626,
+      "297": 0.2352126697267815,
+      "310": 0.24270609798684498,
+      "323": 0.25,
+      "336": 0.25,
+      "349": 0.2358495283014151,
+      "362": 0.27414640249326633,
+      "37": 0.25,
+      "375": 0.273232959212464,
+      "388": 0.25,
+      "401": 0.25,
+      "414": 0.2358495283014151,
+      "427": 0.2358495283014152,
+      "440": 0.23690715480964267,
+      "453": 0.25,
+      "466": 0.25,
+      "479": 0.26575364531836626,
+      "492": 0.25749999999999995,
+      "50": 0.25,
+      "505": 0.25079872407968906,
+      "518": 0.25,
+      "531": 0.3535533905932738,
+      "544": 0.37831864876053894,
+      "557": 0.33589432862136864,
+      "570": 0.3555365663331973,
+      "583": 0.3288236609491476,
+      "596": 0.37124789561693144,
+      "609": 0.3712478956169314,
+      "622": 0.3575262228144951,
+      "63": 0.2304886114323222,
+      "635": 0.3535533905932738,
+      "648": 0.3096066052266973,
+      "661": 0.3454797389138761,
+      "674": 0.36796738985948196,
+      "687": 0.37831864876053894,
+      "700": 0.35889587626496905,
+      "713": 0.3397057550292606,
+      "726": 0.3535533905932738,
+      "76": 0.2816025568065745,
+      "89": 0.23012225011936588
+    },
+    "source_edge_insertion_order": [
+      76,
+      193,
+      310,
+      427,
+      544,
+      661,
+      50,
+      167,
+      284,
+      401,
+      518,
+      635,
+      24,
+      141,
+      258,
+      375,
+      492,
+      609,
+      726,
+      115,
+      232,
+      349,
+      466,
+      583,
+      700,
+      89,
+      206,
+      323,
+      440,
+      557,
+      674,
+      63,
+      180,
+      297,
+      414,
+      531,
+      648,
+      37,
+      154,
+      271,
+      388,
+      505,
+      622,
+      11,
+      128,
+      245,
+      362,
+      479,
+      596,
+      713,
+      102,
+      219,
+      336,
+      453,
+      570,
+      687
+    ],
+    "source_full_graph_sha256": "90d089b8c6d4f75a0c7ba27680fa6db1fd9da1397baf79a48607cd784c974b73",
+    "source_graph_order_envelope_sha256": "c34f77fef336df4c18656ed6629517bb4e69ea71d887e02f7b60f0a134481696",
+    "source_node_insertion_order": [
+      152,
+      271,
+      390,
+      509,
+      203,
+      322,
+      441,
+      135,
+      254,
+      373,
+      492,
+      186,
+      305,
+      424,
+      118,
+      237,
+      356,
+      475,
+      169,
+      288,
+      407,
+      101,
+      220,
+      339,
+      458
+    ]
+  },
+  "length_unit": "m",
+  "prescribed_voltage_V_for_identity_only": {
+    "101": 0.0,
+    "169": 4.0,
+    "186": 0.0,
+    "254": 4.0,
+    "271": 0.0,
+    "339": 4.0,
+    "356": 0.0,
+    "424": 4.0,
+    "441": 0.0,
+    "509": 4.0
+  },
+  "reference_conductance_S": {
+    "102": 0.7983046148814277,
+    "11": 0.4997096248061556,
+    "115": 0.4989687330921922,
+    "128": 0.5982668569099163,
+    "141": 0.6982885130777771,
+    "154": 0.7988877012123657,
+    "167": 0.4986702824096642,
+    "180": 0.598315255349968,
+    "193": 0.6986290028692482,
+    "206": 0.7992127709165617,
+    "219": 0.4984850531217162,
+    "232": 0.5990203556326134,
+    "24": 0.5990644129741669,
+    "245": 0.6997590695945605,
+    "258": 0.7996527490273923,
+    "271": 0.499774654695789,
+    "284": 0.5989347164201875,
+    "297": 0.6984851998952721,
+    "310": 0.7976968199525695,
+    "323": 0.4991644507730089,
+    "336": 0.5993378232712422,
+    "349": 0.6981774873018719,
+    "362": 0.7978679924603039,
+    "37": 0.6982821638907968,
+    "375": 0.4988154454306355,
+    "388": 0.5993159969088315,
+    "401": 0.6988127899236634,
+    "414": 0.7975798018817392,
+    "427": 0.4986644138410233,
+    "440": 0.5989607682336676,
+    "453": 0.6995507088047507,
+    "466": 0.798045878171671,
+    "479": 0.4983767892383005,
+    "492": 0.5992843166854479,
+    "50": 0.7980547804906217,
+    "505": 0.699222125430844,
+    "518": 0.7997546574954181,
+    "531": 0.49948454110577467,
+    "544": 0.5986959194744116,
+    "557": 0.6981377428709661,
+    "570": 0.7981117639237306,
+    "583": 0.49907596280743877,
+    "596": 0.5984435217983964,
+    "609": 0.6979814694146461,
+    "622": 0.7986560602564086,
+    "63": 0.4991771381803558,
+    "635": 0.498774120149268,
+    "648": 0.5981423607128987,
+    "661": 0.6984904870885064,
+    "674": 0.7990462481480184,
+    "687": 0.4984919246497642,
+    "700": 0.5983070060713108,
+    "713": 0.6994626861696827,
+    "726": 0.7995513480725769,
+    "76": 0.5985720603886743,
+    "89": 0.6981875805006718
+  },
+  "reported_mechanical_input_sha256": "976eb1f65394483abc3137e227fea607b310216d2f4f611cb659fa5b82f52318",
+  "retained_artifact_pins": {
+    "deformed_transport": "79514385785f73bd2211b9139e97d25fcb414c9a9827157575696742b266fed6",
+    "mechanical_frame_10": "3df1aaa3e95233e6d325defede40f14486735e1aa40a97fddb5b043f740c7fd0",
+    "preparation": "e8b3474e6d9e0bbb202fbd9c8ee5a10e0477cf9c17c3899f8519c08737a91417",
+    "review": "d53aeda11642ab3a7d7f2b1f4c0444b4ed55556d396bd4582cedcb4040dec07f",
+    "saved_electrothermal": "affb33723da4d67e09f1b74c7b5cc20102f1f68600b92340be3c006591d6a895",
+    "source_fixture": "d605fef16ddb095646a9ab4505986f4b0fa90070b245560ba0c9e8f0acc50868",
+    "terminal": "8c33ce7c2059641c2497c71e57fb4567f33ea116ac1d01f5fbcf57832f981afa"
+  },
+  "saved_content_sha256": "5ea01acf284957aed0eb3695de03529f6666b667d41263dd1e3a0eee3304b81d",
+  "schema": "fibernet.deformed_transport_golden/1",
+  "scope": "retained_25_node_56_edge_preparation_arithmetic_and_identity_only_no_new_physics",
+  "source_electrical_input_sha256": "2c70b87a11809c9fb83f5dfd08f99fd224b873a7c7bed25e2d2dc6b2155d6aa1",
+  "source_graph_insertion_record": {
+    "box_size": [
+      1.0,
+      1.0,
+      0.0
+    ],
+    "dimension": 2,
+    "edges": [
+      {
+        "id": 76,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 220,
+        "node_j": 203,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 193,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 390,
+        "node_j": 407,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 310,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 237,
+        "node_j": 152,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 427,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 305,
+        "node_j": 390,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 544,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 203,
+        "node_j": 135,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 661,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 322,
+        "node_j": 390,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 50,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 169,
+        "node_j": 152,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 167,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 356,
+        "node_j": 373,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 284,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 203,
+        "node_j": 118,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 401,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 271,
+        "node_j": 356,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 518,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 509,
+        "node_j": 424,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 635,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 288,
+        "node_j": 356,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 24,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 135,
+        "node_j": 118,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 141,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 305,
+        "node_j": 322,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 258,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 509,
+        "node_j": 492,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 375,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 237,
+        "node_j": 322,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 492,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 475,
+        "node_j": 390,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 609,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 237,
+        "node_j": 305,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 726,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 492,
+        "node_j": 424,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 115,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 271,
+        "node_j": 288,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 232,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 475,
+        "node_j": 458,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 349,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 203,
+        "node_j": 288,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 466,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 441,
+        "node_j": 356,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 583,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 203,
+        "node_j": 271,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 700,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 458,
+        "node_j": 390,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 89,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 220,
+        "node_j": 237,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 206,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 424,
+        "node_j": 407,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 323,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 169,
+        "node_j": 254,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 440,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 407,
+        "node_j": 322,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 557,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 152,
+        "node_j": 220,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 674,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 407,
+        "node_j": 339,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 63,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 186,
+        "node_j": 203,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 180,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 390,
+        "node_j": 373,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 297,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 135,
+        "node_j": 220,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 414,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 373,
+        "node_j": 288,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 531,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 118,
+        "node_j": 186,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 648,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 373,
+        "node_j": 305,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 37,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 135,
+        "node_j": 152,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 154,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 339,
+        "node_j": 322,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 271,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 101,
+        "node_j": 186,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 388,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 339,
+        "node_j": 254,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 505,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 407,
+        "node_j": 492,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 622,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 322,
+        "node_j": 254,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 11,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 101,
+        "node_j": 118,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 128,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 305,
+        "node_j": 288,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 245,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 475,
+        "node_j": 492,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 362,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 305,
+        "node_j": 220,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 479,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 373,
+        "node_j": 458,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 596,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 288,
+        "node_j": 220,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 713,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 407,
+        "node_j": 475,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 102,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 254,
+        "node_j": 237,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 219,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 441,
+        "node_j": 458,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 336,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 271,
+        "node_j": 186,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 453,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 339,
+        "node_j": 424,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 570,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 237,
+        "node_j": 169,
+        "radius": 0.003,
+        "segments": 4
+      },
+      {
+        "id": 687,
+        "internal_points": null,
+        "material": {
+          "density": 1000.0,
+          "name": "synthetic_planar_acceptance",
+          "poissons_ratio": 0.3,
+          "shear_modulus": 38461538.461538464,
+          "youngs_modulus": 100000000.0
+        },
+        "metadata": {},
+        "node_i": 373,
+        "node_j": 441,
+        "radius": 0.003,
+        "segments": 4
+      }
+    ],
+    "metadata": {
+      "n_pts_per_side": 0,
+      "pattern": {
+        "box": [
+          0.25,
+          0.25
+        ],
+        "grid": [
+          4,
+          4
+        ],
+        "mirror_x": false,
+        "mirror_y": false,
+        "n_internal": 0,
+        "n_pts_per_side": 0,
+        "rotation": 0,
+        "unit": "triangle"
+      },
+      "tiling": {
+        "grid": [
+          4,
+          4
+        ],
+        "unit_box": [
+          0.25,
+          0.25
+        ]
+      },
+      "unit_type": "triangle"
+    },
+    "next_edge_id": 727,
+    "next_node_id": 510,
+    "nodes": [
+      {
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "id": 152,
+        "metadata": {},
+        "position": [
+          0.75,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 271,
+        "metadata": {},
+        "position": [
+          0.0,
+          0.5,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 390,
+        "metadata": {},
+        "position": [
+          0.5,
+          0.7425,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          true,
+          false,
+          true,
+          false,
+          false
+        ],
+        "id": 509,
+        "metadata": {},
+        "position": [
+          1.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 203,
+        "metadata": {},
+        "position": [
+          0.23,
+          0.265,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 322,
+        "metadata": {},
+        "position": [
+          0.76,
+          0.515,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          true,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "id": 441,
+        "metadata": {},
+        "position": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "id": 135,
+        "metadata": {},
+        "position": [
+          0.5,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 254,
+        "metadata": {},
+        "position": [
+          1.0,
+          0.25,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 373,
+        "metadata": {},
+        "position": [
+          0.27,
+          0.735,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "id": 492,
+        "metadata": {},
+        "position": [
+          0.75,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 186,
+        "metadata": {},
+        "position": [
+          0.0,
+          0.25,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 305,
+        "metadata": {},
+        "position": [
+          0.48,
+          0.5075,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 424,
+        "metadata": {},
+        "position": [
+          1.0,
+          0.75,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "id": 118,
+        "metadata": {},
+        "position": [
+          0.25,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 237,
+        "metadata": {},
+        "position": [
+          0.74,
+          0.2425,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 356,
+        "metadata": {},
+        "position": [
+          0.0,
+          0.75,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "id": 475,
+        "metadata": {},
+        "position": [
+          0.5,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          true,
+          true,
+          false,
+          false,
+          false
+        ],
+        "id": 169,
+        "metadata": {},
+        "position": [
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 288,
+        "metadata": {},
+        "position": [
+          0.25,
+          0.5,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 407,
+        "metadata": {},
+        "position": [
+          0.73,
+          0.75,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false
+        ],
+        "id": 101,
+        "metadata": {},
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 220,
+        "metadata": {},
+        "position": [
+          0.51,
+          0.235,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "id": 339,
+        "metadata": {},
+        "position": [
+          1.0,
+          0.5,
+          0.0
+        ]
+      },
+      {
+        "boundary": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "id": 458,
+        "metadata": {},
+        "position": [
+          0.25,
+          1.0,
+          0.0
+        ]
+      }
+    ],
+    "tolerance": 1e-06,
+    "version": "3.1"
+  },
+  "translations_m_by_id": {
+    "101": [
+      0.0,
+      0.0
+    ],
+    "118": [
+      3.0493771346466026e-09,
+      -1.0963833549586639e-07
+    ],
+    "135": [
+      5.059696051981673e-08,
+      -1.962976084442559e-07
+    ],
+    "152": [
+      1.2566179443670734e-07,
+      -2.378912433005073e-07
+    ],
+    "169": [
+      1.9859057693926867e-07,
+      -2.0103821747937824e-07
+    ],
+    "186": [
+      0.0,
+      0.0
+    ],
+    "203": [
+      3.1734592182321276e-08,
+      -8.318469068408799e-08
+    ],
+    "220": [
+      8.925813627601304e-08,
+      -1.5137561194195345e-07
+    ],
+    "237": [
+      1.4879772857376175e-07,
+      -1.6526967006784312e-07
+    ],
+    "254": [
+      2.04778414255551e-07,
+      -1.4799949469225376e-07
+    ],
+    "271": [
+      0.0,
+      0.0
+    ],
+    "288": [
+      5.079207479862181e-08,
+      -5.082163567149326e-08
+    ],
+    "305": [
+      1.0916897451420276e-07,
+      -8.338512763630657e-08
+    ],
+    "322": [
+      1.7050810495622374e-07,
+      -1.0124756846042929e-07
+    ],
+    "339": [
+      1.9864308314731253e-07,
+      -1.0693614021810403e-07
+    ],
+    "356": [
+      0.0,
+      0.0
+    ],
+    "373": [
+      7.917107424135511e-08,
+      -7.726712941880826e-10
+    ],
+    "390": [
+      1.317942837286049e-07,
+      -2.997137574555911e-08
+    ],
+    "407": [
+      1.658012742022382e-07,
+      -6.231324027654896e-08
+    ],
+    "424": [
+      1.8375656523746413e-07,
+      -8.286783173832964e-08
+    ],
+    "441": [
+      0.0,
+      0.0
+    ],
+    "458": [
+      9.653983632550092e-08,
+      8.45179709114336e-08
+    ],
+    "475": [
+      1.5569585214423186e-07,
+      -9.946088051343284e-09
+    ],
+    "492": [
+      1.7295403257032352e-07,
+      -4.2982607457452676e-08
+    ],
+    "509": [
+      1.838144198654816e-07,
+      -7.519320141574082e-08
+    ]
+  }
+}

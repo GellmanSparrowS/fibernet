@@ -461,6 +461,37 @@ def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any
             "it does not compute effective conductivity, CTE or thermal deformation."
         )
 
+    # Reject unavailable legacy execution before any generation, material lookup,
+    # solver import or output. This is a migration notice, not a model substitute.
+    unsupported = []
+    guidance = []
+    if config.simulation and config.simulation.get('type') == 'mechanical':
+        unsupported.append('simulation.type=mechanical')
+        guidance.append(
+            "The legacy FiberFEM configuration path is unavailable. "
+            "See examples/open_source_workflow.py for an explicit StructureGraph "
+            "small-deformation linear FEM example, not an equivalent automatic migration."
+        )
+    if config.analysis and config.analysis.get('morphology'):
+        unsupported.append('analysis.morphology')
+        guidance.append(
+            "The legacy morphology report is unavailable. FiberNetwork.total_length "
+            "and mean_fiber_length expose individual length quantities only; "
+            "analyze_topology and analyze_geometry_paths require StructureGraph, "
+            "not FiberNetwork, and do not reproduce the old report."
+        )
+    if config.analysis and config.analysis.get('stress_strain'):
+        unsupported.append('analysis.stress_strain')
+        guidance.append(
+            "Legacy implicit stress-strain extraction is unavailable. Select an "
+            "explicit solver, load and result definition; no equivalent conversion is provided."
+        )
+    if unsupported:
+        raise NotImplementedError(
+            "Unsupported legacy execution requests: " + ", ".join(unsupported) + ". "
+            "No network was generated and no output was written. " + " ".join(guidance)
+        )
+
     # Validate
     errors = config.validate()
     if errors:

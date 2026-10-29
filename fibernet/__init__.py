@@ -41,6 +41,9 @@ from fibernet.core.material import Material
 from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.fiber import Fiber
+from fibernet.core.fiber_network_profile import (
+    FiberNetworkProfile, FiberNetworkProjectionLimits, FiberNetworkProjectionError,
+)
 
 # --- Transforms ---
 from fibernet.core.transforms import (
@@ -70,14 +73,36 @@ from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
                                               manufacturing_trails_from_graph,
                                               export_mapped_trails)
 
-# --- Simulation ---
-from fibernet.sim.accelerated import TaichiEngine, SimResult
-from fibernet.sim.linear_transport import solve_linear_transport
-from fibernet.sim._viscoelastic_fem import ViscoelasticResult
-from fibernet.sim.joule_heating import (JouleHeatingLoad, JouleHeatingRun,
-                                        assemble_joule_heating, run_joule_heating)
-from fibernet.sim.reduced_beam import (ReducedBeamConfig, ReducedBeamResult,
-                                       ReducedBeamSolver)
+# --- Deferred public exports ---
+# Import the owning implementation only when its public symbol is requested.
+# Do not wrap, replace, or initialize any backend here.
+_LAZY_EXPORTS = {
+    "TaichiEngine": "fibernet.sim.accelerated",
+    "SimResult": "fibernet.sim.accelerated",
+    "solve_linear_transport": "fibernet.sim.linear_transport",
+    "ViscoelasticResult": "fibernet.sim._viscoelastic_fem",
+    "JouleHeatingLoad": "fibernet.sim.joule_heating",
+    "JouleHeatingRun": "fibernet.sim.joule_heating",
+    "assemble_joule_heating": "fibernet.sim.joule_heating",
+    "run_joule_heating": "fibernet.sim.joule_heating",
+    "ReducedBeamConfig": "fibernet.sim.reduced_beam",
+    "ReducedBeamResult": "fibernet.sim.reduced_beam",
+    "ReducedBeamSolver": "fibernet.sim.reduced_beam",
+    **dict.fromkeys(("show", "simulate", "batch_simulate", "batch_simulate_from_json",
+                     "train_model", "train_rl", "predict_named"), "fibernet.easy"),
+    "GraphFeatureExtractor": "fibernet.analysis.graph_features",
+    "GraphFeatureExtractor3D": "fibernet.analysis.graph_features_3d",
+    **dict.fromkeys(("plot_reward_curve", "plot_convergence", "plot_action_distribution",
+                     "evaluate_agent", "save_agent", "load_agent", "run_bayesian_optimization"),
+                    "fibernet.rl.utils"),
+}
+_LAZY_MODULES = {name: "fibernet." + name for name in ("sim", "easy", "analysis", "rl")}
+
+# reload() retains the module dictionary. Drop only bindings newly deferred by
+# this facade, so their next access resolves the current owning implementation.
+for _name in (*_LAZY_EXPORTS, *_LAZY_MODULES, "_HAS_RL"):
+    globals().pop(_name, None)
+del _name
 
 # --- Visualization (resolved only when explicitly requested) ---
 _RENDER_EXPORTS = (
@@ -90,19 +115,12 @@ _RENDER_EXPORTS = (
     "THEMES",
 )
 
-# --- Easy API ---
-from fibernet.easy import show, simulate, batch_simulate, batch_simulate_from_json, train_model, train_rl, predict_named
-
 # --- PyVista 3D Rendering (optional) ---
 try:
     from fibernet.viz.render3d import render_structure_graph_3d, render_stress_pyvista
     _HAS_PYVISTA = True
 except ImportError:
     _HAS_PYVISTA = False
-
-# --- Analysis ---
-from fibernet.analysis.graph_features import GraphFeatureExtractor
-from fibernet.analysis.graph_features_3d import GraphFeatureExtractor3D
 
 # --- ML Utilities (lazy import to avoid hard sklearn dependency) ---
 try:
@@ -120,25 +138,11 @@ try:
 except ImportError:
     _HAS_ML = False
 
-# --- RL Utilities (lazy import to avoid hard gymnasium dependency) ---
-try:
-    from fibernet.rl.utils import (
-        plot_reward_curve,
-        plot_convergence,
-        plot_action_distribution,
-        evaluate_agent,
-        save_agent,
-        load_agent,
-        run_bayesian_optimization,
-    )
-    _HAS_RL = True
-except ImportError:
-    _HAS_RL = False
-
 __all__ = [
     # Core
     "StructureGraph", "SNode", "SEdge",
     "Material", "Fiber", "FiberNetwork", "Crosslink",
+    "FiberNetworkProfile", "FiberNetworkProjectionLimits", "FiberNetworkProjectionError",
     # Transforms
     "translate", "rotate", "mirror", "mirror_x", "mirror_y", "mirror_z",
     "scale", "compose",
@@ -182,14 +186,33 @@ __all__ = [
 
 
 def __getattr__(name):
-    """Keep core imports independent of Matplotlib's plotting initialization."""
-    if name in _RENDER_EXPORTS:
-        from importlib import import_module
+    """Resolve public exports on demand, propagating implementation failures."""
+    from importlib import import_module
+    if name in _LAZY_EXPORTS:
+        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
+    elif name in _RENDER_EXPORTS:
         value = getattr(import_module("fibernet.viz.render"), name)
-        globals()[name] = value
-        return value
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    elif name in _LAZY_MODULES:
+        value = import_module(_LAZY_MODULES[name])
+    elif name == "_HAS_RL":
+        # Historical private flag described facade import success, not whether
+        # Gymnasium or any runtime was installed. Evaluate only if requested.
+        try:
+            import_module("fibernet.rl.utils")
+        except ImportError:
+            value = False
+        else:
+            value = True
+    else:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    globals()[name] = value
+    return value
 
 
 def __dir__():
-    return sorted(set(globals()) | set(_RENDER_EXPORTS))
+    return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)
+                  | set(_LAZY_MODULES) | {"_HAS_RL"})
+
+# Additive standard geometry API; no change to legacy lattice names.
+from fibernet.gen.standard_lattice import octet_fcc_v1
+__all__.append("octet_fcc_v1")

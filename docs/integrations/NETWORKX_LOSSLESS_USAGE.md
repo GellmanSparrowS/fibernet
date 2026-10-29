@@ -32,6 +32,18 @@ The native import has no dimension/tolerance overrides: both come from its
 record. This avoids silently ignoring an explicit override. For arbitrary
 NetworkX graphs and the old import defaults, use the existing projection API.
 
+## Composing imported graphs
+
+Before calling `left.merge(right)`, express both graphs in the same length
+units and coordinate frame. Merge copies the supplied node coordinates, edge
+radii and internal curve points without rescaling or transforming them.
+
+The result is a disjoint union: left-hand node and edge IDs remain stable,
+right-hand nodes and edges receive fresh IDs, and coincident nodes remain
+separate. It keeps the left graph's dimension, tolerance, box and graph-level
+metadata. Prepare compatible graph context before composing; setting a units
+label in metadata does not convert geometry.
+
 ## Native v1 schema
 
 Every graph/node/edge attribute mapping has exactly one key, `_fibernet`.

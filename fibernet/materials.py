@@ -16,6 +16,8 @@ References:
 - Callister, W.D., "Materials Science and Engineering", Wiley, 2018
 """
 
+from copy import deepcopy as _deepcopy
+
 from fibernet.core.material import Material
 
 
@@ -444,7 +446,7 @@ def get_material(name: str) -> Material:
     Returns
     -------
     material : Material
-        Material object with pre-defined properties.
+        Independent copy with pre-defined properties; edits do not change the database.
     
     Raises
     ------
@@ -467,7 +469,7 @@ def get_material(name: str) -> Material:
             f"Material '{name}' not found. Available: {available}"
         )
     
-    return db[name_lower]
+    return _deepcopy(db[name_lower])
 
 
 def list_materials():

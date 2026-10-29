@@ -305,7 +305,26 @@ class StructureGraph:
             (0, 0, 0), (1, 0, 0), (-1, 0, 0),
             (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
         ]
+        # Nearby points can lie across an edge or corner of a hash cell.
+        # Keep the existing center/axis search order when several nodes match.
+        offsets.extend(
+            (dx, dy, dz)
+            for dx in (-1, 0, 1)
+            for dy in (-1, 0, 1)
+            for dz in (-1, 0, 1)
+            if (dx != 0) + (dy != 0) + (dz != 0) >= 2
+        )
         return [(kx + dx, ky + dy, kz + dz) for dx, dy, dz in offsets]
+
+    def _checked_position_key(self, position):
+        """Check the destination lookup key before changing graph state."""
+        if not np.isfinite(position).all():
+            raise ValueError("position must be finite")
+        try:
+            with np.errstate(over='raise', invalid='raise'):
+                return self._pos_key(position)
+        except (ValueError, OverflowError, FloatingPointError, IndexError) as exc:
+            raise ValueError("position exceeds the spatial hash coordinate range or has missing coordinates") from exc
 
     def add_node(
         self,
@@ -331,8 +350,8 @@ class StructureGraph:
         if len(pos) != 3:
             raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
 
+        key = self._checked_position_key(pos)
         if merge:
-            key = self._pos_key(pos)
             for nk in self._nearby_keys(key):
                 for nid in self._spatial_hash.get(nk, []):
                     if np.linalg.norm(self._nodes[nid].position - pos) < self._tolerance:
@@ -344,7 +363,6 @@ class StructureGraph:
         self._nodes[nid] = node
         self._next_node_id += 1
 
-        key = self._pos_key(pos)
         self._spatial_hash.setdefault(key, []).append(nid)
         return nid
 
@@ -394,16 +412,12 @@ class StructureGraph:
         disp = np.asarray(displacement, dtype=float)
         if len(disp) == 2:
             disp = np.append(disp, 0.0)
-        # Update spatial hash
-        old_pos = self._nodes[node_id].position
-        old_key = self._pos_key(old_pos)
-        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
-            self._spatial_hash[old_key].remove(node_id)
-        # Apply displacement
-        self._nodes[node_id].position = old_pos + disp
-        # Update spatial hash
-        new_key = self._pos_key(self._nodes[node_id].position)
-        self._spatial_hash.setdefault(new_key, []).append(node_id)
+        try:
+            with np.errstate(over='raise', invalid='raise'):
+                position = self._nodes[node_id].position + disp
+        except FloatingPointError as exc:
+            raise ValueError("displacement must produce a finite position") from exc
+        self.set_node_position(node_id, position)
 
     def set_node_position(self, node_id: int, position: Sequence[float]):
         """Set the absolute position of a node.
@@ -415,21 +429,13 @@ class StructureGraph:
         position : array-like
             New position (x, y) or (x, y, z).
         """
-        if node_id not in self._nodes:
-            raise KeyError(f"Node {node_id} not found")
-        pos = np.asarray(position, dtype=float)
-        if len(pos) == 2:
-            pos = np.append(pos, 0.0)
-        # Update spatial hash
-        old_key = self._pos_key(self._nodes[node_id].position)
-        if old_key in self._spatial_hash and node_id in self._spatial_hash[old_key]:
-            self._spatial_hash[old_key].remove(node_id)
-        self._nodes[node_id].position = pos.copy()
-        new_key = self._pos_key(pos)
-        self._spatial_hash.setdefault(new_key, []).append(node_id)
+        self.set_node_positions({node_id: position})
 
     def set_node_positions(self, positions: Dict[int, Sequence[float]]):
-        """Batch-set positions of multiple nodes.
+        """Batch-set positions, validating every update before changing any.
+
+        Rejected edits leave positions, merge lookup and stable IDs unchanged.
+        Coordinates are flattened and normalized as in ``add_node``.
 
         Parameters
         ----------
@@ -440,8 +446,24 @@ class StructureGraph:
         --------
         >>> g.set_node_positions({1: [0.5, 0.0], 3: [1.0, 2.0]})
         """
-        for nid, pos in positions.items():
-            self.set_node_position(nid, pos)
+        updates = []
+        for nid, value in positions.items():
+            if nid not in self._nodes:
+                raise KeyError(f"Node {nid} not found")
+            pos = np.asarray(value, dtype=np.float64).ravel()
+            if len(pos) == 2:
+                pos = np.append(pos, 0.0)
+            if len(pos) != 3:
+                raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
+            pos = pos.copy()
+            new_key = self._checked_position_key(pos)
+            old_key = self._pos_key(self._nodes[nid].position)
+            updates.append((nid, pos, old_key, new_key))
+        for nid, pos, old_key, new_key in updates:
+            if old_key in self._spatial_hash and nid in self._spatial_hash[old_key]:
+                self._spatial_hash[old_key].remove(nid)
+            self._nodes[nid].position = pos
+            self._spatial_hash.setdefault(new_key, []).append(nid)
 
     def get_internal_nodes(self) -> List[int]:
         """Return node IDs of non-boundary (internal) nodes.
@@ -660,10 +682,20 @@ class StructureGraph:
         """Sum of all edge lengths."""
         return float(self.edge_lengths().sum()) if self._edges else 0.0
 
+    def _adjacency_lists(self) -> Dict[int, List[int]]:
+        """Build operation-local neighbor lists in physical-edge order."""
+        adjacency = {nid: [] for nid in self._nodes}
+        for edge in self._edges.values():
+            adjacency.setdefault(edge.node_i, []).append(edge.node_j)
+            if edge.node_j != edge.node_i:
+                adjacency.setdefault(edge.node_j, []).append(edge.node_i)
+        return adjacency
+
     def is_connected(self) -> bool:
-        """Check if the graph is connected."""
+        """Check connectivity in O(nodes + physical edges) time."""
         if not self._nodes:
             return True
+        adjacency = self._adjacency_lists()
         visited = set()
         start = next(iter(self._nodes))
         stack = [start]
@@ -672,11 +704,12 @@ class StructureGraph:
             if nid in visited:
                 continue
             visited.add(nid)
-            stack.extend(self.neighbors(nid))
+            stack.extend(adjacency[nid])
         return len(visited) == len(self._nodes)
 
     def connected_components(self) -> List[set]:
-        """Return list of connected component node sets."""
+        """Return component node sets in node insertion order, in O(N + E)."""
+        adjacency = self._adjacency_lists()
         visited = set()
         components = []
         for start in self._nodes:
@@ -690,7 +723,7 @@ class StructureGraph:
                     continue
                 visited.add(nid)
                 comp.add(nid)
-                stack.extend(n for n in self.neighbors(nid) if n not in visited)
+                stack.extend(n for n in adjacency[nid] if n not in visited)
             components.append(comp)
         return components
 
@@ -699,17 +732,25 @@ class StructureGraph:
     # ------------------------------------------------------------------
 
     def discretize_edges(self, n_points_per_edge: int = 8) -> "StructureGraph":
-        """Return a new graph where every edge has n_points_per_edge internal points.
+        """Return a copy, filling edges that have no stored internal samples.
 
-        This is essential for deformation visualization: when simulation
-        displaces nodes, the internal points can be displaced proportionally
-        to show the deformed shape of each beam.
+        Edges with ``internal_points=None`` or an empty array receive
+        ``n_points_per_edge`` equally spaced endpoint-linear samples. Existing
+        nonempty samples are preserved exactly, including collinear points;
+        their count need not equal ``n_points_per_edge``. In particular, zero
+        requests no new samples and does not clear stored geometry.
+
+        Physical nodes, edges, IDs, materials and ``segments`` are unchanged.
+        These geometry samples are not additional mechanical nodes and do not
+        supply an interior displacement field.
         """
         g = self.copy()
         for eid, edge in g._edges.items():
             pi = g._nodes[edge.node_i].position
             pj = g._nodes[edge.node_j].position
             t = np.linspace(0, 1, n_points_per_edge + 2)[1:-1]
+            if edge.internal_points is not None and len(edge.internal_points) > 0:
+                continue
             edge.internal_points = (
                 pi[None, :] * (1 - t[:, None]) + pj[None, :] * t[:, None]
             )
@@ -724,7 +765,7 @@ class StructureGraph:
         g = StructureGraph(
             dimension=self._dimension,
             tolerance=self._tolerance,
-            box_size=self._box_size,
+            box_size=self._box_size.copy() if self._box_size is not None else None,
         )
         g._metadata = copy.deepcopy(self._metadata)
         for nid, node in self._nodes.items():
@@ -761,16 +802,19 @@ class StructureGraph:
         for nid, node in other._nodes.items():
             new_nid = g.add_node(
                 node.position, boundary=tuple(node.boundary),
-                merge=False, **copy.deepcopy(node.metadata),
+                merge=False,
             )
+            # Metadata is data, including keys that name constructor arguments.
+            g._nodes[new_nid].metadata = copy.deepcopy(node.metadata)
             id_map[nid] = new_nid
         for eid, edge in other._edges.items():
-            g.add_edge(
+            new_eid = g.add_edge(
                 id_map[edge.node_i], id_map[edge.node_j],
                 radius=edge.radius, material=copy.deepcopy(edge.material),
                 internal_points=edge.internal_points.copy() if edge.internal_points is not None else None,
-                segments=edge.segments, allow_parallel=True, **copy.deepcopy(edge.metadata),
+                segments=edge.segments, allow_parallel=True,
             )
+            g._edges[new_eid].metadata = copy.deepcopy(edge.metadata)
         return g
 
     # ------------------------------------------------------------------
@@ -853,23 +897,32 @@ class StructureGraph:
         radii : (M,) float64
         """
         if not self._nodes:
-            return np.empty((0, 3)), np.empty((0, 2), dtype=int), np.empty((0,))
+            return np.empty((0, 3)), np.empty((0, 2), dtype=np.int32), np.empty((0,))
         id_list = sorted(self._nodes.keys())
         id_to_idx = {nid: idx for idx, nid in enumerate(id_list)}
         positions = np.array([self._nodes[nid].position for nid in id_list])
         edges = np.array(
             [[id_to_idx[e.node_i], id_to_idx[e.node_j]] for e in self._edges.values()],
             dtype=np.int32,
-        )
+        ).reshape(-1, 2)
         radii = np.array([e.radius for e in self._edges.values()])
         return positions, edges, radii
 
-    def to_fiber_network(self):
-        """Convert to a FiberNetwork for legacy compatibility."""
+    def to_fiber_network(self, *, profile=None):
+        """Convert through the existing endpoint-chord compatibility bridge.
+
+        With no profile, return the unchanged legacy ``FiberNetwork``.
+        ``FiberNetworkProfile`` opts into bounded, explicit loss acceptance and
+        returns ``(FiberNetwork, detached_report)``. The report describes this
+        conversion only, not downstream mesh export or a lossless roundtrip.
+        """
+        if profile is not None:
+            from fibernet.core.fiber_network_profile import _checked_to_fiber_network
+            return _checked_to_fiber_network(self, profile)
         from fibernet.core.fiber import Fiber
         from fibernet.core.network import FiberNetwork, Crosslink
 
-        net = FiberNetwork(dimension=self._dimension, box_size=self._box_size)
+        net = FiberNetwork(dimension=self._dimension, box_size=self.box_size)
         net.metadata = copy.deepcopy(self._metadata)
 
         node_to_fibers: Dict[int, List[Tuple[int, float]]] = {}
@@ -885,7 +938,7 @@ class StructureGraph:
             fid = net.num_fibers
             n_seg = max(edge.segments, max(4, int(dist / max(edge.radius * 2, 0.05))))
             fiber = Fiber.straight(
-                pi, pj, radius=edge.radius, material=edge.material,
+                pi, pj, radius=edge.radius, material=copy.deepcopy(edge.material),
                 fiber_id=fid, segments=n_seg,
             )
             net.add_fiber(fiber)
@@ -1030,6 +1083,12 @@ class StructureGraph:
                 raise ValueError('serialized edges must have distinct endpoints')
             g._next_edge_id = eid
             ip = np.array(ed["internal_points"]) if ed.get("internal_points") is not None else None
+            if ip is not None:
+                # JSON [] loses the coordinate axis of a valid empty curve.
+                if ip.shape == (0,):
+                    ip = np.empty((0, 3))
+                elif ip.ndim != 2 or ip.shape[1] != 3:
+                    raise ValueError('serialized internal_points must have shape (M, 3)')
             try:
                 material = (Material.from_dict(_material_record(ed['material']))
                             if 'material' in ed else Material())
@@ -1053,9 +1112,15 @@ class StructureGraph:
         return g
 
     def save_json(self, path: str):
-        """Save graph to a JSON file."""
+        """Save graph JSON, preserving an existing file if serialization fails.
+
+        Serialization completes before opening the destination. Parent directories
+        are not created. This protects against serialization errors, not partial
+        filesystem writes or interruption after the destination has been opened.
+        """
+        payload = json.dumps(self.to_dict(), indent=2)
         with open(path, "w") as f:
-            json.dump(self.to_dict(), f, indent=2)
+            f.write(payload)
 
     @classmethod
     def load_json(cls, path: str) -> "StructureGraph":

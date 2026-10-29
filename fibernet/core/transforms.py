@@ -67,8 +67,7 @@ def _apply_transform_to_graph(
 ) -> StructureGraph:
     """Transform a detached copy without welding or reallocating stable IDs."""
     g = graph.copy()
-    # StructureGraph.copy currently shares its private box array; preserve the
-    # functional transform's detached box ownership via the public copy getter.
+    # Retain the transform-local defensive box copy through the public getter.
     g.box_size = graph.box_size
     g._spatial_hash = {}
     for nid, node in g._nodes.items():

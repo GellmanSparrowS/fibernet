@@ -14,16 +14,21 @@ Quick Start
 For current simulations, prepare a StructureGraph and use ``fibernet.simulate``.
 """
 
+import json as _json
 import numpy as np
-from typing import Optional, Dict, List, Union, Tuple, Callable, Any
+from typing import Optional, Dict, List, Union, Tuple, Callable, Any, Literal, TYPE_CHECKING, overload
 from pathlib import Path
 from dataclasses import dataclass, field
 
 from fibernet.core.network import FiberNetwork
+from fibernet.core.structure_graph import StructureGraph as _StructureGraph
 from fibernet.core.fiber import Fiber
 from fibernet.core.material import Material
 from fibernet import gen
 from fibernet.core import transform
+
+if TYPE_CHECKING:
+    from fibernet.analysis.topology_metrics import TopologyMetricsV1
 
 
 # ============================================================
@@ -657,54 +662,61 @@ def simulate_thermal(
     )
 
 
-def analyze(network: FiberNetwork) -> Dict:
-    """Analyze network structure.
-    
-    Returns
-    -------
-    dict
-        Analysis results with keys: num_fibers, num_crosslinks,
-        nematic_order, mean_length, total_length, volume_fraction, etc.
+@overload
+def analyze(network: FiberNetwork, *, kind: None = None) -> Dict: ...
+
+
+@overload
+def analyze(network: _StructureGraph, *, kind: Literal['topology']) -> 'TopologyMetricsV1': ...
+
+
+def analyze(network: Union[FiberNetwork, _StructureGraph], *,
+            kind: Optional[str] = None) -> Union[Dict, 'TopologyMetricsV1']:
+    """Analyze an explicit representation without implicit conversion.
+
+    StructureGraph requires kind='topology' and returns the unchanged
+    TopologyMetricsV1 result, not a comprehensive geometry/material report.
+    Use analyze_geometry_paths with explicit length_unit/coordinate_frame and
+    analyze_spectrum separately for their declared units and resource budgets.
+
+    FiberNetwork requires omitted/None kind and returns the historical twelve
+    fields for a nonperiodic, crosslink-free endpoint network. Arc lengths use
+    caller coordinate units; interior crossings are not junctions. Ambiguous
+    rounded endpoints, parallel fibers and degenerate chords raise. Empty means
+    are zero by convention, is_connected is False; no volume fraction is implied.
+    Crosslinked legacy input is unsupported, and from_fiber_network is only an
+    approximate endpoint projection, not a lossless migration helper.
     """
-    from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
-    
-    morph = MorphologyAnalyzer(network)
-    topo = TopologyAnalyzer(network)
-    
-    morph_report = morph.full_report()
-    try:
-        topo_report = topo.full_report()
-    except ImportError:
-        topo_report = {}
-    
-    return {
-        'num_fibers': network.num_fibers,
-        'num_crosslinks': network.num_crosslinks,
-        'dimension': network.dimension,
-        'nematic_order': morph_report.get('nematic_order', 0),
-        'mean_length': morph_report.get('mean_length', 0),
-        'total_length': morph_report.get('total_length', 0),
-        'mean_tortuosity': morph_report.get('mean_tortuosity', 1.0),
-        'num_nodes': topo_report.get('num_nodes', 0),
-        'num_edges': topo_report.get('num_edges', 0),
-        'mean_degree': topo_report.get('degree_stats', {}).get('mean', 0),
-        'is_connected': topo_report.get('is_connected', False),
-        'num_components': topo_report.get('num_components', 0),
-    }
+    if isinstance(network, _StructureGraph):
+        if kind != 'topology':
+            raise ValueError("StructureGraph analysis requires kind='topology'; "
+                             "geometry and spectrum use their explicit analysis entry points")
+        from fibernet.analysis import analyze_topology
+        return analyze_topology(network)
+    if not isinstance(network, FiberNetwork):
+        raise TypeError('analyze requires FiberNetwork or StructureGraph; no conversion is performed')
+    if kind is not None:
+        raise ValueError('FiberNetwork analysis requires omitted/None kind; '
+                         "kind='topology' requires StructureGraph")
+    from fibernet.analysis._legacy_summary import analyze_legacy_endpoints
+    return analyze_legacy_endpoints(network)
 
 
 def export(
-    network: FiberNetwork,
+    network: Union[FiberNetwork, _StructureGraph],
     filename: str,
     format: str = None,
     **kwargs,
 ) -> str:
-    """Export network to file.
-    
+    """Export a native network or graph without implicit representation conversion.
+
+    StructureGraph supports JSON here; use its explicit interoperability methods
+    for other formats. Unknown extensions require an explicit supported format.
+
     Parameters
     ----------
-    network : FiberNetwork
-        Fiber network.
+    network : FiberNetwork or StructureGraph
+        Native representation to save.
     filename : str
         Output filename.
     format : str, optional
@@ -723,8 +735,17 @@ def export(
             '.pdb': 'pdb',
             '.msh': 'gmsh',
         }
-        format = format_map.get(ext, 'json')
-    
+        if ext not in format_map:
+            raise ValueError(f"Cannot infer export format from extension {ext!r}; "
+                             "use a supported extension or specify format explicitly")
+        format = format_map[ext]
+
+    if not isinstance(network, (FiberNetwork, _StructureGraph)):
+        raise TypeError("export requires FiberNetwork or StructureGraph")
+    if isinstance(network, _StructureGraph) and format != 'json':
+        raise ValueError("StructureGraph supports only JSON in fibernet.api.export; "
+                         "use an explicit StructureGraph interoperability exporter")
+
     if format == 'json':
         network.save_json(filename)
     elif format == 'lammps':
@@ -751,8 +772,15 @@ def export(
     return filename
 
 
-def load(filename: str, format: str = None) -> FiberNetwork:
-    """Load network from file.
+def load(filename: str, format: str = None) -> Union[FiberNetwork, _StructureGraph]:
+    """Load a native representation without silently discarding graph data.
+
+    JSON dispatch preserves StructureGraph nodes/edges or legacy FiberNetwork
+    fibers/crosslinks. Mixed or unknown representation shapes are rejected;
+    version handling follows each native reader. Additional legacy header fields
+    remain tolerated by those readers; this dispatch is not schema certification.
+    LAMMPS and PDB readers return FiberNetwork. Unknown extensions require an
+    explicit supported format.
     
     Parameters
     ----------
@@ -769,10 +797,30 @@ def load(filename: str, format: str = None) -> FiberNetwork:
             '.data': 'lammps',
             '.pdb': 'pdb',
         }
-        format = format_map.get(ext, 'json')
-    
+        if ext not in format_map:
+            raise ValueError(f"Cannot infer load format from extension {ext!r}; "
+                             "use a supported extension or specify format explicitly")
+        format = format_map[ext]
+
     if format == 'json':
-        return FiberNetwork.load_json(filename)
+        with open(filename) as stream:
+            data = _json.load(stream)
+        if not isinstance(data, dict):
+            raise ValueError("native JSON must be a StructureGraph or FiberNetwork object")
+        graph_fields = {'nodes', 'edges'} & data.keys()
+        network_fields = {'fibers', 'crosslinks'} & data.keys()
+        if graph_fields and network_fields:
+            raise ValueError("ambiguous JSON mixes StructureGraph and FiberNetwork fields")
+        if graph_fields:
+            if not all(isinstance(data.get(key), list) for key in ('nodes', 'edges')):
+                raise ValueError("StructureGraph JSON requires nodes and edges arrays")
+            return _StructureGraph.from_dict(data)
+        if network_fields:
+            if (not isinstance(data.get('fibers'), list)
+                    or not isinstance(data.get('crosslinks', []), list)):
+                raise ValueError("FiberNetwork JSON requires a fibers array and optional crosslinks array")
+            return FiberNetwork.from_dict(data)
+        raise ValueError("unrecognized native JSON: expected nodes/edges or fibers/crosslinks")
     elif format == 'lammps':
         from fibernet.io.lammps import from_lammps
         return from_lammps(filename)

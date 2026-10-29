@@ -1,0 +1,16 @@
+{
+  "rendered_frames": 24,
+  "encoded_frames": 21,
+  "size_px": [
+    840,
+    1188
+  ],
+  "duration_ms_per_frame": 300,
+  "cpu_s": 6.904445007,
+  "maxrss_kib": 221588,
+  "source_archive_sha256": "005dae4ae98d40e0bdb538d3e9fce52e4c433aac45b7e321d83cc6b4e2dbb633",
+  "source_tree": "8fabc86ee457c1002bab48544ef7b53f8737d185",
+  "training_or_inference_or_physics_calls": 0,
+  "history_sha256": "8c9bd92208d6873e35eaf63df32d99e30c364063871857c1690e6f66f981cad3",
+  "gif_sha256": "cea633e13abcc71f1ab0142e8a7dda22c75bdbd48ed74441f5bddbda2a09f825"
+}

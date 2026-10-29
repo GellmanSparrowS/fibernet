@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 import warnings
 import numpy as np
+from geometry_policy.support import H as GEOMETRY_HELPERS
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,14 +25,15 @@ def extract(path, name, namespace):
 class DispatchContract(unittest.TestCase):
     def setUp(self):
         self.calls = []
-        self.graph = types.SimpleNamespace(dimension=3)
+        self.graph = types.SimpleNamespace(dimension=3, edges={
+            17: types.SimpleNamespace(internal_points=None)})
         self.result = object()
         owner = self
         class Engine:
             def __init__(self, *, arch, num_threads): owner.calls.append(('init', arch, num_threads))
-            def stretch_test(self, graph, target_stretch=2.0, *, num_steps=None):
+            def stretch_test(self, graph, target_stretch=2.0, *, num_steps=None, geometry_policy="reject_internal_points"):
                 owner.calls.append(('stretch', target_stretch)); return owner.result
-            def dynamics(self, graph, *, num_steps=5, material=None):
+            def dynamics(self, graph, *, num_steps=5, material=None, geometry_policy="reject_internal_points"):
                 owner.calls.append(('dynamics', num_steps)); return owner.result
         class FEM:
             def __init__(self, E=1e9, nu=.3): owner.calls.append(('fem_init', E, nu))
@@ -52,12 +54,19 @@ class DispatchContract(unittest.TestCase):
             return real_import(name, *args, **kwargs)
         self.guard = patch('builtins.__import__', side_effect=guard)
         self.guard.start(); self.addCleanup(self.guard.stop)
-        self.simulate = extract('fibernet/easy.py', 'simulate', {'TaichiEngine': Engine, 'np': np})
+        namespace = {**GEOMETRY_HELPERS, 'TaichiEngine': Engine, 'np': np}
+        extract('fibernet/easy.py', '_taichi_engine_class', namespace)
+        self.simulate = extract('fibernet/easy.py', 'simulate', namespace)
         self.namespace = self.simulate.__globals__
 
     def test_signature_and_omitted_defaults(self):
         sig = inspect.signature(self.simulate)
-        self.assertEqual(list(sig.parameters), ['graph','mode','strain','backend','save_path','kwargs'])
+        self.assertEqual(list(sig.parameters), ['graph','mode','strain','backend','save_path','stretch_ratio','kwargs'])
+        self.assertEqual(sig.parameters['stretch_ratio'].kind, inspect.Parameter.KEYWORD_ONLY)
+        self.assertIsNone(sig.parameters['stretch_ratio'].default)
+        self.assertEqual([name for name, parameter in sig.parameters.items()
+                          if parameter.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD],
+                         ['graph', 'mode', 'strain', 'backend', 'save_path'])
         self.assertIsNone(sig.parameters['strain'].default)
         for options in ({}, {'strain': None}):
             self.calls.clear(); self.assertIs(self.simulate(self.graph, **options), self.result)
@@ -100,7 +109,7 @@ class DispatchContract(unittest.TestCase):
         for error in (ImportError('missing optional backend'), RuntimeError('runtime unavailable')):
             class Broken:
                 def __init__(self, *, arch, num_threads): raise error
-                def stretch_test(self, graph, target_stretch=2.0):
+                def stretch_test(self, graph, target_stretch=2.0, *, geometry_policy="reject_internal_points"):
                     raise AssertionError('must not execute')
             self.namespace['TaichiEngine'] = Broken
             with self.assertRaises(type(error)) as caught: self.simulate(self.graph)

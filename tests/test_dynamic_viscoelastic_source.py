@@ -15,6 +15,7 @@ import time
 import types
 import warnings
 import numpy as np
+from geometry_policy.support import H as GEOMETRY_HELPERS
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -87,7 +88,7 @@ def run_checks():
         for value in vars(cls).values():
             if hasattr(value, '__builtins__'):
                 value.__builtins__['__import__'] = imports
-    ns = dict(warnings=warnings, np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
+    ns = dict(GEOMETRY_HELPERS, warnings=warnings, np=np, time=time, sys=sys, dataclass=dataclasses.dataclass, field=dataclasses.field,
         __builtins__=dict(vars(builtins), __import__=imports), SimResult=Result,
         _material_options=mod.material_options, _check_taichi_owner=lambda: None,
         _ensure_taichi=lambda *a: None, _prepare_force_feedback=lambda *a: None,
@@ -95,7 +96,7 @@ def run_checks():
         _element_data=lambda x,e:(np.linalg.norm(x[e[:,1]]-x[e[:,0]], axis=1), None))
     nodes = [ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0)]
     nodes += [n for n in ntree.body if getattr(n, 'name', None) in helpers
-              or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '_DAMPING_UNSET' for t in n.targets))] + [method]
+              or (isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id in {'_DAMPING_UNSET', '_SPRING_PROVENANCE'} for t in n.targets))] + [method]
     exec(compile(ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[])), '<actual dynamics AST, cached fake native fields>', 'exec'), ns)
     class Field:
         def __init__(self):
@@ -112,7 +113,7 @@ def run_checks():
     x0 = np.array([[0.,0.,0.],[1.,0.,0.]])
     graph = types.SimpleNamespace(num_nodes=2,
         nodes={17:types.SimpleNamespace(position=x0[0]), 83:types.SimpleNamespace(position=x0[1])},
-        edges={91:types.SimpleNamespace(node_i=17, node_j=83)})
+        edges={91:types.SimpleNamespace(node_i=17, node_j=83, internal_points=None)})
     ns['_graph_to_arrays'] = lambda g:(x0.copy(), np.array([[0,1]]), [17,83], None)
     fields = None
     steps = None
@@ -155,6 +156,10 @@ def run_checks():
     check('actual interval dt is passed unchanged', all(c[3] == .125 for c in material.calls))
     check('state history is chained once, not by sample schedule', [float(c[2][0,0]) for c in material.calls] == [0.,.01,.02])
     check('result uses sentinel committed stress and U, not elastic stiffness', result.edge_forces.tolist() == [5.25] and result.energy == 1.5)
+    check('geometry interpretation coexists with material state',
+        result.metadata['taichi_geometry'] == dict(schema='taichi_endpoint_chord/1',
+            policy='reject_internal_points', representation='endpoint_chord',
+            ignored_internal_point_edge_ids=[]))
     record = result.metadata['native_axial_viscoelastic']
     check('sampled material state includes initial, sampled and final state', [s['step'] for s in record['samples']] == [0,2,3])
     check('stable IDs, geometry and final branch/x/v state retained', record['node_ids'] == [17,83] and record['edge_ids'] == [91] and record['final']['viscous_strain'] == [[.03]] and len(record['final_velocities_m_per_s']) == 2)
@@ -227,6 +232,8 @@ def run_checks():
             native_axial_viscoelastic=fixture,
             native_axial_inputs=dict(schema='native_axial_inputs/1',node_ids=[17,83],masses=[2.,3.],units=dict(mod.SI))))
     summary = saved.to_dict(detailed=False)
+    check('viscoelastic summary does not invent spring provenance',
+        ns['_SPRING_PROVENANCE'] not in summary)
     check('actual summary export retains full material branch state and final x/v',
         summary['native_axial_viscoelastic']['final']==fixture['final'] and
         summary['native_axial_viscoelastic']['final_positions_m']==fixture['final_positions_m'])

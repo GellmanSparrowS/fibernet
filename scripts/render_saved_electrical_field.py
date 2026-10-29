@@ -30,7 +30,7 @@ def main():
     assert math.isclose(float(power.sum()),e['dissipated_power_W'],rel_tol=1e-12)
     pos=pos-pos.mean(axis=0);scale=275/np.max(np.linalg.norm(pos,axis=1));vmin,vmax=float(v.min()),float(v.max());imax=float(abs(cur).max())
     def color(value):
-        t=np.clip((value-vmin)/(vmax-vmin),0,1);stops=np.array([[45,96,165],[37,202,212],[255,204,103]],float);q=min(int(t*2),1);return tuple(np.rint(stops[q]*(1-(t*2-q))+stops[q+1]*(t*2-q)).astype(int))
+        t=np.clip((value-vmin)/(vmax-vmin),0,1);stops=np.array([[45,96,165],[37,202,212],[255,204,103]],float);q=min(int(t*2),1);return tuple(int(x) for x in np.rint(stops[q]*(1-(t*2-q))+stops[q+1]*(t*2-q)).astype(int))
     font='/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'
     def ft(n):return ImageFont.truetype(font,n)
     frames=[];svg=[]

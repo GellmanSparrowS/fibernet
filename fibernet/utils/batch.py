@@ -68,6 +68,12 @@ def batch_simulate(
         Whether to show progress (requires tqdm).
     raise_on_error : bool, optional
         Whether to raise exceptions immediately. Default False (collect errors).
+        On an exceptional parallel exit, queued calls are cancelled without
+        waiting for calls already running. Running calls cannot be forcibly
+        stopped and may still perform side effects; callers needing cooperative
+        cancellation must provide it in ``simulation_func``. Normal completion
+        (including collected task errors) waits for executor cleanup. Python may
+        still wait for running executor threads when the interpreter exits.
 
     Returns
     -------
@@ -101,32 +107,42 @@ def batch_simulate(
         # Note: ProcessPoolExecutor has issues with pickling custom objects
         executor = ThreadPoolExecutor(max_workers=max_workers)
         
-        futures = {executor.submit(simulation_func, net): i for i, net in enumerate(networks)}
-        
-        if show_progress:
-            try:
-                from tqdm import tqdm
-                future_iter = tqdm(as_completed(futures), total=len(futures), desc="Simulating")
-            except ImportError:
+        try:
+            futures = {executor.submit(simulation_func, net): i for i, net in enumerate(networks)}
+            
+            if show_progress:
+                try:
+                    from tqdm import tqdm
+                    future_iter = tqdm(as_completed(futures), total=len(futures), desc="Simulating")
+                except ImportError:
+                    future_iter = as_completed(futures)
+            else:
                 future_iter = as_completed(futures)
-        else:
-            future_iter = as_completed(futures)
-        
-        for future in future_iter:
-            idx = futures[future]
+            
+            for future in future_iter:
+                idx = futures[future]
+                try:
+                    result = future.result()
+                    results.append((idx, result))
+                except Exception as e:
+                    if raise_on_error:
+                        raise
+                    errors.append({
+                        'index': idx,
+                        'error': str(e),
+                        'traceback': traceback.format_exc(),
+                    })
+        except BaseException:
+            # Return promptly: running calls cannot be killed by a thread pool.
+            # Cancel queued work without letting a cleanup failure replace the
+            # original task/submission/progress exception (including interrupts).
             try:
-                result = future.result()
-                results.append((idx, result))
-            except Exception as e:
-                if raise_on_error:
-                    raise
-                errors.append({
-                    'index': idx,
-                    'error': str(e),
-                    'traceback': traceback.format_exc(),
-                })
-        
-        executor.shutdown()
+                executor.shutdown(wait=False, cancel_futures=True)
+            except BaseException:
+                pass
+            raise
+        else:
+            executor.shutdown()
     else:
         # Sequential execution
         iterator = enumerate(networks)
@@ -187,7 +203,14 @@ def parameter_study(
     Returns
     -------
     dict
-        Dictionary with 'params', 'results', 'errors'.
+        Existing keys retain their historical ordering: ``params`` contains all
+        successfully generated cases; ``results`` contains only successful
+        simulations; simulation ``errors[*]['index']`` indexes ``params``.
+        Join ``successful_params`` with ``results`` (not ``params``). Each
+        ``success_indices`` entry indexes ``params`` and selects the matching
+        successful result. ``generation_errors`` records rejected generations
+        with their original Cartesian-grid ``index``, parameter dictionary,
+        exception type and message; those indices do not index ``params``.
 
     Examples
     --------
@@ -220,14 +243,20 @@ def parameter_study(
     # Generate networks
     networks = []
     params_list = []
-    for combo in combinations:
+    generation_errors = []
+    for combination_index, combo in enumerate(combinations):
         params = dict(zip(param_names, combo))
         try:
             net = generator_func(**params)
             networks.append(net)
             params_list.append(params)
         except Exception as e:
-            # Skip failed generations
+            generation_errors.append({
+                'index': combination_index,
+                'params': params,
+                'error_type': type(e).__name__,
+                'error': str(e),
+            })
             continue
     
     # Run simulations
@@ -239,8 +268,13 @@ def parameter_study(
         show_progress=True,
     )
     
+    failed_indices = {error['index'] for error in batch_result.errors}
+    success_indices = [i for i in range(len(params_list)) if i not in failed_indices]
     return {
         'params': params_list,
         'results': batch_result.results,
         'errors': batch_result.errors,
+        'success_indices': success_indices,
+        'successful_params': [params_list[i] for i in success_indices],
+        'generation_errors': generation_errors,
     }

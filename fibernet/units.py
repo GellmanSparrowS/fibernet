@@ -255,29 +255,46 @@ def convert_energy(value: float, from_unit: str, to_unit: str) -> float:
 # ============================================================
 
 def scale_network_properties(network, length_unit: str = 'm'):
-    """Scale all network properties to a consistent unit system.
-    
+    """Return the legacy length-to-SI factor; never transform network data.
+
     Parameters
     ----------
-    network : FiberNetwork
-        Network to scale.
+    network : None
+        Only ``None`` is supported for the legacy factor-query call.
+        Passing a network raises ``NotImplementedError`` without modifying it.
     length_unit : str
-        Target length unit ('m', 'mm', 'um', 'nm').
-    
+        Source length unit. For example, ``'mm'`` returns 1e-3 metres per mm.
+
     Returns
     -------
-    scale_factor : float
-        Scale factor applied.
-    
+    float
+        Multiplicative factor from ``length_unit`` to metres.
+
+    Notes
+    -----
+    Earlier versions accepted a network but only returned this factor; they
+    did not scale its coordinates, radii, or material properties. Such calls
+    now fail explicitly instead of implying that a conversion took place.
+    Use ``convert_length(value, from_unit, to_unit)`` for explicit scalar/array
+    conversions, or ``parse_unit_string(unit)`` for a factor and quantity kind.
+    Neither helper infers a network's units or changes the network for you.
+
     Examples
     --------
-    >>> from fibernet.units import scale_network_properties
-    >>> factor = scale_network_properties(net, length_unit='mm')
-    >>> print(f"Scale factor: {factor}")
+    >>> scale_network_properties(None, length_unit='mm')
+    0.001
+    >>> convert_length(1.0, 'm', 'mm')
+    1000.0
     """
+    if network is not None:
+        raise NotImplementedError(
+            "scale_network_properties does not transform networks; no data was changed. "
+            "Use convert_length(value, from_unit, to_unit) for explicit values, or "
+            "parse_unit_string(unit) / scale_network_properties(None, length_unit) "
+            "to query a conversion factor."
+        )
     if length_unit not in LENGTH_FACTORS:
         raise ValueError(f"Unknown unit: {length_unit}")
-    
     return LENGTH_FACTORS[length_unit]
 
 

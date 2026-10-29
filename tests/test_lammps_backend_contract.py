@@ -4,6 +4,7 @@ import json
 import hashlib
 import struct
 import os
+import signal
 from pathlib import Path
 import subprocess
 import sys
@@ -161,6 +162,36 @@ class ContractTests(unittest.TestCase):
         for bad in [log.replace(p.completion_marker,'wrong'),log.replace('1 2 3 4','1 2 4 4'),log.replace('1 2 3 4','4 -1 3 4'),log.replace('1 2 3 4','nan 2 3 4'),log.replace('0 2 1 2','0.5 2 1 2'),log+log]:
             with self.subTest(bad=bad[:40]),self.assertRaises(ValueError):parse_outputs(p,dump,bad)
 
+    def test_reject_balanced_negative_harmonic_potential(self):
+        for profile in (None, 'harmonic_sampled_v1'):
+            options = dict(profile=profile, output_stride=2) if profile else {}
+            p = prepared(**options)
+            dump, log = fixture(p)
+            if profile:
+                self.assertEqual(json.loads(p.contract_json)['output_stride'], 2)
+                self.assertEqual(p.sample_every, 1)
+            # Step 1 is still observed natively even when output projection drops it.
+            for step in (0, 1, 2):
+                old = f'{step} 2 1 2 3 4 5 6 7 8 9'
+                lines = log.splitlines()
+                self.assertEqual(lines.count(old), 1)
+                lines[lines.index(old)] = f'{step} 2 -1 2 1 4 5 6 7 8 9'
+                with self.subTest(profile=profile, step=step), self.assertRaisesRegex(
+                        LAMMPSContractError, 'inconsistent native energy values'):
+                    parse_outputs(p, dump, '\n'.join(lines)+'\n')
+
+    def test_accept_nonnegative_harmonic_potential(self):
+        p = prepared()
+        dump, log = fixture(p)
+        for potential in (0, 1):
+            lines = log.splitlines()
+            old = '1 2 1 2 3 4 5 6 7 8 9'
+            self.assertEqual(lines.count(old), 1)
+            lines[lines.index(old)] = f'1 2 {potential} 2 {potential+2} 4 5 6 7 8 9'
+            with self.subTest(potential=potential):
+                result = parse_outputs(p, dump, '\n'.join(lines)+'\n')
+                self.assertEqual(result.thermo[1].potential_J, potential)
+
     def test_budget_validation(self):
         p=prepared()
         with self.assertRaises(ValueError):parse_outputs(p,*fixture(p),max_output_bytes=1)
@@ -250,6 +281,34 @@ class LifecycleTests(unittest.TestCase):
             with patch.object(RuntimeSpec,'checked',lambda self:self),patch('subprocess.Popen',side_effect=fake_spawn):
                 task.start();self.assertEqual(task.wait(2),TaskState.SUCCEEDED)
             self.assertEqual(task.result.identity,task.prepared.identity)
+
+    def test_mock_balanced_negative_harmonic_energy_fails_and_cleans(self):
+        with tempfile.TemporaryDirectory() as root:
+            task = self.make_task(root)
+            process = FakeProcess()
+            def fake_spawn(*args, **kw):
+                self.assertEqual(args[0][1:3], ['-I', '-S'])
+                dump, log = fixture(task.prepared)
+                lines = log.splitlines()
+                old = '1 2 1 2 3 4 5 6 7 8 9'
+                self.assertEqual(lines.count(old), 1)
+                lines[lines.index(old)] = '1 2 -1 2 1 4 5 6 7 8 9'
+                (task.workdir/'trajectory.dump').write_text(dump)
+                (task.workdir/'log.lammps').write_text(
+                    'LAMMPS (test fixture)\n'+'\n'.join(lines)+'\n')
+                return process
+            with patch.object(RuntimeSpec, 'checked', lambda self: self), \
+                    patch('subprocess.Popen', side_effect=fake_spawn), \
+                    patch('os.killpg') as kill, \
+                    patch.object(process, 'wait', wraps=process.wait) as wait:
+                task.start()
+                self.assertEqual(task.wait(2), TaskState.FAILED)
+                self.assertIsNone(task.result)
+                self.assertIn('inconsistent native energy values', task.error)
+                kill.assert_any_call(process.pid, signal.SIGTERM)
+                kill.assert_any_call(process.pid, signal.SIGKILL)
+                self.assertGreaterEqual(wait.call_count, 2)
+                self.assertTrue(task._stream.closed)
 
     def test_fast_exit_artifact_limit(self):
         with tempfile.TemporaryDirectory() as root:

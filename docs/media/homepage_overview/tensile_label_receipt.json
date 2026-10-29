@@ -1,0 +1,272 @@
+{
+  "kind": "label_only_saved_trajectory_derivative",
+  "axis_before": "Engineering strain",
+  "axis_after": "Stretch ratio",
+  "definition": "recorded span / initial span",
+  "definition_source": "fibernet/sim/reduced_beam.py: strain_levels=(np.array(rec[\"spans\"]) / span0)",
+  "source_sha256": {
+    "docs/media/tensile_recruitment_kagome.gif": "b8c572ab28cdf753e52799caa303fde7cdbac77e899b28fa4e716ecdd09e9397",
+    "docs/media/tensile_recruitment_kagome_final.svg": "ebfa694718fb26e18161851d53dc61a3a2e01e871cdd020afc9385714195a6b6",
+    "docs/media/tensile_recruitment_kagome.json": "19667fcba318434ced820cbe9897254ca576a3c5e61c44eb2c4263fc4820ae94",
+    "scripts/make_homepage_media.py": "2fa9ba338a1c3c79af4ea4a1c1e25d0cdde4d5bc03952a99e1f7c2d4238db209",
+    "fibernet/sim/reduced_beam.py": "e87649c357e5f1ca8e93ae458aa5c86d81461f9f86b543e51635748bf70c3288"
+  },
+  "label_rectangle_px": [
+    820,
+    485,
+    1005,
+    508
+  ],
+  "canvas": [
+    1150,
+    552
+  ],
+  "frames": [
+    {
+      "frame": 0,
+      "saved_trajectory_frame": 0,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "f35234830e4d4b40d82a3a55847c4d12aa2bd3f22f94d9659e5c4ffb7ebcbe59",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 251
+    },
+    {
+      "frame": 1,
+      "saved_trajectory_frame": 1,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "225e58b8444b842daba56e68895271e63fdb6650d4b5366a037f0461e80d9249",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 2,
+      "saved_trajectory_frame": 2,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "d936d99be9c59e8d75775ac5b927fc1d1ca04f20ef3ddce37f5042027f1a62e4",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 3,
+      "saved_trajectory_frame": 3,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "c0f19f60b7df7a5ee038c9be1123da4d9964ed369d518309b7b1720c73922171",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 4,
+      "saved_trajectory_frame": 4,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "3a33d7f111430ac57024414e718528600c3111e1783f48dcabaca45cc1b6b282",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 254
+    },
+    {
+      "frame": 5,
+      "saved_trajectory_frame": 5,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "8da5334966bd9d82b3248aa0affac14e6e287c672a2a365cac0e10dc9b9bb512",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 6,
+      "saved_trajectory_frame": 7,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "695a61cf69b79531d8941678a35c2c5521a161f061c88cbbdaa91c439a636252",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 7,
+      "saved_trajectory_frame": 8,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "41b572b054d433dde41196c704ca8859b0f1723d63e869fd907cd2b2359a60f1",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 255
+    },
+    {
+      "frame": 8,
+      "saved_trajectory_frame": 9,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "7c56858024c2bdf08e091db4f190c2d843b1252918021f8edea5c7988ab30849",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 254
+    },
+    {
+      "frame": 9,
+      "saved_trajectory_frame": 10,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "348fbc61d5a4dc78cda68607035b3609311b7d764ab7def66d270c2c39b0ea8b",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 254
+    },
+    {
+      "frame": 10,
+      "saved_trajectory_frame": 11,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "6366584d6aeee4c8c874f5b8d841fb40921c32d0d18d20fc0d3fba332bfe7626",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 254
+    },
+    {
+      "frame": 11,
+      "saved_trajectory_frame": 12,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "c56db1fee9da9233060d402910413c3b9a97cd74de4e93192a94451b3d05be5a",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 253
+    },
+    {
+      "frame": 12,
+      "saved_trajectory_frame": 14,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "d16037d761245c4762fe69f45c9513b8bebc400ed5693e0c8f15be40a3b74b4c",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 253
+    },
+    {
+      "frame": 13,
+      "saved_trajectory_frame": 15,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "30889d32e547f7b33be1ac79721aff14d93287ba89f54b426073115c477a2500",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 252
+    },
+    {
+      "frame": 14,
+      "saved_trajectory_frame": 16,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "f8f116d2d65f74800947e91690991f1450c7fd847ed6fd0a88b6b4ef8cd5052d",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 254
+    },
+    {
+      "frame": 15,
+      "saved_trajectory_frame": 17,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "0d006cdab09647409c99fc8fcd2b910b8faaf22d0fc7191772678d9ecffaeec6",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 253
+    },
+    {
+      "frame": 16,
+      "saved_trajectory_frame": 18,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "52e6bd68a4f682e96c972c658741e3c5e5cc84403045ef6ca3bbe4581a1d322b",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 253
+    },
+    {
+      "frame": 17,
+      "saved_trajectory_frame": 20,
+      "duration_ms": 250,
+      "outside_label_rgb_sha256": "a4a44ea9e8ec7210ffcd6205eb3d230e70207eedd8a6bc9ea809c4851044e5f0",
+      "changed_pixel_bounds": [
+        830,
+        487,
+        990,
+        506
+      ],
+      "original_palette_colors": 253
+    }
+  ],
+  "gif_frames": 18,
+  "duration_ms": 4500,
+  "loop": 0,
+  "outside_label_pixels_byte_identical_after_gif_decode": true,
+  "svg_only_label_string_changed": true,
+  "svg_path_count": 595,
+  "original_sources_unchanged": true,
+  "no_simulation_analysis_or_training_execution": true,
+  "gif_sha256": "f95b75330a619eef18360732ce4bfbc52bfd550c94c856950ab4d7c9e34200be",
+  "svg_sha256": "9f242f801f833f14e32d679b21773ed2fac9172050548b8ba411aa41a799e9bb",
+  "renderer_sha256": "e2f34e14da696893e1f882369d79fb43817a544a482865de5118a1f14f182676",
+  "font_sha256": "57f73e11f51999432bf7ab22ce55b6f945d5eca1bf824404cfa9ec2e3718c84e"
+}

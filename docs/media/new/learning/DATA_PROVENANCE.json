@@ -1,0 +1,51 @@
+{
+  "schema": "fibernet.saved_learning_media.v1",
+  "sources": {
+    "gine_archive_sha256": "005dae4ae98d40e0bdb538d3e9fce52e4c433aac45b7e321d83cc6b4e2dbb633",
+    "gine_source_tree": "8fabc86ee457c1002bab48544ef7b53f8737d185",
+    "rl_archive_sha256": "0eefbb109cc8b88c52d6401156bfec7582ce8f5dddcca72264720007275f63fc"
+  },
+  "projection": {
+    "gine": "Exact training history, final predictions and representative input/field arrays. No training or inference.",
+    "rl": "Preserved plotted graph IDs/positions/edge endpoints, deformed positions, exact action vector, reward and terminal flags; other metadata omitted. No interpolation or policy training."
+  },
+  "files": {
+    "LICENSE": "09bfa500541608a386a7be7cf636fdb5be3c3feaec2bdb8fc63ca756687c9403",
+    "README.md": "a4bc08e12c18cfb08012c825dec6c4d97cdbb211920f7eef4ec176c05fdf4175",
+    "data/gine/fields/gine-9204-v2.npz": "65aa8cbac1afa515a684cdcafb6f2f9cf93fece892ebfbe177c04cd970e8a1bc",
+    "data/gine/final_results.json": "c2f28db8f2f62180f0965c0e451d46f08a05739a622fbef5e0cf98a77e45309f",
+    "data/gine/inputs/gine-9204-v2.npz": "596a4695acd6368da00031807e3fc10a2157c8a1334dd14a7e73eefba935adef",
+    "data/gine/training.json": "8c9bd92208d6873e35eaf63df32d99e30c364063871857c1690e6f66f981cad3",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/env_return.json": "ca1264661a1ebdfeb70da75ec479bc24fd70d41ad6896cdd9ffefd0a4bab9d03",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/raw_result.json": "3fd6ee305f0d80dfa84e1d119244f3aa224097aec16463b8eddad72ab37aa1ae",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/H4/solver_graph.json": "21aa7565a70ff94c4410755f817fa84cf346844db07ecadaf0e63d0d9deafa47",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/env_return.json": "e87b72b0258694247209621c6d1599ba6c1c378962e501580b0f50d3576d090d",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/raw_result.json": "2139d9f06db897ea903354c35e15d669408e3f995cce3da2f081ab7aed24fceb",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/K3/solver_graph.json": "7e97ce9a082bc4c5ab69e6ac55ea785fb78d2746df5078ddaa11dcefda5b25c8",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/env_return.json": "01e1d53033e1808a2dbfc3062d21d28831a3fb562421fe1204f0dda2ed67ed6f",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/raw_result.json": "a24caa5aa6e53fe77a4882f652dbd0c7de97b22bf38fa2e5f10a5094f2394342",
+    "data/rl/fibernet-rl-native-campaign-attempt03-20261016/T5/solver_graph.json": "62bca9f5eb1e8c82147ed0252df544094ad53b7b776e5f5f4afef423db0328ca",
+    "data/rl/fibernet-rl-native-stageA-20261016/H4/controls.json": "e63a1407110a5e3b774787e019259af20f3aac7f98ec856e96a15561eb738dcb",
+    "data/rl/fibernet-rl-native-stageA-20261016/H4/zero_graph.json": "fa212f34d751252e0863f03207330001646bfe71905ebfba27de8e51b04b994b",
+    "data/rl/fibernet-rl-native-stageA-20261016/K3/controls.json": "716bd6c385593af6aa26045d5fe28c99f7df21fc5a5ce1cce96fc9983867124d",
+    "data/rl/fibernet-rl-native-stageA-20261016/K3/zero_graph.json": "2e6859c5d095aa5aa9caff3e53f25af8d47c7eb60b690cfdfbdcbdd217ab8106",
+    "data/rl/fibernet-rl-native-stageA-20261016/T5/controls.json": "96154a32dc38f603c61588a290e02147a9908be68083f6e5d5f973946d4a95ea",
+    "data/rl/fibernet-rl-native-stageA-20261016/T5/zero_graph.json": "07d7fbada21decdca08ba45fa95af6cd85e09f55735399e50bbdfbf2a0731137",
+    "media/gine_training_final.svg": "46fc21c96b3401fd3b941cc372ef49805b48362c4a2155de7afa327f7bc0f10a",
+    "media/gine_training_frame_00.png": "da2a72238b9ed08817a4a71578e098791e3d6825c281e7489b6d9b24ed181dee",
+    "media/gine_training_frame_10.png": "be4dbaa687e703a9315c2b9123bf2a04297e09af8417c3f2e1f1ace087abefea",
+    "media/gine_training_frame_23.png": "c51f215fde30769e8033afd0ccfbd00196ad3abbbc1e13f287f9d8c1e084ba0b",
+    "media/gine_training_history.gif": "cea633e13abcc71f1ab0142e8a7dda22c75bdbd48ed74441f5bddbda2a09f825",
+    "media/gine_training_receipt.json": "5ab85d02739fdc1054ed828d17e2f5791c3e7944a50e8636e11e9b12178fbb56",
+    "media/rl_environment_fixed_actions.gif": "5e3ea8d8c3a30d6815105e62973bf2da42a7fed0d2bcf6b08f9a57c7e5221ee1",
+    "media/rl_environment_receipt.json": "0ffac70454bfbb2f864da8e61fe91300e6bf6db2373cfae4259dd321ddd44edf",
+    "media/rl_environment_stage_0.png": "4507ba9435e962cffde217546f153ec089ca19635ca69be66c56ad339d55641b",
+    "media/rl_environment_stage_0.svg": "388c4f182f94ab2b9e07f3114cd9622220925a1161d342e88ac5362a8bcd2ea9",
+    "media/rl_environment_stage_1.png": "fdf2fd0593339fa1e537d6834251e36f9c53ff603b68a47b80cce488593d3047",
+    "media/rl_environment_stage_1.svg": "513e6a8109ee224c4752cdc325d95b825cb73ca187ebd021ce4e92ac4ac9d9ac",
+    "media/rl_environment_stage_2.png": "187b688929ed4b62f5a7ede51ad63f5f6d67872a75cc0cbd44c19cf3396ac421",
+    "media/rl_environment_stage_2.svg": "a64f199c32405222dab590810d7d4cc41ca33ffa9a972c6b3cdbf30d97dd8bf6",
+    "render_gine_history.py": "11d3365dc540c3a18bf3fc3878f5096ead478eb539f600c9a5d36f3fd7bb3cec",
+    "render_rl_step.py": "4d7cf543646f7faf439e4964e5e14019b6d6d642e544c750099c619bf01422e2"
+  }
+}

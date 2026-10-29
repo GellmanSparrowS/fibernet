@@ -1,3 +1,22 @@
+## [Unreleased] - checked graph prediction
+
+- Add `predict_gnn` for existing CPU scalar FiberGNN models and GraphBatch v1,
+  checking caller-declared raw XYZ+dimension compatibility while preserving
+  graph identity and prior module modes. Low-level forward remains unchanged.
+- Return graph-aligned model-space predictions with an explicit caller-supplied
+  target name and unknown target-unit/transform statuses.
+
+## [Unreleased] - raw beam-resultant availability
+
+- Expose the existing component contract on raw 2-D, 3-D and incremental 2-D beam results. Preserve numeric outputs and approximate qualifications; unrecovered 3-D shear slots remain explicitly unavailable.
+- Document caller-qualified field-learning targets and retain unknown legacy component availability.
+
+## [Unreleased] - explicit Taichi geometry policy
+
+- Breaking input acceptance: graph-based spring/Taichi calls now reject nonempty edge-owned `internal_points` by default. Explicit `geometry_policy="endpoint_chord"` retains the existing endpoint interpretation without modifying the graph or claiming curved-fiber mechanics.
+- Forward the policy through direct/facade, streaming batch, Dataset and RL callers; bind batch/Dataset resumes to the policy and helper source. Actual-node straight-edge segmentation remains accepted, and generator/sampling defaults are unchanged.
+- Preserve geometry provenance in ordinary result metadata. Legacy results are not backfilled. See `docs/TAICHI_GEOMETRY_POLICY.md` for migration and scope.
+
 ## [Unreleased] - RL evaluation isolation
 
 - Add keyword-only `eval_env` to `fibernet.rl.algorithms.train_rl`, enabling automatic evaluation independently of model saving.

@@ -106,3 +106,104 @@ def test_initial_reservoir_overflow_has_no_accepted_frame():
 def test_metadata_must_be_dictionary(metadata):
     with pytest.raises(ValueError,match='metadata'):
         th.solve_transient_thermal(graph(),{101:2,907:1},{11:.2,31:.3},{101:300,907:310},[0,1],length_unit='m',model_metadata=metadata)
+
+
+def test_to_dict_strict_json_preserves_fields_availability_and_arrays():
+    from dataclasses import fields
+    r = run()
+    arrays_before = {f.name: getattr(r, f.name).copy() for f in fields(r)
+                     if isinstance(getattr(r, f.name), np.ndarray)}
+    data = json.loads(json.dumps(r.to_dict(), allow_nan=False))
+    assert set(data) == {f.name for f in fields(r)} - {'provenance_json'} | {'provenance'}
+    assert data['completed'] is True
+    assert data['input_sha256'] == r.input_sha256
+    assert data['provenance'] == json.loads(r.provenance_json)
+    assert data['node_ids'] == [101, 907]
+    assert data['edge_ids'] == [11, 31]
+    assert data['endpoints_by_id'] == [[101, 907], [101, 907]]
+    assert data['fixed_node_ids'] == [907]
+    assert data['interval_diagnostics_available'] == [False, True, True]
+    for name in ('free_node_residual_J', 'node_acceptance_bound_J'):
+        assert data[name][0] == [None, None]
+        assert all(row[1] is None for row in data[name])
+        assert all(np.isfinite(row[0]) for row in data[name][1:])
+    for name in ('component_energy_residual_J', 'component_acceptance_bound_J'):
+        assert data[name][0] == [None]
+        np.testing.assert_array_equal(data[name][1:], getattr(r, name)[1:])
+    assert data['node_stored_heat_change_J'][0] == [0., 0.]
+    for name, before in arrays_before.items():
+        np.testing.assert_array_equal(getattr(r, name), before)
+        assert not getattr(r, name).flags.writeable
+    # Detached nested fields cannot mutate the typed result or later exports.
+    data['temperature_K'][0][0] = -1
+    data['provenance']['units']['T'] = 'wrong'
+    assert r.to_dict()['temperature_K'][0][0] == 300.
+    assert r.to_dict()['provenance']['units']['T'] == 'K'
+
+
+def test_to_dict_actual_failed_prefix_retains_initial_frame():
+    g = graph(ids=(7,), edges=())
+    with pytest.raises(th.ThermalSolveError, match='lost') as caught:
+        run(g, {7: 1}, {}, {7: 1e16}, [0, 1], {7: 1}, bc=())
+    error = caught.value
+    data = json.loads(json.dumps(error.partial_result.to_dict(), allow_nan=False))
+    assert error.attempted_step == 1 and error.attempted_time_s == 1.
+    assert data['completed'] is False
+    assert data['times_s'] == [0.]
+    assert data['temperature_K'] == [[1e16]]
+    assert data['interval_diagnostics_available'] == [False]
+    assert data['free_node_residual_J'] == [[None]]
+    assert data['component_energy_residual_J'] == [[None]]
+
+
+@pytest.mark.parametrize('name', [
+    'temperature_K', 'edge_heat_rate_W', 'reservoir_injection_W',
+    'node_stored_heat_change_J', 'free_node_residual_J',
+    'node_acceptance_bound_J', 'component_energy_residual_J',
+    'component_acceptance_bound_J',
+])
+@pytest.mark.parametrize('bad', [np.nan, np.inf, -np.inf])
+def test_to_dict_rejects_nonfinite_available_values(name, bad):
+    from dataclasses import replace
+    r = run()
+    values = getattr(r, name).copy()
+    values[1, 0] = bad
+    with pytest.raises(ValueError, match=name):
+        replace(r, **{name: values}).to_dict()
+
+
+@pytest.mark.parametrize('bad', [0., np.inf, -np.inf])
+@pytest.mark.parametrize('row_column', [(0, 0), (1, 1)])
+def test_to_dict_rejects_inconsistent_unavailable_sentinels(bad, row_column):
+    from dataclasses import replace
+    r = run()
+    values = r.free_node_residual_J.copy()
+    values[row_column] = bad
+    with pytest.raises(ValueError, match='unavailable diagnostics'):
+        replace(r, free_node_residual_J=values).to_dict()
+
+
+@pytest.mark.parametrize('mask', [[True, True, True], [False, False, True],
+                                 [0, 1, 1], [False]])
+def test_to_dict_rejects_inconsistent_interval_mask(mask):
+    from dataclasses import replace
+    with pytest.raises(ValueError, match='interval_diagnostics_available'):
+        replace(run(), interval_diagnostics_available=np.asarray(mask)).to_dict()
+
+
+def test_to_dict_rejects_nonfinite_provenance():
+    from dataclasses import replace
+    with pytest.raises(ValueError):
+        replace(run(), provenance_json='{"metadata": {"bad": NaN}}').to_dict()
+
+
+def test_to_dict_empty_edges_and_all_fixed_nodes():
+    r = run(graph(ids=(3, 99), edges=()), {3: 2, 99: 7}, {},
+            {3: 300, 99: 305}, [0, 1], {3: 4, 99: 0},
+            bc=((3, 300), (99, 305)))
+    data = r.to_dict()
+    assert data['edge_heat_rate_W'] == [[], []]
+    assert data['free_node_residual_J'] == [[None, None], [None, None]]
+    assert data['node_acceptance_bound_J'] == [[None, None], [None, None]]
+    np.testing.assert_array_equal(data['component_energy_residual_J'][1:],
+                                  r.component_energy_residual_J[1:])

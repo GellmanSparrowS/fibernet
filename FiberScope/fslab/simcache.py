@@ -15,6 +15,7 @@ import numpy as np
 
 from .engine2 import Engine2, Engine2Config
 from .fibernet_bridge import FIBERNET_ROOT, ensure_fibernet
+from fibernet.sim.reduced_beam import _validate_planar_geometry
 
 MAX_FRAMES = 240     # downsample cap for trajectory frames
 
@@ -23,8 +24,8 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # carries an explicit engine version.  After changing the solver, the
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
-ENGINE_VERSION = "e2v12"
-ENGINE_SRC_HASH = "4c5a851d3c61"
+ENGINE_VERSION = "e2v14"
+ENGINE_SRC_HASH = "bf860374a873"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -123,7 +124,8 @@ def _engine_input_digest(graph) -> str:
     """Versioned, exact Engine2 input identity (not a full graph fingerprint).
 
     Node rows are sorted by stable ID; physical edges retain insertion order
-    and direction. Unused Z, radius, material and curve data are not included.
+    and direction. A constant Z offset, radius and material are not included.
+    Nonplanar geometry and edge-owned curve samples reject before cache lookup.
     Validate before coercion so masks, fractional IDs and overflow cannot alias.
     """
     def identity(value):
@@ -156,6 +158,7 @@ def _engine_input_digest(graph) -> str:
     if (positions.ndim != 2 or positions.shape[0] != len(node_ids) or
             positions.shape[1] < 2 or positions.dtype.kind not in "iuf"):
         raise ValueError("Engine2 cache positions must be numeric (N, >=2)")
+    _validate_planar_geometry(graph, positions)
     xy = np.asarray(positions[:, :2], dtype="<f8")
     if not np.isfinite(xy).all():
         raise ValueError("Engine2 cache XY must be finite")
@@ -333,6 +336,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
     ensure_fibernet()
     cfg = cfg or RunConfig()
     graph = factory.build()
+    _validate_planar_geometry(graph, graph.node_positions())
     if cfg.weld_intersections:
         from .welding import IntersectionWelder
         graph = IntersectionWelder().apply(graph)

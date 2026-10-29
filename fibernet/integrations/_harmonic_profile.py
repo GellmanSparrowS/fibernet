@@ -16,10 +16,26 @@ SAMPLED_PROFILE = MappingProxyType(dict(name=SAMPLED_NAME, max_nodes=256,
     max_mass_types=2, max_loaded_nodes=20, prepared_bytes=8*1024*1024,
     raw_bytes=64*1024*1024, export_bytes=40*1024*1024))
 
+FULL_HISTORY_NAME = 'harmonic_full_history_v1'
+FULL_HISTORY_PROFILE = MappingProxyType(dict(name=FULL_HISTORY_NAME, max_nodes=64,
+    max_edges=512, max_steps=2048, sample_every=1, output_stride=1,
+    max_output_frames=2049, max_mass_types=2, max_loaded_nodes=20,
+    prepared_bytes=8*1024*1024, raw_bytes=64*1024*1024,
+    export_bytes=128*1024*1024))
+
+def variable_steps(p):
+    return p is not None and p['name'] in (SAMPLED_NAME, FULL_HISTORY_NAME)
+
 def sampled(p):
     return p is not None and p['name'] == SAMPLED_NAME
 
 def schedule(p, steps, every, stride=None):
+    if p is not None and p['name'] == FULL_HISTORY_NAME:
+        if type(steps) is not int or not 1 <= steps <= p['max_steps'] or type(every) is not int or every != 1:
+            raise ValueError('harmonic_full_history_v1 requires 1..2048 steps and sample_every=1')
+        if type(stride) is not int or stride != 1:
+            raise ValueError('harmonic_full_history_v1 requires output_stride=1')
+        return steps+1
     if sampled(p):
         if type(steps) is not int or not 1 <= steps <= p['max_steps'] or type(every) is not int or every != 1:
             raise ValueError('harmonic_sampled_v1 requires 1..1024 steps and sample_every=1')
@@ -35,15 +51,16 @@ def schedule(p, steps, every, stride=None):
 def frame_counts(c):
     p=contract_profile(c)
     output=schedule(p,c['steps'],c['sample_every'],c.get('output_stride'))
-    if sampled(p) and (type(c.get('native_frames')) is not int or c['native_frames'] != c['steps']+1 or
+    if variable_steps(p) and (type(c.get('native_frames')) is not int or c['native_frames'] != c['steps']+1 or
                        type(c.get('output_frames')) is not int or c['output_frames'] != output):
         raise ValueError('native/output frame counts mismatch')
     return c['steps']+1,output
 
 def select(value):
     if value is None: return None
-    if type(value) is not str or value not in (NAME,SAMPLED_NAME): raise ValueError('unknown harmonic profile')
-    return dict(PROFILE if value == NAME else SAMPLED_PROFILE)
+    profiles = {NAME: PROFILE, SAMPLED_NAME: SAMPLED_PROFILE, FULL_HISTORY_NAME: FULL_HISTORY_PROFILE}
+    if type(value) is not str or value not in profiles: raise ValueError('unknown harmonic profile')
+    return dict(profiles[value])
 
 def record(value):
     # JSON equality is type-sensitive here: True must not impersonate 1.
@@ -111,8 +128,8 @@ def check_contract(c,n,e):
     p=contract_profile(c);counts(n,e,p)
     if p:
         frame_counts(c)
-        if sampled(p) and (type(c.get('timestep_s')) not in (int,float) or not math.isfinite(c['timestep_s']*c['steps']) or c['timestep_s']*c['steps'] <= 0):
-            raise ValueError('sampled duration must be positive finite')
+        if variable_steps(p) and (type(c.get('timestep_s')) not in (int,float) or not math.isfinite(c['timestep_s']*c['steps']) or c['timestep_s']*c['steps'] <= 0):
+            raise ValueError('profile duration must be positive finite')
         pairs(c.get('masses_kg'),'masses',n);pairs(c.get('bonds'),'bonds',e)
         for key in ('forces_N','velocities_m_s','atom_to_type_id','type_to_mass_kg'):pairs(c.get(key),key)
         if len(c['forces_N'])>20 or not 1<=len(c['type_to_mass_kg'])<=2:raise ValueError('harmonic profile mass/load bound exceeded')
@@ -173,7 +190,7 @@ def result_guard(metadata,n,e,state=None,arrays=None):
     if type(identity) is not dict or set(identity)!={'prepared_sha256','graph_sha256'} or any(type(v)is not str or len(v)!=64 or any(c not in '0123456789abcdef' for c in v) for v in identity.values()):
         raise ValueError('invalid profile source identity')
     array_keys={'dynamics_state','positions_trajectory','displacements','deformed_positions','edge_forces','edge_stretches','history'}
-    json_bytes({k:v for k,v in metadata.items() if k not in array_keys},PROFILE['prepared_bytes'],indent=2 if sampled(p) else None)
+    json_bytes({k:v for k,v in metadata.items() if k not in array_keys},p['prepared_bytes'],indent=2 if variable_steps(p) else None)
     for key,count in [('node_ids',n),('edge_ids',e)]:
         ids=metadata.get(key)
         if not isinstance(ids,(list,tuple)) or len(ids)!=count or any(type(x)is not int or not 0<=x<2**31 for x in ids) or len(set(ids))!=count:
@@ -182,14 +199,14 @@ def result_guard(metadata,n,e,state=None,arrays=None):
     if state is not None:
         if record(state.get('profile'))!=p:raise ValueError('state/profile mismatch')
         if state.get('final',{}).get('step')!=c['steps'] or type(state.get('final',{}).get('step')) is not int:raise ValueError('profile final step mismatch')
-        if sampled(p) and any(state.get(k)!=c[k] or type(state.get(k)) is not int for k in ('output_stride','native_frames','output_frames')):
+        if variable_steps(p) and any(state.get(k)!=c[k] or type(state.get(k)) is not int for k in ('output_stride','native_frames','output_frames')):
             raise ValueError('state/model sampled schedule mismatch')
         if state.get('representation')=='sampled':
             for key in ('steps','times','potential_energy','kinetic_energy','total_energy'):shape(state.get(key),(output_count,),key)
             for key in ('positions','velocities','nodal_forces'):shape(state.get(key),(output_count,n,3),key)
             shape(state.get('pressure_tensor'),(output_count,6),'pressure_tensor')
             shape(state.get('node_ids'),(n,),'node_ids')
-        json_bytes(state,PROFILE['export_bytes'])
+        json_bytes(state,p['export_bytes'])
     if arrays:
         for key,dims in [('displacements',(n,3)),('deformed_positions',(n,3)),('edge_forces',(e,)),('edge_stretches',(e,))]:
             if arrays.get(key) is not None:shape(arrays[key],dims,key)
@@ -199,7 +216,7 @@ def result_guard(metadata,n,e,state=None,arrays=None):
     return p
 
 
-def resource_forecast(n, e, steps, stride, prepared_bytes, setup_bytes):
+def resource_forecast(n, e, steps, stride, prepared_bytes, setup_bytes, *, profile=SAMPLED_NAME):
     """Conservative planned payload sizes, not a bound on native diagnostics.
 
     %.17g finite binary64 tokens need at most 24 ASCII bytes. Atom rows
@@ -213,33 +230,24 @@ def resource_forecast(n, e, steps, stride, prepared_bytes, setup_bytes):
     Python parsed state, selected lists/arrays and serialization copies;
     it is not a streaming-memory guarantee or a general interpreter bound.
     """
-    counts(n,e,SAMPLED_PROFILE)
-    out=schedule(SAMPLED_PROFILE,steps,1,stride)
+    p = select(profile)
+    if not variable_steps(p):
+        raise ValueError('forecast requires a variable-step harmonic profile')
+    counts(n,e,p)
+    out=schedule(p,steps,1,stride)
     native=steps+1
-    if type(prepared_bytes) is not int or not 0 <= prepared_bytes <= SAMPLED_PROFILE['prepared_bytes']:
+    if type(prepared_bytes) is not int or not 0 <= prepared_bytes <= p['prepared_bytes']:
         raise ValueError('prepared byte forecast invalid')
-    dump=native*(233*n+1024)+32
-    thermo=native*256
-    if type(setup_bytes) is not int or not 0 <= setup_bytes <= SAMPLED_PROFILE['raw_bytes']:
+    if type(setup_bytes) is not int or not 0 <= setup_bytes <= p['raw_bytes']:
         raise ValueError('exact setup artifact byte count invalid')
-    setup=setup_bytes
-    diagnostic_reserve=1024*1024
-    aggregate=dump+2*thermo+setup+diagnostic_reserve
-    # Detailed state, repeated final state, trajectory, final geometry, edge
-    # arrays, times/energies/pressures, IDs, scalar summary and bounded history.
-    slots=12*n*out+16*n+2*e+16*out+64
-    export=64*slots+SAMPLED_PROFILE['prepared_bytes']+1024*1024
-    raw_parse=4*SAMPLED_PROFILE['raw_bytes']
-    parsed=native*(9*n+16)*64
-    selected=4*slots*64
-    serialization=3*SAMPLED_PROFILE['export_bytes']
-    memory=raw_parse+parsed+selected+serialization+4*prepared_bytes
-    return dict(native_frames=native,output_frames=out,node_frames=n*native,
-        trajectory_bytes=dump,thermo_bytes=thermo,prepared_artifact_bytes=setup,
-        diagnostic_reserve_bytes=diagnostic_reserve,native_aggregate_forecast_bytes=aggregate,
-        detailed_export_forecast_bytes=export,raw_parse_memory_bytes=raw_parse,
-        parsed_state_memory_bytes=parsed,selected_copy_memory_bytes=selected,
-        serialization_memory_bytes=serialization,planned_memory_bytes=memory)
+    from ._lammps_forecast import payload_counts
+    sizes = payload_counts(n, e, native, native, out, row_bytes=233,
+        prepared_bytes=prepared_bytes, setup_bytes=setup_bytes,
+        metadata_reserve_bytes=p['prepared_bytes'],
+        raw_reserve_bytes=p['raw_bytes'],
+        export_reserve_bytes=p['export_bytes'])
+    return dict(native_frames=native, output_frames=out, node_frames=n*native, **sizes)
+
 
 
 def export_metadata(prepared, runtime):

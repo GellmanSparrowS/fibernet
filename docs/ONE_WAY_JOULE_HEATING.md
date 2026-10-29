@@ -80,3 +80,64 @@ declared fractions assign 4 and 12 W to the nodes. With capacities 2 and 3 J/K
 and an isolated thermal network, stored heat at 1 s is 16 J. Temperatures use
 backward Euler. These synthetic values demonstrate the workflow, not an
 experimentally calibrated material or general time-accuracy guarantee.
+
+## Save and reopen thermal fields without a solve
+
+Use the existing result methods, not a generic dataclass/NumPy conversion:
+
+```python
+import json
+from pathlib import Path
+
+path = Path("joule_heating.json")
+path.write_text(json.dumps({
+    "electrical": electrical.to_dict(),
+    "heat_load": heating.heat_load.to_dict(),
+    "thermal": heating.thermal.to_dict(),
+}, allow_nan=False), encoding="utf-8")
+
+saved = json.loads(path.read_text(encoding="utf-8"))
+thermal = saved["thermal"]
+final_K_by_id = dict(zip(thermal["node_ids"], thermal["temperature_K"][-1]))
+```
+
+`TransientThermalResult.to_dict()` returns detached lists and scalars. It
+preserves the existing field names, ID ordering, oriented edge endpoints,
+`input_sha256`, `completed` and `interval_diagnostics_available`. The recorded
+`provenance_json` is decoded to `provenance`, as for the Joule load ledger;
+its units, input/source metadata and validation limits are retained unchanged.
+A source commit is retained if supplied in model metadata, not inferred by the
+exporter. Reopening this JSON does not reconstruct a solver or run one.
+
+JSON `null` means an unavailable diagnostic, **not zero or a failed balance**:
+
+- At t=0 there is no preceding interval, so all four interval diagnostic
+  arrays have null entries and `interval_diagnostics_available[0]` is false.
+- At fixed-temperature node IDs, `free_node_residual_J` and
+  `node_acceptance_bound_J` remain null even on later intervals. These are not
+  free-node equations; reservoir injection and component energy diagnostics
+  remain available.
+- Physical fields, including the initial zero stored-heat change, stay
+  numerical. Unexpected NaN/infinity in an available field raises
+  `ValueError`; the exporter does not silently sanitize numerical failures.
+
+The original read-only NumPy arrays and NaN sentinels are unchanged. Use the
+availability mask and `fixed_node_ids`, rather than treating null as zero,
+when consuming diagnostics. `completed=True` means the requested thermal
+steps were accepted, not a proof of time convergence, calibrated physics, or
+mechanical/two-way coupling.
+
+On `ThermalSolveError`, `error.partial_result` is either `None` (no initial
+frame accepted) or an accepted prefix with `completed=False`. Its `to_dict()`
+works even when only t=0 was accepted. Preserve `error.attempted_step`,
+`error.attempted_time_s` and the error message alongside that export if the
+failure context is needed. Rejected trial states are never added to the
+prefix. The JSON export is for inspection/analysis, not a restart checkpoint.
+
+## Continue from saved temperatures
+
+For an explicit new prescribed-temperature mechanical snapshot, see
+[Saved thermal mechanics](SAVED_THERMAL_MECHANICS.md). It reopens a saved frame,
+checks stable IDs, coordinates and units, and delegates to the existing bounded
+experimental 2D owner. It does not rerun electricity or heat, or feed deformation
+back into either model.

@@ -17,8 +17,10 @@ import uuid
 import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ('monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
-           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py')
+SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
+           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
+           'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py',
+           'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py')
 DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
@@ -27,10 +29,18 @@ FINISHING_CPU_RESERVE = 1.0
 
 def disk_bytes(root):
     total = 0
-    for path in root.rglob('*'):
+    pending = [os.fspath(root)]
+    while pending:
         try:
-            if path.is_file() and not path.is_symlink():
-                total += path.stat().st_size
+            with os.scandir(pending.pop()) as entries:
+                for entry in entries:
+                    try:
+                        if entry.is_dir(follow_symlinks=False):
+                            pending.append(entry.path)
+                        elif entry.is_file(follow_symlinks=False):
+                            total += entry.stat(follow_symlinks=False).st_size
+                    except FileNotFoundError:
+                        pass
         except FileNotFoundError:
             pass
     return total
@@ -238,11 +248,19 @@ def main():
         stages = []
         for name in SCRIPTS:
             start = time.monotonic()
+            child_cpu_start = usage_cpu(resource.RUSAGE_CHILDREN)
             with (directory / (name + '.log')).open('wb') as log:
-                result = subprocess.run([sys.executable, str(ROOT / 'tests' / name)],
-                                        stdout=log, stderr=subprocess.STDOUT)
+                command = [sys.executable, '-B', str(ROOT / 'tests' / name)]
+                if name in ('test_electrical.py', 'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py'):
+                    command = [sys.executable, '-B', '-m', 'pytest', '-p', 'no:cacheprovider',
+                               '-o', 'addopts=', '--basetemp', str(directory / (name + '-pytest')),
+                               '--junitxml', str(directory / (name + '.junit.xml')),
+                               '-q', str(ROOT / 'tests' / name)]
+                result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
             stages.append({'script': name, 'returncode': result.returncode,
-                           'elapsed_s': time.monotonic() - start})
+                           'elapsed_s': time.monotonic() - start,
+                           'waited_child_cpu_seconds':
+                               usage_cpu(resource.RUSAGE_CHILDREN) - child_cpu_start})
             (directory / 'stages.json').write_text(json.dumps(stages, indent=2))
             if result.returncode:
                 raise SystemExit(result.returncode)
@@ -253,6 +271,11 @@ def main():
     report = run_bounded([sys.executable, str(Path(__file__).resolve()),
                           '--worker', str(directory)], directory, ROOT)
     print(json.dumps(report, indent=2))
+    stages_path = directory / 'stages.json'
+    stages = json.loads(stages_path.read_text()) if stages_path.exists() else []
+    incomplete = (SCRIPTS[len(stages)] if len(stages) < len(SCRIPTS)
+                  and all(stage['returncode'] == 0 for stage in stages) else None)
+    print(json.dumps({'completed_stages': stages, 'incomplete_stage': incomplete}, indent=2))
     assert not report['failures'], 'bounded adapter suite failed'
 
 

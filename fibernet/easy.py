@@ -6,7 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
-- train_rl(env_config) → 随机策略 rollout 基线及奖励统计，不进行学习
+- train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用
 
 Examples
 --------
@@ -23,13 +23,41 @@ import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+if _TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
+import fibernet.sim as _sim
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
+from fibernet.sim._taichi_geometry import (
+    preflight_taichi_geometry as _preflight_taichi_geometry,
+    validate_geometry_policy as _validate_geometry_policy,
+)
+
+
+# Keep provider-independent utilities usable without probing a native engine.
+# Explicit alias access still returns the original implementation object.
+_LAZY_EXPORTS = {
+    "TaichiEngine": "fibernet.sim.accelerated",
+    "SimResult": "fibernet.sim.accelerated",
+    "render_graph": "fibernet.viz.render",
+    "render_deformation": "fibernet.viz.render",
+}
+for _name in _LAZY_EXPORTS:
+    globals().pop(_name, None)
+del _name
+
+
+def _taichi_engine_class():
+    # Preserve caller/test overrides of the historical module-level alias.
+    if "TaichiEngine" in globals():
+        return globals()["TaichiEngine"]
+    return __getattr__("TaichiEngine")
 
 
 def show(
@@ -39,8 +67,8 @@ def show(
     save_path: Optional[str] = None,
     title: str = "",
     **kwargs,
-) -> None:
-    """一行出图：可视化 StructureGraph。
+) -> "Figure":
+    """Render a StructureGraph with its declared 2-D or 3-D dimension.
 
     Parameters
     ----------
@@ -49,9 +77,20 @@ def show(
     theme : str
         主题: "dark" (紫黑), "light" (白底), "blueprint", "publication"。
     save_path : str, optional
-        保存路径，默认不保存。
+        Optional image path; missing parent directories are created by the renderer.
     title : str
-        标题。
+        Plot title.
+    **kwargs
+        Forwarded unchanged to render_graph for dimension=2 or render_graph_3d
+        for dimension=3. Renderer-specific options are not interchangeable:
+        e.g. color_by is 2-D-only; elevation/azimuth are 3-D-only. Unsupported
+        options raise TypeError rather than being silently ignored. For an
+        explicit XY projection of a 3-D graph, call render_graph directly.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure, available for notebook display or further customization.
 
     Examples
     --------
@@ -60,12 +99,20 @@ def show(
     >>> show(g)
     >>> show(g, theme="light", save_path="honeycomb.png")
     """
-    from fibernet.viz.render import render_graph
+    from inspect import signature
+    from fibernet.viz.render import render_graph, render_graph_3d
 
-    fig = render_graph(graph, theme=theme, title=title, **kwargs)
+    renderer = render_graph_3d if graph.dimension == 3 else render_graph
+    kwargs.setdefault("dpi", 150)
+    try:
+        signature(renderer).bind(graph, theme=theme, title=title, save_path=save_path, **kwargs)
+    except TypeError as exc:
+        raise TypeError(
+            f"show() uses {renderer.__name__} for a {graph.dimension}D graph: {exc}. "
+            "Use render_graph(graph, ...) for an explicit 2-D XY projection."
+        ) from exc
+    fig = renderer(graph, theme=theme, title=title, save_path=save_path, **kwargs)
     if save_path:
-        fig.savefig(save_path, dpi=150, bbox_inches='tight',
-                    facecolor=fig.get_facecolor())
         print(f"Saved to {save_path}")
     return fig
 
@@ -76,8 +123,10 @@ def simulate(
     strain: Optional[float] = None,
     backend: str = "spring",
     save_path: Optional[str] = None,
+    *,
+    stretch_ratio: Optional[float] = None,
     **kwargs,
-) -> Union[SimResult, _ViscoelasticResult]:
+) -> Union[_sim.SimResult, _ViscoelasticResult]:
     """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
 
     Parameters
@@ -111,11 +160,22 @@ def simulate(
         JSON export path. SimResult saves a summary by default, not a full-state
         checkpoint. For detailed arrays call result.save(path, detailed=True);
         restart support is specific to each result/backend contract.
+    stretch_ratio : float or None, keyword-only
+        Explicit target ratio lambda (1.01 = 1% extension), only for stretch.
+        Must be finite and positive; booleans are rejected. Prefer this name
+        for new code. Do not combine a non-None value with legacy strain.
+        None means unset; when both names are unset the legacy default is 2.0.
+        This names the loading ratio, not the model's range of validity.
     **kwargs
         For spring/taichi, arch="cpu" or "gpu" and a positive integer
         num_threads (default 4) configure the engine; remaining keywords go
         to the selected method. The active runtime's ownership and thread
         settings still apply. GPU requests never silently fall back to CPU.
+        geometry_policy defaults to "reject_internal_points": any nonempty
+        edge-owned internal_points reject before engine construction. Explicit
+        "endpoint_chord" ignores those points mechanically without changing
+        the graph. Actual graph nodes remain accepted; neither policy provides
+        curved-fiber mechanics. Other backends do not accept this option.
 
     Returns
     -------
@@ -143,6 +203,23 @@ def simulate(
     """
     from inspect import signature
 
+    # Resolve the explicit spelling before provider construction. The historical
+    # strain argument and its positional order remain compatible.
+    if stretch_ratio is not None:
+        if strain is not None:
+            raise ValueError("use only stretch_ratio or legacy strain, not both")
+        if mode != "stretch":
+            raise ValueError("stretch_ratio is only supported for mode='stretch'; omit it for other modes")
+        valid_ratio = False
+        if (not isinstance(stretch_ratio, (bool, np.bool_)) and
+                isinstance(stretch_ratio, (int, float, np.integer, np.floating))):
+            try:
+                valid_ratio = bool(np.isfinite(stretch_ratio) and stretch_ratio > 0)
+            except (TypeError, ValueError, OverflowError):
+                pass
+        if not valid_ratio:
+            raise ValueError("stretch_ratio must be a finite positive real ratio (1.01 = 1% extension)")
+        strain = stretch_ratio
     strain_supplied = strain is not None
     if not isinstance(mode, str):
         raise ValueError("mode must be a string")
@@ -167,14 +244,17 @@ def simulate(
         if (isinstance(num_threads, (bool, np.bool_)) or
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
-        method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        engine_class = _taichi_engine_class()
+        method = engine_class.stretch_test if mode == "stretch" else engine_class.dynamics
+        kwargs.setdefault("geometry_policy", "reject_internal_points")
         method_kwargs = dict(kwargs)
         if mode == "stretch":
             if "target_stretch" in method_kwargs:
-                raise TypeError("use strain, not target_stretch, with simulate")
+                raise TypeError("use stretch_ratio (or legacy strain), not target_stretch, with simulate")
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
-        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
+        _preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])
+        engine = engine_class(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
         else:
@@ -204,11 +284,75 @@ def simulate(
     return result
 
 
+def _batch_report_inputs(configs, output, report_path, mode, strain):
+    """Detach JSON-safe inputs and reject destination aliases before any work."""
+    import os
+    import stat
+
+    destination = Path(report_path)
+    csv_path = Path(output)
+    if (destination.resolve() == csv_path.resolve() or
+            (destination.exists() and csv_path.exists() and
+             os.path.samefile(destination, csv_path))):
+        raise ValueError("report_path must differ from the CSV output path")
+    if not destination.parent.is_dir():
+        raise ValueError("report_path parent directory must already exist")
+    if destination.is_symlink() or (destination.exists() and
+            not stat.S_ISREG(destination.stat().st_mode)):
+        raise ValueError("report_path must be a regular file, not a symlink or special file")
+
+    def validate(value):
+        if value is None or type(value) in (str, bool, int, float):
+            return
+        if type(value) in (list, tuple):
+            for item in value:
+                validate(item)
+            return
+        if type(value) is dict and all(type(key) is str for key in value):
+            for item in value.values():
+                validate(item)
+            return
+        raise ValueError("report inputs must contain only JSON-safe values with string keys")
+
+    try:
+        validate(configs)
+        validate(mode)
+        validate(strain)
+        if not isinstance(configs, (list, tuple)) or not all(type(c) is dict for c in configs):
+            raise ValueError("report configs must be a sequence of dictionaries")
+        detached = json.loads(json.dumps(configs, allow_nan=False))
+        json.dumps({'mode': mode, 'strain': strain}, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ValueError("report inputs must be finite, acyclic JSON-safe values") from exc
+    return destination, detached
+
+
+def _write_batch_report(destination, report):
+    """Atomic single-file private JSON; not a CSV/report transaction."""
+    import os
+    import tempfile
+
+    payload = json.dumps(report, indent=2, allow_nan=False)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                dir=destination.parent, prefix=".batch-report-", suffix=".tmp",
+                delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
     mode: str = "stretch",
     strain: float = 2.0,
+    *,
+    report_path: Optional[str] = None,
 ) -> str:
     """Run independent FEM stretch cases and write their measured outputs to CSV.
 
@@ -222,6 +366,20 @@ def batch_simulate(
         模拟模式。
     strain : float
         施加应变。
+
+    report_path : str, optional
+        Opt-in private JSON diagnostic report. Parent must exist; cannot alias
+        output. Configs must be finite JSON-safe dictionaries (tuples become
+        arrays). Includes every original input index/config, error type/message
+        without traceback, and zero-based successful CSV data-row links.
+        Configs and exception messages may contain user data: review before
+        sharing. No report is written by default. All-failed writes the report
+        then raises without writing a CSV. Report failures propagate; CSV and
+        report publication are not a two-file atomic transaction. A CSV write
+        or output-stream failure can stop the call before report publication;
+        this is not crash-complete recording. success_indices describes cases
+        with status success; csv_indices describes rows actually saved (a
+        progress-print error can follow row collection).
 
     Returns
     -------
@@ -240,6 +398,11 @@ def batch_simulate(
     """
     import csv
 
+    report_destination = None
+    if report_path is not None:
+        report_destination, report_configs = _batch_report_inputs(
+            configs, output, report_path, mode, strain)
+    cases = []
     rows = []
     for i, cfg in enumerate(configs):
         unit = cfg.get("unit", "honeycomb")
@@ -247,10 +410,13 @@ def batch_simulate(
         grid = cfg.get("grid", (4, 4))
         seed = cfg.get("seed", 42)
 
+        stage = "generation"
         try:
             g = pattern_2d(unit=unit, box=box, grid=grid, seed=seed, **cfg.get("kwargs", {}))
+            stage = "simulation"
             result = simulate(g, mode=mode, strain=strain, backend="fem")
 
+            stage = "result"
             row = {
                 "id": i,
                 "unit": unit,
@@ -265,9 +431,20 @@ def batch_simulate(
                 "strain": strain,
             }
             rows.append(row)
+            if report_destination is not None:
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'success', 'csv_row': len(rows) - 1,
+                              'csv_id': i})
+            stage = "progress"
             print(f"{i+1}/{len(configs)}: {unit} (max_force={row['max_force']:.2e})")
 
         except Exception as e:
+            if report_destination is not None:
+                prior = cases.pop() if cases and cases[-1]['index'] == i else {}
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'failure', 'stage': stage,
+                              'error_type': type(e).__name__, 'message': str(e),
+                              'csv_row': prior.get('csv_row'), 'csv_id': prior.get('csv_id')})
             print(f"{i+1}/{len(configs)}: {unit} failed: {e}")
 
     if rows:
@@ -276,7 +453,24 @@ def batch_simulate(
             writer.writeheader()
             writer.writerows(rows)
         print(f"Saved {len(rows)} results to {output}")
-    else:
+    if report_destination is not None:
+        import hashlib
+        report = {'schema': 'fibernet.batch_report/1',
+                  'mode': mode, 'strain': strain,
+                  'status': 'completed' if rows else 'all_failed',
+                  'success_count': sum(c['status'] == 'success' for c in cases),
+                  'failure_count': sum(c['status'] == 'failure' for c in cases),
+                  'success_indices': [c['index'] for c in cases if c['status'] == 'success'],
+                  'csv_indices': [row['id'] for row in rows],
+                  'csv_written': bool(rows),
+                  'csv_sha256': hashlib.sha256(Path(output).read_bytes()).hexdigest() if rows else None,
+                  'cases': cases}
+        try:
+            _write_batch_report(report_destination, report)
+        except Exception as exc:
+            raise RuntimeError("Batch diagnostic report could not be written; "
+                               "the CSV may already have been written") from exc
+    if not rows:
         raise RuntimeError('All batch simulations failed; no CSV was written')
 
     return output
@@ -856,66 +1050,142 @@ def train_rl(
     n_episodes: int = 100,
     save_path: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """运行随机策略 rollout 基线并返回奖励统计，不进行策略学习。
+    """随机策略 rollout 基线入口，不进行策略学习；当前内置环境不可用。
 
     此历史名称下的函数每一步独立采样随机动作，不训练或返回策略模型。
+    当前 FiberNetworkEnv 所需的等效模量 E* 和泊松比 ν* 不在 spring-dynamics
+    SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，
+    不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。
+
     实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
-    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同。
+    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；
+    策略训练器也不会自动提供物理评价器。
 
     Parameters
     ----------
     env_config : dict, optional
-        环境配置，默认使用标准配置。
+        历史环境配置；当前所有 E*/ν* 目标均不受支持。
     n_episodes : int
-        随机策略采样回合数。
+        随机策略采样回合数，必须为正整数，不能是布尔值。
     save_path : str, optional
         奖励统计 JSON 文件路径，不是模型文件或检查点目录。
+        环境或回合失败时不写入统计，也不报告成功。统计先写入同目录临时文件，
+        成功关闭后再原子替换目标；写入失败保留原文件，不保证断电持久性。
 
     Returns
     -------
     dict
-        奖励统计：n_episodes、final_reward、mean_reward、max_reward。
+        保留的统计格式：n_episodes、final_reward、mean_reward、max_reward。
         final_reward 是最后一次随机回合的奖励，不是训练后的策略评估结果。
+        当前内置环境不可用，因此正常调用不会返回这份统计。
 
-    Examples
-    --------
-    >>> from fibernet import train_rl
-    >>> stats = train_rl(n_episodes=100)
-    >>> print(f"Last random episode reward: {stats['final_reward']:.2f}")
+    Raises
+    ------
+    ValueError
+        n_episodes 不是正整数，或回合奖励不是有限实数。
+    NotImplementedError
+        内置环境不支持所需的 E*/ν* 物理评价。
+    RuntimeError
+        环境通过 info.error 报告失败。原始执行异常保持原样抛出。
     """
+    import math
+    from numbers import Integral, Real
+
+    if (isinstance(n_episodes, (bool, np.bool_)) or
+            not isinstance(n_episodes, Integral) or n_episodes <= 0):
+        raise ValueError("n_episodes must be a positive integer, not a boolean")
+    n_episodes = int(n_episodes)
+
     from fibernet.sim.rl_env import FiberNetworkEnv
 
     env = FiberNetworkEnv(**(env_config or {}))
+    primary_error = None
+    try:
+        rewards = []
+        for ep in range(n_episodes):
+            obs, info = env.reset()
+            if "error" in info:
+                raise RuntimeError(f"Rollout reset failed: {info['error']}")
+            total_reward = 0.0
+            done = False
 
-    rewards = []
-    for ep in range(n_episodes):
-        obs, _ = env.reset()
-        total_reward = 0
-        done = False
+            while not done:
+                action = env.action_space.sample()
+                obs, reward, terminated, truncated, info = env.step(action)
+                if "error" in info:
+                    raise RuntimeError(f"Rollout step failed: {info['error']}")
+                if (isinstance(reward, (bool, np.bool_)) or
+                        not isinstance(reward, Real) or not math.isfinite(reward)):
+                    raise ValueError("Rollout reward must be a finite real number")
+                total_reward += float(reward)
+                if not math.isfinite(total_reward):
+                    raise ValueError("Total rollout reward must remain finite")
+                done = terminated or truncated
 
-        while not done:
-            action = env.action_space.sample()
-            obs, reward, terminated, truncated, info = env.step(action)
-            total_reward += reward
-            done = terminated or truncated
+            rewards.append(total_reward)
 
-        rewards.append(total_reward)
-        if (ep + 1) % 10 == 0:
-            avg = np.mean(rewards[-10:])
-            print(f"  Episode {ep+1}/{n_episodes}: avg_reward={avg:.2f}")
+        stats = {
+            "n_episodes": n_episodes,
+            "final_reward": rewards[-1],
+            "mean_reward": math.fsum(value / n_episodes for value in rewards),
+            "max_reward": max(rewards),
+        }
+    except BaseException as exc:
+        primary_error = exc
+        raise
+    finally:
+        try:
+            env.close()
+        except BaseException as close_error:
+            if primary_error is None:
+                raise
+            # Preserve the execution exception and its original cause. Python
+            # 3.11+ also retains the secondary cleanup failure as a note.
+            if hasattr(primary_error, "add_note"):
+                primary_error.add_note(f"Environment cleanup also failed: {close_error}")
 
-    env.close()
-
-    stats = {
-        "n_episodes": n_episodes,
-        "final_reward": rewards[-1],
-        "mean_reward": np.mean(rewards),
-        "max_reward": np.max(rewards),
-    }
-
+    # Close successfully before publishing any statistics or success message.
     if save_path:
-        with open(save_path, "w") as f:
-            json.dump(stats, f, indent=2)
+        import os
+        import stat
+        import tempfile
+        import warnings
+
+        destination = Path(save_path)
+        try:
+            info = destination.lstat()
+        except FileNotFoundError:
+            mode = 0o600
+        else:
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("Statistics destination must be a regular file, not a symlink or nonregular target")
+            mode = stat.S_IMODE(info.st_mode)
+            if mode & 0o7000:
+                raise ValueError("Statistics destination has unsupported special mode bits")
+        fd, name = tempfile.mkstemp(prefix=f".{destination.name}.rollout-",
+                                    dir=destination.parent)
+        temporary = Path(name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                fd = None  # The stream owns the descriptor, including on failure.
+                json.dump(stats, stream, indent=2, allow_nan=False)
+            # Serialization, buffered writes and close must all succeed before
+            # replacing an existing result. This does not promise crash durability.
+            os.chmod(temporary, mode)
+            os.replace(temporary, destination)
+        finally:
+            for cleanup in ((lambda: os.close(fd)) if fd is not None else None,
+                            lambda: temporary.unlink(missing_ok=True)):
+                if cleanup is None:
+                    continue
+                try:
+                    cleanup()
+                except Exception as exc:
+                    try:
+                        warnings.warn(f"Statistics cleanup failed for owned temporary {temporary}: {exc!r}; "
+                                      "the save outcome is unchanged", RuntimeWarning, stacklevel=2)
+                    except Exception:
+                        pass  # Do not mask a save failure or a completed replace.
         print(f"OK: Stats saved to {save_path}")
 
     print(f"OK: Mean reward: {stats['mean_reward']:.2f}, Max: {stats['max_reward']:.2f}")
@@ -925,6 +1195,7 @@ _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
 _BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
 _BATCH_SOURCE_FILES = (
     "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py", "fibernet/core/material.py",
 )
 
@@ -940,12 +1211,13 @@ def _batch_value_sha256(value):
 
 
 def _batch_parameters(mode, backend, target_stretch, stiffness, damping,
-                      num_steps, save_interval):
+                      num_steps, save_interval, geometry_policy="reject_internal_points"):
     """Normalize only supported scalar types and the solver's effective None."""
     from numbers import Integral, Real
     import math
 
-    parameters = {"mode": mode, "backend": backend, "auto_steps": False}
+    parameters = {"mode": mode, "backend": backend, "auto_steps": False,
+                  "geometry_policy": _validate_geometry_policy(geometry_policy)}
     for name, value in (("target_stretch", target_stretch),
                         ("stiffness", stiffness), ("damping", damping)):
         if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
@@ -1073,6 +1345,8 @@ def batch_simulate_from_json(
     num_steps: int = 1000,
     save_interval: int = 200,
     backend: str = "spring",
+    *,
+    geometry_policy: str = "reject_internal_points",
 ) -> str:
     """Batch simulate structures from JSON files.
     
@@ -1102,6 +1376,11 @@ def batch_simulate_from_json(
         Save trajectory every N steps.
     backend : str
         Simulation backend: "spring" (TaichiEngine).
+    geometry_policy : str, keyword-only
+        "reject_internal_points" (default) records a per-file failure for
+        nonempty edge-owned points. Explicit "endpoint_chord" ignores those
+        points mechanically without changing the graph. Invalid policies fail
+        before provider construction or output writes.
     
     Returns
     -------
@@ -1149,7 +1428,7 @@ def batch_simulate_from_json(
     if mode != "stretch":
         raise ValueError(f"Unsupported mode: {mode!r}; expected 'stretch'")
     parameters = _batch_parameters(mode, backend, target_stretch, stiffness,
-                                   damping, num_steps, save_interval)
+                                   damping, num_steps, save_interval, geometry_policy)
 
     json_path = Path(json_dir)
     output_path = Path(output_dir)
@@ -1211,7 +1490,7 @@ def batch_simulate_from_json(
     if not pending:
         return str(csv_file)
 
-    engine = TaichiEngine()
+    engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
 
     def write_checkpoint():
@@ -1244,8 +1523,10 @@ def batch_simulate_from_json(
                              "inputs must remain unchanged during the call")
         binding = _batch_canonical_json(_batch_binding(input_hashes[fname],
                                                        parameters, implementation))
+        g = r = None
         try:
             g = _batch_graph_from_bytes(raw)
+            _preflight_taichi_geometry(g, geometry_policy=geometry_policy)
             r = engine.stretch_test(
                 g,
                 target_stretch=target_stretch,
@@ -1254,6 +1535,7 @@ def batch_simulate_from_json(
                 num_steps=num_steps,
                 save_interval=save_interval,
                 auto_steps=False,
+                geometry_policy=geometry_policy,
             )
             row = {
                 "filename": fname,
@@ -1272,6 +1554,8 @@ def batch_simulate_from_json(
             row = {"filename": fname, "success": False, "error": str(e)}
             print(f"  [{fname}] FAILED: {e}")
         finally:
+            # Retain at most one parsed graph/result, including failed cases.
+            g = r = None
             del raw
         row["run_binding"] = binding
         results.append(row)
@@ -1285,21 +1569,24 @@ def batch_simulate_from_json(
 
 
 def __getattr__(name):
-    # Preserve the historical easy-module re-exports without loading plotting
-    # for simulate(), training helpers, or importing the top-level package.
-    if name in {"render_graph", "render_deformation"}:
+    # Preserve historical aliases; propagate the owning implementation's error.
+    if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module("fibernet.viz.render"), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__():
-    return sorted(set(globals()) | {"render_graph", "render_deformation"})
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
 # Preserve the historical wildcard surface, including incidental public imports.
 # A wildcard explicitly requests the renderers; importing this module does not.
 __all__ = [name for name in globals() if not name.startswith("_")]
+# Retain the original wildcard order as well as its public names.
+_index = __all__.index("pattern_3d") + 1
+__all__[_index:_index] = ["TaichiEngine", "SimResult"]
+del _index
 __all__ += ["render_graph", "render_deformation"]

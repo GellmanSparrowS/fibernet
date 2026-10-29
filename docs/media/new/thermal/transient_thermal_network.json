@@ -1,0 +1,70 @@
+{
+  "schema": "fibernet-archived-transient-thermal-media-1",
+  "renderer": "render.py",
+  "renderer_sha256": "e25d2e786cf2b0316cc4e0882df95b494f9da5cda40e3f89c2a470bf6ab4bd19",
+  "sources": {
+    "data/README.md": {
+      "sha256": "f303c9855928acb4473ff3f514f058dc028e7db50f9f75396420ef64a477a312"
+    },
+    "data/archive_provenance.json": {
+      "sha256": "ed4adb09f51e42e1b81ef945207f048ee0d0e159ecfa70ac5b19949e64f69a24"
+    },
+    "data/campaign_analysis.json": {
+      "sha256": "2235bd42f501ee7161ee964b765d36d8c6e0b97db4f6d2da8d036bfcb7f0079a"
+    },
+    "data/energy_ledger_80.csv": {
+      "sha256": "bc3ff316f1ce62b594c839c9ee42c922209a3ccb65983b5b86e783f56ca9ed24"
+    },
+    "data/summary.json": {
+      "sha256": "d3b11d0bc95767f2608f759650abafb03e86fd26590f71d450b2689e7f899471"
+    },
+    "data/thermal.npz": {
+      "sha256": "4b4547015df2b6921cba8299fa57e6aa99221a7af828d7a7eec6f92a911c67ed"
+    }
+  },
+  "gif_sha256": "23af4e8c2835e8225192299bbc12405e287c01f628dde3fd8f49b44844f557b8",
+  "svg_sha256": "a0df65efadd9f6d8c11110f5710b5da290e2d857fb3eb3ba6ee04170cf921b9e",
+  "width": 960,
+  "height": 1358,
+  "layout": "A4 portrait aspect ratio",
+  "frames": 81,
+  "frame_duration_ms": 100,
+  "recorded_time_s": [
+    0.0,
+    20.0
+  ],
+  "recorded_dt_s": 0.25,
+  "playback_speed": 2.5,
+  "synthetic": true,
+  "nodes": 4340,
+  "edges": 5073,
+  "geometry_unit": "m",
+  "temperature_unit": "K",
+  "energy_unit": "J",
+  "peak_temperature_K": 300.4202906813709,
+  "source_power_W": 1.6082938291692697e-05,
+  "display_encoding": {
+    "edge_color": "mean of saved endpoint temperatures, fixed global scale",
+    "geometry": "all archived positions, unchanged",
+    "energy": "cumulative saved ledger and capacity-weighted recorded temperature change"
+  },
+  "coupling": "one-way electrical Joule heat to constant lumped thermal model",
+  "mechanical_deformation": false,
+  "temperature_palette_levels": 16,
+  "time_interpolation": false,
+  "scope": "Saved synthetic thermal scenario, not experimental material calibration or general electro-thermo-mechanical capability. See archived campaign analysis for timestep comparison; algebraic residual acceptance alone is not time accuracy.",
+  "initial_diagnostics": "Unavailable NaN initial interval retained; energy displays start at zero accumulated change.",
+  "verification": [
+    "all 81 original states in original order",
+    "unique stable node/edge IDs and endpoint resolution",
+    "finite temperatures and positive capacities",
+    "fixed planar original geometry",
+    "energy ledger matches capacity-weighted temperature change",
+    "cumulative energy closure below 1e-14 J"
+  ],
+  "final_energy_J": {
+    "input": 0.00032165876583385396,
+    "stored": 0.00011903426146790139,
+    "to_reservoir": 0.00020262450436595315
+  }
+}

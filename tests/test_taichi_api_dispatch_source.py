@@ -13,6 +13,7 @@ import sys
 import types
 import unittest
 from unittest.mock import patch
+from geometry_policy.support import H as GEOMETRY_HELPERS
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE_WRAPPERS = ROOT / 'tests' / 'fixtures' / 'taichi_dispatch_core73.txt'
@@ -45,7 +46,8 @@ class DispatchChecks(unittest.TestCase):
             edge_forces=object(), energy=2.0,
         )
         self.result.save = lambda path: self.calls.append(('save', path))
-        self.graph = types.SimpleNamespace(dimension=3, nodes={8: object(), -3: object(), 91: object()}, edges={9: (8, -3), 2: (8, -3)})
+        self.graph = types.SimpleNamespace(dimension=3, nodes={8: object(), -3: object(), 91: object()}, edges={9: types.SimpleNamespace(node_i=8, node_j=-3, internal_points=None),
+                   2: types.SimpleNamespace(node_i=8, node_j=-3, internal_points=[])})
         owner = self
         class Engine:
             def __init__(self, **kwargs): owner.calls.append(('engine', kwargs))
@@ -55,7 +57,8 @@ class DispatchChecks(unittest.TestCase):
                 owner.calls.append(('stretch', graph, kwargs)); return owner.result
         self.engine = Engine
         self.np = types.SimpleNamespace(integer=FakeInteger, bool_=FakeBool, zeros_like=lambda value: ('zeros_like', value))
-        self.namespace = {'TaichiEngine': Engine, 'np': self.np}
+        self.namespace = {**GEOMETRY_HELPERS, 'TaichiEngine': Engine, 'np': self.np}
+        extract('fibernet/easy.py', '_taichi_engine_class', self.namespace)
         self.simulate = extract('fibernet/easy.py', 'simulate', self.namespace)
         self.real_import = builtins.__import__
         def guarded_import(name, *args, **kwargs):
@@ -68,7 +71,7 @@ class DispatchChecks(unittest.TestCase):
 
     def test_default_stretch_preserved(self):
         self.assertIs(self.simulate(self.graph, strain=1.1, num_steps=3), self.result)
-        self.assertEqual(self.calls, [('engine', {'arch': 'cpu', 'num_threads': 4}), ('stretch', self.graph, {'target_stretch': 1.1, 'num_steps': 3})])
+        self.assertEqual(self.calls, [('engine', {'arch': 'cpu', 'num_threads': 4}), ('stretch', self.graph, {'target_stretch': 1.1, 'num_steps': 3, 'geometry_policy': 'reject_internal_points'})])
 
     def test_aliases_forward_identical_dynamics_and_return_object(self):
         state = {'length': 'm', 'time': 's', 'mass': 'kg', 'frame': 'world'}
@@ -77,24 +80,26 @@ class DispatchChecks(unittest.TestCase):
         for backend in ('spring', 'taichi'):
             self.calls.clear()
             self.assertIs(self.simulate(self.graph, mode='dynamics', backend=backend, **kw), self.result)
-            self.assertEqual(self.calls, [('engine', {'arch': 'cpu', 'num_threads': 4}), ('dynamics', self.graph, kw)])
+            self.assertEqual(self.calls, [('engine', {'arch': 'cpu', 'num_threads': 4}), ('dynamics', self.graph, {**kw, 'geometry_policy': 'reject_internal_points'})])
             self.assertIs(self.calls[-1][1], self.graph)
             self.assertIs(self.calls[-1][2]['state_units'], state)
         self.assertEqual(kw, before)
         self.assertEqual(list(self.graph.nodes), [8, -3, 91])
-        self.assertEqual(self.graph.edges, {9: (8, -3), 2: (8, -3)})
+        self.assertEqual([(eid, edge.node_i, edge.node_j, edge.internal_points)
+                          for eid, edge in self.graph.edges.items()],
+                         [(9, 8, -3, None), (2, 8, -3, [])])
         self.assertEqual(self.result.metadata, {'node_ids': [8, -3, 91], 'edge_ids': [9, 2]})
 
     def test_alias_stretch(self):
         self.simulate(self.graph, backend='taichi', strain=1.02)
-        self.assertEqual(self.calls[-1], ('stretch', self.graph, {'target_stretch': 1.02}))
+        self.assertEqual(self.calls[-1], ('stretch', self.graph, {'target_stretch': 1.02, 'geometry_policy': 'reject_internal_points'}))
 
     def test_runtime_options_consumed_by_constructor(self):
         for backend in ('spring', 'taichi'):
             for arch in ('cpu', 'gpu'):
                 self.calls.clear()
                 self.simulate(self.graph, backend=backend, mode='dynamics', arch=arch, num_threads=FakeInteger(2), dt=.01)
-                self.assertEqual(self.calls, [('engine', {'arch': arch, 'num_threads': 2}), ('dynamics', self.graph, {'dt': .01})])
+                self.assertEqual(self.calls, [('engine', {'arch': arch, 'num_threads': 2}), ('dynamics', self.graph, {'dt': .01, 'geometry_policy': 'reject_internal_points'})])
                 self.assertIs(type(self.calls[0][1]['num_threads']), int)
 
     def test_invalid_backend_rejected_before_constructor(self):
@@ -129,9 +134,9 @@ class DispatchChecks(unittest.TestCase):
                 def __init__(self, *, arch, num_threads):
                     attempts.append((arch, num_threads))
                     raise exc
-                def stretch_test(self, graph, target_stretch=2.0):
+                def stretch_test(self, graph, target_stretch=2.0, *, geometry_policy="reject_internal_points"):
                     raise AssertionError('must not execute after failed construction')
-                def dynamics(self, graph):
+                def dynamics(self, graph, *, geometry_policy="reject_internal_points"):
                     raise AssertionError('must not execute after failed construction')
             self.namespace['TaichiEngine'] = BrokenEngine
             for backend in ('spring', 'taichi'):

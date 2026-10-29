@@ -1,10 +1,20 @@
 Quick Start Guide
 =================
 
-This small example uses the base Python dependencies installed in
-:doc:`getting_started`. It generates a graph, runs a small-extension beam-FEM
-simulation, and verifies that a saved result can be read back. It does not
-require FiberScope or an optional GPU backend.
+This guide uses the current 4.3.0 development checkout, not the published PyPI
+4.2.0 API, which does not accept the ``stretch_ratio`` keyword below. From the
+cloned repository's root, install the development checkout and its base Python
+dependencies before running the examples:
+
+.. code-block:: bash
+
+   python -m pip install -e .
+
+This command installs the source checkout rather than a PyPI release.
+See :doc:`getting_started` for other installation options. The example
+generates a graph, runs a small-extension beam-FEM simulation, and verifies that
+a saved result can be read back. It does not require FiberScope or an optional
+GPU backend.
 
 Generate, simulate, and save
 ----------------------------
@@ -21,6 +31,7 @@ Run this complete block in a notebook or Python script. It writes into a
 
    output = Path("demo_output")
    output.mkdir(parents=True, exist_ok=True)
+   # SI units: coordinates and radius in m; E in Pa; forces in N.
    graph = fn.pattern_2d(
        unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05, seed=23
    )
@@ -28,7 +39,8 @@ Run this complete block in a notebook or Python script. It writes into a
                     save_path=str(output / "network.png"))
    plt.close(figure)
    result = fn.simulate(
-       graph, backend="fem", mode="stretch", strain=1.01,
+       graph, backend="fem", mode="stretch", stretch_ratio=1.01,
+       nonlinear=False, E=1e9, nu=0.3,
        save_path=str(output / "fem_result.json")
    )
    restored = fn.SimResult.load(str(output / "fem_result.json"))
@@ -36,8 +48,15 @@ Run this complete block in a notebook or Python script. It writes into a
    assert np.isfinite(result.max_displacement)
    print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
-``strain=1.01`` is a stretch ratio (1% extension), not an engineering strain
-of 101%. Geometry lengths and fiber radius must use one consistent unit.
+``stretch_ratio=1.01`` means 1% extension; ``nonlinear=False`` selects the
+small-deformation linear beam solver. Coordinates and radii are in m, ``E``
+is in Pa, and ``nu`` is dimensionless; displacement is in m and force in N.
+The solver does not convert units or infer moduli from graph material records.
+Omitting the ratio retains the legacy default 2.0, which automatically selects
+experimental 2-D updated-geometry increments with unverified final equilibrium.
+That route is not a validated nonlinear beam solver. The warning switch at
+``abs(stretch - 1) > 0.3`` is not a physical validity bound; no warning does not certify
+that a structure remains within small-deformation assumptions.
 The example checks the software workflow; it is not a calibrated material
 prediction. ``max_force`` is the largest individual beam axial force, not a
 grip reaction or effective modulus. The result's ``energy`` is an axial-stress

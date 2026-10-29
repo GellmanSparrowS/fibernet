@@ -1,0 +1,1086 @@
+{
+  "version": "3.1",
+  "dimension": 2,
+  "tolerance": 1e-06,
+  "next_node_id": 33,
+  "next_edge_id": 32,
+  "box_size": null,
+  "metadata": {},
+  "nodes": [
+    {
+      "id": 0,
+      "position": [
+        -0.001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 1,
+      "position": [
+        -0.0009375,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 2,
+      "position": [
+        -0.000875,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 3,
+      "position": [
+        -0.0008125000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 4,
+      "position": [
+        -0.00075,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 5,
+      "position": [
+        -0.0006875,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 6,
+      "position": [
+        -0.000625,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 7,
+      "position": [
+        -0.0005625000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 8,
+      "position": [
+        -0.0005,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 9,
+      "position": [
+        -0.00043749999999999995,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 10,
+      "position": [
+        -0.000375,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 11,
+      "position": [
+        -0.00031250000000000006,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 12,
+      "position": [
+        -0.00025,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 13,
+      "position": [
+        -0.00018749999999999995,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 14,
+      "position": [
+        -0.000125,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 15,
+      "position": [
+        -6.250000000000006e-05,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 16,
+      "position": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 17,
+      "position": [
+        6.250000000000006e-05,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 18,
+      "position": [
+        0.0001250000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 19,
+      "position": [
+        0.00018749999999999995,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 20,
+      "position": [
+        0.00025,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 21,
+      "position": [
+        0.00031250000000000006,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 22,
+      "position": [
+        0.0003749999999999999,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 23,
+      "position": [
+        0.00043749999999999995,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 24,
+      "position": [
+        0.0005,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 25,
+      "position": [
+        0.0005625000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 26,
+      "position": [
+        0.0006250000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 27,
+      "position": [
+        0.0006875,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 28,
+      "position": [
+        0.00075,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 29,
+      "position": [
+        0.0008125000000000001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 30,
+      "position": [
+        0.0008749999999999999,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 31,
+      "position": [
+        0.0009375,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    },
+    {
+      "id": 32,
+      "position": [
+        0.001,
+        0.0,
+        0.0
+      ],
+      "boundary": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ],
+      "metadata": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": 0,
+      "node_i": 0,
+      "node_j": 1,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 1,
+      "node_i": 1,
+      "node_j": 2,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 2,
+      "node_i": 2,
+      "node_j": 3,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 3,
+      "node_i": 3,
+      "node_j": 4,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 4,
+      "node_i": 4,
+      "node_j": 5,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 5,
+      "node_i": 5,
+      "node_j": 6,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 6,
+      "node_i": 6,
+      "node_j": 7,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 7,
+      "node_i": 7,
+      "node_j": 8,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 8,
+      "node_i": 8,
+      "node_j": 9,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 9,
+      "node_i": 9,
+      "node_j": 10,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 10,
+      "node_i": 10,
+      "node_j": 11,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 11,
+      "node_i": 11,
+      "node_j": 12,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 12,
+      "node_i": 12,
+      "node_j": 13,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 13,
+      "node_i": 13,
+      "node_j": 14,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 14,
+      "node_i": 14,
+      "node_j": 15,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 15,
+      "node_i": 15,
+      "node_j": 16,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 16,
+      "node_i": 16,
+      "node_j": 17,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 17,
+      "node_i": 17,
+      "node_j": 18,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 18,
+      "node_i": 18,
+      "node_j": 19,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 19,
+      "node_i": 19,
+      "node_j": 20,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 20,
+      "node_i": 20,
+      "node_j": 21,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 21,
+      "node_i": 21,
+      "node_j": 22,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 22,
+      "node_i": 22,
+      "node_j": 23,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 23,
+      "node_i": 23,
+      "node_j": 24,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 24,
+      "node_i": 24,
+      "node_j": 25,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 25,
+      "node_i": 25,
+      "node_j": 26,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 26,
+      "node_i": 26,
+      "node_j": 27,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 27,
+      "node_i": 27,
+      "node_j": 28,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 28,
+      "node_i": 28,
+      "node_j": 29,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 29,
+      "node_i": 29,
+      "node_j": 30,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 30,
+      "node_i": 30,
+      "node_j": 31,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    },
+    {
+      "id": 31,
+      "node_i": 31,
+      "node_j": 32,
+      "radius": 5e-05,
+      "material": {
+        "name": "explicit synthetic test material",
+        "density": 1200.0,
+        "youngs_modulus": 1000000.0,
+        "poissons_ratio": 0.3,
+        "shear_modulus": 384615.3846153846
+      },
+      "segments": 1,
+      "internal_points": null,
+      "metadata": {}
+    }
+  ]
+}

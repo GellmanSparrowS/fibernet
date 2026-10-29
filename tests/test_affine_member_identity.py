@@ -21,11 +21,13 @@ def graph(dimension=3):
     for e in g.edges.values():
         e.metadata['nested']={'items':[e.edge_id]}
         e.material=Material(name=str(e.edge_id),youngs_modulus=e.edge_id*1e6,
-                            extra={'nested':[e.edge_id]})
+                            extra={'nested':[e.edge_id]},
+                            stiffness_tensor=np.eye(6) * e.edge_id)
     return g
 
 
 CASES=[
+    ('copy',lambda g:g.copy(),lambda p:p,1,None),
     ('translate',lambda g:translate(g,[3,4,5]),lambda p:p+[3,4,5],1,None),
     ('rotate2d',lambda g:rotate(g,90,center=[1,2]),
      lambda p:np.array([-(p[1]-2)+1,p[0]-1+2,p[2]]),1,None),
@@ -61,6 +63,8 @@ def test_sparse_reversed_parallel_identity_geometry_and_ownership(name,operation
         assert out.material.to_dict()==e.material.to_dict()
         np.testing.assert_allclose(out.internal_points,[expected(p) for p in e.internal_points],atol=1e-14)
         assert not np.shares_memory(out.internal_points,e.internal_points)
+        assert not np.shares_memory(out.material.stiffness_tensor,e.material.stiffness_tensor)
+        out.material.stiffness_tensor[0,0] = -1
         out.material.extra['nested'].append('new')
         out.metadata['nested']['items'].append('new')
     assert not np.shares_memory(h._box_size,g._box_size)
@@ -68,10 +72,14 @@ def test_sparse_reversed_parallel_identity_geometry_and_ownership(name,operation
     assert g.to_dict()==before
 
 
-def test_rebuilt_spatial_hash_and_preserved_add_counters_and_edge_lookup():
-    g=graph();h=translate(g,[10,20,30])
-    assert h.add_node([10,20,30],merge=True)==40
-    assert h.add_node([0,0,0],merge=True)==100
+@pytest.mark.parametrize('operation,origin', [
+    (lambda g:g.copy(), [0,0,0]),
+    (lambda g:translate(g,[10,20,30]), [10,20,30]),
+])
+def test_rebuilt_spatial_hash_and_preserved_add_counters_and_edge_lookup(operation,origin):
+    g=graph();h=operation(g)
+    assert h.add_node(origin,merge=True)==40
+    assert h.add_node([100,100,100],merge=True)==100
     assert h._next_node_id==101
     mapped=g._edge_set[frozenset((40,7))]
     assert h.add_edge(40,7)==mapped
@@ -79,16 +87,18 @@ def test_rebuilt_spatial_hash_and_preserved_add_counters_and_edge_lookup():
     assert h.add_edge(100,7)==200
 
 
+@pytest.mark.parametrize('operation',[lambda g:g.copy(),lambda g:translate(g,[1,2])])
 @pytest.mark.parametrize('dimension',[2,3])
-def test_empty_and_no_internal_points(dimension):
+def test_empty_and_no_internal_points(dimension,operation):
     empty=StructureGraph(dimension=dimension)
     empty._next_node_id=100;empty._next_edge_id=200
-    h=translate(empty,[1,2]);assert not h.nodes and not h.edges
+    h=operation(empty);assert not h.nodes and not h.edges
     assert (h._next_node_id,h._next_edge_id)==(100,200)
     g=graph(dimension);g.edges[99].internal_points=None
     g.edges[3].internal_points=np.empty((0,3))
-    h=translate(g,[1,2]);assert h.edges[99].internal_points is None
+    h=operation(g);assert h.edges[99].internal_points is None
     assert h.edges[3].internal_points.shape==(0,3)
+    assert h.edges[3].internal_points is not g.edges[3].internal_points
 
 
 @pytest.mark.parametrize('factor,expected_radius,expected_box',[
@@ -101,11 +111,86 @@ def test_existing_scale_policy(factor,expected_radius,expected_box):
     assert list(h.nodes)==[40,7] and list(h.edges)==[99,3]
 
 
-def test_compose_retains_identity_and_shared_material_copy_policy():
+@pytest.mark.parametrize('operation',[
+    lambda g:g.copy(),
+    lambda g:compose(g,lambda x:translate(x,[3,4,5]),lambda x:mirror(x,'z')),
+])
+def test_compose_retains_identity_and_shared_material_copy_policy(operation):
     g=graph();g.edges[3].material=g.edges[99].material
-    h=compose(g,lambda x:translate(x,[3,4,5]),lambda x:mirror(x,'z'))
+    h=operation(g)
     assert list(h.nodes)==[40,7] and list(h.edges)==[99,3]
     # Existing Graph.copy semantics independently deepcopy each edge's material.
     assert h.edges[3].material is not h.edges[99].material
     assert h.edges[3].material is not g.edges[3].material
     assert g.edges[3].material is g.edges[99].material
+
+
+@pytest.mark.parametrize('dimension', [2, 3])
+@pytest.mark.parametrize('kind', ['default', 'none', 'two_values', 'three_values',
+                                  'float64', 'readonly', 'strided'])
+def test_copy_box_ownership_in_both_directions(dimension, kind):
+    options = {}
+    if kind == 'none':
+        options['box_size'] = None
+    elif kind == 'two_values':
+        options['box_size'] = [1.25, 7.75]
+    elif kind == 'three_values':
+        options['box_size'] = [1.25, 7.75, 3.5]
+    elif kind in ('float64', 'readonly'):
+        box = np.array([1.25, 7.75, 3.5], dtype=np.float64)
+        if kind == 'readonly':
+            box.flags.writeable = False
+        options['box_size'] = box
+    elif kind == 'strided':
+        options['box_size'] = np.array([1.25, 99., 7.75, 99., 3.5, 99.])[::2]
+        assert not options['box_size'].flags.c_contiguous
+    source = StructureGraph(dimension=dimension, **options)
+    duplicate = source.copy()
+    assert duplicate.to_dict() == source.to_dict()
+    if source.box_size is None:
+        assert duplicate.box_size is None
+        source.box_size = [2., 3., 4.]
+        assert duplicate.box_size is None
+        duplicate.box_size = [8., 9., 10.]
+        np.testing.assert_array_equal(source.box_size, [2., 3., 4.])
+        return
+    original = source.box_size
+    assert duplicate._box_size is not source._box_size
+    assert not np.shares_memory(duplicate._box_size, source._box_size)
+    assert duplicate._box_size.flags.writeable
+    duplicate._box_size[0] = 99.
+    np.testing.assert_array_equal(source.box_size, original)
+    copied = duplicate.box_size
+    if kind == 'readonly':
+        options['box_size'].flags.writeable = True
+    source._box_size[1] = 88.
+    np.testing.assert_array_equal(duplicate.box_size, copied)
+
+
+@pytest.mark.parametrize('dimension', [2, 3])
+@pytest.mark.parametrize('entry', ['constructor', 'setter'])
+def test_copy_detaches_retained_float64_input_without_changing_input_policy(dimension, entry):
+    box = np.array([1.25, 7.75, 3.5], dtype=np.float64)
+    source = StructureGraph(dimension=dimension, **({'box_size': box} if entry == 'constructor' else {}))
+    if entry == 'setter':
+        source.box_size = box
+    duplicate = source.copy()
+    expected = duplicate.box_size
+    # Existing constructor/setter alias policy is intentionally unchanged.
+    assert np.shares_memory(source._box_size, box)
+    box[0] = 99.
+    assert source.box_size[0] == 99.
+    np.testing.assert_array_equal(duplicate.box_size, expected)
+    duplicate._box_size[1] = 88.
+    assert box[1] == source.box_size[1] == 7.75
+
+
+def test_copy_does_not_dispatch_through_subclass_box_getter():
+    class PrivateBoxGraph(StructureGraph):
+        @property
+        def box_size(self):
+            raise AssertionError('copy must keep its existing private-array dispatch')
+    source = PrivateBoxGraph(dimension=3, box_size=[1.25, 7.75, 3.5])
+    duplicate = source.copy()
+    assert type(duplicate) is StructureGraph
+    np.testing.assert_array_equal(duplicate.box_size, [1.25, 7.75, 3.5])
