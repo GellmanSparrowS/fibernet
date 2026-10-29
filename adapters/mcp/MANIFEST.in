@@ -1,0 +1,5 @@
+include README.md PROJECTION.md DEFORMED_TRANSPORT.md THERMOELASTIC.md LICENSE
+recursive-include tests *.py
+recursive-include tests/fixtures *.json
+recursive-include tests/fixtures *.json.gz
+recursive-include fixtures projection_*.json projection_*.b64

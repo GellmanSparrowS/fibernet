@@ -245,6 +245,19 @@ if __name__ == "__main__":
                         help="new directory for a solve; existing saved directory for --plot-only")
     parser.add_argument("--plot-only", action="store_true",
                         help="redraw only PNG/SVG from saved JSON; do not generate or solve")
+    parser.add_argument("--case", choices=("square", "network81"), default="square")
+    parser.add_argument("--figure-dir", help="new figure directory for network81 --plot-only")
     args = parser.parse_args()
-    action = draw_from_saved if args.plot_only else run
-    print(json.dumps(action(args.output_dir), indent=2, allow_nan=False))
+    if args.case == "network81":
+        from fibernet.examples.linear_static_network import main
+        forwarded = ["--output-dir", args.output_dir]
+        if args.plot_only:
+            forwarded.append("--plot-only")
+        if args.figure_dir:
+            forwarded.extend(["--figure-dir", args.figure_dir])
+        main(forwarded)
+    else:
+        if args.figure_dir:
+            parser.error("--figure-dir requires --case network81")
+        action = draw_from_saved if args.plot_only else run
+        print(json.dumps(action(args.output_dir), indent=2, allow_nan=False))

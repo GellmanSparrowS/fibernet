@@ -295,6 +295,98 @@ def populate_result(result, record, graph=None, stiffness=None):
     return result
 
 
+def _require_material_tiny_arithmetic(*values, underflowed=False):
+    """Refuse ambiguous tiny arithmetic without changing normal-value loads."""
+    sensitive = underflowed
+    for value in values:
+        # Bit inspection precedes arithmetic sign/zero comparisons: DAZ may
+        # otherwise compare a stored nonzero subnormal equal to zero.
+        magnitude = np.asarray(value, dtype=np.float64).view(np.uint64) & np.uint64(0x7fffffffffffffff)
+        sensitive = sensitive or np.any((magnitude > 0) & (magnitude < 0x0010000000000000))
+    if sensitive:
+        from ._roundoff import _require_gradual_underflow
+        try:
+            _require_gradual_underflow()
+            # NumPy ufuncs need the same property; Python scalar arithmetic
+            # alone does not qualify a potentially different ufunc path.
+            tiny = np.array([1], dtype=np.uint64).view(np.float64)
+            with np.errstate(under='ignore'):
+                preserved = np.add(tiny, tiny).view(np.uint64)[0] == 2
+                preserved = preserved and np.multiply(tiny, 2.).view(np.uint64)[0] == 2
+                preserved = preserved and np.divide(tiny * 2., 2.).view(np.uint64)[0] == 1
+                square = np.array([math.ldexp(1., -520)])**2
+                preserved = preserved and square.view(np.uint64)[0] == 2**34
+            if not preserved:
+                raise ArithmeticError('NumPy subnormal arithmetic is unavailable')
+        except ArithmeticError as exc:
+            raise ValueError('material physical dissipation arithmetic unavailable: gradual underflow required') from exc
+
+
+def _validate_endpoint_physical_dissipation(branch_stress, moduli, tau,
+                                          dt, volume, increment):
+    """Check the last physical interval from committed q, without a trial.
+
+    Preserve the producer's binary64 operation order, including underflow.
+    The allowance covers a positive-sum reduction and its two subsequent
+    products, not constitutive evolution or cumulative energy accounting.
+    """
+    _require_material_tiny_arithmetic(branch_stress, moduli, tau, dt, volume, increment)
+    branches = branch_stress.shape[0]
+    # The positive-sum error argument assumes b*u <= 1/16, u=2**-53.
+    # This is far above the producer's 1,000,000-value output limit.
+    if branches > 2**49:
+        raise ValueError('material physical dissipation reduction is too large')
+    if (not math.isfinite(dt) or dt <= 0 or
+            not all(np.isfinite(a).all() for a in
+                    (branch_stress, moduli, tau, volume, increment)) or
+            np.any(moduli <= 0) or np.any(tau <= 0) or
+            np.any(volume <= 0) or np.any(increment < 0)):
+        raise ValueError('material physical dissipation has invalid finite domain')
+    try:
+        with np.errstate(over='raise', divide='raise', invalid='raise', under='ignore'):
+            squared = branch_stress**2
+            _require_material_tiny_arithmetic(squared,
+                underflowed=np.any((branch_stress != 0) & (squared == 0)))
+            branch_energy = squared / moduli
+            _require_material_tiny_arithmetic(branch_energy,
+                underflowed=np.any((squared != 0) & (branch_energy == 0)))
+            rates = branch_energy / tau
+            _require_material_tiny_arithmetic(rates,
+                underflowed=np.any((branch_energy != 0) & (rates == 0)))
+            total = rates.sum(axis=0)
+            _require_material_tiny_arithmetic(total)
+            density = dt * total
+            _require_material_tiny_arithmetic(density,
+                underflowed=np.any((total != 0) & (density == 0)))
+            expected = density * volume
+            _require_material_tiny_arithmetic(expected,
+                underflowed=np.any((density != 0) & (expected == 0)))
+    except FloatingPointError as exc:
+        raise ValueError('material physical dissipation evaluation is nonfinite') from exc
+    if not all(np.isfinite(a).all() for a in (rates, total, density, expected)):
+        raise ValueError('material physical dissipation evaluation is nonfinite')
+    for stored, value, rate, loss, size in zip(increment, expected, total, density, volume):
+        if rate == 0:
+            # Empty branches or producer-underflowed squared stresses give
+            # exact zero. Do not invent a nonzero absolute energy floor.
+            consistent = stored == 0
+        else:
+            stored, value, rate, loss, size = map(float, (stored, value, rate, loss, size))
+            # Exact ratios are used ONLY for the rounding budget/comparison.
+            # They avoid premature budget under/overflow, especially when a
+            # subnormal density is subsequently amplified by a large volume.
+            # Reuse bit-decoding utilities, not the unrelated ledger contract:
+            # even a normal rate can have a subnormal ULP on a DAZ host.
+            from ._energy_accounting import rational, quantum
+            allowance = 8 * (
+                (branches + 1) * rational(dt) * rational(size) * (2 * quantum(rate)) +
+                rational(size) * (2 * quantum(loss)) +
+                2 * quantum(max(value, stored)))
+            consistent = abs(rational(stored) - rational(value)) <= allowance
+        if not consistent:
+            raise ValueError('material physical dissipation inconsistent with committed endpoint')
+
+
 def validate_record(record):
     """Read-only validation of the persisted, versioned material history."""
     if type(record) is not dict or record.get('schema') != SCHEMA:
@@ -319,8 +411,18 @@ def validate_record(record):
     area = _array(record['reference_areas_m2'], (m,), 'reference area')
     rest = _array(record['rest_lengths_m'], (m,), 'rest lengths')
     masses = _array(record['masses_kg'], (n,), 'masses')
+    _require_material_tiny_arithmetic(area, rest)
     if np.any(area <= 0) or np.any(rest <= 1e-12) or np.any(masses <= 0):
         raise ValueError('material record positive geometry/mass required')
+    try:
+        with np.errstate(over='raise', invalid='raise', under='ignore'):
+            volume = area * rest
+    except FloatingPointError as exc:
+        raise ValueError('material reference volumes must remain finite and positive') from exc
+    _require_material_tiny_arithmetic(volume,
+        underflowed=np.any((area != 0) & (rest != 0) & (volume == 0)))
+    if not np.isfinite(volume).all() or np.any(volume <= 0):
+        raise ValueError('material reference volumes must remain finite and positive')
     fixed = _ids(record['fixed_node_ids'], 'fixed node IDs')
     if not set(fixed) <= set(node_ids):
         raise ValueError('material fixed node IDs not in graph')
@@ -379,7 +481,13 @@ def validate_record(record):
             raise ValueError('material sample violates strain/energy domain')
         # Algebraic state consistency, not a history update or second integrator.
         moduli = np.array([e for e, _ in material.branches])[:, None]
-        branch_stress = moduli * (strain[None, :] - viscous)
+        _require_material_tiny_arithmetic(strain, viscous, moduli)
+        difference = strain[None, :] - viscous
+        _require_material_tiny_arithmetic(difference,
+            underflowed=np.any((strain[None, :] != viscous) & (difference == 0)))
+        branch_stress = moduli * difference
+        _require_material_tiny_arithmetic(branch_stress,
+            underflowed=np.any((difference != 0) & (branch_stress == 0)))
         expected_stress = material.equilibrium_modulus * strain + branch_stress.sum(axis=0)
         expected_energy = .5*(material.equilibrium_modulus*strain**2 +
             (moduli*(strain[None, :]-viscous)**2).sum(axis=0))*area*rest
@@ -392,6 +500,10 @@ def validate_record(record):
                 raise ValueError('material dissipation must be nonnegative and cumulative')
             if step == 0 and (np.any(inc) or np.any(cumulative)):
                 raise ValueError('initial material work/loss must be zero')
+            if step and key == 'physical_dissipation_J':
+                tau = np.array([t for _, t in material.branches])[:, None]
+                _validate_endpoint_physical_dissipation(
+                    branch_stress, moduli, tau, dt, volume, inc)
             previous_cumulative[key] = cumulative
         if step == 0 and (np.any(strain) or np.any(viscous) or np.any(stress) or np.any(energy)):
             raise ValueError('material initial state must be relaxed zero history')
@@ -456,6 +568,65 @@ def validate_result(result):
     if result.algorithmic_energy_ledger is not None or result.dynamics_state is not None:
         raise ValueError('dynamic material must not be labeled memoryless axial state/ledger')
     return record
+
+
+def energy_diagnostics(result):
+    """Read existing records; never infer missing interval accounting bounds."""
+    if 'native_axial_viscoelastic' not in result.metadata:
+        raise ValueError('viscoelastic energy diagnostics require native axial viscoelastic results')
+    record = validate_result(result)
+    # Reuse only scalar arithmetic, NOT the memoryless ledger's closure gate.
+    # Exact differences of binary64 operands are integer multiples of the least
+    # subnormal, so a nonzero residual cannot disappear through underflow.
+    from ._energy_accounting import rational, nearest
+
+    initial = record['samples'][0]
+    initial_u = [rational(value) for value in initial['stored_energy_J']]
+    initial_k = rational(initial['kinetic_energy_J'])
+    per_edge, constitutive, dynamic, combined = [], [], [], []
+
+    def displayed(value):
+        try:
+            return nearest(value)
+        except ValueError as exc:
+            raise ValueError('viscoelastic energy diagnostic residual is outside finite binary64 range') from exc
+
+    for state in record['samples']:
+        cumulative = state['cumulative']
+        work = [rational(value) for value in cumulative['endpoint_work_J']]
+        residuals = [rational(u) - u0 + rational(p) + rational(b) - w
+                     for u, u0, p, b, w in zip(state['stored_energy_J'], initial_u,
+                         cumulative['physical_dissipation_J'],
+                         cumulative['be_numerical_dissipation_J'], work)]
+        channels = state['dynamic_cumulative']
+        balance = sum((-1 if key == 'projection_force_work_J' else 1) * rational(channels[key])
+                      for key in DYNAMIC_FIELDS)
+        c = sum(residuals)
+        d = rational(state['kinetic_energy_J']) - initial_k + sum(work) - balance
+        per_edge.append([displayed(value) for value in residuals])
+        constitutive.append(displayed(c))
+        dynamic.append(displayed(d))
+        combined.append(displayed(c + d))
+
+    return dict(
+        source_schema=record['schema'], units=dict(energy='J', time='s'),
+        steps=[state['step'] for state in record['samples']],
+        times_s=[state['time'] for state in record['samples']],
+        edge_ids=list(record['edge_ids']), initial_kinetic_energy_J=initial['kinetic_energy_J'],
+        constitutive_cumulative_residual_J_by_edge=per_edge,
+        constitutive_cumulative_residual_J=constitutive,
+        dynamic_bookkeeping_cumulative_residual_J=dynamic,
+        combined_cumulative_residual_J=combined,
+        coverage=dict(record_validation='passed', cumulative_consistency='not_certified',
+                      omitted_intervals='not_reconstructed'),
+        arithmetic='exact_stored_binary64_operands_then_one_nearest_binary64_rounding',
+        definitions=dict(
+            constitutive='(U-U0)+P+B-W; aggregate is sum over edges',
+            dynamic_bookkeeping='(K-K0)+sum(W)-(E+G+Q-H+R+S)',
+            combined='dynamic_bookkeeping+sum(constitutive), before display rounding',
+            dynamic_channels='E external force work; G numerical drag energy change; '
+                'Q projection kinetic energy change; H projection force work; '
+                'R kick drift residual; S old stress endpoint residual'))
 
 
 def source_capabilities():

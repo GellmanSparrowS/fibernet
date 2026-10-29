@@ -107,10 +107,30 @@ def _excluded_pairs(edges, trips, n):
     return ex
 
 
+def _validate_planar_geometry(graph, positions):
+    """Admit an XY-plane graph before simulation or a cached-result lookup."""
+    if (positions.ndim != 2 or positions.shape[1] not in (2, 3)
+            or not np.isfinite(positions).all()):
+        raise ValueError('reduced simulation requires finite (N,2) or (N,3) node positions')
+    if (positions.shape[1] == 3 and len(positions)
+            and np.any(positions[:, 2] != positions[0, 2])):
+        raise ValueError(
+            'the reduced solver supports one XY plane only; nonplanar 3-D '
+            'geometry requires a 3-D solver and is not projected automatically')
+    for edge in graph.edges.values():
+        if edge.internal_points is not None and np.size(edge.internal_points):
+            raise ValueError(
+                'the reduced solver does not consume edge internal_points; '
+                'subdivide each curved fiber into actual graph nodes and '
+                'straight edges before simulation')
+
+
 class Engine2:
     def __init__(self, graph, cfg: Engine2Config = None):
         self.cfg = cfg or Engine2Config()
-        pos = np.asarray(graph.node_positions(), dtype=np.float64)[:, :2]
+        positions = np.asarray(graph.node_positions(), dtype=np.float64)
+        _validate_planar_geometry(graph, positions)
+        pos = positions[:, :2]
         # Graph endpoints are node IDs; array rows follow sorted node IDs.
         # Deleting a node need not renumber the remaining graph.
         self.node_ids = sorted(graph.nodes)
@@ -150,8 +170,6 @@ class Engine2:
         else:
             self.na = self.nb = self.nc = np.zeros(0, dtype=np.int64)
             self.nnn_rest = np.zeros(0)
-        self._idx_static = np.concatenate((self.ea, self.eb, self.na,
-                                           self.nc))
         self.excluded = _excluded_pairs(edges, self.trips, self.n)
         n = self.n
         self._excl_codes = np.array(
@@ -268,7 +286,7 @@ class Engine2:
 
         # contact repulsion
         if cfg.use_contact:
-            if step % cfg.contact_rebuild == 1:
+            if (step - 1) % cfg.contact_rebuild == 0:
                 cand = self._contact_candidates(pos, fresh=True)
             if len(cand):
                 dc = pos[cand[:, 1]] - pos[cand[:, 0]]
@@ -286,7 +304,10 @@ class Engine2:
                     wy += [-ccy, ccy]
 
         f = np.empty_like(pos)
-        all_idx = np.concatenate(idx) if len(idx) > 2 else self._idx_static
+        # Scatter precisely the force terms enabled for this call. In
+        # particular, degree-two triplets must not contribute indices when
+        # bending is disabled.
+        all_idx = np.concatenate(idx)
         f[:, 0] = np.bincount(all_idx, np.concatenate(wx), self.n)
         f[:, 1] = np.bincount(all_idx, np.concatenate(wy), self.n)
         return f, cand
@@ -356,8 +377,13 @@ class Engine2:
         cand = self._contact_candidates(pos, fresh=True) if cfg.use_contact \
             else np.zeros((0, 2), dtype=np.int64)
 
-        # frame 0 (undeformed) so every saved array matches frames length
-        self._record(pos, cand, 0.0, vel, 0.0, rec)
+        # Keep the force at the current configuration. Reuse it for the next
+        # explicit update, then recover the new force after displacement and
+        # grip constraints have been applied. Reports and geometry therefore
+        # refer to the same state without evaluating every dynamic step twice.
+        f, cand = self._forces(pos, cand, 1)
+        previous_force = -f[self.right, 0].sum()
+        self._record(pos, cand, previous_force, vel, 0.0, rec)
 
         t0 = time.time()
         total = cfg.num_steps
@@ -390,16 +416,19 @@ class Engine2:
                     pos[self.right] = self._right_disp0
                     pos[self.right, 0] += disp
                     done += 1
+                # The last relaxation update changed pos; recover the
+                # reaction at the configuration that is actually recorded.
+                f, cand = self._forces(pos, cand, done + 1)
                 Fg = -f[self.right, 0].sum()
-                W += Fg * (disp - prev_disp)
+                W += 0.5 * (previous_force + Fg) * (disp - prev_disp)
                 prev_disp = disp
+                previous_force = Fg
                 self._record(pos, cand, Fg, vel, W, rec)
                 if progress_cb is not None:
                     progress_cb(done, total)
         else:
             ramp = int(cfg.num_steps * cfg.ramp_fraction)
             for step in range(1, cfg.num_steps + 1):
-                f, cand = self._forces(pos, cand, step)
                 np.multiply(f, free2, out=fbuf)       # keep f for Fg below
                 fbuf *= dt
                 vel += fbuf
@@ -410,9 +439,11 @@ class Engine2:
                 disp = target_disp * s
                 pos[self.right] = self._right_disp0
                 pos[self.right, 0] += disp
+                f, cand = self._forces(pos, cand, step + 1)
                 Fg = -f[self.right, 0].sum()
-                W += Fg * (disp - prev_disp)
+                W += 0.5 * (previous_force + Fg) * (disp - prev_disp)
                 prev_disp = disp
+                previous_force = Fg
                 if step % cfg.save_interval == 0 or step == cfg.num_steps:
                     self._record(pos, cand, Fg, vel, W, rec)
                     if progress_cb is not None:
@@ -427,6 +458,8 @@ class Engine2:
                 "dt": cfg.dt, "target_stretch": cfg.target_stretch,
                 "use_bending": cfg.use_bending, "use_contact": cfg.use_contact,
                 "n_increments": cfg.n_increments,
+                "force_sampling": "recorded_configuration",
+                "work_quadrature": "trapezoidal_grip_reaction",
                 "wall_seconds": round(time.time() - t0, 2)}
         return Engine2Result(
             frames_xy=frames, edges=self.edges.astype(np.int32),

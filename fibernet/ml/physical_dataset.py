@@ -22,6 +22,12 @@ SIM_KW = dict(target_stretch=1.8, num_steps=1500, save_interval=500,
 
 
 class DatasetStream:
+    """Stream callback features using dense node-row endpoint indices.
+
+    StructureGraph stable IDs are projected by its existing to_numpy() export.
+    Other graph-like callbacks must already provide dense row indices into
+    node_positions(); their identity or topology is not inferred here.
+    """
     def __init__(self, config, path=None, model=None, pool_size=24,
                  factory_builder=None, feature_fn=None, sample_fn=None,
                  spec_fn=None):
@@ -101,6 +107,8 @@ class DatasetStream:
         return np.asarray(self.X, float).reshape(-1, 14), np.asarray(self.Y, float).reshape(-1, 3)
 
     def generate(self, n, progress_cb=None, stop_cb=None):
+        from fibernet.core.structure_graph import StructureGraph
+
         n = int(n)
         if not 1 <= n <= 2000:
             raise ValueError('dataset size must be 1..2000')
@@ -118,8 +126,17 @@ class DatasetStream:
                 factory = self.factory_builder(seed, cfg, rng)
                 try:
                     graph = factory.build()
-                    x = self._feature_row(
-                        self.feature_fn(graph.node_positions(), graph.edge_array()))
+                    if isinstance(graph, StructureGraph):
+                        try:
+                            positions, edges, _ = graph.to_numpy()
+                        except KeyError as exc:
+                            raise ValueError('feature edges contain invalid node IDs') from exc
+                        # Keep the existing (0, 2) callback shape for edgeless graphs.
+                        if edges.size == 0:
+                            edges = edges.reshape(0, 2)
+                    else:
+                        positions, edges = graph.node_positions(), graph.edge_array()
+                    x = self._feature_row(self.feature_fn(positions, edges))
                     candidates.append(factory)
                     features.append(x)
                 except (ValueError, MemoryError) as exc:

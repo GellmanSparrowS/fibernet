@@ -17,10 +17,10 @@ import uuid
 import psutil
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPTS = ('provenance_contract.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
-           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py', 'test_projection_fixtures.py', 'test_projection.py')
-PYTEST_SCRIPTS = tuple(name for name in SCRIPTS if name.startswith('test_'))
-STAGES = tuple((name,) for name in SCRIPTS if name not in PYTEST_SCRIPTS) + (PYTEST_SCRIPTS,)
+SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
+           'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
+           'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py',
+           'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py')
 DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
@@ -246,19 +246,18 @@ def main():
         resource.setrlimit(resource.RLIMIT_FSIZE, (16 * 1024 ** 2, 16 * 1024 ** 2))
         resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
         stages = []
-        for names in STAGES:
-            name = names[0] if len(names) == 1 else 'pytest_contracts'
+        for name in SCRIPTS:
             start = time.monotonic()
             child_cpu_start = usage_cpu(resource.RUSAGE_CHILDREN)
             with (directory / (name + '.log')).open('wb') as log:
-                command = [sys.executable, str(ROOT / 'tests' / name)]
-                if names == PYTEST_SCRIPTS:
-                    command = [sys.executable, '-m', 'pytest', '-p', 'no:cacheprovider',
-                               '-o', 'addopts=', '--basetemp', str(directory / (Path(name).stem + '-pytest')),
-                               '--junitxml', str(directory / 'pytest-contracts.xml'),
-                               '-v', *[str(ROOT / 'tests' / item) for item in names]]
+                command = [sys.executable, '-B', str(ROOT / 'tests' / name)]
+                if name in ('test_electrical.py', 'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py'):
+                    command = [sys.executable, '-B', '-m', 'pytest', '-p', 'no:cacheprovider',
+                               '-o', 'addopts=', '--basetemp', str(directory / (name + '-pytest')),
+                               '--junitxml', str(directory / (name + '.junit.xml')),
+                               '-q', str(ROOT / 'tests' / name)]
                 result = subprocess.run(command, stdout=log, stderr=subprocess.STDOUT)
-            stages.append({'script': name, 'modules': list(names), 'returncode': result.returncode,
+            stages.append({'script': name, 'returncode': result.returncode,
                            'elapsed_s': time.monotonic() - start,
                            'waited_child_cpu_seconds':
                                usage_cpu(resource.RUSAGE_CHILDREN) - child_cpu_start})
@@ -274,7 +273,7 @@ def main():
     print(json.dumps(report, indent=2))
     stages_path = directory / 'stages.json'
     stages = json.loads(stages_path.read_text()) if stages_path.exists() else []
-    incomplete = (list(STAGES[len(stages)]) if len(stages) < len(STAGES)
+    incomplete = (SCRIPTS[len(stages)] if len(stages) < len(SCRIPTS)
                   and all(stage['returncode'] == 0 for stage in stages) else None)
     print(json.dumps({'completed_stages': stages, 'incomplete_stage': incomplete}, indent=2))
     assert not report['failures'], 'bounded adapter suite failed'

@@ -396,7 +396,9 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                   *, max_output_bytes=8*1024*1024) -> LAMMPSRunResult:
     """Strict parser for this compiler's exact dump/thermo protocol only."""
     validate_prepared(prepared)
-    selected = _profiles.contract_profile(json.loads(prepared.contract_json))
+    # PreparedRun is revalidated above; reuse only this call's immutable JSON.
+    contract = json.loads(prepared.contract_json)
+    selected = _profiles.contract_profile(contract)
     if selected:
         _integer(max_output_bytes, 'max_output_bytes', 1, selected['raw_bytes'])
         try:
@@ -407,7 +409,7 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
         raise LAMMPSContractError('output byte budget exceeded')
     if log_text.splitlines().count(prepared.completion_marker) != 1:
         raise LAMMPSContractError('native completion marker missing')
-    expected_types = dict(json.loads(prepared.contract_json)['atom_to_type_id'])
+    expected_types = dict(contract['atom_to_type_id'])
     lines = iter(trajectory_text.splitlines())
     frames = []
     expected = list(range(0, prepared.steps+1, prepared.sample_every))
@@ -429,7 +431,7 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 raise LAMMPSContractError('atom count changed')
             if take() != 'ITEM: BOX BOUNDS ff ff ff':
                 raise LAMMPSContractError('unexpected trajectory box type')
-            box = json.loads(prepared.contract_json)['box_m']
+            box = contract['box_m']
             for row in box:
                 actual = tuple(float(x) for x in take().split())
                 if len(actual) != 2 or any(not math.isfinite(x) for x in actual) or any(
@@ -455,7 +457,6 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
         if any(line.strip() for line in lines):
             raise LAMMPSContractError('unexpected extra trajectory data')
         source = json.loads(prepared.graph_json)
-        contract = json.loads(prepared.contract_json)
         by_id = {nid:i for i,nid in enumerate(prepared.node_ids)}
         for frame in frames:
             for point in frame.positions_m:
@@ -500,7 +501,8 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
                 values = tuple(float(x) for x in parts)
                 if not all(math.isfinite(x) for x in values) or values[0] != int(values[0]) or values[1] != len(prepared.node_ids):
                     raise LAMMPSContractError('invalid thermo values/count')
-                if values[3] < 0 or not math.isclose(values[4],values[2]+values[3],rel_tol=1e-12,abs_tol=0.0):
+                if ((contract.get('model') != 'conservative-ball-cosine-strand-cg/1' and values[2] < 0)
+                        or values[3] < 0 or not math.isclose(values[4],values[2]+values[3],rel_tol=1e-12,abs_tol=0.0)):
                     raise LAMMPSContractError('inconsistent native energy values')
                 thermo.append(ThermoFrame(int(values[0]), *values[2:5], values[5:]))
         thermo_expected = list(range(0,prepared.steps+1,contract['thermo_every'])) if contract.get('profile',{}).get('name') in ('cg_network_sampled_v1','cg_network_mixed_sampled_v1') else expected

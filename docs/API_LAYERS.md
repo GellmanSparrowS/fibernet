@@ -1,5 +1,7 @@
 # API layers and supported simulation routes
 
+[Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
@@ -244,6 +246,30 @@ records, including material dynamics metadata, are retained even in summaries.
 matching loader; `SimResult.load` is not a universal loader for electrical,
 thermal or viscoelastic results. Neither summary nor detailed export is a
 general restart checkpoint or a certificate that material dynamics can resume.
+
+### Saved LAMMPS displacement/reference consistency
+
+New `record_state=True` results retain `dynamics_state.displacement_reference`
+(`lammps_original_si_reference/1`): the exact original graph coordinates in SI,
+stable node-row IDs, declared arithmetic and existing prepared/graph source IDs.
+Detailed export/load checks numeric binary64 `(final_SI - original_SI) / scale`
+in that operation order; signed zero is equivalent. Sample 0 is only
+tolerance-close to the original graph and is **not** the displacement reference.
+
+`result.lammps_displacement_relationship()` reports `consistent` only when that
+saved relationship is checked. This is internal consistency, **not** graph
+authenticity, native accuracy or physics qualification. Malformed declared
+references and inconsistent displacements raise, including before summary save.
+Summary export projects `dynamics_state.displacement_reference` without its
+coordinate and node-ID arrays, retaining an `unavailable / omitted_from_summary`
+descriptor. Unrelated historical user metadata keeps its existing behavior. Historical reference-absent
+results remain readable and reference-absent (`unavailable / not_recorded`);
+loading them does not retroactively certify or invalidate their physics.
+Removing an optional descriptor likewise loses checkability and reports
+`unavailable`, never `consistent`; the format is not tamper-authenticating.
+`record_state=False` likewise has no exact saved-reference check. Neither export
+is a restart. Storage forecasts include the new reference and conversion copies;
+resource caps and native behavior are unchanged.
 
 ## Minimal explicit example
 

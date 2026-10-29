@@ -159,13 +159,13 @@ def test_real_stdio_saved_complex_report_reference(tmp_path):
                 async with ClientSession(reader,writer) as session:
                     assert (await session.initialize()).protocolVersion=='2025-11-25'
                     listing=await session.list_tools()
-                    assert len(listing.tools)==7 and len(listing.model_dump_json().encode())<65536
+                    assert len(listing.tools)==9 and len(listing.model_dump_json().encode())<65536
                     definition=next(t for t in listing.tools if t.name==TOOL)
                     assert definition.execution.taskSupport=='forbidden'
                     provenance=json.loads((await session.read_resource('fibernet://provenance/1')).contents[0].text)
                     manifest=json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text())
                     assert provenance['canonical_core_manifest_sha256']==sha(canonical(manifest))
-                    assert provenance['source_file_count']==242
+                    assert provenance['source_file_count']==248
                     catalog=(await session.call_tool('fibernet_catalog',{})).structuredContent
                     assert 'project_fiber_network_report' in catalog['capabilities']
                     graph=catalog['graphs'][0];gid=graph['graph_id']
@@ -286,10 +286,13 @@ def test_no_publication_for_output_contract_failures_or_provenance(tmp_path):
         supervisor.value={'projection_report':report,'_core_provenance':store.core_provenance}
         assert asyncio.run(ns['call'](TOOL,{'graph_id':gid})).structuredContent['artifact']==good.structuredContent['artifact']
         files=set(store.files)
-        for error in (ContractError('controlled storage refusal'),OSError('controlled storage failure')):
-            with patch.object(store,'artifact',side_effect=error):
+        for error in (ContractError('controlled storage refusal'),OSError('controlled storage failure'),server.ArtifactLimitError('controlled quota')):
+            with patch.object(store,'stage_artifact',side_effect=error):
                 failed=asyncio.run(ns['call'](TOOL,{'graph_id':gid}))
             assert failed.isError and 'artifact' not in failed.structuredContent
+            if isinstance(error,server.ArtifactLimitError):
+                assert failed.structuredContent['error']['code']=='PROJECTION_RESOURCE_LIMIT'
+                assert failed.structuredContent['error']['category']=='resource'
             assert store.artifacts==before and store.total==total and store.files==files
     finally:store.close()
 
@@ -385,6 +388,7 @@ def test_new_operation_completed_output_boundary_reaps_without_publication(tmp_p
     _,output,_,_=configure(tmp_path,[(small(),'m','lab_xyz')])
     store=server.ManagedStore(str(tmp_path/'manifest.json'),str(output));supervisor=server.Supervisor(store)
     gid=next(iter(store.graphs));request=projection_request(INFO,{});reaped=[]
+    source=Path(store.path)/gid;source_bytes=source.read_bytes();source_hash=sha(source_bytes)
     class Completed:
         pid=999999;returncode=0
         def poll(self):return 0
@@ -393,11 +397,20 @@ def test_new_operation_completed_output_boundary_reaps_without_publication(tmp_p
         if mode=='oversize':raw=b' '* (projection.MAX_PROJECTION_WORKER_BYTES+1)
         elif mode=='malformed':raw=b'{bad json'
         else:raw=canonical({'core_provenance':{},'result':{}})
-        Path(command[5]).write_bytes(raw)
+        assert len(command)==10
+        assert command[:5]==[sys.executable,'-B','-m','fibernet_mcp.worker','fiber_projection_report']
+        assert Path(command[5])==source and command[7]==source_hash
+        assert source.read_bytes()==source_bytes
+        destination=Path(command[6])
+        assert destination.parent==Path(store.path) and destination.name.startswith('worker-')
+        assert destination not in (source,Path(command[8]))
+        destination.write_bytes(raw)
+        assert source.read_bytes()==source_bytes and sha(source.read_bytes())==source_hash
         return Completed()
     try:
         with patch('fibernet_mcp.server.subprocess.Popen',side_effect=launch):
             result=asyncio.run(supervisor.run('fiber_projection_report',gid,request))
+        assert source.read_bytes()==source_bytes and sha(source.read_bytes())==source_hash
         assert result['error']['code']==('WORKER_PROVENANCE_MISMATCH' if mode=='provenance' else 'PROJECTION_WORKER_OUTPUT_REJECTED')
         assert result['error']['category']=='internal' and reaped==[True]
         assert supervisor.audit[0]['reason']=='failed' and supervisor.audit[0]['reaped']

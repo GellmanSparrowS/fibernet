@@ -27,7 +27,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from pathlib import Path
 
 import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.collections import LineCollection
@@ -35,6 +34,18 @@ from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 from fibernet.core.structure_graph import StructureGraph
+
+
+def _display_bounds(graph):
+    """Bounds of the polylines drawn, including edge-owned curve points."""
+    positions = graph.node_positions()
+    lower, upper = positions.min(axis=0), positions.max(axis=0)
+    for edge in graph.edges.values():
+        points = edge.internal_points
+        if points is not None and len(points):
+            lower = np.minimum(lower, points.min(axis=0))
+            upper = np.maximum(upper, points.max(axis=0))
+    return lower, upper
 
 
 # ======================================================================
@@ -274,7 +285,8 @@ def render_graph(
         cdata = (cdata + np.pi) / (2 * np.pi)  # normalize to [0, 1]
     elif color_by == "length":
         cdata = graph.edge_lengths()
-        cdata = (cdata - cdata.min()) / (cdata.max() - cdata.min() + 1e-12)
+        if cdata.size:
+            cdata = (cdata - cdata.min()) / (cdata.max() - cdata.min() + 1e-12)
     elif color_by == "fiber":
         # Group edges into fibers (connected chains) and assign colors per fiber
         # Simple approach: use edge index modulo palette size
@@ -337,8 +349,8 @@ def render_graph(
 
     # Auto-scale
     if graph.num_nodes > 0:
-        bb_min, bb_max = graph.bounding_box()
-        margin = (bb_max - bb_min).max() * 0.05
+        bb_min, bb_max = _display_bounds(graph)
+        margin = max(float((bb_max[:2] - bb_min[:2]).max()) * 0.05, 1e-12)
         ax.set_xlim(bb_min[0] - margin, bb_max[0] + margin)
         ax.set_ylim(bb_min[1] - margin, bb_max[1] + margin)
 
@@ -738,10 +750,10 @@ def render_graph_3d(
 
     # Auto-scale
     if graph.num_nodes > 0:
-        pos = graph.node_positions()
+        bb_min, bb_max = _display_bounds(graph)
         for ax_obj, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
-            mn, mx = pos[:, dim].min(), pos[:, dim].max()
-            margin = (mx - mn) * 0.05
+            mn, mx = bb_min[dim], bb_max[dim]
+            margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
             ax_obj(mn - margin, mx + margin)
 
     ax.view_init(elev=elevation, azim=azimuth)
@@ -915,10 +927,10 @@ def _render_3d_segments(ax, graph, theme, line_width, elev, azim, title):
         ax.add_collection3d(lc3d)
 
     if graph.num_nodes > 0:
-        pos = graph.node_positions()
+        bb_min, bb_max = _display_bounds(graph)
         for setter, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
-            mn, mx = pos[:, dim].min(), pos[:, dim].max()
-            margin = (mx - mn) * 0.05
+            mn, mx = bb_min[dim], bb_max[dim]
+            margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
             setter(mn - margin, mx + margin)
 
     ax.view_init(elev=elev, azim=azim)
@@ -1363,10 +1375,10 @@ def render_stress_3d(
 
     # Auto-scale
     if deformed.num_nodes > 0:
-        pos = deformed.node_positions()
+        bb_min, bb_max = _display_bounds(deformed)
         for setter, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
-            mn, mx = pos[:, dim].min(), pos[:, dim].max()
-            margin = (mx - mn) * 0.05
+            mn, mx = bb_min[dim], bb_max[dim]
+            margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
             setter(mn - margin, mx + margin)
 
     ax.view_init(elev=elevation, azim=azimuth)

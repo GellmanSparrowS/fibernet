@@ -168,7 +168,7 @@ def __getattr__(name):
         "permutation_importance": "fibernet.ml.xai",
         # Optimization
         "FeatureExtractor": "fibernet.ml.features",
-        "GraphFeatureExtractor": "fibernet.ml.features",
+        "GraphFeatureExtractor": "fibernet.analysis.graph_features",
         "MultiObjectiveOptimizer": "fibernet.ml.optimization",
         "ParetoAnalysis": "fibernet.ml.optimization",
 

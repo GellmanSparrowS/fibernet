@@ -135,7 +135,7 @@ async def smoke(area):
         async with stdio_client(parameters) as (reader, writer):
             async with ClientSession(reader, writer) as session:
                 assert (await session.initialize()).protocolVersion == '2025-11-25'
-                assert len((await session.list_tools()).tools) == 7
+                assert len((await session.list_tools()).tools) == 9
                 resources = await session.list_resources()
                 assert {str(item.uri) for item in resources.resources} == {'fibernet://capabilities', 'fibernet://provenance/1'}
                 provenance = await session.read_resource('fibernet://provenance/1')
@@ -214,7 +214,7 @@ with tempfile.TemporaryDirectory(prefix='fibernet-mcp-installed-') as temporary:
     assert not list((Path(temporary)/'output').iterdir())
 print(json.dumps({'wheel_license_bytes_match': True, 'wheel_core_hashes': len(manifest),
                   'installed_core_hashes': len(manifest), 'real_sdk_initialize': True,
-                  'listed_tools': 7, 'catalog_nodes': 4340, 'catalog_edges': 5073,
+                  'listed_tools': 9, 'catalog_nodes': 4340, 'catalog_edges': 5073,
                   'installed_worker_full_native_parity': True,
                   'installed_electrical': electrical_report,
                   'source_tree': TREE}, indent=2))

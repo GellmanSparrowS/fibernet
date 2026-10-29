@@ -91,7 +91,7 @@ Tool errors set `isError=true` and return fixed, path-free codes:
   violation group, total count, first at most 128 edge IDs, and a truncation flag.
 - `INVALID_PROJECTION_INPUT` or `PROJECTION_NUMERIC_RANGE` (domain).
 - `PROJECTION_GRAPH_LIMIT`, `PROJECTION_REQUEST_LIMIT`, `PROJECTION_LIMIT`,
-  `PROJECTION_RESULT_LIMIT` (resource).
+  `PROJECTION_RESULT_LIMIT`, `PROJECTION_RESOURCE_LIMIT` (resource).
 - `PROJECTION_OUTPUT_CONTRACT_FAILURE` or `PROJECTION_WORKER_OUTPUT_REJECTED`
   (internal); existing busy, worker failure/timeout and provenance refusals also apply.
 
@@ -136,3 +136,12 @@ publication, provenance and worker ownership. The hard-kill test deliberately
 SIGSTOPs the actual worker to exercise escalation; it is not physical or numerical
 cancellation validation. Source-extracted/synthetic controls are labelled separately
 from actual SDK execution. Installed-wheel checks also compare the frozen report.
+
+## Publication and cancellation
+
+The complete reply is validated against the real staged artifact descriptor
+before a final cancellation checkpoint. A synchronous commit then publishes
+the saved report. Pending cancellation publishes nothing; cancellation after
+commit leaves the completed artifact available. Repeated requests validate the
+reply and existing bytes before reusing an artifact. Failed writes remove only
+the owned partial output.

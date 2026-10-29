@@ -98,7 +98,9 @@ class ViscoelasticResult:
         return copy.deepcopy(self._data)
 
     def save(self, path):
+        """Atomically replace JSON, creating missing parent directories."""
         path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
         temporary = None
         try:
             with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8',

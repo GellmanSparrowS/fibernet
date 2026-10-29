@@ -1,0 +1,644 @@
+{
+  "source_commit": "39b3c493293ca58d77c311f1eead1d5c7f3b6895",
+  "source_module_sha256": "210e679eb617f49514f46b260bf53478f9141cd84f64949a8cf8066eb55b099c",
+  "qualification": "Actual full source module execution with Taichi import disabled; prescribed displacements only; no solver invocation. JSON strings are exact StructureGraph.save_json bytes.",
+  "graph": {
+    "version": "3.1",
+    "dimension": 2,
+    "tolerance": 1e-06,
+    "next_node_id": 22,
+    "next_edge_id": 30,
+    "box_size": [
+      3.0,
+      4.0,
+      5.0
+    ],
+    "metadata": {
+      "units": {
+        "length": "m"
+      },
+      "provenance": {
+        "source": "literal prescribed test fixture; no generator or solver"
+      }
+    },
+    "nodes": [
+      {
+        "id": 9,
+        "position": [
+          2.0,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "label": {
+            "value": "right"
+          }
+        }
+      },
+      {
+        "id": 4,
+        "position": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "boundary": [
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "metadata": {
+          "label": {
+            "value": "left"
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": 13,
+        "node_i": 9,
+        "node_j": 4,
+        "radius": 0.1,
+        "material": {
+          "name": "parallel",
+          "youngs_modulus": 1200.0,
+          "extra": {
+            "phase": {
+              "name": "b"
+            }
+          }
+        },
+        "segments": 4,
+        "internal_points": [],
+        "metadata": {
+          "nested": {
+            "tag": "empty"
+          }
+        }
+      },
+      {
+        "id": 12,
+        "node_i": 4,
+        "node_j": 9,
+        "radius": 0.2,
+        "material": {
+          "name": "curved",
+          "youngs_modulus": 800.0,
+          "extra": {
+            "phase": {
+              "name": "a"
+            }
+          }
+        },
+        "segments": 5,
+        "internal_points": [
+          [
+            0.4,
+            0.5,
+            0.0
+          ],
+          [
+            1.4,
+            0.2,
+            0.0
+          ]
+        ],
+        "metadata": {
+          "nested": {
+            "tag": "curved"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "node_i": 9,
+        "node_j": 4,
+        "radius": 0.3,
+        "material": {
+          "name": "straight",
+          "youngs_modulus": 1000.0,
+          "extra": {
+            "phase": {
+              "name": "c"
+            }
+          }
+        },
+        "segments": 1,
+        "internal_points": null,
+        "metadata": {
+          "nested": {
+            "tag": "straight"
+          }
+        }
+      }
+    ]
+  },
+  "node_order": [
+    4,
+    9
+  ],
+  "cases": [
+    {
+      "name": "baseline",
+      "scale": -2.5,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -2.5\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -0.625,\n        0.3125,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.3125,\n        -0.625,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.3541666666666665,\n          5.551115123125783e-17,\n          0.0\n        ],\n        [\n          1.333333333333333,\n          -0.31249999999999994,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "d5fedbbd6a4862641a2b4ae54da637c3e96a311feb4c4ed8bf459b7ad6b51187"
+    },
+    {
+      "name": "baseline",
+      "scale": -1.0,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -0.25,\n        0.125,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.125,\n        -0.25,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.5416666666666665,\n          1.3877787807814457e-17,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          -0.12499999999999999,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "b35258749aa1101a52bf64a9112c694986d58f68f67572d72d87e1096a3cc219"
+    },
+    {
+      "name": "baseline",
+      "scale": -0.0,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "66965d8776228b269c4c4d4549e217ba625a77edf0dad7c0c5676cfb84304140"
+    },
+    {
+      "name": "baseline",
+      "scale": 0.0,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "50735401e69ff7930b191a4b081ddad1e108f9584ac87c720dfa221035fb0f17"
+    },
+    {
+      "name": "baseline",
+      "scale": 0.25,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.25\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0625,\n        -0.03125,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.96875,\n        0.0625,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6979166666666666,\n          -3.469446951953614e-18,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.031249999999999997,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "1ce6bf24b2089320578c4147beca1fb80655be6748a4782eaf41b1666f04bf60"
+    },
+    {
+      "name": "baseline",
+      "scale": 1.0,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.25,\n        -0.125,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.875,\n        0.25,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.7916666666666667,\n          -1.3877787807814457e-17,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.12499999999999999,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "97db35f94ecf426868482983eff3003855b430005a50d9e1f14ae9f0c18bcf6f"
+    },
+    {
+      "name": "baseline",
+      "scale": 3.0,
+      "u": [
+        0.25,
+        -0.125,
+        123.0,
+        -0.125,
+        0.25,
+        -456.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 3.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.75,\n        -0.375,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.625,\n        0.75,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          1.0416666666666665,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.375,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "48f9202be7e46d1fc10c39b2f859c43e59eba3146ed0f4b6ee897c6fbc823c87"
+    },
+    {
+      "name": "swapped",
+      "scale": -2.5,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -2.5\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -5.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        7.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          -1.0000000000000009,\n          0.0,\n          0.0\n        ],\n        [\n          2.999999999999999,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "c42cb5396f17a267ed84220a8fd0512228a055fc33b4e0f196ec26ebed0fadaf"
+    },
+    {
+      "name": "swapped",
+      "scale": -1.0,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        4.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          -2.220446049250313e-16,\n          0.0,\n          0.0\n        ],\n        [\n          1.9999999999999998,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "610f1f77a74fad3d8605bdcbd1e97f539cad28bf49af8f3eb6fae4ff18d549be"
+    },
+    {
+      "name": "swapped",
+      "scale": -0.0,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "66965d8776228b269c4c4d4549e217ba625a77edf0dad7c0c5676cfb84304140"
+    },
+    {
+      "name": "swapped",
+      "scale": 0.0,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "50735401e69ff7930b191a4b081ddad1e108f9584ac87c720dfa221035fb0f17"
+    },
+    {
+      "name": "swapped",
+      "scale": 0.25,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.25\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.5,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.5,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.8333333333333334,\n          0.0,\n          0.0\n        ],\n        [\n          1.1666666666666667,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "56967fb5c67290435f9425277dcabd33e84703ed39098cf9235d494131c766a3"
+    },
+    {
+      "name": "swapped",
+      "scale": 1.0,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          1.3333333333333335,\n          0.0,\n          0.0\n        ],\n        [\n          0.6666666666666667,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "27cb86634d0b07898aaaab330c789524e034aa99f45bed5387bb5d530315b8c3"
+    },
+    {
+      "name": "swapped",
+      "scale": 3.0,
+      "u": [
+        2.0,
+        0.0,
+        0.0,
+        -2.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 3.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        6.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        -4.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          2.666666666666667,\n          0.0,\n          0.0\n        ],\n        [\n          -0.6666666666666665,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "0842e98bcc02accbf747968bf3db2c056c686f61dc2a8a530358f5be735756ae"
+    },
+    {
+      "name": "coincident",
+      "scale": -2.5,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -2.5\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -2.5,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        4.5,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          -0.16666666666666696,\n          0.0,\n          0.0\n        ],\n        [\n          2.1666666666666665,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "de1563452a59960995f2c944a8a92bfe5567307afb3a1b609d0536b88cfd757b"
+    },
+    {
+      "name": "coincident",
+      "scale": -1.0,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -1.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        3.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.33333333333333326,\n          0.0,\n          0.0\n        ],\n        [\n          1.6666666666666665,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "016060b4a05797d2d247ae918b3cc00d96ad214d52a36884e8767d5ea63cd59f"
+    },
+    {
+      "name": "coincident",
+      "scale": -0.0,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "66965d8776228b269c4c4d4549e217ba625a77edf0dad7c0c5676cfb84304140"
+    },
+    {
+      "name": "coincident",
+      "scale": 0.0,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "50735401e69ff7930b191a4b081ddad1e108f9584ac87c720dfa221035fb0f17"
+    },
+    {
+      "name": "coincident",
+      "scale": 0.25,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.25\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.25,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.75,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.75,\n          0.0,\n          0.0\n        ],\n        [\n          1.2499999999999998,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "22b71ea07fdee3d496e02531039e001d507328ba9a515aa29162eb948dc54a72"
+    },
+    {
+      "name": "coincident",
+      "scale": 1.0,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        1.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          1.0,\n          0.0,\n          0.0\n        ],\n        [\n          1.0,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "a8af35ea2e57638ad1e0be7ce066a79f6c295138a144e76b4e406b15621ff5ec"
+    },
+    {
+      "name": "coincident",
+      "scale": 3.0,
+      "u": [
+        1.0,
+        0.0,
+        0.0,
+        -1.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 3.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        3.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        -1.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          1.6666666666666667,\n          0.0,\n          0.0\n        ],\n        [\n          0.33333333333333337,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "916e0fece9ea5c93608d834476b7a73252052d11c3cd0a9cca90d4e6d4e94b56"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": -2.5,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -2.5\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -1e-323,\n        1e-323,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          5e-324,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          5e-324,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "062c01164b259da4282855ea0a3dce016c6afacef6345ddb4332b09154222a3e"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": -1.0,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -5e-324,\n        5e-324,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          5e-324,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "0d33b762df4a76637cd965a6c9d386b4f7aec20ab12697e6d2b9a5ea566935a7"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": -0.0,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "66965d8776228b269c4c4d4549e217ba625a77edf0dad7c0c5676cfb84304140"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": 0.0,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "50735401e69ff7930b191a4b081ddad1e108f9584ac87c720dfa221035fb0f17"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": 0.25,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.25\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "89269520084ca631c3029aef878d0a52e19dbea13fc3d67621842b3ee23c3571"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": 1.0,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        5e-324,\n        -5e-324,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          -5e-324,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "06223290efe29f37052c2b444bbe9d63894d7652d7f290178a5137c092e0ca1a"
+    },
+    {
+      "name": "tiny_signed",
+      "scale": 3.0,
+      "u": [
+        5e-324,
+        -5e-324,
+        -0.0,
+        -0.0,
+        0.0,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 3.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        1.5e-323,\n        -1.5e-323,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          -1e-323,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          -5e-324,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "9e25e40c09f7522e4da827a7ff815d3ab90446c973efafc564e28db000e8e5c1"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": -2.5,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -2.5\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -2.5000002500000005e-06,\n        2.5000002500000005e-06,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.00000250000025,\n        -2.5000002500000005e-06,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666658333332499,\n          8.33333416666667e-07,\n          0.0\n        ],\n        [\n          1.3333341666667498,\n          -8.333334166666667e-07,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "3ae9bfdc5dbe07bc3eb29ab5c32310281d31b2d0b9638d658594bbc345c34b27"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": -1.0,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        -1.0000001e-06,\n        1.0000001e-06,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0000010000001,\n        -1.0000001e-06,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666663333332999,\n          3.3333336666666677e-07,\n          0.0\n        ],\n        [\n          1.3333336666667,\n          -3.333333666666666e-07,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "1347c406c4ae466f674bfbb48fe7263a5c598853ecc18cdbd08b94e093d64523"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": -0.0,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": -0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "66965d8776228b269c4c4d4549e217ba625a77edf0dad7c0c5676cfb84304140"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": 0.0,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        0.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        2.0,\n        0.0,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666666666666666,\n          0.0,\n          0.0\n        ],\n        [\n          1.3333333333333333,\n          0.0,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "50735401e69ff7930b191a4b081ddad1e108f9584ac87c720dfa221035fb0f17"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": 0.25,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 0.25\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        2.50000025e-07,\n        -2.50000025e-07,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.999999749999975,\n        2.50000025e-07,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666667500000083,\n          -8.333334166666669e-08,\n          0.0\n        ],\n        [\n          1.3333332499999915,\n          8.333334166666665e-08,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "9ee2418c46648332d58d102dd3d85c5a79f44d84d9436f38fa3d3e842a5263ad"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": 1.0,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 1.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        1.0000001e-06,\n        -1.0000001e-06,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.9999989999999,\n        1.0000001e-06,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666670000000333,\n          -3.3333336666666677e-07,\n          0.0\n        ],\n        [\n          1.3333329999999666,\n          3.333333666666666e-07,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "75e11b9603d9e0bb491c16fbf68b2f27af0a2ced707444b575fe613d761c0fb1"
+    },
+    {
+      "name": "bucket_boundary",
+      "scale": 3.0,
+      "u": [
+        1.0000001e-06,
+        -1.0000001e-06,
+        0.0,
+        -1.0000001e-06,
+        1.0000001e-06,
+        0.0
+      ],
+      "json": "{\n  \"version\": \"3.1\",\n  \"dimension\": 2,\n  \"tolerance\": 1e-06,\n  \"next_node_id\": 22,\n  \"next_edge_id\": 30,\n  \"box_size\": [\n    3.0,\n    4.0,\n    5.0\n  ],\n  \"metadata\": {\n    \"units\": {\n      \"length\": \"m\"\n    },\n    \"provenance\": {\n      \"source\": \"literal prescribed test fixture; no generator or solver\"\n    },\n    \"deformed\": true,\n    \"deformation_scale\": 3.0\n  },\n  \"nodes\": [\n    {\n      \"id\": 4,\n      \"position\": [\n        3.0000003000000003e-06,\n        -3.0000003000000003e-06,\n        0.0\n      ],\n      \"boundary\": [\n        true,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"left\"\n        }\n      }\n    },\n    {\n      \"id\": 9,\n      \"position\": [\n        1.9999969999997,\n        3.0000003000000003e-06,\n        0.0\n      ],\n      \"boundary\": [\n        false,\n        false,\n        false,\n        false,\n        false,\n        false\n      ],\n      \"metadata\": {\n        \"label\": {\n          \"value\": \"right\"\n        }\n      }\n    }\n  ],\n  \"edges\": [\n    {\n      \"id\": 12,\n      \"node_i\": 4,\n      \"node_j\": 9,\n      \"radius\": 0.2,\n      \"material\": {\n        \"name\": \"curved\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 800.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 307.6923076923077,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"a\"\n          }\n        }\n      },\n      \"segments\": 5,\n      \"internal_points\": [\n        [\n          0.6666676666667667,\n          -1.0000001000000005e-06,\n          0.0\n        ],\n        [\n          1.3333323333332334,\n          1.0000000999999999e-06,\n          0.0\n        ]\n      ],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"curved\"\n        }\n      }\n    },\n    {\n      \"id\": 13,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.1,\n      \"material\": {\n        \"name\": \"parallel\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1200.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 461.53846153846155,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"b\"\n          }\n        }\n      },\n      \"segments\": 4,\n      \"internal_points\": [],\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"empty\"\n        }\n      }\n    },\n    {\n      \"id\": 17,\n      \"node_i\": 9,\n      \"node_j\": 4,\n      \"radius\": 0.3,\n      \"material\": {\n        \"name\": \"straight\",\n        \"density\": 1000.0,\n        \"youngs_modulus\": 1000.0,\n        \"poissons_ratio\": 0.3,\n        \"shear_modulus\": 384.6153846153846,\n        \"extra\": {\n          \"phase\": {\n            \"name\": \"c\"\n          }\n        }\n      },\n      \"segments\": 1,\n      \"internal_points\": null,\n      \"metadata\": {\n        \"nested\": {\n          \"tag\": \"straight\"\n        }\n      }\n    }\n  ]\n}",
+      "sha256": "ec8064e8afeca51baa0cdadf6eb27e985682c0fc1d73d275f9531d93a9ff3054"
+    }
+  ]
+}

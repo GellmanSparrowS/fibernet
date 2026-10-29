@@ -23,17 +23,41 @@ import json
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING as _TYPE_CHECKING
+
+if _TYPE_CHECKING:
+    from matplotlib.figure import Figure
 
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
+import fibernet.sim as _sim
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
 from fibernet.sim._taichi_geometry import (
     preflight_taichi_geometry as _preflight_taichi_geometry,
     validate_geometry_policy as _validate_geometry_policy,
 )
+
+
+# Keep provider-independent utilities usable without probing a native engine.
+# Explicit alias access still returns the original implementation object.
+_LAZY_EXPORTS = {
+    "TaichiEngine": "fibernet.sim.accelerated",
+    "SimResult": "fibernet.sim.accelerated",
+    "render_graph": "fibernet.viz.render",
+    "render_deformation": "fibernet.viz.render",
+}
+for _name in _LAZY_EXPORTS:
+    globals().pop(_name, None)
+del _name
+
+
+def _taichi_engine_class():
+    # Preserve caller/test overrides of the historical module-level alias.
+    if "TaichiEngine" in globals():
+        return globals()["TaichiEngine"]
+    return __getattr__("TaichiEngine")
 
 
 def show(
@@ -43,8 +67,8 @@ def show(
     save_path: Optional[str] = None,
     title: str = "",
     **kwargs,
-) -> None:
-    """一行出图：可视化 StructureGraph。
+) -> "Figure":
+    """Render a StructureGraph with its declared 2-D or 3-D dimension.
 
     Parameters
     ----------
@@ -53,9 +77,20 @@ def show(
     theme : str
         主题: "dark" (紫黑), "light" (白底), "blueprint", "publication"。
     save_path : str, optional
-        保存路径，默认不保存。
+        Optional image path; missing parent directories are created by the renderer.
     title : str
-        标题。
+        Plot title.
+    **kwargs
+        Forwarded unchanged to render_graph for dimension=2 or render_graph_3d
+        for dimension=3. Renderer-specific options are not interchangeable:
+        e.g. color_by is 2-D-only; elevation/azimuth are 3-D-only. Unsupported
+        options raise TypeError rather than being silently ignored. For an
+        explicit XY projection of a 3-D graph, call render_graph directly.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The figure, available for notebook display or further customization.
 
     Examples
     --------
@@ -64,12 +99,20 @@ def show(
     >>> show(g)
     >>> show(g, theme="light", save_path="honeycomb.png")
     """
-    from fibernet.viz.render import render_graph
+    from inspect import signature
+    from fibernet.viz.render import render_graph, render_graph_3d
 
-    fig = render_graph(graph, theme=theme, title=title, **kwargs)
+    renderer = render_graph_3d if graph.dimension == 3 else render_graph
+    kwargs.setdefault("dpi", 150)
+    try:
+        signature(renderer).bind(graph, theme=theme, title=title, save_path=save_path, **kwargs)
+    except TypeError as exc:
+        raise TypeError(
+            f"show() uses {renderer.__name__} for a {graph.dimension}D graph: {exc}. "
+            "Use render_graph(graph, ...) for an explicit 2-D XY projection."
+        ) from exc
+    fig = renderer(graph, theme=theme, title=title, save_path=save_path, **kwargs)
     if save_path:
-        fig.savefig(save_path, dpi=150, bbox_inches='tight',
-                    facecolor=fig.get_facecolor())
         print(f"Saved to {save_path}")
     return fig
 
@@ -83,7 +126,7 @@ def simulate(
     *,
     stretch_ratio: Optional[float] = None,
     **kwargs,
-) -> Union[SimResult, _ViscoelasticResult]:
+) -> Union[_sim.SimResult, _ViscoelasticResult]:
     """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
 
     Parameters
@@ -201,7 +244,8 @@ def simulate(
         if (isinstance(num_threads, (bool, np.bool_)) or
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
-        method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        engine_class = _taichi_engine_class()
+        method = engine_class.stretch_test if mode == "stretch" else engine_class.dynamics
         kwargs.setdefault("geometry_policy", "reject_internal_points")
         method_kwargs = dict(kwargs)
         if mode == "stretch":
@@ -210,7 +254,7 @@ def simulate(
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
         _preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])
-        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
+        engine = engine_class(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
         else:
@@ -240,11 +284,75 @@ def simulate(
     return result
 
 
+def _batch_report_inputs(configs, output, report_path, mode, strain):
+    """Detach JSON-safe inputs and reject destination aliases before any work."""
+    import os
+    import stat
+
+    destination = Path(report_path)
+    csv_path = Path(output)
+    if (destination.resolve() == csv_path.resolve() or
+            (destination.exists() and csv_path.exists() and
+             os.path.samefile(destination, csv_path))):
+        raise ValueError("report_path must differ from the CSV output path")
+    if not destination.parent.is_dir():
+        raise ValueError("report_path parent directory must already exist")
+    if destination.is_symlink() or (destination.exists() and
+            not stat.S_ISREG(destination.stat().st_mode)):
+        raise ValueError("report_path must be a regular file, not a symlink or special file")
+
+    def validate(value):
+        if value is None or type(value) in (str, bool, int, float):
+            return
+        if type(value) in (list, tuple):
+            for item in value:
+                validate(item)
+            return
+        if type(value) is dict and all(type(key) is str for key in value):
+            for item in value.values():
+                validate(item)
+            return
+        raise ValueError("report inputs must contain only JSON-safe values with string keys")
+
+    try:
+        validate(configs)
+        validate(mode)
+        validate(strain)
+        if not isinstance(configs, (list, tuple)) or not all(type(c) is dict for c in configs):
+            raise ValueError("report configs must be a sequence of dictionaries")
+        detached = json.loads(json.dumps(configs, allow_nan=False))
+        json.dumps({'mode': mode, 'strain': strain}, allow_nan=False)
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ValueError("report inputs must be finite, acyclic JSON-safe values") from exc
+    return destination, detached
+
+
+def _write_batch_report(destination, report):
+    """Atomic single-file private JSON; not a CSV/report transaction."""
+    import os
+    import tempfile
+
+    payload = json.dumps(report, indent=2, allow_nan=False)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8",
+                dir=destination.parent, prefix=".batch-report-", suffix=".tmp",
+                delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(payload)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
     mode: str = "stretch",
     strain: float = 2.0,
+    *,
+    report_path: Optional[str] = None,
 ) -> str:
     """Run independent FEM stretch cases and write their measured outputs to CSV.
 
@@ -258,6 +366,20 @@ def batch_simulate(
         模拟模式。
     strain : float
         施加应变。
+
+    report_path : str, optional
+        Opt-in private JSON diagnostic report. Parent must exist; cannot alias
+        output. Configs must be finite JSON-safe dictionaries (tuples become
+        arrays). Includes every original input index/config, error type/message
+        without traceback, and zero-based successful CSV data-row links.
+        Configs and exception messages may contain user data: review before
+        sharing. No report is written by default. All-failed writes the report
+        then raises without writing a CSV. Report failures propagate; CSV and
+        report publication are not a two-file atomic transaction. A CSV write
+        or output-stream failure can stop the call before report publication;
+        this is not crash-complete recording. success_indices describes cases
+        with status success; csv_indices describes rows actually saved (a
+        progress-print error can follow row collection).
 
     Returns
     -------
@@ -276,6 +398,11 @@ def batch_simulate(
     """
     import csv
 
+    report_destination = None
+    if report_path is not None:
+        report_destination, report_configs = _batch_report_inputs(
+            configs, output, report_path, mode, strain)
+    cases = []
     rows = []
     for i, cfg in enumerate(configs):
         unit = cfg.get("unit", "honeycomb")
@@ -283,10 +410,13 @@ def batch_simulate(
         grid = cfg.get("grid", (4, 4))
         seed = cfg.get("seed", 42)
 
+        stage = "generation"
         try:
             g = pattern_2d(unit=unit, box=box, grid=grid, seed=seed, **cfg.get("kwargs", {}))
+            stage = "simulation"
             result = simulate(g, mode=mode, strain=strain, backend="fem")
 
+            stage = "result"
             row = {
                 "id": i,
                 "unit": unit,
@@ -301,9 +431,20 @@ def batch_simulate(
                 "strain": strain,
             }
             rows.append(row)
+            if report_destination is not None:
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'success', 'csv_row': len(rows) - 1,
+                              'csv_id': i})
+            stage = "progress"
             print(f"{i+1}/{len(configs)}: {unit} (max_force={row['max_force']:.2e})")
 
         except Exception as e:
+            if report_destination is not None:
+                prior = cases.pop() if cases and cases[-1]['index'] == i else {}
+                cases.append({'index': i, 'config': report_configs[i],
+                              'status': 'failure', 'stage': stage,
+                              'error_type': type(e).__name__, 'message': str(e),
+                              'csv_row': prior.get('csv_row'), 'csv_id': prior.get('csv_id')})
             print(f"{i+1}/{len(configs)}: {unit} failed: {e}")
 
     if rows:
@@ -312,7 +453,24 @@ def batch_simulate(
             writer.writeheader()
             writer.writerows(rows)
         print(f"Saved {len(rows)} results to {output}")
-    else:
+    if report_destination is not None:
+        import hashlib
+        report = {'schema': 'fibernet.batch_report/1',
+                  'mode': mode, 'strain': strain,
+                  'status': 'completed' if rows else 'all_failed',
+                  'success_count': sum(c['status'] == 'success' for c in cases),
+                  'failure_count': sum(c['status'] == 'failure' for c in cases),
+                  'success_indices': [c['index'] for c in cases if c['status'] == 'success'],
+                  'csv_indices': [row['id'] for row in rows],
+                  'csv_written': bool(rows),
+                  'csv_sha256': hashlib.sha256(Path(output).read_bytes()).hexdigest() if rows else None,
+                  'cases': cases}
+        try:
+            _write_batch_report(report_destination, report)
+        except Exception as exc:
+            raise RuntimeError("Batch diagnostic report could not be written; "
+                               "the CSV may already have been written") from exc
+    if not rows:
         raise RuntimeError('All batch simulations failed; no CSV was written')
 
     return output
@@ -1332,7 +1490,7 @@ def batch_simulate_from_json(
     if not pending:
         return str(csv_file)
 
-    engine = TaichiEngine()
+    engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
 
     def write_checkpoint():
@@ -1411,21 +1569,24 @@ def batch_simulate_from_json(
 
 
 def __getattr__(name):
-    # Preserve the historical easy-module re-exports without loading plotting
-    # for simulate(), training helpers, or importing the top-level package.
-    if name in {"render_graph", "render_deformation"}:
+    # Preserve historical aliases; propagate the owning implementation's error.
+    if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module("fibernet.viz.render"), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__():
-    return sorted(set(globals()) | {"render_graph", "render_deformation"})
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
 # Preserve the historical wildcard surface, including incidental public imports.
 # A wildcard explicitly requests the renderers; importing this module does not.
 __all__ = [name for name in globals() if not name.startswith("_")]
+# Retain the original wildcard order as well as its public names.
+_index = __all__.index("pattern_3d") + 1
+__all__[_index:_index] = ["TaichiEngine", "SimResult"]
+del _index
 __all__ += ["render_graph", "render_deformation"]

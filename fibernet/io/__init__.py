@@ -16,12 +16,26 @@ from fibernet.io.vtk import to_vtk
 from fibernet.io.xyz import to_xyz
 from fibernet.io.pdb import to_pdb, from_pdb
 from fibernet.io.gmsh import to_gmsh
-from fibernet.io.pandas_io import (
-    to_dataframe,
-    from_dataframe,
-    network_summary,
-    parametric_to_dataframe,
+# Text/mesh exporters and NetworkX interchange do not depend on pandas.
+_PANDAS_EXPORTS = (
+    "to_dataframe", "from_dataframe", "network_summary", "parametric_to_dataframe",
 )
+for _name in _PANDAS_EXPORTS:
+    globals().pop(_name, None)
+del _name
+
+
+def __getattr__(name):
+    if name in _PANDAS_EXPORTS:
+        from importlib import import_module
+        value = getattr(import_module("fibernet.io.pandas_io"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(_PANDAS_EXPORTS))
 
 __all__ = [
     "to_lammps", "from_lammps",

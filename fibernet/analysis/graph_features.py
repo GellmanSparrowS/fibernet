@@ -4,7 +4,11 @@
 Extracts structural, pore, and contact features from fiber network graphs
 for machine learning and structure-property analysis.
 
-Accepts both NetworkX Graph and FiberNetwork objects directly.
+Accepts simple undirected NetworkX Graph and StructureGraph objects directly.
+This historical feature set uses the XY projection and straight endpoint chords;
+it does not describe three-dimensional or curved-fiber geometry. Parallel
+physical edges are rejected because collapsing them would change fiber counts
+and total length without changing the feature schema.
 
 Based on the original Features.py implementation, adapted for FiberNet.
 
@@ -19,13 +23,14 @@ Optional dependencies:
 """
 
 import math
-import warnings
+import json as _json
+import sys as _sys
+from numbers import Integral as _Integral, Real as _Real
+from collections.abc import Mapping as _Mapping
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 try:
     import networkx as nx
@@ -50,11 +55,52 @@ except ImportError:
     HAS_SCIPY = False
 
 
+
+def _mark_status(status, names, state, reason):
+    if status is not None:
+        for name in names:
+            status[name] = {"state": state, "reason": reason}
+
+
+def _image_unavailable(status, names, missing_reason):
+    _mark_status(status, names, "unavailable",
+                 "dependency_missing.cv2" if not HAS_CV2 else missing_reason)
+
+
+class FeatureUnavailableError(RuntimeError):
+    """Ordinary extraction encountered unavailable audited features.
+
+    ``unavailable_features`` is a tuple in FEATURE_COLS order; ``reasons`` maps
+    every unavailable name to its status reason in the same stable order.
+    """
+
+    def __init__(self, reasons):
+        self.reasons = dict(reasons)
+        self.unavailable_features = tuple(self.reasons)
+        details = "; ".join(f"{name}: {reason}" for name, reason in self.reasons.items())
+        super().__init__(
+            "Graph features are unavailable: " + details + ". "
+            "For dependency_missing.cv2, install opencv-python-headless "
+            "(pip install opencv-python-headless). For input.no_positions or "
+            "render_missing, provide positioned nodes and check rendering. "
+            "Use extract_with_status() to inspect values and reasons, or pass "
+            "allow_unavailable=True explicitly to retain legacy placeholders."
+        )
+
+
+def _validate_allow_unavailable(value):
+    if type(value) is not bool:
+        raise TypeError("allow_unavailable must be a bool")
+
+
 class GraphFeatureExtractor:
     """Extract 94-dimensional feature vector from fiber network graphs.
 
-    Accepts ``networkx.Graph`` objects with ``pos`` node attributes,
-    or ``FiberNetwork`` objects (auto-converted to graphs).
+    Accepts simple undirected ``networkx.Graph`` objects with ``pos`` node
+    attributes, or ``StructureGraph`` objects without parallel edges.
+    Coordinates are projected onto XY and edges are represented by endpoint
+    chords. Use a geometry-aware feature set when curve shape or 3D geometry
+    matters; this class preserves the historical 94-feature definitions.
 
     Parameters
     ----------
@@ -129,6 +175,19 @@ class GraphFeatureExtractor:
         "contact_edge_contact_degree_q75", "contact_edge_contact_degree_q90",
         "contact_edge_contact_degree_q95",
     ]
+
+    STATUS_SCHEMA = "fibernet.graph_features94_result/1"
+    VALUE_SCHEMA = "fibernet.graph_features94_legacy/1"
+    GEOMETRY_SCHEMA = "simple_undirected_xy_endpoint_chords_legacy_v1"
+    DEFINITION_ID = "graph94-image-availability-v1"
+    MESH_FEATURES = ("mesh_median_area", "mesh_cv_area", "mesh_max_area_ratio")
+    PORE_FEATURES = tuple(FEATURE_COLS[34:52])
+    CONTACT_CONFIGURATION = ("contact_thick", "contact_canvas_size",
+                             "contact_nodes", "contact_edges")
+    CONTACT_MEASUREMENTS = tuple(FEATURE_COLS[56:])
+    AUDITED_NAMES = MESH_FEATURES + PORE_FEATURES + CONTACT_CONFIGURATION + CONTACT_MEASUREMENTS
+    PARAMETER_NAMES = ("canvas_size", "thick", "edge_margin", "top_k",
+                       "area_thresh", "connectivity")
 
     def __init__(self, canvas_size: int = 512, thick: int = 5,
                  edge_margin: float = 0.12, top_k: int = 3,
@@ -215,25 +274,37 @@ class GraphFeatureExtractor:
         return {(int(y + min_y), int(x + min_x)) for y, x in zip(ys, xs)}
 
     def _to_graph(self, obj) -> "nx.Graph":
-        """Convert input to NetworkX Graph with pos attributes."""
+        """Convert supported inputs without silently collapsing physical edges."""
         if not HAS_NETWORKX:
             raise ImportError("networkx is required: pip install networkx")
 
         if isinstance(obj, nx.Graph):
+            if obj.is_multigraph() or obj.is_directed():
+                raise ValueError(
+                    "The 94-feature GraphFeatureExtractor requires a simple "
+                    "undirected graph. MultiGraph and directed inputs are not "
+                    "supported; make any topology projection explicit before "
+                    "extracting this historical feature schema."
+                )
             return obj
 
-        # Try StructureGraph
-        try:
-            from fibernet.core.structure_graph import StructureGraph
-            if isinstance(obj, StructureGraph):
-                G = nx.Graph()
-                for nid, node in obj.nodes.items():
-                    G.add_node(nid, pos=tuple(node.position[:2]))
-                for edge in obj.edges.values():
-                    G.add_edge(edge.node_i, edge.node_j)
-                return G
-        except (ImportError, TypeError, AttributeError):
-            pass
+        from fibernet.core.structure_graph import StructureGraph
+        if isinstance(obj, StructureGraph):
+            G = nx.Graph()
+            for nid, node in obj.nodes.items():
+                G.add_node(nid, pos=tuple(node.position[:2]))
+            for edge in obj.edges.values():
+                if G.has_edge(edge.node_i, edge.node_j):
+                    raise ValueError(
+                        "The 94-feature GraphFeatureExtractor cannot preserve "
+                        f"parallel physical edges between nodes {edge.node_i} "
+                        f"and {edge.node_j}. Use a feature set that preserves "
+                        "physical edge identity, or explicitly construct a "
+                        "simple NetworkX graph if a topology projection is "
+                        "intended."
+                    )
+                G.add_edge(edge.node_i, edge.node_j)
+            return G
 
         raise TypeError(f"Expected nx.Graph or StructureGraph, got {type(obj).__name__}")
 
@@ -491,9 +562,10 @@ class GraphFeatureExtractor:
         return dict(avg_shortest_dy=avg,
                     straightness=float(avg / (ymax - ymin + 1e-12)))
 
-    def _mesh_holes(self, img):
+    def _mesh_holes(self, img, *, _status=None, _missing_reason="render_missing"):
         """Mesh hole area statistics from rendered image."""
         if img is None or not HAS_CV2:
+            _image_unavailable(_status, self.MESH_FEATURES, _missing_reason)
             return dict(mesh_median_area=0.0, mesh_cv_area=0.0, mesh_max_area_ratio=0.0)
 
         res = self.canvas_size
@@ -501,13 +573,18 @@ class GraphFeatureExtractor:
         cv2.floodFill(work, None, (0, 0), 128)
         mask = work == 255
         if mask.sum() == 0:
+            _mark_status(_status, self.MESH_FEATURES, "not_applicable", "domain.no_pores")
             return dict(mesh_median_area=0.0, mesh_cv_area=0.0, mesh_max_area_ratio=0.0)
 
         _, _, st, _ = cv2.connectedComponentsWithStats(mask.astype(np.uint8), 8)
         areas = st[1:, cv2.CC_STAT_AREA].astype(float)
         if areas.size == 0:
+            _mark_status(_status, self.MESH_FEATURES, "not_applicable", "domain.no_pores")
             return dict(mesh_median_area=0.0, mesh_cv_area=0.0, mesh_max_area_ratio=0.0)
 
+        _mark_status(_status, self.MESH_FEATURES, "computed", "evaluated")
+        if _status is not None and areas.mean() <= 0:
+            _mark_status(_status, ("mesh_cv_area",), "not_applicable", "domain.zero_mean_area")
         return dict(
             mesh_median_area=float(np.median(areas)),
             mesh_cv_area=float(np.std(areas) / areas.mean()) if areas.mean() > 0 else 0.0,
@@ -534,7 +611,7 @@ class GraphFeatureExtractor:
 
     # ==================== Pore Features (18) ====================
 
-    def _pore_features(self, img):
+    def _pore_features(self, img, *, _status=None, _missing_reason="render_missing"):
         """Pore size distribution, shape, and spatial uniformity."""
         zero = dict(
             largest_pore_ratio=0.0, top_area_sum_ratio=0.0,
@@ -547,6 +624,7 @@ class GraphFeatureExtractor:
         )
 
         if img is None or not HAS_CV2:
+            _image_unavailable(_status, self.PORE_FEATURES, _missing_reason)
             return zero
 
         res = self.canvas_size
@@ -557,11 +635,17 @@ class GraphFeatureExtractor:
         cc_n, labels, st, cen = cv2.connectedComponentsWithStats(mask, 8)
 
         if cc_n <= 1:
+            _mark_status(_status, self.PORE_FEATURES, "not_applicable", "domain.no_pores")
+            _mark_status(_status, ("big_pore_count", "total_pore_count", "top_area_sum_ratio"),
+                         "defined_empty", "domain.no_pores")
+            _mark_status(_status, ("total_pore_ratio", "center_pore_ratio", "edge_pore_ratio",
+                                  "pore_density"), "computed", "domain.no_pores")
             return zero
 
         all_areas = st[1:, cv2.CC_STAT_AREA].astype(float)
         all_cxy = cen[1:]
         n_pores = len(all_areas)
+        _mark_status(_status, self.PORE_FEATURES, "computed", "evaluated")
 
         # Distribution statistics
         if n_pores >= 2 and HAS_SCIPY:
@@ -584,6 +668,23 @@ class GraphFeatureExtractor:
             pore_large_area_frac = 0.0
             pore_count_large_frac = 0.0
 
+        if _status is not None:
+            if n_pores >= 2 and not HAS_SCIPY:
+                _mark_status(_status, ("pore_area_cv", "pore_area_skew", "pore_area_kurtosis",
+                                      "pore_large_area_frac", "pore_count_large_frac"),
+                             "unavailable", "dependency_missing.scipy")
+            elif n_pores < 2:
+                _mark_status(_status, ("pore_area_skew", "pore_area_kurtosis"),
+                             "not_applicable", "domain.insufficient_pores")
+                _mark_status(_status, ("pore_area_cv", "pore_large_area_frac",
+                                      "pore_count_large_frac"), "fallback", "stat.single_pore_default")
+            if mean_a <= 0:
+                _mark_status(_status, ("pore_area_max_over_mean",),
+                             "not_applicable", "domain.zero_mean_area")
+                if HAS_SCIPY and n_pores >= 2:
+                    _mark_status(_status, ("pore_area_cv",),
+                                 "not_applicable", "domain.zero_mean_area")
+
         pore_density = float(n_pores / total_px)
 
         # Spatial uniformity (3x3 grid CV)
@@ -596,6 +697,8 @@ class GraphFeatureExtractor:
             grid_area[yi, xi] += all_areas[k]
         nz = grid_area[grid_area > 0]
         pore_spatial_cv = float(nz.std() / nz.mean()) if len(nz) > 1 else 0.0
+        if len(nz) <= 1:
+            _mark_status(_status, ("pore_spatial_cv",), "fallback", "stat.single_occupied_bin_default")
 
         new_feats = dict(
             pore_area_cv=pore_area_cv,
@@ -634,17 +737,28 @@ class GraphFeatureExtractor:
                     total_pore_ratio=tpr, center_pore_ratio=cpr, edge_pore_ratio=epr)
 
         if not top:
+            reason = "selection.disabled_top_k" if self.top_k == 0 else "domain.no_selected_pores"
+            _mark_status(_status, ("largest_pore_ratio", "top_convexity_min",
+                                  "top_convexity_mean", "top_circularity_min"), "not_applicable", reason)
+            _mark_status(_status, ("top_area_sum_ratio",), "defined_empty", reason)
             return {**zero, **base, **new_feats}
 
         def _shape(lid):
             m = (labels == lid).astype(np.uint8)
             cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if not cnts:
+                _mark_status(_status, ("top_convexity_min", "top_convexity_mean",
+                                      "top_circularity_min"), "fallback", "shape.no_contour")
                 return 1.0, 1.0
             c = cnts[0]
             ar = cv2.contourArea(c)
             ha = cv2.contourArea(cv2.convexHull(c))
             pe = cv2.arcLength(c, True)
+            if not ha:
+                _mark_status(_status, ("top_convexity_min", "top_convexity_mean"),
+                             "fallback", "shape.zero_hull_area")
+            if not pe:
+                _mark_status(_status, ("top_circularity_min",), "fallback", "shape.zero_perimeter")
             return (ar / ha if ha else 1.0), (4 * np.pi * ar / pe ** 2 if pe else 1.0)
 
         shapes = [_shape(i) for i, _, _ in top]
@@ -658,14 +772,20 @@ class GraphFeatureExtractor:
 
     # ==================== Contact Features (42) ====================
 
-    def _contact_features(self, G, id2pt):
+    def _contact_features(self, G, id2pt, *, _status=None, _missing_reason="render_missing"):
         """Contact/overlap analysis from pixel-level edge rendering."""
         edges = list(G.edges())
         E = len(edges)
         N = G.number_of_nodes()
 
+        _mark_status(_status, self.CONTACT_CONFIGURATION, "computed", "input_recorded")
         if not HAS_CV2 or not id2pt or E == 0:
+            if not HAS_CV2 or not id2pt:
+                _image_unavailable(_status, self.CONTACT_MEASUREMENTS, _missing_reason)
+            else:
+                _mark_status(_status, self.CONTACT_MEASUREMENTS, "not_applicable", "domain.no_edges")
             return self._contact_zeros(N, E)
+        _mark_status(_status, self.CONTACT_MEASUREMENTS, "computed", "evaluated")
 
         node_to_edges = defaultdict(set)
         for i, (u, v) in enumerate(edges):
@@ -724,6 +844,32 @@ class GraphFeatureExtractor:
         ca = self.canvas_size ** 2
         ewc = int((ecd > 0).sum())
         ol_approx = olap_n / max(self.thick, 1)
+
+        if _status is not None:
+            if not pair_n:
+                _mark_status(_status, (name for name in self.CONTACT_MEASUREMENTS
+                                      if name.startswith("contact_overlap_pair_size_")),
+                             "not_applicable", "domain.no_overlap_pairs")
+                _mark_status(_status, ("contact_overlap_pair_size_sum",),
+                             "defined_empty", "domain.no_overlap_pairs")
+            if not cc_st["count"]:
+                _mark_status(_status, (name for name in self.CONTACT_MEASUREMENTS
+                                      if name.startswith("contact_overlap_cc_")),
+                             "not_applicable", "domain.no_overlap_components")
+                _mark_status(_status, ("contact_overlap_cc_count", "contact_overlap_cc_size_sum"),
+                             "defined_empty", "domain.no_overlap_components")
+            if not ep_union_n:
+                _mark_status(_status, ("contact_overlap_pixel_ratio_union",
+                                      "contact_raw_overlap_pixel_ratio_union"),
+                             "not_applicable", "domain.zero_pixel_union")
+            if not cl_len:
+                _mark_status(_status, ("contact_overlap_length_ratio_centerline",),
+                             "not_applicable", "domain.zero_centerline_length")
+            if not ca:
+                _mark_status(_status, ("contact_overlap_pixel_ratio_canvas",),
+                             "not_applicable", "domain.zero_canvas_area")
+            if any(not pixels for pixels in edge_pixels):
+                _mark_status(_status, self.CONTACT_MEASUREMENTS, "fallback", "render_empty_edge")
 
         return {
             "contact_thick": int(self.thick),
@@ -819,14 +965,21 @@ class GraphFeatureExtractor:
 
     # ==================== Public API ====================
 
-    def extract(self, obj) -> Dict[str, float]:
+    def extract(self, obj, *, allow_unavailable: bool = False) -> Dict[str, float]:
         """Extract 94-dimensional feature vector.
 
         Parameters
         ----------
-        obj : nx.Graph or FiberNetwork
-            The network to analyze. For nx.Graph, nodes must have
-            a ``pos`` attribute (2D or 3D tuple).
+        obj : nx.Graph or StructureGraph
+            Simple undirected network without parallel physical edges.
+            NetworkX nodes must have a ``pos`` attribute. Only XY coordinates
+            and straight endpoint chords enter this historical feature set.
+
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
 
         Returns
         -------
@@ -840,9 +993,24 @@ class GraphFeatureExtractor:
         >>> features = ext.extract(G)
         >>> assert len(features) == 94
         """
-        G = self._to_graph(obj)
+        _validate_allow_unavailable(allow_unavailable)
+        if allow_unavailable:
+            return self._extract(obj)
+        result = self.extract_with_status(obj)
+        reasons = {name: result["status"][name]["reason"]
+                   for name in self.FEATURE_COLS
+                   if result["status"][name]["state"] == "unavailable"}
+        if reasons:
+            raise FeatureUnavailableError(reasons)
+        return result["values"]
 
+    def _extract(self, obj, *, _status=None):
+        G = self._to_graph(obj)
         img, id2pt = self._render_image(G)
+        status_kw = {}
+        if _status is not None:
+            missing_reason = "input.no_positions" if not nx.get_node_attributes(G, "pos") else "render_missing"
+            status_kw = {"_status": _status, "_missing_reason": missing_reason}
 
         feat = {}
         feat.update(self._basic_size(G))
@@ -854,56 +1022,254 @@ class GraphFeatureExtractor:
         feat.update(self._redundancy_kcore(G))
         feat.update(self._cycle_features(G))
         feat.update(self._vertical_shortestness(G))
-        feat.update(self._mesh_holes(img))
+        feat.update(self._mesh_holes(img, **status_kw))
         feat.update(self._betweenness_edges(G))
-        feat.update(self._pore_features(img))
-        feat.update(self._contact_features(G, id2pt))
+        feat.update(self._pore_features(img, **status_kw))
+        feat.update(self._contact_features(G, id2pt, **status_kw))
 
         return feat
 
-    def extract_vector(self, obj) -> np.ndarray:
+    def extract_with_status(self, obj) -> dict:
+        """Return unchanged legacy values and explicitly scoped availability.
+
+        All 94 status names are present; 31 unaudited structural features stay
+        unknown. This Python result can contain legacy NaN/Inf and is NOT an
+        unconditional strict-JSON payload. No existing training policy changes.
+        """
+        status = {name: {"state": "unknown", "reason": "outside_audited_scope"}
+                  for name in self.FEATURE_COLS}
+        values = self._extract(obj, _status=status)
+        if set(values) != set(self.FEATURE_COLS):
+            raise ValueError("94-feature implementation returned an unexpected name set")
+        for name in self.AUDITED_NAMES:
+            if not np.isfinite(values[name]):
+                _mark_status(status, (name,), "fallback", "stat.nonfinite")
+        parameters = {name: getattr(self, name) for name in self.PARAMETER_NAMES}
+        parameters = {key: val.item() if isinstance(val, np.generic) else val
+                      for key, val in parameters.items()}
+        dependencies = {}
+        for name, available in (("cv2", HAS_CV2), ("scipy", HAS_SCIPY),
+                                ("numpy", True), ("networkx", HAS_NETWORKX)):
+            module = _sys.modules.get(name)
+            version = getattr(module, "__version__", None) if available else None
+            dependencies[name] = {"available": bool(available),
+                                  "version": str(version) if version is not None else None}
+        return {"schema": self.STATUS_SCHEMA, "feature_schema": self.VALUE_SCHEMA,
+                "definition_id": self.DEFINITION_ID, "geometry": self.GEOMETRY_SCHEMA,
+                "feature_names": list(self.FEATURE_COLS), "audited_names": list(self.AUDITED_NAMES),
+                "parameters": parameters, "dependencies": dependencies,
+                "status": status, "values": values}
+
+    def extract_vector(self, obj, *, allow_unavailable: bool = False) -> np.ndarray:
         """Extract features as ordered numpy array.
 
         Parameters
         ----------
-        obj : nx.Graph or FiberNetwork
+        obj : nx.Graph or StructureGraph
             The network to analyze.
+
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
 
         Returns
         -------
         np.ndarray
             94-element feature vector ordered by FEATURE_COLS.
         """
-        feat = self.extract(obj)
+        _validate_allow_unavailable(allow_unavailable)
+        feat = (self.extract(obj, allow_unavailable=True) if allow_unavailable
+                else self.extract(obj))
         return np.array([feat.get(k, 0.0) for k in self.FEATURE_COLS])
 
-    def batch_extract(self, networks) -> List[Dict[str, float]]:
+    def batch_extract(self, networks, *, allow_unavailable: bool = False) -> List[Dict[str, float]]:
         """Extract features from multiple networks.
 
         Parameters
         ----------
         networks : list
-            List of nx.Graph or FiberNetwork objects.
+            List of simple nx.Graph or StructureGraph objects.
+
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
 
         Returns
         -------
         list of dict
             Feature dictionaries.
         """
-        return [self.extract(net) for net in networks]
+        _validate_allow_unavailable(allow_unavailable)
+        return [(self.extract(net, allow_unavailable=True) if allow_unavailable
+                 else self.extract(net)) for net in networks]
 
-    def batch_extract_matrix(self, networks) -> np.ndarray:
+    def batch_extract_matrix(self, networks, *, allow_unavailable: bool = False) -> np.ndarray:
         """Extract features as a matrix.
 
         Parameters
         ----------
         networks : list
-            List of nx.Graph or FiberNetwork objects.
+            List of simple nx.Graph or StructureGraph objects.
+
+        allow_unavailable : bool, keyword-only
+            False (default) raises FeatureUnavailableError for any audited
+            unavailable feature. True preserves historical numeric placeholders.
+            Use extract_with_status() to inspect availability without rejection.
+            Unknown, fallback, defined_empty and not_applicable are not rejected.
 
         Returns
         -------
         np.ndarray
             Matrix of shape (n_networks, 94).
         """
-        vectors = [self.extract_vector(net) for net in networks]
+        _validate_allow_unavailable(allow_unavailable)
+        vectors = [(self.extract_vector(net, allow_unavailable=True) if allow_unavailable
+                    else self.extract_vector(net)) for net in networks]
         return np.vstack(vectors) if vectors else np.empty((0, len(self.FEATURE_COLS)))
+
+
+def _feature_status_rules():
+    """Frozen per-name state/reason pairs, not a client-supplied policy."""
+    cls = GraphFeatureExtractor
+    audited = set(cls.AUDITED_NAMES)
+    rules = {name: ({("computed", "evaluated"), ("fallback", "stat.nonfinite")}
+                    if name in audited else {("unknown", "outside_audited_scope")})
+             for name in cls.FEATURE_COLS}
+
+    def add(names, state, *reasons):
+        for name in names:
+            rules[name].update((state, reason) for reason in reasons)
+
+    for name in cls.CONTACT_CONFIGURATION:
+        rules[name] = {("computed", "input_recorded"), ("fallback", "stat.nonfinite")}
+    images = cls.MESH_FEATURES + cls.PORE_FEATURES + cls.CONTACT_MEASUREMENTS
+    add(images, "unavailable", "dependency_missing.cv2", "input.no_positions", "render_missing")
+    add(cls.MESH_FEATURES, "not_applicable", "domain.no_pores")
+    add(("mesh_cv_area", "pore_area_cv", "pore_area_max_over_mean"),
+        "not_applicable", "domain.zero_mean_area")
+    no_pore_counts = ("big_pore_count", "total_pore_count", "top_area_sum_ratio")
+    no_pore_ratios = ("total_pore_ratio", "center_pore_ratio", "edge_pore_ratio", "pore_density")
+    add(no_pore_counts, "defined_empty", "domain.no_pores")
+    add(no_pore_ratios, "computed", "domain.no_pores")
+    add(set(cls.PORE_FEATURES) - set(no_pore_counts + no_pore_ratios),
+        "not_applicable", "domain.no_pores")
+    add(("pore_area_cv", "pore_area_skew", "pore_area_kurtosis",
+         "pore_large_area_frac", "pore_count_large_frac"),
+        "unavailable", "dependency_missing.scipy")
+    add(("pore_area_skew", "pore_area_kurtosis"), "not_applicable", "domain.insufficient_pores")
+    add(("pore_area_cv", "pore_large_area_frac", "pore_count_large_frac"),
+        "fallback", "stat.single_pore_default")
+    add(("pore_spatial_cv",), "fallback", "stat.single_occupied_bin_default")
+    add(("largest_pore_ratio", "top_convexity_min", "top_convexity_mean", "top_circularity_min"),
+        "not_applicable", "domain.no_selected_pores", "selection.disabled_top_k")
+    add(("top_area_sum_ratio",), "defined_empty", "domain.no_selected_pores", "selection.disabled_top_k")
+    add(("top_convexity_min", "top_convexity_mean", "top_circularity_min"),
+        "fallback", "shape.no_contour")
+    add(("top_convexity_min", "top_convexity_mean"), "fallback", "shape.zero_hull_area")
+    add(("top_circularity_min",), "fallback", "shape.zero_perimeter")
+    add(cls.CONTACT_MEASUREMENTS, "not_applicable", "domain.no_edges")
+    add(cls.CONTACT_MEASUREMENTS, "fallback", "render_empty_edge")
+    pairs = [name for name in cls.CONTACT_MEASUREMENTS if name.startswith("contact_overlap_pair_size_")]
+    comps = [name for name in cls.CONTACT_MEASUREMENTS if name.startswith("contact_overlap_cc_")]
+    add(set(pairs) - {"contact_overlap_pair_size_sum"}, "not_applicable", "domain.no_overlap_pairs")
+    add(("contact_overlap_pair_size_sum",), "defined_empty", "domain.no_overlap_pairs")
+    add(set(comps) - {"contact_overlap_cc_count", "contact_overlap_cc_size_sum"},
+        "not_applicable", "domain.no_overlap_components")
+    add(("contact_overlap_cc_count", "contact_overlap_cc_size_sum"),
+        "defined_empty", "domain.no_overlap_components")
+    add(("contact_overlap_pixel_ratio_union", "contact_raw_overlap_pixel_ratio_union"),
+        "not_applicable", "domain.zero_pixel_union")
+    add(("contact_overlap_length_ratio_centerline",), "not_applicable", "domain.zero_centerline_length")
+    add(("contact_overlap_pixel_ratio_canvas",), "not_applicable", "domain.zero_canvas_area")
+    return rules
+
+
+_FEATURE_STATUS_RULES = _feature_status_rules()
+# Only documented finite default conventions can be requested. Raster failures,
+# dependencies, unknowns and nonfinite results are NEVER policy exceptions.
+_FEATURE_ALLOWED_CONVENTIONS = frozenset(
+    (state, reason) for pairs in _FEATURE_STATUS_RULES.values() for state, reason in pairs
+    if state == "not_applicable" or
+    (state == "fallback" and reason.startswith(("stat.single_", "shape."))))
+
+
+def _checked_feature_policy(allow_reasons):
+    if isinstance(allow_reasons, (str, bytes)):
+        raise ValueError("allow_reasons must be a sequence of registered convention reasons")
+    try:
+        requested = tuple(allow_reasons)
+    except TypeError as exc:
+        raise ValueError("allow_reasons must be a sequence") from exc
+    known = {reason for _, reason in _FEATURE_ALLOWED_CONVENTIONS}
+    if any(not isinstance(reason, str) or reason not in known for reason in requested):
+        raise ValueError("allow_reasons contains a forbidden or unknown convention reason")
+    return frozenset(pair for pair in _FEATURE_ALLOWED_CONVENTIONS if pair[1] in requested)
+
+
+def _checked_feature_contract(contract):
+    """Validate metadata only; return a conservative comparable-space identity."""
+    cls = GraphFeatureExtractor
+    if not isinstance(contract, _Mapping):
+        raise ValueError("contract.malformed: feature_contract must be a mapping")
+    required = {"schema", "feature_schema", "definition_id", "geometry", "feature_names",
+                "audited_names", "parameters", "dependencies", "status"}
+    if set(contract) != required:
+        raise ValueError("contract.malformed: missing/extra feature_contract fields")
+    expected = {"schema": cls.STATUS_SCHEMA, "feature_schema": cls.VALUE_SCHEMA,
+                "definition_id": cls.DEFINITION_ID, "geometry": cls.GEOMETRY_SCHEMA}
+    for field, value in expected.items():
+        if contract[field] != value:
+            raise ValueError(f"schema.unsupported: {field}")
+    if contract["feature_names"] != list(cls.FEATURE_COLS):
+        raise ValueError("contract.malformed: exact legacy94 feature_names/order required")
+    if contract["audited_names"] != list(cls.AUDITED_NAMES):
+        raise ValueError("contract.malformed: exact audited_names required")
+    statuses = contract["status"]
+    if not isinstance(statuses, _Mapping) or set(statuses) != set(cls.FEATURE_COLS):
+        raise ValueError("contract.malformed: exactly94 named statuses required")
+    for name in cls.FEATURE_COLS:
+        record = statuses[name]
+        if (not isinstance(record, _Mapping) or set(record) != {"state", "reason"}
+                or not isinstance(record["state"], str) or not isinstance(record["reason"], str)
+                or (record["state"], record["reason"]) not in _FEATURE_STATUS_RULES[name]):
+            raise ValueError(f"contract.malformed: feature {name!r} state/reason pair")
+    parameters = contract["parameters"]
+    if not isinstance(parameters, _Mapping) or set(parameters) != set(cls.PARAMETER_NAMES):
+        raise ValueError("contract.malformed: all six actual parameters required")
+    for name in ("canvas_size", "thick", "top_k", "connectivity"):
+        value = parameters[name]
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, _Integral):
+            raise ValueError(f"contract.malformed: parameter {name} must be integer, not bool")
+    for name in ("edge_margin", "area_thresh"):
+        value = parameters[name]
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, _Real):
+            raise ValueError(f"contract.malformed: parameter {name} must be finite real")
+        try:
+            finite = math.isfinite(float(value))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(f"contract.malformed: parameter {name} must be finite real") from exc
+        if not finite:
+            raise ValueError(f"contract.malformed: parameter {name} must be finite real")
+    if (parameters["canvas_size"] <= 10 or parameters["thick"] <= 0
+            or parameters["top_k"] < 0 or parameters["connectivity"] not in (4, 8)
+            or not 0 <= parameters["edge_margin"] < .5 or not 0 <= parameters["area_thresh"] <= 1):
+        raise ValueError("contract.malformed: parameter outside checked image regime")
+    deps = contract["dependencies"]
+    if not isinstance(deps, _Mapping) or set(deps) != {"cv2", "scipy", "numpy", "networkx"}:
+        raise ValueError("contract.malformed: dependency provenance required")
+    for name, record in deps.items():
+        if (not isinstance(record, _Mapping) or set(record) != {"available", "version"}
+                or type(record["available"]) is not bool
+                or not (record["version"] is None or isinstance(record["version"], str))
+                or (not record["available"] and record["version"] is not None)):
+            raise ValueError(f"contract.malformed: dependency {name}")
+    try:
+        _json.dumps(contract, allow_nan=False)
+    except (ValueError, TypeError, OverflowError, RecursionError) as exc:
+        raise ValueError("contract.malformed: metadata must be strict JSON") from exc
+    return tuple(contract[field] for field in ("feature_schema", "definition_id", "geometry")) + tuple(
+        parameters[name] for name in cls.PARAMETER_NAMES)

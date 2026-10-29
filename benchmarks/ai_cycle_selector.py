@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import sys
+from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
@@ -26,8 +27,9 @@ RESULTS = ROOT / "benchmarks" / "results"
 
 
 class AICycleSelector:
-    def __init__(self, max_options_per_case=100, max_total_options=1000):
-        self.study = ConstrainedCycleIntervention(ConstrainedCycleConfig())
+    def __init__(self, max_options_per_case=100, max_total_options=1000, *,
+                 reference_path=None, study_config=None):
+        self.study = ConstrainedCycleIntervention(study_config)
         self.max_options_per_case = int(max_options_per_case)
         self.max_total_options = int(max_total_options)
         if self.max_options_per_case < 5 or self.max_total_options < 24:
@@ -38,7 +40,48 @@ class AICycleSelector:
                   ROOT / "fibernet" / "sim" / "reduced_beam.py"]
         self.analysis_hash = hashlib.sha256(b"".join(
             path.read_bytes() for path in source)).hexdigest()[:16]
-        self.reference_path = RESULTS / "constrained_cycle_intervention.json"
+        self.reference_path = (Path(reference_path) if reference_path is not None
+                               else RESULTS / "constrained_cycle_intervention.json")
+
+    def _study_config(self):
+        return json.loads(json.dumps(asdict(self.study.config)))
+
+    def _validate_reference(self, reference):
+        expected = {"config": self._study_config(),
+                    "engine_version": ENGINE_VERSION,
+                    "engine_hash": ENGINE_SRC_HASH,
+                    "analysis_hash": self.study.analysis_hash}
+        expected_cases = {f"{unit}:seed{seed}:{direction}"
+                          for unit in self.study.config.units
+                          for seed in self.study.config.seeds
+                          for direction in self.study.config.directions}
+        if not isinstance(reference, dict):
+            mismatches = ["document"]
+        else:
+            mismatches = [key for key, value in expected.items()
+                          if reference.get(key) != value]
+            cases = reference.get("cases")
+            if not isinstance(cases, dict) or set(cases) != expected_cases:
+                mismatches.append("case keys")
+        if mismatches:
+            raise ValueError(
+                "incompatible constrained cycle reference ("
+                + ", ".join(mismatches)
+                + "); recompute the constrained reference with the current "
+                "study configuration at a new output path using "
+                "ConstrainedCycleIntervention(...).run(new_path); "
+                "do not edit only checkpoint metadata")
+        ineligible = [key for key, case in reference["cases"].items()
+                      if not isinstance(case, dict)
+                      or case.get("status") != "complete"
+                      or type(case.get("same_length_candidate_count")) is not int
+                      or case["same_length_candidate_count"] <= 0]
+        if ineligible:
+            raise ValueError(
+                "incompatible constrained cycle reference: cases lack complete "
+                "eligible candidates (" + ", ".join(sorted(ineligible))
+                + "); choose a study configuration with eligible cycles before "
+                "generating a new reference at a new output path")
 
     def _signature(self):
         return {"config": {"max_options_per_case": self.max_options_per_case,
@@ -46,6 +89,7 @@ class AICycleSelector:
                            "model": "RandomForestRegressor-200-leaf3-seed11",
                            "training_split": "leave-one-topology-out"},
                 "analysis_hash": self.analysis_hash,
+                "study_config": self._study_config(),
                 "engine_version": ENGINE_VERSION,
                 "engine_hash": ENGINE_SRC_HASH,
                 "reference_sha256": hashlib.sha256(
@@ -107,8 +151,7 @@ class AICycleSelector:
     def run(self, output, max_new=None):
         output = Path(output)
         reference = json.loads(self.reference_path.read_text(encoding="utf-8"))
-        if len(reference["cases"]) != 24:
-            raise ValueError("complete 24-case reference study first")
+        self._validate_reference(reference)
         signature = self._signature()
         if output.exists():
             data = json.loads(output.read_text(encoding="utf-8"))
@@ -159,6 +202,9 @@ class AICycleSelector:
         return data
 
     def evaluate(self, data, reference):
+        if len(set(self.study.config.units)) < 2:
+            raise ValueError("leave-one-topology-out evaluation requires at least "
+                             "two distinct topologies")
         cases = data["cases"]
         expected = [f"{unit}:seed{seed}:{direction}"
                     for unit in self.study.config.units
@@ -205,8 +251,10 @@ class AICycleSelector:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", default=str(RESULTS / "ai_cycle_selector.json"))
+    parser.add_argument("--reference", type=Path,
+                        help="constrained reference recomputed with the current study and engine")
     parser.add_argument("--max-new", type=int)
     args = parser.parse_args()
-    result = AICycleSelector().run(args.output, args.max_new)
+    result = AICycleSelector(reference_path=args.reference).run(args.output, args.max_new)
     print("[ai_cycle] saved", sum(len(case["options"]) for case in
                                result["cases"].values()), "candidates")

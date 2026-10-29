@@ -256,3 +256,9 @@ A failed comparison produces a nonzero command exit status.
 These thresholds apply only to this symmetric fixture and its three
 specified grids. They are not general accuracy tolerances, a convergence
 guarantee for other networks, or a material validation.
+
+## Reuse a saved trajectory
+
+See [Saved electrothermal fields to explicit mechanics](SAVED_ELECTROTHERMAL_MECHANICS.md)
+for strict persistence, exact frame selection and one-way prescribed-temperature
+mechanical snapshots. No mechanical feedback is introduced into this solver.
