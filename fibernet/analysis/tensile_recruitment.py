@@ -127,6 +127,42 @@ def _grip_prune(active, edges, n_nodes, left, right):
     return out
 
 
+def _node_indices(values, name):
+    """Preserve integer identity before converting public array-like inputs."""
+    message = f'{name} must contain finite integer-valued node indices, not bools or strings'
+    range_message = f'{name} contains a node index outside the supported nonnegative int64 range'
+    maximum = int(np.iinfo(np.int64).max)
+    if isinstance(values, np.ndarray) and values.dtype.kind in 'iuf':
+        raw = np.asarray(values)
+        if raw.dtype.kind == 'f' and (
+                not np.isfinite(raw).all() or not np.equal(raw, np.floor(raw)).all()):
+            raise ValueError(message)
+        # Reduce in the source dtype, then compare Python integers. Comparing
+        # against a floating representation of int64.max can round the bound.
+        if raw.size and (raw.min() < 0 or int(raw.max()) > maximum):
+            raise ValueError(range_message)
+        return raw.astype(np.int64, copy=True)
+    try:
+        # Keep mixed Python/NumPy integers exact; normal array inference can
+        # round a large integer when another item is floating-point.
+        raw = np.asarray(values, dtype=object)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(message) from exc
+    indices = np.empty(raw.shape, dtype=np.int64)
+    for row, value in enumerate(raw.flat):
+        if (isinstance(value, (bool, np.bool_)) or
+                not isinstance(value, (int, np.integer, float, np.floating))):
+            raise ValueError(message)
+        if isinstance(value, (float, np.floating)):
+            if not np.isfinite(value) or value != np.floor(value):
+                raise ValueError(message)
+        integer = int(value)
+        if not 0 <= integer <= maximum:
+            raise ValueError(range_message)
+        indices.flat[row] = integer
+    return indices
+
+
 def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
                                 n_nodes: int, alpha: float = 0.05,
                                 hysteresis: float = 0.6,
@@ -136,13 +172,17 @@ def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
     """Analyze positive edge strain across frames without an APP dependency.
 
     Edges are node-index pairs in the same order as the strain columns.
+    Edge and grip indices accept Python/NumPy integers and finite, exactly
+    integral floating-point values. Fractional values, booleans and strings
+    are rejected rather than truncated or interpreted as node identities.
+    Indices must fit nonnegative int64 and lie below n_nodes.
     The threshold is ``max(alpha * frame_max, min_active)`` or a positive
     strain quantile; recruitment uses a strict greater-than comparison.
     """
     strain = np.asarray(edge_strain, dtype=float)
-    edges = np.asarray(edges, dtype=np.int64)
-    left = np.asarray(left_nodes, dtype=np.int64).reshape(-1)
-    right = np.asarray(right_nodes, dtype=np.int64).reshape(-1)
+    edges = _node_indices(edges, 'edges')
+    left = _node_indices(left_nodes, 'left_nodes').reshape(-1)
+    right = _node_indices(right_nodes, 'right_nodes').reshape(-1)
     if strain.ndim != 2 or edges.ndim != 2 or edges.shape[1] != 2:
         raise ValueError('edge_strain must be (frames, edges); edges must be (edges, 2)')
     F, E = strain.shape
