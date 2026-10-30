@@ -41,7 +41,9 @@ except ImportError:
 try:
     import cv2
     HAS_CV2 = True
-except ImportError:
+except ModuleNotFoundError as exc:
+    if exc.name != "cv2":
+        raise
     HAS_CV2 = False
 
 try:

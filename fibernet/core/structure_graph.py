@@ -59,6 +59,41 @@ import numpy as np
 from fibernet.core.material import Material
 
 
+
+def _serialized_internal_points(value, edge_id):
+    """Detach finite real curve coordinates using ordinary NumPy promotion."""
+    if value is None:
+        return None
+    label = f'serialized internal_points for edge {edge_id}'
+
+    def inspect(item):
+        if np.ma.isMaskedArray(item):
+            raise ValueError(f'{label} must not be masked')
+        if isinstance(item, np.ndarray):
+            if item.dtype.kind not in 'iuf':
+                raise ValueError(f'{label} must contain finite real numeric coordinates')
+        elif isinstance(item, (list, tuple)):
+            for scalar in item:
+                inspect(scalar)
+        elif (isinstance(item, (bool, np.bool_))
+              or not isinstance(item, (int, float, np.integer, np.floating))):
+            raise ValueError(f'{label} must contain finite real numeric coordinates')
+
+    inspect(value)
+    try:
+        points = np.array(value, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f'{label} must have shape (M, 3) with finite real coordinates') from exc
+    # JSON [] loses the coordinate axis of a valid empty curve.
+    if points.shape == (0,):
+        return np.empty((0, 3))
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError(f'{label} must have shape (M, 3)')
+    if points.dtype.kind not in 'iuf' or not np.isfinite(points).all():
+        raise ValueError(f'{label} must contain finite real numeric coordinates')
+    return points
+
+
 def _material_record(data: Any) -> dict:
     """Validate and detach the JSON-only material record in graph schema 3.1.
 
@@ -1082,13 +1117,7 @@ class StructureGraph:
             if node_i == node_j:
                 raise ValueError('serialized edges must have distinct endpoints')
             g._next_edge_id = eid
-            ip = np.array(ed["internal_points"]) if ed.get("internal_points") is not None else None
-            if ip is not None:
-                # JSON [] loses the coordinate axis of a valid empty curve.
-                if ip.shape == (0,):
-                    ip = np.empty((0, 3))
-                elif ip.ndim != 2 or ip.shape[1] != 3:
-                    raise ValueError('serialized internal_points must have shape (M, 3)')
+            ip = _serialized_internal_points(ed.get("internal_points"), eid)
             try:
                 material = (Material.from_dict(_material_record(ed['material']))
                             if 'material' in ed else Material())
