@@ -76,49 +76,49 @@
 
 另有 49 条接口与流程分组的归属关系，见下方分支；分组不表示类继承。
 
-[api-zh-src-compile_planar]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L291
-[api-zh-src-compile_surface]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L400
-[api-zh-src-controls]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L74
-[api-zh-src-curve_inverse]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/curve_inverse.py#L248
-[api-zh-src-dataset]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/dataset.py#L230
-[api-zh-src-deformation]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/viz/render.py#L388
-[api-zh-src-export_route]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L296
-[api-zh-src-export_trails]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L282
-[api-zh-src-features94]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/graph_features.py#L98
-[api-zh-src-fem]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47
-[api-zh-src-graph]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234
-[api-zh-src-graph_batch]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L210
-[api-zh-src-graph_batch_type]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L118
-[api-zh-src-joule]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/joule_heating.py#L384
-[api-zh-src-lammps_prepare]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L135
-[api-zh-src-lammps_task]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L692
-[api-zh-src-light_features]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_surrogate.py#L4
-[api-zh-src-load_graph]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1155
-[api-zh-src-manufacturing_config]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L20
-[api-zh-src-material]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/material.py#L14
-[api-zh-src-networkx]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L906
-[api-zh-src-octet]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/standard_lattice.py#L99
-[api-zh-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/geometry_paths.py#L74
-[api-zh-src-pattern_2d]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1887
-[api-zh-src-pattern_3d]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L2314
-[api-zh-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_dataset.py#L208
-[api-zh-src-prepared_controls]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L27
-[api-zh-src-recruitment]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/tensile_recruitment.py#L130
-[api-zh-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128
-[api-zh-src-register_unit]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1101
-[api-zh-src-regressor]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_learning.py#L109
-[api-zh-src-route_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L154
-[api-zh-src-save_graph]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1143
-[api-zh-src-show]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L65
-[api-zh-src-sim_result]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L630
-[api-zh-src-simulate]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122
-[api-zh-src-snapshot]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/snapshot_features.py#L677
-[api-zh-src-taichi]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L1251
-[api-zh-src-tile]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/tiling.py#L253
-[api-zh-src-topology]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/topology_metrics.py#L36
-[api-zh-src-trails_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L149
-[api-zh-src-transport]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/linear_transport.py#L125
-[api-zh-src-visco_material]: https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/viscoelastic.py#L21
+[api-zh-src-compile_planar]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L291
+[api-zh-src-compile_surface]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L400
+[api-zh-src-controls]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L74
+[api-zh-src-curve_inverse]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/curve_inverse.py#L248
+[api-zh-src-dataset]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/dataset.py#L230
+[api-zh-src-deformation]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/viz/render.py#L388
+[api-zh-src-export_route]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L296
+[api-zh-src-export_trails]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L282
+[api-zh-src-features94]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/graph_features.py#L98
+[api-zh-src-fem]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47
+[api-zh-src-graph]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234
+[api-zh-src-graph_batch]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L210
+[api-zh-src-graph_batch_type]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L118
+[api-zh-src-joule]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/joule_heating.py#L384
+[api-zh-src-lammps_prepare]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L135
+[api-zh-src-lammps_task]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L692
+[api-zh-src-light_features]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_surrogate.py#L4
+[api-zh-src-load_graph]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1155
+[api-zh-src-manufacturing_config]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L20
+[api-zh-src-material]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/material.py#L14
+[api-zh-src-networkx]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L906
+[api-zh-src-octet]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/standard_lattice.py#L99
+[api-zh-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/geometry_paths.py#L74
+[api-zh-src-pattern_2d]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1888
+[api-zh-src-pattern_3d]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L2331
+[api-zh-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_dataset.py#L208
+[api-zh-src-prepared_controls]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L27
+[api-zh-src-recruitment]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/tensile_recruitment.py#L130
+[api-zh-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128
+[api-zh-src-register_unit]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1102
+[api-zh-src-regressor]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_learning.py#L109
+[api-zh-src-route_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L154
+[api-zh-src-save_graph]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1143
+[api-zh-src-show]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L65
+[api-zh-src-sim_result]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L630
+[api-zh-src-simulate]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122
+[api-zh-src-snapshot]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/snapshot_features.py#L677
+[api-zh-src-taichi]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L1251
+[api-zh-src-tile]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/tiling.py#L253
+[api-zh-src-topology]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/topology_metrics.py#L36
+[api-zh-src-trails_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L149
+[api-zh-src-transport]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/linear_transport.py#L125
+[api-zh-src-visco_material]: https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/viscoelastic.py#L21
 
 </details>
 
@@ -142,13 +142,13 @@
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- ← [`fibernet.register_unit`](#user-content-api-zh-register_unit) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1101)
-- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.register_unit`](#user-content-api-zh-register_unit) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1102)
+- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/material.py#L14)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1887) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/README.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1888) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/README.md)
 
 </details>
 
@@ -168,12 +168,12 @@
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/material.py#L14)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.Material`](#user-content-api-zh-material) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/material.py#L14)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L2314) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/README.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L2331) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/README.md)
 
 </details>
 
@@ -193,11 +193,11 @@
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/standard_lattice.py#L99) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/standard_lattice.py#L99) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -217,11 +217,11 @@
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1887)
+- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 注册基元工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1888)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1101) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1102) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py)
 
 </details>
 
@@ -241,12 +241,12 @@
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/tiling.py#L253) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/tiling.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/tiling.py#L253) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/tiling.py)
 
 </details>
 
@@ -263,7 +263,7 @@
 
 > 保存的基元名称不会自动变成包根目录的 API。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/custom_cells.py#L90) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/custom_cells.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_CUSTOM_CELL_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/custom_cells.py#L90) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/custom_cells.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_CUSTOM_CELL_UNIFIED.md)
 
 </details>
 
@@ -296,32 +296,32 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 22</summary>
 
-- ← [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1887)
-- ← [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L2314)
-- ← [`fibernet.octet_fcc_v1`](#user-content-api-zh-octet) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/standard_lattice.py#L99)
-- → [`fibernet.tile_2d`](#user-content-api-zh-tile) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/tiling.py#L253)
-- ← [`fibernet.tile_2d`](#user-content-api-zh-tile) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/tiling.py#L253)
-- → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.simulate`](#user-content-api-zh-simulate) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122)
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128)
-- → [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/linear_transport.py#L125)
-- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L135)
-- → [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/graph_features.py#L98)
-- → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-zh-snapshot) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/snapshot_features.py#L677)
-- → [`fibernet.analysis.analyze_topology`](#user-content-api-zh-topology) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/topology_metrics.py#L36)
-- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/geometry_paths.py#L74)
-- → [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L210)
-- → [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L154)
-- → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L149)
-- → [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1143)
-- ← [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1155)
-- → [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-zh-networkx) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L906)
-- → [`fibernet.show`](#user-content-api-zh-show) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L65)
-- → [`fibernet.render_deformation`](#user-content-api-zh-deformation) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/viz/render.py#L388)
+- ← [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 生成二维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1888)
+- ← [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 生成三维图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L2331)
+- ← [`fibernet.octet_fcc_v1`](#user-content-api-zh-octet) — 生成版本化几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/standard_lattice.py#L99)
+- → [`fibernet.tile_2d`](#user-content-api-zh-tile) — 基元图输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/tiling.py#L253)
+- ← [`fibernet.tile_2d`](#user-content-api-zh-tile) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/tiling.py#L253)
+- → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.simulate`](#user-content-api-zh-simulate) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/linear_transport.py#L125)
+- → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L135)
+- → [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/graph_features.py#L98)
+- → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-zh-snapshot) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/snapshot_features.py#L677)
+- → [`fibernet.analysis.analyze_topology`](#user-content-api-zh-topology) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/topology_metrics.py#L36)
+- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/geometry_paths.py#L74)
+- → [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L210)
+- → [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L154)
+- → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L149)
+- → [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1143)
+- ← [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1155)
+- → [`fibernet.StructureGraph.to_networkx_lossless`](#user-content-api-zh-networkx) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L906)
+- → [`fibernet.show`](#user-content-api-zh-show) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L65)
+- → [`fibernet.render_deformation`](#user-content-api-zh-deformation) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/viz/render.py#L388)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -338,7 +338,7 @@ graph = fn.pattern_2d(
 
 > 边界标记描述几何面，不是力学支座约束。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L171) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/STABLE_NODAL_CONTROLS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L171) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/STABLE_NODAL_CONTROLS.md)
 
 </details>
 
@@ -355,7 +355,7 @@ graph = fn.pattern_2d(
 
 > 保存曲线内点不代表所有求解器都支持曲梁。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L198) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L198) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -375,12 +375,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L1887)
-- → [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/pattern.py#L2314)
+- → [`fibernet.pattern_2d`](#user-content-api-zh-pattern_2d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L1888)
+- → [`fibernet.pattern_3d`](#user-content-api-zh-pattern_3d) — 显式材料参数 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/pattern.py#L2331)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/material.py#L14) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/material.py#L14) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -400,11 +400,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/viscoelastic.py#L21) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/DYNAMIC_AXIAL_VISCOELASTICITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/viscoelastic.py#L21) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/DYNAMIC_AXIAL_VISCOELASTICITY.md)
 
 </details>
 
@@ -421,7 +421,7 @@ graph = fn.pattern_2d(
 
 > 不会自动缩放图、材料、结果或求解器输入。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/units.py#L40) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/units.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/units.py#L40) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/units.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -441,12 +441,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L27)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L74) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/STABLE_NODAL_CONTROLS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L74) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/STABLE_NODAL_CONTROLS.md)
 
 </details>
 
@@ -466,13 +466,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L74)
-- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L1251)
-- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47)
+- ← [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 返回已准备的控制 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L74)
+- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L1251)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L27) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/STABLE_NODAL_CONTROLS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L27) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/STABLE_NODAL_CONTROLS.md)
 
 </details>
 
@@ -492,13 +492,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122)
-- ← [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L1251)
-- ← [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122)
+- ← [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L1251)
+- ← [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L630) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L630) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -518,13 +518,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L210)
-- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L154)
-- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L210)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L118) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/GRAPH_TRAINING_CONTRACT.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L118) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/GRAPH_TRAINING_CONTRACT.md)
 
 </details>
 
@@ -549,14 +549,14 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L1251)
-- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47)
-- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L630)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.TaichiEngine`](#user-content-api-zh-taichi) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L1251)
+- → [`fibernet.ml.BeamFrameFEM`](#user-content-api-zh-fem) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 受支持的力学结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L630)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -576,13 +576,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122)
-- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L630)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — taichi_kwargs(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — spring/taichi 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 弹簧结果 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L630)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L1251) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/TAICHI_API_DISPATCH.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L1251) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/TAICHI_API_DISPATCH.md)
 
 </details>
 
@@ -602,14 +602,14 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/nodal_controls.py#L27)
-- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L122)
-- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/accelerated.py#L630)
-- ← [`fibernet.LinearViscoelasticMaterial`](#user-content-api-zh-visco_material) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/viscoelastic.py#L21)
+- ← [`fibernet.sim.PreparedNodalControls`](#user-content-api-zh-prepared_controls) — 通过 fem_kwargs(graph) 传入原始求解 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/nodal_controls.py#L27)
+- ← [`fibernet.simulate`](#user-content-api-zh-simulate) — fem 路径 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L122)
+- → [`fibernet.SimResult`](#user-content-api-zh-sim_result) — 通过 to_sim_result(...) 转换 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/accelerated.py#L630)
+- ← [`fibernet.LinearViscoelasticMaterial`](#user-content-api-zh-visco_material) — history(material=...) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/viscoelastic.py#L21)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/beam_frame_fem.py#L47) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_BEAM_FEM_CONTRACT.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/beam_frame_fem.py#L47) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_BEAM_FEM_CONTRACT.md)
 
 </details>
 
@@ -629,14 +629,14 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 4</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-zh-recruitment) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/tensile_recruitment.py#L130)
-- → [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.CurveInverseDesigner`](#user-content-api-zh-curve_inverse) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/curve_inverse.py#L248)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.analysis.analyze_tensile_recruitment`](#user-content-api-zh-recruitment) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/tensile_recruitment.py#L130)
+- → [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.CurveInverseDesigner`](#user-content-api-zh-curve_inverse) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/curve_inverse.py#L248)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
 
 </details>
 
@@ -656,12 +656,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.run_joule_heating`](#user-content-api-zh-joule) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/joule_heating.py#L384)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.run_joule_heating`](#user-content-api-zh-joule) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/joule_heating.py#L384)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/linear_transport.py#L125) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/ONE_WAY_JOULE_HEATING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/linear_transport.py#L125) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/ONE_WAY_JOULE_HEATING.md)
 
 </details>
 
@@ -681,11 +681,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/linear_transport.py#L125)
+- ← [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 以电结果构造热源 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/linear_transport.py#L125)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/joule_heating.py#L384) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/ONE_WAY_JOULE_HEATING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/joule_heating.py#L384) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/ONE_WAY_JOULE_HEATING.md)
 
 </details>
 
@@ -705,12 +705,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-zh-lammps_task) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L692)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.integrations.lammps_backend.LAMMPSTask`](#user-content-api-zh-lammps_task) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L692)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L135) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/integrations/LAMMPS_HARMONIC_CLI.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L135) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/integrations/LAMMPS_HARMONIC_CLI.md)
 
 </details>
 
@@ -730,11 +730,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L135)
+- ← [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — PreparedRun · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L135)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py#L692) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/integrations/lammps_backend.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/integrations/LAMMPS_HARMONIC_CLI.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py#L692) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/integrations/lammps_backend.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/integrations/LAMMPS_HARMONIC_CLI.md)
 
 </details>
 
@@ -759,12 +759,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.ml.FiberNetDataset`](#user-content-api-zh-dataset) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/dataset.py#L230)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.ml.FiberNetDataset`](#user-content-api-zh-dataset) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/dataset.py#L230)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/graph_features.py#L98) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/FEATURE_AVAILABILITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/graph_features.py#L98) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/FEATURE_AVAILABILITY.md)
 
 </details>
 
@@ -784,11 +784,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/snapshot_features.py#L677) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/examples/snapshot_features_workflow.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/snapshot_features.py#L677) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/examples/snapshot_features_workflow.py)
 
 </details>
 
@@ -808,11 +808,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/topology_metrics.py#L36) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/architecture/topology-metrics.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/topology_metrics.py#L36) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/architecture/topology-metrics.md)
 
 </details>
 
@@ -832,11 +832,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/geometry_paths.py#L74) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/architecture/geometry-paths.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/geometry_paths.py#L74) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/architecture/geometry-paths.md)
 
 </details>
 
@@ -856,11 +856,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/tensile_recruitment.py#L130) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/examples/tensile_recruitment_quickstart.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/tensile_recruitment.py#L130) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/examples/tensile_recruitment_quickstart.py)
 
 </details>
 
@@ -885,12 +885,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回 GraphBatch · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L118)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L210) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/GRAPH_TRAINING_CONTRACT.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L210) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/GRAPH_TRAINING_CONTRACT.md)
 
 </details>
 
@@ -910,11 +910,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/analysis/graph_features.py#L98)
+- ← [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 将特征值与 feature_contract 元数据封装为 DatasetSample 记录 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/analysis/graph_features.py#L98)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/dataset.py#L230) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/FEATURE_AVAILABILITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/dataset.py#L230) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/FEATURE_AVAILABILITY.md)
 
 </details>
 
@@ -934,12 +934,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_learning.py#L109)
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_learning.py#L109)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_dataset.py#L208) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/examples/physical_dataset_workflow.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_dataset.py#L208) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/examples/physical_dataset_workflow.py)
 
 </details>
 
@@ -959,11 +959,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_learning.py#L109)
+- → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_learning.py#L109)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_surrogate.py#L4) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/examples/physical_learning_workflow.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_surrogate.py#L4) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/examples/physical_learning_workflow.py)
 
 </details>
 
@@ -983,12 +983,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_dataset.py#L208)
-- ← [`fibernet.ml.light_features`](#user-content-api-zh-light_features) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_surrogate.py#L4)
+- ← [`fibernet.ml.PlanarPhysicalDataset`](#user-content-api-zh-physical_dataset) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_dataset.py#L208)
+- ← [`fibernet.ml.light_features`](#user-content-api-zh-light_features) — 将 14 维向量逐行组成 X，并提供对应的 Y 标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_surrogate.py#L4)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/physical_learning.py#L109) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/examples/physical_learning_workflow.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/physical_learning.py#L109) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/examples/physical_learning_workflow.py)
 
 </details>
 
@@ -1008,11 +1008,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/sim/reduced_beam.py#L128)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/curve_inverse.py#L248) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/curve_inverse.py#L248) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
 
 </details>
 
@@ -1029,7 +1029,7 @@ graph = fn.pattern_2d(
 
 > 物理评估器由调用方提供；此接口与 fibernet.train_rl 不同。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/rl/algorithms.py#L243) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/rl/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/RL_COMPATIBILITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/rl/algorithms.py#L243) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/rl/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/RL_COMPATIBILITY.md)
 
 </details>
 
@@ -1046,7 +1046,7 @@ graph = fn.pattern_2d(
 
 > 当前不可用：安装可选依赖也不能启用这条内置路径。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L1050) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/RL_COMPATIBILITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L1050) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/RL_COMPATIBILITY.md)
 
 </details>
 
@@ -1071,12 +1071,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- → [`fibernet.compile_planar`](#user-content-api-zh-compile_planar) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L291)
-- → [`fibernet.compile_surface`](#user-content-api-zh-compile_surface) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L400)
+- → [`fibernet.compile_planar`](#user-content-api-zh-compile_planar) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L291)
+- → [`fibernet.compile_surface`](#user-content-api-zh-compile_surface) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L400)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L20) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_MANUFACTURING_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L20) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_MANUFACTURING_UNIFIED.md)
 
 </details>
 
@@ -1096,11 +1096,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L291) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_MANUFACTURING_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L291) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_MANUFACTURING_UNIFIED.md)
 
 </details>
 
@@ -1120,11 +1120,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L20)
+- ← [`fibernet.PlanarManufacturingConfig`](#user-content-api-zh-manufacturing_config) — 配置或工厂 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L20)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing.py#L400) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/METHODS_MANUFACTURING_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing.py#L400) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/METHODS_MANUFACTURING_UNIFIED.md)
 
 </details>
 
@@ -1144,13 +1144,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.export_mapped_route`](#user-content-api-zh-export_route) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L296)
-- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.export_mapped_route`](#user-content-api-zh-export_route) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L296)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L118)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L154) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/MANUFACTURING_GRAPH_MAPPING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L154) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/MANUFACTURING_GRAPH_MAPPING.md)
 
 </details>
 
@@ -1170,11 +1170,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L154)
+- ← [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — network 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L154)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_bridge.py#L296) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/MANUFACTURING_GRAPH_MAPPING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_bridge.py#L296) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/MANUFACTURING_GRAPH_MAPPING.md)
 
 </details>
 
@@ -1194,13 +1194,13 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 3</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.export_mapped_trails`](#user-content-api-zh-export_trails) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L282)
-- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/ml/graph_data.py#L118)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.export_mapped_trails`](#user-content-api-zh-export_trails) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L282)
+- → [`fibernet.ml.GraphBatch`](#user-content-api-zh-graph_batch_type) — 返回来源快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/ml/graph_data.py#L118)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L149) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/MULTISTROKE_MANUFACTURING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L149) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/MULTISTROKE_MANUFACTURING.md)
 
 </details>
 
@@ -1220,11 +1220,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L149)
+- ← [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — trails 与绑定快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L149)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/gen/manufacturing_trails.py#L282) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/MULTISTROKE_MANUFACTURING.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/gen/manufacturing_trails.py#L282) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/MULTISTROKE_MANUFACTURING.md)
 
 </details>
 
@@ -1249,12 +1249,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
-- → [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1155)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原生图序列化 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
+- → [`fibernet.StructureGraph.load_json`](#user-content-api-zh-load_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1155)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1143) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1143) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py)
 
 </details>
 
@@ -1274,12 +1274,12 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 2</summary>
 
-- ← [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1143)
-- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph.save_json`](#user-content-api-zh-save_graph) — 配套原生 JSON 文件 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1143)
+- → [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 重建的结构图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L1155) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/STABLE_NODAL_CONTROLS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L1155) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/STABLE_NODAL_CONTROLS.md)
 
 </details>
 
@@ -1299,11 +1299,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 携带原生记录的 MultiGraph 视图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L906) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/API_LAYERS.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L906) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/API_LAYERS.md)
 
 </details>
 
@@ -1323,11 +1323,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 图声明的维度 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/easy.py#L65) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/README.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/easy.py#L65) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/README.md)
 
 </details>
 
@@ -1347,11 +1347,11 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/core/structure_graph.py#L234)
+- ← [`fibernet.StructureGraph`](#user-content-api-zh-graph) — 原图与调用方提供的变形图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/core/structure_graph.py#L234)
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/viz/render.py#L388) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/380fcda7a8330b60e092d198f4f49e2d6aa967f1/docs/architecture/result-identity-contract.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/viz/render.py#L388) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/c9888415e83f4018c037654af0d08aa335b2de40/docs/architecture/result-identity-contract.md)
 
 </details>
 
