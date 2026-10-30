@@ -227,7 +227,7 @@
   "sim/saved_temperature.py": "c176f4108ed0f7cc5baea2bce9f33c8201c8a25a8263bad5fdb175c2dd42736a",
   "sim/thermoelastic.py": "e30d954b0ad20d31431197c467b590ce7a2a4f309a0ebdafe43e3f6386c4fcdb",
   "sim/transient_thermal.py": "433b86a726b37f4d4e8a76d83b5a1962132ae6b12a7fb8120811841101b50209",
-  "trimesh_integration.py": "f2cb16d776e1c4e62cf733af8b9a9e4004112a1ed9e2b1a3a0e2fc632a750997",
+  "trimesh_integration.py": "dc9459c939e3d51b54e456c04ad90456b5ab7691b12b049009abfd9520a03ffd",
   "units.py": "5d7facb9af710e6af8f380f553b70ba0c5fc3bbf34844845e492ffeb1501b963",
   "utils/__init__.py": "400da359031c05684cae18696b0a9528da7b9905a98d87a03b23356584d79512",
   "utils/batch.py": "9a6be050b8cfcae8dd010fe07158fe8783667a63d5dc4639e1b98be168d25538",

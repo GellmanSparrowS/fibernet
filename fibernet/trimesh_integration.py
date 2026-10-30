@@ -376,7 +376,7 @@ def simplify_mesh(
     >>> print(f"Simplified faces: {len(simplified.faces)}")
     """
     try:
-        simplified = mesh.simplify_quadric_decimation(face_count)
+        simplified = mesh.simplify_quadric_decimation(face_count=face_count)
     except ModuleNotFoundError:
         raise ImportError(
             "fast_simplification is required for mesh simplification. "
