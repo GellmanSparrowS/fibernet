@@ -18,6 +18,8 @@ import json
 import time
 import gc
 import argparse
+import hashlib
+import math
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +34,7 @@ from matplotlib.cm import ScalarMappable
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import fibernet as fn
-from fibernet import pattern_2d, TaichiEngine, list_units
+from fibernet import pattern_2d, TaichiEngine, list_units, StructureGraph
 from fibernet.viz.render import render_graph, _get_theme
 from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
 from fibernet.analysis.graph_features import GraphFeatureExtractor
@@ -94,93 +96,173 @@ class PipelineRunner:
         print(f'  Skip RL: {self.SKIP_RL}')
         print(f'  Memory: {get_memory_mb():.0f} MB')
     
+    def _checkpoint(self):
+        path = self.DATA_OUT / 'pipeline_checkpoint.json'
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text())
+            if not isinstance(data, dict):
+                raise ValueError('expected an object')
+            return data
+        except (OSError, ValueError) as exc:
+            raise ValueError(f'Invalid pipeline checkpoint: {path}') from exc
+
+    @staticmethod
+    def _write_json(path, data):
+        # Publish only a fully serialized file. Keep existing evidence on failure.
+        payload = json.dumps(data, indent=1, allow_nan=False)
+        temporary = path.with_suffix(path.suffix + '.tmp')
+        temporary.write_text(payload)
+        temporary.replace(path)
+
+    @staticmethod
+    def _sha256(path):
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
     def _save_checkpoint(self, stage, data):
-        """Save stage checkpoint."""
-        ckpt_path = self.DATA_OUT / 'pipeline_checkpoint.json'
-        if ckpt_path.exists():
-            with open(ckpt_path) as f:
-                ckpt = json.load(f)
-        else:
-            ckpt = {}
+        ckpt = self._checkpoint()
         ckpt[stage] = data
-        with open(ckpt_path, 'w') as f:
-            json.dump(ckpt, f, indent=1)
+        self._write_json(self.DATA_OUT / 'pipeline_checkpoint.json', ckpt)
         self.stage_checkpoints[stage] = data
-    
+
     def _check_stage_done(self, stage):
-        """Check if stage is already completed."""
-        ckpt_path = self.DATA_OUT / 'pipeline_checkpoint.json'
-        if ckpt_path.exists():
-            with open(ckpt_path) as f:
-                ckpt = json.load(f)
-            return stage in ckpt
-        return False
-    
+        return stage in self._checkpoint()
+
+    def _generation_config(self):
+        return dict(count=self.NUM_STRUCTURES, unit=self.UNIT, box=list(self.BOX),
+                    grid=list(self.GRID), n_pts_per_side=self.N_PTS_PER_SIDE,
+                    perturbation=self.PERTURBATION)
+
+    def _simulation_config(self):
+        return dict(stiffness=self.STIFFNESS, damping=self.DAMPING,
+                    num_steps=self.NUM_STEPS, target_stretch=self.TARGET_STRETCH,
+                    dt=1e-4, save_interval=1000, dashpot=10.0, drag=1.0,
+                    boundary_pct=0.10)
+
+    def _load_generation(self):
+        record = self._checkpoint().get('generation')
+        if (not isinstance(record, dict) or record.get('version') != 1
+                or record.get('config') != self._generation_config()):
+            raise ValueError('Missing, legacy, or incompatible generation checkpoint; '
+                             'preserve this directory and use a new --data-dir for a fresh run')
+        artifacts = record.get('artifacts')
+        if not isinstance(artifacts, list) or len(artifacts) != self.NUM_STRUCTURES:
+            raise ValueError('Generation artifact count mismatch')
+        graphs, metadata = [], []
+        for i, item in enumerate(artifacts):
+            name = f'honeycomb_{i:03d}'
+            path = self.DATA_OUT / 'structures' / f'{name}.json'
+            if (not isinstance(item, dict) or item.get('name') != name
+                    or not path.is_file() or self._sha256(path) != item.get('sha256')):
+                raise ValueError(f'Missing or changed saved graph: {path}')
+            try:
+                graph = StructureGraph.load_json(path)
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                raise ValueError(f'Invalid saved StructureGraph: {path}') from exc
+            meta = item.get('metadata')
+            if (not isinstance(meta, dict) or meta.get('name') != name
+                    or meta.get('nodes') != graph.num_nodes
+                    or meta.get('edges') != graph.num_edges):
+                raise ValueError(f'Incompatible graph metadata: {path}')
+            graphs.append(graph)
+            metadata.append(dict(meta))
+        # Replace state only after the whole set has been validated.
+        self.all_structures, self.all_metadata = graphs, metadata
+        self._graph_hashes = [item['sha256'] for item in artifacts]
+
+    def _load_simulations(self, complete=False):
+        path = self.DATA_OUT / 'simulations' / 'checkpoint.json'
+        if not path.is_file():
+            if complete or any(path.parent.glob('*_sim.json')):
+                raise ValueError(f'Missing simulation checkpoint: {path}')
+            return []
+        try:
+            records = json.loads(path.read_text())
+        except (OSError, ValueError) as exc:
+            raise ValueError(f'Invalid simulation checkpoint: {path}') from exc
+        if (not isinstance(records, list) or len(records) > self.NUM_STRUCTURES
+                or (complete and len(records) != self.NUM_STRUCTURES)):
+            raise ValueError('Simulation checkpoint count mismatch')
+        expected_names = {f'{self.all_metadata[i]["name"]}_sim.json'
+                          for i in range(len(records))}
+        if any(p.name not in expected_names for p in path.parent.glob('*_sim.json')):
+            raise ValueError('Uncommitted simulation outputs exist; preserve them before restarting')
+        if complete:
+            marker = self._checkpoint().get('simulation')
+            if not isinstance(marker, dict) or marker.get('count') != self.NUM_STRUCTURES:
+                raise ValueError('Simulation completion count mismatch')
+        for i, result in enumerate(records):
+            if (not isinstance(result, dict) or result.get('index') != i
+                    or result.get('name') != self.all_metadata[i]['name']
+                    or result.get('graph_sha256') != self._graph_hashes[i]
+                    or result.get('pipeline_config') != self._simulation_config()):
+                raise ValueError(f'Legacy or incompatible simulation record: {i}')
+            for key in ('max_force', 'max_stretch', 'energy'):
+                value = result.get(key)
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                        or not math.isfinite(value)):
+                    raise ValueError(f'Invalid simulation metric {key} at index {i}')
+        for meta, result in zip(self.all_metadata, records):
+            meta.update({key: result[key] for key in ('max_force', 'max_stretch', 'energy')})
+        return records
+
+    def _require_features(self):
+        record = self._checkpoint().get('features')
+        path = self.DATA_OUT / 'structures_features.csv'
+        if (not isinstance(record, dict) or record.get('count') != self.NUM_STRUCTURES
+                or not path.is_file() or record.get('sha256') != self._sha256(path)
+                or record.get('simulation_sha256') != self._sha256(
+                    self.DATA_OUT / 'simulations' / 'checkpoint.json')):
+            raise ValueError('Missing, legacy, or changed features artifact')
+
     def stage_generation(self):
-        """Stage 1: Generate batch structures."""
+        """Generate once; all resume paths restore the saved StructureGraphs."""
         if self._check_stage_done('generation'):
-            print('✓ Generation already done (checkpoint)')
-            # Load from JSON
-            struct_dir = self.DATA_OUT / 'structures'
-            first = struct_dir / 'honeycomb_000.json'
-            if first.exists():
-                print(f'  Loading {self.NUM_STRUCTURES} structures from {struct_dir}...')
-                for i in range(self.NUM_STRUCTURES):
-                    g = pattern_2d(unit=self.UNIT, box=self.BOX, grid=self.GRID, 
-                                   seed=100+i, n_pts_per_side=self.N_PTS_PER_SIDE, 
-                                   perturbation=self.PERTURBATION)
-                    self.all_structures.append(g)
-                    self.all_metadata.append({
-                        'name': f'honeycomb_{i:03d}', 'seed': 100+i,
-                        'nodes': g.num_nodes, 'edges': g.num_edges,
-                        'perturbation': self.PERTURBATION
-                    })
-                print(f'  ✓ Loaded {len(self.all_structures)} structures')
-                return
-        
-        print(f'Generating {self.NUM_STRUCTURES} structures...')
+            self._load_generation()
+            print(f'✓ Loaded {len(self.all_structures)} saved structures')
+            return
+        struct_dir = self.DATA_OUT / 'structures'
+        sim_dir = self.DATA_OUT / 'simulations'
+        if (self._checkpoint() or (struct_dir.exists() and any(struct_dir.iterdir()))
+                or (sim_dir.exists() and any(sim_dir.iterdir()))
+                or (self.DATA_OUT / 'structures_features.csv').exists()):
+            raise ValueError('Uncommitted or legacy artifacts exist; preserve this directory '
+                             'and use a new --data-dir for a fresh run')
+        if self.NUM_STRUCTURES <= 0:
+            raise ValueError('num_structures must be positive')
+        struct_dir.mkdir(parents=True, exist_ok=True)
         t0 = time.time()
+        artifacts = []
         for i in range(self.NUM_STRUCTURES):
             g = pattern_2d(unit=self.UNIT, box=self.BOX, grid=self.GRID, seed=100+i,
                            n_pts_per_side=self.N_PTS_PER_SIDE, perturbation=self.PERTURBATION)
-            self.all_structures.append(g)
-            self.all_metadata.append({
-                'name': f'honeycomb_{i:03d}', 'seed': 100+i,
-                'nodes': g.num_nodes, 'edges': g.num_edges,
-                'perturbation': self.PERTURBATION
-            })
-            if (i + 1) % 500 == 0:
-                print(f'  {i+1}/{self.NUM_STRUCTURES} ({time.time()-t0:.1f}s)')
-                check_memory()
-        
-        elapsed = time.time() - t0
-        print(f'✓ Generated {self.NUM_STRUCTURES} structures in {elapsed:.1f}s')
-        self._save_checkpoint('generation', {'count': self.NUM_STRUCTURES, 'time': elapsed})
-    
+            name = f'honeycomb_{i:03d}'
+            path = struct_dir / f'{name}.json'
+            temporary = path.with_suffix('.json.tmp')
+            g.save_json(temporary)
+            temporary.replace(path)
+            meta = dict(name=name, seed=100+i, nodes=g.num_nodes, edges=g.num_edges,
+                        perturbation=self.PERTURBATION)
+            artifacts.append(dict(name=name, sha256=self._sha256(path), metadata=meta))
+        self._save_checkpoint('generation', dict(version=1, config=self._generation_config(),
+                                                artifacts=artifacts, time=time.time()-t0))
+        self._load_generation()
+
     def stage_simulation(self):
         """Stage 2: Run simulations."""
-        if self._check_stage_done('simulation'):
-            print('✓ Simulation already done (checkpoint)')
-            # Load results
-            sim_dir = self.DATA_OUT / 'simulations'
-            ckpt_path = sim_dir / 'checkpoint.json'
-            if ckpt_path.exists():
-                with open(ckpt_path) as f:
-                    ckpt = json.load(f)
-                for i, sr in enumerate(ckpt):
-                    if i < len(self.all_metadata):
-                        self.all_metadata[i]['max_force'] = sr['max_force']
-                        self.all_metadata[i]['max_stretch'] = sr['max_stretch']
-                        self.all_metadata[i]['energy'] = sr['energy']
-                print(f'  ✓ Loaded {len(ckpt)} simulation results')
-                return
-        
-        if not self.all_structures:
-            print('✗ No structures loaded, run generation first')
+        self._load_generation()
+        complete = self._check_stage_done('simulation')
+        ckpt = self._load_simulations(complete=complete)
+        if complete:
+            record = self._checkpoint()['simulation']
+            if not isinstance(record, dict) or record.get('count') != self.NUM_STRUCTURES:
+                raise ValueError('Simulation completion count mismatch')
+            print(f'✓ Loaded {len(ckpt)} simulation results')
             return
-        
+
         print(f'Simulating {self.NUM_STRUCTURES} structures...')
-        engine = TaichiEngine()
+        engine = TaichiEngine() if len(ckpt) < self.NUM_STRUCTURES else None
         sim_dir = self.DATA_OUT / 'simulations'
         sim_dir.mkdir(parents=True, exist_ok=True)
         
@@ -209,20 +291,18 @@ class PipelineRunner:
         
         # Checkpoint support
         ckpt_path = sim_dir / 'checkpoint.json'
-        start_idx = 0
-        ckpt = []
-        if ckpt_path.exists():
-            with open(ckpt_path) as f:
-                ckpt = json.load(f)
-            start_idx = len(ckpt)
+        start_idx = len(ckpt)
+        if start_idx:
             print(f'  Resuming from {start_idx}/{self.NUM_STRUCTURES}')
-        
+
         t0 = time.time()
         for i in range(start_idx, self.NUM_STRUCTURES):
             g = self.all_structures[i]
             result = run_stretch(g)
             
             sim_dict = result.to_dict()
+            sim_dict['graph_sha256'] = self._graph_hashes[i]
+            sim_dict['pipeline_config'] = self._simulation_config()
             sim_dict['index'] = i
             sim_dict['name'] = self.all_metadata[i]['name']
             ckpt.append(sim_dict)
@@ -234,16 +314,14 @@ class PipelineRunner:
             result.save(str(sim_dir / f'{self.all_metadata[i]["name"]}_sim.json'), detailed=False)
             
             if (i + 1) % 50 == 0 or i == self.NUM_STRUCTURES - 1:
-                with open(ckpt_path, 'w') as f:
-                    json.dump(ckpt, f, indent=1)
+                self._write_json(ckpt_path, ckpt)
                 elapsed = time.time() - t0
                 rate = (i + 1 - start_idx) / elapsed if elapsed > 0 else 0
                 remaining = (self.NUM_STRUCTURES - i - 1) / rate if rate > 0 else 0
                 print(f'  {i+1}/{self.NUM_STRUCTURES} ({elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining, {get_memory_mb():.0f}MB)')
                 gc.collect()
         
-        with open(ckpt_path, 'w') as f:
-            json.dump(ckpt, f, indent=1)
+        self._write_json(ckpt_path, ckpt)
         
         elapsed = time.time() - t0
         forces_kN = np.array([m['max_force'] for m in self.all_metadata]) / 1000.0
@@ -254,7 +332,12 @@ class PipelineRunner:
     
     def stage_features(self):
         """Stage 3: Extract features."""
+        self._load_generation()
+        if not self._check_stage_done('simulation'):
+            raise ValueError('Feature extraction requires completed saved simulations')
+        self._load_simulations(complete=True)
         if self._check_stage_done('features'):
+            self._require_features()
             print('✓ Feature extraction already done (checkpoint)')
             return
         
@@ -262,6 +345,8 @@ class PipelineRunner:
             print('✗ No simulation results, run simulation first')
             return
         
+        if (self.DATA_OUT / 'structures_features.csv').exists():
+            raise ValueError('Uncommitted features CSV exists; preserve it before restarting')
         print(f'Extracting features for {len(self.all_structures)} structures...')
         extractor = GraphFeatureExtractor()
         t0 = time.time()
@@ -277,7 +362,10 @@ class PipelineRunner:
         
         elapsed = time.time() - t0
         print(f'✓ Extracted features in {elapsed:.1f}s, saved to {csv_path}')
-        self._save_checkpoint('features', {'count': len(self.all_structures), 'time': elapsed})
+        self._save_checkpoint('features', {'count': len(self.all_structures), 'time': elapsed,
+                                           'sha256': self._sha256(csv_path),
+                                           'simulation_sha256': self._sha256(
+                                               self.DATA_OUT / 'simulations' / 'checkpoint.json')})
     
     def stage_ml(self):
         """Stage 4: ML binary classification."""
@@ -340,6 +428,16 @@ class PipelineRunner:
             ('ml', self.stage_ml),
         ]
         
+        if from_stage not in (None, 'generation', 'simulation', 'features', 'ml'):
+            raise ValueError(f'Unknown pipeline stage: {from_stage}')
+        if from_stage in ('simulation', 'features', 'ml'):
+            self._load_generation()
+        if from_stage in ('features', 'ml'):
+            if not self._check_stage_done('simulation'):
+                raise ValueError('Resume requires completed saved simulations')
+            self._load_simulations(complete=True)
+        if from_stage == 'ml':
+            self._require_features()
         start = False if from_stage else True
         for name, func in stages:
             if from_stage and name == from_stage:
