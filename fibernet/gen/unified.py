@@ -501,6 +501,9 @@ def lattice_2d(
     >>> net = fn.create("lattice_2d", topology="honeycomb", cell_size=8.0)
     >>> net = fn.create("lattice_2d", topology="kagome", perturbation=0.2)
     """
+    if kwargs:
+        raise TypeError("lattice_2d does not support keyword options: "
+                        + ", ".join(sorted(kwargs)))
     topology = topology.lower()
     nx, ny = grid_size
     
