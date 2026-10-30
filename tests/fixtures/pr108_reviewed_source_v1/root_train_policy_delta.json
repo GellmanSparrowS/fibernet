@@ -1,0 +1,20 @@
+{
+  "schema": "reviewed_pr108_source_delta/1",
+  "source": "fibernet/__init__.py",
+  "base_sha256": "ddcec745609991587e6343f6c9bb34634d064775605b588f9be48faf5ae4010c",
+  "result_sha256": "2ea40895a7008bd4c52760488eeb74c05aab43d7373ae99d05919d971db2bc86",
+  "hunks": [
+    {
+      "before": "# Import the owning implementation only when its public symbol is requested.\n# Do not wrap, replace, or initialize any backend here.\n_LAZY_EXPORTS = {\n    \"TaichiEngine\": \"fibernet.sim.accelerated\",\n    \"SimResult\": \"fibernet.sim.accelerated\",\n    \"solve_linear_transport\": \"fibernet.sim.linear_transport\",\n",
+      "after": "# Import the owning implementation only when its public symbol is requested.\n# Do not wrap, replace, or initialize any backend here.\n_LAZY_EXPORTS = {\n    \"train_policy\": \"fibernet.rl.algorithms\",\n    \"TaichiEngine\": \"fibernet.sim.accelerated\",\n    \"SimResult\": \"fibernet.sim.accelerated\",\n    \"solve_linear_transport\": \"fibernet.sim.linear_transport\",\n"
+    },
+    {
+      "before": "    \"render_fem_stress\",\n    \"THEMES\",\n    # Easy API\n    \"show\", \"simulate\", \"batch_simulate\", \"batch_simulate_from_json\", \"train_model\", \"train_rl\", \"predict_named\",\n    # Analysis\n    \"GraphFeatureExtractor\",\n    \"GraphFeatureExtractor3D\",\n",
+      "after": "    \"render_fem_stress\",\n    \"THEMES\",\n    # Easy API\n    \"show\", \"simulate\", \"batch_simulate\", \"batch_simulate_from_json\", \"train_model\", \"train_rl\", \"train_policy\", \"predict_named\",\n    # Analysis\n    \"GraphFeatureExtractor\",\n    \"GraphFeatureExtractor3D\",\n"
+    },
+    {
+      "before": "    \"\"\"Resolve public exports on demand, propagating implementation failures.\"\"\"\n    from importlib import import_module\n    if name in _LAZY_EXPORTS:\n        value = getattr(import_module(_LAZY_EXPORTS[name]), name)\n    elif name in _RENDER_EXPORTS:\n        value = getattr(import_module(\"fibernet.viz.render\"), name)\n    elif name in _LAZY_MODULES:\n",
+      "after": "    \"\"\"Resolve public exports on demand, propagating implementation failures.\"\"\"\n    from importlib import import_module\n    if name in _LAZY_EXPORTS:\n        value = getattr(import_module(_LAZY_EXPORTS[name]),\n                        \"train_rl\" if name == \"train_policy\" else name)\n    elif name in _RENDER_EXPORTS:\n        value = getattr(import_module(\"fibernet.viz.render\"), name)\n    elif name in _LAZY_MODULES:\n"
+    }
+  ]
+}

@@ -76,3 +76,8 @@ tests/fixtures/lammps_metadata_persistence_v1/accelerated_delta.json -text
 
 # Exact result-processing source delta composed on current main.
 tests/fixtures/result_processing_v1/accelerated_delta.json -text
+
+# Exact reviewed PR108 source deltas preserve historical lineage bytes.
+tests/fixtures/pr108_reviewed_source_v1/root_train_policy_delta.json -text
+tests/fixtures/pr108_reviewed_source_v1/easy_train_policy_delta.json -text
+tests/fixtures/pr108_reviewed_source_v1/mechanical_json_scalar_delta.json -text

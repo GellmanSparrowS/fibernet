@@ -86,6 +86,10 @@ class TestLazyPlotImports(unittest.TestCase):
             assert callable(easy.show)
             assert 'render_graph' in easy.__all__
             assert 'render_deformation' in easy.__all__
+            assert 'train_policy' in easy.__all__
+            assert 'train_policy' not in vars(easy)
+            assert 'fibernet.rl.algorithms' not in sys.modules
+            assert 'stable_baselines3' not in sys.modules
             assert 'render_graph' not in vars(easy)
             assert 'render_deformation' not in vars(easy)
             assert 'fibernet.viz.render' not in sys.modules
@@ -168,8 +172,21 @@ class TestLazyPlotImports(unittest.TestCase):
                 'batch_simulate_from_json',
             }
             exports = {}; exec('from fibernet.easy import *', exports)
-            assert set(easy.__all__) == original_easy_names
-            assert set(exports) - {'__builtins__'} == original_easy_names
+            expected_easy_names = original_easy_names | {'train_policy'}
+            assert set(easy.__all__) == expected_easy_names
+            assert set(exports) - {'__builtins__'} == expected_easy_names
+            assert easy.__all__ == [
+                'annotations', 'json', 'time', 'Path', 'Any', 'Dict', 'List',
+                'Optional', 'Union', 'np', 'StructureGraph', 'pattern_2d',
+                'pattern_3d', 'TaichiEngine', 'SimResult', 'show', 'simulate',
+                'batch_simulate', 'train_model', 'predict_named', 'train_rl',
+                'batch_simulate_from_json', 'render_graph', 'render_deformation',
+                'train_policy',
+            ]
+            from fibernet.rl.algorithms import train_rl as direct_policy
+            assert exports['train_policy'] is easy.train_policy is fn.train_policy is direct_policy
+            assert exports['train_rl'] is easy.train_rl
+            assert easy.train_rl is not direct_policy
             for name in original_easy_names:
                 assert exports[name] is getattr(easy, name)
             assert exports['render_graph'] is direct_graph
