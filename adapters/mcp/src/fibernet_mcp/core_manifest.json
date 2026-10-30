@@ -100,7 +100,7 @@
   "io/gmsh.py": "bf4e88d935f3625c4a038500b30d027875219429668a497ee72a479744ea3d82",
   "io/lammps.py": "34f383bbe8ac86728d2251b882d04171b0c42897d2aeede823f1929131c7e249",
   "io/mesh_export.py": "d2bab800b1fa641d8742815c104ee8d2002d1726dcd1edb7b7f0739af033e6ed",
-  "io/meshio_adapter.py": "7260d468f5d980b58975b589d9431b3298290d0d979e0abb3609ec3d6b29bccd",
+  "io/meshio_adapter.py": "2238ce29dac3bf719548a8a4ea83dc6b03afde6b7d9e9cc1dab138d45557d004",
   "io/networkx_adapter.py": "5d1a1dc6ac9874313525a5bb7c56d30ca8cf9e6c107e7a6c6d997315c1acd89e",
   "io/pandas_io.py": "648a96723f5ff997767ec7abda44f69c22314bdbf20e79d84f2fddeea3bb6c13",
   "io/pdb.py": "ad1ba199b88c60ece90a88faf4b936e0f18a339c661700b51e26092bcc7d1938",
