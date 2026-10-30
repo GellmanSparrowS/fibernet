@@ -14,7 +14,7 @@ from fibernet.ml import PlanarPhysicalDataset
 
 
 class PhysicalDatasetWorkflow:
-    def __init__(self, output_dir, unit="hexagon", samples=8, seed=23,
+    def __init__(self, output_dir, unit="hexagon", samples=10, seed=23,
                  grid=2):
         self.output_dir = Path(output_dir)
         self.unit = unit
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="demo_labels")
     parser.add_argument("--unit", default="hexagon")
-    parser.add_argument("--samples", type=int, default=8)
+    parser.add_argument("--samples", type=int, default=10)
     parser.add_argument("--seed", type=int, default=23)
     parser.add_argument("--grid", type=int, default=2)
     args = parser.parse_args()
