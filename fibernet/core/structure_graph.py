@@ -1068,7 +1068,10 @@ class StructureGraph:
                     "radius": edge.radius,
                     "material": material_record(edge.material),
                     "segments": edge.segments,
-                    "internal_points": edge.internal_points.tolist() if edge.internal_points is not None else None,
+                    "internal_points": (
+                        _serialized_internal_points(edge.internal_points, eid).tolist()
+                        if edge.internal_points is not None else None
+                    ),
                     "metadata": edge.metadata,
                 }
                 for eid, edge in sorted(self._edges.items())

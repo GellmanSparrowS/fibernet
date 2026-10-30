@@ -1,6 +1,7 @@
-"""Native curve deserialization rejects malformed coordinates before admission."""
+"""Native curve serialization validates coordinates before admission or writes."""
 import json
 import pickle
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -96,3 +97,84 @@ def test_finite_mixed_numeric_coordinates_use_ordinary_numpy_promotion():
     graph = StructureGraph.from_dict(data)
     np.testing.assert_array_equal(graph.edges[101].internal_points, np.array(points))
     assert pickle.dumps(data) == before
+
+
+@pytest.mark.parametrize('points', [
+    pytest.param(np.array([[np.nan, 0., 0.]]), id='nan'),
+    pytest.param(np.array([[np.inf, 0., 0.]]), id='positive-inf'),
+    pytest.param(np.array([[-np.inf, 0., 0.]]), id='negative-inf'),
+    pytest.param(np.array([1., 2., 3.]), id='one-dimensional'),
+    pytest.param(np.ones((1, 2)), id='two-columns'),
+    pytest.param(np.ones((1, 4)), id='four-columns'),
+    pytest.param(np.empty((0, 2)), id='empty-wrong-columns'),
+    pytest.param(np.empty((1, 0)), id='empty-row'),
+    pytest.param(np.ones((1, 1, 3)), id='three-dimensional'),
+    pytest.param(np.array(1.), id='scalar-array'),
+    pytest.param([[1, 2, 3], [4]], id='ragged'),
+    pytest.param([[True, 0, 0]], id='mixed-bool'),
+    pytest.param(np.ones((1, 3), dtype=bool), id='bool-array'),
+    pytest.param([['1', '0', '0']], id='numeric-strings'),
+    pytest.param(np.array([['1', '0', '0']]), id='string-array'),
+    pytest.param(np.array([[1, 0, 0]], dtype=object), id='object-array'),
+    pytest.param(np.array([[1j, 0, 0]]), id='complex-array'),
+    pytest.param([[None, 0, 0]], id='null-coordinate'),
+    pytest.param(np.ma.array([[1., 0., 0.]], mask=False), id='unmasked-array'),
+    pytest.param(np.ma.array([[1., 0., 0.]], mask=[[True, False, False]]),
+                 id='masked-array'),
+    pytest.param([np.ma.array([1., 0., 0.], mask=False)], id='nested-masked'),
+])
+def test_writer_rejects_raw_curve_before_open_and_preserves_destinations(points, tmp_path):
+    graph = StructureGraph.from_dict(record([[1., 0., 1.]]))
+    existing = tmp_path / 'existing.json'
+    graph.save_json(existing)
+    previous_bytes = existing.read_bytes()
+    previous_record = graph.to_dict()
+    new = tmp_path / 'new.json'
+    graph.edges[101].internal_points = points
+    before = pickle.dumps(points)
+
+    with pytest.raises(ValueError, match='internal_points.*edge 101'):
+        graph.to_dict()
+    with patch('fibernet.core.structure_graph.open', create=True) as open_destination:
+        for destination in (existing, new):
+            with pytest.raises(ValueError, match='internal_points.*edge 101'):
+                graph.save_json(destination)
+        open_destination.assert_not_called()
+
+    assert existing.read_bytes() == previous_bytes
+    assert StructureGraph.load_json(existing).to_dict() == previous_record
+    assert not new.exists()
+    assert graph.edges[101].internal_points is points
+    assert pickle.dumps(points) == before
+
+
+@pytest.mark.parametrize('points', [
+    None, np.empty((0, 3)), np.array([[1, 0, 1]], dtype=np.int64),
+    np.array([[1.5, 0., 1.]], dtype=np.float32),
+    np.array([[1.5, 0., 1.]], dtype=np.float64),
+    [[1, 0, 1]], ((1., 0., 1.),), [[2**53 + 1, 0., 0.]],
+])
+def test_writer_valid_raw_curves_keep_format_roundtrip_and_input(points, tmp_path):
+    graph = StructureGraph.from_dict(record(None))
+    graph.edges[101].internal_points = points
+    before = pickle.dumps(points)
+    expected = record(None if points is None else np.array(points).tolist())
+    expected = StructureGraph.from_dict(expected).to_dict()
+    data = graph.to_dict()
+    assert data == expected
+
+    destination = tmp_path / 'graph.json'
+    graph.save_json(destination)
+    reference = tmp_path / 'reference.json'
+    with open(reference, 'w') as stream:
+        json.dump(expected, stream, indent=2)
+    assert destination.read_bytes() == reference.read_bytes()
+    assert not destination.read_bytes().endswith(b'\n')
+    for restored in (StructureGraph.load_json(destination), fn.load(destination)):
+        assert restored.to_dict() == expected
+        if points is None:
+            assert restored.edges[101].internal_points is None
+        elif np.array(points).size == 0:
+            assert restored.edges[101].internal_points.shape == (0, 3)
+    assert graph.edges[101].internal_points is points
+    assert pickle.dumps(points) == before
