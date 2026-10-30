@@ -8,6 +8,7 @@ import ast
 import builtins
 import copy
 import dataclasses
+from functools import lru_cache
 import inspect
 import hashlib
 import json
@@ -254,6 +255,13 @@ def result_detail_method(raw):
     return methods[0]
 
 
+@lru_cache(maxsize=1)
+def _result_detail_span(raw):
+    """Reuse only immutable line bounds for the exact bytes already parsed."""
+    method = result_detail_method(raw)
+    return method.lineno, method.end_lineno
+
+
 def reviewed_result_identity_method():
     raw = (ROOT/'tests/fixtures/result_identity_contract_v1/compute_detailed.py.txt').read_bytes()
     assert hashlib.sha256(raw).hexdigest() == RESULT_IDENTITY_METHOD_PIN, 'reviewed result identity method fixture changed'
@@ -263,9 +271,9 @@ def reviewed_result_identity_method():
 def reviewed_result_identity_source():
     """Reconstruct only the approved method and two field-comment changes."""
     raw = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-    method = result_detail_method(raw)
+    start, end = _result_detail_span(raw)
     lines = raw.splitlines(keepends=True)
-    approved = b''.join(lines[:method.lineno-1]) + reviewed_result_identity_method() + b''.join(lines[method.end_lineno:])
+    approved = b''.join(lines[:start-1]) + reviewed_result_identity_method() + b''.join(lines[end:])
     for before, after in (
         (b'    edge_forces: np.ndarray = None       # per-edge axial force magnitude\n',
          b'    edge_forces: np.ndarray = None       # signed per-edge axial force\n'),
