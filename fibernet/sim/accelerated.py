@@ -420,7 +420,15 @@ def _validate_mechanical_json(data):
                  'mean_stretch', 'std_stretch', 'max_displacement'):
         if name in data:
             value = data[name]
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(name + ' must be a finite real number')
+            # JSON integers can exceed NumPy integer dtypes yet remain finite
+            # in binary64. Check that conversion without changing stored values.
+            try:
+                finite = np.isfinite(float(value))
+            except (OverflowError, TypeError, ValueError):
+                finite = False
+            if not finite:
                 raise ValueError(name + ' must be a finite real number')
     for name in ('n_nodes', 'n_edges'):
         if name in data and (type(data[name]) is not int or data[name] < 0):

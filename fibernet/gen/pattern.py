@@ -30,12 +30,14 @@ This gives full control over beam geometry — straight, curved, wavy, or custom
 from __future__ import annotations
 
 import copy
+from numbers import Integral
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.material import Material
+from fibernet.core._grid_contract import normalize_grid
 from fibernet.core.transforms import (
     translate, rotate, mirror_x as _mirror_x, mirror_y as _mirror_y,
     mirror as _mirror, scale as _scale, compose,
@@ -1916,7 +1918,8 @@ def pattern_2d(
     box : (w, h)
         Unit cell dimensions.
     grid : int or (nx, ny)
-        Tiling grid size.
+        Nonnegative integer counts, or a Python/NumPy integer scalar broadcast
+        to both axes. Bool and floats are rejected; zero produces an empty tiling.
     n_internal : int
         Internal points per edge (for FEM deformation visualization).
     n_pts_per_side : int
@@ -1959,6 +1962,7 @@ def pattern_2d(
     -------
     StructureGraph
     """
+    grid = normalize_grid(grid, 2)
     if not isinstance(boundary_mode, str) or boundary_mode not in ("none", "extend", "error"):
         raise ValueError("boundary_mode must be 'none', 'extend', or 'error'")
     if unit is None and points is None:
@@ -2335,6 +2339,7 @@ def pattern_3d(
         TPMS units support only 0.
     n_pts_per_side : int
         Intermediate graph nodes per edge (affects structure topology).
+        Must be a nonnegative Python or NumPy integer, not a boolean.
         TPMS units support only 0.
     point_displacements : list of (dx, dy, dz), optional
         Explicit displacement per intermediate node. For non-TPMS built-in
@@ -2366,8 +2371,11 @@ def pattern_3d(
     degree-one pass, in raw graph coordinate units, not inferred metres or mm.
     These reports do not describe tiling welds or certify mechanical stability.
     """
-    if isinstance(grid, int):
-        grid = (grid, grid, grid)
+    if (isinstance(n_pts_per_side, (bool, np.bool_))
+            or not isinstance(n_pts_per_side, Integral) or n_pts_per_side < 0):
+        raise ValueError("n_pts_per_side must be a nonnegative integer, not bool")
+    n_pts_per_side = int(n_pts_per_side)
+    grid = normalize_grid(grid, 3)
 
     unit_name = unit.lower()
     if unit_name not in _UNIT_FACTORIES_3D:

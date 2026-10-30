@@ -23,6 +23,7 @@ from typing import Optional, Tuple, List, Dict
 from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.core.material import Material
+from fibernet.gen._input_contract import nonnegative_count, positive_real
 
 
 def _compute_percolation_box_2d(num_fibers, fiber_length, threshold_factor=2.0):
@@ -248,18 +249,39 @@ def random_straight_2d(
         Size of the square domain.
     radius : float
         Fiber radius.
+
+    Count accepts Python and NumPy integers, excluding booleans and negatives;
+    zero returns an empty network. Length, radius and effective box extents
+    must be finite positive real scalars. A one-item box sequence uses the
+    same extent on both axes; an empty sequence retains the 50-unit default.
     """
-    mat = material or Material(name="random_2d")
-    rng = np.random.RandomState(seed)
+    if kwargs:
+        raise TypeError("random_straight_2d does not support keyword options: "
+                        + ", ".join(sorted(kwargs)))
+    nonnegative_count(num_fibers, "num_fibers")
+    positive_real(fiber_length, "fiber_length")
+    positive_real(radius, "radius")
     
     # Auto-compute box_size for percolation if not specified
     if box_size is None:
-        bx = by = _compute_percolation_box_2d(num_fibers, fiber_length)
+        try:
+            bx = by = _compute_percolation_box_2d(num_fibers, fiber_length)
+        except (OverflowError, ValueError) as exc:
+            raise ValueError("automatic box_size must be finite and positive") from exc
     elif isinstance(box_size, (list, tuple, np.ndarray)):
-        bx = box_size[0] if len(box_size) > 0 else 50.0
-        by = box_size[1] if len(box_size) > 1 else bx
+        try:
+            bx = box_size[0] if len(box_size) > 0 else 50.0
+            by = box_size[1] if len(box_size) > 1 else bx
+        except TypeError as exc:
+            raise ValueError("box_size must be a positive scalar or a sequence of extents") from exc
     else:
+        positive_real(box_size, "box_size")
         bx = by = float(box_size)
+
+    positive_real(bx, "box_size[0]")
+    positive_real(by, "box_size[1]")
+    mat = material or Material(name="random_2d")
+    rng = np.random.RandomState(seed)
     
     net = FiberNetwork(
         dimension=2,
@@ -352,6 +374,9 @@ def random_straight_3d(
     threshold_factor : float
         Crosslink threshold as multiple of sum of radii.
     """
+    if kwargs:
+        raise TypeError("random_straight_3d does not support keyword options: "
+                        + ", ".join(sorted(kwargs)))
     mat = material or Material(name="random_3d")
     rng = np.random.RandomState(seed)
     
@@ -420,6 +445,9 @@ def random_walk_fibers(
     
     Each fiber is a random walk in 2D or 3D space.
     """
+    if kwargs:
+        raise TypeError("random_walk_fibers does not support keyword options: "
+                        + ", ".join(sorted(kwargs)))
     mat = material or Material(name="random_walk")
     
     # Auto-compute box_size if not specified

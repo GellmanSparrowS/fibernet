@@ -748,6 +748,10 @@ class SnapshotFeatureExtractor:
         else:
             positions = graph.node_positions()
         positions = np.asarray(positions, dtype=float)
+        # Validate every source coordinate before the planar XY projection.
+        # In particular, NaN/constant infinity in Z must not disappear here.
+        if not np.isfinite(positions).all():
+            raise ValueError("positions must contain only finite coordinates")
         if positions.ndim == 2 and positions.shape[1] == 3:
             if len(positions) and np.ptp(positions[:, 2]) > 1e-9:
                 raise ValueError("snapshot features require a planar graph")

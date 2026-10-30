@@ -18,24 +18,29 @@ def export_vtk(network: FiberNetwork, filepath: str):
     """Export fiber network to VTK format for ParaView visualization."""
     try:
         import pyvista as pv
-        
-        meshes = []
-        for fiber in network.fibers:
-            pts = fiber.centerline
-            if len(pts) < 2:
-                continue
-            spline = pv.Spline(pts, n_points=max(len(pts), 10))
-            tube = spline.tube(radius=fiber.radius, capping=True)
-            meshes.append(tube)
-        
-        if meshes:
-            combined = meshes[0]
-            for m in meshes[1:]:
-                combined = combined.merge(m)
-            combined.save(filepath)
-            print(f"Exported to {filepath}")
-    except ImportError:
-        print("PyVista required for VTK export. Install with: pip install pyvista")
+    except ModuleNotFoundError as exc:
+        if exc.name != 'pyvista':
+            raise
+        raise ImportError(
+            "PyVista is required for this export; install it with: "
+            "python -m pip install 'fibernet[viz]'"
+        ) from exc
+
+    meshes = []
+    for fiber in network.fibers:
+        pts = fiber.centerline
+        if len(pts) < 2:
+            continue
+        spline = pv.Spline(pts, n_points=max(len(pts), 10))
+        tube = spline.tube(radius=fiber.radius, capping=True)
+        meshes.append(tube)
+    
+    if meshes:
+        combined = meshes[0]
+        for m in meshes[1:]:
+            combined = combined.merge(m)
+        combined.save(filepath)
+        print(f"Exported to {filepath}")
 
 
 def export_csv(network: FiberNetwork, filepath: str):
@@ -59,20 +64,25 @@ def export_stl(network: FiberNetwork, filepath: str):
     """Export fiber network to STL for 3D printing."""
     try:
         import pyvista as pv
-        
-        meshes = []
-        for fiber in network.fibers:
-            pts = fiber.centerline
-            if len(pts) < 2:
-                continue
-            spline = pv.Spline(pts, n_points=max(len(pts), 10))
-            tube = spline.tube(radius=fiber.radius, capping=True)
-            meshes.append(tube)
-        
-        if meshes:
-            combined = meshes[0]
-            for m in meshes[1:]:
-                combined = combined.merge(m)
-            combined.save(filepath)
-    except ImportError:
-        print("PyVista required for STL export.")
+    except ModuleNotFoundError as exc:
+        if exc.name != 'pyvista':
+            raise
+        raise ImportError(
+            "PyVista is required for this export; install it with: "
+            "python -m pip install 'fibernet[viz]'"
+        ) from exc
+
+    meshes = []
+    for fiber in network.fibers:
+        pts = fiber.centerline
+        if len(pts) < 2:
+            continue
+        spline = pv.Spline(pts, n_points=max(len(pts), 10))
+        tube = spline.tube(radius=fiber.radius, capping=True)
+        meshes.append(tube)
+    
+    if meshes:
+        combined = meshes[0]
+        for m in meshes[1:]:
+            combined = combined.merge(m)
+        combined.save(filepath)

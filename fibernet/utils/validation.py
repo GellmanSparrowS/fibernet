@@ -61,8 +61,13 @@ def validate_type(
         return
     
     if not isinstance(value, expected_type):
+        def type_name(classinfo):
+            if isinstance(classinfo, tuple):
+                return " or ".join(type_name(item) for item in classinfo)
+            return classinfo.__name__
+
         raise ValidationError(
-            f"{name} must be of type {expected_type.__name__}, "
+            f"{name} must be of type {type_name(expected_type)}, "
             f"got {type(value).__name__}"
         )
 
@@ -104,6 +109,8 @@ def validate_range(
     >>> validate_range(0.5, 'ratio', min_val=0.0, max_val=1.0)
     """
     validate_type(value, name, (int, float))
+    if value != value:
+        raise ValidationError(f"{name} must not be NaN")
     
     if min_val is not None:
         if min_inclusive:

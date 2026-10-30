@@ -6,6 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
+- train_policy(env) → Gymnasium/SB3 策略训练，环境由调用方提供
 - train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用
 
 Examples
@@ -43,6 +44,7 @@ from fibernet.sim._taichi_geometry import (
 # Keep provider-independent utilities usable without probing a native engine.
 # Explicit alias access still returns the original implementation object.
 _LAZY_EXPORTS = {
+    "train_policy": "fibernet.rl.algorithms",
     "TaichiEngine": "fibernet.sim.accelerated",
     "SimResult": "fibernet.sim.accelerated",
     "render_graph": "fibernet.viz.render",
@@ -1057,7 +1059,8 @@ def train_rl(
     SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，
     不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。
 
-    实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
+    实际策略训练请使用 ``from fibernet import train_policy``
+    （与 ``from fibernet.rl import train_rl`` 为同一训练器），并传入适用的、
     由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；
     策略训练器也不会自动提供物理评价器。
 
@@ -1572,7 +1575,8 @@ def __getattr__(name):
     # Preserve historical aliases; propagate the owning implementation's error.
     if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]),
+                        "train_rl" if name == "train_policy" else name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -1589,4 +1593,4 @@ __all__ = [name for name in globals() if not name.startswith("_")]
 _index = __all__.index("pattern_3d") + 1
 __all__[_index:_index] = ["TaichiEngine", "SimResult"]
 del _index
-__all__ += ["render_graph", "render_deformation"]
+__all__ += ["render_graph", "render_deformation", "train_policy"]

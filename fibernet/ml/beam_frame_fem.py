@@ -9,6 +9,7 @@ Fixes from v4/v5:
   5. Per-node stress/strain for graph-level analysis
 """
 import numpy as np
+from numbers import Integral
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple, Optional
@@ -81,14 +82,21 @@ class BeamFrameFEM:
     
     @staticmethod
     def _validate_nodes(n_nodes, fixed_nodes, prescribed_disp):
-        """Validate node indices against n_nodes. Raises ValueError for out-of-range."""
-        bad_fixed = [n for n in fixed_nodes if int(n) < 0 or int(n) >= n_nodes]
+        """Require integral input-row indices, excluding booleans, within range.
+
+        Python and NumPy integers are accepted. Floats and coercible strings
+        are rejected rather than truncated; these are row indices, not stable
+        StructureGraph node IDs. Empty constraint collections remain valid.
+        """
+        bad_fixed = [n for n in fixed_nodes if isinstance(n, (bool, np.bool_)) or not isinstance(n, Integral)
+                     or int(n) < 0 or int(n) >= n_nodes]
         if bad_fixed:
             raise ValueError(
                 f"fixed_nodes contains invalid indices {bad_fixed} "
                 f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
             )
-        bad_prescribed = [n for n in prescribed_disp if int(n) < 0 or int(n) >= n_nodes]
+        bad_prescribed = [n for n in prescribed_disp if isinstance(n, (bool, np.bool_)) or not isinstance(n, Integral)
+                     or int(n) < 0 or int(n) >= n_nodes]
         if bad_prescribed:
             raise ValueError(
                 f"prescribed_disp contains invalid node indices {bad_prescribed} "

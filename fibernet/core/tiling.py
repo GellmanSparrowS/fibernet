@@ -38,6 +38,7 @@ import numpy as np
 from fibernet.core.material import Material
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.transforms import translate
+from fibernet.core._grid_contract import normalize_grid
 
 
 _NUMPY_SCALARS = tuple(np.dtype(name).type for name in (
@@ -262,7 +263,9 @@ def tile_2d(
     unit_cell : StructureGraph
         The unit cell. Must have ``box_size`` set, or pass ``box_size`` explicitly.
     grid : int or (nx, ny)
-        Grid dimensions. If int, uses (grid, grid).
+        Nonnegative integer counts; integer scalars broadcast to both axes.
+        Python/NumPy integers are accepted, bool and floats are rejected.
+        A zero count retains the empty-tiling behavior.
     box_size : (w, h), optional
         Override the unit cell's box_size.
     tolerance : float, optional
@@ -281,8 +284,7 @@ def tile_2d(
     tolerance. Matching bundles retain their maximum multiplicity. Values that
     cannot be safely compared remain separate fibers.
     """
-    if isinstance(grid, int):
-        grid = (grid, grid)
+    grid = normalize_grid(grid, 2)
     nx, ny = grid
 
     if box_size is not None:
@@ -372,8 +374,7 @@ def tile_3d(
     Uses the same shared-fiber matching and physical multiplicity rules as
     :func:`tile_2d`.
     """
-    if isinstance(grid, int):
-        grid = (grid, grid, grid)
+    grid = normalize_grid(grid, 3)
     nx, ny, nz = grid
 
     if box_size is not None:
@@ -459,8 +460,7 @@ def tile_with_transforms(
     ... }
     >>> g = tile_with_transforms(unit, grid=(2,2), cell_transforms=transforms)
     """
-    if isinstance(grid, int):
-        grid = (grid, grid)
+    grid = normalize_grid(grid, 2)
     nx, ny = grid
 
     if box_size is not None:

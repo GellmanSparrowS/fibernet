@@ -4,7 +4,8 @@ Analysis tools for FiberNet.
 - graph_features: Structural and topological feature extraction
 """
 
-from fibernet.analysis.graph_features import GraphFeatureExtractor
+# Reload clears the facade cache without reloading the feature implementation.
+globals().pop("GraphFeatureExtractor", None)
 from fibernet.analysis.tensile_recruitment import (
     PercolationResult, analyze_tensile_recruitment, compute_percolation,
 )
@@ -31,3 +32,15 @@ __all__ += ["GeometryPathMetricsV1", "analyze_geometry_paths"]
 from fibernet.analysis.spectrum_metrics import LaplacianSpectrumV1, analyze_spectrum
 
 __all__ += ["LaplacianSpectrumV1", "analyze_spectrum"]
+
+
+def __getattr__(name):
+    if name == "GraphFeatureExtractor":
+        from fibernet.analysis.graph_features import GraphFeatureExtractor
+        globals()[name] = GraphFeatureExtractor
+        return GraphFeatureExtractor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

@@ -8,7 +8,13 @@ Provides tools for:
 - Version control for configs
 - Automatic documentation generation
 
-Example config structure:
+The mechanical template below is retained as a configuration record, not an
+executable mechanical workflow. ``run_from_config`` refuses legacy mechanical,
+morphology and stress-strain execution. For an explicit StructureGraph
+small-deformation linear FEM example, see ``examples/open_source_workflow.py``;
+that model is not an equivalent automatic migration of this configuration.
+
+Example configuration record:
 ```yaml
 experiment:
   name: "fiber_network_study"
@@ -247,7 +253,14 @@ def create_template_config(
     template_type: str = 'mechanical',
 ) -> ExperimentConfig:
     """
-    Create a template configuration file.
+    Create a template configuration record.
+
+    The default mechanical template is retained for configuration storage and
+    editing; ``run_from_config`` refuses its mechanical, morphology and
+    stress-strain requests. Thermal templates are also explicitly unsupported.
+    For an explicit StructureGraph small-deformation linear FEM example, see
+    ``examples/open_source_workflow.py``. It is not an equivalent automatic
+    migration of these template settings.
     
     Parameters
     ----------
@@ -264,7 +277,7 @@ def create_template_config(
     Examples
     --------
     >>> config = create_template_config('my_experiment.yaml', template_type='mechanical')
-    >>> # Edit the file, then load it
+    >>> # Reload the configuration record; this does not run a simulation.
     >>> config = ExperimentConfig.from_yaml('my_experiment.yaml')
     """
     if template_type == 'thermal':
@@ -429,7 +442,14 @@ def create_template_config(
 
 def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any]:
     """
-    Run experiment from configuration.
+    Execute supported configuration requests.
+
+    Legacy mechanical, thermal, morphology and stress-strain requests are
+    refused before network generation or output. A stored mechanical template
+    is therefore not an executable mechanical workflow. Select an explicit
+    solver and result definition instead; ``examples/open_source_workflow.py``
+    illustrates StructureGraph small-deformation linear FEM, not an equivalent
+    automatic migration of the legacy settings.
     
     Parameters
     ----------
@@ -441,10 +461,11 @@ def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any
     dict
         Experiment results
     
-    Examples
-    --------
-    >>> results = run_from_config('experiment.yaml')
-    >>> print(results['stress_strain'].youngs_modulus)
+    Notes
+    -----
+    Inspect the configuration's requested capabilities before calling this
+    function. Legacy mechanical templates do not produce a stress-strain
+    result through this entry point.
     """
     # Load config if it's a file path
     if isinstance(config, (str, Path)):

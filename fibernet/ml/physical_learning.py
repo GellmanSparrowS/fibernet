@@ -57,6 +57,8 @@ def select_candidate(pool, X, Y, method, rng):
             X.ndim != 2 or X.shape[1] != pool.shape[1] or
             Y.shape != (len(X), 3)):
         raise ValueError('candidate pool and labelled arrays have invalid shape')
+    if not np.isfinite(X).all():
+        raise ValueError('labelled feature array X must be finite')
     if method in ACQUISITION_PLUGINS:
         return int(ACQUISITION_PLUGINS[method](pool, X, Y, rng))
     if method not in ACQUISITIONS:
@@ -84,6 +86,24 @@ def select_candidate(pool, X, Y, method, rng):
     if method == 'hybrid':
         uncertainty = uncertainty / max(uncertainty.max(), 1e-9) + distance / max(distance.max(), 1e-9)
     return int(np.argmax(uncertainty))
+
+
+def _checked_predictions(raw, n_rows):
+    """Check the non-MLP adapter's three-target output before arithmetic."""
+    if np.ma.isMaskedArray(raw):
+        raise ValueError('estimator predictions must not be masked')
+    try:
+        output = np.asarray(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('estimator predictions must be a real numeric (N, 3) array') from exc
+    if output.shape != (n_rows, 3):
+        raise ValueError(f'estimator predictions must have shape ({n_rows}, 3); '
+                         f'got {output.shape}')
+    if output.dtype.kind not in 'biuf':
+        raise ValueError('estimator predictions must contain real numeric values')
+    if not np.isfinite(output).all():
+        raise ValueError('estimator predictions must be finite')
+    return output
 
 
 class Regressor:
@@ -186,8 +206,10 @@ class Regressor:
                 if forest:
                     estimator.set_params(n_estimators=ep)
                 estimator.fit(x[ti], y[ti])
-            train.append(float(np.mean((estimator.predict(x[ti]) - y[ti]) ** 2)))
-            val.append(float(np.mean((estimator.predict(x[vi]) - y[vi]) ** 2)))
+            train_pred = _checked_predictions(estimator.predict(x[ti]), len(ti))
+            train.append(float(np.mean((train_pred - y[ti]) ** 2)))
+            val_pred = _checked_predictions(estimator.predict(x[vi]), len(vi))
+            val.append(float(np.mean((val_pred - y[vi]) ** 2)))
             if not neural or val[-1] < best - min_delta:
                 best, bad, best_epoch = val[-1], 0, ep
                 saved = copy.deepcopy(estimator)
@@ -226,7 +248,9 @@ class Regressor:
             raise ValueError('prediction features must be finite')
         if self.key == 'mlp':
             return self.estimator.predict(X)
-        out = self.estimator.predict((np.atleast_2d(X) - self.x_mean) / self.x_std)
+        rows = np.atleast_2d(X)
+        out = _checked_predictions(
+            self.estimator.predict((rows - self.x_mean) / self.x_std), len(rows))
         out = out * self.y_std + self.y_mean
         return out[0] if X.ndim == 1 else out
 
