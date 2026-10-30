@@ -27,7 +27,9 @@ import numpy as np
 try:
     import taichi as ti
     HAS_TAICHI = True
-except ImportError:
+except ModuleNotFoundError as exc:
+    if exc.name != "taichi":
+        raise
     HAS_TAICHI = False
 
 from fibernet.core.structure_graph import StructureGraph
