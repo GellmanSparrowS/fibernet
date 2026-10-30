@@ -146,7 +146,13 @@ def lattice_3d_fixed(
         if topology == 'gyroid':
             return gyroid_lattice_3d(cell_size=cell_size, **kwargs)
         else:
-            return plate_lattice_3d(cell_size=cell_size, **kwargs)
+            if 'spacing' in kwargs:
+                raise TypeError("lattice_3d(topology='plate') uses cell_size, "
+                                "not spacing")
+            return plate_lattice_3d(
+                spacing=cell_size, grid_size=grid_size,
+                radius=radius, material=material, **kwargs,
+            )
     else:
         raise ValueError(f"Unknown topology: {topology}")
 
