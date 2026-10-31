@@ -6,7 +6,8 @@ import sys
 import uuid
 from unittest.mock import patch
 
-from bounded_suite import ROOT, disk_bytes, run_bounded, subreaper
+from bounded_suite import (DEFAULT_LIMITS, FINISHING_CPU_RESERVE, REPORT_RESERVE,
+                           ROOT, disk_bytes, run_bounded, subreaper)
 
 AREA = ROOT / 'evidence' / ('monitor-' + uuid.uuid4().hex[:8])
 AREA.mkdir()
@@ -14,6 +15,14 @@ LIMITS = {'cpu_seconds': 5, 'wall_seconds': 5,
           'rss_bytes': 256 * 1024 ** 2, 'disk_bytes': 4 * 1024 ** 2}
 before = subreaper()
 records = []
+assert DEFAULT_LIMITS == {
+    'cpu_seconds': 180, 'wall_seconds': 300,
+    'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2,
+}
+assert FINISHING_CPU_RESERVE == 1.0 and REPORT_RESERVE == 16384
+records.append({'case': 'default_budget_contract', 'limits': dict(DEFAULT_LIMITS),
+                'finishing_cpu_reserve_seconds': FINISHING_CPU_RESERVE,
+                'report_disk_reserve_bytes': REPORT_RESERVE})
 inventory = AREA / 'disk_inventory'
 inventory.mkdir()
 (inventory / 'nested').mkdir()
@@ -61,6 +70,7 @@ assert abs(sum(item['cpu_seconds'] for item in result['wait4_records'])
            - result['waited_child_cpu_seconds']) <= result['wait4_rounding_allowance_seconds']
 
 result, _ = run('terminal_cpu_limit', short, {**LIMITS, 'cpu_seconds': .05})
+assert result['limits'] == {**LIMITS, 'cpu_seconds': .05}
 assert set(result['failures']) == {'sampled_cpu_limit', 'terminal_cpu_limit'}
 assert result['waited_child_cpu_seconds'] >= .05
 
