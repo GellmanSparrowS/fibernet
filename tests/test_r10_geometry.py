@@ -1,33 +1,64 @@
 """Synthetic-only R10 interchange tests; no native solver or benchmark data."""
 import copy
+import json
 import os
+from pathlib import Path
+import subprocess
 import sys
 import unittest
 
 _OPTIONAL = {"gmsh", "shapely", "numba", "llvmlite", "psutil", "tkinter",
              "fibernet_continuum"}
-_IMPORT_ENVIRONMENT = dict(os.environ)
-_PRELOADED_OPTIONAL = _OPTIONAL.intersection(sys.modules)
+from fibernet.core.material import Material
+from fibernet.io.r10_geometry import (
+    SCHEMA, import_r10_geometry, export_r10_geometry, validate_r10_geometry,
+)
 
+# The oracle belongs in a fresh interpreter, not in pytest's shared collection
+# process, where unrelated tests/plugins may already have imported psutil.
+# -I -S avoids user/site/.pth startup; exact explicit search paths preserve both
+# source-checkout and installed-package testing without relying on PYTHONPATH.
+_IMPORT_SENTINEL = r'''
+import json
+import os
+from pathlib import Path
+import sys
 
-class _DenyOptionalImports:
+if sys.flags.optimize or not sys.flags.isolated or not sys.flags.no_site:
+    raise RuntimeError("import sentinel requires -I -S without optimization")
+config = json.loads(sys.argv[1])
+sys.path[:] = config["paths"]
+optional = set(config["optional"])
+if optional.intersection(sys.modules):
+    raise AssertionError("fresh child already contains an optional backend")
+environment = dict(os.environ)
+attempts = []
+
+class DenyOptional:
     def find_spec(self, fullname, path=None, target=None):
-        if fullname.split(".")[0] in _OPTIONAL:
+        if fullname.split(".")[0] in optional:
+            attempts.append(fullname)
             raise AssertionError("R10 adapter eagerly imported optional backend: " + fullname)
         return None
 
+sys.meta_path.insert(0, DenyOptional())
+from fibernet.io import r10_geometry
 
-_guard = _DenyOptionalImports()
-sys.meta_path.insert(0, _guard)
-try:
-    from fibernet.core.material import Material
-    from fibernet.io.r10_geometry import (
-        SCHEMA, import_r10_geometry, export_r10_geometry, validate_r10_geometry,
-    )
-finally:
-    sys.meta_path.remove(_guard)
-_AFTER_IMPORT_ENVIRONMENT = dict(os.environ)
-_AFTER_OPTIONAL = _OPTIONAL.intersection(sys.modules)
+# Also detect attempted imports swallowed by broad exception handling.
+assert not attempts, "optional import attempts: " + repr(attempts)
+assert not optional.intersection(sys.modules), "optional backend loaded"
+assert dict(os.environ) == environment, "import changed child environment"
+origins = {}
+for name, expected in config["origins"].items():
+    module = sys.modules[name]
+    actual = str(Path(module.__file__).resolve())
+    assert actual == expected, "wrong import origin for " + name + ": " + actual
+    origins[name] = actual
+print(json.dumps({"status": "PASS", "origins": origins,
+                  "optional_import_attempts": attempts,
+                  "optional_modules": sorted(optional.intersection(sys.modules)),
+                  "environment_unchanged": True}, sort_keys=True))
+'''
 
 
 def fixture():
@@ -55,10 +86,43 @@ def fixture():
 
 class R10GeometryTests(unittest.TestCase):
     def test_import_does_not_load_optional_backends_or_mutate_environment(self):
-        # Fresh isolated interpreter required to establish the stronger claim.
-        self.assertFalse(_PRELOADED_OPTIONAL, "run in fresh isolated interpreter")
-        self.assertFalse(_AFTER_OPTIONAL)
-        self.assertEqual(_AFTER_IMPORT_ENVIRONMENT, _IMPORT_ENVIRONMENT)
+        environment = dict(os.environ)
+        # Deliberate regression condition: the shared parent is contaminated.
+        # psutil is already a declared dev dependency. Keep its real object;
+        # never delete/reload global modules to manufacture a clean process.
+        import psutil
+        parent_modules = {name: sys.modules[name] for name in _OPTIONAL
+                          if name in sys.modules}
+        self.assertIs(parent_modules["psutil"], psutil)
+        names = ("fibernet", "fibernet.core.material",
+                 "fibernet.core.structure_graph", "fibernet.io.r10_geometry")
+        origins = {name: str(Path(sys.modules[name].__file__).resolve()) for name in names}
+        config = dict(paths=[str(Path(path or os.curdir).resolve()) for path in sys.path],
+                      origins=origins, optional=sorted(_OPTIONAL))
+        try:
+            completed = subprocess.run(
+                [sys.executable, "-I", "-S", "-B", "-c", _IMPORT_SENTINEL,
+                 json.dumps(config)],
+                env=environment, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, encoding="utf-8", timeout=20, check=False,
+            )
+        except subprocess.TimeoutExpired as exc:
+            self.fail("fresh import sentinel exceeded 20 seconds\nstdout: %r\nstderr: %r"
+                      % (exc.stdout, exc.stderr))
+        finally:
+            self.assertEqual(dict(os.environ), environment)
+            self.assertEqual(_OPTIONAL.intersection(sys.modules), set(parent_modules))
+            for name, module in parent_modules.items():
+                self.assertIs(sys.modules.get(name), module)
+        self.assertEqual(completed.returncode, 0,
+                         "fresh import sentinel failed\nstdout:\n%s\nstderr:\n%s"
+                         % (completed.stdout, completed.stderr))
+        receipt = json.loads(completed.stdout)
+        self.assertEqual(receipt["status"], "PASS")
+        self.assertEqual(receipt["origins"], origins)
+        self.assertEqual(receipt["optional_import_attempts"], [])
+        self.assertEqual(receipt["optional_modules"], [])
+        self.assertIs(receipt["environment_unchanged"], True)
 
     def test_round_trip_identity_and_annotations(self):
         source, props = fixture()
