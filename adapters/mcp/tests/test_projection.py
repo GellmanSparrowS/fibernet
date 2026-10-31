@@ -165,7 +165,7 @@ def test_real_stdio_saved_complex_report_reference(tmp_path):
                     provenance=json.loads((await session.read_resource('fibernet://provenance/1')).contents[0].text)
                     manifest=json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text())
                     assert provenance['canonical_core_manifest_sha256']==sha(canonical(manifest))
-                    assert provenance['source_file_count']==254
+                    assert provenance['source_file_count']==255
                     catalog=(await session.call_tool('fibernet_catalog',{})).structuredContent
                     assert 'project_fiber_network_report' in catalog['capabilities']
                     graph=catalog['graphs'][0];gid=graph['graph_id']
