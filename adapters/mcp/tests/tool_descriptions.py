@@ -123,7 +123,7 @@ class MetadataSession(unittest.TestCase):
         manifest = json.loads(manifest_raw)
         actual = {p.relative_to(CORE / 'fibernet').as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                   for p in (CORE / 'fibernet').rglob('*.py')}
-        self.assertEqual(len(manifest), 254)
+        self.assertEqual(len(manifest), 255)
         self.assertIn("examples/linear_static_network.py", manifest)
         self.assertEqual(actual, manifest)
         expected = schemas()['tools']

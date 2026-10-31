@@ -104,6 +104,7 @@
   "io/networkx_adapter.py": "5d1a1dc6ac9874313525a5bb7c56d30ca8cf9e6c107e7a6c6d997315c1acd89e",
   "io/pandas_io.py": "648a96723f5ff997767ec7abda44f69c22314bdbf20e79d84f2fddeea3bb6c13",
   "io/pdb.py": "ad1ba199b88c60ece90a88faf4b936e0f18a339c661700b51e26092bcc7d1938",
+  "io/r10_geometry.py": "19399181c4b4ecce51d9189065cd2ed08ed00bb334ee480444a007ec51b8ba8d",
   "io/vtk.py": "1545259fdfddbb89da903d90f68b1718b07a859f3a8289a23551944083ab4ef2",
   "io/xyz.py": "1a02f04bea38dae047b82e51c20cfbe3b1969fa1f1ebf0aee0c78778cbeb895e",
   "materials.py": "b3d7f642f2cde3121b2114a4cdc161767306fbcdc1ec6f4154fccdfe706091b4",
