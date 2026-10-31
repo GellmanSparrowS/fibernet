@@ -53,7 +53,6 @@ class MDAnalysisBridge:
         self.network = network
         try:
             import MDAnalysis as mda
-            from MDAnalysis.topology.base import Topology
             self.mda = mda
         except ImportError:
             raise ImportError(
