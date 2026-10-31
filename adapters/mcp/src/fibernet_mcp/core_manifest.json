@@ -92,7 +92,7 @@
   "integrations/lammps_backend.py": "851d9d0ae08c9fe660f29a69cb33699c3d092988218dc008b9d5ed8f195e1c05",
   "integrations/lammps_integration.py": "211ca5506341e1a16b156cf7aa1e7a0cc386b5838e08cc51f748d362c138ff6b",
   "integrations/lammps_planning.py": "aaf5e43f135bca17666ee3db7745e76734ea7f61b43e1c4fa06596176542fbd5",
-  "integrations/mdanalysis_integration.py": "23b5068bf119b611a94259f1b66576c5b5c7fdd3dea3d32f7d783547bb885642",
+  "integrations/mdanalysis_integration.py": "e7ad8cce7032d405bb31e1f557d1bd80446aee417df2bb5322cd90fc3bcb7524",
   "integrations/networkx_integration.py": "72207fd467feeea3dc66e62676b54db8f05e146802a6b6cf894a1ab65bb2a728",
   "integrations/ovito_integration.py": "9cbe3ce7cc64ee0da5dc707c41f8a655c2813b21b3970e6d2587486b1d7b4d9a",
   "io/__init__.py": "766831945d4797bcf816b5c96c2bb8a53a8ed7ce23f2391e59c81b7dc7eb9643",
