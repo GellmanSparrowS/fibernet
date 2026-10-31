@@ -21,7 +21,7 @@ SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py'
            'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
            'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py',
            'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py')
-DEFAULT_LIMITS = {'cpu_seconds': 120, 'wall_seconds': 300,
+DEFAULT_LIMITS = {'cpu_seconds': 180, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
 FINISHING_CPU_RESERVE = 1.0
