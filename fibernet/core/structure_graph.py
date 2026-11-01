@@ -573,6 +573,9 @@ class StructureGraph:
         if edge_key in self._edge_set and not allow_parallel:
             return self._edge_set[edge_key]
 
+        if isinstance(radius, (float, np.floating)) and not np.isfinite(radius):
+            raise ValueError("radius must be finite")
+
         if internal_points is None and n_internal > 0:
             pi = self._nodes[node_i].position
             pj = self._nodes[node_j].position
