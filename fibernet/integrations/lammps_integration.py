@@ -24,8 +24,36 @@ from pathlib import Path
 import tempfile
 import os
 import warnings
+import math
+from numbers import Integral, Real
 
 from fibernet.core.network import FiberNetwork
+
+
+def _checked_legacy_controls(temperature, timestep, nsteps, dump_freq):
+    """Validate scalar controls before emitting files or constructing a provider."""
+    def real(value, name, *, positive=False):
+        if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+            raise ValueError(f"{name} must be a finite real number")
+        try:
+            value = float(value)
+        except (OverflowError, ValueError) as error:
+            raise ValueError(f"{name} must be a finite real number") from error
+        if not math.isfinite(value) or (value <= 0 if positive else value < 0):
+            bound = "positive" if positive else "nonnegative"
+            raise ValueError(f"{name} must be finite and {bound}")
+        return value
+
+    def integer(value, name, minimum):
+        if (isinstance(value, (bool, np.bool_)) or
+                not isinstance(value, Integral) or value < minimum):
+            raise ValueError(f"{name} must be an integer >= {minimum}")
+        return int(value)
+
+    return (real(temperature, "temperature"),
+            real(timestep, "timestep", positive=True),
+            integer(nsteps, "nsteps", 0),
+            integer(dump_freq, "dump_freq", 1))
 
 
 @dataclass
@@ -195,13 +223,13 @@ class LAMMPSBridge:
         data_file : str
             LAMMPS data file.
         temperature : float
-            Simulation temperature (K).
+            Finite nonnegative simulation temperature (K).
         timestep : float
-            Time step (ps).
+            Finite positive time step (ps).
         nsteps : int
-            Number of simulation steps.
+            Nonnegative integer number of simulation steps (not boolean).
         dump_freq : int
-            Dump frequency for trajectory.
+            Positive integer dump frequency for trajectory (not boolean).
         force_field : str
             Force field type: 'harmonic', 'fene', 'morse'
         
@@ -210,6 +238,8 @@ class LAMMPSBridge:
         filename : str
             Path to written script.
         """
+        temperature, timestep, nsteps, dump_freq = _checked_legacy_controls(
+            temperature, timestep, nsteps, dump_freq)
         script = f"""# FiberNet LAMMPS Input Script
 # Generated automatically
 
@@ -274,9 +304,9 @@ run             {nsteps}
         Parameters
         ----------
         temperature : float
-            Simulation temperature (K).
+            Finite nonnegative simulation temperature (K).
         nsteps : int
-            Number of steps.
+            Nonnegative integer number of steps (not boolean).
         workdir : str, optional
             Working directory. Uses temp dir if None.
         
@@ -287,7 +317,10 @@ run             {nsteps}
         """
         if not self._lammps_available:
             raise self._lammps_import_error
-        
+
+        temperature, _, nsteps, _ = _checked_legacy_controls(
+            temperature, 0.001, nsteps, 100)
+
         if workdir is None:
             workdir = tempfile.mkdtemp()
         
