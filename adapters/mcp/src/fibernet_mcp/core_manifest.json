@@ -28,7 +28,7 @@
   "core/crosslinks.py": "ec855b9c694caee17b78cce7d5b73d112250308c68cf8edc33549077cb6e4db6",
   "core/fiber.py": "32382b63db6b71e9c6ff48aee9c3f656f46a0d3b636547d7c61671c6dc9e681c",
   "core/fiber_network_profile.py": "08fb72065aa9c6a05888a5aa627816d44153387a714fa6a89f61c635699a7b9c",
-  "core/material.py": "e817611530f08106b5fbf20a7633116a145bbb149fb9d634256147328b526aed",
+  "core/material.py": "f6ed04edadb5bd746ce204f0d33c2b4089b984c45a5a38b9c63dc4494bae0270",
   "core/network.py": "bcca0a3a69df6ee58b1bb422e473ed7d1ae80aa7c000a09f2e41c500fcbe0fdd",
   "core/pbc.py": "b2f9c65ef55e2e49c890401450c0e88396ae2f8f1391746afd4f4e8d283782e4",
   "core/structure_graph.py": "375ed4eee07a204ee94c92b3755fed0b3993fbfb2d9fbddc25476e340cec5160",
