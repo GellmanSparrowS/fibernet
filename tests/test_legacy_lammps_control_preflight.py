@@ -1,5 +1,6 @@
 """Regression tests for legacy LAMMPS scalar controls."""
 import importlib
+import os
 import sys
 import types
 import unittest
@@ -75,7 +76,7 @@ class LegacyLAMMPSControlPreflightTests(unittest.TestCase):
         mkdir.assert_called_once_with()
         self.assertEqual(opened.call_count, 2)
         self.provider.lammps.assert_called_once_with(cmdargs=['-log', 'none', '-screen', 'none'])
-        self.engine.file.assert_called_once_with('/fake/in.fiber')
+        self.engine.file.assert_called_once_with(os.path.join('/fake', 'in.fiber'))
         self.engine.close.assert_called_once_with()
         self.assertEqual(result.simulation_time, 0.)
         text = ''.join(call.args[0] for call in opened().write.call_args_list)
