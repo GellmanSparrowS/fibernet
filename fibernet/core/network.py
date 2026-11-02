@@ -501,35 +501,91 @@ class FiberNetwork:
         return cls.from_dict(data)
 
     def save_hdf5(self, filepath: str):
-        """Save network to HDF5 file for large-scale data."""
+        """Atomically replace a new or writable single-link regular HDF5 file.
+
+        Accept str or PathLike[str], not bytes. Existing targets with no write
+        mode bits, symlinks and nonregular/multiply-linked files are rejected.
+        Mode checks are a conservative policy, not an ACL authorization check.
+        Existing mode bits are retained, but ownership/ACLs/xattrs are not.
+        New files have private temporary-file permissions. No durability or
+        concurrent-directory-mutation guarantee is provided.
+        """
+        import os
+        import stat
+        import tempfile
         import h5py
-        with h5py.File(filepath, 'w') as hf:
-            hf.attrs['version'] = '0.1.0'
-            hf.attrs['dimension'] = self.dimension
-            hf.attrs['periodic'] = self.periodic
-            if self.box_size is not None:
-                hf.attrs['box_size'] = self.box_size
-            hf.attrs['metadata'] = json.dumps(self.metadata)
-            
-            fiber_grp = hf.create_group('fibers')
-            for i, f in enumerate(self.fibers):
-                fg = fiber_grp.create_group(f'fiber_{i}')
-                fg.create_dataset('centerline', data=f.centerline)
-                fg.attrs['radius'] = f.radius
-                fg.attrs['fiber_id'] = f.fiber_id
-                fg.attrs['cross_section'] = f.cross_section.value
-                fg.attrs['segments'] = f.segments
-                fg.attrs['material'] = json.dumps(f.material.to_dict())
-            
-            cl_grp = hf.create_group('crosslinks')
-            for i, cl in enumerate(self.crosslinks):
-                cg = cl_grp.create_group(f'cl_{i}')
-                cg.attrs['fiber_i'] = cl.fiber_i
-                cg.attrs['fiber_j'] = cl.fiber_j
-                cg.attrs['param_i'] = cl.param_i
-                cg.attrs['param_j'] = cl.param_j
-                cg.create_dataset('position', data=cl.position)
-                cg.attrs['crosslink_type'] = cl.crosslink_type
+
+        path = os.fspath(filepath)
+        if not isinstance(path, str):
+            raise TypeError("save_hdf5 requires str or PathLike[str], not bytes")
+        target = os.path.abspath(path)
+        metadata_json = json.dumps(self.metadata)
+        materials_json = [json.dumps(f.material.to_dict()) for f in self.fibers]
+        try:
+            previous = os.lstat(target)
+        except FileNotFoundError:
+            previous_mode = None
+        else:
+            if not stat.S_ISREG(previous.st_mode) or previous.st_nlink != 1:
+                raise ValueError("save_hdf5 requires a new or single-link regular file")
+            previous_mode = stat.S_IMODE(previous.st_mode)
+            if not previous_mode & (stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH):
+                raise PermissionError("save_hdf5 rejects targets with no write mode bits")
+
+        fd, temporary = tempfile.mkstemp(
+            prefix=".fibernet-", suffix=".h5.tmp", dir=os.path.dirname(target)
+        )
+        try:
+            try:
+                os.close(fd)
+            except BaseException as error:
+                error.hdf5_descriptor_close_uncertain = True
+                raise
+            hf = h5py.File(temporary, 'w')
+            try:
+                hf.attrs['version'] = '0.1.0'
+                hf.attrs['dimension'] = self.dimension
+                hf.attrs['periodic'] = self.periodic
+                if self.box_size is not None:
+                    hf.attrs['box_size'] = self.box_size
+                hf.attrs['metadata'] = metadata_json
+                fiber_grp = hf.create_group('fibers')
+                for i, f in enumerate(self.fibers):
+                    fg = fiber_grp.create_group(f'fiber_{i}')
+                    fg.create_dataset('centerline', data=f.centerline)
+                    fg.attrs['radius'] = f.radius
+                    fg.attrs['fiber_id'] = f.fiber_id
+                    fg.attrs['cross_section'] = f.cross_section.value
+                    fg.attrs['segments'] = f.segments
+                    fg.attrs['material'] = materials_json[i]
+                cl_grp = hf.create_group('crosslinks')
+                for i, cl in enumerate(self.crosslinks):
+                    cg = cl_grp.create_group(f'cl_{i}')
+                    cg.attrs['fiber_i'] = cl.fiber_i
+                    cg.attrs['fiber_j'] = cl.fiber_j
+                    cg.attrs['param_i'] = cl.param_i
+                    cg.attrs['param_j'] = cl.param_j
+                    cg.create_dataset('position', data=cl.position)
+                    cg.attrs['crosslink_type'] = cl.crosslink_type
+            except BaseException as error:
+                try:
+                    hf.close()
+                except BaseException as close_error:
+                    error.hdf5_close_error = close_error
+                raise
+            else:
+                hf.close()
+            if previous_mode is not None:
+                os.chmod(temporary, previous_mode)
+            os.replace(temporary, target)
+        except BaseException as error:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
+            except OSError as cleanup_error:
+                error.hdf5_cleanup_error = cleanup_error
+            raise
 
     def summary(self) -> str:
         """Print a summary of the network."""
