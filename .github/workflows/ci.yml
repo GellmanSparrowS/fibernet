@@ -38,7 +38,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -e ".[dev]"
+        pip install -e ".[dev,io]"
 
     - name: Verify legacy LAMMPS failure semantics without a native provider
       run: python tests/test_legacy_lammps_fail_closed.py
