@@ -828,7 +828,7 @@ def curved_random_2d(
         fiber = Fiber(
             centerline=centerline,
             radius=radius,
-            material=material,
+            material=Material() if material is None else material,
         )
         fibers.append(fiber)
     
@@ -1000,7 +1000,7 @@ def entangled_3d(
         fiber = Fiber(
             centerline=centerline,
             radius=radius,
-            material=material,
+            material=Material() if material is None else material,
         )
         fibers.append(fiber)
     
@@ -1394,7 +1394,7 @@ def hierarchical_lattice(
     for (p1, p2, r) in all_edges:
         p1_3d = np.array([p1[0], p1[1], 0.0])
         p2_3d = np.array([p2[0], p2[1], 0.0])
-        fiber = Fiber(centerline=np.array([p1_3d, p2_3d]), radius=r, material=material)
+        fiber = Fiber(centerline=np.array([p1_3d, p2_3d]), radius=r, material=Material() if material is None else material)
         fibers.append(fiber)
     
     net = FiberNetwork(fibers=fibers, dimension=2)
