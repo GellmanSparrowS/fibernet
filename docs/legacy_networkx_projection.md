@@ -56,3 +56,21 @@ members, curves, full material records and metadata. The lossless reader is
 for graphs produced by that native protocol, not arbitrary NetworkX graphs.
 The similarly named `StructureGraph.from_networkx()` is also a projection;
 passing an arbitrary rich graph through it does not recover discarded fields.
+
+## Native graph's ordinary NetworkX projection
+
+`StructureGraph.to_networkx()` emits `pos` and `boundary` for nodes, and
+`radius`, `edge_id` and `segments` for edges. Other metadata remains in flat
+NetworkX attributes as before, except that edge metadata named `key` is now
+an attribute rather than a NetworkX MultiGraph edge key. Previously, equal
+`key` metadata values could collapse parallel edges; keys are now allocated by
+NetworkX. If metadata uses one of these structural names,
+or `_fibernet_metadata` itself, the structural values take precedence and a
+`_fibernet_metadata` attribute contains a shallow copy of the full original
+metadata mapping, including any value originally using that name. This also
+preserves conflicting metadata on each parallel edge separately. Metadata
+values may be shared with the source graph; this is not a detached snapshot.
+
+The corresponding `StructureGraph.from_networkx()` remains a projection and
+does not restore this metadata. For complete, detached round trips, use the
+native lossless NetworkX methods described above.
