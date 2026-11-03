@@ -1021,7 +1021,67 @@ def reviewed_taichi_import_source(reverse=None):
     return result
 
 
+# Exact accepted JSON and batch-input layers follow the frozen historical deltas.
+# Their owners are unchanged from the separately reviewed source candidates.
+JSON_HELPER_SHA256 = '4dd0c0b493e950762525c80f5e0f1b5dd116b96d3c39b1d01b1342de467aef27'
+
+
+def reviewed_json_helper_source():
+    raw = (ROOT/'fibernet/_json.py').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == JSON_HELPER_SHA256, 'reviewed JSON helper source changed'
+    return raw
+
+
+def _reviewed_release_input_delta(relative, filename, fixture_pin, base, reverse=None):
+    raw = (ROOT/'tests/fixtures/release_input_contract_v1'/filename).read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == fixture_pin, 'reviewed release input delta fixture changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_release_input_source_delta/1'
+    assert delta['source'] == relative, 'reviewed release input delta source changed'
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'reviewed release input delta base changed'
+    reviewed_json_helper_source()
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'unreviewed release input inverse input'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'reviewed release input delta is not uniquely located'
+        source = source.replace(before, after, 1)
+    expected = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == expected, 'reviewed release input delta result changed'
+    if reverse is not None:
+        assert source == base, 'reviewed release input inverse changed historical bytes'
+    return source
+
+
+def reviewed_easy_json_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_json_delta.json',
+        '1f998f4c1479bb263fbc01a5d88069f44fe6f0c96da7d68fea27dc23c6eabd5e', reviewed_easy_train_policy_source(), reverse=reverse)
+
+
+def reviewed_api_json_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/api.py', 'api_json_delta.json',
+        'a5257157afdb1603fe8ee37fbdbfe4ef4a6474ceac569462705ce9a4fee16287', reviewed_legacy_analysis_source(), reverse=reverse)
+
+
+def reviewed_easy_batch_input_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_batch_input_delta.json',
+        'a547b80934f858c5f379b9ec70168ee75831e042efac849d2cb4efcdaa9fbb10', reviewed_easy_json_source(), reverse=reverse)
+
+
+def restore_reviewed_release_easy_source(source):
+    return reviewed_easy_json_source(reverse=reviewed_easy_batch_input_source(reverse=source))
+
+
 def require_public_source(relative, raw):
+    if relative == 'fibernet/_json.py':
+        assert raw == reviewed_json_helper_source(), 'public source bytes changed: '+relative
+        return
     if relative == 'fibernet/__init__.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_facade(relative), reviewed_fiber_network_profile_facade(), reviewed_octet_fcc_facade(), reviewed_root_train_policy_source()), 'public source bytes changed: '+relative
         return
@@ -1029,10 +1089,10 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1117,6 +1177,94 @@ def restore_historical_save(result_node):
     return node
 
 
+class ReleaseInputSourceAdmission(unittest.TestCase):
+    CASES = (
+        ('fibernet/easy.py', reviewed_easy_json_source, reviewed_easy_train_policy_source, 'easy_json_delta.json'),
+        ('fibernet/api.py', reviewed_api_json_source, reviewed_legacy_analysis_source, 'api_json_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_batch_input_source, reviewed_easy_json_source, 'easy_batch_input_delta.json'),
+    )
+
+    def test_exact_accepted_layers_and_historical_versions(self):
+        for relative, build, previous, filename in self.CASES:
+            with self.subTest(source=relative, layer=filename):
+                current, prior = build(), previous()
+                self.assertNotEqual(current, prior)
+                self.assertEqual(build(reverse=current), prior)
+                require_public_source(relative, current)
+                require_public_source(relative, prior)
+                with self.assertRaises(AssertionError):
+                    build(reverse=prior)
+        self.assertEqual(reviewed_easy_batch_input_source(), (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_api_json_source(), (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
+                         reviewed_easy_train_policy_source())
+        require_public_source('fibernet/_json.py', reviewed_json_helper_source())
+
+    def test_unreviewed_source_bytes_are_rejected(self):
+        for relative, build, previous, filename in self.CASES:
+            raw = build()
+            mutations = [raw + b'\npass\n', raw + b'\n# unreviewed\n',
+                         raw.replace(b'\n', b'\r\n'),
+                         raw.replace(b'object_pairs_hook=_unique_json_object_pairs',
+                                     b'object_pairs_hook=dict', 1)]
+            if filename == 'easy_batch_input_delta.json':
+                mutations.append(raw.replace(b'configs = _batch_config_inputs(configs)',
+                                             b'configs = list(configs)', 1))
+            for changed in mutations:
+                with self.subTest(layer=filename, tail=changed[-40:]):
+                    self.assertNotEqual(raw, changed)
+                    with self.assertRaises(AssertionError):
+                        require_public_source(relative, changed)
+                    with self.assertRaises(AssertionError):
+                        build(reverse=changed)
+
+    def test_each_delta_fixture_is_not_self_accepting(self):
+        original = Path.read_bytes
+        for relative, build, previous, filename in self.CASES:
+            fixture = ROOT/'tests/fixtures/release_input_contract_v1'/filename
+            def changed_read(path):
+                raw = original(path)
+                return raw + b'\n' if path == fixture else raw
+            with self.subTest(layer=filename), patch.object(Path, 'read_bytes', changed_read):
+                with self.assertRaisesRegex(AssertionError, 'release input delta fixture changed'):
+                    build()
+
+    def test_new_json_dependency_is_exact_and_not_self_accepting(self):
+        original = Path.read_bytes
+        fixture = ROOT/'fibernet/_json.py'
+        def changed_read(path):
+            raw = original(path)
+            return raw + b'\n# changed helper\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            for relative, build, previous, filename in self.CASES:
+                with self.subTest(layer=filename), self.assertRaisesRegex(
+                        AssertionError, 'reviewed JSON helper source changed'):
+                    build()
+        with self.assertRaises(AssertionError):
+            require_public_source('fibernet/_json.py', original(fixture) + b'\n')
+
+    def test_public_signatures_and_unrelated_definitions_are_unchanged(self):
+        expected_changes = {
+            'easy_json_delta.json': ({'_batch_graph_from_bytes'}, set()),
+            'api_json_delta.json': ({'load'}, set()),
+            'easy_batch_input_delta.json': ({'batch_simulate'}, {'_batch_config_inputs'}),
+        }
+        for relative, build, previous, filename in self.CASES:
+            old, new = ast.parse(previous()), ast.parse(build())
+            old_defs = {n.name: n for n in old.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))}
+            new_defs = {n.name: n for n in new.body if isinstance(n, (ast.FunctionDef, ast.ClassDef))}
+            changed, added = expected_changes[filename]
+            with self.subTest(layer=filename):
+                self.assertEqual(set(old_defs) - set(new_defs), set())
+                self.assertEqual(set(new_defs) - set(old_defs), added)
+                self.assertEqual({name for name in old_defs if canonical_ast(old_defs[name]) !=
+                                  canonical_ast(new_defs[name])}, changed)
+                for name in old_defs:
+                    if isinstance(old_defs[name], ast.FunctionDef):
+                        self.assertEqual(canonical_ast(old_defs[name].args), canonical_ast(new_defs[name].args))
+                        self.assertEqual(canonical_ast(old_defs[name].returns), canonical_ast(new_defs[name].returns))
+
+
 class PR108ReviewedSourceAdmission(unittest.TestCase):
     CASES = (
         ('fibernet/__init__.py', reviewed_root_train_policy_source, reviewed_octet_fcc_facade, 'root_train_policy_delta.json'),
@@ -1132,6 +1280,8 @@ class PR108ReviewedSourceAdmission(unittest.TestCase):
                 actual = (ROOT/relative).read_bytes()
                 if relative == 'fibernet/sim/accelerated.py':
                     actual = reviewed_taichi_import_source(reverse=actual)
+                elif relative == 'fibernet/easy.py':
+                    actual = restore_reviewed_release_easy_source(actual)
                 self.assertEqual(current, actual)
                 self.assertEqual(build(reverse=current), prior)
                 self.assertNotEqual(current, prior)
@@ -1194,7 +1344,7 @@ class PR108ReviewedSourceAdmission(unittest.TestCase):
 class EasyOptionalImportSourceAdmission(unittest.TestCase):
     def test_exact_candidate_and_ordered_inverse(self):
         current = reviewed_easy_optional_import_source()
-        self.assertEqual(current, reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()))
+        self.assertEqual(current, reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes())))
         require_public_source('fibernet/easy.py', current)
         self.assertEqual(reviewed_easy_optional_import_source(reverse=current),
                          reviewed_easy_batch_report_source())
@@ -1240,7 +1390,7 @@ class StretchRatioSourceAdmission(unittest.TestCase):
     def test_exact_old_and_new_versions_are_admitted(self):
         old = public_baseline('fibernet/easy.py').read_bytes()
         new = reviewed_easy_stretch_ratio_source()
-        self.assertIn(reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()),
+        self.assertIn(reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes())),
                       (new, reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source('fibernet/easy.py'), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source()))
         self.assertNotEqual(old, new)
         require_public_source('fibernet/easy.py', old)
@@ -1317,7 +1467,7 @@ class RLFailureSourceAdmission(unittest.TestCase):
         stretch = reviewed_easy_stretch_ratio_source()
         failure = reviewed_easy_rl_failure_source()
         current = reviewed_taichi_geometry_source('fibernet/easy.py')
-        self.assertEqual(reviewed_easy_show_source(reverse=reviewed_easy_batch_report_source(reverse=reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes())))), current)
+        self.assertEqual(reviewed_easy_show_source(reverse=reviewed_easy_batch_report_source(reverse=reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()))))), current)
         require_public_source('fibernet/easy.py', current)
         self.assertEqual(len({old, stretch, failure}), 3)
         for raw in (old, stretch, failure):
@@ -1376,7 +1526,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
                 expected = (reviewed_taichi_controls_source() if relative == 'fibernet/sim/accelerated.py'
                             else reviewed_easy_optional_import_source())
                 self.assertEqual(reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=(ROOT/relative).read_bytes()))))
-                                 if relative == 'fibernet/sim/accelerated.py' else reviewed_easy_train_policy_source(reverse=(ROOT/relative).read_bytes()), expected)
+                                 if relative == 'fibernet/sim/accelerated.py' else reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/relative).read_bytes())), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
                                 expected.replace(b'\n', b'\r\n')):
@@ -1825,7 +1975,7 @@ class TaichiOptionalImportSourceAdmission(unittest.TestCase):
 class BackendLazySourceComposition(unittest.TestCase):
     def test_current_pair_preserves_both_ordered_lineages(self):
         accelerated = reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes()))
-        easy = reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes())
+        easy = reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()))
         self.assertEqual(hashlib.sha256(candidate_result_processing_source(reverse=accelerated)).hexdigest(), LAMMPS_REFERENCE_RESULT_SHA256)
         self.assertEqual(hashlib.sha256(easy).hexdigest(), EASY_OPTIONAL_IMPORT_SHA256)
         self.assertEqual(accelerated, candidate_result_processing_source())
@@ -2263,7 +2413,7 @@ class SourceShape(unittest.TestCase):
 
     def test_dimension_aware_show_is_exact_and_reversible(self):
         raw = reviewed_easy_show_source()
-        self.assertEqual(raw, reviewed_easy_batch_report_source(reverse=reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()))))
+        self.assertEqual(raw, reviewed_easy_batch_report_source(reverse=reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes())))))
         self.assertEqual(reviewed_easy_show_source(reverse=raw),
                          reviewed_taichi_geometry_source('fibernet/easy.py'))
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
@@ -2286,7 +2436,7 @@ class SourceShape(unittest.TestCase):
 
     def test_batch_report_source_is_exact_and_reversible(self):
         raw = reviewed_easy_batch_report_source()
-        self.assertEqual(raw, reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes())))
+        self.assertEqual(raw, reviewed_easy_optional_import_source(reverse=reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()))))
         self.assertEqual(reviewed_easy_batch_report_source(reverse=raw), reviewed_easy_show_source())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'report_path: Optional[str] = None', b'report_path: Optional[str] = "shared.json"', 1),
@@ -2309,7 +2459,7 @@ class SourceShape(unittest.TestCase):
 
     def test_legacy_analysis_source_is_exact_and_reversible(self):
         raw = reviewed_legacy_analysis_source()
-        self.assertEqual(raw, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(raw, reviewed_api_json_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
         self.assertEqual(reviewed_legacy_analysis_source(reverse=raw), reviewed_native_io_source())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return analyze_legacy_endpoints(network)', b'return {}', 1)):
@@ -2321,7 +2471,7 @@ class SourceShape(unittest.TestCase):
 
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()
-        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
+        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=reviewed_api_json_source(reverse=(ROOT/'fibernet/api.py').read_bytes())))
         self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),
@@ -2342,7 +2492,7 @@ class SourceShape(unittest.TestCase):
                 reviewed_native_io_source()
 
     def test_lazy_easy_all_extension(self):
-        tree=ast.parse(reviewed_easy_train_policy_source(reverse=(ROOT/'fibernet/easy.py').read_bytes()))
+        tree=ast.parse(reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes())))
         extra=[n for n in tree.body if isinstance(n,ast.AugAssign) and isinstance(n.target,ast.Name) and n.target.id=='__all__']
         self.assertEqual(len(extra),1)
         self.assertEqual(ast.literal_eval(extra[0].value),['render_graph','render_deformation'])

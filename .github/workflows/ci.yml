@@ -8,6 +8,9 @@ on:
       - 'tests/**'
       - 'pyproject.toml'
       - 'requirements*.txt'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/mcp.yml'
+      - '.github/workflows/publish-pypi.yml'
     tags:
       - 'v*'
   pull_request:

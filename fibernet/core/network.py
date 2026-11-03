@@ -12,6 +12,7 @@ import numpy as np
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Tuple, Any, Union
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import warnings
 
 from fibernet.core.fiber import Fiber, CrossSection
@@ -497,7 +498,7 @@ class FiberNetwork:
     def load_json(cls, filepath: str) -> "FiberNetwork":
         """Load network from JSON file."""
         with open(filepath, 'r') as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=_unique_json_object_pairs)
         return cls.from_dict(data)
 
     def save_hdf5(self, filepath: str):
