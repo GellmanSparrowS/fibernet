@@ -443,7 +443,11 @@ def random_walk_fibers(
 ) -> FiberNetwork:
     """Generate random walk fibers with intersection detection.
     
-    Each fiber is a random walk in 2D or 3D space.
+    Each fiber is a random walk in a cubic 3D box. Step endpoints are
+    reflected into the box, including when a step crosses multiple walls.
+    The centerline stores the start and one endpoint per step, not intermediate
+    wall-contact points; its chords therefore do not represent the full
+    reflected path length or every wall contact.
     """
     if kwargs:
         raise TypeError("random_walk_fibers does not support keyword options: "
@@ -477,12 +481,16 @@ def random_walk_fibers(
             direction /= np.linalg.norm(direction) + 1e-12
             pos = pos + direction * step_size
             
-            # Reflect at boundaries
+            # Preserve the existing one-wall reflection exactly, then fold any
+            # remaining overshoot for steps that cross more than one wall.
             for d in range(3):
                 if pos[d] < 0:
                     pos[d] = -pos[d]
                 elif pos[d] > box_size:
                     pos[d] = 2 * box_size - pos[d]
+                if box_size > 0 and np.isfinite(pos[d]) and not 0 <= pos[d] <= box_size:
+                    folded = pos[d] % (2 * box_size)
+                    pos[d] = folded if folded <= box_size else 2 * box_size - folded
             
             points.append(pos.copy())
         
