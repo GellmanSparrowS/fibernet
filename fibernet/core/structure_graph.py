@@ -917,25 +917,66 @@ class StructureGraph:
         return G
 
     @classmethod
-    def from_networkx(cls, G, dimension: int = 2, tolerance: float = 1e-6) -> "StructureGraph":
+    def from_networkx(cls, G, dimension: int = 2, tolerance: float = 1e-6,
+                      *, preserve_metadata: bool = False) -> "StructureGraph":
         """Create a StructureGraph from a NetworkX Graph or MultiGraph.
 
         Expects nodes to have a 'pos' attribute (2-tuple or 3-tuple).
+        By default, graph, node and edge attributes other than the structural
+        fields are discarded, as in the legacy projection. Set
+        ``preserve_metadata=True`` to deep-copy graph attributes and the
+        nonstructural node/edge attributes into their corresponding metadata.
+        For graphs produced by ``to_networkx()``, reserved attribute
+        collisions are restored from its ``_fibernet_metadata`` dictionary;
+        ordinary flat attributes take precedence if edited after export, and
+        values missing from the flat attributes fall back to that dictionary.
+        A dictionary under that name containing structural keys is interpreted
+        as this projection namespace, including for other NetworkX graphs.
+
+        This remains a projection: IDs are reassigned; material and curved
+        geometry are not reconstructed. Self-loops are ignored and opposite
+        directed edges in a non-multigraph collapse, keeping the first edge's
+        metadata. For native record roundtrips use
+        ``to_networkx_lossless`` and ``from_networkx_lossless`` instead.
         """
         g = cls(dimension=dimension, tolerance=tolerance)
+        if preserve_metadata:
+            g._metadata = copy.deepcopy(dict(G.graph))
+
+        def projected_metadata(data, structural):
+            """Copy flat attributes and recover the exporter's collision keys."""
+            namespace = data.get("_fibernet_metadata")
+            collision_keys = set(structural) | {"_fibernet_metadata"}
+            is_projection_namespace = (isinstance(namespace, dict)
+                                       and bool(namespace.keys() & collision_keys))
+            excluded = set(structural)
+            if is_projection_namespace:
+                excluded.add("_fibernet_metadata")
+            metadata = dict(namespace) if is_projection_namespace else {}
+            metadata.update({key: value for key, value in data.items() if key not in excluded})
+            return copy.deepcopy(metadata)
+
         id_map = {}
         for n, data in G.nodes(data=True):
             pos = data.get("pos", (0, 0, 0))
             bnd = data.get("boundary", (False,) * 6)
             nid = g.add_node(pos, boundary=bnd, merge=False)
+            if preserve_metadata:
+                g._nodes[nid].metadata = projected_metadata(data, ("pos", "boundary"))
             id_map[n] = nid
         for u, v, data in G.edges(data=True):
-            g.add_edge(
+            previous_count = g.num_edges
+            eid = g.add_edge(
                 id_map[u], id_map[v],
                 radius=data.get("radius", 0.1),
                 segments=data.get("segments", 4),
                 allow_parallel=G.is_multigraph(),
             )
+            # Self-loops are ignored by the existing projection; a repeated
+            # directed edge may also collapse onto an existing undirected edge.
+            if preserve_metadata and g.num_edges > previous_count:
+                g._edges[eid].metadata = projected_metadata(
+                    data, ("radius", "edge_id", "segments"))
         return g
 
     def to_networkx_lossless(self):

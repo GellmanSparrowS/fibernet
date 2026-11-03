@@ -3,7 +3,8 @@
 `StructureGraph` remains FiberNet's source graph. The additive methods
 `g.to_networkx_lossless()` and `StructureGraph.from_networkx_lossless(G)` exchange
 complete native records with an undirected NetworkX MultiGraph. Existing
-`to_networkx()`/`from_networkx()` are unchanged analysis projections.
+`to_networkx()`/`from_networkx()` remain analysis projections with unchanged
+defaults. The importer also offers [opt-in metadata retention](../legacy_networkx_projection.md#native-graphs-ordinary-networkx-projection).
 
 ## Example: topology algorithms and supported edits
 

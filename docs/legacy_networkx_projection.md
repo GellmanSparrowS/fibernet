@@ -71,6 +71,35 @@ metadata mapping, including any value originally using that name. This also
 preserves conflicting metadata on each parallel edge separately. Metadata
 values may be shared with the source graph; this is not a detached snapshot.
 
-The corresponding `StructureGraph.from_networkx()` remains a projection and
-does not restore this metadata. For complete, detached round trips, use the
-native lossless NetworkX methods described above.
+To import ordinary graph attributes and recover projected metadata, opt in:
+
+```python
+from fibernet import StructureGraph
+
+graph = StructureGraph()
+graph.add_node((0, 0))
+graph.add_node((1, 0))
+graph.add_edge(0, 1)
+G = graph.to_networkx()
+G.nodes[0]['experiment'] = {'batch': 'A'}
+restored = StructureGraph.from_networkx(G, preserve_metadata=True)
+```
+
+Graph attributes and nonstructural node/edge attributes are deep-copied into
+metadata. Retention does not validate serialization compatibility: JSON saving
+and native-v1 export still require metadata that satisfies their respective
+serialization constraints. For the projection namespace, conflicting
+structural-name metadata is recovered from `_fibernet_metadata`, while edited
+flat nonstructural attributes take precedence. Values absent from those flat
+attributes fall back to the namespace; to remove one, delete it from both
+places. An external
+graph's dictionary under that name is interpreted as this namespace if it
+contains a structural name or `_fibernet_metadata`; otherwise it is retained
+as an ordinary attribute.
+With the default `preserve_metadata=False`, historical behavior is unchanged.
+
+This importer remains a projection. It reassigns IDs, does not reconstruct
+materials or curved geometry, ignores self-loops, and collapses opposing
+directed edges in a non-multigraph (retaining the first edge's metadata).
+`to_networkx()` does not export graph-level metadata. For complete, detached
+native-record round trips, use the lossless methods described above.
