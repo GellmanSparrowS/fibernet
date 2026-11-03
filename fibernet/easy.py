@@ -21,6 +21,7 @@ Examples
 from __future__ import annotations
 
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -348,6 +349,22 @@ def _write_batch_report(destination, report):
             temporary.unlink(missing_ok=True)
 
 
+def _batch_config_inputs(configs):
+    """Snapshot sized inputs and check their access contract before case work."""
+    try:
+        len(configs)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    try:
+        detached = list(configs)
+    except TypeError as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    for index, config in enumerate(detached):
+        if not callable(getattr(config, "get", None)):
+            raise ValueError(f"configs[{index}] must provide a callable .get method")
+    return detached
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
@@ -362,6 +379,10 @@ def batch_simulate(
     ----------
     configs : list of dict
         每个 dict 包含: unit, box, grid, seed 等参数。
+        Sized iterables are snapshotted once before case work; every entry must
+        provide a callable .get method. Unsized iterators are rejected. Mapping
+        subclasses and compatible dictionary-like entries remain supported
+        without a report; report_path retains its stricter JSON-safe contract.
     output : str
         CSV 输出路径。
     mode : str
@@ -404,6 +425,7 @@ def batch_simulate(
     if report_path is not None:
         report_destination, report_configs = _batch_report_inputs(
             configs, output, report_path, mode, strain)
+    configs = _batch_config_inputs(configs)
     cases = []
     rows = []
     for i, cfg in enumerate(configs):
@@ -1197,7 +1219,7 @@ def train_rl(
 _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
 _BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
 _BATCH_SOURCE_FILES = (
-    "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/easy.py", "fibernet/_json.py", "fibernet/sim/accelerated.py",
     "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py", "fibernet/core/material.py",
 )
@@ -1335,7 +1357,7 @@ def _batch_graph_from_bytes(raw):
     """Match load_json's default text decoding, parsing the captured bytes only."""
     import io
     with io.TextIOWrapper(io.BytesIO(raw)) as stream:
-        return StructureGraph.from_dict(json.load(stream))
+        return StructureGraph.from_dict(json.load(stream, object_pairs_hook=_unique_json_object_pairs))
 
 
 def batch_simulate_from_json(

@@ -36,12 +36,15 @@ import numpy as np
 
 try:
     import torch
+except ModuleNotFoundError as exc:
+    if exc.name != "torch":
+        raise
+    HAS_TORCH = False
+else:
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
     HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
 
 
 def _regression_metrics(y_true, y_pred):

@@ -50,6 +50,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 from numbers import Real
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -58,6 +59,15 @@ import numpy as np
 
 from fibernet.core.material import Material
 
+
+
+def _graph_identifier(value, name):
+    """Normalize a nonnegative integer ID before graph lookup or mutation."""
+    if (isinstance(value, (bool, np.bool_))
+            or not isinstance(value, (int, np.integer)) or value < 0):
+        raise ValueError(f"{name} must be a nonnegative integer node ID" if name in ("node_i", "node_j")
+                         else f"{name} must be a nonnegative integer")
+    return int(value)
 
 
 def _serialized_internal_points(value, edge_id):
@@ -402,7 +412,8 @@ class StructureGraph:
         return nid
 
     def remove_node(self, node_id: int):
-        """Remove a node and all its incident edges."""
+        """Remove a node and all its incident edges; unknown valid IDs are ignored."""
+        node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             return
         # Remove incident edges
@@ -431,7 +442,8 @@ class StructureGraph:
         node_id : int
             Node to move.
         displacement : array-like
-            Displacement vector (dx, dy) or (dx, dy, dz).
+            Displacement vector (dx, dy) or (dx, dy, dz). Nested array-like
+            inputs are flattened, as for absolute node positions.
 
         Raises
         ------
@@ -442,11 +454,14 @@ class StructureGraph:
         --------
         >>> g.displace_node(5, [0.1, 0.2])  # move node 5 by (0.1, 0.2)
         """
+        node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             raise KeyError(f"Node {node_id} not found")
-        disp = np.asarray(displacement, dtype=float)
+        disp = np.asarray(displacement, dtype=float).ravel()
         if len(disp) == 2:
             disp = np.append(disp, 0.0)
+        if len(disp) != 3:
+            raise ValueError(f"displacement must have 2 or 3 components, got {disp.size}")
         try:
             with np.errstate(over='raise', invalid='raise'):
                 position = self._nodes[node_id].position + disp
@@ -464,6 +479,7 @@ class StructureGraph:
         position : array-like
             New position (x, y) or (x, y, z).
         """
+        node_id = _graph_identifier(node_id, "node ID")
         self.set_node_positions({node_id: position})
 
     def set_node_positions(self, positions: Dict[int, Sequence[float]]):
@@ -483,6 +499,7 @@ class StructureGraph:
         """
         updates = []
         for nid, value in positions.items():
+            nid = _graph_identifier(nid, "node ID")
             if nid not in self._nodes:
                 raise KeyError(f"Node {nid} not found")
             pos = np.asarray(value, dtype=np.float64).ravel()
@@ -542,7 +559,8 @@ class StructureGraph:
         Parameters
         ----------
         node_i, node_j : int
-            Endpoint node IDs.
+            Nonnegative endpoint node IDs. NumPy integer scalars are accepted
+            and stored as Python integers; booleans and floats are rejected.
         radius : float
             Cross-section radius.
         material : Material, optional
@@ -563,6 +581,8 @@ class StructureGraph:
         int
             Edge ID, or -1 if node_i == node_j.
         """
+        node_i = _graph_identifier(node_i, "node_i")
+        node_j = _graph_identifier(node_j, "node_j")
         if node_i == node_j:
             return -1
         if node_i not in self._nodes or node_j not in self._nodes:
@@ -599,7 +619,8 @@ class StructureGraph:
         return eid
 
     def remove_edge(self, edge_id: int):
-        """Remove an edge by ID."""
+        """Remove an edge by ID; unknown valid IDs are ignored."""
+        edge_id = _graph_identifier(edge_id, "edge ID")
         edge = self._edges.pop(edge_id, None)
         if edge is not None:
             key = frozenset({edge.node_i, edge.node_j})
@@ -1158,7 +1179,7 @@ class StructureGraph:
     def load_json(cls, path: str) -> "StructureGraph":
         """Load graph from a JSON file."""
         with open(path) as f:
-            return cls.from_dict(json.load(f))
+            return cls.from_dict(json.load(f, object_pairs_hook=_unique_json_object_pairs))
 
     # ------------------------------------------------------------------
     # Repr
