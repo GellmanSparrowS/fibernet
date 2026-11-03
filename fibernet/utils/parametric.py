@@ -144,7 +144,11 @@ def sensitivity_analysis(
     Returns
     -------
     results : dict
-        Dictionary with 'param_values', 'metrics_mean', 'metrics_std'.
+        Dictionary with 'param_values', 'metrics_mean', 'metrics_std'. Values
+        with no successful samples have NaN mean and standard deviation.
+        If no samples succeed, the metric dictionaries are empty. Every
+        successful analysis must return the same metric keys; a mismatch
+        raises ValueError rather than producing misaligned summaries.
     
     Examples
     --------
@@ -177,7 +181,15 @@ def sensitivity_analysis(
                     tqdm.write(f"Warning: Failed for {param_name}={value}: {e}")
     
     # Compute statistics
-    metric_names = list(metric_values[param_values[0]][0].keys()) if metric_values[param_values[0]] else []
+    # A failed first parameter value must not hide later successful metrics.
+    first_success = next((sample for value in param_values
+                          for sample in metric_values[value]), None)
+    metric_names = list(first_success.keys()) if first_success is not None else []
+    expected_keys = set(metric_names)
+    for value in param_values:
+        for sample in metric_values[value]:
+            if set(sample.keys()) != expected_keys:
+                raise ValueError("successful analyses must return the same metric keys")
     
     results = {
         'param_values': np.array(param_values),
