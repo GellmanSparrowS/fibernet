@@ -887,3 +887,62 @@ class LAMMPSTask:
                 self._process.wait()
             if self._stream is not None: self._stream.close()
             self._done.set()
+
+def parse_output_files(prepared: PreparedRun, trajectory_path, log_path, *,
+                       max_output_bytes=8*1024*1024, expected_banner=None) -> LAMMPSRunResult:
+    """Read saved UTF-8 outputs within a byte cap and reuse the strict parser.
+
+    Paths must resolve to ordinary files. The combined file content is capped
+    at ``max_output_bytes`` (at most 64 MiB); a selected parser profile may
+    impose a lower cap. This is not a total-memory limit.
+    If supplied, ``expected_banner`` must exactly match the log's first line.
+    Parsing checks the existing prepared/trajectory/thermo protocol, but does
+    not establish file provenance, binary identity, or that LAMMPS executed.
+    Files must remain stable while read. The returned ``workdir`` is empty.
+    The cap is not a read timeout. This does not launch or resume a run.
+    """
+    import stat
+
+    budget = _integer(max_output_bytes, 'max_output_bytes', 1, 64*1024*1024)
+    if expected_banner is not None and (type(expected_banner) is not str or
+                                       not expected_banner or
+                                       expected_banner.splitlines() != [expected_banner]):
+        raise LAMMPSContractError('expected_banner must be a nonempty single line')
+
+    def read_regular(path, limit, label):
+        # Nonblocking open prevents waiting on a POSIX FIFO before fstat can
+        # reject it. Reading is bounded even if a regular file grows mid-read.
+        flags = os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0)
+        try:
+            fd = os.open(os.fspath(path), flags)
+            try:
+                info = os.fstat(fd)
+                if not stat.S_ISREG(info.st_mode):
+                    raise LAMMPSContractError(label + ' must be a regular file')
+                if info.st_size > limit:
+                    raise LAMMPSContractError('output byte budget exceeded')
+                with os.fdopen(fd, 'rb', closefd=False) as stream:
+                    data = stream.read(limit + 1)
+                if len(data) > limit:
+                    raise LAMMPSContractError('output byte budget exceeded')
+                return data
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            raise LAMMPSContractError('cannot read ' + label) from exc
+
+    trajectory = read_regular(trajectory_path, budget, 'trajectory')
+    log = read_regular(log_path, budget - len(trajectory), 'log')
+    try:
+        trajectory_text, log_text = trajectory.decode('utf-8'), log.decode('utf-8')
+    except UnicodeDecodeError as exc:
+        raise LAMMPSContractError('output must be UTF-8') from exc
+    del trajectory, log
+    if expected_banner is not None:
+        length = len(expected_banner)
+        if (not log_text.startswith(expected_banner) or
+                (len(log_text) > length and log_text[length] not in
+                 '\n\r\v\f\x1c\x1d\x1e\x85\u2028\u2029')):
+            raise LAMMPSContractError('native log banner differs from expected banner')
+    return parse_outputs(prepared, trajectory_text, log_text, max_output_bytes=budget)
+
