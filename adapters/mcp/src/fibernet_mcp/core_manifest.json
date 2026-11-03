@@ -32,7 +32,7 @@
   "core/material.py": "f6ed04edadb5bd746ce204f0d33c2b4089b984c45a5a38b9c63dc4494bae0270",
   "core/network.py": "03ab8aef70c99e5461920504f8a34cde0fd6f44e99480f5662ec664fc49edd25",
   "core/pbc.py": "b2f9c65ef55e2e49c890401450c0e88396ae2f8f1391746afd4f4e8d283782e4",
-  "core/structure_graph.py": "1bf8258a646afff4b1e036aa22fbdc0fa017674fd1f1ca7957f29a81491a9143",
+  "core/structure_graph.py": "2e6370bd94c63992533caa7c12a9101ef26ea1b6de2ba01e357d0ae1c5122fe3",
   "core/tiling.py": "f294352e08005ecacd3754012e5d3955e8297b9063289f9f1d6c891be5069415",
   "core/transform.py": "faf2e4eb0e8753398c818fa1be5b3e45a8673cec4ec6b04888e2a3909bbbd2e5",
   "core/transforms.py": "e8adcc6a2ec72d7e0cef419b0d1afa95dc8f0a0021e4aaf06f96c2d8fc4610e3",
