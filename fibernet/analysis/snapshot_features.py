@@ -245,7 +245,12 @@ def _nn_distances(pos, budget=2000000):
 
 
 def _chain_straightness(pos, edges):
-    '''Chord/arc-length of every maximal degree-2 walk (fiber line).'''
+    '''Chord/arc for open chains containing at least one degree-2 node.
+
+    Boundary nodes are included; walks returning to the same node and
+    individual edges are excluded. Lengths at or below 1e-12 in caller units
+    remain excluded.
+    '''
     if edges.shape[0] == 0:
         return np.zeros(0)
     n = pos.shape[0]
@@ -269,7 +274,13 @@ def _chain_straightness(pos, edges):
                 arm.append(cur)
                 a, b = adj[cur]
                 prev, cur = cur, (b if a == prev else a)
+            # Stop at a non-degree-2 boundary. Reaching a seen degree-2
+            # node instead identifies a closed walk with no distinct ends.
+            if deg[cur] != 2:
+                arm.append(cur)
             arms.append(arm)
+        if not all(arms) or arms[0][-1] == arms[1][-1]:
+            continue
         chain = arms[0][::-1] + [v] + arms[1]
         p = pos[chain]
         arclen = float(np.hypot(np.diff(p[:, 0]), np.diff(p[:, 1])).sum())
@@ -655,7 +666,11 @@ def _contact_features(pos, edges, inter):
 
 
 def compute_features(pos, edges, rect=None, contact_config=None, include_contact=False):
-    '''Scalar feature dict + histogram arrays for one network snapshot.'''
+    '''Scalar feature dict + histogram arrays for one network snapshot.
+
+    Pore detection uses absolute coordinate/area tolerances in caller units;
+    rescaling the same geometry can change inferred pores and coverage.
+    '''
     pos, edges = _filter_region(pos, edges, rect)
     feats, lens, ang, deg = _structure_features(pos, edges)
     feats.update(_structure_extra(pos, edges, lens, ang, deg, rect))
@@ -679,6 +694,13 @@ class SnapshotFeatureExtractor:
 
     Coordinates and width share the caller's length unit. Pore areas and
     contact overlap areas use its square. Parallel edges remain independent.
+    Pore detection uses absolute coordinate/area tolerances in caller units;
+    rescaling the same geometry can change inferred pores and coverage.
+    ``segment_straightness`` reports endpoint chord / full path length for
+    open chains containing degree-2 nodes. Individual edges and walks returning
+    to the same node are excluded, as are paths at or below 1e-12 in the caller's
+    length unit. Distinct endpoint nodes at the same coordinates have ratio 0.
+    An empty distribution has the legacy ``straightness_mean`` value 0.0.
     """
 
     def __init__(self, include_contact=False, contact_config=None,
