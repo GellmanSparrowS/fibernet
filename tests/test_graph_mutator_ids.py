@@ -37,18 +37,18 @@ class MutatorIDTests(unittest.TestCase):
                 with self.subTest(method=method, value=repr(value)):
                     g = self.fixture()
                     before = self.state(g)
-                    with self.assertRaisesRegex(ValueError, 'nonnegative integer'):
+                    with self.assertRaisesRegex(ValueError, 'integer'):
                         self.invoke(g, method, value)
                     self.assertEqual(self.state(g), before)
 
     def test_other_invalid_ids_and_batch_failure_are_transactional(self):
         for method in ('remove_node', 'remove_edge', 'set_node_position',
                        'set_node_positions', 'displace_node'):
-            for value in (-1, np.int64(-1), '1', None, float('nan'), float('inf')):
+            for value in ('1', None, float('nan'), float('inf')):
                 with self.subTest(method=method, value=repr(value)):
                     g = self.fixture()
                     before = self.state(g)
-                    with self.assertRaisesRegex(ValueError, 'nonnegative integer'):
+                    with self.assertRaisesRegex(ValueError, 'integer'):
                         self.invoke(g, method, value)
                     self.assertEqual(self.state(g), before)
 
@@ -58,12 +58,12 @@ class MutatorIDTests(unittest.TestCase):
                 with self.subTest(method=method, value=repr(value)):
                     g = self.fixture()
                     before = self.state(g)
-                    with self.assertRaisesRegex(ValueError, 'nonnegative integer'):
+                    with self.assertRaisesRegex(ValueError, 'integer'):
                         self.invoke(g, method, value)
                     self.assertEqual(self.state(g), before)
 
     def test_valid_unknown_ids_keep_existing_behavior(self):
-        for value in (999, np.int64(999), np.uint64(999)):
+        for value in (-1, np.int64(-7), 999, np.int64(999), np.uint64(999)):
             g = self.fixture()
             before = self.state(g)
             for method in ('remove_node', 'remove_edge'):
@@ -109,11 +109,42 @@ class MutatorIDTests(unittest.TestCase):
         g = self.fixture()
         before = self.state(g)
         objects = {i: node.position for i, node in g.nodes.items()}
-        with self.assertRaisesRegex(ValueError, 'nonnegative integer'):
+        with self.assertRaisesRegex(ValueError, 'integer'):
             g.set_node_positions({0: [20, 30], 1.0: [40, 50]})
         self.assertEqual(self.state(g), before)
         for i, original in objects.items():
             self.assertIs(g.nodes[i].position, original)
+
+    def test_existing_negative_node_and_edge_ids_remain_editable(self):
+        g = self.fixture()
+        node = g._nodes.pop(0)
+        node.node_id = -7
+        g._nodes[-7] = node
+        g._spatial_hash[g._pos_key(node.position)] = [-7]
+        for edge in g._edges.values():
+            if edge.node_i == 0: edge.node_i = -7
+            if edge.node_j == 0: edge.node_j = -7
+        edge = g._edges.pop(0)
+        edge.edge_id = -3
+        g._edges[-3] = edge
+        del g._edge_set[frozenset((0, 1))]
+        g._edge_set[frozenset((-7, 1))] = -3
+        counters = (g._next_node_id, g._next_edge_id)
+        edges = copy.deepcopy(g.to_dict()['edges'])
+        g.set_node_position(np.int64(-7), [3, 4])
+        g.displace_node(-7, [.5])
+        g.set_node_positions({1: [8, 9], np.int64(-7): [5, 6]})
+        np.testing.assert_array_equal(g.nodes[-7].position, [5, 6, 0])
+        self.assertEqual(g.add_node([5, 6]), -7)
+        self.assertEqual(g.to_dict()['edges'], edges)
+        g.remove_edge(np.int64(-3))
+        self.assertEqual(g._edge_set[frozenset((-7, 1))], 1)
+        self.assertEqual(g.add_edge(-7, 1), 1)
+        g.remove_node(np.int64(-7))
+        self.assertEqual(set(g.nodes), {1, 2})
+        self.assertEqual(set(g.edges), {2})
+        self.assertFalse(any(-7 in bucket for bucket in g._spatial_hash.values()))
+        self.assertEqual((g._next_node_id, g._next_edge_id), counters)
 
 
 if __name__ == '__main__':

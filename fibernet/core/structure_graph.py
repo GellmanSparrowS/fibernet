@@ -62,11 +62,11 @@ from fibernet.core.material import Material
 
 
 def _graph_identifier(value, name):
-    """Normalize a nonnegative integer ID before graph lookup or mutation."""
+    """Normalize a signed integer stable ID before graph lookup or mutation."""
     if (isinstance(value, (bool, np.bool_))
-            or not isinstance(value, (int, np.integer)) or value < 0):
-        raise ValueError(f"{name} must be a nonnegative integer node ID" if name in ("node_i", "node_j")
-                         else f"{name} must be a nonnegative integer")
+            or not isinstance(value, (int, np.integer))):
+        raise ValueError(f"{name} must be an integer node ID" if name in ("node_i", "node_j")
+                         else f"{name} must be an integer")
     return int(value)
 
 
@@ -442,8 +442,9 @@ class StructureGraph:
         node_id : int
             Node to move.
         displacement : array-like
-            Displacement vector (dx, dy) or (dx, dy, dz). Nested array-like
-            inputs are flattened, as for absolute node positions.
+            Displacement vector (d,), (dx, dy) or (dx, dy, dz). A single
+            component broadcasts to all three stored coordinates. Nested
+            array-like inputs are flattened; scalar inputs are rejected.
 
         Raises
         ------
@@ -457,11 +458,14 @@ class StructureGraph:
         node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             raise KeyError(f"Node {node_id} not found")
-        disp = np.asarray(displacement, dtype=float).ravel()
+        disp = np.asarray(displacement, dtype=float)
+        if disp.ndim == 0:
+            raise ValueError("displacement must be an array-like with 1, 2 or 3 components")
+        disp = disp.ravel()
         if len(disp) == 2:
             disp = np.append(disp, 0.0)
-        if len(disp) != 3:
-            raise ValueError(f"displacement must have 2 or 3 components, got {disp.size}")
+        if len(disp) not in (1, 3):
+            raise ValueError(f"displacement must have 1, 2 or 3 components, got {disp.size}")
         try:
             with np.errstate(over='raise', invalid='raise'):
                 position = self._nodes[node_id].position + disp
@@ -559,8 +563,8 @@ class StructureGraph:
         Parameters
         ----------
         node_i, node_j : int
-            Nonnegative endpoint node IDs. NumPy integer scalars are accepted
-            and stored as Python integers; booleans and floats are rejected.
+            Existing signed integer endpoint node IDs. NumPy integer scalars
+            are stored as Python integers; booleans and floats are rejected.
         radius : float
             Cross-section radius.
         material : Material, optional

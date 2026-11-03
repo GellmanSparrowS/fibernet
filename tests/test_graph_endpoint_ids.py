@@ -20,8 +20,7 @@ class EndpointIDTests(unittest.TestCase):
 
     def test_invalid_endpoint_types_rejected_without_mutation(self):
         values = [True, False, np.bool_(True), 1.0, np.float64(1.0),
-                  float('nan'), float('inf'), '1', None, [1], {'id': 1},
-                  -1, np.int64(-1)]
+                  float('nan'), float('inf'), '1', None, [1], {'id': 1}]
         for value in values:
             for slot in (0, 1):
                 for existing in (False, True):
@@ -32,16 +31,16 @@ class EndpointIDTests(unittest.TestCase):
                         before = self.state(graph)
                         endpoints = [1, 2]
                         endpoints[slot] = value
-                        with self.assertRaisesRegex(ValueError, 'nonnegative integer node ID'):
+                        with self.assertRaisesRegex(ValueError, 'integer node ID'):
                             graph.add_edge(*endpoints)
                         self.assertEqual(self.state(graph), before)
 
     def test_invalid_self_aliases_are_checked_before_equality(self):
-        for value in (True, False, np.bool_(True), 1.0, -1):
+        for value in (True, False, np.bool_(True), 1.0):
             with self.subTest(value=repr(value)):
                 graph = self.fixture()
                 before = self.state(graph)
-                with self.assertRaisesRegex(ValueError, 'nonnegative integer node ID'):
+                with self.assertRaisesRegex(ValueError, 'integer node ID'):
                     graph.add_edge(value, value)
                 self.assertEqual(self.state(graph), before)
 
@@ -60,13 +59,39 @@ class EndpointIDTests(unittest.TestCase):
     def test_integer_self_loop_and_unknown_endpoints_preserve_behavior(self):
         graph = self.fixture()
         before = self.state(graph)
-        for same in (0, 2, 999, np.int64(1)):
+        for same in (-1, np.int64(-7), 0, 2, 999, np.int64(1)):
             self.assertEqual(graph.add_edge(same, same), -1)
             self.assertEqual(self.state(graph), before)
-        for endpoints in ((0, 999), (999, 0), (np.int64(999), np.int64(0))):
+        for endpoints in ((0, 999), (999, 0), (np.int64(999), np.int64(0)),
+                          (-7, 0), (0, np.int64(-7))):
             with self.assertRaisesRegex(ValueError, 'not in graph'):
                 graph.add_edge(*endpoints)
             self.assertEqual(self.state(graph), before)
+
+    def test_existing_negative_stable_ids_preserve_parallel_endpoints(self):
+        graph = self.fixture()
+        node = graph._nodes.pop(0)
+        node.node_id = -7
+        graph._nodes[-7] = node
+        graph._spatial_hash[graph._pos_key(node.position)] = [-7]
+        counters = (graph._next_node_id, graph._next_edge_id)
+        curve = np.array([[.3, .2, 0.], [.8, .1, 0.]])
+        first = graph.add_edge(np.int64(-7), 1, internal_points=curve)
+        before = self.state(graph)
+        self.assertEqual(graph.add_edge(1, -7), first)
+        self.assertEqual(self.state(graph), before)
+        second = graph.add_edge(1, np.int64(-7), internal_points=curve[::-1].copy(),
+                                allow_parallel=True)
+        self.assertEqual((first, second), (counters[1], counters[1] + 1))
+        self.assertEqual((graph.edges[first].node_i, graph.edges[first].node_j), (-7, 1))
+        self.assertEqual((graph.edges[second].node_i, graph.edges[second].node_j), (1, -7))
+        self.assertIs(type(graph.edges[first].node_i), int)
+        self.assertIs(type(graph.edges[second].node_j), int)
+        np.testing.assert_array_equal(graph.edges[second].internal_points, curve[::-1])
+        self.assertEqual(graph._next_node_id, counters[0])
+        # The live-ID contract does not broaden the existing serialized schema.
+        with self.assertRaisesRegex(ValueError, 'nonnegative integer'):
+            StructureGraph.from_dict(graph.to_dict())
 
     def test_dedup_reversed_parallel_curves_and_stable_ids(self):
         graph = self.fixture()

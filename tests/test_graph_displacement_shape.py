@@ -5,8 +5,8 @@ import numpy as np
 from fibernet.core.structure_graph import StructureGraph
 
 class DisplacementShapeTests(unittest.TestCase):
-    def fixture(self):
-        g = StructureGraph(dimension=3)
+    def fixture(self, dimension=3):
+        g = StructureGraph(dimension=dimension)
         g.add_node([1., 2., 3.], merge=False)
         g.add_node([4., 5., 6.], merge=False)
         curve = np.array([[2., 3., 4.], [3., 4., 5.]])
@@ -19,15 +19,33 @@ class DisplacementShapeTests(unittest.TestCase):
                 copy.deepcopy(g._edge_set), g._next_node_id, g._next_edge_id)
 
     def test_wrong_component_counts_rejected_without_mutation(self):
-        for value in (0.5, np.array(0.5), [0.5], [[0.5]], [],
+        for value in (0.5, np.array(0.5), [],
                       [1, 2, 3, 4], [[1, 2], [3, 4]], np.zeros((0, 3))):
             with self.subTest(value=repr(value)):
                 g = self.fixture(); before = self.state(g)
                 original = g.nodes[0].position
-                with self.assertRaisesRegex(ValueError, 'displacement must have 2 or 3 components'):
+                with self.assertRaisesRegex(ValueError, 'displacement must .*1, 2 or 3 components'):
                     g.displace_node(0, value)
                 self.assertEqual(self.state(g), before)
                 self.assertIs(g.nodes[0].position, original)
+
+    def test_legacy_single_component_arrays_broadcast_without_aliasing(self):
+        for dimension in (2, 3):
+            for value in ([.5], (.5,), [[.5]], np.array([[[.5]]])):
+                with self.subTest(dimension=dimension, shape=np.shape(value)):
+                    g = self.fixture(dimension=dimension)
+                    before = self.state(g)
+                    old_key = g._pos_key(g.nodes[0].position)
+                    argument = np.array(value)
+                    g.displace_node(0, argument)
+                    expected = [1.5, 2.5, 3.5]
+                    np.testing.assert_array_equal(g.nodes[0].position, expected)
+                    argument[...] = 99
+                    np.testing.assert_array_equal(g.nodes[0].position, expected)
+                    self.assertEqual(g.to_dict()['edges'], before[0]['edges'])
+                    self.assertEqual((g._next_node_id, g._next_edge_id), before[3:])
+                    self.assertEqual(g.add_node(expected), 0)
+                    self.assertNotIn(0, g._spatial_hash.get(old_key, []))
 
     def test_nested_two_and_three_components_follow_position_flattening(self):
         cases = (([[.5, -.5]], [1.5, 1.5, 3.]),
@@ -58,7 +76,8 @@ class DisplacementShapeTests(unittest.TestCase):
                 np.testing.assert_array_equal(g.nodes[0].position, expected)
 
     def test_nonfinite_and_overflow_keep_graph_unchanged(self):
-        for value in ([float('nan'), 0], [float('inf'), 0, 0],
+        for value in ([float('nan')], [float('inf')], [float('-inf')], [1e308],
+                      [float('nan'), 0], [float('inf'), 0, 0],
                       [float('-inf'), 0, 0], [1e308, 0, 0]):
             with self.subTest(value=value):
                 g = self.fixture(); before = self.state(g)
@@ -76,13 +95,14 @@ class DisplacementShapeTests(unittest.TestCase):
         class ForbiddenConversion:
             def __array__(self, *args, **kwargs):
                 raise AssertionError('displacement converted before ID admission')
-        for node_id in (True, 0.0, -1, '0'):
+        for node_id in (True, 0.0, '0'):
             with self.subTest(node_id=node_id):
                 g = self.fixture(); before = self.state(g)
                 with self.assertRaises(ValueError): g.displace_node(node_id, ForbiddenConversion())
                 self.assertEqual(self.state(g), before)
-        g = self.fixture(); before = self.state(g)
-        with self.assertRaises(KeyError): g.displace_node(999, ForbiddenConversion())
-        self.assertEqual(self.state(g), before)
+        for node_id in (-1, np.int64(-1), 999):
+            g = self.fixture(); before = self.state(g)
+            with self.assertRaises(KeyError): g.displace_node(node_id, ForbiddenConversion())
+            self.assertEqual(self.state(g), before)
 
 if __name__ == '__main__': unittest.main()
