@@ -192,9 +192,9 @@ def validate_array(
     shape : tuple, optional
         Expected shape
     min_length : int, optional
-        Minimum length (for 1D arrays)
+        Minimum length along the first axis; scalars have no length.
     max_length : int, optional
-        Maximum length (for 1D arrays)
+        Maximum length along the first axis; scalars have no length.
     
     Returns
     -------
@@ -222,6 +222,9 @@ def validate_array(
                 f"{name} must have shape {shape}, got {arr.shape}"
             )
     
+    if (min_length is not None or max_length is not None) and arr.ndim == 0:
+        raise ValidationError(f"{name} must have a length; got a scalar")
+
     if min_length is not None:
         if len(arr) < min_length:
             raise ValidationError(
