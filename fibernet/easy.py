@@ -1440,7 +1440,9 @@ def batch_simulate_from_json(
     - Result and CSV output paths must not alias any input JSON path, including
       through symbolic or hard links. This preflight rejects collisions before
       simulation but is not atomic with later writes. Concurrent changes to
-      input or output paths, links, or directories are unsupported.
+      input or output paths, links, or directories are unsupported. Result paths
+      for previously recorded cases are checked too, so generated JSON in the
+      input directory cannot be silently treated as a new structure on resume.
     - Inputs must remain unchanged during a call. Preflight streams file hashes;
       pending files are captured one at a time, rechecked and parsed from those
       exact bytes. Concurrent input modification is unsupported.
@@ -1516,20 +1518,21 @@ def batch_simulate_from_json(
             print(f"  [{json_file.name}] Already simulated, skipping")
         else:
             pending.append(json_file)
-    if not pending:
-        return str(csv_file)
-
     # A result name such as a_result.json can itself be another source file.
     # Check the complete input set before any simulation or output write, not
     # just the current file: atomic result replacement would still destroy that
-    # source pathname. Resolve symlinks and detect existing hard-link aliases.
+    # source pathname. Check recorded cases as well as pending ones: in a shared
+    # input/output directory their result JSON could otherwise become a new input
+    # on resume. Resolve symlinks and detect existing hard-link aliases.
     input_paths = {path.resolve(): path for path in json_files}
     input_ids = {}
     for path in json_files:
         st = path.stat()
         if st.st_ino:
             input_ids[(st.st_dev, st.st_ino)] = path
-    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in pending]
+    result_stems = {path.stem for path in pending}
+    result_stems.update(Path(row["filename"]).stem for row in results)
+    outputs = [csv_file] + [output_path / f"{stem}_result.json" for stem in sorted(result_stems)]
     for destination in outputs:
         source = input_paths.get(destination.resolve())
         if source is None:
@@ -1542,7 +1545,12 @@ def batch_simulate_from_json(
                     source = input_ids.get((st.st_dev, st.st_ino))
         if source is not None:
             raise ValueError(f"Batch output {destination} aliases input {source}; "
-                             "choose a different output directory")
+                             "separate intended input structures from generated results, "
+                             "then use different input and output directories; "
+                             "retain the existing CSV with the results if needed")
+
+    if not pending:
+        return str(csv_file)
 
     engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
