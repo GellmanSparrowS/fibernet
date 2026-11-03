@@ -1074,8 +1074,15 @@ def reviewed_easy_batch_input_source(reverse=None):
         'a547b80934f858c5f379b9ec70168ee75831e042efac849d2cb4efcdaa9fbb10', reviewed_easy_json_source(), reverse=reverse)
 
 
+def reviewed_easy_collision_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_output_collision_delta.json',
+        '760844c40c4f3bd3f3547da98aca228a85df87e9f67ff100ea962ea95e520b6c', reviewed_easy_batch_input_source(), reverse=reverse)
+
+
 def restore_reviewed_release_easy_source(source):
-    return reviewed_easy_json_source(reverse=reviewed_easy_batch_input_source(reverse=source))
+    return reviewed_easy_json_source(reverse=reviewed_easy_batch_input_source(
+        reverse=reviewed_easy_collision_source(reverse=source)))
 
 
 def require_public_source(relative, raw):
@@ -1089,7 +1096,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source()), 'public source bytes changed: '+relative
@@ -1182,6 +1189,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
         ('fibernet/easy.py', reviewed_easy_json_source, reviewed_easy_train_policy_source, 'easy_json_delta.json'),
         ('fibernet/api.py', reviewed_api_json_source, reviewed_legacy_analysis_source, 'api_json_delta.json'),
         ('fibernet/easy.py', reviewed_easy_batch_input_source, reviewed_easy_json_source, 'easy_batch_input_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_collision_source, reviewed_easy_batch_input_source, 'easy_output_collision_delta.json'),
     )
 
     def test_exact_accepted_layers_and_historical_versions(self):
@@ -1194,7 +1202,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 require_public_source(relative, prior)
                 with self.assertRaises(AssertionError):
                     build(reverse=prior)
-        self.assertEqual(reviewed_easy_batch_input_source(), (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_easy_collision_source(), (ROOT/'fibernet/easy.py').read_bytes())
         self.assertEqual(reviewed_api_json_source(), (ROOT/'fibernet/api.py').read_bytes())
         self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
                          reviewed_easy_train_policy_source())
@@ -1248,6 +1256,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
             'easy_json_delta.json': ({'_batch_graph_from_bytes'}, set()),
             'api_json_delta.json': ({'load'}, set()),
             'easy_batch_input_delta.json': ({'batch_simulate'}, {'_batch_config_inputs'}),
+            'easy_output_collision_delta.json': ({'batch_simulate_from_json'}, set()),
         }
         for relative, build, previous, filename in self.CASES:
             old, new = ast.parse(previous()), ast.parse(build())

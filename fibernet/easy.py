@@ -1437,6 +1437,10 @@ def batch_simulate_from_json(
       Existing CSV success values must be "True" or "False".
     - Each CSV checkpoint is replaced atomically after serialization succeeds.
       Malformed existing CSV files raise ValueError and are left unchanged.
+    - Result and CSV output paths must not alias any input JSON path, including
+      through symbolic or hard links. This preflight rejects collisions before
+      simulation but is not atomic with later writes. Concurrent changes to
+      input or output paths, links, or directories are unsupported.
     - Inputs must remain unchanged during a call. Preflight streams file hashes;
       pending files are captured one at a time, rechecked and parsed from those
       exact bytes. Concurrent input modification is unsupported.
@@ -1514,6 +1518,31 @@ def batch_simulate_from_json(
             pending.append(json_file)
     if not pending:
         return str(csv_file)
+
+    # A result name such as a_result.json can itself be another source file.
+    # Check the complete input set before any simulation or output write, not
+    # just the current file: atomic result replacement would still destroy that
+    # source pathname. Resolve symlinks and detect existing hard-link aliases.
+    input_paths = {path.resolve(): path for path in json_files}
+    input_ids = {}
+    for path in json_files:
+        st = path.stat()
+        if st.st_ino:
+            input_ids[(st.st_dev, st.st_ino)] = path
+    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in pending]
+    for destination in outputs:
+        source = input_paths.get(destination.resolve())
+        if source is None:
+            try:
+                st = destination.stat()
+            except FileNotFoundError:
+                pass
+            else:
+                if st.st_ino:
+                    source = input_ids.get((st.st_dev, st.st_ino))
+        if source is not None:
+            raise ValueError(f"Batch output {destination} aliases input {source}; "
+                             "choose a different output directory")
 
     engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
