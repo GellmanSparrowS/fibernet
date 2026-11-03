@@ -42,12 +42,12 @@ class StableLAMMPSNormTests(unittest.TestCase):
         self.assertEqual(o.displacements[1,0],expected)
     def test_nonfinite_derived_force_or_stretch_rejected(self):
         for kwargs in (dict(length=2.,rest=.1,stiffness=1e308),
-                       dict(length=1.,rest=1e-310)):
+                       dict(length=1e200,rest=1e-200)):
             p,r=sample(**kwargs)
             with self.subTest(kwargs=kwargs), self.assertRaisesRegex(ValueError,'nonfinite LAMMPS derived result'):
                 to_sim_result(p,r,RUNTIME,0.,False)
     def test_nonzero_force_underflow_rejected(self):
-        p,r=sample(1.,rest=1.-1e-10,stiffness=1e-320)
+        p,r=sample(2e-150,rest=1e-150,stiffness=1e-200)
         with self.assertRaisesRegex(ValueError,'underflow'):
             to_sim_result(p,r,RUNTIME,0.,False)
     def test_nonzero_stretch_underflow_rejected(self):
@@ -61,7 +61,7 @@ class StableLAMMPSNormTests(unittest.TestCase):
             to_sim_result(p,parse_outputs(p,*fixture(p)),RUNTIME,0.,False)
     def test_stretch_mean_and_spread_avoid_square_overflow_underflow(self):
         for lengths,rest,box,tolerance in (([1e-70,2e-70],1e100,2e100,1e-80),
-                                           ([1.,1.],1e-308,3.,1e-5)):
+                                           ([1e100,1e100],1e-208,3e100,1e95)):
             g=StructureGraph(dimension=3,tolerance=tolerance)
             nodes=[g.add_node([x,0,0],merge=False) for x in (0.,lengths[0],sum(lengths))]
             edges=[g.add_edge(nodes[i],nodes[i+1],n_internal=0) for i in (0,1)]
