@@ -892,21 +892,28 @@ class StructureGraph:
             raise ImportError("networkx required: pip install networkx")
         pairs = [frozenset((e.node_i, e.node_j)) for e in self._edges.values()]
         G = nx.MultiGraph() if len(set(pairs)) < len(pairs) else nx.Graph()
+        def project_metadata(attributes, metadata, structural):
+            # The flat projection reserves its structural keys. Keep the full
+            # original metadata in a namespace whenever those keys collide,
+            # including a collision with the namespace itself.
+            attributes.update(metadata)
+            if metadata.keys() & (structural.keys() | {"_fibernet_metadata"}):
+                attributes["_fibernet_metadata"] = dict(metadata)
+            attributes.update(structural)
+
         for nid, node in self._nodes.items():
-            G.add_node(
-                nid,
-                pos=tuple(node.position[:2]) if self._dimension == 2 else tuple(node.position),
-                boundary=node.boundary,
-                **node.metadata,
-            )
+            G.add_node(nid)
+            project_metadata(G.nodes[nid], node.metadata, {
+                "pos": tuple(node.position[:2]) if self._dimension == 2 else tuple(node.position),
+                "boundary": node.boundary,
+            })
         for eid, edge in self._edges.items():
-            G.add_edge(
-                edge.node_i, edge.node_j,
-                radius=edge.radius,
-                edge_id=eid,
-                segments=edge.segments,
-                **edge.metadata,
-            )
+            key = G.add_edge(edge.node_i, edge.node_j)
+            attributes = (G.edges[edge.node_i, edge.node_j, key]
+                          if G.is_multigraph() else G.edges[edge.node_i, edge.node_j])
+            project_metadata(attributes, edge.metadata, {
+                "radius": edge.radius, "edge_id": eid, "segments": edge.segments,
+            })
         return G
 
     @classmethod
