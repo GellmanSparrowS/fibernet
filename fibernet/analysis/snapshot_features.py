@@ -659,9 +659,9 @@ def compute_features(pos, edges, rect=None, contact_config=None, include_contact
     pos, edges = _filter_region(pos, edges, rect)
     feats, lens, ang, deg = _structure_features(pos, edges)
     feats.update(_structure_extra(pos, edges, lens, ang, deg, rect))
-    inter = _segment_interactions(pos, edges)
+    inter = _segment_interactions(pos, edges) if include_contact else None
     area = _region_area(pos, rect)
-    pore_feats, pore_arr = _pore_features(pos, edges, inter, area)
+    pore_feats, pore_arr = _normalized_pore_features(pos, edges, rect, area)
     feats.update(pore_feats)
     if include_contact:
         feats.update(_contact_features(pos, edges, inter))
@@ -759,3 +759,48 @@ class SnapshotFeatureExtractor:
         if not is_structure_graph:
             edges = graph.edge_array()
         return self.extract(positions, edges, rect=rect)
+
+
+def _normalized_pore_features(pos, edges, rect, original_area):
+    """Run only the pore topology calculation at a geometry-relative scale."""
+    if not len(pos) or not len(edges):
+        empty_inter = _segment_interactions(pos, edges)
+        return _pore_features(pos, edges, empty_inter, original_area)
+    with np.errstate(over='ignore', under='ignore', invalid='ignore'):
+        active = pos[np.unique(edges)]
+        origin = active.min(axis=0)
+        scale = float(np.max(active.max(axis=0) - origin))
+        if not np.isfinite(scale):
+            raise ValueError('pore geometry extent is not representable')
+        if scale == 0.0:
+            scale = 1.0
+        scale2 = scale * scale
+        if not np.isfinite(scale2) or scale2 == 0.0:
+            raise ValueError('pore geometry area scale is not representable')
+        normalized = (pos - origin) / scale
+        if rect is None:
+            normalized_rect = None
+        else:
+            x0,y0,x1,y1 = np.asarray(rect, dtype=float)
+            normalized_rect = ((x0-origin[0])/scale, (y0-origin[1])/scale,
+                               (x1-origin[0])/scale, (y1-origin[1])/scale)
+        if (not np.isfinite(normalized).all() or
+                (normalized_rect is not None and not np.isfinite(normalized_rect).all())):
+            raise ValueError('normalized pore geometry is not representable')
+        inter = _segment_interactions(normalized, edges)
+        feats, arrays = _pore_features(normalized, edges, inter,
+                                      _region_area(normalized, normalized_rect))
+        normalized_mean = feats['pore_area_mean']
+        normalized_perim = feats['pore_perim_mean']
+        normalized_areas = arrays['areas']
+        feats['pore_area_mean'] *= scale2
+        feats['pore_perim_mean'] *= scale
+        arrays['areas'] = normalized_areas * scale2
+        if (not np.isfinite(feats['pore_area_mean']) or
+                not np.isfinite(feats['pore_perim_mean']) or
+                not np.isfinite(arrays['areas']).all() or
+                (normalized_mean > 0 and feats['pore_area_mean'] == 0) or
+                (normalized_perim > 0 and feats['pore_perim_mean'] == 0) or
+                np.any((normalized_areas > 0) & (arrays['areas'] == 0))):
+            raise ValueError('pore measurements are not representable in caller units')
+    return feats, arrays
