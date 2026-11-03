@@ -51,7 +51,7 @@ class OutputFiles(unittest.TestCase):
         self.assertEqual((self.dump_path.read_bytes(), self.log_path.read_bytes()), before)
 
     def test_combined_byte_cap_and_option_validation(self):
-        exact = len(self.dump.encode()) + len(self.log.encode())
+        exact = self.dump_path.stat().st_size + self.log_path.stat().st_size
         self.assertEqual(parse_output_files(self.prepared, self.dump_path, self.log_path,
                                             max_output_bytes=exact).identity, self.prepared.identity)
         for limit in (exact - 1, 0, True, 64 * 1024 * 1024 + 1):
@@ -64,7 +64,7 @@ class OutputFiles(unittest.TestCase):
         with patch('fibernet.integrations.lammps_backend.os.fstat', side_effect=stale_size):
             with self.assertRaisesRegex(LAMMPSContractError, 'byte budget'):
                 parse_output_files(self.prepared, self.dump_path, self.log_path,
-                                   max_output_bytes=len(self.dump.encode()) - 1)
+                                   max_output_bytes=self.dump_path.stat().st_size - 1)
         for banner in ('', 'line\nnext', 5):
             with self.subTest(banner=banner), self.assertRaises(LAMMPSContractError):
                 parse_output_files(self.prepared, self.dump_path, self.log_path, expected_banner=banner)
