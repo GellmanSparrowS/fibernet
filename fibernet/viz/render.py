@@ -48,6 +48,42 @@ def _display_bounds(graph):
     return lower, upper
 
 
+def _polyline_segments(graph):
+    """Display segments and owning physical-edge rows, never new graph edges."""
+    segments, owners = [], []
+    for row, edge in enumerate(graph.edges.values()):
+        endpoints = [graph.nodes[edge.node_i].position,
+                     graph.nodes[edge.node_j].position]
+        internal = edge.internal_points
+        points = (np.vstack([endpoints[0], internal, endpoints[1]])
+                  if internal is not None and len(internal) else np.asarray(endpoints))
+        for start, end in zip(points[:-1], points[1:]):
+            segments.append([start, end])
+            owners.append(row)
+    return segments, np.asarray(owners, dtype=int)
+
+
+def _require_known_curve_motion(graph, positions):
+    """Reject unknown interior motion before allocating any figure/output.
+
+    Edge.internal_points are absolute stored geometry, not displacement DOFs.
+    Exactly unchanged displayed endpoints retain that geometry as a display
+    convention; moving endpoints cannot determine the interior beam motion.
+    """
+    if positions is None:
+        return
+    rows = {nid: row for row, nid in enumerate(sorted(graph.nodes))}
+    for edge in graph.edges.values():
+        if edge.internal_points is not None and len(edge.internal_points):
+            if any(not np.array_equal(positions[rows[nid]], graph.nodes[nid].position)
+                   for nid in (edge.node_i, edge.node_j)):
+                raise ValueError(
+                    "Nonzero displayed motion on edges with internal_points requires "
+                    "known interior geometry; nodal positions alone do not determine "
+                    "curve deformation. Render a graph containing the saved absolute "
+                    "curve geometry without additional nodal motion instead.")
+
+
 # ======================================================================
 # Theme presets
 # ======================================================================
@@ -834,6 +870,13 @@ def render_deformation_3d(
 ):
     """Render 3D structure before and after deformation.
 
+    Stored edge curves are preserved at zero displayed motion. Nonzero nodal
+    motion on an edge with internal points raises ValueError: interior motion
+    cannot be inferred from endpoints. Supply saved absolute curve geometry as
+    the graph without additional nodal motion; no interpolation is invented.
+    Displacement color is the mean of endpoint nodal magnitudes, repeated on
+    every display segment of that physical edge, not an interior displacement field.
+
     Parameters
     ----------
     graph : StructureGraph
@@ -845,6 +888,9 @@ def render_deformation_3d(
         Scale factor for displacement visualization.
     """
     sim_result = _align_result(graph, sim_result, require_edges=False)
+    if sim_result is not None and sim_result.displacements is not None:
+        _require_known_curve_motion(
+            graph, graph.node_positions() + displacement_scale * sim_result.displacements)
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -903,16 +949,7 @@ def render_deformation_3d(
 
 def _render_3d_segments(ax, graph, theme, line_width, elev, azim, title):
     """Helper to render 3D segments on a given axes."""
-    segments_3d = []
-    for edge in graph.edges.values():
-        pi = graph.nodes[edge.node_i].position
-        pj = graph.nodes[edge.node_j].position
-        if edge.internal_points is not None and len(edge.internal_points) > 0:
-            pts = np.vstack([pi[None, :], edge.internal_points, pj[None, :]])
-        else:
-            pts = np.vstack([pi[None, :], pj[None, :]])
-        for k in range(len(pts) - 1):
-            segments_3d.append([pts[k], pts[k + 1]])
+    segments_3d, _ = _polyline_segments(graph)
 
     if segments_3d:
         z_vals = [np.mean([s[0][2], s[1][2]]) for s in segments_3d]
@@ -958,31 +995,22 @@ def _render_3d_colored(ax, graph, node_values, theme, line_width, elev, azim, ti
     node_ids = sorted(graph.nodes.keys())
     node_to_idx = {nid: i for i, nid in enumerate(node_ids)}
 
-    segments_3d = []
-    colors = []
-    for edge in graph.edges.values():
-        pi = graph.nodes[edge.node_i].position
-        pj = graph.nodes[edge.node_j].position
-        pts = np.vstack([pi[None, :], pj[None, :]])
-        
-        i_idx = node_to_idx[edge.node_i]
-        j_idx = node_to_idx[edge.node_j]
-        val = (node_values[i_idx] + node_values[j_idx]) / 2
-        color = cmap(norm(val))
-        
-        for k in range(len(pts) - 1):
-            segments_3d.append([pts[k], pts[k + 1]])
-            colors.append(color)
+    segments_3d, owners = _polyline_segments(graph)
+    # node_values are explicitly nodal; N == E does not change that contract.
+    edge_values = [(node_values[node_to_idx[e.node_i]] +
+                    node_values[node_to_idx[e.node_j]]) / 2
+                   for e in graph.edges.values()]
+    colors = [cmap(norm(edge_values[row])) for row in owners]
 
     if segments_3d:
         lc3d = Line3DCollection(segments_3d, colors=colors, linewidths=line_width)
         ax.add_collection3d(lc3d)
 
     if graph.num_nodes > 0:
-        pos = graph.node_positions()
+        bb_min, bb_max = _display_bounds(graph)
         for setter, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
-            mn, mx = pos[:, dim].min(), pos[:, dim].max()
-            margin = (mx - mn) * 0.05
+            mn, mx = bb_min[dim], bb_max[dim]
+            margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
             setter(mn - margin, mx + margin)
 
     ax.view_init(elev=elev, azim=azim)
@@ -1016,6 +1044,13 @@ def render_trajectory_3d(
     color_by="displacement",
 ):
     """Render multi-frame 3D trajectory in ONE combined figure.
+
+    Stored edge curves are preserved at zero displayed motion. Nonzero nodal
+    motion on an edge with internal points raises ValueError: interior motion
+    cannot be inferred from endpoints. Supply saved absolute curve geometry as
+    the graph without additional nodal motion; no interpolation is invented.
+    Displacement color is the mean of endpoint nodal magnitudes, repeated on
+    every display segment of that physical edge, not an interior displacement field.
 
     Parameters
     ----------
@@ -1084,6 +1119,9 @@ def render_trajectory_3d(
         indices = np.linspace(0, len(frames) - 1, n_frames, dtype=int)
     else:
         indices = list(range(len(frames)))
+
+    for frame_idx in indices:
+        _require_known_curve_motion(graph, frames[frame_idx])
 
     n_show = len(indices)
     if ncols is None:
@@ -1176,31 +1214,22 @@ def _render_3d_colored_global(ax, graph, node_values, norm, theme, line_width, e
     node_ids = sorted(graph.nodes.keys())
     node_to_idx = {nid: i for i, nid in enumerate(node_ids)}
 
-    segments_3d = []
-    colors = []
-    for edge in graph.edges.values():
-        pi = graph.nodes[edge.node_i].position
-        pj = graph.nodes[edge.node_j].position
-        pts = np.vstack([pi[None, :], pj[None, :]])
-
-        i_idx = node_to_idx[edge.node_i]
-        j_idx = node_to_idx[edge.node_j]
-        val = (node_values[i_idx] + node_values[j_idx]) / 2
-        color = cmap_obj(norm(val))
-
-        for k in range(len(pts) - 1):
-            segments_3d.append([pts[k], pts[k + 1]])
-            colors.append(color)
+    segments_3d, owners = _polyline_segments(graph)
+    # node_values are explicitly nodal; N == E does not change that contract.
+    edge_values = [(node_values[node_to_idx[e.node_i]] +
+                    node_values[node_to_idx[e.node_j]]) / 2
+                   for e in graph.edges.values()]
+    colors = [cmap_obj(norm(edge_values[row])) for row in owners]
 
     if segments_3d:
         lc3d = Line3DCollection(segments_3d, colors=colors, linewidths=line_width)
         ax.add_collection3d(lc3d)
 
     if graph.num_nodes > 0:
-        pos = graph.node_positions()
+        bb_min, bb_max = _display_bounds(graph)
         for setter, dim in [(ax.set_xlim, 0), (ax.set_ylim, 1), (ax.set_zlim, 2)]:
-            mn, mx = pos[:, dim].min(), pos[:, dim].max()
-            margin = (mx - mn) * 0.05
+            mn, mx = bb_min[dim], bb_max[dim]
+            margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
             setter(mn - margin, mx + margin)
 
     ax.view_init(elev=elev, azim=azim)
@@ -1281,6 +1310,15 @@ def render_stress_3d(
 ):
     """Render 3D structure colored by stress/force/stretch.
 
+    Stored edge curves are preserved at zero displayed motion. Nonzero nodal
+    motion on an edge with internal points raises ValueError: interior motion
+    cannot be inferred from endpoints. Supply saved absolute curve geometry as
+    the graph without additional nodal motion; no interpolation is invented.
+    When displacement coloring is used, color is the mean of endpoint nodal
+    magnitudes, repeated on each physical edge's display segments; it is not an
+    interior displacement field. Force coloring instead uses the absolute
+    supplied per-edge force; stretch coloring uses the supplied per-edge stretch.
+
     Parameters
     ----------
     graph : StructureGraph
@@ -1293,6 +1331,8 @@ def render_stress_3d(
         Matplotlib colormap name.
     """
     sim_result = _align_result(graph, sim_result, require_edges=color_by in ("force", "stretch"))
+    if sim_result is not None:
+        _require_known_curve_motion(graph, sim_result.deformed_positions)
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -1329,32 +1369,18 @@ def render_stress_3d(
     else:
         deformed = graph
 
-    segments_3d = []
-    colors = []
-
-    edges_list = list(deformed.edges.values())
-    for ei, edge in enumerate(edges_list):
-        pi = deformed.nodes[edge.node_i].position
-        pj = deformed.nodes[edge.node_j].position
-
-        if edge.internal_points is not None and len(edge.internal_points) > 0:
-            pts = np.vstack([pi[None, :], edge.internal_points, pj[None, :]])
+    geometry, owners = _polyline_segments(deformed)
+    if edge_values is None:
+        if sim_result.displacements is None:
+            edge_values = np.zeros(deformed.num_edges)
         else:
-            pts = np.vstack([pi[None, :], pj[None, :]])
-
-        if edge_values is not None:
-            val = edge_values[ei]
-        elif sim_result.displacements is not None:
-            i_idx = node_to_idx[edge.node_i]
-            j_idx = node_to_idx[edge.node_j]
-            di = np.linalg.norm(sim_result.displacements[i_idx, :3])
-            dj = np.linalg.norm(sim_result.displacements[j_idx, :3])
-            val = (di + dj) / 2
-        else:
-            val = 0.0
-
-        for k in range(len(pts) - 1):
-            segments_3d.append((pts[k], pts[k + 1], val))
+            nodal_values = np.linalg.norm(sim_result.displacements[:, :3], axis=1)
+            edge_values = np.asarray([
+                (nodal_values[node_to_idx[e.node_i]] +
+                 nodal_values[node_to_idx[e.node_j]]) / 2
+                for e in deformed.edges.values()])
+    segments_3d = [(segment[0], segment[1], edge_values[row])
+                   for segment, row in zip(geometry, owners)]
 
     if not segments_3d:
         if save_path:
@@ -1420,6 +1446,17 @@ def render_comparison_3d(
 ):
     """Render 3-panel comparison: original, deformed overlay, stress.
 
+    Stored edge curves are preserved at zero displayed motion. Nonzero nodal
+    motion on an edge with internal points raises ValueError: interior motion
+    cannot be inferred from endpoints. Supply saved absolute curve geometry as
+    the graph without additional nodal motion; no interpolation is invented.
+    In the displacement panel, color is the mean of endpoint nodal magnitudes,
+    repeated on each physical edge's display segments, not an interior field.
+    The stress panel instead colors by the absolute supplied per-edge force.
+
+    The stress panel uses unscaled deformed positions, so displacement_scale=0
+    only disables motion in the displacement panel, not the stress panel.
+
     Parameters
     ----------
     graph : StructureGraph
@@ -1430,6 +1467,13 @@ def render_comparison_3d(
         Scale factor for deformed view (1.0 = actual deformation).
     """
     sim_result = _align_result(graph, sim_result, require_edges=sim_result.edge_forces is not None)
+    if sim_result.deformed_positions is not None:
+        original = graph.node_positions()
+        _require_known_curve_motion(
+            graph, original + displacement_scale * (sim_result.deformed_positions - original))
+        # The stress panel historically displays unscaled positions.
+        if sim_result.edge_forces is not None:
+            _require_known_curve_motion(graph, sim_result.deformed_positions)
     t = _get_theme(theme)
     fig = plt.figure(figsize=figsize)
     fig.patch.set_facecolor(t["bg"])
@@ -1478,26 +1522,19 @@ def render_comparison_3d(
             for idx, nid in enumerate(node_ids):
                 deformed.nodes[nid].position = sim_result.deformed_positions[idx].copy()
 
-        edges_list = list(deformed.edges.values())
-        segments_3d = []
-        seg_colors = []
-        for ei, edge in enumerate(edges_list):
-            pi = deformed.nodes[edge.node_i].position
-            pj = deformed.nodes[edge.node_j].position
-            val = edge_forces[ei]
-            c = colormap(norm(val))
-            segments_3d.append([pi, pj])
-            seg_colors.append(c)
+        segments_3d, owners = _polyline_segments(deformed)
+        # edge_forces remain in aligned physical-edge order.
+        seg_colors = [colormap(norm(edge_forces[row])) for row in owners]
 
         if segments_3d:
             lc = Line3DCollection(segments_3d, colors=seg_colors, linewidths=line_width * 1.2)
             ax3.add_collection3d(lc)
 
         if deformed.num_nodes > 0:
-            pos = deformed.node_positions()
+            bb_min, bb_max = _display_bounds(deformed)
             for setter, dim in [(ax3.set_xlim, 0), (ax3.set_ylim, 1), (ax3.set_zlim, 2)]:
-                mn, mx = pos[:, dim].min(), pos[:, dim].max()
-                margin = (mx - mn) * 0.05
+                mn, mx = bb_min[dim], bb_max[dim]
+                margin = max((mx - mn) * 0.05, float((bb_max - bb_min).max()) * 0.01, 1e-12)
                 setter(mn - margin, mx + margin)
 
         ax3.view_init(elev=elevation, azim=azimuth)
@@ -1537,6 +1574,13 @@ def render_multi_angle_3d(
 ):
     """Render 3D structure from multiple viewing angles.
 
+    Stored edge curves are preserved at zero displayed motion. Nonzero nodal
+    motion on an edge with internal points raises ValueError: interior motion
+    cannot be inferred from endpoints. Supply saved absolute curve geometry as
+    the graph without additional nodal motion; no interpolation is invented.
+    Displacement color is the mean of endpoint nodal magnitudes, repeated on
+    every display segment of that physical edge, not an interior displacement field.
+
     Parameters
     ----------
     graph : StructureGraph
@@ -1547,6 +1591,8 @@ def render_multi_angle_3d(
         Viewing angles. Default: 6 views (front, back, left, right, top, iso).
     """
     sim_result = _align_result(graph, sim_result, require_edges=False)
+    if sim_result is not None:
+        _require_known_curve_motion(graph, sim_result.deformed_positions)
     t = _get_theme(theme)
 
     if angles is None:
