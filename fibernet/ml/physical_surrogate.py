@@ -69,24 +69,34 @@ class MLP:
         return H, H @ self.W2 + self.b2
 
     def train(self, X, Y, lr=1e-3, epochs=200, batch=16, val_frac=0.2,
-              patience=15, min_delta=1e-4, epoch_cb=None, stop_cb=None):
+              patience=15, min_delta=1e-4, epoch_cb=None, stop_cb=None, *,
+              validation_indices=None):
         """Adam training with standardized I/O and early stopping on val MSE.
 
         Returns a history dict (train/val loss lists, epochs_run,
         best_epoch, early_stopped); best weights are restored at the end.
         Fresh instances with the same seed use the same holdout regardless
-        of hidden width. A zero fraction or fewer than five rows disables
-        validation; otherwise at least two rows remain in each partition.
+        of hidden width. With the default row split, a zero fraction or fewer
+        than five rows disables validation; otherwise at least two rows remain
+        in each partition. ``validation_indices`` explicitly selects validation rows; its complement
+        is the training set. Callers must keep related source networks together.
+        Validation is for model selection, not an untouched final test set.
         """
         X = np.asarray(X, float)
         Y = np.asarray(Y, float)
         n, d = X.shape
         if not np.isfinite(val_frac) or not 0 <= val_frac < 1:
             raise ValueError('val_frac must be finite and in [0, 1)')
+        explicit = (_partition_validation_indices(n, validation_indices)
+                    if validation_indices is not None else None)
         # Split before initialization consumes a width-dependent amount of RNG.
         idx = self.rng.permutation(n)
-        nv = max(2, min(n - 2, int(n * val_frac))) if n >= 5 and val_frac > 0 else 0
-        vi, ti = idx[:nv], idx[nv:]
+        if explicit is None:
+            nv = max(2, min(n - 2, int(n * val_frac))) if n >= 5 and val_frac > 0 else 0
+            vi, ti = idx[:nv], idx[nv:]
+        else:
+            ti, vi = explicit
+            nv = len(vi)
         self.val_indices, self.train_indices = vi, ti
         if self.W1 is None or self.W1.shape[0] != d:
             self._init_weights(d)
@@ -175,3 +185,27 @@ def r2_score(y_true, y_pred):
     ss_res = float(((y_true - y_pred) ** 2).sum())
     ss_tot = float(((y_true - y_true.mean()) ** 2).sum())
     return 1.0 - ss_res / ss_tot if ss_tot > 1e-12 else float('nan')
+
+
+def _partition_validation_indices(n_rows, validation_indices):
+    """Validate explicit validation rows and return detached train/val arrays."""
+    if np.ma.isMaskedArray(validation_indices):
+        raise ValueError('validation_indices must not be masked')
+    if not isinstance(validation_indices, (list, tuple, np.ndarray)):
+        raise ValueError('validation_indices must be a list, tuple or 1-D array')
+    if isinstance(validation_indices, np.ndarray) and validation_indices.ndim != 1:
+        raise ValueError('validation_indices must be one-dimensional')
+    values = list(validation_indices)
+    if any(isinstance(i, (bool, np.bool_)) or not isinstance(i, (int, np.integer))
+           for i in values):
+        raise ValueError('validation_indices must contain integers, not booleans')
+    if any(i < 0 or i >= n_rows for i in values):
+        raise ValueError('validation_indices out of range')
+    if len(set(values)) != len(values):
+        raise ValueError('validation_indices must be unique')
+    if len(values) < 2 or n_rows - len(values) < 2:
+        raise ValueError('explicit validation requires at least two rows per partition')
+    selected = set(values)
+    train = np.array([i for i in range(n_rows) if i not in selected], dtype=np.intp)
+    val = np.array(values, dtype=np.intp)
+    return train, val
