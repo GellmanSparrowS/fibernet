@@ -140,7 +140,7 @@
   "ml/multiscale.py": "fa10f837169b20d2441d58f50ca3b40967be0e18d0d297924e5a258b0414fe74",
   "ml/neural_ode.py": "908c10f051ba4c2ba655078f92a36431601697138aafc6c995761cd5362b0362",
   "ml/neural_operator.py": "1eeed34651411dc1fa57bbd057b6a98877b6e62f29b1fb94e8a8c1d05c40dbae",
-  "ml/optimization.py": "4c201446a4b8262ccda1bcba64f7e3420e41f3d4a8132a31813c90f0f04af6f8",
+  "ml/optimization.py": "1b59a4a7dd1ec150596d5f1e7d06e5368199aaafcaa45c458704caf3681f2c99",
   "ml/physical_dataset.py": "01c71485fa5b816a6f3ac934e3ec68972958cdbb4cbbe01a9689e8da2884a5c0",
   "ml/physical_learning.py": "ff954b4404c94f6fdbd214099ea54ee817c63a72852d611aa3bc21bad80b9b2c",
   "ml/physical_surrogate.py": "8e537a8a36c4b52e878d2b3be89227a6bcda1e98b8686cffd47c0274631fad38",
