@@ -78,6 +78,33 @@ The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall
 
 `LAMMPSRunResult` contains typed trajectory and thermo frames. Trajectories map back to stable graph IDs and expose positions in m, velocities in m/s and forces in N. Thermo energies are J. The six global pressure components are Pa, compression-positive. This fixed-box mechanical virial is not a calibrated fiber or bulk material stress; site kinetic energy is not automatically physical material temperature.
 
+### Reopen saved output files
+
+If the matching `PreparedRun` is available or deterministically reconstructed,
+saved files can be parsed again without starting or resuming an engine:
+
+```python
+from fibernet.integrations import parse_output_files
+
+raw = parse_output_files(
+    prepared, workdir / 'trajectory.dump', workdir / 'log.lammps',
+    max_output_bytes=8 * 1024 * 1024,
+    expected_banner=runtime.expected_banner,
+)
+```
+
+The helper reads UTF-8 regular-file targets and passes their contents to the
+same strict `parse_outputs` protocol parser. The combined raw file limit is
+caller-selected, defaults to 8 MiB and cannot exceed 64 MiB; it is not a total
+memory limit. A selected parser profile may impose a lower cap on that value.
+`expected_banner` is optional and checks only the log's first
+line. Files must stay stable while read; ordinary filesystem symlinks are
+followed. The byte cap is not a read timeout; even regular network files may
+block. A matching marker, model identity or banner is not an authenticity
+proof and does not verify the executable, runtime, or that LAMMPS actually ran.
+This helper does not read or authenticate the work directory manifest, and the
+returned result's `workdir` is empty because the paths may be unrelated.
+
 Dump units, time, integer steps, complete unique identities, expected types, box, finite values, initial state, PE+KE consistency and a graph/contract-bound completion marker are checked. Returned energy is the engine's mechanical thermo energy. Explicit constant nodal forces and whole-node fixed constraints have compiler/protocol tests, but the native scientific qualification below uses zero loads and no fixed sites. External work is not integrated into the result, so do not apply closed-system energy conservation to loaded runs. Geometric boundary flags are preserved as provenance; fixed sites are an explicit separate argument.
 
 For every harmonic profile, each observed fixed site must retain its position

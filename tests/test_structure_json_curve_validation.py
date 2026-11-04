@@ -178,3 +178,21 @@ def test_writer_valid_raw_curves_keep_format_roundtrip_and_input(points, tmp_pat
             assert restored.edges[101].internal_points.shape == (0, 3)
     assert graph.edges[101].internal_points is points
     assert pickle.dumps(points) == before
+
+
+def test_extended_float_json_limit_preserves_destination(tmp_path):
+    points = np.array([[1., 0., 0.]], dtype=np.longdouble)
+    try:
+        json.dumps(points.tolist())
+    except TypeError:
+        pass
+    else:
+        pytest.skip('platform JSON encoder supports this longdouble representation')
+    graph = StructureGraph.from_dict(record(None))
+    graph.edges[101].internal_points = points
+    destination = tmp_path / 'existing.json'
+    destination.write_text('sentinel')
+    with pytest.raises(TypeError):
+        graph.save_json(destination)
+    assert destination.read_text() == 'sentinel'
+    assert graph.edges[101].internal_points is points

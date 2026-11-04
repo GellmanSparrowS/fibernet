@@ -81,7 +81,11 @@ def to_pdb(
 def from_pdb(filename: str, bead_radius: float = 0.1) -> FiberNetwork:
     """Import fiber network from PDB file.
     
-    Reads CONECT records to reconstruct fiber chains.
+    Reads the first pair from each CONECT record to reconstruct fiber chains.
+    Fixed-width five-column serials and legacy whitespace-separated pairs are
+    accepted. This is not a general branched PDB topology importer; coordinates
+    are interpreted as angstroms and returned in nanometers, and proximity
+    crosslinks are inferred after chain reconstruction.
     """
     atoms = {}
     conect = []
@@ -96,14 +100,25 @@ def from_pdb(filename: str, bead_radius: float = 0.1) -> FiberNetwork:
                 atoms[aid] = np.array([x, y, z])
             
             elif line.startswith("CONECT"):
-                parts = line[6:].split()
-                if len(parts) >= 2:
+                # Standard PDB serials occupy adjacent five-column fields;
+                # five-digit values need not have whitespace between them.
+                # Preserve the legacy whitespace parser for nonstandard input.
+                body = line[6:].rstrip()
+                fields = [body[k:k + 5] for k in range(0, len(body), 5)]
+                canonical = (len(body) >= 10 and len(body) % 5 == 0 and
+                             all(field.lstrip(' ').isascii() and field.lstrip(' ').isdigit()
+                                 for field in fields))
+                if canonical:
+                    i, j = int(fields[0]), int(fields[1])
+                else:
+                    parts = body.split()
+                    if len(parts) < 2:
+                        continue
                     try:
-                        i = int(parts[0])
-                        j = int(parts[1])
-                        conect.append((i, j))
+                        i, j = int(parts[0]), int(parts[1])
                     except ValueError:
-                        pass
+                        continue
+                conect.append((i, j))
     
     if not atoms:
         return FiberNetwork()

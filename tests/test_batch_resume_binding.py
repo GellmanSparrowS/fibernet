@@ -27,6 +27,7 @@ from fibernet.core.structure_graph import StructureGraph
 
 SOURCES = {
     "fibernet/easy.py",
+    "fibernet/_json.py",
     "fibernet/sim/accelerated.py",
     "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py",
