@@ -46,6 +46,6 @@ def test_ml_graph_feature_export_runs_supported_extractor():
 
     assert GraphFeatureExtractor is AnalysisExtractor is fn.GraphFeatureExtractor
     graph = fn.pattern_2d(unit="square", box=(2, 2), grid=(1, 1))
-    values = GraphFeatureExtractor(canvas_size=32).extract(graph)
+    values = GraphFeatureExtractor(canvas_size=32).extract(graph, allow_unavailable=True)
     assert values["n_node"] == graph.num_nodes
     assert values["n_edge"] == graph.num_edges

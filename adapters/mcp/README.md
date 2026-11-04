@@ -1,10 +1,10 @@
 # FiberNet MCP adapter
 
-A separate optional Linux stdio adapter exposing eight bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
+A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: all 246 native Python source hashes must match core_manifest.json. The required native core snapshot is 6eabb154cd37d95c7c447a568b1b737c3ec883c8. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the 246 bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the historical producer/core snapshot label used by v1 outputs and operator configuration. It is not a unique identity for a subsequently changed core manifest; use the additive verified provenance resource below for that narrower identity. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.3.0 is not sufficient: every native Python source hash and the complete source inventory must match core_manifest.json. The required native core snapshot is 6eabb154cd37d95c7c447a568b1b737c3ec883c8. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the historical producer/core snapshot label used by v1 outputs and operator configuration. It is not a unique identity for a subsequently changed core manifest; use the additive verified provenance resource below for that narrower identity. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
 
 From the repository containing this adapter:
 
@@ -51,6 +51,7 @@ The eighth tool, `fibernet_solve_thermoelastic_network_snapshot`, calls the exis
 - fibernet_solve_linear_transport: the existing bounded steady-DC electrical tool; see [Electrical method and limits](ELECTRICAL.md)
 - fibernet_prepare_deformed_transport: native prepare-only geometry/conductance/binding bundle; see [Deformed transport preparation](DEFORMED_TRANSPORT.md)
 - fibernet_solve_thermoelastic_network_snapshot: one native planar prescribed-temperature mechanical snapshot; see [Thermoelastic snapshot](THERMOELASTIC.md)
+- fibernet_project_fiber_network_report: native checked projection and loss report; see [Projection reports](PROJECTION.md)
 
 resources/read supports fibernet://capabilities, fibernet://provenance/1 and fibernet://artifacts/{artifact_id}; the latter returns a small manifest, not unbounded artifact contents. No other resource schemes are read. Complete data are reconstructed through chunks and verified against SHA256. structuredContent is authoritative; text content is a concise pointer rather than duplicating up to44KiB base64. Errors carry stable categories/codes and no raw exception/path/metadata. Unknown tool names and unknown resources use protocol errors. Validation may successfully report an invalid graph; analysis of it returns a domain error.
 
@@ -62,10 +63,12 @@ SourceSHA hashes original input bytes. ArtifactSHA hashes compact sorted JSON re
 v1 `Producer` fields, capabilities contents and legacy operator `source_tree` gating
 were unchanged. The historical label `6eabb154cd37d95c7c447a568b1b737c3ec883c8`
 is not being reinterpreted as a protocol-only tag or asserted to identify a modified
-runtime manifest. The new resource returns exactly four fields:
+runtime manifest. The new resource returns exactly four fields. The following JSON illustrates their shape;
+`source_file_count` is an integer computed from the matching verified
+`core_manifest.json`, not a fixed value for every adapter build:
 
 ```json
-{"schema_version":"fibernet.core-provenance/1","canonical_core_manifest_sha256":"<64 lowercase hex characters>","source_file_count":246,"scope":"fibernet_python_sources"}
+{"schema_version":"fibernet.core-provenance/1","canonical_core_manifest_sha256":"<64 lowercase hex characters>","source_file_count":248,"scope":"fibernet_python_sources"}
 ```
 
 The digest is SHA256 of UTF-8 JSON for the same strictly parsed `core_manifest.json`
@@ -120,18 +123,18 @@ For a source-only native checkout, set FIBERNET_CORE_PATH to its absolute root a
 
 The `provenance_contract.py` check uses temporary synthetic source files, isolated callback/worker bodies and real JSON Schema validation. It checks canonical manifest identity, strict source verification, worker/cache mismatch refusal, privacy and immutable v1 output fixtures without launching an MCP session or importing scientific providers. The existing SDK acceptance and installed-distribution sessions also check the additive resource against an independently canonicalized core manifest; they do not add sessions or topology workers for this check.
 
-The complete `bounded_suite.py` runner rejects runs exceeding120CPU seconds (terminal kernel waited-child usage plus supervisor usage, with one CPU second reserved for report/exit work),300wall seconds or60MiB of adapter-directory data, including reserved report space. It samples process-tree RSS against1GiB and monitors intermediate CPU/disk use; these observations are not hard aggregate-memory limits. A Linux per-process child subreaper captures short-lived and orphaned descendants, checks terminal resources even on failure, and rejects any worker-exit leak before bounded kill/reap cleanup. The nested acceptance smoke is an additional sampled monitor. Existing server/worker OS limits and the CI job/command wall deadlines remain separate safeguards. Run the full suite with `PYTHONPATH=adapters/mcp/src python adapters/mcp/tests/bounded_suite.py`. Raw logs distinguish unsuccessful attempts from passing runs. Scientific and authorization limits above apply even when protocol checks pass.
+The complete `bounded_suite.py` runner rejects runs exceeding180CPU seconds (terminal kernel waited-child usage plus supervisor usage, with one CPU second reserved for report/exit work),300wall seconds or60MiB of adapter-directory data, including reserved report space. It samples process-tree RSS against1GiB and monitors intermediate CPU/disk use; these observations are not hard aggregate-memory limits. A Linux per-process child subreaper captures short-lived and orphaned descendants, checks terminal resources even on failure, and rejects any worker-exit leak before bounded kill/reap cleanup. The nested acceptance smoke is an additional sampled monitor. Existing server/worker OS limits and the CI job/command wall deadlines remain separate safeguards. Run the full suite with `PYTHONPATH=adapters/mcp/src python adapters/mcp/tests/bounded_suite.py`. Raw logs distinguish unsuccessful attempts from passing runs. Scientific and authorization limits above apply even when protocol checks pass.
 
 ## Separate adapter CI and wheel checks
 
-The Linux Python 3.12 adapter workflow builds and installs separate core and adapter wheels, verifies the embedded 246-file binding and exact MIT notice, and exercises actual installed SDK initialize/catalog and worker topology/chunk/native-parity calls. It also runs the bounded source acceptance, binding-refusal, adversarial, transport and cleanup scripts. The main cross-platform core test workflow does not collect these standalone adapter scripts. The fixed SDK/protocol and Linux-only support limits still apply; this is not evidence for a graphical MCP client or another operating system.
+The Linux Python 3.12 adapter workflow is configured to build and install separate core and adapter wheels, verify the complete source binding in the embedded core_manifest.json and exact MIT notice, and exercise installed SDK initialize/catalog and worker topology/chunk/native-parity calls. Those checks must pass for the matching source revision; a result for a previous source binding does not qualify a changed binding. It also runs the bounded source acceptance, binding-refusal, adversarial, transport and cleanup scripts. The main cross-platform core test workflow does not collect these standalone adapter scripts. The fixed SDK/protocol and Linux-only support limits still apply; this is not evidence for a graphical MCP client or another operating system.
 
 The standalone adapter wheel includes the repository MIT copyright and permission notice. To check an already built and installed pair, run `python adapters/mcp/tests/distribution.py --wheels /absolute/path/to/wheels` from the matching source checkout. An explicit `--installed-root /absolute/path/to/pip-target` can check a separate `pip --target` installation. The check refuses to treat the source checkout as the installed distribution.
 
 ## Historical native-core compatibility notes
 
 The following notes describe earlier core additions and their five-tool adapter
-surface. The current eight-tool surface is listed above. The saved-electrothermal
+surface. The current nine-tool surface is listed above. The saved-electrothermal
 bridge changes the native source binding, not the MCP tool surface; it adds no
 electrothermal or mechanical MCP execution tool.
 
@@ -163,3 +166,11 @@ The paired core separates automatic SB3 evaluation from its training environment
 and clarifies the distinct root random-rollout helper. This refresh changes the
 whole-core source binding, not the five MCP tools: no RL execution tool or new
 optional native dependency is added.
+
+## Checked FiberNetwork projection reports
+
+Use `fibernet_project_fiber_network_report` with a catalog graph ID to obtain
+the native `StructureGraph.to_fiber_network` admission and loss report. The
+report preserves stable IDs and explicit projection policies and is read through
+the same bounded artifact resources as other results. See [Projection reports](PROJECTION.md)
+for input policies, units, limits and the complete read workflow.

@@ -279,7 +279,7 @@ class ManufacturingDialog(QDialog):
             button.setEnabled(False)
         self.status.setText('参数已改变，请更新制造模型' if get_lang()=='zh' else 'Settings changed; update the fabrication model')
 
-    def rebuild(self):
+    def rebuild(self, *, autostart=True):
         if self.worker is not None and self.worker.isRunning():
             return
         settings = PrintSettings(**{k:v.value() for k,v in self.controls.items()}, curved=self.surface is not None,
@@ -297,7 +297,10 @@ class ManufacturingDialog(QDialog):
         self.worker.progress.connect(self.progress.setValue)
         self.worker.completed.connect(self._done)
         self.worker.failed.connect(self._failed)
-        self.worker.start()
+        worker = self.worker
+        if autostart:
+            worker.start()
+        return worker
 
     def _release(self):
         self.refresh.setEnabled(True)

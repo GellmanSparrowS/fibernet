@@ -331,7 +331,7 @@ class SimTab(QWidget):
                          grip_pct=self.grip.value() / 100.0)
 
     # ---------------- run ----------------
-    def start_run(self):
+    def start_run(self, *, autostart=True):
         if self.worker is not None and self.worker.isRunning():
             return
         self._play_timer.stop()
@@ -343,7 +343,10 @@ class SimTab(QWidget):
         self.worker.finished_ok.connect(self._on_done)
         self.worker.failed.connect(self._on_fail)
         self.worker.progress.connect(self.progress.setValue)
-        self.worker.start()
+        worker = self.worker
+        if autostart:
+            worker.start()
+        return worker
 
     def run_sync(self):
         """Test hook: run without a worker thread."""

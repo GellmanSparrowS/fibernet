@@ -56,8 +56,11 @@ def destinations(text: str) -> list[str]:
     return markdown + html
 
 
-def _without_markdown_code(text: str) -> str:
+def _without_markdown_code(text: str, preserve_offsets: bool = False) -> str:
     """Exclude fenced blocks and matching backtick spans before image checks."""
+    def blank(value):
+        return re.sub(r"[^\r\n]", " ", value)
+
     lines = []
     fence = None
     for line in text.splitlines(keepends=True):
@@ -66,16 +69,17 @@ def _without_markdown_code(text: str) -> str:
             if re.fullmatch(r" {0,3}" + re.escape(char) + r"{" + str(length)
                             + r",}[ \t]*(?:\r?\n)?", line):
                 fence = None
-            lines.append("\n")
+            lines.append(blank(line) if preserve_offsets else "\n")
             continue
         opening = re.match(r" {0,3}(`{3,}|~{3,})([^\r\n]*)", line)
         if opening and not (opening[1][0] == "`" and "`" in opening[2]):
             fence = (opening[1][0], len(opening[1]))
-            lines.append("\n")
+            lines.append(blank(line) if preserve_offsets else "\n")
         else:
             lines.append(line)
     prose = "".join(lines)
-    return re.sub(r"(?<!`)(`+)(?!`)((?:(?!\n[ \t]*\n).)*?)(?<!`)\1(?!`)", " ", prose, flags=re.S)
+    return re.sub(r"(?<!`)(`+)(?!`)((?:(?!\n[ \t]*\n).)*?)(?<!`)\1(?!`)",
+                  (lambda m: blank(m[0])) if preserve_offsets else " ", prose, flags=re.S)
 
 
 class _InlineGifParser(HTMLParser):
@@ -109,10 +113,75 @@ def inline_gifs(text: str) -> list[str]:
     return markdown + parser.html_gifs
 
 
+class _DisclosureParser(HTMLParser):
+    """Locate outermost native disclosures without flattening their children."""
+
+    def __init__(self, source: str) -> None:
+        super().__init__(convert_charrefs=False)
+        self.source = source
+        self.masked = _without_markdown_code(source, preserve_offsets=True)
+        self.offsets = [0] + [m.end() for m in re.finditer("\n", source)]
+        self.stack = []
+        self.sections = []
+
+    def _source_offset(self) -> int:
+        line, column = self.getpos()
+        return self.offsets[line - 1] + column
+
+    def handle_starttag(self, tag, attrs) -> None:
+        at = self._source_offset()
+        if tag == "details":
+            require(not self.stack or self.stack[-1].get("body") is not None,
+                    "Nested details before its parent summary closes")
+            raw = self.get_starttag_text()
+            self.stack.append({"attrs": raw[8:-1], "open_end": at + len(raw)})
+        elif tag == "summary":
+            require(bool(self.stack), "Summary outside details")
+            frame = self.stack[-1]
+            require("summary_start" not in frame, "Duplicate details summary")
+            require(not self.masked[frame["open_end"]:at].strip(),
+                    "Summary must be the first details content")
+            frame["summary_start"] = at + len(self.get_starttag_text())
+
+    def handle_startendtag(self, tag, attrs) -> None:
+        require(tag not in ("details", "summary"), "Self-closing disclosure control")
+
+    def handle_endtag(self, tag) -> None:
+        at = self._source_offset()
+        if tag == "summary":
+            require(bool(self.stack), "Summary closes outside details")
+            frame = self.stack[-1]
+            require("summary_start" in frame and "body" not in frame,
+                    "Unmatched summary close")
+            frame["summary"] = self.source[frame["summary_start"]:at]
+            frame["body"] = self.source.index(">", at) + 1
+        elif tag == "details":
+            require(bool(self.stack), "Unmatched details close")
+            frame = self.stack.pop()
+            require("body" in frame, "Details needs one complete summary")
+            if not self.stack:
+                self.sections.append((frame["attrs"], frame["summary"],
+                                      self.source[frame["body"]:at]))
+
+
+def top_level_disclosures(text: str) -> list[tuple[str, str, str]]:
+    """Return exact (attributes, summary, body) for outermost details only.
+
+    Nested details are retained verbatim in each body. HTML comments and
+    Markdown code literals do not create controls. Malformed controls reject.
+    """
+    parser = _DisclosureParser(text)
+    parser.feed(parser.masked)
+    parser.close()
+    require(not parser.stack, "Unclosed details control")
+    return parser.sections
+
+
 def canonical_destination(target: str) -> str:
     target = re.sub(r"(?:homepage-)?language-(?:en|zh)-(?:active|inactive)(?:-v2)?\.svg", "language-button.svg", target)
     return (target.replace("manufacturing-zh.png", "manufacturing-en.png")
-            .replace("homepage-quickstart-zh-v2.svg", "homepage-quickstart-en-v2.svg"))
+            .replace("homepage-quickstart-zh-v2.svg", "homepage-quickstart-en-v2.svg")
+            .replace("api-relationship-map-zh.svg", "api-relationship-map-en.svg"))
 
 
 def check_links(path: Path) -> dict:
@@ -175,7 +244,7 @@ def locale_block(text: str, language: str) -> str:
 
 def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     """Validate GitHub-native disclosures and shared translated source blocks."""
-    sections = re.findall(r"<details([^>]*)>\s*<summary>(.*?)</summary>(.*?)</details>", homepage, re.S)
+    sections = top_level_disclosures(homepage)
     require(len(sections) == 2, "Expected two native language disclosures")
     zh_attrs, zh_summary, zh_section = sections[0]
     en_attrs, en_summary, en_section = sections[1]

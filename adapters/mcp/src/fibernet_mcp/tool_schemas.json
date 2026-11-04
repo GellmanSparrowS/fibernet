@@ -95,7 +95,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -402,7 +403,8 @@
                   "read_artifact",
                   "solve_linear_transport",
                   "prepare_deformed_transport",
-                  "solve_thermoelastic_network_snapshot"
+                  "solve_thermoelastic_network_snapshot",
+                  "project_fiber_network_report"
                 ]
               }
             },
@@ -505,7 +507,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -809,7 +812,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -1151,7 +1155,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -1455,7 +1460,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -1771,7 +1777,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -2075,7 +2082,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -2379,7 +2387,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -2694,7 +2703,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -3032,7 +3042,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -3384,7 +3395,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -3700,7 +3712,8 @@
                   "validation_report",
                   "linear_transport_result",
                   "deformed_transport_preparation",
-                  "thermoelastic_network_snapshot"
+                  "thermoelastic_network_snapshot",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -4067,7 +4080,8 @@
                   "structure_graph",
                   "topology_metrics",
                   "validation_report",
-                  "linear_transport_result"
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
                 ]
               }
             },
@@ -4888,6 +4902,839 @@
               },
               "kind": {
                 "const": "thermoelastic_network_snapshot"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "fibernet_project_fiber_network_report",
+      "description": "Construct the native checked endpoint-chord compatibility projection and return only its admission/loss report, never the FiberNetwork, mesh or physics result. Approved declared units/frame; no rescaling. Strict policies by default. Fixed ceilings: 256 nodes, 1024 edges, 4096 source points, 8192 output points, 16384 crosslinks, 1 MiB metadata/material and report. One synchronous bounded worker; MCP cancellation before publication terminates/reaps it. Read complete report through artifact chunks.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "graph_id": {
+            "$ref": "#/$defs/Id"
+          },
+          "geometry_policy": {
+            "type": "string",
+            "enum": [
+              "reject_internal_points",
+              "endpoint_chord"
+            ],
+            "default": "reject_internal_points"
+          },
+          "short_edge_policy": {
+            "type": "string",
+            "enum": [
+              "reject",
+              "omit_legacy"
+            ],
+            "default": "reject"
+          }
+        },
+        "required": [
+          "graph_id"
+        ],
+        "additionalProperties": false,
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report",
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
+                ]
+              }
+            },
+            "required": [
+              "artifact_id",
+              "uri",
+              "mime_type",
+              "byte_size",
+              "sha256",
+              "source_sha256",
+              "producer",
+              "kind"
+            ],
+            "additionalProperties": false
+          },
+          "Error": {
+            "type": "object",
+            "properties": {
+              "category": {
+                "type": "string",
+                "enum": [
+                  "contract",
+                  "domain",
+                  "resource",
+                  "internal"
+                ]
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Z_]{1,64}$"
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "category",
+              "code",
+              "message",
+              "retryable"
+            ],
+            "additionalProperties": false
+          },
+          "Failure": {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          },
+          "Graph": {
+            "type": "object",
+            "properties": {
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "graph_schema": {
+                "const": "3.1"
+              },
+              "node_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "edge_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_unit": {
+                "$ref": "#/$defs/Unit"
+              },
+              "frame_id": {
+                "$ref": "#/$defs/Frame"
+              },
+              "unit_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              },
+              "frame_provenance": {
+                "type": "string",
+                "enum": [
+                  "operator_asserted",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "graph_id",
+              "source_sha256",
+              "graph_schema",
+              "node_count",
+              "edge_count",
+              "length_unit",
+              "frame_id",
+              "unit_provenance",
+              "frame_provenance"
+            ],
+            "additionalProperties": false
+          },
+          "Issue": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 256
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "code",
+              "path",
+              "message"
+            ],
+            "additionalProperties": false
+          },
+          "Metrics": {
+            "type": "object",
+            "properties": {
+              "schema": {
+                "const": "fibernet.topology/1"
+              },
+              "n_nodes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_physical_edges": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_unique_connections": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_components": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "n_isolates": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cycle_rank_physical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "largest_component_fraction": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "schema",
+              "n_nodes",
+              "n_physical_edges",
+              "n_unique_connections",
+              "n_components",
+              "n_isolates",
+              "cycle_rank_physical",
+              "largest_component_fraction"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "outputSchema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "graph_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "status": {
+                "const": "completed"
+              },
+              "scope": {
+                "const": "checked_projection_report_only"
+              },
+              "effective_profile": {
+                "type": "object",
+                "properties": {
+                  "length_unit": {
+                    "enum": [
+                      "m",
+                      "cm",
+                      "mm",
+                      "um",
+                      "nm"
+                    ]
+                  },
+                  "coordinate_frame": {
+                    "$ref": "#/$defs/Frame"
+                  },
+                  "geometry_policy": {
+                    "type": "string",
+                    "enum": [
+                      "reject_internal_points",
+                      "endpoint_chord"
+                    ],
+                    "default": "reject_internal_points"
+                  },
+                  "short_edge_policy": {
+                    "type": "string",
+                    "enum": [
+                      "reject",
+                      "omit_legacy"
+                    ],
+                    "default": "reject"
+                  },
+                  "missing_material_policy": {
+                    "const": "reject"
+                  },
+                  "limits": {
+                    "type": "object",
+                    "properties": {
+                      "max_nodes": {
+                        "const": 256
+                      },
+                      "max_edges": {
+                        "const": 1024
+                      },
+                      "max_source_points": {
+                        "const": 4096
+                      },
+                      "max_output_points": {
+                        "const": 8192
+                      },
+                      "max_crosslinks": {
+                        "const": 16384
+                      },
+                      "max_metadata_bytes": {
+                        "const": 1048576
+                      },
+                      "max_report_bytes": {
+                        "const": 1048576
+                      }
+                    },
+                    "required": [
+                      "max_nodes",
+                      "max_edges",
+                      "max_source_points",
+                      "max_output_points",
+                      "max_crosslinks",
+                      "max_metadata_bytes",
+                      "max_report_bytes"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "length_unit",
+                  "coordinate_frame",
+                  "geometry_policy",
+                  "short_edge_policy",
+                  "missing_material_policy",
+                  "limits"
+                ],
+                "additionalProperties": false
+              },
+              "request_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "counts": {
+                "type": "object",
+                "properties": {
+                  "source_nodes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 256
+                  },
+                  "source_edges": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1024
+                  },
+                  "source_points": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4096
+                  },
+                  "fibers": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1024
+                  },
+                  "centerline_points": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8192
+                  },
+                  "crosslinks": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 16384
+                  }
+                },
+                "required": [
+                  "source_nodes",
+                  "source_edges",
+                  "source_points",
+                  "fibers",
+                  "centerline_points",
+                  "crosslinks"
+                ],
+                "additionalProperties": false
+              },
+              "artifact": {
+                "$ref": "#/$defs/Artifact"
+              }
+            },
+            "required": [
+              "schema_version",
+              "graph_id",
+              "source_sha256",
+              "status",
+              "scope",
+              "effective_profile",
+              "request_sha256",
+              "counts",
+              "artifact"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "schema_version": {
+                "const": "fibernet.mcp/1"
+              },
+              "error": {
+                "$ref": "#/$defs/Error"
+              },
+              "diagnostics": {
+                "type": "object",
+                "properties": {
+                  "violations": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "enum": [
+                            "internal_points",
+                            "short_edges",
+                            "missing_materials"
+                          ]
+                        },
+                        "edge_ids": {
+                          "type": "array",
+                          "maxItems": 128,
+                          "items": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "total_count": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 1024
+                        },
+                        "truncated": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "edge_ids",
+                        "total_count",
+                        "truncated"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "violations"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "schema_version",
+              "error"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "$defs": {
+          "Id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "Hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "Frame": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$"
+          },
+          "Unit": {
+            "type": "string",
+            "enum": [
+              "m",
+              "cm",
+              "mm",
+              "um",
+              "nm",
+              "unspecified"
+            ]
+          },
+          "Producer": {
+            "type": "object",
+            "properties": {
+              "fibernet_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "source_tree": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "adapter_version": {
+                "type": "string",
+                "maxLength": 128
+              },
+              "sdk_version": {
+                "type": "string",
+                "maxLength": 128
+              }
+            },
+            "required": [
+              "fibernet_version",
+              "source_tree",
+              "adapter_version",
+              "sdk_version"
+            ],
+            "additionalProperties": false
+          },
+          "Artifact": {
+            "type": "object",
+            "properties": {
+              "artifact_id": {
+                "$ref": "#/$defs/Id"
+              },
+              "uri": {
+                "type": "string",
+                "pattern": "^fibernet://artifacts/[a-f0-9]{32}$"
+              },
+              "mime_type": {
+                "const": "application/json"
+              },
+              "byte_size": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 16777216
+              },
+              "sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "source_sha256": {
+                "$ref": "#/$defs/Hash"
+              },
+              "producer": {
+                "$ref": "#/$defs/Producer"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "structure_graph",
+                  "topology_metrics",
+                  "validation_report",
+                  "linear_transport_result",
+                  "fiber_network_projection_report"
+                ]
               }
             },
             "required": [

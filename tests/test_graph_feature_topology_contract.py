@@ -40,8 +40,8 @@ def test_simple_graph_preserves_named_and_ordered_feature_schema():
         graph.add_node(node, pos=position)
     graph.add_edges_from(((0, 1), (1, 2), (2, 0)))
     extractor = GraphFeatureExtractor(canvas_size=32)
-    values = extractor.extract(graph)
-    vector = extractor.extract_vector(graph)
+    values = extractor.extract(graph, allow_unavailable=True)
+    vector = extractor.extract_vector(graph, allow_unavailable=True)
     assert len(values) == len(extractor.FEATURE_COLS) == 94
     assert values["n_edge"] == 3
     assert values["total_length"] == pytest.approx(2 + np.sqrt(2))

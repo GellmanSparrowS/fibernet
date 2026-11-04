@@ -14,11 +14,13 @@ Modules
 
 Quick Start
 -----------
->>> from fibernet.rl import train_rl, evaluate_rl, plot_reward_curve
->>> from fibernet.rl.env import FiberStructureEnv
->>> env = FiberStructureEnv(unit="honeycomb", grid=(3,3))
->>> model, info = train_rl(env, algorithm="PPO", total_timesteps=10000)
->>> rewards, infos = evaluate_rl(model, env, n_episodes=10)
+>>> import gymnasium as gym
+>>> from fibernet.rl import train_policy
+>>> env = gym.make("CartPole-v1")
+>>> try:
+...     model, info = train_policy(env, algorithm="PPO", total_timesteps=10000)
+... finally:
+...     env.close()
 
 >>> # Reward shaping
 >>> from fibernet.rl.reward_shaping import CompositeReward, create_default_reward
@@ -43,12 +45,14 @@ from fibernet.rl.utils import (
     run_bayesian_optimization,
 )
 
-from fibernet.rl.parametric import (
-    ParametricStructureEnv,
-    create_rl_environment,
-)
+# A utility import must not probe Gym or native simulation providers.
+# Drop cached aliases on reload; explicit access resolves their real owner.
+for _name in ("ParametricStructureEnv", "create_rl_environment"):
+    globals().pop(_name, None)
+del _name
 
 __all__ = [
+    "train_policy",
     # Utils
     "plot_reward_curve",
     "plot_convergence",
@@ -66,10 +70,13 @@ __all__ = [
 def __getattr__(name):
     _submodules = {
         # Environments
+        "ParametricStructureEnv": "fibernet.rl.parametric",
+        "create_rl_environment": "fibernet.rl.parametric",
         "FiberStructureEnv": "fibernet.rl.env",
         "FiberDesignEnv": "fibernet.rl.env",
         "make_env": "fibernet.rl.env",
         # Algorithms
+        "train_policy": "fibernet.rl.algorithms",
         "train_rl": "fibernet.rl.algorithms",
         "evaluate_rl": "fibernet.rl.algorithms",
         "replay_best": "fibernet.rl.algorithms",
@@ -101,6 +108,10 @@ def __getattr__(name):
     if name in _submodules:
         import importlib
         mod = importlib.import_module(_submodules[name])
-        return getattr(mod, name)
+        return getattr(mod, "train_rl" if name == "train_policy" else name)
 
     raise AttributeError(f"module 'fibernet.rl' has no attribute '{name}'")
+
+
+def __dir__():
+    return sorted(set(globals()) | {"ParametricStructureEnv", "create_rl_environment"})

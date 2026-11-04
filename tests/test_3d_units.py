@@ -73,7 +73,7 @@ class TestPattern3DGeneration:
         assert g2.num_nodes > g1.num_nodes
         assert g2.num_edges > g1.num_edges
 
-    @pytest.mark.parametrize("unit", unit_cases(ALL_3D_UNITS))
+    @pytest.mark.parametrize("unit", sorted(set(ALL_3D_UNITS) - TPMS_UNITS))
     def test_n_pts_per_side(self, unit):
         ukw = SPECIAL_KWARGS.get(unit, {})
         g0 = fn.pattern_3d(unit=unit, box=(10, 10, 10), grid=(1, 1, 1), unit_kwargs=ukw)
@@ -81,6 +81,22 @@ class TestPattern3DGeneration:
                            n_pts_per_side=1, unit_kwargs=ukw)
         # With intermediate points, should have more nodes
         assert g2.num_nodes >= g0.num_nodes
+
+    @pytest.mark.parametrize("unit", sorted(TPMS_UNITS))
+    @pytest.mark.parametrize("controls", [
+        {"n_internal": 1},
+        {"n_pts_per_side": 1},
+        {"point_displacements": [(0.0, 0.0, 0.0)]},
+    ], ids=["internal_points", "intermediate_nodes", "explicit_displacements"])
+    def test_tpms_unsupported_controls_rejected_before_geometry(self, unit, controls, monkeypatch):
+        from fibernet.gen import pattern
+
+        def forbidden_builder(*args, **kwargs):
+            pytest.fail("Unsupported TPMS controls must reject before geometry")
+
+        monkeypatch.setattr(pattern, "_build_tpms_unit", forbidden_builder)
+        with pytest.raises(ValueError, match="TPMS units require"):
+            fn.pattern_3d(unit=unit, grid=(1, 1, 1), **controls)
 
     def test_invalid_unit_raises(self):
         with pytest.raises(ValueError, match="Unknown 3D unit"):

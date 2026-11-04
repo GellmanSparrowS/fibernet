@@ -50,6 +50,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 from numbers import Real
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
@@ -57,6 +58,50 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 import numpy as np
 
 from fibernet.core.material import Material
+
+
+
+def _graph_identifier(value, name):
+    """Normalize a signed integer stable ID before graph lookup or mutation."""
+    if (isinstance(value, (bool, np.bool_))
+            or not isinstance(value, (int, np.integer))):
+        raise ValueError(f"{name} must be an integer node ID" if name in ("node_i", "node_j")
+                         else f"{name} must be an integer")
+    return int(value)
+
+
+def _serialized_internal_points(value, edge_id):
+    """Detach finite real curve coordinates using ordinary NumPy promotion."""
+    if value is None:
+        return None
+    label = f'serialized internal_points for edge {edge_id}'
+
+    def inspect(item):
+        if np.ma.isMaskedArray(item):
+            raise ValueError(f'{label} must not be masked')
+        if isinstance(item, np.ndarray):
+            if item.dtype.kind not in 'iuf':
+                raise ValueError(f'{label} must contain finite real numeric coordinates')
+        elif isinstance(item, (list, tuple)):
+            for scalar in item:
+                inspect(scalar)
+        elif (isinstance(item, (bool, np.bool_))
+              or not isinstance(item, (int, float, np.integer, np.floating))):
+            raise ValueError(f'{label} must contain finite real numeric coordinates')
+
+    inspect(value)
+    try:
+        points = np.array(value, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f'{label} must have shape (M, 3) with finite real coordinates') from exc
+    # JSON [] loses the coordinate axis of a valid empty curve.
+    if points.shape == (0,):
+        return np.empty((0, 3))
+    if points.ndim != 2 or points.shape[1] != 3:
+        raise ValueError(f'{label} must have shape (M, 3)')
+    if points.dtype.kind not in 'iuf' or not np.isfinite(points).all():
+        raise ValueError(f'{label} must contain finite real numeric coordinates')
+    return points
 
 
 def _material_record(data: Any) -> dict:
@@ -367,7 +412,8 @@ class StructureGraph:
         return nid
 
     def remove_node(self, node_id: int):
-        """Remove a node and all its incident edges."""
+        """Remove a node and all its incident edges; unknown valid IDs are ignored."""
+        node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             return
         # Remove incident edges
@@ -396,7 +442,9 @@ class StructureGraph:
         node_id : int
             Node to move.
         displacement : array-like
-            Displacement vector (dx, dy) or (dx, dy, dz).
+            Displacement vector (d,), (dx, dy) or (dx, dy, dz). A single
+            component broadcasts to all three stored coordinates. Nested
+            array-like inputs are flattened; scalar inputs are rejected.
 
         Raises
         ------
@@ -407,11 +455,17 @@ class StructureGraph:
         --------
         >>> g.displace_node(5, [0.1, 0.2])  # move node 5 by (0.1, 0.2)
         """
+        node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             raise KeyError(f"Node {node_id} not found")
         disp = np.asarray(displacement, dtype=float)
+        if disp.ndim == 0:
+            raise ValueError("displacement must be an array-like with 1, 2 or 3 components")
+        disp = disp.ravel()
         if len(disp) == 2:
             disp = np.append(disp, 0.0)
+        if len(disp) not in (1, 3):
+            raise ValueError(f"displacement must have 1, 2 or 3 components, got {disp.size}")
         try:
             with np.errstate(over='raise', invalid='raise'):
                 position = self._nodes[node_id].position + disp
@@ -429,13 +483,14 @@ class StructureGraph:
         position : array-like
             New position (x, y) or (x, y, z).
         """
+        node_id = _graph_identifier(node_id, "node ID")
         self.set_node_positions({node_id: position})
 
     def set_node_positions(self, positions: Dict[int, Sequence[float]]):
         """Batch-set positions, validating every update before changing any.
 
         Rejected edits leave positions, merge lookup and stable IDs unchanged.
-        Coordinate normalization retains the existing method semantics.
+        Coordinates are flattened and normalized as in ``add_node``.
 
         Parameters
         ----------
@@ -448,11 +503,14 @@ class StructureGraph:
         """
         updates = []
         for nid, value in positions.items():
+            nid = _graph_identifier(nid, "node ID")
             if nid not in self._nodes:
                 raise KeyError(f"Node {nid} not found")
-            pos = np.asarray(value, dtype=float)
+            pos = np.asarray(value, dtype=np.float64).ravel()
             if len(pos) == 2:
                 pos = np.append(pos, 0.0)
+            if len(pos) != 3:
+                raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
             pos = pos.copy()
             new_key = self._checked_position_key(pos)
             old_key = self._pos_key(self._nodes[nid].position)
@@ -505,7 +563,8 @@ class StructureGraph:
         Parameters
         ----------
         node_i, node_j : int
-            Endpoint node IDs.
+            Existing signed integer endpoint node IDs. NumPy integer scalars
+            are stored as Python integers; booleans and floats are rejected.
         radius : float
             Cross-section radius.
         material : Material, optional
@@ -526,6 +585,8 @@ class StructureGraph:
         int
             Edge ID, or -1 if node_i == node_j.
         """
+        node_i = _graph_identifier(node_i, "node_i")
+        node_j = _graph_identifier(node_j, "node_j")
         if node_i == node_j:
             return -1
         if node_i not in self._nodes or node_j not in self._nodes:
@@ -535,6 +596,9 @@ class StructureGraph:
         edge_key = frozenset({node_i, node_j})
         if edge_key in self._edge_set and not allow_parallel:
             return self._edge_set[edge_key]
+
+        if isinstance(radius, (float, np.floating)) and not np.isfinite(radius):
+            raise ValueError("radius must be finite")
 
         if internal_points is None and n_internal > 0:
             pi = self._nodes[node_i].position
@@ -559,7 +623,8 @@ class StructureGraph:
         return eid
 
     def remove_edge(self, edge_id: int):
-        """Remove an edge by ID."""
+        """Remove an edge by ID; unknown valid IDs are ignored."""
+        edge_id = _graph_identifier(edge_id, "edge ID")
         edge = self._edges.pop(edge_id, None)
         if edge is not None:
             key = frozenset({edge.node_i, edge.node_j})
@@ -730,17 +795,25 @@ class StructureGraph:
     # ------------------------------------------------------------------
 
     def discretize_edges(self, n_points_per_edge: int = 8) -> "StructureGraph":
-        """Return a new graph where every edge has n_points_per_edge internal points.
+        """Return a copy, filling edges that have no stored internal samples.
 
-        This is essential for deformation visualization: when simulation
-        displaces nodes, the internal points can be displaced proportionally
-        to show the deformed shape of each beam.
+        Edges with ``internal_points=None`` or an empty array receive
+        ``n_points_per_edge`` equally spaced endpoint-linear samples. Existing
+        nonempty samples are preserved exactly, including collinear points;
+        their count need not equal ``n_points_per_edge``. In particular, zero
+        requests no new samples and does not clear stored geometry.
+
+        Physical nodes, edges, IDs, materials and ``segments`` are unchanged.
+        These geometry samples are not additional mechanical nodes and do not
+        supply an interior displacement field.
         """
         g = self.copy()
         for eid, edge in g._edges.items():
             pi = g._nodes[edge.node_i].position
             pj = g._nodes[edge.node_j].position
             t = np.linspace(0, 1, n_points_per_edge + 2)[1:-1]
+            if edge.internal_points is not None and len(edge.internal_points) > 0:
+                continue
             edge.internal_points = (
                 pi[None, :] * (1 - t[:, None]) + pj[None, :] * t[:, None]
             )
@@ -819,43 +892,91 @@ class StructureGraph:
             raise ImportError("networkx required: pip install networkx")
         pairs = [frozenset((e.node_i, e.node_j)) for e in self._edges.values()]
         G = nx.MultiGraph() if len(set(pairs)) < len(pairs) else nx.Graph()
+        def project_metadata(attributes, metadata, structural):
+            # The flat projection reserves its structural keys. Keep the full
+            # original metadata in a namespace whenever those keys collide,
+            # including a collision with the namespace itself.
+            attributes.update(metadata)
+            if metadata.keys() & (structural.keys() | {"_fibernet_metadata"}):
+                attributes["_fibernet_metadata"] = dict(metadata)
+            attributes.update(structural)
+
         for nid, node in self._nodes.items():
-            G.add_node(
-                nid,
-                pos=tuple(node.position[:2]) if self._dimension == 2 else tuple(node.position),
-                boundary=node.boundary,
-                **node.metadata,
-            )
+            G.add_node(nid)
+            project_metadata(G.nodes[nid], node.metadata, {
+                "pos": tuple(node.position[:2]) if self._dimension == 2 else tuple(node.position),
+                "boundary": node.boundary,
+            })
         for eid, edge in self._edges.items():
-            G.add_edge(
-                edge.node_i, edge.node_j,
-                radius=edge.radius,
-                edge_id=eid,
-                segments=edge.segments,
-                **edge.metadata,
-            )
+            key = G.add_edge(edge.node_i, edge.node_j)
+            attributes = (G.edges[edge.node_i, edge.node_j, key]
+                          if G.is_multigraph() else G.edges[edge.node_i, edge.node_j])
+            project_metadata(attributes, edge.metadata, {
+                "radius": edge.radius, "edge_id": eid, "segments": edge.segments,
+            })
         return G
 
     @classmethod
-    def from_networkx(cls, G, dimension: int = 2, tolerance: float = 1e-6) -> "StructureGraph":
+    def from_networkx(cls, G, dimension: int = 2, tolerance: float = 1e-6,
+                      *, preserve_metadata: bool = False) -> "StructureGraph":
         """Create a StructureGraph from a NetworkX Graph or MultiGraph.
 
         Expects nodes to have a 'pos' attribute (2-tuple or 3-tuple).
+        By default, graph, node and edge attributes other than the structural
+        fields are discarded, as in the legacy projection. Set
+        ``preserve_metadata=True`` to deep-copy graph attributes and the
+        nonstructural node/edge attributes into their corresponding metadata.
+        For graphs produced by ``to_networkx()``, reserved attribute
+        collisions are restored from its ``_fibernet_metadata`` dictionary;
+        ordinary flat attributes take precedence if edited after export, and
+        values missing from the flat attributes fall back to that dictionary.
+        A dictionary under that name containing structural keys is interpreted
+        as this projection namespace, including for other NetworkX graphs.
+
+        This remains a projection: IDs are reassigned; material and curved
+        geometry are not reconstructed. Self-loops are ignored and opposite
+        directed edges in a non-multigraph collapse, keeping the first edge's
+        metadata. For native record roundtrips use
+        ``to_networkx_lossless`` and ``from_networkx_lossless`` instead.
         """
         g = cls(dimension=dimension, tolerance=tolerance)
+        if preserve_metadata:
+            g._metadata = copy.deepcopy(dict(G.graph))
+
+        def projected_metadata(data, structural):
+            """Copy flat attributes and recover the exporter's collision keys."""
+            namespace = data.get("_fibernet_metadata")
+            collision_keys = set(structural) | {"_fibernet_metadata"}
+            is_projection_namespace = (isinstance(namespace, dict)
+                                       and bool(namespace.keys() & collision_keys))
+            excluded = set(structural)
+            if is_projection_namespace:
+                excluded.add("_fibernet_metadata")
+            metadata = dict(namespace) if is_projection_namespace else {}
+            metadata.update({key: value for key, value in data.items() if key not in excluded})
+            return copy.deepcopy(metadata)
+
         id_map = {}
         for n, data in G.nodes(data=True):
             pos = data.get("pos", (0, 0, 0))
             bnd = data.get("boundary", (False,) * 6)
             nid = g.add_node(pos, boundary=bnd, merge=False)
+            if preserve_metadata:
+                g._nodes[nid].metadata = projected_metadata(data, ("pos", "boundary"))
             id_map[n] = nid
         for u, v, data in G.edges(data=True):
-            g.add_edge(
+            previous_count = g.num_edges
+            eid = g.add_edge(
                 id_map[u], id_map[v],
                 radius=data.get("radius", 0.1),
                 segments=data.get("segments", 4),
                 allow_parallel=G.is_multigraph(),
             )
+            # Self-loops are ignored by the existing projection; a repeated
+            # directed edge may also collapse onto an existing undirected edge.
+            if preserve_metadata and g.num_edges > previous_count:
+                g._edges[eid].metadata = projected_metadata(
+                    data, ("radius", "edge_id", "segments"))
         return g
 
     def to_networkx_lossless(self):
@@ -1072,13 +1193,7 @@ class StructureGraph:
             if node_i == node_j:
                 raise ValueError('serialized edges must have distinct endpoints')
             g._next_edge_id = eid
-            ip = np.array(ed["internal_points"]) if ed.get("internal_points") is not None else None
-            if ip is not None:
-                # JSON [] loses the coordinate axis of a valid empty curve.
-                if ip.shape == (0,):
-                    ip = np.empty((0, 3))
-                elif ip.ndim != 2 or ip.shape[1] != 3:
-                    raise ValueError('serialized internal_points must have shape (M, 3)')
+            ip = _serialized_internal_points(ed.get("internal_points"), eid)
             try:
                 material = (Material.from_dict(_material_record(ed['material']))
                             if 'material' in ed else Material())
@@ -1116,7 +1231,7 @@ class StructureGraph:
     def load_json(cls, path: str) -> "StructureGraph":
         """Load graph from a JSON file."""
         with open(path) as f:
-            return cls.from_dict(json.load(f))
+            return cls.from_dict(json.load(f, object_pairs_hook=_unique_json_object_pairs))
 
     # ------------------------------------------------------------------
     # Repr

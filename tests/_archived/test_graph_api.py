@@ -262,20 +262,20 @@ class TestGraphFeatureExtractor:
     def test_feature_count(self):
         G = self._make_test_graph()
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert len(feat) == 94
 
     def test_feature_cols_match(self):
         G = self._make_test_graph()
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         for col in GraphFeatureExtractor.FEATURE_COLS:
             assert col in feat, f"Missing feature: {col}"
 
     def test_structural_features_nonzero(self):
         G = self._make_test_graph(n=50)
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert feat['n_node'] > 0
         assert feat['n_edge'] > 0
         assert feat['total_length'] > 0
@@ -285,14 +285,14 @@ class TestGraphFeatureExtractor:
     def test_vector_form(self):
         G = self._make_test_graph()
         ext = GraphFeatureExtractor(canvas_size=128)
-        vec = ext.extract_vector(G)
+        vec = ext.extract_vector(G, allow_unavailable=True)
         assert vec.shape == (94,)
         assert isinstance(vec, np.ndarray)
 
     def test_batch_extract(self):
         graphs = [self._make_test_graph(n=20, seed=i) for i in range(3)]
         ext = GraphFeatureExtractor(canvas_size=128)
-        results = ext.batch_extract(graphs)
+        results = ext.batch_extract(graphs, allow_unavailable=True)
         assert len(results) == 3
         for r in results:
             assert len(r) == 94
@@ -300,14 +300,14 @@ class TestGraphFeatureExtractor:
     def test_batch_matrix(self):
         graphs = [self._make_test_graph(n=20, seed=i) for i in range(3)]
         ext = GraphFeatureExtractor(canvas_size=128)
-        mat = ext.batch_extract_matrix(graphs)
+        mat = ext.batch_extract_matrix(graphs, allow_unavailable=True)
         assert mat.shape == (3, 94)
 
     def test_reproducibility(self):
         G = self._make_test_graph()
         ext = GraphFeatureExtractor(canvas_size=128)
-        f1 = ext.extract(G)
-        f2 = ext.extract(G)
+        f1 = ext.extract(G, allow_unavailable=True)
+        f2 = ext.extract(G, allow_unavailable=True)
         for k in f1:
             if isinstance(f1[k], float) and isinstance(f2[k], float):
                 assert math.isclose(f1[k], f2[k], rel_tol=1e-10), f"Non-reproducible: {k}"
@@ -317,7 +317,7 @@ class TestGraphFeatureExtractor:
     def test_empty_graph(self):
         G = nx.Graph()
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert len(feat) == 94
         assert feat['n_node'] == 0
         assert feat['n_edge'] == 0
@@ -328,14 +328,14 @@ class TestGraphFeatureExtractor:
         G.add_node(1, pos=(1, 0))
         G.add_edge(0, 1)
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert feat['n_node'] == 2
         assert feat['n_edge'] == 1
 
     def test_anisotropy_range(self):
         G = self._make_test_graph(n=50)
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert -1.0 <= feat['anisotropy'] <= 1.0
 
     def test_convenience_function(self):
@@ -418,14 +418,14 @@ class TestIntegration:
         G = gen.generate()
         Gw = weld_graph(G)
         ext = GraphFeatureExtractor(canvas_size=256)
-        feat = ext.extract(Gw)
+        feat = ext.extract(Gw, allow_unavailable=True)
         assert feat['n_node'] >= G.number_of_nodes()
 
     def test_zigzag_feature_pipeline(self):
         gen = ZigZagGenerator(n_cols=4, n_rows=4)
         G = gen.generate()
         ext = GraphFeatureExtractor(canvas_size=256)
-        feat = ext.extract(G)
+        feat = ext.extract(G, allow_unavailable=True)
         assert feat['n_node'] == G.number_of_nodes()
 
     def test_json_roundtrip_with_features(self, tmp_path):
@@ -435,7 +435,7 @@ class TestIntegration:
         save_graph_json(G, path)
         net = load_graph_json(path)
         ext = GraphFeatureExtractor(canvas_size=128)
-        feat = ext.extract(net)
+        feat = ext.extract(net, allow_unavailable=True)
         assert len(feat) == 94
 
     def test_parametric_sweep(self):
@@ -447,7 +447,7 @@ class TestIntegration:
             )
             G = gen.generate()
             ext = GraphFeatureExtractor(canvas_size=128)
-            feat = ext.extract(G)
+            feat = ext.extract(G, allow_unavailable=True)
             results.append(feat)
         n_nodes = [r['n_node'] for r in results]
         assert len(set(n_nodes)) == 1

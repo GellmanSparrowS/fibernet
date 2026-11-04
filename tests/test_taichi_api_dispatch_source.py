@@ -58,6 +58,7 @@ class DispatchChecks(unittest.TestCase):
         self.engine = Engine
         self.np = types.SimpleNamespace(integer=FakeInteger, bool_=FakeBool, zeros_like=lambda value: ('zeros_like', value))
         self.namespace = {**GEOMETRY_HELPERS, 'TaichiEngine': Engine, 'np': self.np}
+        extract('fibernet/easy.py', '_taichi_engine_class', self.namespace)
         self.simulate = extract('fibernet/easy.py', 'simulate', self.namespace)
         self.real_import = builtins.__import__
         def guarded_import(name, *args, **kwargs):

@@ -5,14 +5,62 @@ Converts fiber network structures into feature vectors suitable for ML models.
 """
 
 import numpy as np
+import warnings
+from numbers import Integral
 from typing import Dict, List, Optional, Any
 from fibernet.core.network import FiberNetwork
-from fibernet.analysis import MorphologyAnalyzer, TopologyAnalyzer
-from fibernet.analysis.advanced import SpectralAnalyzer, PoreAnalyzer, AnisotropyAnalyzer
+
+
+def _require_finite(value, quantity):
+    """Reject invalid derived quantities before normalization or clipping."""
+    if not np.isfinite(value).all():
+        raise ValueError(f'Legacy GNN {quantity} is not finite; rescale the input explicitly')
+    return value
+
+
+def _checked_norm(vector, quantity):
+    """Reject a zero norm of a nonzero vector, including silent BLAS underflow."""
+    value = _require_finite(np.linalg.norm(vector), quantity)
+    if value == 0 and np.any(vector != 0):
+        raise ValueError(f'Legacy GNN {quantity} underflowed; rescale the input explicitly')
+    return value
+
+
+def _float32_features(values, shape, quantity):
+    """Return finite float32 zeros/normal values; reject nonportable subnormals."""
+    values = np.asarray(values, dtype=np.float64).reshape(shape)
+    _require_finite(values, quantity)
+    # Inspect stored bits: floating comparisons can treat subnormals as zero
+    # under an inherited denormals-are-zero mode. Both signed zeros are valid.
+    nonzero = (values.view(np.uint64) & np.uint64(0x7fffffffffffffff)) != 0
+    if np.any(nonzero & (np.abs(values) < 2.0 ** -126)):
+        raise ValueError(
+            f'Legacy GNN {quantity} is below the portable float32 normal range; '
+            'rescale the input explicitly'
+        )
+    if np.any(np.abs(values) > np.finfo(np.float32).max):
+        raise ValueError(f'Legacy GNN {quantity} exceeds float32 range; rescale the input explicitly')
+    with np.errstate(under='ignore'):
+        result = values.astype(np.float32)
+    magnitude = result.view(np.uint32) & np.uint32(0x7fffffff)
+    exponent = magnitude & np.uint32(0x7f800000)
+    if np.any(exponent == np.uint32(0x7f800000)):
+        raise ValueError(f'Legacy GNN {quantity} cast is not finite; rescale the input explicitly')
+    if np.any((nonzero & (magnitude == 0)) | ((magnitude != 0) & (exponent == 0))):
+        raise ValueError(
+            f'Legacy GNN {quantity} cast is outside the portable float32 normal range; '
+            'rescale the input explicitly'
+        )
+    return result
 
 
 class FeatureExtractor:
-    """Extract comprehensive feature vectors from fiber networks.
+    """Extract basic counts without substituting a different feature schema.
+
+    Only the all-groups-disabled configuration is currently supported. Enabled
+    legacy groups raise NotImplementedError with migration guidance; they never
+    return placeholder zeros. This class is not the 94-feature
+    GraphFeatureExtractor, and existing trained models must not interchange them.
     
     Parameters
     ----------
@@ -41,9 +89,28 @@ class FeatureExtractor:
         self.include_spectral = include_spectral
         self.include_pore = include_pore
         self.include_anisotropy = include_anisotropy
+
+    def _require_supported_groups(self) -> None:
+        reasons = {
+            'morphology': 'std_radius has no historical report definition',
+            'topology': 'legacy graph projection and report field mapping are unresolved',
+            'spectral': 'eigenvalue method and missing-mode schema require migration',
+            'pore': 'sampled-vertex pore approximation requires an explicit contract',
+            'anisotropy': 'legacy 3D tensor and empty-input conventions require an explicit contract',
+        }
+        enabled = [name for name in reasons if getattr(self, 'include_' + name)]
+        if enabled:
+            details = '; '.join(name + ': ' + reasons[name] for name in enabled)
+            raise NotImplementedError(
+                'Legacy FeatureExtractor groups for FiberNetwork are unavailable (' + details + '). '
+                'For counts only, construct FeatureExtractor(include_morphology=False, '
+                'include_topology=False, include_spectral=False, include_pore=False, '
+                'include_anisotropy=False). No complete legacy vector is returned. '
+                'GraphFeatureExtractor is a different 94-feature schema, not a drop-in replacement.'
+            )
     
     def extract(self, network: FiberNetwork) -> Dict[str, float]:
-        """Extract all features from a fiber network.
+        """Return basic counts, or fail explicitly for enabled legacy groups.
         
         Parameters
         ----------
@@ -55,129 +122,14 @@ class FeatureExtractor:
         Dict[str, float]
             Feature dictionary with string keys and numeric values
         """
-        features = {}
-        
-        # Basic network properties
-        features['num_fibers'] = network.num_fibers
-        features['num_crosslinks'] = network.num_crosslinks
-        features['dimension'] = network.dimension
-        
-        # Morphological features
-        if self.include_morphology:
-            try:
-                morph = MorphologyAnalyzer(network)
-                report = morph.full_report()
-                features['mean_length'] = report.get('mean_length', 0.0)
-                features['std_length'] = report.get('std_length', 0.0)
-                features['mean_radius'] = report.get('mean_radius', 0.0)
-                features['std_radius'] = report.get('std_radius', 0.0)
-                features['nematic_order'] = report.get('nematic_order', 0.0)
-                features['mean_tortuosity'] = report.get('mean_tortuosity', 1.0)
-                features['total_length'] = report.get('total_length', 0.0)
-                features['volume_fraction'] = report.get('volume_fraction', 0.0)
-            except Exception:
-                # Fill with defaults if analysis fails
-                features.update({
-                    'mean_length': 0.0,
-                    'std_length': 0.0,
-                    'mean_radius': 0.0,
-                    'std_radius': 0.0,
-                    'nematic_order': 0.0,
-                    'mean_tortuosity': 1.0,
-                    'total_length': 0.0,
-                    'volume_fraction': 0.0,
-                })
-        
-        # Topological features
-        if self.include_topology:
-            try:
-                topo = TopologyAnalyzer(network)
-                report = topo.full_report()
-                features['num_nodes'] = report.get('num_nodes', 0)
-                features['num_edges'] = report.get('num_edges', 0)
-                features['mean_degree'] = report.get('degree_stats', {}).get('mean', 0.0)
-                features['std_degree'] = report.get('degree_stats', {}).get('std', 0.0)
-                features['max_degree'] = report.get('degree_stats', {}).get('max', 0)
-                features['min_degree'] = report.get('degree_stats', {}).get('min', 0)
-                features['is_connected'] = 1.0 if report.get('is_connected', False) else 0.0
-                features['num_components'] = report.get('num_components', 1)
-            except Exception:
-                features.update({
-                    'num_nodes': 0,
-                    'num_edges': 0,
-                    'mean_degree': 0.0,
-                    'std_degree': 0.0,
-                    'max_degree': 0,
-                    'min_degree': 0,
-                    'is_connected': 0.0,
-                    'num_components': 1,
-                })
-        
-        # Spectral features
-        if self.include_spectral:
-            try:
-                spectral = SpectralAnalyzer(network)
-                features['spectral_gap'] = spectral.spectral_gap()
-                features['spectral_entropy'] = spectral.spectral_entropy()
-                # Add first few eigenvalues
-                eigenvalues = spectral.eigenvalues()
-                for i, eig in enumerate(eigenvalues[:5]):
-                    features[f'eigenvalue_{i}'] = eig
-            except Exception:
-                features.update({
-                    'spectral_gap': 0.0,
-                    'spectral_entropy': 0.0,
-                    'eigenvalue_0': 0.0,
-                    'eigenvalue_1': 0.0,
-                    'eigenvalue_2': 0.0,
-                    'eigenvalue_3': 0.0,
-                    'eigenvalue_4': 0.0,
-                })
-        
-        # Pore structure features
-        if self.include_pore:
-            try:
-                pore = PoreAnalyzer(network)
-                stats = pore.pore_size_statistics()
-                features['mean_pore_size'] = stats.get('mean', 0.0)
-                features['std_pore_size'] = stats.get('std', 0.0)
-                features['median_pore_size'] = stats.get('median', 0.0)
-                features['p95_pore_size'] = stats.get('p95', 0.0)
-                features['pore_size_range'] = stats.get('max', 0.0) - stats.get('min', 0.0)
-            except Exception:
-                features.update({
-                    'mean_pore_size': 0.0,
-                    'std_pore_size': 0.0,
-                    'median_pore_size': 0.0,
-                    'p95_pore_size': 0.0,
-                    'pore_size_range': 0.0,
-                })
-        
-        # Anisotropy features
-        if self.include_anisotropy:
-            try:
-                aniso = AnisotropyAnalyzer(network)
-                features['anisotropy_index'] = aniso.anisotropy_index()
-                # Add orientation tensor components
-                tensor = aniso.orientation_tensor()
-                features['orientation_xx'] = tensor[0, 0]
-                features['orientation_yy'] = tensor[1, 1]
-                features['orientation_zz'] = tensor[2, 2]
-                features['orientation_xy'] = tensor[0, 1]
-                features['orientation_xz'] = tensor[0, 2]
-                features['orientation_yz'] = tensor[1, 2]
-            except Exception:
-                features.update({
-                    'anisotropy_index': 0.0,
-                    'orientation_xx': 0.0,
-                    'orientation_yy': 0.0,
-                    'orientation_zz': 0.0,
-                    'orientation_xy': 0.0,
-                    'orientation_xz': 0.0,
-                    'orientation_yz': 0.0,
-                })
-        
-        return features
+        if not isinstance(network, FiberNetwork):
+            raise TypeError('FeatureExtractor requires FiberNetwork; no implicit StructureGraph conversion')
+        self._require_supported_groups()
+        return {
+            'num_fibers': network.num_fibers,
+            'num_crosslinks': network.num_crosslinks,
+            'dimension': network.dimension,
+        }
     
     def extract_to_array(self, network: FiberNetwork) -> np.ndarray:
         """Extract features as a numpy array.
@@ -196,25 +148,28 @@ class FeatureExtractor:
         return np.array(list(features.values()))
     
     def get_feature_names(self) -> List[str]:
-        """Get list of feature names.
+        """Return supported names without generating or analyzing a network.
+
+        Enabled legacy groups raise the same diagnostic as extract. This is not
+        a declaration that a complete 38-value legacy vector is available.
         
         Returns
         -------
         List[str]
             Feature names in consistent order
         """
-        # Create a dummy network to get feature keys
-        from fibernet import gen
-        dummy = gen.random_straight_2d(num_fibers=5, fiber_length=5, box_size=(20, 20), seed=42)
-        features = self.extract(dummy)
-        return list(features.keys())
+        self._require_supported_groups()
+        return ['num_fibers', 'num_crosslinks', 'dimension']
 
 
 def extract_features(
     network: FiberNetwork,
     as_array: bool = False,
 ) -> Any:
-    """Convenience function to extract features from a network.
+    """Legacy convenience entry; raises until enabled groups are migrated.
+
+    To request basic counts only, use FeatureExtractor with all five include
+    flags False. This function never silently substitutes a different schema.
     
     Parameters
     ----------
@@ -241,6 +196,25 @@ class GNNFeatureExtractor:
     
     Converts fiber networks into graph representations suitable for GNN models.
     Supports PyTorch Geometric and DGL formats.
+
+    This is a simple fiber-contact graph: fibers are nodes indexed by list
+    position, and crosslinks are edges. It is not a geometric junction graph or
+    a lossless physical serialization. Repeated contacts and self-contacts are
+    rejected. Materials, crosslink constitutive data and full centerlines are
+    not encoded. Position is the endpoint midpoint (not the arc centroid),
+    angle uses endpoint chords, and length is arc length. The optional weight
+    column remains the historical constant 1, not stiffness or strength.
+    Angle normalization retains ``norm + 1e-10``: at small chord lengths this
+    is a regularized feature, not the exact geometric angle. Selected angle
+    features reject chord norms <=1e-12, including for isolated fibers.
+
+    Feature lists retain their historical membership semantics and fixed output
+    order: position, degree, centrality, then length/radius for nodes; length,
+    angle, weight for edges. Empty lists retain the historical default selection.
+    Each undirected edge appears once; no reverse edges are added for ML tools.
+    Nonfinite derived geometry and values outside the float32 normal-or-zero range are
+    rejected rather than clipped or replaced. Caller-directed rescaling must
+    include its own unit/schema policy; this class never rescales automatically.
     
     Parameters
     ----------
@@ -272,16 +246,17 @@ class GNNFeatureExtractor:
         Dict[str, Any]
             Graph data with node_features, edge_index, edge_features
         """
-        import networkx as nx
-        
-        # Convert to NetworkX graph
-        G = self._to_networkx(network)
-        
-        # Extract node features
-        node_feat_matrix = self._extract_node_features(G, network)
-        
-        # Extract edge index and features
-        edge_index, edge_feat_matrix = self._extract_edge_features(G, network)
+        try:
+            with np.errstate(over='raise', invalid='raise', divide='raise', under='raise'):
+                # Keep the historical formulas, but reject unsafe intermediates.
+                G = self._to_networkx(network)
+                node_feat_matrix = self._extract_node_features(G, network)
+                edge_index, edge_feat_matrix = self._extract_edge_features(G, network)
+        except FloatingPointError as exc:
+            raise ValueError(
+                'Legacy GNN geometry or features exceeded the numerical range; '
+                'rescale the input explicitly rather than using placeholder values'
+            ) from exc
         
         return {
             'node_features': node_feat_matrix,
@@ -373,6 +348,7 @@ class GNNFeatureExtractor:
     
     def _to_networkx(self, network: FiberNetwork):
         """Convert fiber network to NetworkX graph."""
+        self._validate_network(network)
         import networkx as nx
         
         G = nx.Graph()
@@ -380,7 +356,11 @@ class GNNFeatureExtractor:
         # Add nodes (fibers)
         for i, fiber in enumerate(network.fibers):
             pos = (fiber.start_point + fiber.end_point) / 2  # Center position
-            G.add_node(i, pos=pos, length=fiber.length, radius=fiber.radius)
+            _require_finite(pos, f'fiber {i} endpoint midpoint')
+            length = _require_finite(fiber.length, f'fiber {i} arc length')
+            if length == 0 and np.any(fiber.centerline[1:] != fiber.centerline[:-1]):
+                raise ValueError(f'Legacy GNN fiber {i} arc length underflowed; rescale the input explicitly')
+            G.add_node(i, pos=pos, length=length, radius=fiber.radius)
         
         # Add edges (crosslinks)
         for crosslink in network.crosslinks:
@@ -389,13 +369,71 @@ class GNNFeatureExtractor:
             G.add_edge(i, j, position=crosslink.position)
         
         return G
+
+    def _validate_network(self, network: FiberNetwork) -> None:
+        """Reject silent contact collapse; disclose the historical projection."""
+        if not isinstance(network, FiberNetwork):
+            raise TypeError('GNNFeatureExtractor requires FiberNetwork; no implicit StructureGraph conversion')
+        has_internal_points = False
+        for index, fiber in enumerate(network.fibers):
+            points = np.asarray(fiber.centerline)
+            if (points.ndim != 2 or points.shape[1] != 3 or len(points) < 2
+                    or not np.isfinite(points).all()):
+                raise ValueError(f'fiber {index} requires a finite centerline with shape (N, 3), N >= 2')
+            if points.dtype != np.dtype(np.float64):
+                raise ValueError(
+                    f'fiber {index} centerline must retain the Fiber constructor float64 dtype; '
+                    'reconstruct the Fiber explicitly instead of mutating its coordinate dtype'
+                )
+            if not np.isfinite(fiber.radius) or fiber.radius < 0:
+                raise ValueError(f'fiber {index} requires a finite nonnegative radius')
+            if 'angle' in self.edge_features:
+                chord = _require_finite(points[-1] - points[0], f'fiber {index} endpoint chord')
+                norm = _checked_norm(chord, f'fiber {index} endpoint-chord norm')
+                if norm <= 1e-12:
+                    raise ValueError(f'fiber {index} has no defined endpoint-chord angle')
+            has_internal_points = has_internal_points or len(points) > 2
+
+        pairs = set()
+        for index, crosslink in enumerate(network.crosslinks):
+            i, j = crosslink.fiber_i, crosslink.fiber_j
+            if any(not isinstance(k, Integral) or isinstance(k, (bool, np.bool_))
+                   or k < 0 or k >= network.num_fibers for k in (i, j)):
+                raise ValueError(f'crosslink {index} must reference existing integer fiber list indices')
+            if i == j:
+                raise ValueError(f'crosslink {index}: self-contacts are not supported by this legacy GNN projection')
+            pair = (min(i, j), max(i, j))
+            if pair in pairs:
+                raise ValueError(
+                    f'crosslink {index}: repeated fiber-pair contacts would be collapsed by the '
+                    'legacy simple GNN graph; choose an explicit contact representation instead'
+                )
+            pairs.add(pair)
+            position = np.asarray(crosslink.position)
+            if position.shape != (3,) or not np.isfinite(position).all():
+                raise ValueError(f'crosslink {index} requires a finite 3D position')
+
+        if has_internal_points and ('position' in self.node_features
+                                    or 'length' in self.edge_features
+                                    or 'angle' in self.edge_features):
+            warnings.warn(
+                'Legacy GNN geometry uses endpoint midpoints and chord angles; internal '
+                'centerline points are not encoded except through fiber arc length. '
+                'This is not a lossless curved-fiber representation.',
+                UserWarning, stacklevel=3,
+            )
+        if 'weight' in self.edge_features:
+            warnings.warn(
+                'Legacy GNN weight is the constant 1.0, not crosslink stiffness or strength.',
+                UserWarning, stacklevel=3,
+            )
     
     def _extract_node_features(self, G, network: FiberNetwork) -> np.ndarray:
         """Extract node feature matrix."""
         import networkx as nx
         
-        num_nodes = G.number_of_nodes()
         features = []
+        centrality = nx.betweenness_centrality(G) if 'centrality' in self.node_features else None
         
         for node in G.nodes():
             node_feat = []
@@ -409,11 +447,7 @@ class GNNFeatureExtractor:
                 node_feat.append(degree)
             
             if 'centrality' in self.node_features:
-                try:
-                    centrality = nx.betweenness_centrality(G)
-                    node_feat.append(centrality.get(node, 0.0))
-                except:
-                    node_feat.append(0.0)
+                node_feat.append(centrality[node])
             
             # Add fiber properties
             fiber = network.fibers[node]
@@ -421,7 +455,9 @@ class GNNFeatureExtractor:
             
             features.append(node_feat)
         
-        return np.array(features, dtype=np.float32)
+        width = (2 + 3 * ('position' in self.node_features)
+                 + ('degree' in self.node_features) + ('centrality' in self.node_features))
+        return _float32_features(features, (G.number_of_nodes(), width), 'node features')
     
     def _extract_edge_features(self, G, network: FiberNetwork) -> tuple:
         """Extract edge index and edge feature matrix."""
@@ -429,7 +465,8 @@ class GNNFeatureExtractor:
         
         if len(edges) == 0:
             # No edges
-            return np.zeros((2, 0), dtype=np.int64), np.zeros((0, 3), dtype=np.float32)
+            width = sum(name in self.edge_features for name in ('length', 'angle', 'weight'))
+            return np.zeros((2, 0), dtype=np.int64), np.zeros((0, width), dtype=np.float32)
         
         # Edge index (source, target)
         edge_index = np.array(edges, dtype=np.int64).T
@@ -443,7 +480,8 @@ class GNNFeatureExtractor:
                 # Distance between fiber centers
                 pos_u = G.nodes[u]['pos']
                 pos_v = G.nodes[v]['pos']
-                dist = np.linalg.norm(np.array(pos_v) - np.array(pos_u))
+                delta = _require_finite(np.array(pos_v) - np.array(pos_u), 'fiber midpoint difference')
+                dist = _checked_norm(delta, 'fiber midpoint distance')
                 edge_feat.append(dist)
             
             if 'angle' in self.edge_features:
@@ -451,13 +489,16 @@ class GNNFeatureExtractor:
                 fiber_u = network.fibers[u]
                 fiber_v = network.fibers[v]
                 
-                dir_u = fiber_u.end_point - fiber_u.start_point
-                dir_v = fiber_v.end_point - fiber_v.start_point
+                dir_u = _require_finite(fiber_u.end_point - fiber_u.start_point, 'source endpoint chord')
+                dir_v = _require_finite(fiber_v.end_point - fiber_v.start_point, 'target endpoint chord')
                 
-                dir_u = dir_u / (np.linalg.norm(dir_u) + 1e-10)
-                dir_v = dir_v / (np.linalg.norm(dir_v) + 1e-10)
+                norm_u = _checked_norm(dir_u, 'source endpoint-chord norm')
+                norm_v = _checked_norm(dir_v, 'target endpoint-chord norm')
+                dir_u = dir_u / (norm_u + 1e-10)
+                dir_v = dir_v / (norm_v + 1e-10)
                 
-                cos_angle = np.clip(np.dot(dir_u, dir_v), -1, 1)
+                raw_cosine = _require_finite(np.dot(dir_u, dir_v), 'chord cosine')
+                cos_angle = np.clip(raw_cosine, -1, 1)
                 angle = np.arccos(cos_angle)
                 edge_feat.append(angle)
             
@@ -467,7 +508,8 @@ class GNNFeatureExtractor:
             
             edge_features.append(edge_feat)
         
-        edge_feat_matrix = np.array(edge_features, dtype=np.float32)
+        width = sum(name in self.edge_features for name in ('length', 'angle', 'weight'))
+        edge_feat_matrix = _float32_features(edge_features, (len(edges), width), 'edge features')
         
         return edge_index, edge_feat_matrix
     

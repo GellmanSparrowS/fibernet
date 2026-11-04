@@ -39,6 +39,7 @@ Examples
 from __future__ import annotations
 
 import math
+from numbers import Real
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from dataclasses import dataclass, field
 from copy import deepcopy
@@ -717,7 +718,20 @@ def property_target_reward(state: StructureState,
                            target_n_nodes: int = 15,
                            target_n_edges: int = 20,
                            target_connectivity: float = 1.0) -> float:
-    """Reward targeting specific structural properties."""
+    """Target node/edge counts, weighted by connectivity from node zero.
+
+    Only target_connectivity=1.0 is supported. The historical reward multiplies
+    the node/edge scores by the fraction of nodes reachable from node zero; it
+    does not optimize distance to an arbitrary connectivity target. Supply a
+    custom reward_fn to GFlowNetTrainer for a different connectivity objective.
+    """
+    if isinstance(target_connectivity, bool) or not isinstance(target_connectivity, Real):
+        raise TypeError("target_connectivity must be a real scalar equal to 1.0")
+    if target_connectivity != 1.0 or not math.isfinite(target_connectivity):
+        raise ValueError(
+            "Only target_connectivity=1.0 is supported; supply a custom "
+            "reward_fn to GFlowNetTrainer for a different connectivity objective"
+        )
     n = state.n_nodes
     e = state.n_edges
     if n < 2:

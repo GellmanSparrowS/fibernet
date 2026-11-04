@@ -1,6 +1,15 @@
 name: MCP adapter
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'adapters/mcp/**'
+      - 'fibernet/**'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/mcp.yml'
+      - '.github/workflows/publish-pypi.yml'
   pull_request:
     branches: [ main ]
     paths:
@@ -8,6 +17,7 @@ on:
       - 'fibernet/**'
       - 'pyproject.toml'
       - '.github/workflows/mcp.yml'
+      - '.github/workflows/publish-pypi.yml'
 
 permissions:
   contents: read

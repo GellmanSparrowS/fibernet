@@ -94,7 +94,7 @@ def forecast_cg_fiber_only(prepared, runtime, limits=ResourceLimits(), *,
         prepared_bytes=prepared_bytes, setup_bytes=setup_bytes,
         metadata_reserve_bytes=metadata_forecast,
         raw_reserve_bytes=limits.output_bytes, export_reserve_bytes=export_budget_bytes,
-        type_table_bytes=table)
+        type_table_bytes=table, record_reference=record_state)
     comparisons = dict(
         native_aggregate=sizes['native_aggregate_forecast_bytes'] <= limits.output_bytes,
         trajectory_file=sizes['trajectory_bytes'] <= limits.file_size_bytes,

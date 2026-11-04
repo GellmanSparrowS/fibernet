@@ -27,7 +27,9 @@ import numpy as np
 try:
     import taichi as ti
     HAS_TAICHI = True
-except ImportError:
+except ModuleNotFoundError as exc:
+    if exc.name != "taichi":
+        raise
     HAS_TAICHI = False
 
 from fibernet.core.structure_graph import StructureGraph
@@ -420,7 +422,15 @@ def _validate_mechanical_json(data):
                  'mean_stretch', 'std_stretch', 'max_displacement'):
         if name in data:
             value = data[name]
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(name + ' must be a finite real number')
+            # JSON integers can exceed NumPy integer dtypes yet remain finite
+            # in binary64. Check that conversion without changing stored values.
+            try:
+                finite = np.isfinite(float(value))
+            except (OverflowError, TypeError, ValueError):
+                finite = False
+            if not finite:
                 raise ValueError(name + ' must be a finite real number')
     for name in ('n_nodes', 'n_edges'):
         if name in data and (type(data[name]) is not int or data[name] < 0):
@@ -788,6 +798,15 @@ class SimResult:
 
         return self
 
+    def lammps_displacement_relationship(self) -> Dict:
+        """Inspect saved displacement/reference consistency, not native accuracy.
+
+        Missing historical/no-state references remain unavailable and are never
+        synthesized. Malformed declared references raise rather than downgrade.
+        """
+        from ._lammps_result import displacement_relationship_status
+        return displacement_relationship_status(self)
+
     def viscoelastic_energy_diagnostics(self) -> Dict:
         """Inspect cumulative energy residuals at saved material endpoints.
 
@@ -814,10 +833,20 @@ class SimResult:
             from ._taichi_viscoelastic import validate_result as validate_material_result
             validate_material_result(self)
         profile = None
+        record = None
         if self.metadata.get('backend') == 'lammps':
             from fibernet.integrations import _harmonic_profile as hp
-            profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
-                                      self.dynamics_state, vars(self))
+            from ._lammps_result import _plain_full_history_export, validate_result
+            if _plain_full_history_export(self, detailed):
+                # Full validation includes result_guard; retain its detached
+                # state only for this hook-free projection, never on self.
+                record = validate_result(self)
+                profile = hp.contract_profile(self.metadata['model_contract'])
+            else:
+                profile = hp.result_guard(self.metadata, self.n_nodes, self.n_edges,
+                                          self.dynamics_state, vars(self))
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(self.metadata)
         d = {
             "mode": self.mode,
             "energy": self.energy,
@@ -856,7 +885,8 @@ class SimResult:
         if 'native_axial_inputs' in d:
             d['native_axial_inputs'] = _validate_mass_inputs(d['native_axial_inputs'], self.n_nodes, self.metadata.get('node_ids'))
         if self.dynamics_state is not None:
-            record = _validate_result_state(self)
+            if record is None:
+                record = _validate_result_state(self)
             d['dynamics_state'] = record if detailed else _dynamics_state_summary(record)
         if self.algorithmic_energy_ledger is not None:
             from ._energy_accounting import validate_ledger, ledger_summary
@@ -962,6 +992,8 @@ class SimResult:
             if selected != requested:
                 raise ValueError('profile-bearing result requires explicit matching load profile')
             if selected: hp.json_bytes(data,selected['export_bytes'],indent=2)
+            from ._lammps_result import validate_persisted_metadata
+            validate_persisted_metadata(data)
         elif requested:
             raise ValueError('explicit harmonic profile requires a LAMMPS result')
         # Older FEM summary files stored [axial, shear, moment] resultants
@@ -1488,14 +1520,16 @@ class TaichiEngine:
             observer_node_ids = tuple(_strict_state_ids(node_ids))
             observer_units = None if units is None else tuple(sorted(units.items()))
         if explicit_mass or record_state or units is not None:
-            fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
             _strict_state_ids(list(node_ids))
-            for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
-                scalar = _finite_real_array(value, name, ())
-                if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
-                    raise ValueError(f'{name} is outside the supported mass/state range')
-            if external_force is not None:
-                external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
+
+        # Caller controls have the same contract with or without mass/state output.
+        fixed_nodes = _validated_fixed_rows(fixed_nodes, num_nodes)
+        for name, value in (('dt', dt), ('dashpot', dashpot), ('drag', drag)):
+            scalar = _finite_real_array(value, name, ())
+            if (name == 'dt' and scalar <= 0) or (name != 'dt' and scalar < 0):
+                raise ValueError(f'{name} is outside the supported range')
+        if external_force is not None:
+            external_force = _finite_real_array(external_force, 'external_force', (num_nodes, dim))
 
         schedules = _prepare_displacement_schedule(
             displacement_schedule, num_nodes, dim

@@ -28,7 +28,47 @@ def load_algorithms():
     return module
 
 
-class UntouchedEnv:
+class Env:
+    """Inert nominal Gymnasium base; no backend is imported."""
+
+
+class Space:
+    @property
+    def __class__(self):
+        raise AssertionError("Space classification must use the actual type")
+
+
+class Box(Space):
+    pass
+
+
+class Discrete(Space):
+    pass
+
+
+class MultiDiscrete(Space):
+    pass
+
+
+class MultiBinary(Space):
+    pass
+
+
+class Dict(Space):
+    pass
+
+
+class Tuple(Space):
+    pass
+
+
+class VecEnv:
+    action_space = Box()
+
+
+class UntouchedEnv(Env):
+    action_space = Box()
+
     def reset(self, *args, **kwargs):
         raise AssertionError("Inert regression must not reset an environment")
 
@@ -65,11 +105,11 @@ def fake_sb3(monkeypatch):
         def __init__(self, env):
             self.env = env
 
-    class VecEnvWrapper(UntouchedEnv):
+    class VecEnvWrapper(UntouchedEnv, VecEnv):
         def __init__(self, venv):
             self.venv = venv
 
-    class DummyVecEnv(UntouchedEnv):
+    class DummyVecEnv(UntouchedEnv, VecEnv):
         def __init__(self, envs):
             self.envs = envs
 
@@ -115,6 +155,11 @@ def fake_sb3(monkeypatch):
             "stable_baselines3.common.vec_env",
         )
     }
+    modules["gymnasium"].Env = Env
+    modules["gymnasium"].spaces = SimpleNamespace(
+        Space=Space, Box=Box, Discrete=Discrete, MultiDiscrete=MultiDiscrete,
+        MultiBinary=MultiBinary, Dict=Dict, Tuple=Tuple,
+    )
     modules["gymnasium"].Wrapper = Wrapper
     sb3 = modules["stable_baselines3"]
     for name in ("PPO", "SAC", "TD3", "A2C", "DDPG"):
@@ -127,6 +172,7 @@ def fake_sb3(monkeypatch):
     sb3.common.callbacks.CallbackList = CallbackList
     sb3.common.vec_env.VecEnvWrapper = VecEnvWrapper
     sb3.common.vec_env.DummyVecEnv = DummyVecEnv
+    sb3.common.vec_env.VecEnv = VecEnv
     for name, module in modules.items():
         monkeypatch.setitem(sys.modules, name, module)
     return SimpleNamespace(
@@ -498,15 +544,21 @@ def test_missing_sb3_error_is_actionable_and_leaf_import_is_optional(monkeypatch
     assert attempted == ["stable_baselines3"]
 
 
-def test_no_eval_does_not_import_wrapper_dependencies(algorithms, fake_sb3, monkeypatch):
+def test_no_eval_does_not_walk_or_import_isolation_wrappers(algorithms, fake_sb3, monkeypatch):
     original_import = builtins.__import__
 
     def without_wrappers(name, *args, **kwargs):
-        if name == "gymnasium" or name.startswith("stable_baselines3.common.vec_env"):
+        fromlist = kwargs.get("fromlist", args[2] if len(args) > 2 else ())
+        if ((name == "gymnasium" and "Wrapper" in fromlist)
+                or name.startswith("stable_baselines3.common.vec_env")):
             raise AssertionError("No eval_env must not import wrapper dependencies")
         return original_import(name, *args, **kwargs)
 
+    def no_isolation_walk(*args):
+        raise AssertionError("No eval_env must not walk environment aliases")
+
     monkeypatch.setattr(builtins, "__import__", without_wrappers)
+    monkeypatch.setattr(algorithms, "_check_eval_env_isolation", no_isolation_walk)
     model, _ = algorithms.train_rl(UntouchedEnv())
     assert model.saved == []
 
@@ -568,13 +620,23 @@ def _assert_distinct_lazy_train_rl_routes(root_api, rl_api, fail_owner=None):
             "    return sorted(set(globals()) | set(_RENDER_EXPORTS) | "
             "set(_LAZY_EXPORTS) | set(_LAZY_MODULES) | {'_HAS_RL'})",
         )
-        allowed = {ast.dump(ast.parse(source).body[0]) for source in allowed_root_uses}
+        allowed_rl_uses = (
+            'for _name in ("ParametricStructureEnv", "create_rl_environment"):\n'
+            '    globals().pop(_name, None)',
+            'def __dir__():\n'
+            '    return sorted(set(globals()) | {"ParametricStructureEnv", "create_rl_environment"})',
+        )
+        allowed = {ast.dump(ast.parse(source).body[0]) for source in
+                   (allowed_root_uses if root else allowed_rl_uses)}
+        seen_allowed = {statement: 0 for statement in allowed}
         dependencies = {"_LAZY_EXPORTS", "_LAZY_MODULES", "_RENDER_EXPORTS",
                         "__getattr__", "__dir__", "train_rl"}
         for statement in tree.body:
             if statement in declarations or statement in functions:
                 continue
-            if root and ast.dump(statement) in allowed:
+            statement_dump = ast.dump(statement)
+            if statement_dump in allowed:
+                seen_allowed[statement_dump] += 1
                 continue
             for node in ast.walk(statement):
                 assert not (isinstance(node, ast.Name) and node.id in dependencies), \
@@ -587,6 +649,8 @@ def _assert_distinct_lazy_train_rl_routes(root_api, rl_api, fail_owner=None):
                 assert not (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
                             and node.func.id in {"globals", "locals", "vars", "exec", "eval"}), \
                     "Unsupported dynamic module binding"
+        if not root:
+            assert set(seen_allowed.values()) == {1}, "Missing or duplicate reviewed RL facade statement"
         exec(compile(ast.Module(body=functions, type_ignores=[]),
                      "<isolated-facade-resolver>", "exec"), namespace)
         return namespace
@@ -637,6 +701,8 @@ def test_lazy_train_rl_routes_reject_adverse_rebindings():
         "root_import", "root_assignment", "root_duplicate_map", "root_decoy",
         "rl_owner", "rl_return", "rl_symbol", "root_subscript", "root_update",
         "root_getter_rebind", "rl_getter_rebind", "root_alias", "root_dynamic",
+        "rl_cleanup_alias", "rl_cleanup_rebind", "rl_cleanup_duplicate", "rl_cleanup_missing",
+        "rl_dir_alias", "rl_dir_rebind", "rl_dir_duplicate", "rl_dir_missing",
     ):
         root_api, rl_api = ast.parse(root_source), ast.parse(rl_source)
         target = rl_api if mutation.startswith("rl_") else root_api
@@ -651,6 +717,29 @@ def test_lazy_train_rl_routes_reject_adverse_rebindings():
                 "root_dynamic": 'globals()["train_rl"] = None',
             }[mutation]
             target.body.extend(ast.parse(statement).body)
+        elif mutation.startswith("rl_cleanup_"):
+            cleanup = next(node for node in rl_api.body if isinstance(node, ast.For))
+            if mutation == "rl_cleanup_alias":
+                cleanup.iter.elts[0].value = "train_rl"
+            elif mutation == "rl_cleanup_rebind":
+                cleanup.body.extend(ast.parse('globals()["train_rl"] = None').body)
+            elif mutation == "rl_cleanup_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(cleanup)).body[0])
+            else:
+                rl_api.body.remove(cleanup)
+        elif mutation.startswith("rl_dir_"):
+            directory = next(node for node in rl_api.body
+                             if isinstance(node, ast.FunctionDef) and node.name == "__dir__")
+            if mutation == "rl_dir_alias":
+                name = next(node for node in ast.walk(directory)
+                            if isinstance(node, ast.Constant) and node.value == "ParametricStructureEnv")
+                name.value = "train_rl"
+            elif mutation == "rl_dir_rebind":
+                directory.body.insert(0, ast.parse('globals()["train_rl"] = None').body[0])
+            elif mutation == "rl_dir_duplicate":
+                rl_api.body.append(ast.parse(ast.unparse(directory)).body[0])
+            else:
+                rl_api.body.remove(directory)
         elif mutation in ("root_owner", "root_decoy"):
             owner = next(node for node in ast.walk(root_api)
                          if isinstance(node, ast.Constant) and node.value == "fibernet.easy")

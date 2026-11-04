@@ -18,6 +18,7 @@ from typing import Optional, Tuple, Dict, Any
 from fibernet.core.network import FiberNetwork
 from fibernet.core.material import Material
 from fibernet.gen._graph_builder import FiberGraph
+from fibernet.gen._input_contract import nonnegative_count, positive_real
 
 
 # ============================================================================
@@ -43,9 +44,20 @@ def square_lattice_2d(
         Fiber radius.
     material : Material, optional
         Fiber material.
+
+    Counts accept Python and NumPy integers, excluding booleans and negatives.
+    Zero counts retain the existing strip/empty-grid behavior. Spacing and
+    radius must be finite positive real scalars.
     """
+    positive_real(spacing, "spacing")
+    positive_real(radius, "radius")
+    try:
+        nx, ny = grid_size
+    except (TypeError, ValueError) as exc:
+        raise ValueError("grid_size must contain exactly two nonnegative integers") from exc
+    nonnegative_count(nx, "grid_size[0]")
+    nonnegative_count(ny, "grid_size[1]")
     mat = material or Material(name="square_lattice")
-    nx, ny = grid_size
     
     g = FiberGraph(dimension=2, tolerance=spacing * 0.01)
     

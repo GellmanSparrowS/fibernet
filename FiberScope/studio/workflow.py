@@ -3,12 +3,43 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 import time
-from PySide6.QtCore import QObject, QTimer, Signal, QEvent
+from PySide6.QtCore import QObject, QTimer, Signal, QEvent, Slot
 from PySide6.QtWidgets import QApplication, QWidget
 from fslab.storage import writable_data_dir
 from fslab.exporter import export_json
 from fslab.print_export import PrintSettings, export_solid, export_route
 from .manufacturing_dialog import ManufacturingWorker, ManufacturingDialog
+
+
+class _WorkflowObserver(QObject):
+    """One GUI-affine receiver per stage; retired/duplicate callbacks are inert."""
+    def __init__(self, owner, worker, signal, solid=False):
+        super().__init__(owner)
+        self.owner, self.worker, self.signal = owner, worker, signal
+        self.terminal = False
+        self.success_slot = self.solid_done if solid else self.done
+
+    def _accept(self):
+        if not self.owner.running or self.owner._observer is not self or self.terminal:
+            return False
+        self.terminal = True
+        return True
+
+    @Slot()
+    def done(self):
+        if self._accept():
+            self.owner._ok()
+
+    @Slot(str)
+    def failed(self, message):
+        if self._accept():
+            self.owner._fail(message)
+
+    @Slot(object, object)
+    def solid_done(self, network, solid):
+        if self._accept():
+            self.owner._solid(network, solid)
+            self.owner._ok()
 
 
 class PrintWorkflow(QObject):
@@ -22,6 +53,7 @@ class PrintWorkflow(QObject):
         super().__init__(panel)
         self.panel, self.win = panel, panel.win
         self.running, self.worker = False, None
+        self._observer = None
         self.timer = QTimer(self)
         self.timer.setInterval(100)
         self.timer.timeout.connect(self._tick)
@@ -54,6 +86,7 @@ class PrintWorkflow(QObject):
             for key in ('worker','_worker','gen_worker','train_worker'):
                 if self._busy(getattr(tab,key,None)):
                     raise ValueError('wait for the current analysis task to finish')
+        self._unwatch()
         self.folder = Path(writable_data_dir('workflows'))/str(time.time_ns())
         self.folder.mkdir(parents=True)
         self.options = dict(samples=int(samples),iterations=int(iterations),curved=bool(curved),open_slicer=bool(open_slicer),
@@ -110,14 +143,40 @@ class PrintWorkflow(QObject):
         self.success = True
 
     def _fail(self,message):
-        self.error = str(message)
+        self.error = str(message) or 'stage failed without an error message'
 
-    def _watch(self,worker,signal):
+    def _unwatch(self):
+        observer, self._observer = self._observer, None
+        if observer is None:
+            return
+        for signal, slot in ((observer.signal, observer.success_slot), ('failed', observer.failed)):
+            try:
+                getattr(observer.worker, signal).disconnect(slot)
+            except (RuntimeError, TypeError):
+                pass  # The tab may already have deleted its finished worker.
+        observer.deleteLater()
+
+    def _watch(self, worker, signal, *, solid=False):
         if worker is None:
             raise RuntimeError('stage did not start')
+        self._unwatch()
         self.worker = worker
-        getattr(worker,signal).connect(self._ok)
-        worker.failed.connect(self._fail)
+        observer = self._observer = _WorkflowObserver(self, worker, signal, solid)
+        getattr(worker, signal).connect(observer.success_slot)
+        worker.failed.connect(observer.failed)
+
+    def _start_worker(self, worker, signal, *, solid=False):
+        # This preparation/subscription/start transaction must not process events.
+        self._watch(worker, signal, solid=solid)
+        try:
+            worker.start()
+        except Exception as exc:
+            if not self._busy(worker):
+                try:
+                    worker.failed.emit(str(exc) or 'worker could not be started')
+                except Exception:
+                    pass  # Preserve the original launch exception.
+            raise
 
     def _tick(self):
         if not self.running:
@@ -172,8 +231,8 @@ class PrintWorkflow(QObject):
             export_json(w.tab_struct.collect_factory(),str(self.folder/'initial.json'))
         elif stage in ('simulation','verification'):
             w.tab_sim.stretch.setValue(self.options['stretch'])
-            w.tab_sim.start_run()
-            self._watch(w.tab_sim.worker,'finished_ok')
+            worker = w.tab_sim.start_run(autostart=False)
+            self._start_worker(worker, 'finished_ok')
             return
         elif stage=='features':
             w.tab_features.chk_batch.setChecked(False)
@@ -190,12 +249,12 @@ class PrintWorkflow(QObject):
             tab.unit_combo.setCurrentIndex(tab.unit_combo.findData(unit))
             tab.n_spin.setValue(self.options['samples'])
             tab.mode_combo.setCurrentIndex(tab.mode_combo.findData('physics'))
-            tab.start_gen()
-            self._watch(tab.gen_worker,'done')
+            worker = tab.start_gen(autostart=False)
+            self._start_worker(worker, 'done')
             return
         elif stage=='training':
-            w.tab_ml.start_train()
-            self._watch(w.tab_ml.train_worker,'done')
+            worker = w.tab_ml.start_train(autostart=False)
+            self._start_worker(worker, 'done')
             return
         elif stage=='inverse':
             tab = w.tab_design
@@ -203,12 +262,8 @@ class PrintWorkflow(QObject):
             tab.model_btn.setChecked(False)
             tab.algorithm, tab.parameters = 'cem', {}
             tab.follow_type.setChecked(True)
-            result = p._run_inverse(self.options['target'],self.options['iterations'],True)
-            if isinstance(result,str):
-                result = json.loads(result)
-            if not result.get('ok'):
-                raise RuntimeError(result.get('error','inverse did not start'))
-            self._watch(tab.worker,'finished_ok')
+            worker = p._prepare_inverse(self.options['target'],self.options['iterations'],True)
+            self._start_worker(worker, 'finished_ok')
             return
         elif stage=='surface':
             w.tab_features.refresh()
@@ -239,10 +294,8 @@ class PrintWorkflow(QObject):
             dialog.controls['diameter'].setValue(self.options['diameter'])
             w.tab_struct.manufacturing_dialog=w.tab_surface.manufacturing_dialog=dialog
             w.tab_manufacturing.mount(dialog)
-            dialog.rebuild()
-            worker=dialog.worker
-            self._watch(worker,'completed')
-            worker.completed.connect(self._solid)
+            worker = dialog.rebuild(autostart=False)
+            self._start_worker(worker, 'completed', solid=True)
             return
         elif stage=='export':
             export_json(w.tab_struct.collect_factory(),str(self.folder/'optimized.json'))
@@ -275,6 +328,7 @@ class PrintWorkflow(QObject):
         self._finish('cancelled','流程已停止，已完成的结果保留。')
 
     def _finish(self,state,message):
+        self._unwatch()
         self.timer.stop()
         if state!='complete' and self._busy(self.worker) and hasattr(self.worker,'request_stop'):
             self.worker.request_stop()

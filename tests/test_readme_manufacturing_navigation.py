@@ -1,10 +1,14 @@
 """Source-only checks for the homepage's existing-graph manufacturing routes."""
 from pathlib import Path
-import re
+import importlib.util
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location(
+    "homepage_media_check", ROOT / "scripts/check_bilingual_homepage.py")
+CHECK = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(CHECK)
 
 
 class ManufacturingNavigationTests(unittest.TestCase):
@@ -36,7 +40,8 @@ class ManufacturingNavigationTests(unittest.TestCase):
 
     def test_native_language_defaults_and_cover_remain(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-        folds = re.findall(r'(<details(?: open)?>)\s*<summary>(.*?)</summary>', readme)
+        folds = [('<details' + attrs + '>', summary)
+                 for attrs, summary, _ in CHECK.top_level_disclosures(readme)]
         self.assertEqual(folds, [
             ('<details>', '中文'),
             ('<details open>', 'English'),

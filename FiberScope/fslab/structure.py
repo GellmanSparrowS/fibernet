@@ -119,6 +119,8 @@ _CUSTOM_ROOT = (os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('
 CUSTOM_CELL_FILE = os.path.join(_CUSTOM_ROOT, 'custom_units.json')
 CUSTOM_CELLS = {}        # key -> {'nodes', 'edges', 'zh', 'en'}
 _CELLS_REGISTERED = set()
+_CLASSIC_BINDINGS = {}  # one strong reference + epoch per resolved library key
+_CLASSIC_BINDING_EPOCH = 0
 
 UNIT_PRESETS = {k: k for k in
                 list(SPECTRUM_PRESETS) + CLASSIC_UNITS + list(CELL_UNITS)}
@@ -219,14 +221,97 @@ def _all_cell_specs():
     return specs
 
 
+def _identity_digest(value):
+    return hashlib.sha256(json.dumps(value, sort_keys=True,
+                                    separators=(',', ':')).encode()).hexdigest()
+
+
+def _validate_cell_names(specs):
+    # register_unit lowercases names; old case-only aliases were order-dependent.
+    from fibernet.gen.pattern import list_units
+    groups = {}
+    for key in set(specs) | set(SPECTRUM_PRESETS) | set(CLASSIC_UNITS) | {
+            k for k in list_units() if not k.startswith('fiberscope.cell.v1:')}:
+        groups.setdefault(key.lower(), set()).add(key)
+    conflicts = [sorted(keys) for keys in groups.values()
+                 if len(keys) > 1 and any(k in CUSTOM_CELLS for k in keys)]
+    if conflicts:
+        raise ValueError('ambiguous custom cell names; explicit migration required: %r'
+                         % sorted(conflicts))
+
+
+def _resolve_pattern_unit(unit):
+    """Snapshot one APP provider without replacing a public library name.
+
+    Returns (lookup key, serializable identity, copied cell geometry, cache token).
+    The marker set remains editor-compatible bookkeeping, never an authority.
+    Qualified names are a convention, not a private or concurrent registry.
+    """
+    from fibernet.gen.pattern import register_unit, _UNIT_FACTORIES
+    specs = _all_cell_specs()
+    _validate_cell_names(specs)
+    identity = dict(provider='fibernet.pattern', visible_unit=unit,
+                    definition_version='legacy-v1', lookup_key=unit.lower())
+    if unit in SPECTRUM_PRESETS:
+        identity.update(provider='fiberscope.points', lookup_key=None,
+                        cell_geometry_sha256=_identity_digest({
+                            'nodes': [[0., 0.], [1., 0.], [1., 1.], [0., 1.]],
+                            'edges': [[0, 1], [1, 2], [2, 3], [3, 0]]}))
+        return unit, identity, None, None
+    if unit in specs:
+        source = specs[unit]
+        geometry = {'nodes': [[float(a), float(b)] for a, b in source['nodes']],
+                    'edges': [[int(a), int(b)] for a, b in source['edges']]}
+        key = 'fiberscope.cell.v1:' + hashlib.sha256(unit.encode()).hexdigest()
+        register_unit(key, _cell_factory(geometry))
+        _CELLS_REGISTERED.add(unit)
+        identity.update(provider='fiberscope.cell', lookup_key=key,
+                        cell_geometry_sha256=_identity_digest(geometry))
+        return key, identity, geometry, identity['cell_geometry_sha256']
+    # Never accept a stale private registry entry as an APP-visible unit.
+    key = unit.lower()
+    if key.startswith('fiberscope.cell.v1:') or key not in _UNIT_FACTORIES:
+        raise ValueError('unknown APP unit: %r' % unit)
+    factory = _UNIT_FACTORIES[key]
+    import inspect
+    try:
+        source = inspect.getsource(factory)
+    except (OSError, TypeError):
+        source = None
+    identity.update(factory_module=getattr(factory, '__module__', None),
+                    factory_name=getattr(factory, '__qualname__', None),
+                    factory_source_sha256=(hashlib.sha256(source.encode()).hexdigest()
+                                           if source is not None else None))
+    # Keep the latest callable alive: bare id(factory) could be recycled for a
+    # new same-source closure, incorrectly reusing an intermediate-count entry.
+    # Retention is bounded by resolved names, not number of replacements.
+    global _CLASSIC_BINDING_EPOCH
+    previous = _CLASSIC_BINDINGS.get(key)
+    if previous is None or previous[0] is not factory:
+        _CLASSIC_BINDING_EPOCH += 1
+        _CLASSIC_BINDINGS[key] = (factory, _CLASSIC_BINDING_EPOCH)
+        if previous is not None:
+            _INTERMEDIATE_CACHE.clear()
+    return key, identity, None, _CLASSIC_BINDINGS[key][1]
+
+
 def _ensure_cells():
-    """Register built-in + custom cell specs as pattern_2d units."""
+    """Compatibility entry point: register only qualified APP cell names."""
     ensure_fibernet()
-    from fibernet.gen.pattern import register_unit
-    for key, spec in _all_cell_specs().items():
-        if key not in _CELLS_REGISTERED:
-            register_unit(key, _cell_factory(spec))
-            _CELLS_REGISTERED.add(key)
+    for key in _all_cell_specs():
+        if key not in SPECTRUM_PRESETS:
+            _resolve_pattern_unit(key)
+
+
+def _annotate_generator(graph, identity, topology):
+    identity = dict(identity, requested_topology=topology)
+    if topology == 'topnet26':
+        identity['topology_compiler'] = 'fibernet.gen.manufacturing:topnet26'
+    graph.metadata['generator_identity'] = identity
+    pattern = graph.metadata.get('pattern')
+    if pattern and identity['provider'] == 'fiberscope.cell':
+        pattern['unit'] = identity['visible_unit']
+    return graph
 
 
 def valid_cell_spec(spec):
@@ -249,6 +334,7 @@ def load_custom_cells(path=None):
     CUSTOM_CELLS.clear()
     CUSTOM_CELLS.update({k: v.to_mapping() for k, v in data.items()})
     _CELLS_REGISTERED.clear()
+    _INTERMEDIATE_CACHE.clear()
     return dict(CUSTOM_CELLS)
 
 
@@ -294,6 +380,7 @@ def delete_custom_cell(key):
         CUSTOM_CELLS[key] = previous
         raise
     _CELLS_REGISTERED.discard(key)
+    _INTERMEDIATE_CACHE.clear()
     return True
 
 
@@ -304,21 +391,22 @@ def all_unit_keys():
 _INTERMEDIATE_CACHE = {}
 
 
-def n_intermediate_for(unit, n_pts_per_side):
+def n_intermediate_for(unit, n_pts_per_side, _binding=None):
     '''Number of intermediate nodes pattern_2d expects for a classic unit.'''
     if n_pts_per_side <= 0:
         return 0
-    key = (unit, n_pts_per_side)
+    binding = _binding or _resolve_pattern_unit(unit)
+    lookup, identity, _, token = binding
+    key = (_identity_digest(identity), token, n_pts_per_side)
     if key in _INTERMEDIATE_CACHE:
         return _INTERMEDIATE_CACHE[key]
     ensure_fibernet()
-    _ensure_cells()
     from fibernet.gen.pattern import pattern_2d
     # node-count delta: robust for builders that do not validate the
     # displacement list length (they would silently auto-perturb otherwise)
-    base = pattern_2d(unit=unit, grid=(1, 1), n_pts_per_side=0,
+    base = pattern_2d(unit=lookup, grid=(1, 1), n_pts_per_side=0,
                       box=(CELL, CELL), seed=0)
-    withd = pattern_2d(unit=unit, grid=(1, 1),
+    withd = pattern_2d(unit=lookup, grid=(1, 1),
                        n_pts_per_side=n_pts_per_side,
                        box=(CELL, CELL), seed=0)
     n = max(0, int(withd.num_nodes) - int(base.num_nodes))
@@ -406,16 +494,16 @@ class StructureFactory:
         return spectrum
 
     def build(self):
+        binding = _resolve_pattern_unit(self.unit)
+        lookup, identity, spec, _ = binding
         if self.topology == 'topnet26':
             from fibernet.gen.manufacturing import manufacturable_graph
-            return manufacturable_graph(self)
+            return _annotate_generator(manufacturable_graph(self), identity, self.topology)
         if self.topology != 'legacy':
             raise ValueError('unknown topology version')
         ensure_fibernet()
-        _ensure_cells()
         from fibernet.gen.pattern import pattern_2d
         self.clamped()
-        spec = _all_cell_specs().get(self.unit)
         if spec and (len(spec['nodes']) + len(spec['edges'])*self.n_pts_per_side) * self.grid_x*self.grid_y > MAX_NODES:
             raise MemoryError('custom cell expansion exceeds node budget; reduce grid or points')
         if self.expansion_rule != 'translate':
@@ -428,7 +516,7 @@ class StructureFactory:
                              self.expansion_rule, CELL, MAX_NODES, self.custom_rule)
             self._apply_offsets(g)
             self._apply_jitter(g)
-            return g
+            return _annotate_generator(g, identity, self.topology)
         pts = self.n_pts_per_side
         if self.is_p1():
             kwargs = dict(
@@ -449,7 +537,7 @@ class StructureFactory:
             g = pattern_2d(**kwargs)
         else:
             kwargs = dict(
-                unit=self.unit,
+                unit=lookup,
                 grid=(self.grid_x, self.grid_y),
                 n_pts_per_side=pts,
                 radius=self.radius,
@@ -459,9 +547,9 @@ class StructureFactory:
             if pts > 0 and not self.wave:
                 if self.line_displacements:
                     kwargs['point_displacements'] = \
-                        self._classic_point_displacements()
+                        self._classic_point_displacements(_binding=binding)
                 else:
-                    n = n_intermediate_for(self.unit, pts)
+                    n = n_intermediate_for(self.unit, pts, _binding=binding)
                     if n > 0:
                         kwargs['point_displacements'] = [(0.0, 0.0)] * n
             g = pattern_2d(**kwargs)
@@ -470,10 +558,10 @@ class StructureFactory:
                               % (g.num_nodes, MAX_NODES))
         self._apply_offsets(g)
         self._apply_jitter(g)
-        return g
+        return _annotate_generator(g, identity, self.topology)
 
     # ---------------- classic-path spectrum replication ----------------
-    def _classic_point_displacements(self):
+    def _classic_point_displacements(self, _binding=None):
         """Rotate the reference-line spectrum into every base-unit edge.
 
         Each classic unit is described by its zero-point corner graph;
@@ -489,7 +577,8 @@ class StructureFactory:
         ensure_fibernet()
         from fibernet.gen.pattern import pattern_2d
         spec = fit_spectrum(self.line_displacements, self.n_pts_per_side)
-        base = pattern_2d(unit=self.unit, grid=(1, 1), n_pts_per_side=0,
+        lookup = (_binding or _resolve_pattern_unit(self.unit))[0]
+        base = pattern_2d(unit=lookup, grid=(1, 1), n_pts_per_side=0,
                           box=(CELL, CELL), seed=self.seed)
         pos = np.asarray(base.node_positions(), float)[:, :2]
         edges = np.asarray(base.edge_array(), int)[:, :2]
@@ -536,6 +625,7 @@ class StructureFactory:
 
     def key(self) -> str:
         spec = asdict(self)
+        spec['generator_identity'] = _resolve_pattern_unit(self.unit)[1]
         if self.unit in CUSTOM_CELLS:
             spec['custom_cell'] = CUSTOM_CELLS[self.unit]
         raw = json.dumps(spec, sort_keys=True)

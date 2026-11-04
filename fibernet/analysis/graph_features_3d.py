@@ -594,9 +594,12 @@ class GraphFeatureExtractor3D:
         Returns
         -------
         dict
-            Feature dictionary with 60 named features.
+            Feature dictionary with 60 named features. An empty supported graph
+            returns zero for every feature; no connectivity query is performed.
         """
         G = self._to_nx(obj)
+        if G.number_of_nodes() == 0:
+            return {name: 0.0 for name in self.FEATURE_NAMES}
         positions, node_list = self._get_positions(G)
         edge_lengths = self._get_edge_lengths(G, positions, node_list)
         

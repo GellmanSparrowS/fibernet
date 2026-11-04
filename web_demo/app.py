@@ -15,7 +15,7 @@ from fslab.structure import StructureFactory,all_unit_keys,unit_display
 from fslab.simcache import RunConfig,run_stretch
 from fslab.features import compute_features,feature_name
 from fslab.mlmodel import gen_dataset,TARGET_NAMES
-from fslab.learning import Regressor,MODEL_SPECS,ACQUISITIONS
+from fslab.learning import Regressor,MODEL_SPECS,ACQUISITIONS,FEATURE_SCHEMA
 from fslab.inverse import run_inverse,curve_of,target_curve
 from fslab.surface_mapping import load_obj,subdivide_quads
 from fslab.manufacturing import compile_planar,compile_surface
@@ -76,7 +76,7 @@ class Demo:
         def report(*args):
             if args and isinstance(args[0],(int,float)):progress(min(float(args[0])/count,.95),desc='生成并物理标注')
         X,Y=gen_dataset(factory.unit,n=count,seed0=factory.seed,path=str(path),mode='physics',acquisition=acquisition,progress_cb=report)
-        estimator=Regressor(model,params=params,seed=factory.seed);estimator.train(X,Y,epochs=150)
+        estimator=Regressor(model,params=params,seed=factory.seed);estimator.train(X,Y,epochs=150,feature_schema=FEATURE_SCHEMA)
         ids=estimator.val_indices;pred=estimator.predict(X[ids]);truth=Y[ids]
         score=[];figure=go.Figure()
         for i,label in enumerate(TARGET_NAMES):

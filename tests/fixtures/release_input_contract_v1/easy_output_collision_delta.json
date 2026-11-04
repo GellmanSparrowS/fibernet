@@ -1,0 +1,17 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "Output collision preflight candidate; focused review pending",
+  "base_sha256": "4340a0d7ce4709a09881d7eed08164c519d387012dc68bc4415f0a6e26e566f1",
+  "result_sha256": "b84560498114f5107aa36245a6600017fb42a75b91e92827c8617943b2068da3",
+  "hunks": [
+    {
+      "before": "    - Inputs must remain unchanged during a call. Preflight streams file hashes;\n",
+      "after": "    - Result and CSV output paths must not alias any input JSON path, including\n      through symbolic or hard links. This preflight rejects collisions before\n      simulation but is not atomic with later writes. Concurrent changes to\n      input or output paths, links, or directories are unsupported.\n    - Inputs must remain unchanged during a call. Preflight streams file hashes;\n"
+    },
+    {
+      "before": "    if not pending:\n        return str(csv_file)\n\n    engine = _taichi_engine_class()()\n",
+      "after": "    if not pending:\n        return str(csv_file)\n\n    # A result name such as a_result.json can itself be another source file.\n    # Check the complete input set before any simulation or output write, not\n    # just the current file: atomic result replacement would still destroy that\n    # source pathname. Resolve symlinks and detect existing hard-link aliases.\n    input_paths = {path.resolve(): path for path in json_files}\n    input_ids = {}\n    for path in json_files:\n        st = path.stat()\n        if st.st_ino:\n            input_ids[(st.st_dev, st.st_ino)] = path\n    outputs = [csv_file] + [output_path / f\"{path.stem}_result.json\" for path in pending]\n    for destination in outputs:\n        source = input_paths.get(destination.resolve())\n        if source is None:\n            try:\n                st = destination.stat()\n            except FileNotFoundError:\n                pass\n            else:\n                if st.st_ino:\n                    source = input_ids.get((st.st_dev, st.st_ino))\n        if source is not None:\n            raise ValueError(f\"Batch output {destination} aliases input {source}; \"\n                             \"choose a different output directory\")\n\n    engine = _taichi_engine_class()()\n"
+    }
+  ]
+}

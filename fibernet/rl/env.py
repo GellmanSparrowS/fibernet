@@ -6,11 +6,16 @@ Provides properly structured environments following the Gymnasium API:
 - FiberDesignEnv: Discrete + continuous action space for structure design
 - FiberTopologyEnv: Multi-step iterative refinement environment
 
-All environments:
+The Gymnasium environments defined here:
 - Follow gymnasium.spaces conventions
 - Return 5-tuple from step(): (obs, reward, terminated, truncated, info)
 - Support seeding and deterministic resets
 - Include comprehensive info dicts
+
+The factory's ``parametric`` route instead returns the intentional legacy
+ParametricStructureEnv protocol, not a Gymnasium environment. FiberDesignEnv's
+mixed Dict actions are not directly supported by the bundled SB3 algorithms;
+no automatic action flattening or protocol conversion is provided.
 
 Examples
 --------
@@ -495,7 +500,7 @@ if HAS_GYM:
         *,
         geometry_policy: str = "reject_internal_points",
         **kwargs,
-    ) -> gym.Env:
+    ) -> Any:
         """Factory function for creating FiberNet RL environments.
 
         Parameters
@@ -507,7 +512,12 @@ if HAS_GYM:
 
         Returns
         -------
-        gym.Env
+        gym.Env or ParametricStructureEnv
+            The structure/design routes return Gym environments. The parametric
+            route preserves reset -> observation and step ->
+            (graph, result, reward, info); it is not an SB3/Gym transition API.
+            The broad return annotation keeps runtime annotation inspection
+            independent of the legacy implementation import.
         """
         geometry_policy = validate_geometry_policy(geometry_policy)
         if env_type == "structure":

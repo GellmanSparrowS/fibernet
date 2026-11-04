@@ -19,6 +19,55 @@ jobs:
           python-version: '3.10'
       - run: python -m pip install torch==2.7.1 --index-url https://download.pytorch.org/whl/cpu
       - run: python -m pip install -r FiberScope/requirements-rl.txt networkx matplotlib trimesh
+      - name: Install focused registry test dependency
+        run: python -m pip install pytest==9.0.3
+      - name: Verify 12 registry and 22 golden-contract cases without optional providers
+        timeout-minutes: 2
+        shell: python
+        env:
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD: '1'
+          PYTEST_ADDOPTS: ''
+          PYTHONDONTWRITEBYTECODE: '1'
+          OPENBLAS_NUM_THREADS: '1'
+          OMP_NUM_THREADS: '1'
+          MKL_NUM_THREADS: '1'
+        run: |
+          import sys
+          import pytest
+          
+          forbidden = {"taichi", "torch", "exudyn", "lammps", "gmsh"}
+          violations = []
+          
+          def forbid_provider_import(event, args):
+              if event == "import" and args[0].split(".")[0] in forbidden:
+                  violations.append(args[0])
+                  raise RuntimeError("native provider import forbidden in registry regression: " + args[0])
+          
+          sys.addaudithook(forbid_provider_import)
+          
+          class ExactRegistryCases:
+              def __init__(self):
+                  self.reports = []
+          
+              def pytest_collection_finish(self, session):
+                  assert len(session.items) == 34, "focused regressions must collect exactly 34 cases"
+                  counts = {name: sum(item.path.name == name for item in session.items) for name in ("test_registry_isolation.py", "test_golden_reference_contract.py")}
+                  assert counts == {"test_registry_isolation.py": 12, "test_golden_reference_contract.py": 22}, "focused per-file collection counts changed"
+          
+              def pytest_runtest_logreport(self, report):
+                  self.reports.append(report)
+          
+          contract = ExactRegistryCases()
+          result = pytest.main([
+              "FiberScope/tests/test_registry_isolation.py",
+              "FiberScope/tests/test_golden_reference_contract.py",
+              "-q", "--noconftest", "-o", "addopts=", "-p", "no:cacheprovider",
+          ], plugins=[contract])
+          assert not violations, "native provider import attempted: " + repr(violations)
+          assert result == 0, "focused regressions failed"
+          assert not any(r.skipped or hasattr(r, "wasxfail") for r in contract.reports), "skips/xfails forbidden"
+          assert sum(r.when == "call" and r.passed for r in contract.reports) == 34, "all 34 focused cases must pass"
+          assert not forbidden.intersection(name.split(".")[0] for name in sys.modules), "native provider imported"
       - run: python FiberScope/scripts/run_tests.py
   web:
     runs-on: ubuntu-latest

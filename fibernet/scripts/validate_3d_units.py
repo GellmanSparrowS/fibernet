@@ -22,6 +22,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 import fibernet as fn
 from fibernet.analysis.graph_features import GraphFeatureExtractor
 
+TPMS_UNITS = {"gyroid", "schwarz_p", "schwarz_d", "iwp", "neovius", "lidinoid"}
+
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'output_data', '3d_validation')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(os.path.join(OUTPUT_DIR, 'viz'), exist_ok=True)
@@ -128,16 +130,25 @@ def validate_unit(unit_name, unit_kwargs=None):
     except Exception as e:
         result['errors'].append(f'visualization: {e}')
     
-    # 6. Test n_pts_per_side (RL feature)
-    try:
-        g_pts = fn.pattern_3d(unit=unit_name, box=(10, 10, 10), grid=(1, 1, 1),
-                              n_pts_per_side=2, unit_kwargs=ukw)
+    # 6. Intermediate-node control: unsupported for TPMS.
+    if unit_name in TPMS_UNITS:
         result['rl_feature'] = {
-            'pts_nodes': g_pts.num_nodes,
-            'pts_edges': g_pts.num_edges,
+            'supported': False,
+            'n_pts_per_side': 0,
+            'status': 'not run: TPMS subdivision is unsupported; generation used defaults',
         }
-    except Exception as e:
-        result['errors'].append(f'n_pts_per_side: {e}')
+    else:
+        try:
+            g_pts = fn.pattern_3d(unit=unit_name, box=(10, 10, 10), grid=(1, 1, 1),
+                                  n_pts_per_side=2, unit_kwargs=ukw)
+            result['rl_feature'] = {
+                'supported': True,
+                'n_pts_per_side': 2,
+                'pts_nodes': g_pts.num_nodes,
+                'pts_edges': g_pts.num_edges,
+            }
+        except Exception as e:
+            result['errors'].append(f'n_pts_per_side: {e}')
     
     return result
 

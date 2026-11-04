@@ -1,0 +1,28 @@
+{
+  "schema": "reviewed_pr108_source_delta/1",
+  "source": "fibernet/easy.py",
+  "base_sha256": "55bb90fa65932457cd8b552522c17d459f33dae06e221373ca04707a0f94c762",
+  "result_sha256": "c4b6c6f88c0b402f140875af9624dd252531a1344682564cc9ab4d0411e73e8c",
+  "hunks": [
+    {
+      "before": "- simulate(graph, mode) → FEM 模拟\n- batch_simulate(configs) → 批量模拟输出 CSV\n- train_model(csv_path) → ML 训练\n- train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用\n\nExamples\n",
+      "after": "- simulate(graph, mode) → FEM 模拟\n- batch_simulate(configs) → 批量模拟输出 CSV\n- train_model(csv_path) → ML 训练\n- train_policy(env) → Gymnasium/SB3 策略训练，环境由调用方提供\n- train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用\n\nExamples\n"
+    },
+    {
+      "before": "# Keep provider-independent utilities usable without probing a native engine.\n# Explicit alias access still returns the original implementation object.\n_LAZY_EXPORTS = {\n    \"TaichiEngine\": \"fibernet.sim.accelerated\",\n    \"SimResult\": \"fibernet.sim.accelerated\",\n    \"render_graph\": \"fibernet.viz.render\",\n",
+      "after": "# Keep provider-independent utilities usable without probing a native engine.\n# Explicit alias access still returns the original implementation object.\n_LAZY_EXPORTS = {\n    \"train_policy\": \"fibernet.rl.algorithms\",\n    \"TaichiEngine\": \"fibernet.sim.accelerated\",\n    \"SimResult\": \"fibernet.sim.accelerated\",\n    \"render_graph\": \"fibernet.viz.render\",\n"
+    },
+    {
+      "before": "    SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，\n    不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。\n\n    实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、\n    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；\n    策略训练器也不会自动提供物理评价器。\n\n",
+      "after": "    SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，\n    不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。\n\n    实际策略训练请使用 ``from fibernet import train_policy``\n    （与 ``from fibernet.rl import train_rl`` 为同一训练器），并传入适用的、\n    由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；\n    策略训练器也不会自动提供物理评价器。\n\n"
+    },
+    {
+      "before": "    # Preserve historical aliases; propagate the owning implementation's error.\n    if name in _LAZY_EXPORTS:\n        from importlib import import_module\n        value = getattr(import_module(_LAZY_EXPORTS[name]), name)\n        globals()[name] = value\n        return value\n    raise AttributeError(f\"module {__name__!r} has no attribute {name!r}\")\n",
+      "after": "    # Preserve historical aliases; propagate the owning implementation's error.\n    if name in _LAZY_EXPORTS:\n        from importlib import import_module\n        value = getattr(import_module(_LAZY_EXPORTS[name]),\n                        \"train_rl\" if name == \"train_policy\" else name)\n        globals()[name] = value\n        return value\n    raise AttributeError(f\"module {__name__!r} has no attribute {name!r}\")\n"
+    },
+    {
+      "before": "_index = __all__.index(\"pattern_3d\") + 1\n__all__[_index:_index] = [\"TaichiEngine\", \"SimResult\"]\ndel _index\n__all__ += [\"render_graph\", \"render_deformation\"]\n",
+      "after": "_index = __all__.index(\"pattern_3d\") + 1\n__all__[_index:_index] = [\"TaichiEngine\", \"SimResult\"]\ndel _index\n__all__ += [\"render_graph\", \"render_deformation\", \"train_policy\"]\n"
+    }
+  ]
+}

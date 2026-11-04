@@ -8,7 +8,13 @@ Provides tools for:
 - Version control for configs
 - Automatic documentation generation
 
-Example config structure:
+The mechanical template below is retained as a configuration record, not an
+executable mechanical workflow. ``run_from_config`` refuses legacy mechanical,
+morphology and stress-strain execution. For an explicit StructureGraph
+small-deformation linear FEM example, see ``examples/open_source_workflow.py``;
+that model is not an equivalent automatic migration of this configuration.
+
+Example configuration record:
 ```yaml
 experiment:
   name: "fiber_network_study"
@@ -45,10 +51,13 @@ from __future__ import annotations
 try:
     import yaml
     HAS_YAML = True
-except ImportError:
+except ModuleNotFoundError as exc:
+    if exc.name != "yaml":
+        raise
     HAS_YAML = False
     yaml = None
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
 from dataclasses import dataclass, field, asdict
@@ -125,7 +134,7 @@ class ExperimentConfig:
         """Load configuration from JSON file."""
         filepath = Path(filepath)
         with open(filepath, 'r') as f:
-            data = json.load(f)
+            data = json.load(f, object_pairs_hook=_unique_json_object_pairs)
         config = cls.from_dict(data)
         config.metadata['source_file'] = str(filepath.absolute())
         return config
@@ -135,10 +144,11 @@ class ExperimentConfig:
         return asdict(self)
     
     def to_yaml(self, filepath: Union[str, Path], include_metadata: bool = True):
-        """Save configuration to YAML file."""
-        filepath = Path(filepath)
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        
+        """Save YAML after serialization succeeds, before touching the destination.
+
+        Serialization errors preserve the target and do not create parents.
+        Filesystem write failures or interruption can still leave partial output.
+        """
         data = self.to_dict()
         if not include_metadata:
             data.pop('metadata', None)
@@ -149,14 +159,18 @@ class ExperimentConfig:
         
         if yaml is None:
             raise ImportError("PyYAML is required for YAML support. Install with: pip install pyyaml")
-        with open(filepath, 'w') as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-    
-    def to_json(self, filepath: Union[str, Path], include_metadata: bool = True):
-        """Save configuration to JSON file."""
+        payload = yaml.dump(data, default_flow_style=False, sort_keys=False)
         filepath = Path(filepath)
         filepath.parent.mkdir(parents=True, exist_ok=True)
-        
+        with open(filepath, 'w') as f:
+            f.write(payload)
+    
+    def to_json(self, filepath: Union[str, Path], include_metadata: bool = True):
+        """Save JSON after serialization succeeds, before touching the destination.
+
+        Serialization errors preserve the target and do not create parents.
+        Filesystem write failures or interruption can still leave partial output.
+        """
         data = self.to_dict()
         if not include_metadata:
             data.pop('metadata', None)
@@ -165,8 +179,11 @@ class ExperimentConfig:
         if include_metadata:
             data['metadata']['saved_at'] = datetime.now().isoformat()
         
+        payload = json.dumps(data, indent=2)
+        filepath = Path(filepath)
+        filepath.parent.mkdir(parents=True, exist_ok=True)
         with open(filepath, 'w') as f:
-            json.dump(data, f, indent=2)
+            f.write(payload)
     
     def compute_hash(self) -> str:
         """Compute hash of configuration (excluding metadata)."""
@@ -247,7 +264,14 @@ def create_template_config(
     template_type: str = 'mechanical',
 ) -> ExperimentConfig:
     """
-    Create a template configuration file.
+    Create a template configuration record.
+
+    The default mechanical template is retained for configuration storage and
+    editing; ``run_from_config`` refuses its mechanical, morphology and
+    stress-strain requests. Thermal templates are also explicitly unsupported.
+    For an explicit StructureGraph small-deformation linear FEM example, see
+    ``examples/open_source_workflow.py``. It is not an equivalent automatic
+    migration of these template settings.
     
     Parameters
     ----------
@@ -264,7 +288,7 @@ def create_template_config(
     Examples
     --------
     >>> config = create_template_config('my_experiment.yaml', template_type='mechanical')
-    >>> # Edit the file, then load it
+    >>> # Reload the configuration record; this does not run a simulation.
     >>> config = ExperimentConfig.from_yaml('my_experiment.yaml')
     """
     if template_type == 'thermal':
@@ -429,7 +453,14 @@ def create_template_config(
 
 def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any]:
     """
-    Run experiment from configuration.
+    Execute supported configuration requests.
+
+    Legacy mechanical, thermal, morphology and stress-strain requests are
+    refused before network generation or output. A stored mechanical template
+    is therefore not an executable mechanical workflow. Select an explicit
+    solver and result definition instead; ``examples/open_source_workflow.py``
+    illustrates StructureGraph small-deformation linear FEM, not an equivalent
+    automatic migration of the legacy settings.
     
     Parameters
     ----------
@@ -441,10 +472,11 @@ def run_from_config(config: Union[str, Path, ExperimentConfig]) -> Dict[str, Any
     dict
         Experiment results
     
-    Examples
-    --------
-    >>> results = run_from_config('experiment.yaml')
-    >>> print(results['stress_strain'].youngs_modulus)
+    Notes
+    -----
+    Inspect the configuration's requested capabilities before calling this
+    function. Legacy mechanical templates do not produce a stress-strain
+    result through this entry point.
     """
     # Load config if it's a file path
     if isinstance(config, (str, Path)):

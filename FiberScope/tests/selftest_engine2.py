@@ -107,59 +107,19 @@ def main():
     assert len(prog) == 61 and prog[-1][0] == prog[-1][1], "progress cb broken"
 
     # 7) golden reference: numerics must not drift when the solver is
-    #    refactored (regenerate with scripts/make_golden_engine.py)
+    #    refactored; preserve the pinned historical reference bytes.
     golden_check()
     print("[e2] PASS")
 
 
 def golden_check():
-    """Re-run the frozen cases and compare every stored array."""
-    import json
-
-    from fslab.simcache import ENGINE_VERSION
-    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    ref_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "golden_engine.npz")
-    if not os.path.exists(ref_path):
-        print("[e2] golden: no reference file, skipped")
-        return
-    sys.path.insert(0, os.path.join(root, "scripts"))
-    from make_golden_engine import CASES, run_case
-    worst_key, worst = "", 0.0
-    n_arr = 0
-    t0 = time.time()
-    with np.load(ref_path, allow_pickle=False) as z:
-        meta = json.loads(str(z["meta"]))
-        assert meta["engine_version"] == ENGINE_VERSION, (
-            "golden reference was made with engine %s, code is %s: run "
-            "scripts/make_golden_engine.py" % (meta["engine_version"],
-                                               ENGINE_VERSION))
-        for case in CASES:
-            res, _dt = run_case(case)
-            n = case[0]
-            pairs = [(n + "_force", res.force_curve),
-                     (n + "_strain", res.strain_levels),
-                     (n + "_ccounts", res.contact_counts),
-                     (n + "_final", res.frames_xy[-1]),
-                     (n + "_estrain", res.edge_strain[-1])]
-            pairs += [("%s_e_%s" % (n, k), np.asarray(v, float))
-                      for k, v in res.energies.items()]
-            for key, arr in pairs:
-                ref = np.asarray(z[key], float)
-                got = np.asarray(arr, float)
-                assert got.shape == ref.shape, (key, got.shape, ref.shape)
-                scale = max(float(np.abs(ref).max()), 1e-12)
-                dev = float(np.abs(got - ref).max()) / scale
-                n_arr += 1
-                if dev > worst:
-                    worst, worst_key = dev, key
-                assert dev < 1e-9, (
-                    "golden mismatch %s: rel dev %.3e (refactor changed the "
-                    "physics)" % (key, dev))
-    rec = sum(c["seconds"] for c in meta["cases"])
-    print("[e2] golden ok: %d arrays, max rel dev %.2e (%s), "
-          "%.1fs vs %.1fs recorded" % (n_arr, worst, worst_key,
-                                       time.time() - t0, rec))
+    """Compare all pinned historical arrays with this exact audited source."""
+    from pathlib import Path
+    from _golden_reference_contract import run_comparison
+    report = run_comparison(Path(__file__).resolve().parents[2])
+    worst = max(item["relative_error"] for case in report["cases"]
+                for item in case["arrays"].values())
+    print("[e2] golden ok: 40 arrays, max rel dev %.2e" % worst)
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ class BatchPolicy(unittest.TestCase):
         for n in tree.body:
             if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id.startswith('_BATCH_') for t in n.targets):
                 self.ns[n.targets[0].id]=ast.literal_eval(n.value)
-        names=[n.name for n in tree.body if isinstance(n,ast.FunctionDef) and (n.name.startswith('_batch_') or n.name=='batch_simulate_from_json')]
+        names=[n.name for n in tree.body if isinstance(n,ast.FunctionDef) and (n.name.startswith('_batch_') or n.name in {'_taichi_engine_class','batch_simulate_from_json'})]
         load_functions('fibernet/easy.py',names,self.ns)
         self.ns['_batch_graph_from_bytes']=parse
         self.run_batch=self.ns['batch_simulate_from_json']

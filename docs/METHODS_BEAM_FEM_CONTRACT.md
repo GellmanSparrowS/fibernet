@@ -33,6 +33,29 @@ when |λ−1|>0.3. The warnings describe the actual branch; they do not change i
 numerical results. The legacy 0.3 switch is not a validated small-deformation
 limit. A call without a warning still needs an appropriate model and loading.
 
+## FEM automatic grip fraction
+
+For FEM stretch, `pct` is a fraction of node rows per side, not a percentage
+written as an integer: use `pct=0.10` for 10%, not `pct=10`. The default remains
+0.10. `BeamFrameFEM.graph_to_fem_input`, and therefore both
+`BeamFrameFEM.stretch_test` and `simulate(..., backend="fem", mode="stretch")`,
+require a finite Python/NumPy integer or floating scalar in `[0, 0.5]`, excluding
+booleans and duration scalars such as `numpy.timedelta64`, and at least two graph
+nodes. Invalid values raise `ValueError` before raw FEM assembly or solving.
+
+Selection uses `max(floor(n_nodes * pct), 1)` rows at each
+end of the coordinate sort. In particular, `pct=0` retains the legacy minimum
+of one node per side. The admitted range keeps opposite grip row sets disjoint;
+it does not redefine coordinate ties as geometric boundary faces. Existing
+argsort ordering, graph insertion-order rows and stable node identities are
+unchanged. NumPy fractions use their represented numeric values without
+narrowing the node count; `longdouble` precision is retained. Default Python
+float selections are unchanged.
+
+This contract is limited to FEM graph input conversion and its stretch
+shortcuts; other backends and fixed-tolerance selection keep their existing
+behavior.
+
 ## Public shortcut dimension selection
 
 `simulate(graph, backend="fem")` selects the existing beam solver from

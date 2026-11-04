@@ -57,6 +57,8 @@ def select_candidate(pool, X, Y, method, rng):
             X.ndim != 2 or X.shape[1] != pool.shape[1] or
             Y.shape != (len(X), 3)):
         raise ValueError('candidate pool and labelled arrays have invalid shape')
+    if not np.isfinite(X).all():
+        raise ValueError('labelled feature array X must be finite')
     if method in ACQUISITION_PLUGINS:
         return int(ACQUISITION_PLUGINS[method](pool, X, Y, rng))
     if method not in ACQUISITIONS:
@@ -86,6 +88,24 @@ def select_candidate(pool, X, Y, method, rng):
     return int(np.argmax(uncertainty))
 
 
+def _checked_predictions(raw, n_rows):
+    """Check the non-MLP adapter's three-target output before arithmetic."""
+    if np.ma.isMaskedArray(raw):
+        raise ValueError('estimator predictions must not be masked')
+    try:
+        output = np.asarray(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('estimator predictions must be a real numeric (N, 3) array') from exc
+    if output.shape != (n_rows, 3):
+        raise ValueError(f'estimator predictions must have shape ({n_rows}, 3); '
+                         f'got {output.shape}')
+    if output.dtype.kind not in 'biuf':
+        raise ValueError('estimator predictions must contain real numeric values')
+    if not np.isfinite(output).all():
+        raise ValueError('estimator predictions must be finite')
+    return output
+
+
 class Regressor:
     """sklearn adapter with training-only normalization and fixed held-out rows."""
     def __init__(self, key='mlp', params=None, seed=0):
@@ -101,7 +121,16 @@ class Regressor:
                 raise ValueError('invalid model parameter: ' + k)
 
     def train(self, X, Y, lr=.003, epochs=200, batch=16, val_frac=.2,
-              patience=15, min_delta=.0001, epoch_cb=None, stop_cb=None):
+              patience=15, min_delta=.0001, epoch_cb=None, stop_cb=None, *,
+              feature_schema=None):
+        """Publish a completed fit together; callbacks see the previous fit.
+
+        ``feature_schema`` is an optional caller-declared identity, not inferred
+        from width or verified from values. Use ``FEATURE_SCHEMA`` only for the
+        canonical 14 ``light_features`` columns. Other nonempty printable strings
+        (up to 128 characters, no outer whitespace) are opaque declarations.
+        History returns ``schema`` (None if undeclared) and ``feature_count``.
+        """
         import copy
         X, Y = np.asarray(X, float), np.asarray(Y, float)
         if X.ndim != 2 or Y.shape != (len(X), 3) or len(X) < 5 or not np.isfinite(X).all() or not np.isfinite(Y).all():
@@ -109,44 +138,60 @@ class Regressor:
         if (not 0 < val_frac < 0.5 or int(epochs) < 1 or int(batch) < 1 or
                 int(patience) < 1 or not np.isfinite(lr) or lr <= 0):
             raise ValueError('invalid training controls')
+        if feature_schema is not None and (
+                not isinstance(feature_schema, str) or
+                not 1 <= len(feature_schema) <= 128 or
+                not feature_schema.isprintable() or
+                feature_schema != feature_schema.strip()):
+            raise ValueError('feature_schema must be None or a nonempty printable string '
+                             'of at most 128 characters without outer whitespace')
+        if feature_schema == FEATURE_SCHEMA and X.shape[1] != len(FEATURE_NAMES):
+            raise ValueError('canonical feature_schema requires 14 feature columns')
         if self.key == 'mlp':
             from fibernet.ml.physical_surrogate import MLP
-            self.estimator = MLP(hidden=self.params['hidden'], seed=self.seed)
-            history = self.estimator.train(X, Y, lr=lr, epochs=epochs, batch=batch,
+            estimator = MLP(hidden=self.params['hidden'], seed=self.seed)
+            if 'estimator' in self.__dict__ and estimator is self.estimator:
+                raise ValueError('model factory must return a new estimator for refitting')
+            history = estimator.train(X, Y, lr=lr, epochs=epochs, batch=batch,
                 val_frac=val_frac, patience=patience, min_delta=min_delta,
                 epoch_cb=epoch_cb, stop_cb=stop_cb)
             if not history['train']:
                 raise InterruptedError('training stopped before a fitted model was available')
-            for name in ('val_indices', 'train_indices', 'x_mean', 'x_std', 'y_mean', 'y_std'):
-                setattr(self, name, getattr(self.estimator, name))
-            history.update(validation_count=len(self.val_indices), schema=FEATURE_SCHEMA, progress_kind='epoch')
+            fitted_state = {name: getattr(estimator, name) for name in
+                            ('val_indices', 'train_indices', 'x_mean', 'x_std', 'y_mean', 'y_std')}
+            fitted_state['estimator'] = estimator
+            history.update(validation_count=len(fitted_state['val_indices']),
+                           schema=feature_schema, feature_count=X.shape[1], progress_kind='epoch')
+            self.__dict__.update(fitted_state)
             return history
         ids = np.random.default_rng(self.seed).permutation(len(X))
         nv = max(2, min(len(X) - 2, int(len(X) * val_frac)))
-        self.val_indices, self.train_indices = ids[:nv], ids[nv:]
-        ti, vi = self.train_indices, self.val_indices
-        self.x_mean, self.x_std = X[ti].mean(0), X[ti].std(0)
-        self.y_mean, self.y_std = Y[ti].mean(0), Y[ti].std(0)
-        self.x_std[self.x_std < 1e-12] = 1.
-        self.y_std[self.y_std < 1e-12] = 1.
-        x, y = (X - self.x_mean) / self.x_std, (Y - self.y_mean) / self.y_std
+        val_indices, train_indices = ids[:nv], ids[nv:]
+        ti, vi = train_indices, val_indices
+        x_mean, x_std = X[ti].mean(0), X[ti].std(0)
+        y_mean, y_std = Y[ti].mean(0), Y[ti].std(0)
+        x_std[x_std < 1e-12] = 1.
+        y_std[y_std < 1e-12] = 1.
+        x, y = (X - x_mean) / x_std, (Y - y_mean) / y_std
         p = self.params
         if self.key in MODEL_PLUGINS:
-            self.estimator = MODEL_PLUGINS[self.key](p, self.seed)
+            estimator = MODEL_PLUGINS[self.key](p, self.seed)
         elif self.key in ('mlp', 'deep_mlp'):
             cls = importlib.import_module('sklearn.neural_network').MLPRegressor
-            self.estimator = cls(hidden_layer_sizes=(p['hidden'],) * p.get('depth', 1),
+            estimator = cls(hidden_layer_sizes=(p['hidden'],) * p.get('depth', 1),
                                  learning_rate_init=lr, batch_size=min(batch, len(ti)),
                                  max_iter=1, random_state=self.seed)
         elif self.key == 'ridge':
-            self.estimator = importlib.import_module('sklearn.linear_model').Ridge(alpha=p['alpha'])
+            estimator = importlib.import_module('sklearn.linear_model').Ridge(alpha=p['alpha'])
         elif self.key == 'knn':
-            self.estimator = importlib.import_module('sklearn.neighbors').KNeighborsRegressor(
+            estimator = importlib.import_module('sklearn.neighbors').KNeighborsRegressor(
                 n_neighbors=min(p['neighbors'], len(ti)), weights='distance', n_jobs=1)
         else:
             module = importlib.import_module('sklearn.ensemble')
             cls = module.RandomForestRegressor if self.key == 'random_forest' else module.ExtraTreesRegressor
-            self.estimator = cls(n_estimators=p['trees'], max_depth=p['depth'], random_state=self.seed, n_jobs=1, warm_start=True)
+            estimator = cls(n_estimators=p['trees'], max_depth=p['depth'], random_state=self.seed, n_jobs=1, warm_start=True)
+        if 'estimator' in self.__dict__ and estimator is self.estimator:
+            raise ValueError('model factory must return a new estimator for refitting')
         neural = self.key in ('mlp', 'deep_mlp')
         train, val, best, bad, best_epoch, saved = [], [], np.inf, 0, 0, None
         forest = self.key in ('random_forest', 'extra_trees')
@@ -156,16 +201,18 @@ class Regressor:
             if stop_cb and stop_cb():
                 break
             if neural:
-                self.estimator.partial_fit(x[ti], y[ti])
+                estimator.partial_fit(x[ti], y[ti])
             else:
                 if forest:
-                    self.estimator.set_params(n_estimators=ep)
-                self.estimator.fit(x[ti], y[ti])
-            train.append(float(np.mean((self.estimator.predict(x[ti]) - y[ti]) ** 2)))
-            val.append(float(np.mean((self.estimator.predict(x[vi]) - y[vi]) ** 2)))
+                    estimator.set_params(n_estimators=ep)
+                estimator.fit(x[ti], y[ti])
+            train_pred = _checked_predictions(estimator.predict(x[ti]), len(ti))
+            train.append(float(np.mean((train_pred - y[ti]) ** 2)))
+            val_pred = _checked_predictions(estimator.predict(x[vi]), len(vi))
+            val.append(float(np.mean((val_pred - y[vi]) ** 2)))
             if not neural or val[-1] < best - min_delta:
                 best, bad, best_epoch = val[-1], 0, ep
-                saved = copy.deepcopy(self.estimator)
+                saved = copy.deepcopy(estimator)
             else:
                 bad += 1
             if epoch_cb:
@@ -174,19 +221,36 @@ class Regressor:
                 break
         if saved is None:
             raise InterruptedError('training stopped before a fitted model was available')
-        self.estimator = saved
-        return dict(train=train, val=val, epochs_run=len(train), best_epoch=best_epoch,
-                    early_stopped=neural and bad >= patience, validation_count=len(vi), schema=FEATURE_SCHEMA,
+        fitted_state = dict(estimator=saved, val_indices=val_indices, train_indices=train_indices,
+                            x_mean=x_mean, x_std=x_std, y_mean=y_mean, y_std=y_std)
+        history = dict(train=train, val=val, epochs_run=len(train), best_epoch=best_epoch,
+                    early_stopped=neural and bad >= patience, validation_count=len(vi),
+                    schema=feature_schema, feature_count=X.shape[1],
                     progress_kind='trees' if forest else ('epoch' if neural else 'fit'),
-                    trees_fitted=len(self.estimator.estimators_) if forest else None)
+                    trees_fitted=len(saved.estimators_) if forest else None)
+        self.__dict__.update(fitted_state)
+        return history
 
     def predict(self, X):
-        if not hasattr(self, 'estimator'):
+        """Predict from finite (D,) or (N, D) features at the fitted width D."""
+        if (not hasattr(self, 'estimator') or
+                getattr(self, 'x_mean', None) is None):
             raise RuntimeError('train the physical regressor before prediction')
         X = np.asarray(X, float)
+        if X.ndim not in (1, 2):
+            raise ValueError('prediction features must have shape (D,) or (N, D)')
+        width = len(self.x_mean)
+        if X.shape[-1] != width:
+            raise ValueError(
+                f'prediction feature width must match fitted width {width}; '
+                f'got {X.shape[-1]}')
+        if not np.isfinite(X).all():
+            raise ValueError('prediction features must be finite')
         if self.key == 'mlp':
             return self.estimator.predict(X)
-        out = self.estimator.predict((np.atleast_2d(X) - self.x_mean) / self.x_std)
+        rows = np.atleast_2d(X)
+        out = _checked_predictions(
+            self.estimator.predict((rows - self.x_mean) / self.x_std), len(rows))
         out = out * self.y_std + self.y_mean
         return out[0] if X.ndim == 1 else out
 

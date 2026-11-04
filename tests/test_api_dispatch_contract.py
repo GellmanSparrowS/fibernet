@@ -54,7 +54,9 @@ class DispatchContract(unittest.TestCase):
             return real_import(name, *args, **kwargs)
         self.guard = patch('builtins.__import__', side_effect=guard)
         self.guard.start(); self.addCleanup(self.guard.stop)
-        self.simulate = extract('fibernet/easy.py', 'simulate', {**GEOMETRY_HELPERS, 'TaichiEngine': Engine, 'np': np})
+        namespace = {**GEOMETRY_HELPERS, 'TaichiEngine': Engine, 'np': np}
+        extract('fibernet/easy.py', '_taichi_engine_class', namespace)
+        self.simulate = extract('fibernet/easy.py', 'simulate', namespace)
         self.namespace = self.simulate.__globals__
 
     def test_signature_and_omitted_defaults(self):

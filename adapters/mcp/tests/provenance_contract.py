@@ -49,6 +49,7 @@ def load_safety():
     return module
 NEW=load_safety()
 import jsonschema
+from projection_compatibility import legacy_eight
 from snapshot_compatibility import legacy_seven, LIMITS as SNAPSHOT_LIMITS, PHYSICS as SNAPSHOT_PHYSICS, CAPABILITY as SNAPSHOT_CAPABILITY
 
 class Model:
@@ -90,12 +91,13 @@ def server_namespace():
     ns['MAX_SNAPSHOT_REQUEST_BYTES']=64*1024
     ns['MAX_SNAPSHOT_ENVELOPE_BYTES']=1024*1024+4096
     ns['SnapshotContractError']=type('SnapshotContractError',(NEW.ContractError,),{})
+    ns['ProjectionContractError']=type('ProjectionContractError',(NEW.ContractError,),{})
     ns['PreparationContractError']=type('PreparationContractError',(NEW.ContractError,),{})
     schema=json.loads((SOURCE/'tool_schemas.json').read_text())['tools'][0]['outputSchema']
     limits=schema['oneOf'][0]['properties']['limits']['properties']['preparation']['properties']
     ns['PREPARATION_LIMITS']={key:value['const'] for key,value in limits.items()}
     exec(compile(ast.Module(body=body,type_ignores=[]),'<extracted-server-source>','exec'),ns)
-    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='serve')
+    serve=next(n for n in tree.body if isinstance(n,ast.AsyncFunctionDef) and n.name=='_serve_admitted')
     # Extract callbacks, not serve() or SDK setup/transport. No actual server exists.
     selected=[]
     for n in serve.body:
@@ -295,7 +297,8 @@ class ProvenanceContract(unittest.TestCase):
         current_outputs=json.loads(json.dumps(outputs))
         # The DC route is additive. Keep the frozen original five-tool fixture
         # immutable and prove exact legacy outputs after explicit extensions only.
-        outputs['tool_definitions']=legacy_seven(outputs['tool_definitions'])
+        self.assertEqual(outputs['fibernet_catalog']['structuredContent']['capabilities'].pop(), 'project_fiber_network_report')
+        outputs['tool_definitions']=legacy_seven(legacy_eight(outputs['tool_definitions']))
         self.assertEqual(outputs['fibernet_catalog']['structuredContent']['capabilities'].pop(), SNAPSHOT_CAPABILITY)
         self.assertEqual(outputs['fibernet_catalog']['structuredContent']['limits'].pop('thermoelastic'), SNAPSHOT_LIMITS)
         caps=json.loads(outputs['capabilities'][0]['content'])

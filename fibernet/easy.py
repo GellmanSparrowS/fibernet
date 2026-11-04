@@ -6,6 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
+- train_policy(env) → Gymnasium/SB3 策略训练，环境由调用方提供
 - train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用
 
 Examples
@@ -20,6 +21,7 @@ Examples
 from __future__ import annotations
 
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -31,13 +33,34 @@ if _TYPE_CHECKING:
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
+import fibernet.sim as _sim
 from fibernet.gen.pattern import pattern_2d, pattern_3d
-from fibernet.sim.accelerated import TaichiEngine, SimResult
 from fibernet.sim._viscoelastic_fem import ViscoelasticResult as _ViscoelasticResult
 from fibernet.sim._taichi_geometry import (
     preflight_taichi_geometry as _preflight_taichi_geometry,
     validate_geometry_policy as _validate_geometry_policy,
 )
+
+
+# Keep provider-independent utilities usable without probing a native engine.
+# Explicit alias access still returns the original implementation object.
+_LAZY_EXPORTS = {
+    "train_policy": "fibernet.rl.algorithms",
+    "TaichiEngine": "fibernet.sim.accelerated",
+    "SimResult": "fibernet.sim.accelerated",
+    "render_graph": "fibernet.viz.render",
+    "render_deformation": "fibernet.viz.render",
+}
+for _name in _LAZY_EXPORTS:
+    globals().pop(_name, None)
+del _name
+
+
+def _taichi_engine_class():
+    # Preserve caller/test overrides of the historical module-level alias.
+    if "TaichiEngine" in globals():
+        return globals()["TaichiEngine"]
+    return __getattr__("TaichiEngine")
 
 
 def show(
@@ -106,7 +129,7 @@ def simulate(
     *,
     stretch_ratio: Optional[float] = None,
     **kwargs,
-) -> Union[SimResult, _ViscoelasticResult]:
+) -> Union[_sim.SimResult, _ViscoelasticResult]:
     """Run spring dynamics, beam-frame stretch or a viscoelastic frame history.
 
     Parameters
@@ -224,7 +247,8 @@ def simulate(
         if (isinstance(num_threads, (bool, np.bool_)) or
                 not isinstance(num_threads, (int, np.integer)) or num_threads <= 0):
             raise ValueError("num_threads must be a positive integer")
-        method = TaichiEngine.stretch_test if mode == "stretch" else TaichiEngine.dynamics
+        engine_class = _taichi_engine_class()
+        method = engine_class.stretch_test if mode == "stretch" else engine_class.dynamics
         kwargs.setdefault("geometry_policy", "reject_internal_points")
         method_kwargs = dict(kwargs)
         if mode == "stretch":
@@ -233,7 +257,7 @@ def simulate(
             method_kwargs["target_stretch"] = strain
         signature(method).bind(None, graph, **method_kwargs)
         _preflight_taichi_geometry(graph, geometry_policy=kwargs["geometry_policy"])
-        engine = TaichiEngine(arch=arch, num_threads=int(num_threads))
+        engine = engine_class(arch=arch, num_threads=int(num_threads))
         if mode == "stretch":
             result = engine.stretch_test(graph, target_stretch=strain, **kwargs)
         else:
@@ -325,6 +349,22 @@ def _write_batch_report(destination, report):
             temporary.unlink(missing_ok=True)
 
 
+def _batch_config_inputs(configs):
+    """Snapshot sized inputs and check their access contract before case work."""
+    try:
+        len(configs)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    try:
+        detached = list(configs)
+    except TypeError as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    for index, config in enumerate(detached):
+        if not callable(getattr(config, "get", None)):
+            raise ValueError(f"configs[{index}] must provide a callable .get method")
+    return detached
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
@@ -339,6 +379,10 @@ def batch_simulate(
     ----------
     configs : list of dict
         每个 dict 包含: unit, box, grid, seed 等参数。
+        Sized iterables are snapshotted once before case work; every entry must
+        provide a callable .get method. Unsized iterators are rejected. Mapping
+        subclasses and compatible dictionary-like entries remain supported
+        without a report; report_path retains its stricter JSON-safe contract.
     output : str
         CSV 输出路径。
     mode : str
@@ -381,6 +425,7 @@ def batch_simulate(
     if report_path is not None:
         report_destination, report_configs = _batch_report_inputs(
             configs, output, report_path, mode, strain)
+    configs = _batch_config_inputs(configs)
     cases = []
     rows = []
     for i, cfg in enumerate(configs):
@@ -1036,7 +1081,8 @@ def train_rl(
     SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，
     不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。
 
-    实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
+    实际策略训练请使用 ``from fibernet import train_policy``
+    （与 ``from fibernet.rl import train_rl`` 为同一训练器），并传入适用的、
     由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；
     策略训练器也不会自动提供物理评价器。
 
@@ -1173,7 +1219,7 @@ def train_rl(
 _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
 _BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
 _BATCH_SOURCE_FILES = (
-    "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/easy.py", "fibernet/_json.py", "fibernet/sim/accelerated.py",
     "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py", "fibernet/core/material.py",
 )
@@ -1311,7 +1357,7 @@ def _batch_graph_from_bytes(raw):
     """Match load_json's default text decoding, parsing the captured bytes only."""
     import io
     with io.TextIOWrapper(io.BytesIO(raw)) as stream:
-        return StructureGraph.from_dict(json.load(stream))
+        return StructureGraph.from_dict(json.load(stream, object_pairs_hook=_unique_json_object_pairs))
 
 
 def batch_simulate_from_json(
@@ -1391,6 +1437,10 @@ def batch_simulate_from_json(
       Existing CSV success values must be "True" or "False".
     - Each CSV checkpoint is replaced atomically after serialization succeeds.
       Malformed existing CSV files raise ValueError and are left unchanged.
+    - Result and CSV output paths must not alias any input JSON path, including
+      through symbolic or hard links. This preflight rejects collisions before
+      simulation but is not atomic with later writes. Concurrent changes to
+      input or output paths, links, or directories are unsupported.
     - Inputs must remain unchanged during a call. Preflight streams file hashes;
       pending files are captured one at a time, rechecked and parsed from those
       exact bytes. Concurrent input modification is unsupported.
@@ -1469,7 +1519,32 @@ def batch_simulate_from_json(
     if not pending:
         return str(csv_file)
 
-    engine = TaichiEngine()
+    # A result name such as a_result.json can itself be another source file.
+    # Check the complete input set before any simulation or output write, not
+    # just the current file: atomic result replacement would still destroy that
+    # source pathname. Resolve symlinks and detect existing hard-link aliases.
+    input_paths = {path.resolve(): path for path in json_files}
+    input_ids = {}
+    for path in json_files:
+        st = path.stat()
+        if st.st_ino:
+            input_ids[(st.st_dev, st.st_ino)] = path
+    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in pending]
+    for destination in outputs:
+        source = input_paths.get(destination.resolve())
+        if source is None:
+            try:
+                st = destination.stat()
+            except FileNotFoundError:
+                pass
+            else:
+                if st.st_ino:
+                    source = input_ids.get((st.st_dev, st.st_ino))
+        if source is not None:
+            raise ValueError(f"Batch output {destination} aliases input {source}; "
+                             "choose a different output directory")
+
+    engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
 
     def write_checkpoint():
@@ -1548,21 +1623,25 @@ def batch_simulate_from_json(
 
 
 def __getattr__(name):
-    # Preserve the historical easy-module re-exports without loading plotting
-    # for simulate(), training helpers, or importing the top-level package.
-    if name in {"render_graph", "render_deformation"}:
+    # Preserve historical aliases; propagate the owning implementation's error.
+    if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module("fibernet.viz.render"), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]),
+                        "train_rl" if name == "train_policy" else name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def __dir__():
-    return sorted(set(globals()) | {"render_graph", "render_deformation"})
+    return sorted(set(globals()) | set(_LAZY_EXPORTS))
 
 
 # Preserve the historical wildcard surface, including incidental public imports.
 # A wildcard explicitly requests the renderers; importing this module does not.
 __all__ = [name for name in globals() if not name.startswith("_")]
-__all__ += ["render_graph", "render_deformation"]
+# Retain the original wildcard order as well as its public names.
+_index = __all__.index("pattern_3d") + 1
+__all__[_index:_index] = ["TaichiEngine", "SimResult"]
+del _index
+__all__ += ["render_graph", "render_deformation", "train_policy"]

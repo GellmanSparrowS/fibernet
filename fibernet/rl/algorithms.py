@@ -22,6 +22,7 @@ Examples
 from __future__ import annotations
 
 import warnings
+from inspect import getattr_static
 from types import GetSetDescriptorType
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
@@ -88,6 +89,77 @@ ALGORITHM_REGISTRY = {
         "description": "Deep Deterministic Policy Gradient",
     },
 }
+
+
+# SB3 2.0/2.8/current documented action families, not a training guarantee.
+# Keep names here so importing this module does not import optional backends.
+_SB3_ACTION_SPACE_NAMES = {
+    "PPO": ("Box", "Discrete", "MultiDiscrete", "MultiBinary"),
+    "A2C": ("Box", "Discrete", "MultiDiscrete", "MultiBinary"),
+    "SAC": ("Box",),
+    "TD3": ("Box",),
+    "DDPG": ("Box",),
+}
+
+
+def _check_sb3_compatibility(env, algorithm: str, *, role: str) -> str:
+    """Check nominal env types and stored action spaces, without user getters.
+
+    Return ``checked`` for a supported stored action family or ``deferred``
+    for a training string ID or dynamic/descriptor/missing space metadata.
+    Neither result certifies observations, runtime protocol or successful fit.
+    """
+    if issubclass(type(env), str):
+        if role == "env":
+            # SB3 makes registered training environments itself. Do not create
+            # one merely to inspect its spaces; EvalCallback has no such route.
+            return "deferred"
+        raise ValueError(
+            "eval_env must be an independent environment object, not a string ID."
+        )
+
+    from gymnasium import Env, spaces
+
+    if not issubclass(type(env), Env):
+        from stable_baselines3.common.vec_env import VecEnv
+
+        if not issubclass(type(env), VecEnv):
+            try:
+                import gym
+            except ImportError:
+                gym = None
+            if gym is None or not issubclass(type(env), gym.Env):
+                raise ValueError(
+                    f"{role} must be a Gymnasium Env, an SB3 VecEnv, or an "
+                    "OpenAI Gym Env supported by SB3's Shimmy compatibility. "
+                    "FiberNet's legacy ParametricStructureEnv returns "
+                    "(graph, result, reward, info), not Gym transitions; "
+                    "its protocol is not converted by train_rl."
+                )
+            # Check the original family, but do not construct a compatibility
+            # wrapper or convert any space. SB3 retains that responsibility.
+            spaces = gym.spaces
+
+    missing = object()
+    action_space = getattr_static(env, "action_space", missing)
+    if action_space is missing or getattr_static(
+        type(action_space), "__get__", missing
+    ) is not missing:
+        # Includes standard Gym Wrapper.action_space delegation. Do not invoke
+        # properties, unwrap environments, inspect workers or guess metadata.
+        return "deferred"
+
+    names = _SB3_ACTION_SPACE_NAMES[algorithm]
+    allowed = tuple(getattr(spaces, name) for name in names)
+    if not issubclass(type(action_space), allowed):
+        raise ValueError(
+            f"{algorithm} does not support {role}.action_space of type "
+            f"{type(action_space).__name__}; supported action families: "
+            f"{', '.join(names)}. Mixed Dict actions require an explicit, "
+            "separately validated action adapter; train_rl does not flatten "
+            "or remap actions."
+        )
+    return "checked"
 
 
 def _check_eval_env_isolation(env, eval_env) -> None:
@@ -188,8 +260,10 @@ def train_rl(
 
     Parameters
     ----------
-    env : gym.Env
-        FiberNet environment (from fibernet.rl.env).
+    env : Gymnasium Env, SB3 VecEnv, OpenAI Gym Env, or str
+        Training environment or registered training environment ID. Legacy Gym
+        compatibility remains SB3/Shimmy's responsibility. FiberNet's legacy
+        ParametricStructureEnv protocol is not accepted or converted.
     algorithm : str
         Algorithm name: "PPO", "SAC", "TD3", "A2C", "DDPG".
     total_timesteps : int
@@ -232,6 +306,14 @@ def train_rl(
     environment. Known Gymnasium Wrapper, SB3 VecEnvWrapper and DummyVecEnv
     links are inspected with a limit of 1024 object references per environment.
     See docs/architecture/rl-evaluation-isolation.md for migration and limits.
+    A passive preflight checks nominal environment types and stored action-space
+    families before construction. PPO/A2C support Box, Discrete, MultiDiscrete
+    and MultiBinary; SAC/TD3/DDPG support Box. Mixed Dict actions (including
+    FiberDesignEnv's) are not directly supported. String training IDs and
+    descriptor/delegated spaces defer space validation to SB3 without creating
+    environments or invoking getters. This is not complete validation of
+    observations, policies, shapes, bounds, runtime protocols or dependencies.
+    See docs/architecture/rl-capability-preflight.md for the precise boundary.
     """
     try:
         import stable_baselines3 as sb3
@@ -245,6 +327,10 @@ def train_rl(
     algo_info = ALGORITHM_REGISTRY.get(algorithm.upper())
     if algo_info is None:
         raise ValueError(f"Unknown algorithm: {algorithm}. Options: {list(ALGORITHM_REGISTRY.keys())}")
+
+    _check_sb3_compatibility(env, algorithm.upper(), role="env")
+    if eval_env is not None:
+        _check_sb3_compatibility(eval_env, algorithm.upper(), role="eval_env")
 
     algo_cls = getattr(sb3, algo_info["class_name"])
     algo_kwargs = {**algo_info["default_kwargs"]}

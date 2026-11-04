@@ -273,3 +273,7 @@ __all__.extend([
 from .manufacturing_trails import (ManufacturingTrails, manufacturing_trails_from_graph,
                                     export_mapped_trails)
 __all__.extend(["ManufacturingTrails", "manufacturing_trails_from_graph", "export_mapped_trails"])
+
+# Versioned ideal geometry; legacy pattern registrations remain unchanged.
+from .standard_lattice import octet_fcc_v1
+__all__.append("octet_fcc_v1")

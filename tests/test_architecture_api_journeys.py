@@ -27,7 +27,7 @@ def test_quick_api_edit_persist_simulate_analyze_and_render(tmp_path):
     replay = SimResult.load(tmp_path / 'result.json')
     np.testing.assert_allclose(replay.displacements, result.displacements)
     extractor = fn.GraphFeatureExtractor(canvas_size=64)
-    features = extractor.extract(restored)
+    features = extractor.extract(restored, allow_unavailable=True)
     assert features['n_node'] == restored.num_nodes
     assert features['n_edge'] == restored.num_edges
     figure = fn.show(restored, save_path=str(tmp_path / 'structure.png'))

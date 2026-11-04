@@ -1,0 +1,21 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "JSON duplicate-key source regression 1913; source integration 1918",
+  "base_sha256": "c4b6c6f88c0b402f140875af9624dd252531a1344682564cc9ab4d0411e73e8c",
+  "result_sha256": "9db5c8ad9dbd3490fabfe0c38fffd4305faf0c00bd7962f82fde966d52320398",
+  "hunks": [
+    {
+      "before": "from __future__ import annotations\n\nimport json\nimport time\nfrom pathlib import Path\nfrom typing import Any, Dict, List, Optional, Union\n",
+      "after": "from __future__ import annotations\n\nimport json\nfrom fibernet._json import unique_object_pairs as _unique_json_object_pairs\nimport time\nfrom pathlib import Path\nfrom typing import Any, Dict, List, Optional, Union\n"
+    },
+    {
+      "before": "_BATCH_BINDING_SCHEMA = \"fibernet-batch-run-1\"\n_BATCH_SOURCE_RECIPE = \"fibernet-batch-source-1\"\n_BATCH_SOURCE_FILES = (\n    \"fibernet/easy.py\", \"fibernet/sim/accelerated.py\",\n    \"fibernet/sim/_taichi_geometry.py\",\n    \"fibernet/core/structure_graph.py\", \"fibernet/core/material.py\",\n)\n",
+      "after": "_BATCH_BINDING_SCHEMA = \"fibernet-batch-run-1\"\n_BATCH_SOURCE_RECIPE = \"fibernet-batch-source-1\"\n_BATCH_SOURCE_FILES = (\n    \"fibernet/easy.py\", \"fibernet/_json.py\", \"fibernet/sim/accelerated.py\",\n    \"fibernet/sim/_taichi_geometry.py\",\n    \"fibernet/core/structure_graph.py\", \"fibernet/core/material.py\",\n)\n"
+    },
+    {
+      "before": "    \"\"\"Match load_json's default text decoding, parsing the captured bytes only.\"\"\"\n    import io\n    with io.TextIOWrapper(io.BytesIO(raw)) as stream:\n        return StructureGraph.from_dict(json.load(stream))\n\n\ndef batch_simulate_from_json(\n",
+      "after": "    \"\"\"Match load_json's default text decoding, parsing the captured bytes only.\"\"\"\n    import io\n    with io.TextIOWrapper(io.BytesIO(raw)) as stream:\n        return StructureGraph.from_dict(json.load(stream, object_pairs_hook=_unique_json_object_pairs))\n\n\ndef batch_simulate_from_json(\n"
+    }
+  ]
+}

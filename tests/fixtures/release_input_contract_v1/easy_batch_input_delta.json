@@ -1,0 +1,21 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "Batch input source/API review 2008; controlled-double regression 2029",
+  "base_sha256": "9db5c8ad9dbd3490fabfe0c38fffd4305faf0c00bd7962f82fde966d52320398",
+  "result_sha256": "4340a0d7ce4709a09881d7eed08164c519d387012dc68bc4415f0a6e26e566f1",
+  "hunks": [
+    {
+      "before": "            temporary.unlink(missing_ok=True)\n\n\ndef batch_simulate(\n    configs: List[Dict[str, Any]],\n    output: str = \"results.csv\",\n",
+      "after": "            temporary.unlink(missing_ok=True)\n\n\ndef _batch_config_inputs(configs):\n    \"\"\"Snapshot sized inputs and check their access contract before case work.\"\"\"\n    try:\n        len(configs)\n    except (TypeError, ValueError, OverflowError) as exc:\n        raise ValueError(\"configs must be a sized iterable of dictionaries\") from exc\n    try:\n        detached = list(configs)\n    except TypeError as exc:\n        raise ValueError(\"configs must be a sized iterable of dictionaries\") from exc\n    for index, config in enumerate(detached):\n        if not callable(getattr(config, \"get\", None)):\n            raise ValueError(f\"configs[{index}] must provide a callable .get method\")\n    return detached\n\n\ndef batch_simulate(\n    configs: List[Dict[str, Any]],\n    output: str = \"results.csv\",\n"
+    },
+    {
+      "before": "    ----------\n    configs : list of dict\n        每个 dict 包含: unit, box, grid, seed 等参数。\n    output : str\n        CSV 输出路径。\n    mode : str\n",
+      "after": "    ----------\n    configs : list of dict\n        每个 dict 包含: unit, box, grid, seed 等参数。\n        Sized iterables are snapshotted once before case work; every entry must\n        provide a callable .get method. Unsized iterators are rejected. Mapping\n        subclasses and compatible dictionary-like entries remain supported\n        without a report; report_path retains its stricter JSON-safe contract.\n    output : str\n        CSV 输出路径。\n    mode : str\n"
+    },
+    {
+      "before": "    if report_path is not None:\n        report_destination, report_configs = _batch_report_inputs(\n            configs, output, report_path, mode, strain)\n    cases = []\n    rows = []\n    for i, cfg in enumerate(configs):\n",
+      "after": "    if report_path is not None:\n        report_destination, report_configs = _batch_report_inputs(\n            configs, output, report_path, mode, strain)\n    configs = _batch_config_inputs(configs)\n    cases = []\n    rows = []\n    for i, cfg in enumerate(configs):\n"
+    }
+  ]
+}

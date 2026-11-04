@@ -26,7 +26,7 @@ class DispatchPolicy(unittest.TestCase):
                 owner.calls.append(('dynamics',graph,locals().copy())); return owner.result
         self.Engine=Engine
         self.ns={**H,'TaichiEngine':Engine,'np':NP}
-        self.sim=load_functions('fibernet/easy.py',['simulate'],self.ns)['simulate']
+        self.sim=load_functions('fibernet/easy.py',['_taichi_engine_class','simulate'],self.ns)['simulate']
 
     def test_alias_mode_default_rejects_before_construct(self):
         for alias in ('spring','taichi'):

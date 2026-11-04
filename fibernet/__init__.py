@@ -77,6 +77,7 @@ from fibernet.gen.manufacturing_trails import (ManufacturingTrails,
 # Import the owning implementation only when its public symbol is requested.
 # Do not wrap, replace, or initialize any backend here.
 _LAZY_EXPORTS = {
+    "train_policy": "fibernet.rl.algorithms",
     "TaichiEngine": "fibernet.sim.accelerated",
     "SimResult": "fibernet.sim.accelerated",
     "solve_linear_transport": "fibernet.sim.linear_transport",
@@ -170,7 +171,7 @@ __all__ = [
     "render_fem_stress",
     "THEMES",
     # Easy API
-    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl", "predict_named",
+    "show", "simulate", "batch_simulate", "batch_simulate_from_json", "train_model", "train_rl", "train_policy", "predict_named",
     # Analysis
     "GraphFeatureExtractor",
     "GraphFeatureExtractor3D",
@@ -189,7 +190,8 @@ def __getattr__(name):
     """Resolve public exports on demand, propagating implementation failures."""
     from importlib import import_module
     if name in _LAZY_EXPORTS:
-        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]),
+                        "train_rl" if name == "train_policy" else name)
     elif name in _RENDER_EXPORTS:
         value = getattr(import_module("fibernet.viz.render"), name)
     elif name in _LAZY_MODULES:
@@ -212,3 +214,7 @@ def __getattr__(name):
 def __dir__():
     return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)
                   | set(_LAZY_MODULES) | {"_HAS_RL"})
+
+# Additive standard geometry API; no change to legacy lattice names.
+from fibernet.gen.standard_lattice import octet_fcc_v1
+__all__.append("octet_fcc_v1")

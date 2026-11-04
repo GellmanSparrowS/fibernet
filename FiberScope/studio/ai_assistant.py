@@ -1013,22 +1013,32 @@ class AIPanel(QWidget):
                   contacts_max=int(run.contact_counts.max()), metrics=m,
                   final_stretch=float(run.strain_levels[-1]))
 
-    def _run_inverse(self, target, budget, load_best):
+    def _prepare_inverse(self, target, budget, load_best):
         if target not in TARGETS and target not in SCALARS:
-            return _j(ok=False, error='unknown target')
+            raise ValueError('unknown target')
         tab = self.win.tab_design
         if tab.worker is not None and tab.worker.isRunning():
-            return _j(ok=False, error='inverse task already running')
+            raise ValueError('inverse task already running')
         if tab.selected_model is not None and target not in SCALARS:
-            return _j(ok=False, error='Learned model supports scalar targets only; switch off Use trained model for curve objectives')
+            raise ValueError('Learned model supports scalar targets only; switch off Use trained model for curve objectives')
         if int(budget) < 1:
-            return _j(ok=False, error='budget must be positive')
+            raise ValueError('budget must be positive')
         tab.set_spec(self.win.tab_struct.collect_factory())
         tab.target_combo.setCurrentText(target)
         tab.budget.setValue(int(budget))
         tab._auto_apply = bool(load_best)
-        tab.start_run()
-        return _j(ok=True, state='started', algorithm=tab.algorithm,
+        worker = tab.start_run(autostart=False)
+        if worker is None:
+            raise RuntimeError('inverse did not start')
+        return worker
+
+    def _run_inverse(self, target, budget, load_best):
+        try:
+            worker = self._prepare_inverse(target, budget, load_best)
+        except (ValueError, RuntimeError) as exc:
+            return _j(ok=False, error=str(exc))
+        worker.start()
+        return _j(ok=True, state='started', algorithm=self.win.tab_design.algorithm,
                   note='Optimization running. Query get_design_status; no result is available yet.')
 
     def _configure_search(self, algorithm='cem', parameters=None, unit=None, amplitude=None, resume=False, follow_type=None):

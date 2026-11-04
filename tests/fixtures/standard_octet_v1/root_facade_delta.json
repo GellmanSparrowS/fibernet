@@ -1,0 +1,13 @@
+{
+  "schema": "reviewed_octet_fcc_facade_delta/1",
+  "source": "fibernet/__init__.py",
+  "baseline_main": "1a5e69c031810126a56e2a87a25a70748ba4c4bf",
+  "base_sha256": "0ea04c0e27c3ebdda23deef8ef7f9eb3d8b47f1de226f61049b4330ca33daffe",
+  "result_sha256": "ddcec745609991587e6343f6c9bb34634d064775605b588f9be48faf5ae4010c",
+  "hunks": [
+    {
+      "before": "def __dir__():\n    return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)\n                  | set(_LAZY_MODULES) | {\"_HAS_RL\"})\n",
+      "after": "def __dir__():\n    return sorted(set(globals()) | set(_RENDER_EXPORTS) | set(_LAZY_EXPORTS)\n                  | set(_LAZY_MODULES) | {\"_HAS_RL\"})\n\n# Additive standard geometry API; no change to legacy lattice names.\nfrom fibernet.gen.standard_lattice import octet_fcc_v1\n__all__.append(\"octet_fcc_v1\")\n"
+    }
+  ]
+}

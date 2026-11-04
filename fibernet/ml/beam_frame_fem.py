@@ -9,6 +9,7 @@ Fixes from v4/v5:
   5. Per-node stress/strain for graph-level analysis
 """
 import numpy as np
+from numbers import Integral
 from scipy import sparse
 from scipy.sparse.linalg import spsolve
 from typing import Dict, List, Tuple, Optional
@@ -81,14 +82,21 @@ class BeamFrameFEM:
     
     @staticmethod
     def _validate_nodes(n_nodes, fixed_nodes, prescribed_disp):
-        """Validate node indices against n_nodes. Raises ValueError for out-of-range."""
-        bad_fixed = [n for n in fixed_nodes if int(n) < 0 or int(n) >= n_nodes]
+        """Require integral input-row indices, excluding booleans, within range.
+
+        Python and NumPy integers are accepted. Floats and coercible strings
+        are rejected rather than truncated; these are row indices, not stable
+        StructureGraph node IDs. Empty constraint collections remain valid.
+        """
+        bad_fixed = [n for n in fixed_nodes if isinstance(n, (bool, np.bool_)) or not isinstance(n, Integral)
+                     or int(n) < 0 or int(n) >= n_nodes]
         if bad_fixed:
             raise ValueError(
                 f"fixed_nodes contains invalid indices {bad_fixed} "
                 f"(n_nodes={n_nodes}, valid range: 0..{n_nodes-1})"
             )
-        bad_prescribed = [n for n in prescribed_disp if int(n) < 0 or int(n) >= n_nodes]
+        bad_prescribed = [n for n in prescribed_disp if isinstance(n, (bool, np.bool_)) or not isinstance(n, Integral)
+                     or int(n) < 0 or int(n) >= n_nodes]
         if bad_prescribed:
             raise ValueError(
                 f"prescribed_disp contains invalid node indices {bad_prescribed} "
@@ -880,7 +888,13 @@ class BeamFrameFEM:
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
-            Boundary detection percentage (0.10 = 10% each side).
+            Finite Python/NumPy real scalar in [0, 0.5], excluding bools
+            and timedelta64 values.
+            Select floor(n_nodes * pct) rows per side, with a minimum of one;
+            0 preserves that legacy minimum-one behavior. At least two nodes
+            are required. NumPy scalars use their represented numeric value
+            without lowering node-count precision; longdouble is retained.
+            Ties retain the existing argsort row ordering.
         
         Returns
         -------
@@ -891,6 +905,21 @@ class BeamFrameFEM:
             boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
             x_range: float (for displacement calculation)
         """
+        if (isinstance(pct, (bool, np.bool_, np.timedelta64))
+                or not isinstance(pct, (int, float, np.integer, np.floating))
+                or not 0 <= pct <= 0.5
+                or not np.isfinite(pct)):
+            raise ValueError(
+                'FEM pct must be a finite real scalar in [0, 0.5], '
+                'not bool or timedelta64; '
+                '0 retains the minimum of one node per side'
+            )
+        if isinstance(pct, (np.integer, np.floating)):
+            # Avoid NumPy narrowing the Python node count to pct's dtype.
+            # item() keeps longdouble when Python float would lose precision.
+            pct = pct.item()
+        if len(graph.nodes) < 2:
+            raise ValueError('FEM automatic boundary selection requires at least two nodes')
         curved_edges = [
             edge_id for edge_id, edge in graph.edges.items()
             if edge.internal_points is not None and len(edge.internal_points)
@@ -940,7 +969,9 @@ class BeamFrameFEM:
         dim : int
             2 for 2D, 3 for 3D.
         pct : float
-            Boundary percentage.
+            Fraction of nodes per side in [0, 0.5], finite and not boolean.
+            The default is 0.10; 0 retains at least one node per side.
+            Opposite grips use disjoint row sets; at least two nodes are needed.
         nonlinear : bool or None
             In 2-D, None auto-selects incremental updated-geometry solves for
             |stretch-1| > 0.3; True selects this experimental path explicitly.
