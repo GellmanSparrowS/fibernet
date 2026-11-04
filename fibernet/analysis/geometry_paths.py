@@ -181,3 +181,114 @@ def analyze_geometry_paths(graph, *, length_unit, coordinate_frame, node_pairs=(
         tuple(sorted(positions)), tuple(ids), length_unit, coordinate_frame, distance_mode,
         tuple(chords), tuple(polylines), tuple(straightness), tuple(degenerate), tuple(pairs),
         tuple(distances), tuple(pair_chords), tuple(ratios), tuple(statuses))
+
+
+def compare_lammps_node_displacements(reference_graph, initial_graph, result, *,
+                                       reference_length_unit, initial_length_unit):
+    """Compare final nodes to two caller-supplied geometries, in metres.
+
+    Returns sorted stable node IDs and detached (N, 3) arrays named
+    ``from_initial_m`` and ``from_reference_m``. The initial graph must exactly
+    match the result's recorded graph digest and original length unit. The
+    reference graph must have the same node IDs, but matching IDs alone do not
+    establish physical correspondence; the caller must supply the same frame
+    and meaning. Float64 conversion can round near-coincident coordinates.
+    Only final positions are used. No interpolation, force,
+    reaction, stress, work, or physical validation is performed. Digests detect
+    disagreement, not maliciously fabricated results.
+    """
+    import hashlib
+    import json
+
+    from fibernet.units import LENGTH_FACTORS as scales
+    if (not isinstance(reference_length_unit, str) or not isinstance(initial_length_unit, str)
+            or reference_length_unit not in scales or initial_length_unit not in scales):
+        raise ValueError('explicit supported graph length units are required')
+    if not isinstance(reference_graph, StructureGraph) or not isinstance(initial_graph, StructureGraph):
+        raise TypeError('reference and initial must be StructureGraph instances')
+    if (not _integer(reference_graph.dimension) or reference_graph.dimension != 3
+            or not _integer(initial_graph.dimension) or initial_graph.dimension != 3):
+        raise ValueError('graphs must be 3D')
+
+    def graph_ids(graph, label):
+        ids = list(graph.nodes)
+        if any(not _integer(i) for i in ids) or len(ids) != len(set(ids)):
+            raise ValueError(f'{label} node IDs must be nonnegative integers')
+        if any(not _integer(graph.nodes[i].node_id) or graph.nodes[i].node_id != i for i in ids):
+            raise ValueError(f'{label} node records must match their IDs')
+        return ids
+
+    ref_ids = graph_ids(reference_graph, 'reference')
+    initial_ids = graph_ids(initial_graph, 'initial')
+    if not initial_ids or set(ref_ids) != set(initial_ids):
+        raise ValueError('graphs must have the same nonempty node IDs')
+    order = tuple(sorted(initial_ids))
+    metadata = getattr(result, 'metadata', None)
+    if not isinstance(metadata, dict) or metadata.get('backend') != 'lammps':
+        raise ValueError('result must carry explicit LAMMPS metadata')
+    ids = metadata.get('node_ids')
+    if not isinstance(ids, (tuple, list)) or any(not _integer(i) for i in ids) or len(ids) != len(set(ids)) or set(ids) != set(order):
+        raise ValueError('result node_ids must exactly cover graph IDs')
+    fields = metadata.get('field_units')
+    if (not isinstance(fields, dict) or fields.get('deformed_positions') != initial_length_unit
+            or metadata.get('original_graph_length_unit') != initial_length_unit
+            or isinstance(metadata.get('original_graph_length_to_m'), (bool, np.bool_))
+            or metadata.get('original_graph_length_to_m') != scales[initial_length_unit]):
+        raise ValueError('result and initial graph units must agree')
+    try:
+        canonical = json.dumps(initial_graph.to_dict(), sort_keys=True, separators=(',', ':'), allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError('initial graph must have finite JSON representation') from exc
+    identity = metadata.get('source_identity')
+    if not isinstance(identity, dict) or identity.get('graph_sha256') != hashlib.sha256(canonical.encode()).hexdigest():
+        raise ValueError('initial graph does not match result graph digest')
+
+    def real_array(value, shape, label):
+        pending = [value]
+        seen = set()
+        while pending:
+            item = pending.pop()
+            if (np.ma.isMaskedArray(item) or isinstance(item, (bool, np.bool_))
+                    or (isinstance(item, np.ndarray) and item.dtype.kind == 'b')):
+                raise ValueError(f'{label} must contain unmasked real numbers')
+            if isinstance(item, (list, tuple)) and id(item) not in seen:
+                seen.add(id(item)); pending.extend(item)
+        return _geometry(value, shape, label)
+
+    def graph_positions(graph, label):
+        return np.stack([real_array(graph.nodes[i].position, (3,), label) for i in order])
+
+    reference = graph_positions(reference_graph, 'reference positions')
+    initial = graph_positions(initial_graph, 'initial positions')
+    final = real_array(getattr(result, 'deformed_positions', None), (len(order), 3), 'final positions')
+    rows = {nid: index for index, nid in enumerate(ids)}
+    final = final[[rows[nid] for nid in order]]
+    with np.errstate(over='ignore', invalid='ignore', under='ignore'):
+        reference_m = reference * scales[reference_length_unit]
+        initial_m = initial * scales[initial_length_unit]
+        final_m = final * scales[initial_length_unit]
+    for original, converted in ((reference, reference_m), (initial, initial_m), (final, final_m)):
+        if not np.isfinite(converted).all() or np.any((original != 0) & (converted == 0)):
+            raise OverflowError('position conversion is not representable in metres')
+
+    def same_unit_difference(a, b, a_m, b_m, factor):
+        with np.errstate(over='ignore', invalid='ignore', under='ignore'):
+            delta = a - b
+            result_m = delta * factor
+            # Only the components whose raw subtraction overflowed use the
+            # already-scaled operands; other components keep their precision.
+            result_m = np.where(np.isfinite(delta), result_m, a_m - b_m)
+        if np.any(np.isfinite(delta) & (delta != 0) & (result_m == 0)):
+            raise OverflowError('displacement is below representable float64 range in metres')
+        return result_m
+
+    from_initial = same_unit_difference(final, initial, final_m, initial_m, scales[initial_length_unit])
+    if scales[reference_length_unit] == scales[initial_length_unit]:
+        from_reference = same_unit_difference(final, reference, final_m, reference_m, scales[initial_length_unit])
+    else:
+        with np.errstate(over='ignore', invalid='ignore', under='ignore'):
+            from_reference = final_m - reference_m
+    if not np.isfinite(from_initial).all() or not np.isfinite(from_reference).all():
+        raise OverflowError('displacement exceeds finite float64 range')
+    return {'node_ids': order, 'units': 'm', 'from_initial_m': from_initial.copy(),
+            'from_reference_m': from_reference.copy()}
