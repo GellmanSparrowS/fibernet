@@ -71,6 +71,9 @@ def save_results(runner, count=2, complete=True):
                     pipeline_config=runner._simulation_config()) for i in range(count)]
     directory = runner.DATA_OUT / 'simulations'
     directory.mkdir(exist_ok=True)
+    for record in records:
+        summary = {key: record[key] for key in ('max_force', 'max_stretch', 'energy')}
+        runner._write_json(directory / f'{record["name"]}_sim.json', summary)
     runner._write_json(directory / 'checkpoint.json', records)
     if complete:
         runner._save_checkpoint('simulation', {'count': count})
@@ -271,6 +274,10 @@ def test_features_reject_changed_finite_simulation_inputs(runner_module, tmp_pat
     save_features(runner)
     records[0]['energy'] = 123.0
     runner._write_json(runner.DATA_OUT / 'simulations/checkpoint.json', records)
+    summary_path = runner.DATA_OUT / 'simulations/honeycomb_000_sim.json'
+    summary = json.loads(summary_path.read_text())
+    summary['energy'] = 123.0
+    runner._write_json(summary_path, summary)
     before = snapshot(runner.DATA_OUT)
     with pytest.raises(ValueError, match='features artifact'):
         runner.run(from_stage=stage)
@@ -338,3 +345,42 @@ def test_all_simulation_records_without_marker_recovers_without_engine(runner_mo
     assert set(after) == set(before)
     assert {p: b for p, b in after.items() if p != completion_path} == {
         p: b for p, b in before.items() if p != completion_path}
+
+
+@pytest.mark.parametrize('damage', [
+    'missing', 'truncated', 'non_object', 'duplicate_key', 'changed', 'extra',
+    'reserved', 'bool_number', 'int_float', 'nan', 'overflow',
+])
+def test_simulation_summary_mismatch_preserves_state(runner_module, tmp_path, monkeypatch, damage):
+    runner, _ = generated(runner_module, tmp_path, monkeypatch)
+    save_results(runner)
+    path = runner.DATA_OUT / 'simulations/honeycomb_001_sim.json'
+    data = json.loads(path.read_text())
+    if damage == 'missing':
+        path.unlink()
+    elif damage in ('truncated', 'non_object', 'duplicate_key', 'nan', 'overflow'):
+        path.write_text({'truncated': '{', 'non_object': '[]',
+                         'duplicate_key': '{"energy":1,"energy":2}',
+                         'nan': '{"energy":NaN}', 'overflow': '{"energy":1e999}'}[damage])
+    else:
+        if damage == 'changed':
+            data['energy'] = 100
+        elif damage == 'extra':
+            data['extra'] = 1
+        elif damage == 'reserved':
+            data['name'] = 'shadow'
+        elif damage == 'bool_number':
+            data['energy'] = True
+        elif damage == 'int_float':
+            data['energy'] = float(data['energy'])
+        path.write_text(json.dumps(data))
+    resumed = new_runner(runner_module, tmp_path)
+    structures, metadata, hashes = [object()], [{'sentinel': True}], ['old']
+    resumed.all_structures, resumed.all_metadata, resumed._graph_hashes = structures, metadata, hashes
+    before = snapshot(runner.DATA_OUT)
+    with pytest.raises(ValueError, match='simulation result'):
+        resumed.stage_simulation()
+    assert resumed.all_structures is structures
+    assert resumed.all_metadata is metadata
+    assert resumed._graph_hashes is hashes
+    assert snapshot(runner.DATA_OUT) == before

@@ -5,6 +5,24 @@ FiberNet Tutorial Pipeline — Standalone Runner
 Runs the complete pipeline from the tutorial notebook outside Jupyter.
 Supports checkpoint/resume, memory monitoring, and partial execution.
 
+Resume uses saved native graphs and summary records. Legacy or incompatible
+generation checkpoints are rejected; preserve those directories and use a new
+data directory. Normal run()/CLI paths validate required recorded generation,
+simulation and features inputs; a direct stage_ml() call skips those checks.
+Interrupted work can leave uncommitted files that require manual preservation
+before a fresh run. Resume requires each recorded *_sim.json to match the
+corresponding summary checkpoint record, excluding runner-owned fields. Old
+directories missing those files, containing runner-owned reserved fields, or
+having inconsistent summaries are rejected; no checkpoint migration is made.
+Feature CSVs are bound to that summary checkpoint once features are recorded.
+A completed ML marker does not validate the saved model file.
+Backend and library versions are not bound, so resuming after an implementation
+change can combine results produced by different versions. This is a single-writer
+workflow, not solver-state recovery, crash-durable storage, or an authenticity
+check. The dynamics example is a unit-mass spring model; its force display
+labeled kN is meaningful as SI force only if the caller supplies a consistent,
+validated unit and model interpretation.
+
 Usage:
     python run_pipeline.py                        # Run full pipeline
     python run_pipeline.py --skip-rl              # Skip RL section
@@ -177,9 +195,25 @@ class PipelineRunner:
             if complete or any(path.parent.glob('*_sim.json')):
                 raise ValueError(f'Missing simulation checkpoint: {path}')
             return []
+        def unique_object(pairs):
+            obj = {}
+            for key, value in pairs:
+                if key in obj:
+                    raise ValueError(f'Duplicate JSON key: {key}')
+                obj[key] = value
+            return obj
+
+        def reject_constant(value):
+            raise ValueError(f'Non-finite JSON value: {value}')
+
+        def read_json(source):
+            return json.loads(source.read_text(encoding='utf-8'),
+                              object_pairs_hook=unique_object,
+                              parse_constant=reject_constant)
+
         try:
-            records = json.loads(path.read_text())
-        except (OSError, ValueError) as exc:
+            records = read_json(path)
+        except (OSError, UnicodeError, ValueError) as exc:
             raise ValueError(f'Invalid simulation checkpoint: {path}') from exc
         if (not isinstance(records, list) or len(records) > self.NUM_STRUCTURES
                 or (complete and len(records) != self.NUM_STRUCTURES)):
@@ -203,9 +237,43 @@ class PipelineRunner:
                 if (isinstance(value, bool) or not isinstance(value, (int, float))
                         or not math.isfinite(value)):
                     raise ValueError(f'Invalid simulation metric {key} at index {i}')
+            result_path = path.parent / f'{self.all_metadata[i]["name"]}_sim.json'
+            try:
+                saved = read_json(result_path)
+                reserved = {'graph_sha256', 'pipeline_config', 'index', 'name'}
+                if not isinstance(saved, dict) or reserved.intersection(saved):
+                    raise ValueError('Expected a summary object without runner-owned keys')
+                expected = {key: value for key, value in result.items()
+                            if key not in reserved}
+                # Canonical JSON compares types and signed zero as well as values,
+                # ignores object order/whitespace, and rejects nested infinities.
+                def canonical(value):
+                    return json.dumps(value, sort_keys=True, separators=(',', ':'),
+                                      ensure_ascii=True, allow_nan=False)
+                if canonical(saved) != canonical(expected):
+                    raise ValueError('Summary does not match checkpoint')
+            except (OSError, UnicodeError, TypeError, ValueError) as exc:
+                raise ValueError(f'Missing, invalid, or changed simulation result: {result_path}') from exc
         for meta, result in zip(self.all_metadata, records):
             meta.update({key: result[key] for key in ('max_force', 'max_stretch', 'energy')})
         return records
+
+    def _load_generation_and_simulations(self, complete=False):
+        # Do not leave newly loaded generation state behind if a simulation
+        # summary is invalid. Preserve attribute absence as well as values.
+        missing = object()
+        previous = (self.all_structures, self.all_metadata,
+                    getattr(self, '_graph_hashes', missing))
+        try:
+            self._load_generation()
+            return self._load_simulations(complete=complete)
+        except Exception:
+            self.all_structures, self.all_metadata = previous[:2]
+            if previous[2] is missing:
+                self.__dict__.pop('_graph_hashes', None)
+            else:
+                self._graph_hashes = previous[2]
+            raise
 
     def _require_features(self):
         record = self._checkpoint().get('features')
@@ -251,9 +319,8 @@ class PipelineRunner:
 
     def stage_simulation(self):
         """Stage 2: Run simulations."""
-        self._load_generation()
         complete = self._check_stage_done('simulation')
-        ckpt = self._load_simulations(complete=complete)
+        ckpt = self._load_generation_and_simulations(complete=complete)
         if complete:
             record = self._checkpoint()['simulation']
             if not isinstance(record, dict) or record.get('count') != self.NUM_STRUCTURES:
@@ -332,10 +399,9 @@ class PipelineRunner:
     
     def stage_features(self):
         """Stage 3: Extract features."""
-        self._load_generation()
         if not self._check_stage_done('simulation'):
             raise ValueError('Feature extraction requires completed saved simulations')
-        self._load_simulations(complete=True)
+        self._load_generation_and_simulations(complete=True)
         if self._check_stage_done('features'):
             self._require_features()
             print('✓ Feature extraction already done (checkpoint)')
@@ -430,12 +496,13 @@ class PipelineRunner:
         
         if from_stage not in (None, 'generation', 'simulation', 'features', 'ml'):
             raise ValueError(f'Unknown pipeline stage: {from_stage}')
-        if from_stage in ('simulation', 'features', 'ml'):
-            self._load_generation()
+        if from_stage == 'simulation':
+            self._load_generation_and_simulations(
+                complete=self._check_stage_done('simulation'))
         if from_stage in ('features', 'ml'):
             if not self._check_stage_done('simulation'):
                 raise ValueError('Resume requires completed saved simulations')
-            self._load_simulations(complete=True)
+            self._load_generation_and_simulations(complete=True)
         if from_stage == 'ml':
             self._require_features()
         start = False if from_stage else True
