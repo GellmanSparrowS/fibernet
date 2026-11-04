@@ -7,4 +7,4 @@ scikit-learn==1.7.2
 fast-simplification==0.1.13
 scikit-image==0.25.2
 manifold3d==3.5.1
-Pillow==12.2.0
+Pillow==12.3.0
