@@ -89,12 +89,12 @@ if _OVITO_AVAILABLE:
 from .lammps_backend import (
     HarmonicBond, RunSpec, PreparedRun, RuntimeSpec, ResourceLimits,
     LAMMPSTask, TaskState, LAMMPSRunResult, LAMMPSContractError,
-    prepare_harmonic_beads, parse_outputs,
+    prepare_harmonic_beads, parse_outputs, parse_output_files,
 )
 __all__.extend([
     'HarmonicBond', 'RunSpec', 'PreparedRun', 'RuntimeSpec', 'ResourceLimits',
     'LAMMPSTask', 'TaskState', 'LAMMPSRunResult', 'LAMMPSContractError',
-    'prepare_harmonic_beads', 'parse_outputs',
+    'prepare_harmonic_beads', 'parse_outputs', 'parse_output_files',
 ])
 
 # Deterministic conservative coarse-bead input records; no native imports.

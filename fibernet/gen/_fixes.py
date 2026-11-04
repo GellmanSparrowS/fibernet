@@ -25,7 +25,8 @@ def _edges_to_network_safe(nodes, edges, radius=0.1, material=None, dimension=2)
         length = np.linalg.norm(p2 - p1)
         if length < 1e-10:
             continue
-        fiber = Fiber(centerline=np.array([p1, p2]), radius=radius, material=material)
+        fiber = Fiber(centerline=np.array([p1, p2]), radius=radius,
+                      material=Material() if material is None else material)
         fibers.append(fiber)
         valid_edges.append((u, v))
 

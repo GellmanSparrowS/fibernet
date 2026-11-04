@@ -15,6 +15,7 @@ For current simulations, prepare a StructureGraph and use ``fibernet.simulate``.
 """
 
 import json as _json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import numpy as np
 from typing import Optional, Dict, List, Union, Tuple, Callable, Any, Literal, TYPE_CHECKING, overload
 from pathlib import Path
@@ -804,7 +805,7 @@ def load(filename: str, format: str = None) -> Union[FiberNetwork, _StructureGra
 
     if format == 'json':
         with open(filename) as stream:
-            data = _json.load(stream)
+            data = _json.load(stream, object_pairs_hook=_unique_json_object_pairs)
         if not isinstance(data, dict):
             raise ValueError("native JSON must be a StructureGraph or FiberNetwork object")
         graph_fields = {'nodes', 'edges'} & data.keys()

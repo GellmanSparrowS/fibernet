@@ -1,11 +1,9 @@
 """
 Disordered fiber network generators.
 
-Generates random/disordered fiber networks with proper geometric
-intersection detection for crosslink creation.
-
-Key fix: 3D random networks now use segment intersection detection
-to create crosslinks at actual crossing points.
+Generates random/disordered fiber networks with geometric crosslink candidates.
+In 3D, radius-based segment proximity is a modeling rule, not proof of
+physical contact or bonding, and its midpoint-cell search is not exhaustive.
 
 Available generators:
 - random_2d: Random straight fibers in 2D
@@ -143,10 +141,14 @@ def _segment_min_distance_3d(p1, p2, p3, p4):
 
 
 def _detect_intersections_3d(fibers, threshold_factor=2.0):
-    """Detect intersections between 3D fibers based on segment proximity.
-    
-    Uses spatial hashing to reduce O(n^2) to O(n*k) complexity.
-    Returns list of (fiber_i, fiber_j, param_i, param_j, position).
+    """Detect segment proximity using the existing radius-based rule.
+
+    Preserve same-cell results, then search same and adjacent midpoint cells
+    for previously unlinked pairs, adding at most one closest candidate per
+    pair. Long segments or large thresholds can still produce contacts beyond
+    that neighborhood. Proximity is a modeling rule, not proof of physical
+    contact or bonding. Dense cells can have quadratic candidate counts.
+    Returns (fiber_i, fiber_j, param_i, param_j, midpoint) records.
     """
     from collections import defaultdict
     
@@ -224,6 +226,54 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
                     pair_key = (min(i1, i2), max(i1, i2))
                     checked_pairs.add(pair_key)
     
+    # Midpoints in neighboring cells may be close even though the existing
+    # same-cell pass never compared them. Revisit same-cell candidates too:
+    # the legacy pair-level cache can suppress a later contact in another cell.
+    from itertools import product
+
+    linked = {(min(i, j), max(i, j)) for i, j, _, _, _ in crosslinks}
+    bounds = {}
+    for members in grid.values():
+        for i, si in members:
+            p, q = fibers[i].centerline[si:si + 2]
+            bounds[(i, si)] = (np.minimum(p, q), np.maximum(p, q))
+    best = {}
+    for cell in sorted(grid):
+        current = grid[cell]
+        for offset in product((-1, 0, 1), repeat=3):
+            neighbor = tuple(cell[d] + offset[d] for d in range(3))
+            if neighbor < cell or neighbor not in grid:
+                continue
+            others = grid[neighbor]
+            for index, (i, si) in enumerate(current):
+                start = index + 1 if neighbor == cell else 0
+                for other_index in range(start, len(others)):
+                    j, sj = others[other_index]
+                    if i == j:
+                        continue
+                    pair = (min(i, j), max(i, j))
+                    if pair in linked or (pair in best and best[pair][0] == 0):
+                        continue
+                    fi, fj = fibers[i], fibers[j]
+                    threshold = (fi.radius + fj.radius) * threshold_factor
+                    if not threshold > 0:
+                        continue
+                    low_i, high_i = bounds[(i, si)]
+                    low_j, high_j = bounds[(j, sj)]
+                    if any(low_i[d] > high_j[d] + threshold or
+                           low_j[d] > high_i[d] + threshold for d in range(3)):
+                        continue
+                    p, q = fi.centerline[si:si + 2]
+                    a, b = fj.centerline[sj:sj + 2]
+                    distance, t, u = _segment_min_distance_3d(p, q, a, b)
+                    if distance < threshold and (pair not in best or distance < best[pair][0]):
+                        point = ((p + t * (q - p)) + (a + u * (b - a))) / 2
+                        pi = (si + t) / (fi.num_points - 1)
+                        pj = (sj + u) / (fj.num_points - 1)
+                        best[pair] = ((distance, pi, pj, point) if i < j
+                                      else (distance, pj, pi, point))
+    for (i, j), (_, pi, pj, point) in sorted(best.items()):
+        crosslinks.append((i, j, pi, pj, point))
     return crosslinks
 
 
@@ -358,8 +408,13 @@ def random_straight_3d(
 ) -> FiberNetwork:
     """Generate random straight fibers in 3D with geometric intersection detection.
     
-    Uses minimum segment distance to detect crossing points and create
-    crosslinks where fibers pass near each other.
+    Uses segment distance to find nearby fibers and places each detected
+    link at the midpoint of the two closest points on the candidate segments.
+    This radius-based proximity rule is not proof of physical contact or
+    bonding. Candidate search covers same and adjacent midpoint-grid cells;
+    long segments or large thresholds may have contacts outside that range.
+    ``ensure_connected`` may add separate bridging links; additional detected
+    links can change which bridges are subsequently added.
     
     Parameters
     ----------
@@ -443,7 +498,15 @@ def random_walk_fibers(
 ) -> FiberNetwork:
     """Generate random walk fibers with intersection detection.
     
-    Each fiber is a random walk in 2D or 3D space.
+    Each fiber is a random walk in a cubic 3D box. Step endpoints are
+    reflected into the box, including when a step crosses multiple walls.
+    The centerline stores the start and one endpoint per step, not intermediate
+    wall-contact points; its chords therefore do not represent the full
+    reflected path length or every wall contact.
+    Crosslinks use radius-based segment proximity in the same or adjacent
+    midpoint-grid cells, not a proof of physical contact. Long segments or
+    large thresholds may have contacts outside that neighborhood. Additional
+    detected links can change subsequent ``ensure_connected`` bridging.
     """
     if kwargs:
         raise TypeError("random_walk_fibers does not support keyword options: "
@@ -477,12 +540,16 @@ def random_walk_fibers(
             direction /= np.linalg.norm(direction) + 1e-12
             pos = pos + direction * step_size
             
-            # Reflect at boundaries
+            # Preserve the existing one-wall reflection exactly, then fold any
+            # remaining overshoot for steps that cross more than one wall.
             for d in range(3):
                 if pos[d] < 0:
                     pos[d] = -pos[d]
                 elif pos[d] > box_size:
                     pos[d] = 2 * box_size - pos[d]
+                if box_size > 0 and np.isfinite(pos[d]) and not 0 <= pos[d] <= box_size:
+                    folded = pos[d] % (2 * box_size)
+                    pos[d] = folded if folded <= box_size else 2 * box_size - folded
             
             points.append(pos.copy())
         
@@ -602,7 +669,14 @@ def oriented_random_3d(
     ensure_connected: bool = True,
     **kwargs,
 ) -> FiberNetwork:
-    """Generate oriented random fibers in 3D with intersection detection."""
+    """Generate oriented random fibers in 3D with proximity-based crosslinks.
+
+    Segment candidates use same or adjacent midpoint-grid cells; long
+    segments or large thresholds may have contacts outside that neighborhood.
+    Proximity is not proof of physical contact or bonding. When enabled,
+    ``ensure_connected`` may add separate bridging links; additional detected
+    links can change which bridges are subsequently added.
+    """
     mat = material or Material(name="oriented_3d")
     rng = np.random.RandomState(seed)
     
@@ -892,9 +966,13 @@ def random_curved_fibers_3d(
     threshold_factor: float = 2.0,
     **kwargs,
 ) -> FiberNetwork:
-    """Generate random curved fibers in 3D with intersection detection.
+    """Generate random curved fibers in 3D with proximity-based crosslinks.
     
-    Each fiber is a random walk with controlled curvature.
+    Each fiber is a random walk with controlled curvature. Segment candidates
+    use same or adjacent midpoint-grid cells, so long segments or large
+    thresholds may have contacts outside that neighborhood. Proximity is not
+    proof of physical contact; additional detected links can change subsequent
+    component bridging.
     """
     mat = material or Material(name="curved_3d")
     rng = np.random.RandomState(seed)
