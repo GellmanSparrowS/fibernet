@@ -1,3 +1,12 @@
+## [Unreleased] - offline LAMMPS saved-run reader
+
+- Add `read_saved_lammps_run` to reconstruct existing saved preparation files
+  and parse captured output without runtime admission or engine execution.
+- Require a caller-supplied manifest digest, exact current-compiler regeneration,
+  bounded POSIX regular-file reads and explicit nonauthentication semantics.
+  Returned SI output is protocol-checked, not certified as original engine data
+  or physically valid; compiler drift is rejected without automatic migration.
+
 ## [Unreleased] - gyroid factory parameters
 
 - Forward `lattice_3d(topology="gyroid")` parameters `grid_size`, `radius`, and
