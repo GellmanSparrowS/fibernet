@@ -1,3 +1,16 @@
+## [Unreleased] - gyroid factory parameters
+
+- Forward `lattice_3d(topology="gyroid")` parameters `grid_size`, `radius`, and
+  `material` to the existing backend instead of silently discarding them.
+  Calls without these options now use the documented factory defaults
+  `(3, 3, 3)` and `0.1`, rather than the backend defaults `(2, 2, 2)` and `0.15`.
+  To retain the previous default geometry and radius, pass `grid_size=(2, 2, 2)`
+  and `radius=0.15` explicitly. Direct `gyroid_lattice_3d` defaults are unchanged.
+- This routes parameters to the existing TPMS-inspired fiber-network generator;
+  it does not produce a solid or shell gyroid or qualify mechanical behavior.
+  The existing backend does not use `threshold`, and the factory's `seed` and
+  `perturbation` do not affect this route. Those behaviors are unchanged.
+
 ## [Unreleased] - checked graph prediction
 
 - Add `predict_gnn` for existing CPU scalar FiberGNN models and GraphBatch v1,

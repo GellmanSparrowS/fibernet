@@ -108,7 +108,7 @@ def test_plate_unknown_backend_option_still_rejects(create_lattice, capture_plat
     assert calls == []
 
 
-def test_gyroid_dispatch_keeps_its_existing_keyword_contract(create_lattice, monkeypatch):
+def test_gyroid_dispatch_forwards_public_defaults_and_backend_options(create_lattice, monkeypatch):
     result = object()
     calls = []
 
@@ -120,7 +120,8 @@ def test_gyroid_dispatch_keeps_its_existing_keyword_contract(create_lattice, mon
     monkeypatch.setattr(metamaterials, "gyroid_lattice_3d", capture)
     assert create_lattice(topology="gyroid", cell_size=2.5,
                           resolution=6, threshold=0.2) is result
-    assert calls == [{"cell_size": 2.5, "resolution": 6, "threshold": 0.2}]
+    assert calls == [{"cell_size": 2.5, "grid_size": (3, 3, 3), "radius": 0.1,
+                      "material": None, "resolution": 6, "threshold": 0.2}]
 
 
 def test_public_factory_signature_is_unchanged():
