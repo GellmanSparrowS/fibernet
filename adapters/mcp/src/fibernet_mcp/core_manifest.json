@@ -224,6 +224,7 @@
   "sim/isolated_taichi.py": "82697636bac9a7386a8019ffcbea84e9f9683f5e0b04b94cff88a4b6216eb28c",
   "sim/joule_heating.py": "a0078a18011dac50cf65d0a8509f48f0a4e42be35dc116d755429b2b4d5402ae",
   "sim/l3.py": "ed77d9fe7e8be97ef77e657d90f009e1f10850aa4665019877d8bc15996857b1",
+  "sim/l3_result.py": "ba90c63ee5c2e18e625d7c6fcf705df140b715b6585a4cc4b2c823925a5cdc2f",
   "sim/linear_transport.py": "8fe7103ebc90a7ed5a443dfb25e0cf9881cbf9c67da9f6ee47c2e82a150ba480",
   "sim/nodal_controls.py": "f47a2ad19f57a4f6aaf647d8740f7e9589c69b609faec44a6c0f02ce4e9e2e3b",
   "sim/reduced_beam.py": "b4d4a57affde9f453ca59538ac13da2d43fd5e66251b6cd0bd0a69646cf081f9",
