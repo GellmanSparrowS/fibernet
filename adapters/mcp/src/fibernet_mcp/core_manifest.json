@@ -92,6 +92,7 @@
   "integrations/_lammps_forecast.py": "acdeffa8f36fef157cc3c8def9f69ac6625bbabcb3d7dd54ce56bee9078250e2",
   "integrations/_lammps_worker.py": "5a47ffa60a2c048ba77abc1b2c2b6293ae2ac213ecc4d52d6bd2e820bb059d5f",
   "integrations/lammps_backend.py": "53c92f407b98e7787ae4298d3d492feffcb5ce3a0248a7edb17ef85a84515324",
+  "integrations/lammps_geometry.py": "6e3921626c7b8ff72d2c250fa537aca8a80a9a0cae874a52b355d5ad38dcaba6",
   "integrations/lammps_integration.py": "82d65310c8a296c687a0e20e00b81010c57676384e922c81341f47a6def305e0",
   "integrations/lammps_planning.py": "aaf5e43f135bca17666ee3db7745e76734ea7f61b43e1c4fa06596176542fbd5",
   "integrations/mdanalysis_integration.py": "e7ad8cce7032d405bb31e1f557d1bd80446aee417df2bb5322cd90fc3bcb7524",
