@@ -35,7 +35,11 @@ def parametric_sweep(
     generator_func : callable
         Function that generates a FiberNetwork given parameters.
     analysis_func : callable
-        Function that analyzes a network and returns metrics dict.
+        Function that analyzes a network and returns a metrics dict. Every
+        successful case must return the same metric keys; mismatches raise
+        ValueError rather than returning misaligned parameter and metric arrays.
+        Generation, analysis and metric-iteration errors retain the legacy
+        behavior of skipping that case.
     base_params : dict, optional
         Base parameters to use for all combinations.
     show_progress : bool, optional
@@ -75,6 +79,7 @@ def parametric_sweep(
     # Initialize results
     results = {name: [] for name in param_names}
     metric_results = {}
+    expected_keys = None
     
     # Run combinations
     iterator = tqdm(combinations) if show_progress else combinations
@@ -84,27 +89,30 @@ def parametric_sweep(
         for name, value in zip(param_names, combo):
             params[name] = value
         
-        # Generate network
+        # Stage a complete metric record before changing any result column.
         try:
             net = generator_func(**params)
-            
-            # Analyze
-            metrics = analysis_func(net)
-            
-            # Store results
-            for name, value in zip(param_names, combo):
-                results[name].append(value)
-            
-            for metric_name, metric_value in metrics.items():
-                if metric_name not in metric_results:
-                    metric_results[metric_name] = []
-                metric_results[metric_name].append(metric_value)
-        
+            metrics = dict(analysis_func(net).items())
         except Exception as e:
             if show_progress:
-                tqdm.write(f"Warning: Failed for params {params}: {e}")
+                message = f"Warning: Failed for params {params}: {e}"
+                if HAS_TQDM:
+                    tqdm.write(message)
+                else:
+                    print(message)
             continue
-    
+
+        keys = set(metrics)
+        if expected_keys is None:
+            expected_keys = keys
+            metric_results = {name: [] for name in metrics}
+        elif keys != expected_keys:
+            raise ValueError('successful analyses must return the same metric keys')
+        for name, value in zip(param_names, combo):
+            results[name].append(value)
+        for name, value in metrics.items():
+            metric_results[name].append(value)
+
     # Convert to arrays
     param_arrays = {name: np.array(vals) for name, vals in results.items()}
     metric_arrays = {name: np.array(vals) for name, vals in metric_results.items()}
