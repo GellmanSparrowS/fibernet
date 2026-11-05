@@ -5,10 +5,15 @@ import importlib.abc
 import json
 import os
 from pathlib import Path
+import platform
 import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+# Python 3.9-3.11 may query the Windows version through a stdlib subprocess.
+# Cache that platform metadata before auditing dependency and projection work.
+# No NumPy, SciPy, FiberNet or provider import precedes the audit boundary.
+platform.uname()
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT))
 PROHIBITED=[]
@@ -24,6 +29,10 @@ class BlockTaichi(importlib.abc.MetaPathFinder):
             raise ModuleNotFoundError("No module named 'taichi' (synthetic-test guard)",name='taichi')
 sys.meta_path.insert(0,BlockTaichi())
 import numpy as np
+# Older NumPy testing imports probe optional CPU features with lscpu. Keep the
+# audit active and use NumPy's missing-command fallback during that import only.
+with patch('subprocess.run',side_effect=FileNotFoundError('CPU discovery disabled for isolated synthetic tests')):
+    import numpy.testing
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.material import Material
 from fibernet.sim.l3 import bind_l3
