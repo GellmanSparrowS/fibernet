@@ -2,6 +2,8 @@
 VTK file export for visualization in Paraview/VisIt.
 
 Exports fiber networks as VTK polydata with fiber segments as lines.
+Coordinates use round-trip float64 text precision; legacy point/cell attribute
+formatting is unchanged. This does not encode units or welded crosslinks.
 """
 
 import numpy as np
@@ -90,9 +92,9 @@ def to_vtk(
         f.write("DATASET POLYDATA\n")
         
         # Points
-        f.write(f"POINTS {len(points)} float\n")
+        f.write(f"POINTS {len(points)} double\n")
         for pt in points:
-            f.write(f"{pt[0]:.6f} {pt[1]:.6f} {pt[2]:.6f}\n")
+            f.write(f"{pt[0]:.17g} {pt[1]:.17g} {pt[2]:.17g}\n")
         
         # Lines (cells)
         total_ints = sum(2 + 1 for _ in cells)  # n_pts + point_ids
@@ -168,7 +170,7 @@ def to_vtk_xml(
         f.write('      <Points>\n')
         f.write('        <DataArray type="Float64" NumberOfComponents="3" format="ascii">\n')
         for pt in points:
-            f.write(f'          {pt[0]:.6f} {pt[1]:.6f} {pt[2]:.6f}\n')
+            f.write(f'          {pt[0]:.17g} {pt[1]:.17g} {pt[2]:.17g}\n')
         f.write('        </DataArray>\n')
         f.write('      </Points>\n')
         

@@ -2,6 +2,9 @@
 XYZ file format I/O.
 
 Simple atomic coordinate format for visualization and exchange.
+
+Exported (possibly resampled) coordinates use round-trip float64 text precision.
+XYZ does not preserve fiber topology, units or unsampled source points.
 """
 
 import numpy as np
@@ -53,7 +56,7 @@ def to_xyz(
         f.write(f"{len(all_points)}\n")
         f.write(f"{comment}\n")
         for elem, pt in zip(all_elements, all_points):
-            f.write(f"{elem:2s} {pt[0]:12.6f} {pt[1]:12.6f} {pt[2]:12.6f}\n")
+            f.write(f"{elem:2s} {pt[0]:.17g} {pt[1]:.17g} {pt[2]:.17g}\n")
     
     return filename
 
