@@ -33,6 +33,11 @@ def prepare(g, binding, **changes):
     kwargs.update(changes)
     return l3.prepare_l3(g, binding, **kwargs)
 
+def _temporary_path(stack):
+    # macOS temp roots may use system symlinks. Only normalize our fixture;
+    # provider inputs and the production rejection of symlinks stay unchanged.
+    return Path(stack.enter_context(tempfile.TemporaryDirectory())).resolve()
+
 def _synthetic_seal_fixture(tmp_path, stack):
     root = tmp_path / 'provider'
     root.mkdir()
@@ -53,7 +58,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_multiedges_stable_sorted_ids_units_and_distinct_span_types(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             b = bind(g)
@@ -71,7 +76,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_reordering_and_detachment(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             source = data()
@@ -90,7 +95,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: g.nodes[7].metadata.update(note='changed')
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -101,7 +106,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25].material, 'name', 'changed')
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -112,7 +117,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.nodes[7], 'node_id', 8)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -123,7 +128,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25], 'edge_id', 26)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -134,7 +139,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25], 'segments', 2)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -145,7 +150,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_06(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25], 'internal_points', np.array([[0.0, 1.0, 0.0]]))
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -156,7 +161,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_07(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25].material, 'stiffness_tensor', np.eye(6))
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -167,7 +172,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_08(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: setattr(g.edges[25].material, 'shear_modulus', 1.0)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -178,7 +183,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_mutation_invalidates_binding__case_09(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             mutation = lambda g: g.nodes[7].position.__setitem__(2, 1e-20)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -189,7 +194,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = True
             d = data()
             d[25]['failure_strain'] = value
@@ -198,7 +203,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = np.float64(0.01)
             d = data()
             d[25]['failure_strain'] = value
@@ -207,7 +212,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = float('nan')
             d = data()
             d[25]['failure_strain'] = value
@@ -216,7 +221,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = float('inf')
             d = data()
             d[25]['failure_strain'] = value
@@ -225,7 +230,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = 0.0
             d = data()
             d[25]['failure_strain'] = value
@@ -234,7 +239,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_thresholds__case_06(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = -1.0
             d = data()
             d[25]['failure_strain'] = value
@@ -243,7 +248,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_coordinate_containers__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = np.array([0, 0, 0], dtype=object)
             g = graph()
             g.nodes[7].position = value
@@ -252,7 +257,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_coordinate_containers__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = np.array([False, False, False])
             g = graph()
             g.nodes[7].position = value
@@ -261,7 +266,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_coordinate_containers__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = np.ma.array([0.0, 0.0, 0.0], mask=[False, True, False])
             g = graph()
             g.nodes[7].position = value
@@ -270,7 +275,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_coordinate_containers__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             value = np.array([float('nan'), 0, 0])
             g = graph()
             g.nodes[7].position = value
@@ -279,7 +284,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_unit_model_span_and_grip_rejections(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             g = graph()
             for kwargs in (dict(coordinate_unit='m'), dict(radius_unit='m'), dict(fixed_node_ids=[True]), dict(loaded_node_ids=[7]), dict(model=dict(l3._MODEL, joint='hinged'))):
                 with self.assertRaises(l3.L3InputError):
@@ -291,7 +296,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_lineage_preserved_and_not_reinterpreted(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             d = data()
             d[25]['native_lineage'] = {'strength_span_id': 1, 'fiber_id': 123, 'parent_segment_id': 456, 'source_planar_line_indices': [8, 9], 'initial_kerf_inactive': False}
             b = bind(graph(), edge_data=d)
@@ -302,7 +307,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'memory_budget_mb': 65}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -311,7 +316,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'shear_correction': 0}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -320,7 +325,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'timeout_s': 11}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -329,7 +334,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'frame_cap': True}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -338,7 +343,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'output': 'elsewhere'}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -347,7 +352,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_06(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'unknown': 1}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -356,7 +361,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_07(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'young_Pa': 3500000000.0}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -365,7 +370,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_settings__case_08(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             change = {'strength_field_mean': 0.01}
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -374,7 +379,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_missing_budget_never_falls_back(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             s = settings()
@@ -384,7 +389,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_notch_and_post_notch_strength_statistics(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             d = data()
@@ -400,7 +405,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_native_and_stronger_digest_are_distinct(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             b = bind(g)
@@ -416,7 +421,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_provider_absent_and_symlink_fail_closed(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             missing = l3.L3ProviderSpec(str(tmp_path / 'absent'), str(tmp_path / 'python'))
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(missing)
@@ -429,13 +434,13 @@ class L3ContractTests(unittest.TestCase):
 
     def test_no_execution_api(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             assert not hasattr(l3, 'simulate_l3')
             assert not hasattr(l3, 'run_case')
 
     def test_weighting_is_reference_length_not_edge_count(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             g._nodes[31] = type(g.nodes[7])(position=np.array([0.0, 6.0, 0.0]), node_id=31)
@@ -449,7 +454,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_alias_does_not_hide_invalid_canonical_type__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             canonical = True
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -458,7 +463,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_alias_does_not_hide_invalid_canonical_type__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             canonical = 64.0
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -467,7 +472,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_alias_does_not_hide_invalid_canonical_type__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             canonical = np.int64(64)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -476,7 +481,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_radius_si_underflow_and_length_overflow_rejected(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             g = graph()
             g.edges[25].radius = 5e-324
             g.edges[91].radius = 5e-324
@@ -491,7 +496,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_stale_or_forged_binding_rejected(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             b = bind(g)
@@ -505,7 +510,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_provider_seal_invalid_rejected_without_import__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             seal_text = '{}'
             root = tmp_path / 'provider'
             root.mkdir()
@@ -517,7 +522,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_provider_seal_invalid_rejected_without_import__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             seal_text = '{"python":"3.14.3","python":"3.14.3"}'
             root = tmp_path / 'provider'
             root.mkdir()
@@ -529,7 +534,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_provider_seal_invalid_rejected_without_import__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             seal_text = '{"python":NaN}'
             root = tmp_path / 'provider'
             root.mkdir()
@@ -541,7 +546,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_provider_source_hash_mismatch_without_import(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             root = tmp_path / 'provider'
             root.mkdir()
             interpreter = tmp_path / 'python'
@@ -553,7 +558,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_geometric_face_flags_are_preserved_not_interpreted_as_dofs(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             g = graph()
             g.nodes[7].boundary = (True, False, True, False, False, False)
             g.nodes[19].boundary = (True, False, False, True, False, False)
@@ -567,7 +572,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_native_real_scalars_are_losslessly_normalized__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             scalar = np.float32
             g = graph()
             for edge in g.edges.values():
@@ -583,7 +588,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_native_real_scalars_are_losslessly_normalized__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             scalar = np.float64
             g = graph()
             for edge in g.edges.values():
@@ -599,7 +604,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_native_real_scalars_are_losslessly_normalized__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             scalar = np.longdouble
             g = graph()
             for edge in g.edges.values():
@@ -615,7 +620,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_native_real_scalars_are_losslessly_normalized__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             scalar = np.int32
             g = graph()
             for edge in g.edges.values():
@@ -631,7 +636,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_graph_native_real_scalars_are_losslessly_normalized__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             scalar = np.int64
             g = graph()
             for edge in g.edges.values():
@@ -647,7 +652,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.bool_(True)
             g = graph()
             g.edges[25].radius = bad
@@ -656,7 +661,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.complex128(1)
             g = graph()
             g.edges[25].radius = bad
@@ -665,7 +670,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.float64(float('nan'))
             g = graph()
             g.edges[25].radius = bad
@@ -674,7 +679,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.float32(float('inf'))
             g = graph()
             g.edges[25].radius = bad
@@ -683,7 +688,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.timedelta64(1, 's')
             g = graph()
             g.edges[25].radius = bad
@@ -692,7 +697,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_06(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.datetime64('2026-01-01')
             g = graph()
             g.edges[25].radius = bad
@@ -701,7 +706,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_bad_graph_native_scalars_rejected__case_07(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             bad = np.ma.masked
             g = graph()
             g.edges[25].radius = bad
@@ -710,7 +715,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_longdouble_precision_loss_rejected(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             if np.finfo(np.longdouble).nmant <= np.finfo(np.float64).nmant:
                 self.skipTest('This platform has no wider longdouble significand')
             g = graph()
@@ -720,7 +725,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_graph_stores_reject_deliberately__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             target = 'node'
             g = graph()
             if target == 'node':
@@ -736,7 +741,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_graph_stores_reject_deliberately__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             target = 'edge'
             g = graph()
             if target == 'node':
@@ -752,7 +757,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_graph_stores_reject_deliberately__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             target = 'nodes'
             g = graph()
             if target == 'node':
@@ -768,7 +773,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_graph_stores_reject_deliberately__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             target = 'edges'
             g = graph()
             if target == 'node':
@@ -784,7 +789,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_nonuniform_graph_properties_reject__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             field, value = ('youngs_modulus', 4600000000.0)
             g = graph()
             if field == 'radius':
@@ -798,7 +803,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_nonuniform_graph_properties_reject__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             field, value = ('poissons_ratio', 0.25)
             g = graph()
             if field == 'radius':
@@ -812,7 +817,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_nonuniform_graph_properties_reject__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             field, value = ('radius', 1.0)
             g = graph()
             if field == 'radius':
@@ -826,7 +831,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_unknown_keywords_and_resource_counts(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             with self.assertRaises(TypeError):
@@ -839,7 +844,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_binding_bytes_have_input_error__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             raw = b'\xff'
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
@@ -848,16 +853,34 @@ class L3ContractTests(unittest.TestCase):
 
     def test_malformed_binding_bytes_have_input_error__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             raw = b'[' * 2000 + b']' * 2000
             stack.enter_context(mock.patch.object(l3, '_provider', lambda spec: {'source_verified': False, 'runtime_verified': False, 'execution_qualified': False, 'test_double': True}))
             g = graph()
             with self.assertRaises(l3.L3InputError):
                 prepare(g, l3.L3Binding(raw, hashlib.sha256(raw).hexdigest()))
 
+    def test_provider_rejects_symlinked_parent_after_fixture_normalization(self):
+        with ExitStack() as stack:
+            tmp_path = _temporary_path(stack)
+            real = tmp_path / 'real'
+            real.mkdir()
+            root, spec = _synthetic_seal_fixture(real, stack)
+            assert l3._provider(spec)['source_verified'] is True
+            alias = tmp_path / 'alias'
+            try:
+                alias.symlink_to(real, target_is_directory=True)
+            except (OSError, NotImplementedError) as exc:
+                self.skipTest('Directory symlinks unavailable: ' + str(exc))
+            with self.assertRaisesRegex(l3.L3ProviderIdentityError, 'provider directory may not traverse symlinks'):
+                l3._provider(l3.L3ProviderSpec(str(alias / 'provider'), spec.interpreter))
+            with self.assertRaisesRegex(l3.L3ProviderIdentityError, 'interpreter may not traverse symlinks'):
+                l3._provider(l3.L3ProviderSpec(str(root), str(alias / 'python')))
+            assert l3._provider(spec)['source_verified'] is True
+
     def test_all_six_source_hashes_are_checked(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             synthetic_seal = _synthetic_seal_fixture(tmp_path, stack)
             root, spec = synthetic_seal
             record = l3._provider(spec)
@@ -873,7 +896,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_later_source_filesystem_failures__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             failure = 'missing'
             synthetic_seal = _synthetic_seal_fixture(tmp_path, stack)
             root, spec = synthetic_seal
@@ -901,7 +924,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_later_source_filesystem_failures__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             failure = 'symlink'
             synthetic_seal = _synthetic_seal_fixture(tmp_path, stack)
             root, spec = synthetic_seal
@@ -929,7 +952,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_later_source_filesystem_failures__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             failure = 'unreadable'
             synthetic_seal = _synthetic_seal_fixture(tmp_path, stack)
             root, spec = synthetic_seal
@@ -957,7 +980,7 @@ class L3ContractTests(unittest.TestCase):
 
     def test_later_source_filesystem_failures__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             failure = 'disappeared'
             synthetic_seal = _synthetic_seal_fixture(tmp_path, stack)
             root, spec = synthetic_seal
@@ -985,35 +1008,35 @@ class L3ContractTests(unittest.TestCase):
 
     def test_invalid_provider_path_types_have_identity_error__case_01(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             path = None
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(l3.L3ProviderSpec(path, '/never/executed'))
 
     def test_invalid_provider_path_types_have_identity_error__case_02(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             path = 2
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(l3.L3ProviderSpec(path, '/never/executed'))
 
     def test_invalid_provider_path_types_have_identity_error__case_03(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             path = ''
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(l3.L3ProviderSpec(path, '/never/executed'))
 
     def test_invalid_provider_path_types_have_identity_error__case_04(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             path = 'relative'
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(l3.L3ProviderSpec(path, '/never/executed'))
 
     def test_invalid_provider_path_types_have_identity_error__case_05(self):
         with ExitStack() as stack:
-            tmp_path = Path(stack.enter_context(tempfile.TemporaryDirectory()))
+            tmp_path = _temporary_path(stack)
             path = '\x00'
             with self.assertRaises(l3.L3ProviderIdentityError):
                 l3._provider(l3.L3ProviderSpec(path, '/never/executed'))
