@@ -33,6 +33,25 @@ when |λ−1|>0.3. The warnings describe the actual branch; they do not change i
 numerical results. The legacy 0.3 switch is not a validated small-deformation
 limit. A call without a warning still needs an appropriate model and loading.
 
+## Uniform isotropic material admission
+
+`BeamFrameFEM(E=..., nu=...)` requires finite Python/NumPy real scalars, excluding
+booleans: `E > 0` and `-1 < nu < 0.5`. The derived shear modulus
+`E / (2 * (1 + nu))` must also remain finite and positive. Invalid values raise
+`ValueError` at construction, before graph conversion, stiffness assembly or
+solving, including through `simulate(..., backend="fem", mode="stretch")`.
+Negative Poisson ratios inside this range remain supported. This validates the
+uniform isotropic constitutive parameters; it does not certify model applicability
+or equilibrium. Explicit constructor parameters still take precedence over
+descriptive edge `Material` values. FEM history still uses its explicit
+`LinearViscoelasticMaterial` law rather than the constructor's static `E`.
+
+Finite admitted parameters can still overflow when combined with geometry.
+The 2-D and 3-D assemblers reject nonfinite beam lengths, local stiffness,
+transformed stiffness and summed sparse stiffness before solving. These are
+calculation failures, distinct from invalid material inputs; nonfinite entries
+are never silently treated as zero stiffness.
+
 ## FEM automatic grip fraction
 
 For FEM stretch, `pct` is a fraction of node rows per side, not a percentage

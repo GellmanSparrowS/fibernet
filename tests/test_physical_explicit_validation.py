@@ -75,7 +75,10 @@ class ValidationTests(unittest.TestCase):
         bad = [[], [0], [0,0], [-1,1], [0,8], [False,1], [0.,1.],
                [0,1,2,3,4,5,6], [[0,1]], np.array([[0,1]]),
                np.ma.array([0,1], mask=[False,False]), '01',
-               [np.uint64(2**64-1), 1]]
+               [np.uint64(2**64-1), 1],
+               [np.timedelta64(1, 'ns'), np.timedelta64(2, 'ns')],
+               np.array([1, 2], dtype='timedelta64[ns]'),
+               np.array([1, 2], dtype='timedelta64[D]')]
         for value in bad:
             for key in ('mlp','ridge'):
                 with self.subTest(value=str(value), key=key):
@@ -88,11 +91,12 @@ class ValidationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             physical.Regressor(key='mlp').train(self.X[:4], self.Y[:4], epochs=1,
                                                validation_indices=[0,1])
-        direct = surrogate.MLP(seed=13)
-        before = copy.deepcopy(direct.rng.bit_generator.state)
-        with self.assertRaises(ValueError):
-            direct.train(self.X,self.Y,epochs=1,validation_indices=[0,0])
-        self.assertEqual(direct.rng.bit_generator.state, before)
-        self.assertIsNone(direct.W1)
+        for value in bad:
+            direct = surrogate.MLP(seed=13)
+            before = copy.deepcopy(direct.rng.bit_generator.state)
+            with self.assertRaises(ValueError):
+                direct.train(self.X,self.Y,epochs=1,validation_indices=value)
+            self.assertEqual(direct.rng.bit_generator.state, before)
+            self.assertIsNone(direct.W1)
 
 if __name__ == '__main__': unittest.main()

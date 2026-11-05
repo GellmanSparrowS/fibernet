@@ -231,3 +231,121 @@ def export_r10_geometry(graph, binding, *, length_unit):
     if _digest(rebuilt.to_dict()) != b["graph_sha256"]:
         _error("retained beam annotations do not match graph binding")
     return source
+
+
+def read_r10_geometry_zip(archive, member, *, length_unit, max_bytes=4*1024*1024):
+    """Read one explicitly named geometry JSON member without extracting it.
+
+    ``archive`` is a path to a regular file. Member paths must be
+    relative, canonical POSIX paths ending in ``.json`` and at most 4096
+    characters long.
+    Duplicate selected names, duplicate JSON object keys, encrypted/non-regular members,
+    unsupported compression, and members exceeding the byte caps are rejected.
+    ``max_bytes`` bounds uncompressed content and may not exceed 8 MiB; the
+    selected member's compressed content is independently capped at 8 MiB.
+    Archive size is capped at 512 MiB and entry count at 10,000. Entry count
+    is checked after the standard library reads the ZIP directory.
+    The ZIP directory and JSON object graph are not included in a total-memory
+    or time guarantee. The archive must remain stable while reading.
+    JSON decimals are rounded to binary64, as in ordinary Python JSON loading;
+    nonfinite results and nonzero decimals rounded to zero are rejected.
+
+    Returns a detached structurally validated R10 geometry record. This does
+    not extract other members, assign beam properties, establish physical
+    validity, or execute the R10 solver. Explicit ``length_unit='mm'`` remains
+    required by the existing geometry contract.
+    """
+    import os
+    import stat
+    import zipfile
+    import zlib
+    from decimal import Decimal, InvalidOperation
+
+    cap = 8 * 1024 * 1024
+    if type(max_bytes) is not int or not 1 <= max_bytes <= cap:
+        _error('max_bytes must be an integer between 1 and 8388608')
+    if (type(member) is not str or not member or len(member) > 4096 or member.startswith('/') or
+            '\\' in member or ':' in member or not member.endswith('.json') or
+            not member.isprintable() or
+            any(part in ('', '.', '..') for part in member.split('/'))):
+        _error('member must be a canonical relative POSIX .json path')
+
+    def unique_object(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                _error('duplicate JSON object key')
+            result[key] = value
+        return result
+
+    def binary64_number(text):
+        try:
+            exact = Decimal(text)
+            value = float(exact)
+        except (InvalidOperation, ValueError, OverflowError) as exc:
+            raise ValueError('R10 geometry: invalid JSON decimal') from exc
+        if not math.isfinite(value) or (exact != 0 and value == 0):
+            _error('JSON decimal exceeds binary64 range')
+        return value
+
+    try:
+        flags = os.O_RDONLY | getattr(os, 'O_NONBLOCK', 0) | getattr(os, 'O_BINARY', 0)
+        archive_path = os.fspath(archive)
+        if ('\0' in archive_path if isinstance(archive_path, str) else b'\0' in archive_path):
+            _error('archive path contains NUL')
+        fd = os.open(archive_path, flags)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                _error('archive must be a regular file')
+            if info.st_size > 512 * 1024 * 1024:
+                _error('archive byte limit exceeded')
+            with os.fdopen(fd, 'rb', closefd=False) as source:
+                raw = _read_r10_zip_member(source, member, max_bytes, cap)
+        finally:
+            os.close(fd)
+        try:
+            payload = json.loads(raw.decode('utf-8'), object_pairs_hook=unique_object,
+                                 parse_float=binary64_number,
+                                 parse_constant=lambda value: _error('nonfinite JSON number'))
+        except ValueError as exc:
+            if str(exc).startswith('R10 geometry:'):
+                raise
+            raise ValueError('R10 geometry: invalid UTF-8 JSON') from exc
+    except (OSError, TypeError, zipfile.BadZipFile, EOFError, UnicodeDecodeError,
+            json.JSONDecodeError, zlib.error, RecursionError, RuntimeError,
+            NotImplementedError) as exc:
+        raise ValueError('R10 geometry: cannot read archive member as UTF-8 JSON') from exc
+    return validate_r10_geometry(payload, length_unit=length_unit)
+
+
+def _read_r10_zip_member(source, member, max_bytes, cap):
+    """Read only the selected member, bounded by both declared and actual bytes."""
+    import stat
+    import zipfile
+
+    with zipfile.ZipFile(source, 'r') as zf:
+        entries = zf.infolist()
+        if len(entries) > 10000:
+            _error('archive entry limit exceeded')
+        matches = [entry for entry in entries if entry.filename == member]
+        if len(matches) != 1:
+            _error('member must occur exactly once in the archive')
+        entry = matches[0]
+        if entry.orig_filename != member:
+            _error('member name was altered by ZIP decoding')
+        mode = entry.external_attr >> 16
+        kind = stat.S_IFMT(mode)
+        if entry.is_dir() or kind not in (0, stat.S_IFREG):
+            _error('member must be a regular file')
+        if entry.flag_bits & 1:
+            _error('encrypted members are unsupported')
+        if entry.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+            _error('unsupported member compression')
+        if entry.file_size > max_bytes or entry.compress_size > cap:
+            _error('member byte limit exceeded')
+        with zf.open(entry, 'r') as stream:
+            raw = stream.read(max_bytes + 1)
+        if len(raw) > max_bytes:
+            _error('member byte limit exceeded')
+        return raw

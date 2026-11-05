@@ -196,7 +196,7 @@ def _partition_validation_indices(n_rows, validation_indices):
     if isinstance(validation_indices, np.ndarray) and validation_indices.ndim != 1:
         raise ValueError('validation_indices must be one-dimensional')
     values = list(validation_indices)
-    if any(isinstance(i, (bool, np.bool_)) or not isinstance(i, (int, np.integer))
+    if any(isinstance(i, (bool, np.bool_, np.timedelta64)) or not isinstance(i, (int, np.integer))
            for i in values):
         raise ValueError('validation_indices must contain integers, not booleans')
     if any(i < 0 or i >= n_rows for i in values):
