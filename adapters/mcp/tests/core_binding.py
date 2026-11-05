@@ -87,6 +87,7 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     cases.append(('ml/edge_gine_io.py', None))
     cases.append(('ml/graph_training_contract.py', None))
     cases.append(('sim/saved_temperature.py', None))
+    cases.append(('sim/l3_result.py', None))
     cases.append(('sim/thermoelastic.py', None))
     cases.append(('sim/_thermoelastic.py', None))
     cases.append(('sim/_taichi_geometry.py', None))
