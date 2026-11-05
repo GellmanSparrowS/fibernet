@@ -38,6 +38,7 @@ import numpy as np
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.material import Material
 from fibernet.core._grid_contract import normalize_grid
+from fibernet.gen._input_contract import positive_real as _positive_real
 from fibernet.core.transforms import (
     translate, rotate, mirror_x as _mirror_x, mirror_y as _mirror_y,
     mirror as _mirror, scale as _scale, compose,
@@ -1957,6 +1958,10 @@ def pattern_2d(
         Extra kwargs for the unit factory (e.g., ``angle=20`` for reentrant).
         These override top-level factory arguments, including ``seed``. For
         Voronoi, an overriding ``seed=None`` also uses the default seed 42.
+        The effective ``box`` must contain two finite positive real dimensions.
+        It also sets tiling spacing, transform origins, boundary handling and
+        box metadata. Custom ``points`` retain the top-level ``box`` and do
+        not use ``unit_kwargs``.
 
     Returns
     -------
@@ -2004,6 +2009,18 @@ def pattern_2d(
             "seed": seed,
         }
         factory_kwargs.update(ukw)
+        box = factory_kwargs["box"]
+        try:
+            if (isinstance(box, (str, bytes))
+                    or not isinstance(box, (Sequence, np.ndarray))
+                    or len(box) != 2):
+                raise ValueError
+            for size in box:
+                _positive_real(size, "box dimension")
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "box must contain two finite positive real dimensions"
+            ) from exc
         if unit_name == "voronoi" and factory_kwargs["seed"] is None:
             factory_kwargs["seed"] = 42
         factory = _UNIT_FACTORIES[unit_name]

@@ -58,9 +58,21 @@ def to_xyz(
     return filename
 
 
-def from_xyz(filename: str) -> np.ndarray:
+def from_xyz(filename: str, *, strict: bool = False) -> np.ndarray:
     """Read points from XYZ file.
     
+    Parameters
+    ----------
+    filename : str
+        Input path.
+    strict : bool, optional
+        Validate the declared point count and each coordinate in the first
+        frame. The default retains the legacy permissive reader. Only the first
+        frame's coordinates are returned; extra columns and subsequent lines
+        are not validated. The entire file is read and decoded, so errors in
+        trailing text can still fail the read. Element labels, units and fiber
+        topology are not validated or returned.
+
     Returns
     -------
     np.ndarray
@@ -69,6 +81,30 @@ def from_xyz(filename: str) -> np.ndarray:
     points = []
     with open(filename, 'r') as f:
         lines = f.readlines()
+
+    if strict:
+        if len(lines) < 2:
+            raise ValueError("XYZ requires a count and a comment line")
+        try:
+            num_atoms = int(lines[0].strip())
+        except ValueError as exc:
+            raise ValueError("XYZ point count must be a nonnegative integer") from exc
+        if num_atoms < 0:
+            raise ValueError("XYZ point count must be a nonnegative integer")
+        if len(lines) - 2 < num_atoms:
+            raise ValueError(f"XYZ declares {num_atoms} points but has only {len(lines) - 2} coordinate lines")
+        for index, line in enumerate(lines[2:2 + num_atoms], start=3):
+            parts = line.split()
+            if len(parts) < 4:
+                raise ValueError(f"XYZ line {index} requires an element and three coordinates")
+            try:
+                point = [float(value) for value in parts[1:4]]
+            except ValueError as exc:
+                raise ValueError(f"XYZ line {index} has invalid coordinates") from exc
+            if not np.isfinite(point).all():
+                raise ValueError(f"XYZ line {index} requires finite coordinates")
+            points.append(point)
+        return np.asarray(points, dtype=float).reshape(-1, 3)
     
     if len(lines) < 3:
         return np.array([]).reshape(0, 3)

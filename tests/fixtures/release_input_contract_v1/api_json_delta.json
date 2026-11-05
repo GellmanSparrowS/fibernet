@@ -1,0 +1,17 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/api.py",
+  "accepted_stage": "JSON duplicate-key source regression 1913; source integration 1918",
+  "base_sha256": "ed4775cae2183e6d4f247042730e80efda438353e7bd753014047bfa9d0efd46",
+  "result_sha256": "56ffbe75b08c9d20fc708aa8f3e3fe2e4f1d41a9a1628507a3997a7aa58e5a6e",
+  "hunks": [
+    {
+      "before": "\"\"\"\n\nimport json as _json\nimport numpy as np\nfrom typing import Optional, Dict, List, Union, Tuple, Callable, Any, Literal, TYPE_CHECKING, overload\nfrom pathlib import Path\n",
+      "after": "\"\"\"\n\nimport json as _json\nfrom fibernet._json import unique_object_pairs as _unique_json_object_pairs\nimport numpy as np\nfrom typing import Optional, Dict, List, Union, Tuple, Callable, Any, Literal, TYPE_CHECKING, overload\nfrom pathlib import Path\n"
+    },
+    {
+      "before": "\n    if format == 'json':\n        with open(filename) as stream:\n            data = _json.load(stream)\n        if not isinstance(data, dict):\n            raise ValueError(\"native JSON must be a StructureGraph or FiberNetwork object\")\n        graph_fields = {'nodes', 'edges'} & data.keys()\n",
+      "after": "\n    if format == 'json':\n        with open(filename) as stream:\n            data = _json.load(stream, object_pairs_hook=_unique_json_object_pairs)\n        if not isinstance(data, dict):\n            raise ValueError(\"native JSON must be a StructureGraph or FiberNetwork object\")\n        graph_fields = {'nodes', 'edges'} & data.keys()\n"
+    }
+  ]
+}

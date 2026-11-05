@@ -49,11 +49,14 @@ import numpy as np
 
 try:
     import torch
+except ModuleNotFoundError as exc:
+    if exc.name != "torch":
+        raise
+    HAS_TORCH = False
+else:
     import torch.nn as nn
     import torch.nn.functional as F
     HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
 
 
 def _require_torch():

@@ -115,6 +115,7 @@ class Material:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Material":
         """Create Material from dictionary."""
+        data = dict(data)
         if "stiffness_tensor" in data and data["stiffness_tensor"] is not None:
             data["stiffness_tensor"] = np.array(data["stiffness_tensor"])
         return cls(**data)
@@ -279,6 +280,8 @@ def get_material(name: str) -> Material:
         If material name is not found.
     """
     key = name.lower().strip()
+    if key not in MATERIAL_DB:
+        key = next((stored for stored in MATERIAL_DB if stored.lower() == key), key)
     if key not in MATERIAL_DB:
         available = ", ".join(sorted(MATERIAL_DB.keys()))
         raise KeyError(f"Material '{name}' not found. Available: {available}")
