@@ -1,3 +1,12 @@
+## [Unreleased] - snapshot open-chain straightness
+
+- Include both boundary nodes when measuring the chord divided by full path
+  length of an open chain containing degree-2 nodes. Exclude closed walks and
+  retain the existing single-edge exclusion and 1e-12 caller-unit length cutoff.
+  Affected straightness values intentionally change; public signatures and
+  other feature calculations are unchanged. Pore unit normalization remains a
+  separate change.
+
 ## [Unreleased] - tutorial pipeline artifact recovery
 
 - Restore persisted native graphs instead of regenerating them when the tutorial
