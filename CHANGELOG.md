@@ -1,3 +1,13 @@
+## [Unreleased] - LAMMPS dual-reference displacement
+
+- Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`
+  to compare final LAMMPS positions with the loaded initial graph and an explicit
+  reference graph. Align by stable node IDs, verify initial units and graph digest,
+  and return detached metre-valued arrays. Reference correspondence and coordinate
+  frame remain caller responsibilities. This is geometry-only post-processing.
+- Reject silent zero displacement caused by FTZ/DAZ floating-point modes,
+  including when distinct normal coordinates have a subnormal difference.
+
 ## [Unreleased] - LAMMPS stable edge history
 
 - Add `EdgeLengthHistory` and `edge_length_history` in the explicit
