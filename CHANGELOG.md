@@ -1,3 +1,9 @@
+## [4.4.0] - 2026-11-06
+
+See [4.4.0 release notes and migration](docs/RELEASE_4_4_0.md) for the changes
+since 4.3.0. Historical Unreleased entries below are retained as development
+history and include changes already shipped in earlier releases.
+
 ## [Unreleased] - offline LAMMPS saved-run reader
 
 - Add `read_saved_lammps_run` to reconstruct existing saved preparation files
