@@ -263,7 +263,7 @@ class StructureGraph:
     tolerance : float
         Finite node-merging tolerance. Nodes closer than this are merged.
     box_size : array-like or None
-        Unit cell dimensions [Lx, Ly, Lz] for periodic structures.
+        Unit cell dimensions [Lx, Ly, Lz]; copied on assignment and retrieval.
     """
 
     def __init__(
@@ -286,7 +286,7 @@ class StructureGraph:
         self._tolerance = tolerance
 
         if box_size is not None:
-            bs = np.asarray(box_size, dtype=np.float64)
+            bs = np.array(box_size, dtype=np.float64, copy=True)
             if len(bs) == 2:
                 bs = np.append(bs, 0.0)
             self._box_size = bs
@@ -323,7 +323,7 @@ class StructureGraph:
     @box_size.setter
     def box_size(self, value):
         if value is not None:
-            bs = np.asarray(value, dtype=np.float64)
+            bs = np.array(value, dtype=np.float64, copy=True)
             if len(bs) == 2:
                 bs = np.append(bs, 0.0)
             self._box_size = bs
