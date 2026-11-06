@@ -19,6 +19,13 @@ correction is applied.
 For sampled runs the series describes retained frames only, not the unobserved
 integration steps between them.
 
+The return record is frozen, and its aligned arrays are tuples detached from
+the input coordinates. Changing a caller-owned coordinate list afterward does
+not alter a previously extracted history. Norms use scaled Euclidean distance
+arithmetic rather than directly squaring components; finite extreme distances
+can therefore remain representable. Binary64 rounding and the active
+floating-point environment still apply. A nonfinite distance is rejected.
+
 The function regenerates and validates the prepared run, then checks the
 result identity, frame schedule, node order and finite position geometry before
 extracting values. Matching an identity detects accidental use of a different
