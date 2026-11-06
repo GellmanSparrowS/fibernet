@@ -1,3 +1,11 @@
+## [Unreleased] - LAMMPS stable edge history
+
+- Add `EdgeLengthHistory` and `edge_length_history` in the explicit
+  `fibernet.integrations.lammps_backend` module. Extract aligned step/time/SI
+  endpoint-distance tuples by stable StructureGraph edge ID from a prepared run
+  and parsed result, including sampled CG trajectories. This is geometry-only
+  post-processing, not native output authentication or physical validation.
+
 ## [Unreleased] - LAMMPS projection numeric range
 
 - Use scaled Euclidean norms for projected bond lengths and maximum displacement.
