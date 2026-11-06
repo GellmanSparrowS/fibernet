@@ -82,14 +82,14 @@ def _graph_identifier(value, name):
     return int(value)
 
 
-def _serialized_internal_points(value, edge_id):
+def _serialized_internal_points(value, edge_id, *, allow_unmasked=False):
     """Detach finite real curve coordinates using ordinary NumPy promotion."""
     if value is None:
         return None
     label = f'serialized internal_points for edge {edge_id}'
 
     def inspect(item):
-        if np.ma.isMaskedArray(item):
+        if np.ma.isMaskedArray(item) and (not allow_unmasked or np.ma.is_masked(item)):
             raise ValueError(f'{label} must not be masked')
         if isinstance(item, np.ndarray):
             if item.dtype.kind not in 'iuf':
@@ -1136,9 +1136,11 @@ class StructureGraph:
         """Serialize graph schema 3.1, including each edge's material.
 
         Material records contain only JSON data, never serialized Python objects.
+        Curves are None, empty one-dimensional sequences, or finite real
+        (M, 3) coordinates. MaskedArray inputs are accepted only when no entries
+        are masked. Saving also requires scalar types supported by the standard
+        JSON encoder. Curve validation does not mutate stored coordinates.
         """
-        for edge in self._edges.values():
-            _reject_masked_coordinates(edge.internal_points, "internal_points")
 
         def material_record(material):
             if not isinstance(material, Material):
@@ -1173,7 +1175,11 @@ class StructureGraph:
                     "radius": edge.radius,
                     "material": material_record(edge.material),
                     "segments": edge.segments,
-                    "internal_points": edge.internal_points.tolist() if edge.internal_points is not None else None,
+                    "internal_points": (
+                        _serialized_internal_points(
+                            edge.internal_points, eid, allow_unmasked=True
+                        ).tolist() if edge.internal_points is not None else None
+                    ),
                     "metadata": edge.metadata,
                 }
                 for eid, edge in sorted(self._edges.items())
