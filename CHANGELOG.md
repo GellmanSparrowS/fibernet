@@ -1,11 +1,21 @@
+## [Unreleased] - snapshot pore units
+
+- Normalize planar pore geometry by the active edge-endpoint span before
+  detecting bounded centerline faces, then return pore areas in caller units
+  squared and perimeters in caller units. For well-conditioned geometry, pore
+  results are less sensitive to length units; approximate tolerances and
+  near-degenerate geometry limitations remain.
+  Structure/contact calculations and the caller-unit straightness cutoff are
+  unchanged. Historical pore results near the old tolerances may change.
+
 ## [Unreleased] - snapshot open-chain straightness
 
 - Include both boundary nodes when measuring the chord divided by full path
   length of an open chain containing degree-2 nodes. Exclude closed walks and
   retain the existing single-edge exclusion and 1e-12 caller-unit length cutoff.
   Affected straightness values intentionally change; public signatures and
-  other feature calculations are unchanged. Pore unit normalization remains a
-  separate change.
+  other feature calculations are unchanged by this correction. Pore unit
+  normalization is documented separately.
 
 ## [Unreleased] - tutorial pipeline artifact recovery
 

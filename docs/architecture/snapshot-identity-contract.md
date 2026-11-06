@@ -29,7 +29,12 @@ not perform general graph normalization, reordering or duplicate removal.
 The separate open-chain straightness correction includes both boundary nodes
 in chord / full path length and excludes closed walks. Individual edges and
 paths at or below 1e-12 in caller units remain excluded; an empty distribution
-has mean 0.0. Pore calculations still use absolute tolerances in caller units.
+has mean 0.0. Pore topology is calculated after translating and normalizing
+coordinates by the larger XY span of active edge endpoints, then pore areas
+are returned in caller units squared and perimeters in caller units. Approximate
+tolerances remain;
+structure/contact calculations, including the 1e-12 straightness cutoff,
+are not normalized. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md).
 
 ## Preserved behavior
 
@@ -41,10 +46,12 @@ has mean 0.0. Pore calculations still use absolute tolerances in caller units.
   to use the explicit `ContactConfig`
 - Three-dimensional coordinate arrays are projected to XY only after validating
   every source coordinate as finite and checking constant Z (tolerance 1e-9)
-- Empty graphs and isolated nodes retain existing feature behavior
+- Empty graphs and graphs with no active edges retain existing feature behavior
 - Graph-size budgets are enforced before rectangle filtering
 - Rectangle validation, midpoint selection, output key order, histogram order,
-  exceptions and contact configuration retain their existing contracts
+  and contact configuration retain their existing contracts. The pore pipeline
+  additionally rejects unrepresentable normalized geometry, region area, area
+  scale or denormalized pore measurements with `ValueError`
 - Source graph dictionaries, node coordinates and edge records are not mutated
 
 ## Regression evidence
