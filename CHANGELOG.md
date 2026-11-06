@@ -1,3 +1,11 @@
+## [Unreleased] - tutorial pipeline artifact recovery
+
+- Restore persisted native graphs instead of regenerating them when the tutorial
+  pipeline resumes. Validate generation inputs, saved simulation summaries, and
+  feature-file bindings before continuing; reject missing or inconsistent files
+  without overwriting them. Legacy checkpoints without artifact bindings require
+  a fresh data directory. This does not restore interrupted solver state.
+
 ## [4.4.0] - 2026-11-06
 
 See [4.4.0 release notes and migration](docs/RELEASE_4_4_0.md) for the changes
