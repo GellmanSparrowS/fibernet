@@ -122,7 +122,7 @@ class Regressor:
 
     def train(self, X, Y, lr=.003, epochs=200, batch=16, val_frac=.2,
               patience=15, min_delta=.0001, epoch_cb=None, stop_cb=None, *,
-              feature_schema=None):
+              feature_schema=None, validation_indices=None):
         """Publish a completed fit together; callbacks see the previous fit.
 
         ``feature_schema`` is an optional caller-declared identity, not inferred
@@ -130,6 +130,14 @@ class Regressor:
         canonical 14 ``light_features`` columns. Other nonempty printable strings
         (up to 128 characters, no outer whitespace) are opaque declarations.
         History returns ``schema`` (None if undeclared) and ``feature_count``.
+
+        ``validation_indices`` is an optional explicit list, tuple or 1-D array
+        of distinct integer row indices. At least five total rows are required,
+        with at least two in each partition. The complement trains the model and
+        fits normalization.
+        It overrides the random row split; ``val_frac`` is still validated.
+        Callers must assign every related source-network variant to the same
+        partition. Validation guides model selection and is not a final test set.
         """
         import copy
         X, Y = np.asarray(X, float), np.asarray(Y, float)
@@ -147,14 +155,21 @@ class Regressor:
                              'of at most 128 characters without outer whitespace')
         if feature_schema == FEATURE_SCHEMA and X.shape[1] != len(FEATURE_NAMES):
             raise ValueError('canonical feature_schema requires 14 feature columns')
+        explicit = None
+        if validation_indices is not None:
+            from fibernet.ml.physical_surrogate import _partition_validation_indices
+            explicit = _partition_validation_indices(len(X), validation_indices)
         if self.key == 'mlp':
             from fibernet.ml.physical_surrogate import MLP
             estimator = MLP(hidden=self.params['hidden'], seed=self.seed)
             if 'estimator' in self.__dict__ and estimator is self.estimator:
                 raise ValueError('model factory must return a new estimator for refitting')
-            history = estimator.train(X, Y, lr=lr, epochs=epochs, batch=batch,
+            train_options = dict(lr=lr, epochs=epochs, batch=batch,
                 val_frac=val_frac, patience=patience, min_delta=min_delta,
                 epoch_cb=epoch_cb, stop_cb=stop_cb)
+            if explicit is not None:
+                train_options['validation_indices'] = explicit[1]
+            history = estimator.train(X, Y, **train_options)
             if not history['train']:
                 raise InterruptedError('training stopped before a fitted model was available')
             fitted_state = {name: getattr(estimator, name) for name in
@@ -166,7 +181,10 @@ class Regressor:
             return history
         ids = np.random.default_rng(self.seed).permutation(len(X))
         nv = max(2, min(len(X) - 2, int(len(X) * val_frac)))
-        val_indices, train_indices = ids[:nv], ids[nv:]
+        if explicit is None:
+            val_indices, train_indices = ids[:nv], ids[nv:]
+        else:
+            train_indices, val_indices = explicit
         ti, vi = train_indices, val_indices
         x_mean, x_std = X[ti].mean(0), X[ti].std(0)
         y_mean, y_std = Y[ti].mean(0), Y[ti].std(0)

@@ -5,6 +5,7 @@ Run directly with unittest to avoid the repository's native-provider conftest:
 Only tiny NumPy arrays and one-point synthetic fiber data are used.
 """
 import ast
+import copy
 import hashlib
 import json
 import ntpath
@@ -239,11 +240,81 @@ class LegacyFailureControls(unittest.TestCase):
         with self.assertRaises(ImportError):
             __import__('lammps.core')
 
+
+    def test_invalid_controls_precede_real_writers_and_provider(self):
+        factory = Mock(side_effect=AssertionError('provider construction forbidden'))
+        self.provider = types.SimpleNamespace(lammps=factory)
+        bridge = self.module.LAMMPSBridge(self.network)
+        cases = {'nsteps': ['10', True, 1.5, -1],
+                 'temperature': ['300', True, float('nan'), float('inf'), -1.]}
+        # Keep both production writer methods intact: validation must stop before
+        # even the deliberately unusable network is inspected.
+        with patch.object(self.module.tempfile, 'mkdtemp', side_effect=AssertionError('tempdir forbidden')), \
+             patch.object(builtins, 'open', side_effect=AssertionError('write forbidden')):
+            for name, values in cases.items():
+                for value in values:
+                    with self.subTest(name=name, value=value):
+                        with self.assertRaisesRegex(ValueError, name):
+                            bridge.run_simulation(**{name: value})
+        factory.assert_not_called()
+
+    def test_standalone_writer_rejects_invalid_controls_without_provider(self):
+        bridge = self.missing_bridge()
+        cases = {'nsteps': ['10', True, 1.5, -1],
+                 'dump_freq': ['100', True, 1.5, 0, -1],
+                 'temperature': ['300', True, float('nan'), float('inf'), -1.],
+                 'timestep': ['0.001', True, float('nan'), float('inf'), 0., -1.]}
+        with patch.object(builtins, 'open', side_effect=AssertionError('write forbidden')):
+            for name, values in cases.items():
+                for value in values:
+                    with self.subTest(name=name, value=value):
+                        with self.assertRaisesRegex(ValueError, name):
+                            bridge.write_input_script('unused.in', 'unused.data', **{name: value})
+        self.assertEqual(self.import_attempts, ['lammps'])
+
+    def test_script_preflight_preserves_zero_and_force_field_text(self):
+        bridge = self.missing_bridge()
+        coefficients = {'harmonic': 'bond_coeff      * 100.0 1.0',
+                        'fene': 'bond_coeff      * 30.0 1.5 1.0 1.0',
+                        'morse': 'bond_coeff      * 10.0 2.0 1.0'}
+        with tempfile.TemporaryDirectory() as folder:
+            script = str(Path(folder) / 'in.fiber')
+            for force_field, coefficient in coefficients.items():
+                with self.subTest(force_field=force_field):
+                    bridge.write_input_script(script, 'fiber.data', temperature=0.,
+                        timestep=.002, nsteps=0, dump_freq=1, force_field=force_field)
+                    text = Path(script).read_text()
+                    self.assertIn(coefficient, text)
+                    self.assertIn('temp 0.0 0.0 100.0', text)
+                    self.assertIn('timestep        0.002', text)
+                    self.assertIn('custom 1 dump.lammpstrj id type x y z', text)
+                    self.assertIn('run             0', text)
+        self.assertEqual(self.import_attempts, ['lammps'])
+
     def test_generated_physics_and_signatures_unchanged(self):
         # Lock the existing public call signatures and generated-text writers.
         tree = ast.parse(SOURCE.read_text())
-        definitions = {node.name: node for node in ast.walk(tree)
-                       if isinstance(node, ast.FunctionDef)}
+        # Inventory direct public definitions, not unrelated nested helpers.
+        top_functions = {node.name: node for node in tree.body
+                         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+        self.assertEqual(set(top_functions), {'run_lammps_md', '_checked_legacy_controls'})
+        classes = {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+        self.assertEqual(set(classes), {'LAMMPSResult', 'LAMMPSBridge'})
+        definitions = {'run_lammps_md': top_functions['run_lammps_md']}
+        expected_methods = {'LAMMPSResult': {'to_dict'},
+                            'LAMMPSBridge': {'__init__', 'write_data_file',
+                                             'write_input_script', 'run_simulation'}}
+        for name, expected in expected_methods.items():
+            methods = {node.name: node for node in classes[name].body
+                       if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
+            self.assertEqual(set(methods), expected, name)
+            definitions.update(methods)
+        # Explicitly admit exactly the reviewed private scalar validator, including
+        # both nested checks and their bounds; behavior is exercised below too.
+        helper = top_functions['_checked_legacy_controls']
+        self.assertEqual([node.name for node in helper.body if isinstance(node, ast.FunctionDef)],
+                         ['real', 'integer'])
+        self.assertEqual(syntax_hash(helper), '917bb57343923d6162d90401bf5b07a9bfad5c55dbbcb347038bd46f4dc11c87')
         expected_signatures = {'run_lammps_md': '5c59b061cffe9cedbd4a86628088586d8bc923385b7c956c0e7b8e49b646faef', 'to_dict': 'd2f53b54bcf64664c681c7039aa2f19defd9a60d393f079097db7394eae7063b', '__init__': '1ddd3cd3684fcd9858d4e948e48dd056bfe2a97886a822327aba3d6ff3ee867d', 'write_data_file': '91883e10c2bdc36ad8df39d3f80e60ab5967d4bc60e2e39c35653f63d82511eb', 'write_input_script': '42357c5a65fcfc0a45fdae9f541821de22c26a9a9a45cf161e0d99f5916cc09f', 'run_simulation': '9bcf9b96d3b0551fa2e46dd816cbcd00aa80ec5d2fbabd35aa2c50d7adc66fc4'}
         expected_writers = {'write_data_file': '9c9b13a29c566c787f3a279c013653704af07e42b6e39481c06b7389f3c737e5', 'write_input_script': 'ecbb9f2fd209888983617d6c0c667cb29495369cca5f36489ff7de7d527a8b0b'}
         self.assertEqual(set(definitions), set(expected_signatures))
@@ -251,7 +322,29 @@ class LegacyFailureControls(unittest.TestCase):
             actual = syntax_hash(definitions[name].args)
             self.assertEqual(actual, expected, name)
         for name, expected in expected_writers.items():
-            actual = syntax_hash(definitions[name])
+            writer = copy.deepcopy(definitions[name])
+            if name == 'write_input_script':
+                approved_preflight = ast.parse(
+                    'temperature, timestep, nsteps, dump_freq = '
+                    '_checked_legacy_controls(temperature, timestep, nsteps, dump_freq)'
+                ).body[0]
+                self.assertEqual(stable_ast(writer.body[1]), stable_ast(approved_preflight))
+                # Remove only the exact initial validation assignment, never other
+                # statements or calls. Keep the historical whole-writer hash below.
+                del writer.body[1]
+                # Reverse only the four reviewed parameter-documentation edits.
+                # Every other docstring byte and all generated physics stay pinned.
+                doc = writer.body[0].value.value
+                for current, original in (
+                    ('Finite nonnegative simulation temperature (K).', 'Simulation temperature (K).'),
+                    ('Finite positive time step (ps).', 'Time step (ps).'),
+                    ('Nonnegative integer number of simulation steps (not boolean).', 'Number of simulation steps.'),
+                    ('Positive integer dump frequency for trajectory (not boolean).', 'Dump frequency for trajectory.'),
+                ):
+                    self.assertEqual(doc.count(current), 1)
+                    doc = doc.replace(current, original)
+                writer.body[0].value.value = doc
+            actual = syntax_hash(writer)
             self.assertEqual(actual, expected, name)
 
 

@@ -86,31 +86,41 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     Parameters
     ----------
     df : pd.DataFrame
-        DataFrame with columns: fiber_id, x, y (at minimum).
+        DataFrame with columns: fiber_id, x, y (at minimum). If z is absent,
+        points are padded with z=0 and the network dimension is 2; otherwise
+        the network dimension is 3. Rows are sorted by point_idx when present.
     material : Material, optional
-        Material for all fibers. Creates default material if None.
+        Material for all fibers, taking precedence over table material columns.
+        If omitted, material columns are used when youngs_modulus is present;
+        otherwise a default material is used. The supplied object is shared.
 
     Returns
     -------
     FiberNetwork
-        Reconstructed fiber network.
+        Reconstructed fiber network. Fiber IDs are reassigned in group order;
+        crosslinks, box, and network metadata are not reconstructed. DataFrame
+        export includes z, so a 2D network's dimension is not preserved by
+        a round trip.
     """
     _require_pandas()
 
+    supplied_material = material is not None
     if material is None:
         material = Material(name='default')
 
-    network = FiberNetwork()
+    network = FiberNetwork(dimension=3 if 'z' in df.columns else 2)
     coord_cols = [c for c in ['x', 'y', 'z'] if c in df.columns]
 
     for fiber_id, group in df.groupby('fiber_id'):
         if 'point_idx' in group.columns:
             group = group.sort_values('point_idx')
         points = group[coord_cols].values.astype(float)
+        if coord_cols == ['x', 'y']:
+            points = np.column_stack((points, np.zeros(len(points))))
         radius = float(group['radius'].iloc[0]) if 'radius' in group.columns else 1.0
 
         mat = material
-        if 'youngs_modulus' in group.columns:
+        if not supplied_material and 'youngs_modulus' in group.columns:
             mat = Material(
                 name=group['material_name'].iloc[0] if 'material_name' in group.columns else 'imported',
                 youngs_modulus=float(group['youngs_modulus'].iloc[0]),

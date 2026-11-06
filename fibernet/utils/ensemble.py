@@ -28,7 +28,7 @@ class EnsembleResult:
     networks : list
         List of generated FiberNetwork objects
     seeds : list
-        Random seeds used for each network
+        Random seeds used for each network, aligned with ``networks``
     statistics : dict
         Computed statistics over the ensemble
     metadata : dict
@@ -177,6 +177,7 @@ def generate_ensemble(
     >>> print(f"Mean num_crosslinks: {ensemble.statistics['num_crosslinks']['mean']:.1f}")
     """
     networks = []
+    successful_seeds = []
     seeds = [base_seed + i for i in range(num_networks)]
     
     if parallel:
@@ -210,8 +211,11 @@ def generate_ensemble(
         
         executor.shutdown()
         
-        # Filter out None values
-        networks = [net for net in results if net is not None]
+        # Keep each surviving network paired with the seed that generated it.
+        for seed, net in zip(seeds, results):
+            if net is not None:
+                networks.append(net)
+                successful_seeds.append(seed)
     else:
         # Sequential generation
         iterator = enumerate(seeds)
@@ -228,12 +232,13 @@ def generate_ensemble(
                 kwargs['seed'] = seed
                 net = generator_func(**kwargs)
                 networks.append(net)
+                successful_seeds.append(seed)
             except Exception as e:
                 warnings.warn(f"Failed to generate network {i}: {e}")
     
     result = EnsembleResult(
         networks=networks,
-        seeds=seeds[:len(networks)],
+        seeds=successful_seeds,
         metadata={
             'generator': generator_func.__name__,
             'num_requested': num_networks,

@@ -45,12 +45,35 @@ def _beam_resultant_contract(dimension, status='available'):
 
 
 class BeamFrameFEM:
-    """Beam frames with welded joints: 2-D incremental geometry, 3-D linear only."""
+    """Beam frames with welded joints: 2-D incremental geometry, 3-D linear only.
+
+    The uniform isotropic material requires finite real scalars ``E > 0`` and
+    ``-1 < nu < 0.5``; booleans are not material values. The derived shear
+    modulus must also be finite and positive. Graph Material does not override
+    these explicit constructor parameters.
+    """
     
     def __init__(self, E: float = 1e9, nu: float = 0.3):
+        def finite_real(value):
+            if (isinstance(value, (bool, np.bool_, np.timedelta64)) or
+                    not isinstance(value, (int, float, np.integer, np.floating))):
+                return False
+            try:
+                return bool(np.isfinite(float(value)))
+            except (TypeError, ValueError, OverflowError):
+                return False
+
+        if not finite_real(E) or E <= 0:
+            raise ValueError('E must be a finite positive real scalar, not bool')
+        if not finite_real(nu) or not -1 < nu < 0.5:
+            raise ValueError('nu must be a finite real scalar in (-1, 0.5), not bool')
+        with np.errstate(over='ignore', invalid='ignore', divide='ignore', under='ignore'):
+            G = E / (2 * (1 + nu))
+        if not finite_real(G) or G <= 0:
+            raise ValueError('E and nu must produce a finite positive shear modulus')
         self.E = E
         self.nu = nu
-        self.G = E / (2 * (1 + nu))
+        self.G = G
 
     def history(self, graph, *, material, times, constraints, loads=None,
                 length_unit, initial_state=None):
@@ -275,6 +298,8 @@ class BeamFrameFEM:
             dx = node_pos[j, 0] - node_pos[i, 0]
             dy = node_pos[j, 1] - node_pos[i, 1]
             L = np.sqrt(dx**2 + dy**2)
+            if not np.isfinite(L):
+                raise ValueError('nonfinite 2-D beam length during stiffness assembly')
             if L < 1e-12:
                 continue
             cx, cy = dx / L, dy / L
@@ -291,6 +316,8 @@ class BeamFrameFEM:
                 [0, -12*E*I/L3, -6*E*I/L2, 0, 12*E*I/L3, -6*E*I/L2],
                 [0, 6*E*I/L2, 2*E*I/L, 0, -6*E*I/L2, 4*E*I/L]
             ])
+            if not np.isfinite(k_local).all():
+                raise ValueError('nonfinite 2-D local beam stiffness; check material and geometry scales')
             
             T = np.array([
                 [cx, cy, 0, 0, 0, 0],
@@ -302,6 +329,8 @@ class BeamFrameFEM:
             ])
             
             k_global = T.T @ k_local @ T
+            if not np.isfinite(k_global).all():
+                raise ValueError('nonfinite 2-D transformed beam stiffness; check material and geometry scales')
             dofs = [3*i, 3*i+1, 3*i+2, 3*j, 3*j+1, 3*j+2]
             
             for a in range(6):
@@ -312,6 +341,8 @@ class BeamFrameFEM:
                         vals.append(k_global[a, b])
         
         K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
+        if not np.isfinite(K.data).all():
+            raise ValueError('nonfinite assembled 2-D stiffness; check material and geometry scales')
         return K, edge_list
     
     @staticmethod
@@ -728,6 +759,8 @@ class BeamFrameFEM:
             r = radii[e]
             dx = node_pos[j] - node_pos[i]
             L = np.linalg.norm(dx)
+            if not np.isfinite(L):
+                raise ValueError('nonfinite 3-D beam length during stiffness assembly')
             if L < 1e-12:
                 continue
             e1 = dx / L
@@ -751,11 +784,15 @@ class BeamFrameFEM:
             k_local[2,4]=k_local[4,2]=-6*E*I/L2; k_local[2,10]=k_local[10,2]=-6*E*I/L2
             k_local[8,4]=k_local[4,8]=6*E*I/L2; k_local[8,10]=k_local[10,8]=6*E*I/L2
             k_local[4,4]=k_local[10,10]=4*E*I/L; k_local[4,10]=k_local[10,4]=2*E*I/L
+            if not np.isfinite(k_local).all():
+                raise ValueError('nonfinite 3-D local beam stiffness; check material and geometry scales')
             
             R_block = np.array([e1, e2, e3])
             T = np.zeros((12, 12))
             for k in range(4): T[3*k:3*k+3, 3*k:3*k+3] = R_block
             k_global = T.T @ k_local @ T
+            if not np.isfinite(k_global).all():
+                raise ValueError('nonfinite 3-D transformed beam stiffness; check material and geometry scales')
             
             dofs = list(range(6*i, 6*i+6)) + list(range(6*j, 6*j+6))
             for a in range(12):
@@ -764,6 +801,8 @@ class BeamFrameFEM:
                         rows.append(dofs[a]); cols.append(dofs[b]); vals.append(k_global[a,b])
         
         K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
+        if not np.isfinite(K.data).all():
+            raise ValueError('nonfinite assembled 3-D stiffness; check material and geometry scales')
         K_damped = K + damping * sparse.eye(n_dof, format='csr')
         
         f_global = np.zeros(n_dof)
@@ -888,7 +927,13 @@ class BeamFrameFEM:
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
-            Boundary detection percentage (0.10 = 10% each side).
+            Finite Python/NumPy real scalar in [0, 0.5], excluding bools
+            and timedelta64 values.
+            Select floor(n_nodes * pct) rows per side, with a minimum of one;
+            0 preserves that legacy minimum-one behavior. At least two nodes
+            are required. NumPy scalars use their represented numeric value
+            without lowering node-count precision; longdouble is retained.
+            Ties retain the existing argsort row ordering.
         
         Returns
         -------
@@ -899,6 +944,21 @@ class BeamFrameFEM:
             boundaries: dict with 'left', 'right' (and 'top', 'bottom', etc.)
             x_range: float (for displacement calculation)
         """
+        if (isinstance(pct, (bool, np.bool_, np.timedelta64))
+                or not isinstance(pct, (int, float, np.integer, np.floating))
+                or not 0 <= pct <= 0.5
+                or not np.isfinite(pct)):
+            raise ValueError(
+                'FEM pct must be a finite real scalar in [0, 0.5], '
+                'not bool or timedelta64; '
+                '0 retains the minimum of one node per side'
+            )
+        if isinstance(pct, (np.integer, np.floating)):
+            # Avoid NumPy narrowing the Python node count to pct's dtype.
+            # item() keeps longdouble when Python float would lose precision.
+            pct = pct.item()
+        if len(graph.nodes) < 2:
+            raise ValueError('FEM automatic boundary selection requires at least two nodes')
         curved_edges = [
             edge_id for edge_id, edge in graph.edges.items()
             if edge.internal_points is not None and len(edge.internal_points)
@@ -948,7 +1008,9 @@ class BeamFrameFEM:
         dim : int
             2 for 2D, 3 for 3D.
         pct : float
-            Boundary percentage.
+            Fraction of nodes per side in [0, 0.5], finite and not boolean.
+            The default is 0.10; 0 retains at least one node per side.
+            Opposite grips use disjoint row sets; at least two nodes are needed.
         nonlinear : bool or None
             In 2-D, None auto-selects incremental updated-geometry solves for
             |stretch-1| > 0.3; True selects this experimental path explicitly.

@@ -89,12 +89,12 @@ if _OVITO_AVAILABLE:
 from .lammps_backend import (
     HarmonicBond, RunSpec, PreparedRun, RuntimeSpec, ResourceLimits,
     LAMMPSTask, TaskState, LAMMPSRunResult, LAMMPSContractError,
-    prepare_harmonic_beads, parse_outputs,
+    prepare_harmonic_beads, parse_outputs, parse_output_files,
 )
 __all__.extend([
     'HarmonicBond', 'RunSpec', 'PreparedRun', 'RuntimeSpec', 'ResourceLimits',
     'LAMMPSTask', 'TaskState', 'LAMMPSRunResult', 'LAMMPSContractError',
-    'prepare_harmonic_beads', 'parse_outputs',
+    'prepare_harmonic_beads', 'parse_outputs', 'parse_output_files',
 ])
 
 # Deterministic conservative coarse-bead input records; no native imports.
@@ -104,3 +104,13 @@ __all__.extend(['CGRequest', 'CGAngle', 'MorsePair', 'prepare_cg'])
 # Pure count/byte planning only; does not inspect or admit a native provider.
 from .lammps_planning import forecast_cg_fiber_only
 __all__.append('forecast_cg_fiber_only')
+
+# Offline saved bytes and protocol only; no runtime admission or engine launch.
+from .lammps_saved import (
+    SavedLAMMPSRead, LAMMPSSavedReadLimits, LAMMPSSavedReadError,
+    LAMMPSCompilerCompatibilityError, read_saved_lammps_run,
+)
+__all__.extend([
+    'SavedLAMMPSRead', 'LAMMPSSavedReadLimits', 'LAMMPSSavedReadError',
+    'LAMMPSCompilerCompatibilityError', 'read_saved_lammps_run',
+])

@@ -32,12 +32,14 @@ def _edges_to_network(
 ) -> FiberNetwork:
     """Convert node/edge graph to FiberNetwork.
     
-    Each edge becomes a Fiber. Nodes where edges meet become crosslinks.
+    Each retained edge becomes a Fiber. Shared nodes become crosslinks.
+    Omitted materials produce independent generic Material instances.
     """
     from fibernet.core.network import Crosslink
     
     fibers = []
-    for (u, v) in edges:
+    edge_to_fiber = {}
+    for edge_index, (u, v) in enumerate(edges):
         p1 = np.array(nodes[u], dtype=float)
         p2 = np.array(nodes[v], dtype=float)
         # Ensure 3D coordinates
@@ -54,8 +56,9 @@ def _edges_to_network(
         fiber = Fiber(
             centerline=centerline,
             radius=radius,
-            material=material,
+            material=Material() if material is None else material,
         )
+        edge_to_fiber[edge_index] = len(fibers)
         fibers.append(fiber)
     
     net = FiberNetwork(fibers=fibers, dimension=dimension)
@@ -63,10 +66,12 @@ def _edges_to_network(
     # Detect crosslinks at shared nodes
     node_to_fibers = {}
     for i, (u, v) in enumerate(edges):
-        for node in [u, v]:
+        if i not in edge_to_fiber:
+            continue
+        for node, param in [(u, 0.0), (v, 1.0)]:
             if node not in node_to_fibers:
                 node_to_fibers[node] = []
-            node_to_fibers[node].append(i)
+            node_to_fibers[node].append((edge_to_fiber[i], param))
     
     crosslinks = []
     for node, fiber_indices in node_to_fibers.items():
@@ -79,15 +84,19 @@ def _edges_to_network(
         seen = set()
         for ii in range(len(fiber_indices)):
             for jj in range(ii + 1, len(fiber_indices)):
-                pair = (min(fiber_indices[ii], fiber_indices[jj]),
-                        max(fiber_indices[ii], fiber_indices[jj]))
+                # Keep endpoint parameters attached to their fiber references.
+                (fi, pi), (fj, pj) = sorted(
+                    (fiber_indices[ii], fiber_indices[jj]),
+                    key=lambda incidence: incidence[0],
+                )
+                pair = (fi, fj)
                 if pair in seen:
                     continue
                 seen.add(pair)
                 cl = Crosslink(
                     position=pos,
                     fiber_i=pair[0], fiber_j=pair[1],
-                    param_i=0.5, param_j=0.5,
+                    param_i=pi, param_j=pj,
                 )
                 crosslinks.append(cl)
     
@@ -501,6 +510,9 @@ def lattice_2d(
     >>> net = fn.create("lattice_2d", topology="honeycomb", cell_size=8.0)
     >>> net = fn.create("lattice_2d", topology="kagome", perturbation=0.2)
     """
+    if kwargs:
+        raise TypeError("lattice_2d does not support keyword options: "
+                        + ", ".join(sorted(kwargs)))
     topology = topology.lower()
     nx, ny = grid_size
     
@@ -825,7 +837,7 @@ def curved_random_2d(
         fiber = Fiber(
             centerline=centerline,
             radius=radius,
-            material=material,
+            material=Material() if material is None else material,
         )
         fibers.append(fiber)
     
@@ -997,7 +1009,7 @@ def entangled_3d(
         fiber = Fiber(
             centerline=centerline,
             radius=radius,
-            material=material,
+            material=Material() if material is None else material,
         )
         fibers.append(fiber)
     
@@ -1391,7 +1403,7 @@ def hierarchical_lattice(
     for (p1, p2, r) in all_edges:
         p1_3d = np.array([p1[0], p1[1], 0.0])
         p2_3d = np.array([p2[0], p2[1], 0.0])
-        fiber = Fiber(centerline=np.array([p1_3d, p2_3d]), radius=r, material=material)
+        fiber = Fiber(centerline=np.array([p1_3d, p2_3d]), radius=r, material=Material() if material is None else material)
         fibers.append(fiber)
     
     net = FiberNetwork(fibers=fibers, dimension=2)
