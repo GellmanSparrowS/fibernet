@@ -1,3 +1,12 @@
+## [Unreleased] - LAMMPS projection numeric range
+
+- Use scaled Euclidean norms for projected bond lengths and maximum displacement.
+  Compute stretch statistics without directly squaring extreme values, and
+  translate tightly clustered stretches before scaling their spread.
+  Reject nonfinite projected quantities and nonzero force/stretch values that
+  underflow to zero. Public signatures and graph/SI unit conventions are unchanged.
+  Regression evidence uses synthetic protocol fixtures, not native engine runs.
+
 ## [Unreleased] - snapshot pore units
 
 - Normalize planar pore geometry by the active edge-endpoint span before
