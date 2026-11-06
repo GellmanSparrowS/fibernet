@@ -67,6 +67,7 @@
 </tbody></table>
 <h2>Visualization</h2>
 <p><code>plot_reward_curve</code>, <code>plot_convergence</code>, <code>plot_action_distribution</code> — standard RL analysis plots.</p>
+<p>By default, <code>show=False</code> returns a standalone figure for headless export and leaves the application's backend and pyplot current figure unchanged. Save or edit that result through <code>fig.savefig(...)</code> and <code>fig.axes</code>; it is no longer selected by <code>plt.gcf()</code> or displayed by a later <code>plt.show()</code>. Use <code>show=True</code> for a pyplot-managed figure with the caller's backend.</p>
 <h2>Agent Persistence</h2>
 <p><code>save_agent()</code> / <code>load_agent()</code> for serialization.</p>
 <h2>Reward Design</h2>

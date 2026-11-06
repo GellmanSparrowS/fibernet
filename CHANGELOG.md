@@ -1,3 +1,58 @@
+## [Unreleased] - snapshot pore units
+
+- Normalize planar pore geometry by the active edge-endpoint span before
+  detecting bounded centerline faces, then return pore areas in caller units
+  squared and perimeters in caller units. For well-conditioned geometry, pore
+  results are less sensitive to length units; approximate tolerances and
+  near-degenerate geometry limitations remain.
+  Structure/contact calculations and the caller-unit straightness cutoff are
+  unchanged. Historical pore results near the old tolerances may change.
+
+## [Unreleased] - snapshot open-chain straightness
+
+- Include both boundary nodes when measuring the chord divided by full path
+  length of an open chain containing degree-2 nodes. Exclude closed walks and
+  retain the existing single-edge exclusion and 1e-12 caller-unit length cutoff.
+  Affected straightness values intentionally change; public signatures and
+  other feature calculations are unchanged by this correction. Pore unit
+  normalization is documented separately.
+
+## [Unreleased] - tutorial pipeline artifact recovery
+
+- Restore persisted native graphs instead of regenerating them when the tutorial
+  pipeline resumes. Validate generation inputs, saved simulation summaries, and
+  feature-file bindings before continuing; reject missing or inconsistent files
+  without overwriting them. Legacy checkpoints without artifact bindings require
+  a fresh data directory. This does not restore interrupted solver state.
+
+## [4.4.0] - 2026-11-06
+
+See [4.4.0 release notes and migration](docs/RELEASE_4_4_0.md) for the changes
+since 4.3.0. Historical Unreleased entries below are retained as development
+history and include changes already shipped in earlier releases.
+
+## [Unreleased] - offline LAMMPS saved-run reader
+
+- Add `read_saved_lammps_run` to reconstruct existing saved preparation files
+  and parse captured output without runtime admission or engine execution.
+- Require a caller-supplied manifest digest, exact current-compiler regeneration,
+  bounded POSIX regular-file reads and explicit nonauthentication semantics.
+  Returned SI output is protocol-checked, not certified as original engine data
+  or physically valid; compiler drift is rejected without automatic migration.
+
+## [Unreleased] - gyroid factory parameters
+
+- Forward `lattice_3d(topology="gyroid")` parameters `grid_size`, `radius`, and
+  `material` to the existing backend instead of silently discarding them.
+  Calls without these options now use the documented factory defaults
+  `(3, 3, 3)` and `0.1`, rather than the backend defaults `(2, 2, 2)` and `0.15`.
+  To retain the previous default geometry and radius, pass `grid_size=(2, 2, 2)`
+  and `radius=0.15` explicitly. Direct `gyroid_lattice_3d` defaults are unchanged.
+- This routes parameters to the existing TPMS-inspired fiber-network generator;
+  it does not produce a solid or shell gyroid or qualify mechanical behavior.
+  The existing backend does not use `threshold`, and the factory's `seed` and
+  `perturbation` do not affect this route. Those behaviors are unchanged.
+
 ## [Unreleased] - checked graph prediction
 
 - Add `predict_gnn` for existing CPU scalar FiberGNN models and GraphBatch v1,

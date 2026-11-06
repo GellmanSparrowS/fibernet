@@ -61,6 +61,18 @@ from fibernet.core.material import Material
 
 
 
+def _reject_masked_coordinates(value, name):
+    """Reject missing coordinates before NumPy can discard their masks."""
+    if np.ma.isMaskedArray(value) and np.ma.is_masked(value):
+        raise ValueError(f"{name} must not contain masked values")
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _reject_masked_coordinates(item, name)
+    elif isinstance(value, np.ndarray) and value.dtype.kind == 'O':
+        for item in value.flat:
+            _reject_masked_coordinates(item, name)
+
+
 def _graph_identifier(value, name):
     """Normalize a signed integer stable ID before graph lookup or mutation."""
     if (isinstance(value, (bool, np.bool_))
@@ -249,7 +261,7 @@ class StructureGraph:
     dimension : int
         Spatial dimension (2 or 3).
     tolerance : float
-        Node-merging tolerance. Nodes closer than this are merged.
+        Finite node-merging tolerance. Nodes closer than this are merged.
     box_size : array-like or None
         Unit cell dimensions [Lx, Ly, Lz] for periodic structures.
     """
@@ -262,6 +274,14 @@ class StructureGraph:
     ):
         if dimension not in (2, 3):
             raise ValueError("dimension must be 2 or 3")
+        # Inspect scalar arrays without coercing or replacing the stored value.
+        scalar_tolerance = (
+            tolerance[()]
+            if isinstance(tolerance, np.ndarray) and tolerance.ndim == 0
+            else tolerance
+        )
+        if isinstance(scalar_tolerance, (float, np.floating)) and not np.isfinite(scalar_tolerance):
+            raise ValueError("tolerance must be finite")
         self._dimension = dimension
         self._tolerance = tolerance
 
@@ -389,6 +409,7 @@ class StructureGraph:
         int
             Node ID.
         """
+        _reject_masked_coordinates(position, "position")
         pos = np.asarray(position, dtype=np.float64).ravel()
         if len(pos) == 2:
             pos = np.append(pos, 0.0)
@@ -458,6 +479,7 @@ class StructureGraph:
         node_id = _graph_identifier(node_id, "node ID")
         if node_id not in self._nodes:
             raise KeyError(f"Node {node_id} not found")
+        _reject_masked_coordinates(displacement, "displacement")
         disp = np.asarray(displacement, dtype=float)
         if disp.ndim == 0:
             raise ValueError("displacement must be an array-like with 1, 2 or 3 components")
@@ -506,6 +528,7 @@ class StructureGraph:
             nid = _graph_identifier(nid, "node ID")
             if nid not in self._nodes:
                 raise KeyError(f"Node {nid} not found")
+            _reject_masked_coordinates(value, "position")
             pos = np.asarray(value, dtype=np.float64).ravel()
             if len(pos) == 2:
                 pos = np.append(pos, 0.0)
@@ -667,7 +690,10 @@ class StructureGraph:
         list of int
             Edge IDs created.
         """
-        pts = [np.asarray(p, dtype=np.float64) for p in points]
+        pts = []
+        for point in points:
+            _reject_masked_coordinates(point, "position")
+            pts.append(np.asarray(point, dtype=np.float64))
         nids = [self.add_node(p) for p in pts]
         edge_ids = []
         pairs = list(zip(nids[:-1], nids[1:]))
@@ -1111,6 +1137,9 @@ class StructureGraph:
 
         Material records contain only JSON data, never serialized Python objects.
         """
+        for edge in self._edges.values():
+            _reject_masked_coordinates(edge.internal_points, "internal_points")
+
         def material_record(material):
             if not isinstance(material, Material):
                 raise ValueError('edge material must be a Material instance')
@@ -1224,6 +1253,8 @@ class StructureGraph:
         filesystem writes or interruption after the destination has been opened.
         """
         payload = json.dumps(self.to_dict(), indent=2)
+        # Key coercion can create duplicates that our reader rejects.
+        json.loads(payload, object_pairs_hook=_unique_json_object_pairs)
         with open(path, "w") as f:
             f.write(payload)
 

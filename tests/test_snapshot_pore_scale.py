@@ -7,7 +7,7 @@ from fibernet.analysis.snapshot_features import SnapshotFeatureExtractor
 class SnapshotPoreScaleTests(unittest.TestCase):
     def check_scaled(self, points, edges, expected_count, area, perim, coverage, rect=None):
         ex = SnapshotFeatureExtractor()
-        for s in (1., 1e-3, 1e3):
+        for s in (1e-6, 1e-3, 1., 1e3, 1e6):
             r = None if rect is None else np.asarray(rect)*s
             f = ex.extract(np.asarray(points)*s, edges, rect=r)
             self.assertEqual(f['pore_count'], expected_count)
@@ -26,7 +26,7 @@ class SnapshotPoreScaleTests(unittest.TestCase):
     def test_crossing_split_and_adjacency(self):
         p=[[0,0],[1,0],[1,1],[0,1]];e=[[0,1],[1,2],[2,3],[3,0],[0,2],[1,3]]
         self.check_scaled(p,e,4,.25,1.+2**.5,1.)
-        for s in (1.,1e-3,1e3):
+        for s in (1e-6,1e-3,1.,1e3,1e6):
             f=SnapshotFeatureExtractor().extract(np.asarray(p)*s,e)
             self.assertAlmostEqual(f['largest_pore_ratio'],.25)
             self.assertEqual(f['pore_neighbor_mean'],2.)
@@ -42,6 +42,34 @@ class SnapshotPoreScaleTests(unittest.TestCase):
         f=SnapshotFeatureExtractor().extract(p,e)
         self.assertEqual(f['pore_count'],1)
         self.assertEqual(f['pore_area_mean'],1.)
+
+    def test_translation_and_disconnected_faces(self):
+        p=np.array([[0,0],[1,0],[1,1],[0,1],
+                    [2,0],[3,0],[3,1],[2,1]],float)
+        e=np.array([[0,1],[1,2],[2,3],[3,0],
+                    [4,5],[5,6],[6,7],[7,4]])
+        self.check_scaled(p,e,2,1.,4.,2./3.)
+        ex=SnapshotFeatureExtractor()
+        baseline=ex.extract(p,e)
+        for offset in ([16.,-32.],[-256.,128.]):
+            f=ex.extract(p+offset,e)
+            for key in ('pore_count','pore_area_mean','pore_perim_mean',
+                        'porosity','pore_neighbor_mean','pore_area_cv'):
+                self.assertAlmostEqual(f[key],baseline[key],places=11)
+            np.testing.assert_allclose(f['pore_areas'],baseline['pore_areas'])
+
+    def test_region_midpoints_do_not_clip_faces(self):
+        # All four edge midpoints lie in this diamond's region, but its
+        # vertices lie outside it. Existing ROI semantics retain the full face.
+        p=np.array([[-1.,0.],[0.,-1.],[1.,0.],[0.,1.]])
+        e=np.array([[0,1],[1,2],[2,3],[3,0]])
+        for scale in (1e-6,1.,1e6):
+            f=SnapshotFeatureExtractor().extract(p*scale,e,
+                rect=np.array([.5,.5,-.5,-.5])*scale)
+            self.assertEqual(f['pore_count'],1)
+            self.assertAlmostEqual(f['pore_area_mean']/(scale*scale),2.)
+            self.assertAlmostEqual(f['pore_perim_mean']/scale,4.*2**.5)
+            self.assertEqual(f['porosity'],1.)
 
     def test_contact_keeps_original_input_units(self):
         p=np.array([[0,0],[1,0],[1,1],[0,1],[.5,-.2],[.5,1.2],[-.2,.5],[1.2,.5]])
@@ -68,5 +96,16 @@ class SnapshotPoreScaleTests(unittest.TestCase):
             for scale in (1e-200,1e200):
                 with self.subTest(scale=scale), self.assertRaisesRegex(ValueError,'area scale'):
                     SnapshotFeatureExtractor().extract([[0,0],[scale,0]], [[0,1]])
+
+    def test_unrepresentable_region_area_is_explicit(self):
+        p=np.array([[0.,0.],[1.,0.],[1.,1.],[0.,1.]])
+        e=np.array([[0,1],[1,2],[2,3],[3,0]])
+        with np.errstate(all='ignore'):
+            with self.assertRaisesRegex(ValueError,'region area'):
+                SnapshotFeatureExtractor().extract(
+                    np.vstack([p,[1e200,1e200]]),e)
+            with self.assertRaisesRegex(ValueError,'region area'):
+                SnapshotFeatureExtractor().extract(p,e,
+                    rect=[-1e200,-1e200,1e200,1e200])
 
 if __name__ == '__main__': unittest.main()

@@ -23,7 +23,8 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    # Keep the matrix label stable; Ubuntu 26.04 has no setup-python 3.9 build.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' && 'ubuntu-24.04' || matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
