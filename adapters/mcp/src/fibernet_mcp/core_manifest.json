@@ -33,7 +33,7 @@
   "core/network.py": "03ab8aef70c99e5461920504f8a34cde0fd6f44e99480f5662ec664fc49edd25",
   "core/pbc.py": "b2f9c65ef55e2e49c890401450c0e88396ae2f8f1391746afd4f4e8d283782e4",
   "core/single_junction_import.py": "a5dc19bfdb4d6c1fe91838694bbc2d684b40f22ee8a4f9c9a847a4164005be7e",
-  "core/structure_graph.py": "605c8e2e66424c66013db6c032b881114fa053d4fa7a6b8d5fea8d08e407a01e",
+  "core/structure_graph.py": "3f5cc9cc4bb70dafcf4e5e109a3a0d8e5499c41e6e4213e846ac9010db59c50d",
   "core/tiling.py": "f294352e08005ecacd3754012e5d3955e8297b9063289f9f1d6c891be5069415",
   "core/transform.py": "faf2e4eb0e8753398c818fa1be5b3e45a8673cec4ec6b04888e2a3909bbbd2e5",
   "core/transforms.py": "e8adcc6a2ec72d7e0cef419b0d1afa95dc8f0a0021e4aaf06f96c2d8fc4610e3",

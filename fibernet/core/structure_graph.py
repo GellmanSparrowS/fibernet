@@ -261,7 +261,7 @@ class StructureGraph:
     dimension : int
         Spatial dimension (2 or 3).
     tolerance : float
-        Node-merging tolerance. Nodes closer than this are merged.
+        Finite node-merging tolerance. Nodes closer than this are merged.
     box_size : array-like or None
         Unit cell dimensions [Lx, Ly, Lz] for periodic structures.
     """
@@ -274,6 +274,14 @@ class StructureGraph:
     ):
         if dimension not in (2, 3):
             raise ValueError("dimension must be 2 or 3")
+        # Inspect scalar arrays without coercing or replacing the stored value.
+        scalar_tolerance = (
+            tolerance[()]
+            if isinstance(tolerance, np.ndarray) and tolerance.ndim == 0
+            else tolerance
+        )
+        if isinstance(scalar_tolerance, (float, np.floating)) and not np.isfinite(scalar_tolerance):
+            raise ValueError("tolerance must be finite")
         self._dimension = dimension
         self._tolerance = tolerance
 
