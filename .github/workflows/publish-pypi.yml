@@ -37,6 +37,7 @@ jobs:
     outputs:
       checks: ${{ steps.ci.outputs.checks }}
       version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
       manifest: ${{ steps.packages.outputs.manifest }}
       artifact_id: ${{ steps.upload.outputs.artifact-id }}
     env:
@@ -136,13 +137,18 @@ jobs:
           assert versions == [version], 'Core source and package versions differ'
           if os.environ['GITHUB_EVENT_NAME'] == 'workflow_dispatch':
               assert os.environ['EXPECTED_VERSION'] == version, 'Dispatch version mismatch'
-          if os.environ['GITHUB_EVENT_NAME'] != 'pull_request':
+          should_publish = os.environ['GITHUB_EVENT_NAME'] != 'pull_request'
+          if should_publish:
               request = urllib.request.Request('https://pypi.org/pypi/fibernet/json', headers={'Cache-Control': 'no-cache'})
               with urllib.request.urlopen(request, timeout=30) as response:
                   published = json.load(response)
-              assert version not in published['releases'], 'Version already exists on PyPI'
+              if version in published['releases']:
+                  assert os.environ['GITHUB_EVENT_NAME'] == 'push', 'Version already exists on PyPI'
+                  should_publish = False
+                  print(f'Version {version} is already on PyPI; validate distributions without publishing')
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
               out.write(f'version={version}\n')
+              out.write(f'publish={str(should_publish).lower()}\n')
           PY
       - name: Build the sdist and its wheel with official PyPA tools
         run: |
@@ -213,7 +219,7 @@ jobs:
 
   publish:
     needs: build
-    if: github.repository == 'GellmanSparrowS/fibernet' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.repository == 'GellmanSparrowS/fibernet' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && needs.build.outputs.publish == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -340,3 +346,4 @@ jobs:
           assert graph.num_nodes > 0 and graph.num_edges > 0
           print('Published core smoke passed:', fibernet.__version__, fibernet.__file__)
           PY
+
