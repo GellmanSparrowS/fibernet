@@ -251,6 +251,17 @@ def compare_lammps_node_displacements(reference_graph, initial_graph, result, *,
             if (np.ma.isMaskedArray(item) or isinstance(item, (bool, np.bool_))
                     or (isinstance(item, np.ndarray) and item.dtype.kind == 'b')):
                 raise ValueError(f'{label} must contain unmasked real numbers')
+            if isinstance(item, (float, np.floating, np.ndarray)):
+                raw = np.asarray(item)
+                if raw.dtype.kind == 'f' and raw.dtype.itemsize in (2, 4, 8):
+                    # Inspect before dtype promotion: DAZ can erase a float32
+                    # subnormal even though its float64 value is normal. This
+                    # also covers scalar elements in mixed nested sequences.
+                    unsigned = np.dtype(f'u{raw.dtype.itemsize}').newbyteorder(raw.dtype.byteorder)
+                    magnitude = (1 << (8*raw.dtype.itemsize-1))-1
+                    stored_nonzero = (raw.view(unsigned) & magnitude) != 0
+                    if np.any(stored_nonzero & (raw == 0)):
+                        raise OverflowError(f'{label} is not representable in the active floating-point mode')
             if isinstance(item, (list, tuple)) and id(item) not in seen:
                 seen.add(id(item)); pending.extend(item)
         return _geometry(value, shape, label)
@@ -263,12 +274,25 @@ def compare_lammps_node_displacements(reference_graph, initial_graph, result, *,
     final = real_array(getattr(result, 'deformed_positions', None), (len(order), 3), 'final positions')
     rows = {nid: index for index, nid in enumerate(ids)}
     final = final[[rows[nid] for nid in order]]
+
+    def nonzero(values):
+        # Integer bits still distinguish subnormals from signed zero when the
+        # calling thread enables denormals-are-zero (DAZ) arithmetic.
+        return (values.view(np.uint64) & np.uint64(0x7fffffffffffffff)) != 0
+
+    def different(a, b):
+        # Both inputs are finite float64; only signed zeros compare equal with
+        # different bits. Floating comparisons can erase subnormals under DAZ.
+        return (a.view(np.uint64) != b.view(np.uint64)) & (nonzero(a) | nonzero(b))
+
     with np.errstate(over='ignore', invalid='ignore', under='ignore'):
         reference_m = reference * scales[reference_length_unit]
         initial_m = initial * scales[initial_length_unit]
         final_m = final * scales[initial_length_unit]
     for original, converted in ((reference, reference_m), (initial, initial_m), (final, final_m)):
-        if not np.isfinite(converted).all() or np.any((original != 0) & (converted == 0)):
+        # A floating zero comparison also detects converted subnormals that
+        # DAZ would discard as operands, even if later subtraction stays nonzero.
+        if not np.isfinite(converted).all() or np.any(nonzero(original) & (converted == 0)):
             raise OverflowError('position conversion is not representable in metres')
 
     def same_unit_difference(a, b, a_m, b_m, factor):
@@ -278,7 +302,7 @@ def compare_lammps_node_displacements(reference_graph, initial_graph, result, *,
             # Only the components whose raw subtraction overflowed use the
             # already-scaled operands; other components keep their precision.
             result_m = np.where(np.isfinite(delta), result_m, a_m - b_m)
-        if np.any(np.isfinite(delta) & (delta != 0) & (result_m == 0)):
+        if np.any(different(a, b) & ~nonzero(result_m)):
             raise OverflowError('displacement is below representable float64 range in metres')
         return result_m
 
@@ -288,6 +312,8 @@ def compare_lammps_node_displacements(reference_graph, initial_graph, result, *,
     else:
         with np.errstate(over='ignore', invalid='ignore', under='ignore'):
             from_reference = final_m - reference_m
+        if np.any(different(final_m, reference_m) & ~nonzero(from_reference)):
+            raise OverflowError('displacement is below representable float64 range in metres')
     if not np.isfinite(from_initial).all() or not np.isfinite(from_reference).all():
         raise OverflowError('displacement exceeds finite float64 range')
     return {'node_ids': order, 'units': 'm', 'from_initial_m': from_initial.copy(),

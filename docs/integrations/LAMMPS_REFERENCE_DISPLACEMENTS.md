@@ -22,6 +22,12 @@ print(comparison['from_initial_m'])     # final minus loaded initial, metres
 print(comparison['from_reference_m'])   # final minus reference, metres
 ```
 
+Both displacement arrays are always in metres. In contrast, the saved
+`result.displacements` and `result.max_displacement` use the original graph
+unit recorded in `result.metadata['field_units']`. The arrays are independent
+copies that the caller may edit without changing either graph or the result.
+The returned node IDs are physical StructureGraph IDs, not native atom indices.
+
 Save a detailed result with `SimResult.save(..., detailed=True)`; summary exports
 omit final positions. For a profile-bound file pass its matching profile name
 to `SimResult.load(..., profile=...)`.
@@ -40,6 +46,22 @@ Calculations use finite float64 coordinates; unit conversion and subtraction
 can round near-coincident values. It recomputes from final graph-unit positions;
 its values are not guaranteed bitwise equal to `result.displacements`, and
 unit round trips can produce a small nonzero difference for an unchanged state.
+For equal unit factors, subtraction precedes scaling to retain small differences;
+components whose raw subtraction overflows use the metre-valued operands instead.
+Different unit factors require comparing the converted positions, so cancellation
+can lose differences below their converted precision. Nonfinite positions,
+unrepresentable metre conversions and nonfinite displacements are rejected.
+Representable subnormal differences are retained when the active floating-point
+mode supports them. Some native libraries change the calling thread to flush
+subnormal outputs or treat subnormal inputs as zero (FTZ/DAZ). The helper does
+not change that mode: it rejects conversions or differences that silently become
+zero instead of returning a false zero-motion result. This includes differences
+between distinct normal coordinates. Integer-bit checks distinguish stored
+subnormals from signed zero even in DAZ mode. Rounding between different unit
+factors can still make converted coordinates identical, as described above.
+The input check runs before dtype promotion, including nested NumPy scalars:
+a float32 subnormal can otherwise disappear under DAZ even though its value
+would be normal and representable in float64.
 This is a final-frame geometry comparison,
 not a trajectory, stress, reaction force, external work, or physical solver
 validation. It does not require recorded native force state. A fixed-node net

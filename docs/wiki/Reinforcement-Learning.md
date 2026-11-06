@@ -29,6 +29,13 @@ The action space is `(dx, dy)` displacement pairs for internal points on each un
 
 `plot_reward_curve`, `plot_convergence`, `plot_action_distribution` — standard RL analysis plots.
 
+By default, `show=False` returns a standalone figure for headless export and
+leaves the application's backend and pyplot current figure unchanged. Save or
+edit that result through `fig.savefig(...)` and `fig.axes`; it is no longer
+selected by `plt.gcf()` or displayed by a later `plt.show()`. Use `show=True`
+for a pyplot-managed figure with the caller's backend. See
+[RL plot figures and migration](../RL_PLOT_FIGURES.md).
+
 ## Agent Persistence
 
 `save_agent()` / `load_agent()` for serialization.

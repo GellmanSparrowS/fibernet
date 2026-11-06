@@ -80,6 +80,11 @@ The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall
 
 ### Reopen saved output files
 
+For a complete existing task directory without a separately retained
+`PreparedRun`, see [offline saved-run restoration](LAMMPS_SAVED_RUN.md).
+That bounded POSIX route restores the stored preparation and checks output
+protocols; it does not authenticate the output or run an engine.
+
 If the matching `PreparedRun` is available or deterministically reconstructed,
 saved files can be parsed again without starting or resuming an engine:
 
