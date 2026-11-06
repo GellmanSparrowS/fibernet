@@ -1,4 +1,4 @@
-# FiberNet 4.3.0
+# FiberNet 4.4.0
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
@@ -9,15 +9,15 @@ FiberNet connects native graph generation, topology and planar snapshot analysis
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.3.0"
+python -m pip install "fibernet==4.4.0"
 ```
 
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.3.0"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.3.0"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.3.0"       # experimental fracture backend
+python -m pip install "fibernet[ml]==4.4.0"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.4.0"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.4.0"       # experimental fracture backend
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.

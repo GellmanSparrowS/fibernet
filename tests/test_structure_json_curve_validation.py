@@ -118,10 +118,10 @@ def test_finite_mixed_numeric_coordinates_use_ordinary_numpy_promotion():
     pytest.param(np.array([[1, 0, 0]], dtype=object), id='object-array'),
     pytest.param(np.array([[1j, 0, 0]]), id='complex-array'),
     pytest.param([[None, 0, 0]], id='null-coordinate'),
-    pytest.param(np.ma.array([[1., 0., 0.]], mask=False), id='unmasked-array'),
     pytest.param(np.ma.array([[1., 0., 0.]], mask=[[True, False, False]]),
                  id='masked-array'),
-    pytest.param([np.ma.array([1., 0., 0.], mask=False)], id='nested-masked'),
+    pytest.param([np.ma.array([1., 0., 0.], mask=[True, False, False])],
+                 id='nested-masked'),
 ])
 def test_writer_rejects_raw_curve_before_open_and_preserves_destinations(points, tmp_path):
     graph = StructureGraph.from_dict(record([[1., 0., 1.]]))
@@ -149,7 +149,9 @@ def test_writer_rejects_raw_curve_before_open_and_preserves_destinations(points,
 
 
 @pytest.mark.parametrize('points', [
-    None, np.empty((0, 3)), np.array([[1, 0, 1]], dtype=np.int64),
+    None, [], (), np.empty((0, 3)), np.array([[1, 0, 1]], dtype=np.int64),
+    np.ma.array([[1., 0., 1.]], mask=False),
+    [np.ma.array([1., 0., 1.], mask=False)],
     np.array([[1.5, 0., 1.]], dtype=np.float32),
     np.array([[1.5, 0., 1.]], dtype=np.float64),
     [[1, 0, 1]], ((1., 0., 1.),), [[2**53 + 1, 0., 0.]],

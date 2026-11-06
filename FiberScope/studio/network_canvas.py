@@ -84,7 +84,8 @@ class NetworkCanvas(QWidget):
             float(allxy[:, 0].min()) - pad, float(allxy[:, 1].min()) - pad,
             float(allxy[:, 0].ptp()) + 2 * pad,
             float(allxy[:, 1].ptp()) + 2 * pad)
-        cf = getattr(run, "contact_frames", None)
+        history = getattr(run, "contact_history", None)
+        cf = history if history is not None else getattr(run, "contact_frames", None)
         if cf is not None:
             cum, acc = [], set()
             for pairs in cf:

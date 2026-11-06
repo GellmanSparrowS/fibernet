@@ -31,7 +31,7 @@ def test_exact_identity_admits_comparison_not_result(contract_module):
 
 
 @pytest.mark.parametrize("field,value", [
-    ("version", "e2v15"), ("version", "e2v13"),
+    ("version", "e2v16"), ("version", "e2v13"),
     ("source_hash", "unreviewed"), ("actual_hash", "unreviewed"),
     ("actual_hash", None),
 ])

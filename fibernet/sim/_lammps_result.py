@@ -630,16 +630,16 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         else:
             for _ in json.JSONEncoder(allow_nan=False).iterencode(state):
                 pass
-    positions = np.asarray(state['final']['positions']); displacement = positions-original_si
+    positions = np.asarray(state['final']['positions'])
     row = {n:i for i,n in enumerate(ids)}; topology = {e['id']:e for e in graph['edges']}; bonds = dict(contract['bonds'])
-    lengths = np.asarray([np.linalg.norm(positions[row[topology[e]['node_j']]]-positions[row[topology[e]['node_i']]]) for e in edges])
-    coefficients = np.asarray([bonds[e] for e in edges]).reshape((-1,2)); forces = coefficients[:,0]*(lengths-coefficients[:,1]); stretches = lengths/coefficients[:,1]
     scale = contract['length_to_m']
+    displacement, forces, stretches, metrics = _stable_lammps_metrics(positions, original_si, row, topology, bonds, edges, scale)
+    # Validate derived values before constructing the public result.
     result = SimResult(displacements=displacement/scale, deformed_positions=positions/scale,
         energy=float(raw.thermo[-1].potential_J), time_seconds=float(wall_seconds), mode='dynamics',
-        edge_forces=forces, edge_stretches=stretches, max_force=float(np.max(np.abs(forces))) if len(edges) else 0.0,
-        max_stretch=float(np.max(stretches)) if len(edges) else 1.0, mean_stretch=float(np.mean(stretches)) if len(edges) else 1.0, std_stretch=float(np.std(stretches)) if len(edges) else 0.0,
-        max_displacement=float(np.max(np.linalg.norm(displacement/scale,axis=1))), n_nodes=len(ids), n_edges=len(edges),
+        edge_forces=forces, edge_stretches=stretches, max_force=metrics[0],
+        max_stretch=metrics[1], mean_stretch=metrics[2], std_stretch=metrics[3],
+        max_displacement=metrics[4], n_nodes=len(ids), n_edges=len(edges),
         metadata=_profiles.export_metadata(prepared,runtime),
         dynamics_state=state if record_state else None)
     if cg:
@@ -652,7 +652,7 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         result.metadata['edge_force_origin'] = 'harmonic bond contribution only: k*(length-equilibrium_length); tension-positive; not total nodal force'
         result.metadata['initial_bending_energy_J'] = contract['initial_bending_energy_J']
     if selected: result.metadata['profile'] = selected
-    if record_state: result.positions_trajectory = [np.asarray(p)/scale for p in state['positions']]
+    if record_state: result.positions_trajectory = _stable_graph_trajectory(state['positions'], scale)
     return result
 
 
@@ -690,3 +690,47 @@ def simulate_lammps(graph, mode, strain, **kwargs):
         task.cancel()
         task.wait()
         raise
+
+
+def _stable_lammps_metrics(positions, original_si, row, topology, bonds, edges, scale):
+    """Derive finite graph-unit summaries using scaled Euclidean norms."""
+    import math
+    # Avoid directly squaring components in np.linalg.norm.
+    lengths = np.asarray([math.dist(positions[row[topology[e]['node_j']]],
+                                   positions[row[topology[e]['node_i']]]) for e in edges])
+    with np.errstate(over='ignore', under='ignore', invalid='ignore', divide='ignore'):
+        displacement = positions-original_si
+        coefficients = np.asarray([bonds[e] for e in edges]).reshape((-1,2)); forces = coefficients[:,0]*(lengths-coefficients[:,1]); stretches = lengths/coefficients[:,1]
+        if not np.isfinite(forces).all() or not np.isfinite(stretches).all():
+            raise ValueError('nonfinite LAMMPS derived result')
+        if (np.any((lengths > 0) & (stretches == 0)) or
+                np.any((lengths != coefficients[:,1]) & (forces == 0))):
+            raise ValueError('LAMMPS derived force or stretch underflow')
+        displacements = displacement/scale
+        deformed = positions/scale
+        displacement_norms = np.hypot.reduce(displacements, axis=1)
+        max_stretch = float(np.max(stretches)) if len(edges) else 1.0
+        normalized_stretches = stretches/max_stretch if len(edges) else stretches
+        # Translate before scaling so close stretches keep their small spread.
+        minimum_stretch = float(np.min(stretches)) if len(edges) else 1.0
+        spread = max_stretch-minimum_stretch
+        normalized_offsets = (stretches-minimum_stretch)/spread if spread else stretches[:0]
+        metrics = (float(np.max(np.abs(forces))) if len(edges) else 0.0,
+                   max_stretch,
+                   float(np.mean(normalized_stretches)*max_stretch) if len(edges) else 1.0,
+                   float(np.std(normalized_offsets)*spread) if spread else 0.0,
+                   float(np.max(displacement_norms)))
+    if (not np.isfinite(lengths).all() or not np.isfinite(forces).all() or
+            not np.isfinite(stretches).all() or not np.isfinite(displacements).all() or
+            not np.isfinite(deformed).all() or not np.isfinite(displacement_norms).all() or
+            not all(np.isfinite(v) for v in metrics)):
+        raise ValueError('nonfinite LAMMPS derived result')
+    return displacement, forces, stretches, metrics
+
+
+def _stable_graph_trajectory(positions, scale):
+    with np.errstate(over='ignore', under='ignore', invalid='ignore', divide='ignore'):
+        result = [np.asarray(p)/scale for p in positions]
+    if any(not np.isfinite(p).all() for p in result):
+        raise ValueError('nonfinite LAMMPS derived trajectory')
+    return result
