@@ -111,3 +111,49 @@ actual run. CPU cost and measured peak RSS remain unknown. The explicit export
 budget is a planning input rather than an additional enforced file limit.
 Existing preparation caps, generated native inputs and harmonic/network
 forecast results are preserved.
+
+## Opt-in example preflight (no execution)
+
+The separate source-checkout entry point below prepares the existing crosslinked
+example and prints a structured storage report. It never calls `run_example`,
+checks provider paths, creates an output directory, or launches a solver, even
+when every comparison fits:
+
+```sh
+python -m examples.cg_resource_preflight \
+  --runtime-json RUNTIME.json --limits-json LIMITS.json \
+  --export-budget-bytes 16777216 --steps 500 --timestep-s 1e-7
+```
+
+`RUNTIME.json` contains the intended inert `RuntimeSpec` configuration. Supply
+all five existing `ResourceLimits` fields in `LIMITS.json`, with the values
+already applicable to your job. For the existing crosslinked example these are:
+
+```json
+{"cpu_seconds": 10, "wall_seconds": 20.0, "memory_bytes": 1073741824,
+ "output_bytes": 16777216, "file_size_bytes": 16777216}
+```
+
+Do not increase a job's authorized limits to make a forecast fit. The CLI does
+not fill in missing limits or change the existing example's execution behavior.
+The export budget is explicit and remains a planning input, not an enforced
+export limit. This report does not budget every output artifact or total job
+storage. Each comparison includes forecast bytes, budget bytes, and a boolean
+fit. A failed comparison returns `status="refused"` and exit code 1. A fit returns
+`status="storage_fit_only"` and exit code 0, which means only that the storage
+planning command succeeded. Both return `execution_admission=false`,
+`runtime_readiness="not_checked"`, and whole-workflow acceptance not established.
+Invalid input fails with a nonzero exit instead of producing a fit report.
+
+The Python helper `examples.cg_resource_preflight.preflight` accepts an existing
+`PreparedRun`, an inert runtime, required keyword `limits`, and required keyword
+`export_budget_bytes`. It always retains the `record_state=True` planning mode.
+No public compiler, sampling, provider checks, or resource caps are changed.
+This helper is not an execution gate automatically applied to other callers.
+
+The 48-node 500-step and 1000-step schedules exceed a 16 MiB detailed-export
+planning budget; the latter also exceeds the default 8 MiB native aggregate
+budget. These estimates are not new native results or convergence evidence.
+Historical whole-workflow resource failure is unchanged. Native execution needs
+separate authorization, provider qualification and applicable resource admission;
+a storage fit does not supply those requirements.
