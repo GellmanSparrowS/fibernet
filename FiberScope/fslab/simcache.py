@@ -24,8 +24,8 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # carries an explicit engine version.  After changing the solver, the
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
-ENGINE_VERSION = "e2v14"
-ENGINE_SRC_HASH = "bf860374a873"
+ENGINE_VERSION = "e2v15"
+ENGINE_SRC_HASH = "2aa074362b46"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -219,7 +219,9 @@ def _load_cache(path):
                 z["frames_xy"], z["edges"], z["edge_rest"], z["edge_strain"],
                 z["strain_levels"], z["force_curve"], z["left_nodes"],
                 z["right_nodes"], energies, z["contact_pairs_last"], cf,
-                z["contact_counts"], json.loads(str(z["meta"])))
+                z["contact_counts"], json.loads(str(z["meta"])),
+                contact_history=(list(z["contact_history"])
+                                 if "contact_history" in z else None))
     except Exception as e:
         print("[simcache] drop unreadable cache %s: %s"
               % (os.path.basename(path), e))
@@ -241,6 +243,9 @@ def _save_cache(path, run):
               contact_frames=np.array(run.contact_frames, dtype=object),
               contact_counts=run.contact_counts,
               meta=json.dumps(run.metadata))
+    contact_history = getattr(run, "contact_history", None)
+    if contact_history is not None:
+        kw["contact_history"] = np.array(contact_history, dtype=object)
     for k, v in run.energies.items():
         kw["energies_" + k] = v
     try:
@@ -306,6 +311,7 @@ class StretchRun:
     metadata: dict
     cache_hit: bool = False     # runtime only, never persisted in NPZ
     cache_key: str = ""         # empty when no cache path is selected
+    contact_history: list = None  # cumulative pairs through each retained frame
 
     @property
     def n_frames(self):
@@ -321,6 +327,16 @@ def _downsample(res):
     if F <= MAX_FRAMES:
         return res
     idx = np.unique(np.linspace(0, F - 1, MAX_FRAMES).round().astype(int))
+    # Preserve events in skipped frames separately from currently active pairs.
+    history, seen = [], set()
+    retained = set(idx.tolist())
+    for frame, pairs in enumerate(res.contact_frames):
+        seen.update((int(a), int(b)) for a, b in
+                    np.asarray(pairs, dtype=int).reshape(-1, 2))
+        if frame in retained:
+            history.append(np.asarray(sorted(seen), dtype=np.int64).reshape(-1, 2))
+    res.contact_history = history
+    res.contact_frames = [res.contact_frames[i] for i in idx]
     res.frames_xy = res.frames_xy[idx]
     res.edge_strain = res.edge_strain[idx]
     res.strain_levels = res.strain_levels[idx]
@@ -368,7 +384,8 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
     run = StretchRun(res.frames_xy, res.edges, res.edge_rest, res.edge_strain,
                      res.strain_levels, res.force_curve, res.left_nodes,
                      res.right_nodes, res.energies, res.contact_pairs_last,
-                     res.contact_frames, res.contact_counts, res.metadata)
+                     res.contact_frames, res.contact_counts, res.metadata,
+                     contact_history=getattr(res, "contact_history", None))
 
     run.cache_key = key
     if path:

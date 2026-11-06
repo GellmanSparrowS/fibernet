@@ -711,10 +711,14 @@ def _stable_lammps_metrics(positions, original_si, row, topology, bonds, edges, 
         displacement_norms = np.hypot.reduce(displacements, axis=1)
         max_stretch = float(np.max(stretches)) if len(edges) else 1.0
         normalized_stretches = stretches/max_stretch if len(edges) else stretches
+        # Translate before scaling so close stretches keep their small spread.
+        minimum_stretch = float(np.min(stretches)) if len(edges) else 1.0
+        spread = max_stretch-minimum_stretch
+        normalized_offsets = (stretches-minimum_stretch)/spread if spread else stretches[:0]
         metrics = (float(np.max(np.abs(forces))) if len(edges) else 0.0,
                    max_stretch,
                    float(np.mean(normalized_stretches)*max_stretch) if len(edges) else 1.0,
-                   float(np.std(normalized_stretches)*max_stretch) if len(edges) else 0.0,
+                   float(np.std(normalized_offsets)*spread) if spread else 0.0,
                    float(np.max(displacement_norms)))
     if (not np.isfinite(lengths).all() or not np.isfinite(forces).all() or
             not np.isfinite(stretches).all() or not np.isfinite(displacements).all() or

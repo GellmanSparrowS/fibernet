@@ -89,4 +89,90 @@ class StableLAMMPSNormTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'nonfinite LAMMPS derived trajectory'):
             to_sim_result(p,r,RUNTIME,0.,True)
 
+    def test_near_equal_stretches_keep_representable_spread(self):
+        for length, rest in ((10., 1.), (1e100, 1e-208), (1e-170, 1.)):
+            g = StructureGraph(dimension=3, tolerance=length*1e-5)
+            nodes = []
+            edges = []
+            for y, x in enumerate((math.nextafter(length, 0.), length)):
+                a = g.add_node([0., y*length, 0.], merge=False)
+                b = g.add_node([x, y*length, 0.], merge=False)
+                nodes.extend((a, b))
+                edges.append(g.add_edge(a, b, n_internal=0))
+            p = prepare_harmonic_beads(
+                g, length_unit='m', maximum_bond_length_m=2*max(length, rest),
+                masses_kg={n: 1. for n in nodes},
+                bonds={e: HarmonicBond(2., rest) for e in edges},
+                run=RunSpec(.001, 0, 1, ((-4*max(length, rest), 4*max(length, rest)),)*3))
+            for record in (False, True):
+                with self.subTest(length=length, rest=rest, record=record):
+                    o = to_sim_result(p, parse_outputs(p, *fixture(p)), RUNTIME, 0., record)
+                    expected = (max(o.edge_stretches)-min(o.edge_stretches))/2
+                    self.assertGreater(expected, 0.)
+                    self.assertEqual(o.std_stretch, expected)
+
+    def test_nonaxial_norms_across_scales(self):
+        for scale in (1e-170, 1., 1e160):
+            g = StructureGraph(dimension=3, tolerance=scale*1e-5)
+            a = g.add_node([0., 0., 0.])
+            b = g.add_node([3*scale, 4*scale, 0.], merge=False)
+            e = g.add_edge(a, b, n_internal=0)
+            p = prepare_harmonic_beads(
+                g, length_unit='m', maximum_bond_length_m=20*scale,
+                masses_kg={a: 1., b: 1.}, bonds={e: HarmonicBond(2., 5*scale)},
+                run=RunSpec(.001, 1, 1, ((-30*scale, 30*scale),)*3))
+            r = parse_outputs(p, *fixture(p))
+            points = tuple(tuple(x+d*scale for x, d in zip(point, (1., 2., 2.)))
+                           for point in r.trajectory[-1].positions_m)
+            r = replace(r, trajectory=(r.trajectory[0], replace(r.trajectory[1], positions_m=points)))
+            for record in (False, True):
+                with self.subTest(scale=scale, record=record):
+                    o = to_sim_result(p, r, RUNTIME, 0., record)
+                    self.assertTrue(math.isclose(o.max_displacement, 3*scale, rel_tol=1e-14))
+                    self.assertTrue(math.isclose(o.edge_stretches[0], 1., rel_tol=1e-14))
+
+    def test_representable_subnormal_tension_and_compression(self):
+        for length in (1e-150, 3e-150):
+            p, r = sample(length, rest=2e-150, stiffness=1e-160)
+            expected = 1e-160*(length-2e-150)
+            self.assertNotEqual(expected, 0.)
+            for record in (False, True):
+                with self.subTest(length=length, record=record):
+                    o = to_sim_result(p, r, RUNTIME, 0., record)
+                    self.assertEqual(o.edge_forces[0], expected)
+                    self.assertEqual(o.max_force, abs(expected))
+
+    def test_collapsed_final_bond_remains_rejected(self):
+        p, r = sample(1., steps=1)
+        final = replace(r.trajectory[1], positions_m=((0., 0., 0.), (0., 0., 0.)))
+        r = replace(r, trajectory=(r.trajectory[0], final))
+        for record in (False, True):
+            with self.subTest(record=record), self.assertRaisesRegex(ValueError, 'native bond left declared reach'):
+                to_sim_result(p, r, RUNTIME, 0., record)
+
+    def test_graph_units_and_history_remain_consistent(self):
+        for unit, scale in (('mm', 1e-3), ('nm', 1e-9)):
+            g = StructureGraph(dimension=3)
+            a = g.add_node([0., 0., 0.])
+            b = g.add_node([3., 4., 0.], merge=False)
+            e = g.add_edge(a, b, n_internal=0)
+            p = prepare_harmonic_beads(
+                g, length_unit=unit, maximum_bond_length_m=20*scale,
+                masses_kg={a: 1., b: 1.}, bonds={e: HarmonicBond(2., 5*scale)},
+                run=RunSpec(.001, 1, 1, ((-30*scale, 30*scale),)*3))
+            r = parse_outputs(p, *fixture(p))
+            final = replace(r.trajectory[1], positions_m=((scale, 2*scale, 2*scale),
+                                                        (4*scale, 6*scale, 2*scale)))
+            r = replace(r, trajectory=(r.trajectory[0], final))
+            for record in (False, True):
+                with self.subTest(unit=unit, record=record):
+                    o = to_sim_result(p, r, RUNTIME, 0., record)
+                    np.testing.assert_allclose(o.displacements, [[1., 2., 2.]]*2, rtol=1e-14, atol=0.)
+                    np.testing.assert_allclose(o.deformed_positions, [[1., 2., 2.], [4., 6., 2.]], rtol=1e-14, atol=0.)
+                    self.assertTrue(math.isclose(o.max_displacement, 3., rel_tol=1e-14))
+                    if record:
+                        np.testing.assert_array_equal(o.positions_trajectory[-1], o.deformed_positions)
+                    else:
+                        self.assertEqual(o.positions_trajectory, [])
+
 if __name__ == '__main__': unittest.main()

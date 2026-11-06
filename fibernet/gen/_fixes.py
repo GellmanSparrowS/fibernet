@@ -145,9 +145,18 @@ def lattice_3d_fixed(
     elif topology in ('gyroid', 'plate'):
         from fibernet.gen.metamaterials import gyroid_lattice_3d, plate_lattice_3d
         if topology == 'gyroid':
-            return gyroid_lattice_3d(cell_size=cell_size, **kwargs)
+            return gyroid_lattice_3d(
+                cell_size=cell_size, grid_size=grid_size,
+                radius=radius, material=material, **kwargs,
+            )
         else:
-            return plate_lattice_3d(cell_size=cell_size, **kwargs)
+            if 'spacing' in kwargs:
+                raise TypeError("lattice_3d(topology='plate') uses cell_size, "
+                                "not spacing")
+            return plate_lattice_3d(
+                spacing=cell_size, grid_size=grid_size,
+                radius=radius, material=material, **kwargs,
+            )
     else:
         raise ValueError(f"Unknown topology: {topology}")
 

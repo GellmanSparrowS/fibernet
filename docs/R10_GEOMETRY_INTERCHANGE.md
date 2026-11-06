@@ -101,3 +101,35 @@ adapter is newly authored from its data contract; no solver code is copied.
 Original ZIP, local research paths, embedded images, raw receipts and benchmark
 payloads remain private and unchanged. Only synthetic fixtures are included in
 `tests/test_r10_geometry.py`; they contain no historical experimental evidence.
+
+## Explicit ZIP member reader
+
+For a ZIP containing a geometry JSON record, select the exact member explicitly:
+
+```python
+from fibernet.io.r10_geometry import read_r10_geometry_zip
+
+payload = read_r10_geometry_zip(
+    'my-release.zip', 'release/example/geometry.json', length_unit='mm')
+# Inspect payload['edge_ids'] and provide explicit edge_properties before import.
+```
+
+The archive path must resolve to a regular file; symlinks to regular files are
+followed. On POSIX, nonblocking open permits FIFO rejection before reading. The
+reader never extracts the archive. The selected member must be a canonical
+relative POSIX `.json` path of at most 4096 printable characters, without
+backslashes or colons, and occur exactly once. It rejects altered names,
+non-regular or encrypted members, duplicate JSON keys and unsupported
+compression. The default uncompressed cap is 4 MiB; `max_bytes` may be set up
+to 8 MiB. The compressed member is also capped at 8 MiB. The archive must stay
+stable during reading. Archive size is capped at 512 MiB; entry count is capped
+at 10,000 after the standard library reads the ZIP directory. ZIP directory parsing
+and the decoded object graph are not covered by a total-memory or time guarantee.
+It applies the same structural
+geometry checks and millimetre contract as `validate_r10_geometry`; it does not
+validate continuum physics or supply mechanical beam properties.
+JSON decimals are rounded to binary64, so long decimal values need not be
+preserved exactly. Nonfinite results and nonzero decimals rounded to zero are
+rejected; this is not an arbitrary-precision or byte-preserving parser.
+JSON integer tokens use Python integers subject to the interpreter's limits;
+the existing geometry validator separately bounds stable IDs to int64.

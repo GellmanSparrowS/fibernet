@@ -8,9 +8,12 @@ is the largest Euclidean displacement in graph length units.
 
 Endpoint distance and displacement norms use scaled floating-point norm
 algorithms rather than directly squaring components. This avoids avoidable
-underflow and overflow for finite extremes. Stretch mean and standard
-deviation are computed after scaling by the largest stretch. Results at ordinary scales can
-change by a few last-place bits. If conversion, force, stretch, or aggregate
+underflow and overflow for finite extremes. Stretch mean is computed after
+scaling by the largest stretch. Standard deviation first subtracts the minimum
+stretch, then scales by the remaining range so tightly clustered values retain
+their small spread. Finite results can differ from the former formulas,
+especially when the old norm or variance lost precision. These algorithms do
+not guarantee correctly rounded statistics. If conversion, force, stretch, or aggregate
 statistics produce nonfinite binary64 values, projection raises
 `ValueError` instead of returning nonfinite values. A nonzero force or stretch
 that underflows to zero is also rejected. Floating-point precision and range
