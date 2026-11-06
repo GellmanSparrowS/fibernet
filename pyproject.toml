@@ -61,7 +61,9 @@ rl = [
     "stable-baselines3>=2.0",
 ]
 graph = ["networkx>=3.0"]
+image = ["opencv-python-headless>=4.5"]
 full = [
+    "opencv-python-headless>=4.5",
     "psutil>=5.9",
     "threadpoolctl>=3.1",
     "pyvista>=0.37",

@@ -63,6 +63,32 @@ For a checkout, use the equivalent editable command, for example
 ``python -m pip install -e ".[ml]"``. The desktop application has its own
 requirements; library extras do not replace them.
 
+Legacy graph image features
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The source checkout provides an ``image`` extra for the OpenCV-backed pore
+and contact fields in ``GraphFeatureExtractor``:
+
+.. code-block:: bash
+
+   python -m pip install -e ".[image]"
+
+This extra is also included in the source ``full`` extra. It is not part of
+the published 4.4.0 extras; with that release, install
+``python -m pip install opencv-python-headless`` separately. OpenCV remains
+optional for the core library and is not required by ``SnapshotFeatureExtractor``.
+
+OpenCV packages share the ``cv2`` namespace. Use only one OpenCV distribution
+in an environment. If a working ``opencv-python`` or contrib distribution is
+already installed, keep it and do not add the headless extra alongside it.
+
+When legacy extraction raises ``FeatureUnavailableError`` with
+``dependency_missing.cv2``, check the environment running your script with
+``python -c "import cv2; print(cv2.__version__); print(cv2.__file__)"``.
+Restart the interpreter after installation. Use ``extract_with_status()`` to
+inspect feature availability; installing OpenCV does not resolve missing
+positions or change the feature definitions.
+
 Choose the model deliberately
 -----------------------------
 
