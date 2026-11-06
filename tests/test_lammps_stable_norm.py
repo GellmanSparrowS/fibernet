@@ -1,6 +1,9 @@
 """Synthetic protocol fixtures; no native execution or scientific trajectories."""
 from dataclasses import replace
 import math
+from pathlib import Path
+import subprocess
+import sys
 import unittest
 import numpy as np
 from fibernet.core.structure_graph import StructureGraph
@@ -131,16 +134,42 @@ class StableLAMMPSNormTests(unittest.TestCase):
                     self.assertTrue(math.isclose(o.max_displacement, 3*scale, rel_tol=1e-14))
                     self.assertTrue(math.isclose(o.edge_stretches[0], 1., rel_tol=1e-14))
 
-    def test_representable_subnormal_tension_and_compression(self):
+    def test_subnormal_force_respects_active_runtime(self):
         for length in (1e-150, 3e-150):
             p, r = sample(length, rest=2e-150, stiffness=1e-160)
             expected = 1e-160*(length-2e-150)
-            self.assertNotEqual(expected, 0.)
             for record in (False, True):
                 with self.subTest(length=length, record=record):
-                    o = to_sim_result(p, r, RUNTIME, 0., record)
-                    self.assertEqual(o.edge_forces[0], expected)
-                    self.assertEqual(o.max_force, abs(expected))
+                    if expected == 0.:
+                        # A previously initialized Taichi runtime enables FTZ.
+                        # Projection must reject that loss, never return zero force.
+                        with self.assertRaisesRegex(ValueError, 'LAMMPS derived force or stretch underflow'):
+                            to_sim_result(p, r, RUNTIME, 0., record)
+                    else:
+                        o = to_sim_result(p, r, RUNTIME, 0., record)
+                        self.assertEqual(o.edge_forces[0], expected)
+                        self.assertEqual(o.max_force, abs(expected))
+
+    def test_representable_subnormal_force_in_clean_process(self):
+        # Windows runs its full suite in one process. Test gradual underflow in
+        # a fresh interpreter, without initializing any optional runtime.
+        code = '''
+import sys
+sys.path.insert(0, 'tests')
+from test_lammps_stable_norm import sample, to_sim_result, RUNTIME
+for length in (1e-150, 3e-150):
+    prepared, raw = sample(length, rest=2e-150, stiffness=1e-160)
+    expected = 1e-160*(length-2e-150)
+    assert expected != 0., 'fresh interpreter did not preserve subnormal force'
+    for record in (False, True):
+        result = to_sim_result(prepared, raw, RUNTIME, 0., record)
+        assert result.edge_forces[0] == expected
+        assert result.max_force == abs(expected)
+'''
+        completed = subprocess.run(
+            [sys.executable, '-c', code], cwd=Path(__file__).resolve().parents[1],
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(completed.returncode, 0, completed.stdout+completed.stderr)
 
     def test_collapsed_final_bond_remains_rejected(self):
         p, r = sample(1., steps=1)

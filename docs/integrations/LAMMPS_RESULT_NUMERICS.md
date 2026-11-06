@@ -19,6 +19,16 @@ statistics produce nonfinite binary64 values, projection raises
 that underflows to zero is also rejected. Floating-point precision and range
 limits still apply.
 
+Subnormal support also depends on the active floating-point environment.
+Taichi 1.7.4 enables flush-to-zero when its program is initialized; subsequent
+Python/NumPy arithmetic on that thread can then turn a representable subnormal
+force into zero. Projection rejects the detected loss with the same underflow
+error. It does not change the caller's floating-point mode or guarantee gradual
+underflow after another runtime changes it. Normal-range arithmetic and the
+public unit conventions are unchanged. Tests keep a mandatory clean-interpreter
+subnormal positive control and check fail-closed behavior in an active FTZ mode.
+See [Taichi's initialization](https://github.com/taichi-dev/taichi/blob/v1.7.4/taichi/program/program.cpp).
+
 These checks do not authenticate manually constructed output, qualify an engine
 or prove physical accuracy. The regression cases are synthetic protocol data,
 not native LAMMPS runs. They do not expand the admitted runtime or solver scope.
