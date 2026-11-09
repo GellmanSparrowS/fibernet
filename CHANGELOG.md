@@ -1,3 +1,10 @@
+## [Unreleased] - CSV training input preservation
+
+- Reject model destinations that resolve to the input CSV path before training,
+  including input-file and parent-directory symlink aliases. Distinct hard-link
+  destinations remain supported because atomic replacement preserves the input
+  entry. Native Dataset training and model serialization are unchanged.
+
 ## [Unreleased] - LAMMPS dual-reference displacement
 
 - Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`

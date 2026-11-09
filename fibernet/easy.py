@@ -542,6 +542,8 @@ def train_model(
         ordinary save failures preserve previous bytes or destination absence.
         Existing targets must be regular files without special permission bits.
         Parent directories must exist. No crash/concurrent-writer guarantee.
+        For CSV training, the destination must not resolve to the input CSV path;
+        path and link changes during the call are unsupported.
     split : {"row", "group"}, keyword-only
         Required explicitly for native data; omitted for CSV compatibility.
     groups : list or tuple of str, keyword-only
@@ -576,6 +578,12 @@ def train_model(
     import os
     if not isinstance(csv_path, (str, bytes, os.PathLike)):
         raise ValueError("csv_path must be a CSV path or an explicit FiberNetDataset")
+    if save_path:
+        source = Path(os.fsdecode(csv_path)).resolve()
+        destination = Path(os.fsdecode(save_path)).resolve()
+        if source == destination:
+            raise ValueError("save_path must not overwrite the input CSV; "
+                             "choose a different model destination")
 
     try:
         import pandas as pd
