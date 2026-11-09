@@ -1,3 +1,12 @@
+## [Unreleased] - 3D graph k-core correction
+
+- Restore `GraphFeatureExtractor3D` k-core values by computing the unweighted
+  mean degree locally, including isolated nodes. `kcore_frac` retains its
+  maximum-core-number / mean-degree formula and can exceed one. Names, order
+  and signatures are unchanged, but historical all-zero k-core values change.
+  See [migration guidance](docs/architecture/graph-feature-3d-kcore.md) before
+  combining corrected feature values with existing datasets or models.
+
 ## [Unreleased] - LAMMPS dual-reference displacement
 
 - Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`
