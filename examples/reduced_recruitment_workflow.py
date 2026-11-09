@@ -4,6 +4,7 @@ Run: python -m examples.reduced_recruitment_workflow --output-dir demo_stretch
 The solver is a reduced spring/bending/contact model, not calibrated FEM.
 """
 import argparse
+from dataclasses import asdict
 import json
 import os
 from pathlib import Path
@@ -28,16 +29,39 @@ class ReducedRecruitmentWorkflow:
     def run(self):
         if not 1 <= self.grid <= 8:
             raise ValueError("grid must be 1..8 for this example")
-        graph = manufacturable_graph(PlanarManufacturingConfig(
+        graph_config = PlanarManufacturingConfig(
             unit=self.unit, grid_x=self.grid, grid_y=self.grid,
-            n_pts_per_side=2, perturbation=0.25, seed=self.seed))
+            n_pts_per_side=2, perturbation=0.25, seed=self.seed)
+        graph = manufacturable_graph(graph_config)
         if graph.num_nodes > 2500 or graph.num_edges > 3500:
             raise MemoryError("example network exceeds node/edge budget")
         cfg = ReducedBeamConfig(target_stretch=self.stretch, n_increments=20,
                                 num_steps=2000, use_contact=False,
                                 use_bending=True)
         result = ReducedBeamSolver(graph, cfg).run()
-        recruited = compute_percolation(result, alpha=self.alpha)
+        recruitment_config = dict(alpha=self.alpha, hysteresis=0.6,
+                                  grip_connected=True, quantile=None,
+                                  min_active=1e-4)
+        recruited = compute_percolation(result, **recruitment_config)
+        graph_data = graph.to_dict()
+        # Native serialization sorts edge IDs; the solver uses insertion order.
+        # Preserve that order for a native from_dict -> solver replay as well.
+        edge_records = {edge["id"]: edge for edge in graph_data["edges"]}
+        graph_data["edges"] = [edge_records[eid]
+                               for eid in result.metadata["edge_ids"]]
+        json_records = {
+            "graph_json": graph_data,
+            "graph_config_json": asdict(graph_config),
+            "solver_config_json": asdict(cfg),
+            "recruitment_config_json": recruitment_config,
+            "result_metadata_json": result.metadata,
+        }
+        # Unicode scalars are readable with allow_pickle=False. Reject non-JSON
+        # numbers before touching either output, rather than storing objects.
+        replay = {key: json.dumps(value, allow_nan=False)
+                  for key, value in json_records.items()}
+        replay.update({"energy_" + key: values
+                       for key, values in result.energies.items()})
         self.output_dir.mkdir(parents=True, exist_ok=True)
         target = self.output_dir / "trajectory.npz"
         temporary = target.with_suffix(".tmp.npz")
@@ -48,7 +72,21 @@ class ReducedRecruitmentWorkflow:
                                 force_curve=result.force_curve,
                                 stretch_levels=result.strain_levels,
                                 active_edges=recruited.active_edges,
-                                spanning_edges=recruited.edge_in_spanning)
+                                spanning_edges=recruited.edge_in_spanning,
+                                trajectory_schema_version=np.int64(1),
+                                node_ids=np.asarray(result.metadata["node_ids"],
+                                                    dtype=np.int64),
+                                edge_ids=np.asarray(result.metadata["edge_ids"],
+                                                    dtype=np.int64),
+                                left_nodes=result.left_nodes,
+                                right_nodes=result.right_nodes,
+                                edge_rest=result.edge_rest,
+                                spanning_frac=recruited.spanning_frac,
+                                backbone_frac=recruited.backbone_frac,
+                                edge_depth_norm=recruited.edge_depth_norm,
+                                threshold_curve=recruited.threshold_curve,
+                                first_spanning_frame=np.int64(recruited.perc_frame),
+                                **replay)
             os.replace(temporary, target)
         finally:
             temporary.unlink(missing_ok=True)

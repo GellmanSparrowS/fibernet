@@ -3962,7 +3962,7 @@
   "symbols": [
    "ReducedRecruitmentWorkflow"
   ],
-  "sha256": "8dfa13268b9159679bc79927d819f2021a121a06351a7376361ab7aeb206212e"
+  "sha256": "548264c7bcccdc40f1f1848f9500499a6ae1e385cc2a2516e2a447c84a451f4b"
  },
  "benchmarks/early_recruitment_prediction.py": {
   "purpose": "Topology-held-out early recruitment screen on the shared reduced solver.",
@@ -4497,5 +4497,18 @@
    "test_real_cancellation_then_retry_preserves_inputs"
   ],
   "sha256": "1167370838b7489799a552765bcc2a52b7d7ba551edf8c66597b86a16b87e7b1"
+ },
+ "tests/test_reduced_recruitment_export.py": {
+  "purpose": "Saved reduced recruitment can be reanalyzed using only native public APIs.",
+  "status": "active",
+  "symbols": [
+   "_sparse_graph",
+   "_json",
+   "test_export_replays_native_analysis_and_solver_without_hidden_defaults",
+   "test_default_export_keeps_legacy_arrays_and_real_graph_roundtrip",
+   "test_failed_archive_replace_preserves_previous_outputs",
+   "test_non_json_metadata_does_not_modify_outputs"
+  ],
+  "sha256": "1ff7c8f0f8e301327b0139254ca12ce707f0930cea20bbe112c30c548fce0789"
  }
 }
