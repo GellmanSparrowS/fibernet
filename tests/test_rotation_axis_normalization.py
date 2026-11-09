@@ -70,13 +70,23 @@ def test_axis_magnitude_does_not_change_rotation(magnitude, direction, via_facto
     np.testing.assert_array_equal(axis, axis_before)
 
 
-@pytest.mark.parametrize("magnitude", [np.finfo(float).max, np.nextafter(0.0, 1.0)])
+@pytest.mark.parametrize(
+    "magnitude_bits",
+    [0x7FEFFFFFFFFFFFFF, 1],
+    ids=["largest-finite", "smallest-subnormal"],
+)
 @pytest.mark.parametrize("sign", [-1.0, 1.0])
-def test_extreme_finite_coordinate_axes_use_right_hand_rule(magnitude, sign):
+def test_extreme_finite_coordinate_axes_use_right_hand_rule(magnitude_bits, sign):
     source = StructureGraph(dimension=3)
     source.add_node([1.0, 0.0, 0.0])
+    # Native libraries can enable flush-to-zero in a shared test process.
+    # Construct stored bits directly: sign * a subnormal can erase the fixture
+    # before rotate() receives it, even though division normalizes it correctly.
+    sign_bit = 1 << 63 if sign < 0.0 else 0
+    axis = np.array([0, 0, magnitude_bits | sign_bit], dtype=np.uint64).view(np.float64)
+    assert int(axis.view(np.uint64)[2]) == magnitude_bits | sign_bit
     with np.errstate(over="raise", divide="raise", invalid="raise"):
-        actual = rotate(source, 90.0, axis=[0.0, 0.0, sign * magnitude])
+        actual = rotate(source, 90.0, axis=axis)
     np.testing.assert_allclose(actual.nodes[0].position, [0.0, sign, 0.0], atol=1e-15)
 
 
