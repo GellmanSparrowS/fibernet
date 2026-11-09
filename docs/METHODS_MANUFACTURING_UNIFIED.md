@@ -25,7 +25,8 @@ OBJ 输入在映射前限制文件为 64 MB；未请求面数简化时最多读�
 The curved-solid route passes its native `Mesh64` result directly through one
 Manifold reconstruction, then extracts `Mesh64` again. This retains binary64
 coordinates through cleanup without decimal rounding or a float32 bridge. The
-provider must support `Manifold.to_mesh64` (verified API: manifold3d 3.5.1).
+provider must support `Manifold.to_mesh64` and `Manifold.simplify`
+(`manifold3d>=3.2.0`; see the [provider contract](solid_validation.md#surface-extraction-precision)).
 Nonempty halfedge tangents are explicitly unsupported and raise `ValueError`.
 An explicit non-`NoError` status or an empty result raises `ValueError`.
 Exceptions raised by the native constructor/provider propagate unchanged.

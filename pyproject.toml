@@ -47,7 +47,7 @@ dependencies = [
 fracture = ["psutil>=5.9", "threadpoolctl>=3.1"]
 viz = ["pyvista>=0.37"]
 mesh = ["trimesh>=3.20"]
-manufacturing = ["manifold3d", "scikit-image>=0.19", "fast-simplification"]
+manufacturing = ["manifold3d>=3.2.0", "scikit-image>=0.19", "fast-simplification"]
 io = ["h5py>=3.7"]
 accel = ["taichi==1.7.4"]
 ml = [
@@ -79,7 +79,7 @@ full = [
     "scikit-optimize>=0.9",
     "stable-baselines3>=2.0",
     "matplotlib>=3.5",
-    "manifold3d",
+    "manifold3d>=3.2.0",
     "scikit-image>=0.19",
     "fast-simplification",
 ]
