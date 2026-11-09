@@ -133,10 +133,35 @@ def register_backend(name: str) -> Callable:
 # Built-in Generator Registration
 # ============================================================
 
+def _legacy_metamaterial_generator(generator, inactive_parameter):
+    """Restore a historical factory without admitting its unused option."""
+    from functools import wraps
+    from inspect import signature
+
+    parameters = signature(generator)
+    fixed = parameters.parameters[inactive_parameter].default
+
+    @wraps(generator)
+    def generate(*args, **kwargs):
+        bound = parameters.bind(*args, **kwargs)
+        if inactive_parameter in bound.arguments:
+            equal = bound.arguments[inactive_parameter] == fixed
+            if not isinstance(equal, (bool, np.bool_)) or not equal:
+                raise ValueError(
+                    f"{generator.__name__} does not implement {inactive_parameter}; "
+                    f"only its historical default {fixed!r} is supported "
+                    "through fibernet.api."
+                )
+        return generator(*args, **kwargs)
+
+    return generate
+
+
 def _register_builtin_generators():
     """Register all built-in generators (consolidated).
     
-    Removed: laminates, woven 2D, helix/braided, category 16, specific lattices/metamaterials
+    Removed: laminates, woven 2D, helix/braided, category 16, specific lattices
+    Restored: six historical 2D metamaterial factory names
     Added: unified lattice_2d, lattice_3d, metamaterial_2d, curved_random_2d,
            entangled_3d, biomimetic_network, hierarchical_lattice
     """
@@ -159,6 +184,20 @@ def _register_builtin_generators():
     # Unified metamaterials
     _safe_register("metamaterial_2d", gen.metamaterial_2d)
     
+    # Historical names retain their own geometry and parameter vocabulary.
+    # Each implementation has one unused option: admit its default only.
+    for name, inactive_parameter in (
+        ("reentrant_honeycomb_2d", "vertical_thickness"),
+        ("chiral_honeycomb_2d", "num_node_points"),
+        ("star_honeycomb_2d", "star_inner_angle"),
+        ("arrowhead_auxetic_2d", "arm_angle"),
+        ("hierarchical_lattice_2d", "base_type"),
+        ("missing_rib_auxetic_2d", "rib_angle"),
+    ):
+        _safe_register(
+            name, _legacy_metamaterial_generator(getattr(gen, name), inactive_parameter)
+        )
+
     # Curved fibers
     _safe_register("curved_random_2d", gen.curved_random_2d)
     
@@ -908,13 +947,13 @@ def create_metamaterial(
     1. Generate a parameterized unit cell
     2. Tile it into an array (Nx × Ny)
     3. Weld intersections with crosslinks
-    4. Return a complete graph ready for simulation
+    4. Return the resulting legacy FiberNetwork
     
     Parameters
     ----------
     unit_cell : str
         Unit cell type. Available options:
-        - ``"reentrant_honeycomb_2d"`` : Re-entrant honeycomb (auxetic when angle > 90°)
+        - ``"reentrant_honeycomb_2d"`` : Historical re-entrant honeycomb
         - ``"chiral_honeycomb_2d"`` : Chiral honeycomb with rotating nodes
         - ``"star_honeycomb_2d"`` : Star-shaped honeycomb
         - ``"arrowhead_auxetic_2d"`` : Arrowhead auxetic structure
@@ -925,17 +964,34 @@ def create_metamaterial(
     weld_threshold : float
         Distance threshold for auto-detecting intersections (default 0.5).
     **cell_params
-        Unit cell parameters. Common parameters:
+        Parameters of the selected historical generator, forwarded unchanged.
+        The unified ``metamaterial_2d`` route has a different parameter vocabulary
+        and geometry; these names are not aliases for its modes. Common parameters:
         - ``reentrant_angle`` : Re-entrant angle in degrees (default 150)
         - ``cell_height``, ``cell_width`` : Cell dimensions
-        - ``grid_size`` : Internal grid resolution (default (5, 5))
+        - ``grid_size`` : Internal grid (default (5, 5), hierarchical (4, 4))
         - ``radius`` : Fiber radius
     
     Returns
     -------
     FiberNetwork
-        Complete metamaterial graph with welded crosslinks.
+        Tiled legacy network with auto-detected welded crosslinks.
     
+    Notes
+    -----
+    Each restored historical generator has one unused option. Nondefault
+    values now raise ``ValueError`` through this registry rather than being
+    silently ignored: ``vertical_thickness=1.0`` (reentrant),
+    ``num_node_points=6`` (chiral), ``star_inner_angle=30.0`` (star),
+    ``arm_angle=None`` (arrowhead), ``base_type="triangular"`` (hierarchical),
+    and ``rib_angle=45.0`` (missing-rib). Omitted or explicit default values
+    preserve historical geometry. Unknown keywords raise ``TypeError``.
+    Direct ``fibernet.gen.metamaterials`` functions are unchanged.
+
+    The existing bounding-box spacing plus 0.1 and crosslink rebuilding are
+    retained. This helper does not establish periodic seams or certify
+    connectivity, auxetic response, or simulation readiness.
+
     See Also
     --------
     create : Low-level generator access.
@@ -943,8 +999,9 @@ def create_metamaterial(
     
     Examples
     --------
+    >>> import fibernet.api as legacy
     >>> # Create a 3×3 re-entrant honeycomb array
-    >>> meta = fn.create_metamaterial(
+    >>> meta = legacy.create_metamaterial(
     ...     unit_cell="reentrant_honeycomb_2d",
     ...     array_size=(3, 3),
     ...     reentrant_angle=150,
@@ -952,11 +1009,6 @@ def create_metamaterial(
     ...     cell_width=10,
     ... )
     >>> print(f"Fibers: {meta.num_fibers}, Crosslinks: {meta.num_crosslinks}")
-    >>> 
-    >>> # Run dynamics simulation
-    >>> traj = fn.simulate_dynamics(meta, dt=1e-7, steps=5000)
-    >>> 
-    Legacy simulate_mechanics is unsupported; see its migration documentation.
     """
     # Step 1: Generate unit cell
     if unit_cell not in _registry.generators:

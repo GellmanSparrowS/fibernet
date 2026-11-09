@@ -1,3 +1,13 @@
+## [Unreleased] - Legacy metamaterial factory compatibility
+
+- Restore the default and six historical 2D names of
+  `fibernet.api.create_metamaterial` to the legacy registry, preserving their
+  original generators and parameter vocabulary. Unknown keywords are rejected;
+  explicitly nondefault values for six historically ignored options now fail
+  clearly on these restored registry routes. Direct generators, unified modes,
+  custom registry entries and root exports are unchanged. See the
+  [compatibility contract](docs/architecture/legacy-metamaterial-factory.md).
+
 ## [Unreleased] - Kagome lattice perturbation
 
 - Honor positive `perturbation` and its `seed` in `lattice_2d(topology="kagome")`,

@@ -1068,6 +1068,31 @@ def reviewed_api_json_source(reverse=None):
         'a5257157afdb1603fe8ee37fbdbfe4ef4a6474ceac569462705ce9a4fee16287', reviewed_legacy_analysis_source(), reverse=reverse)
 
 
+def reviewed_legacy_metamaterial_source(reverse=None):
+    raw = (ROOT/'tests/fixtures/legacy_metamaterial_factory_v1/api_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'eb4dc6340c5d93971adc905d5f7cd45255c2673c1f3b90d86745bf401d01b0ea', 'reviewed metamaterial factory delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'reviewed_legacy_metamaterial_source_delta/1'
+    assert delta['source'] == 'fibernet/api.py'
+    assert delta['baseline_main'] == '50a1e94f3bd31f3f1ee00ff6c2896f47ad2350dc'
+    base = reviewed_api_json_source()
+    assert hashlib.sha256(base).hexdigest() == delta['base_sha256'], 'metamaterial factory base changed'
+    source = base if reverse is None else reverse
+    if reverse is not None:
+        assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'unreviewed metamaterial factory inverse input'
+    for hunk in (delta['hunks'] if reverse is None else reversed(delta['hunks'])):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        if reverse is not None:
+            before, after = after, before
+        assert before and source.count(before) == 1, 'metamaterial factory delta is not unique'
+        source = source.replace(before, after, 1)
+    expected = delta['result_sha256'] if reverse is None else delta['base_sha256']
+    assert hashlib.sha256(source).hexdigest() == expected, 'metamaterial factory result changed'
+    if reverse is not None:
+        assert source == base, 'metamaterial factory inverse changed historical bytes'
+    return source
+
+
 def reviewed_easy_batch_input_source(reverse=None):
     return _reviewed_release_input_delta(
         'fibernet/easy.py', 'easy_batch_input_delta.json',
@@ -1113,7 +1138,7 @@ def require_public_source(relative, raw):
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source(), reviewed_easy_training_csv_source(), reviewed_easy_training_csv_entry_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source(), reviewed_legacy_metamaterial_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1198,6 +1223,43 @@ def restore_historical_save(result_node):
     return node
 
 
+class LegacyMetamaterialSourceAdmission(unittest.TestCase):
+    def test_exact_factory_layer_reverses_to_previous_api(self):
+        prior, current = reviewed_api_json_source(), reviewed_legacy_metamaterial_source()
+        self.assertEqual(current, (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_legacy_metamaterial_source(reverse=current), prior)
+        require_public_source('fibernet/api.py', prior)
+        require_public_source('fibernet/api.py', current)
+        with self.assertRaises(AssertionError):
+            reviewed_legacy_metamaterial_source(reverse=prior)
+
+    def test_unreviewed_factory_and_unrelated_bytes_are_rejected(self):
+        raw = reviewed_legacy_metamaterial_source()
+        for changed in (
+            raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
+            raw.replace(b'parameters.bind(*args, **kwargs)', b'parameters.bind_partial(*args, **kwargs)', 1),
+            raw.replace(b' or not equal:', b' or equal:', 1),
+            raw.replace(b'("reentrant_honeycomb_2d", "vertical_thickness")', b'("reentrant_honeycomb_2d", "cell_height")', 1),
+            raw.replace(b'return generator(*args, **kwargs)', b'return generator()', 1),
+            raw.replace(b'object_pairs_hook=_unique_json_object_pairs', b'object_pairs_hook=dict', 1),
+        ):
+            self.assertNotEqual(changed, raw)
+            with self.subTest(tail=changed[-40:]), self.assertRaises(AssertionError):
+                require_public_source('fibernet/api.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_legacy_metamaterial_source(reverse=changed)
+
+    def test_factory_fixture_cannot_self_accept_a_mutation(self):
+        fixture = ROOT/'tests/fixtures/legacy_metamaterial_factory_v1/api_delta.json'
+        original = Path.read_bytes
+        def mutated(path):
+            raw = original(path)
+            return raw+b'\n' if path == fixture else raw
+        with patch.object(Path, 'read_bytes', mutated):
+            with self.assertRaisesRegex(AssertionError, 'reviewed metamaterial factory delta changed'):
+                reviewed_legacy_metamaterial_source()
+
+
 class ReleaseInputSourceAdmission(unittest.TestCase):
     CASES = (
         ('fibernet/easy.py', reviewed_easy_json_source, reviewed_easy_train_policy_source, 'easy_json_delta.json'),
@@ -1219,7 +1281,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     build(reverse=prior)
         self.assertEqual(reviewed_easy_training_csv_entry_source(), (ROOT/'fibernet/easy.py').read_bytes())
-        self.assertEqual(reviewed_api_json_source(), (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_api_json_source(), reviewed_legacy_metamaterial_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
         self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
                          reviewed_easy_train_policy_source())
         require_public_source('fibernet/_json.py', reviewed_json_helper_source())
@@ -2486,7 +2548,7 @@ class SourceShape(unittest.TestCase):
 
     def test_legacy_analysis_source_is_exact_and_reversible(self):
         raw = reviewed_legacy_analysis_source()
-        self.assertEqual(raw, reviewed_api_json_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))
+        self.assertEqual(raw, reviewed_api_json_source(reverse=reviewed_legacy_metamaterial_source(reverse=(ROOT/'fibernet/api.py').read_bytes())))
         self.assertEqual(reviewed_legacy_analysis_source(reverse=raw), reviewed_native_io_source())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return analyze_legacy_endpoints(network)', b'return {}', 1)):
@@ -2498,7 +2560,7 @@ class SourceShape(unittest.TestCase):
 
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()
-        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=reviewed_api_json_source(reverse=(ROOT/'fibernet/api.py').read_bytes())))
+        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=reviewed_api_json_source(reverse=reviewed_legacy_metamaterial_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))))
         self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),

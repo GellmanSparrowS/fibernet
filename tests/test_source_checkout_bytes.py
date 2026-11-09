@@ -11,6 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
     'fibernet/_json.py',
+    'tests/fixtures/legacy_metamaterial_factory_v1/api_delta.json',
     'tests/fixtures/release_input_contract_v1/easy_json_delta.json',
     'tests/fixtures/release_input_contract_v1/api_json_delta.json',
     'tests/fixtures/release_input_contract_v1/easy_batch_input_delta.json',
