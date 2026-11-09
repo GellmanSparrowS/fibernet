@@ -1,3 +1,10 @@
+## [Unreleased] - Scale-invariant 3D rotation axes
+
+- Normalize 3D rotation axes without overflowing or underflowing their norm.
+  Large and tiny finite axis magnitudes now preserve rigid geometry. Reject
+  malformed, complex, nonfinite and zero axes before copying a 3D graph.
+  Public signatures, default-axis rotation and 2D axis behavior are unchanged.
+
 ## [Unreleased] - LAMMPS dual-reference displacement
 
 - Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`

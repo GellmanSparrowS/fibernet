@@ -311,7 +311,7 @@
    "make_mirror",
    "make_scale"
   ],
-  "sha256": "6c6082846e110946b13a7acfb2c1b95885bbe4ebec49944b99448f0d2b453831"
+  "sha256": "f5d67e9c82ad28e3e0824ea9bec0d2d0144e54dc306f1a2e43af724964fb6732"
  },
  "fibernet/doe.py": {
   "purpose": "Design of Experiments (DOE) Module for Fiber Networks",
@@ -4400,5 +4400,17 @@
    "prepare_deformed_transport"
   ],
   "sha256": "5611345cfcf3c1872a9bb763534cc23b1d8f192c5df0e7fa603429de05c62d4e"
+ },
+ "tests/test_rotation_axis_normalization.py": {
+  "purpose": "Public 3D rotations depend on axis direction, not finite axis magnitude.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "test_axis_magnitude_does_not_change_rotation",
+   "test_extreme_finite_coordinate_axes_use_right_hand_rule",
+   "test_invalid_3d_axis_is_rejected_before_copy",
+   "test_default_and_2d_axis_behavior_is_unchanged"
+  ],
+  "sha256": "293670f8605f5cc5b38f2845872442667fdc24dcd643438f19daaf23a39bf3c0"
  }
 }
