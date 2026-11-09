@@ -132,3 +132,120 @@ def test_omitted_model_destination_keeps_csv_unchanged(tmp_path, destination):
     assert train(source, destination)["n_samples"] == 16
     assert (source.read_bytes(), source.stat().st_ino) == before
     assert list(tmp_path.iterdir()) == [source]
+
+
+@pytest.mark.parametrize("alias", ["case", "unicode", "parent_case"])
+def test_filesystem_lookup_aliases_reject_when_supported(tmp_path, monkeypatch, alias):
+    directory = tmp_path / "Inputs"
+    directory.mkdir()
+    source = csv_input(directory)
+    if alias == "case":
+        destination = directory / "INPUT.csv"
+    elif alias == "unicode":
+        source = source.rename(directory / "caf\u00e9.csv")
+        destination = directory / "cafe\u0301.csv"
+    else:
+        destination = tmp_path / "inputs" / source.name
+    if not destination.exists() or not source.samefile(destination):
+        pytest.skip(f"Filesystem does not provide {alias} lookup aliases")
+    before = source.read_bytes(), source.stat().st_ino
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Filesystem lookup alias reached model training or saving")
+    monkeypatch.setattr(LinearRegression, "fit", forbidden)
+    monkeypatch.setattr(easy, "_save_model_artifact", forbidden)
+    with pytest.raises(ValueError, match="save_path.*input CSV"):
+        train(source, destination)
+    assert (source.read_bytes(), source.stat().st_ino) == before
+
+
+@pytest.mark.parametrize("alias", ["case", "unicode", "parent_case"])
+def test_lookup_alias_identity_model_rejects_before_training(tmp_path, monkeypatch, alias):
+    # Exercise insensitive lookup semantics even on a case-sensitive CI volume.
+    # The capability-gated test above additionally covers actual filesystem IO.
+    import unicodedata
+    directory = tmp_path / "Inputs"
+    directory.mkdir()
+    source = csv_input(directory)
+    if alias == "case":
+        destination = directory / "INPUT.csv"
+    elif alias == "unicode":
+        source = source.rename(directory / "caf\u00e9.csv")
+        destination = directory / "cafe\u0301.csv"
+    else:
+        destination = tmp_path / "inputs" / source.name
+    before = source.read_bytes(), source.stat().st_ino
+    original = Path.samefile
+
+    def samefile(path, other):
+        key = lambda value: unicodedata.normalize("NFD", str(value)).casefold()
+        return key(path) == key(other) or original(path, other)
+    monkeypatch.setattr(Path, "samefile", samefile)
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Modeled lookup alias reached training or staging")
+    monkeypatch.setattr(LinearRegression, "fit", forbidden)
+    monkeypatch.setattr(easy, "_save_model_artifact", forbidden)
+    with pytest.raises(ValueError, match="save_path.*input CSV"):
+        train(source, destination)
+    assert (source.read_bytes(), source.stat().st_ino) == before
+
+
+@pytest.mark.parametrize("alternate", ["INPUT.csv", "cafe\u0301.csv"])
+def test_distinct_case_or_unicode_hardlink_entries_remain_supported(tmp_path, alternate):
+    source = csv_input(tmp_path)
+    if alternate.startswith("cafe"):
+        source = source.rename(tmp_path / "caf\u00e9.csv")
+    destination = tmp_path / alternate
+    if destination.exists():
+        pytest.skip("Filesystem folds these spellings to the existing entry")
+    try:
+        os.link(source, destination)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"Hardlinks unavailable: {exc}")
+    before = source.read_bytes(), source.stat().st_ino
+    train(source, destination)
+    assert (source.read_bytes(), source.stat().st_ino) == before
+    assert pickle.loads(destination.read_bytes())["target"] == "y"
+    assert not source.samefile(destination)
+
+
+@pytest.mark.parametrize("kind", ["missing", "separate_file", "other_parent_hardlink"])
+def test_ordinary_destinations_do_not_scan_directories(tmp_path, monkeypatch, kind):
+    source = csv_input(tmp_path)
+    destination = tmp_path / "model.pkl"
+    if kind == "separate_file":
+        destination.write_bytes(b"previous model")
+    elif kind == "other_parent_hardlink":
+        (tmp_path / "models").mkdir()
+        destination = tmp_path / "models" / "model.pkl"
+        try:
+            os.link(source, destination)
+        except (OSError, NotImplementedError) as exc:
+            pytest.skip(f"Hardlinks unavailable: {exc}")
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("Unambiguous destination required directory enumeration")
+    monkeypatch.setattr(os, "scandir", forbidden)
+    assert easy._model_save_overwrites_csv(source, destination) is False
+
+
+def test_unreadable_ambiguous_directory_fails_before_training(tmp_path, monkeypatch):
+    source = csv_input(tmp_path)
+    destination = tmp_path / "model.pkl"
+    try:
+        os.link(source, destination)
+    except (OSError, NotImplementedError) as exc:
+        pytest.skip(f"Hardlinks unavailable: {exc}")
+    before = source.read_bytes(), source.stat().st_ino
+
+    def denied(*args, **kwargs):
+        raise PermissionError("directory entries are unreadable")
+    def forbidden(*args, **kwargs):
+        pytest.fail("Unverified same-inode destination reached training")
+    monkeypatch.setattr(os, "scandir", denied)
+    monkeypatch.setattr(LinearRegression, "fit", forbidden)
+    with pytest.raises(PermissionError, match="directory entries"):
+        train(source, destination)
+    assert (source.read_bytes(), source.stat().st_ino) == before
+    assert destination.read_bytes() == before[0]

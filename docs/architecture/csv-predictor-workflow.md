@@ -24,10 +24,17 @@ simulation outputs as predictors simply because they are numeric.
 ## Preserving CSV training inputs
 
 When using `train_model(..., save_path="model.pkl")`, choose a destination that
-does not resolve to the input CSV path. Identical paths and aliases through file
-or parent-directory symlinks are rejected before training. A different hard-link
-name remains supported: replacing that directory entry leaves the input CSV
-inode and bytes unchanged. Existing artifact-target restrictions still apply.
+does not identify the input CSV directory entry. Identical paths and aliases
+through file or parent-directory symlinks, filesystem case rules, or Unicode
+normalization are rejected before training.
+
+Different hardlink entries remain supported: replacing the destination leaves
+the input CSV inode and bytes unchanged. For same-inode paths in the same parent
+directory, the preflight must be able to read that directory and find both exact
+entry spellings. Ambiguous aliases are rejected rather than guessing filesystem
+naming rules. Use the actual directory-entry spellings for distinct hardlinks;
+noncanonical spellings can conservatively reject even when a save would be safe.
+Existing artifact-target restrictions still apply.
 
 This is a static path check, not a filesystem transaction. Do not change input
 or output paths, symlinks, or directories during the call. Native in-memory

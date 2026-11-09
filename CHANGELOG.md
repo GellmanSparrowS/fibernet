@@ -1,9 +1,10 @@
 ## [Unreleased] - CSV training input preservation
 
-- Reject model destinations that resolve to the input CSV path before training,
-  including input-file and parent-directory symlink aliases. Distinct hard-link
-  destinations remain supported because atomic replacement preserves the input
-  entry. Native Dataset training and model serialization are unchanged.
+- Reject model destinations that identify the input CSV entry before training,
+  including symlink, case-insensitive and Unicode-normalization aliases. Distinct
+  hardlink entries remain supported; ambiguous same-parent aliases require readable
+  directory entries and exact spellings. Native Dataset training and model
+  serialization are unchanged.
 
 ## [Unreleased] - LAMMPS dual-reference displacement
 
