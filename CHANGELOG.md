@@ -1,3 +1,9 @@
+## [4.4.1] - 2026-11-09
+
+See [4.4.1 release notes and migration](docs/RELEASE_4_4_1.md) for changes
+since 4.4.0, including the CSV, k-core and rotation fixes. Historical Unreleased
+entries below remain as development history.
+
 ## [Unreleased] - Scale-invariant 3D rotation axes
 
 - Normalize 3D rotation axes without overflowing or underflowing their norm.

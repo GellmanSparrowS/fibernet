@@ -2,7 +2,7 @@
 FiberNet Version Information
 """
 
-__version__ = "4.4.0"
+__version__ = "4.4.1"
 __author__ = "Yunhao Yang"
 __email__ = ""
 __license__ = "MIT"
