@@ -84,3 +84,6 @@ tests/fixtures/pr108_reviewed_source_v1/mechanical_json_scalar_delta.json -text
 
 # Accepted JSON/batch-input source deltas retain exact historical composition.
 tests/fixtures/release_input_contract_v1/*.json -text
+
+# Exact reviewed legacy factory source delta.
+tests/fixtures/legacy_metamaterial_factory_v1/api_delta.json -text
