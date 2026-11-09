@@ -1,3 +1,10 @@
+## [Unreleased] - Scale-invariant 3D rotation axes
+
+- Normalize 3D rotation axes without overflowing or underflowing their norm.
+  Large and tiny finite axis magnitudes now preserve rigid geometry. Reject
+  malformed, complex, nonfinite and zero axes before copying a 3D graph.
+  Public signatures, default-axis rotation and 2D axis behavior are unchanged.
+
 ## [Unreleased] - 3D graph k-core correction
 
 - Restore `GraphFeatureExtractor3D` k-core values by computing the unweighted
