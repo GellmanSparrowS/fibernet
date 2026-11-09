@@ -676,7 +676,7 @@
    "biomimetic_network",
    "hierarchical_lattice"
   ],
-  "sha256": "42f2ec5ab75340f5b680efa0e159c97fb9fbb8b6eca8193685bed9da4eb668e7"
+  "sha256": "70a75f6d30a8bfde76197796007221d84dd6f55a5c465eb62aa5985eb885ad91"
  },
  "fibernet/gen/variants.py": {
   "purpose": "Enhanced variants of existing generators with 2D/3D support and more options.",
@@ -4460,6 +4460,22 @@
    "test_ionic_force_with_zero_charge_remains_zero"
   ],
   "sha256": "8441cd1556b04315276069e758c3ab21b78bc055c84bcda8a9e4e7f284a195dd"
+ },
+ "tests/test_kagome_perturbation_contract.py": {
+  "purpose": "Seeded lattice displacement after connectivity construction, before rotation.",
+  "status": "active",
+  "symbols": [
+   "create_lattice",
+   "centerlines",
+   "incidences",
+   "test_kagome_seed_controls_geometry_without_changing_incidence",
+   "test_displacement_uses_common_cell_size_and_existing_node_order",
+   "test_kagome_rotates_after_displacement_and_preserves_material",
+   "test_kagome_keeps_distinct_coincident_node_identities",
+   "test_legacy_no_displacement_is_seed_independent",
+   "test_kagome_does_not_consume_global_random_state"
+  ],
+  "sha256": "288937cccbed51e897443dfd523cead1d749ff8debfc3b9a468342d002f70a93"
  },
  "tests/test_legacy_trim_crosslinks.py": {
   "purpose": "Crosslink preservation in the legacy sampled-vertex trim operation.",

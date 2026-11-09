@@ -7,6 +7,15 @@
   change from the old empty-link output; see the
   [compatibility and migration contract](docs/architecture/legacy-trim-crosslinks.md).
 
+## [Unreleased] - Kagome lattice perturbation
+
+- Honor positive `perturbation` and its `seed` in `lattice_2d(topology="kagome")`,
+  including `create("lattice_2d", ...)`. Apply displacement after existing tile
+  connectivity is built and before rotation. Zero perturbation, public
+  signatures and other lattice types are unchanged. Historical Kagome calls
+  silently ignored positive perturbation; see the
+  [usage and migration contract](docs/architecture/lattice-perturbation-contract.md).
+
 ## [Unreleased] - Ionic bond force direction
 
 - Correct `IonicBond.compute_force` to return force on the first endpoint,
