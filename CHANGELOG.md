@@ -1,3 +1,13 @@
+## [Unreleased] - Ionic bond force direction
+
+- Correct `IonicBond.compute_force` to return force on the first endpoint,
+  matching Spring and Covalent crosslinks and the negative first-endpoint
+  energy gradient. Opposite charges attract and like charges repel. Nonzero
+  returned forces and newly stored state forces reverse sign; magnitudes,
+  energies, constructor signatures and rupture thresholds are unchanged.
+  External callers using the previous sign must follow the
+  [endpoint and migration contract](docs/architecture/crosslink-force-contract.md).
+
 ## [Unreleased] - transformed tiling boundary labels
 
 - Recompute `tile_with_transforms` node flags on the nominal outer XY planes

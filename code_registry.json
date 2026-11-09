@@ -211,7 +211,7 @@
    "IonicBond",
    "create_crosslink"
   ],
-  "sha256": "a4197a41b04131a6fbc7ffe8a8b301abd09d32787bc16f6956fc867fb8a5dff6"
+  "sha256": "3ff2aa7cea5b3a88203c62797885baa4284fe5126fdf2f3f55066dffa48a5158"
  },
  "fibernet/core/fiber.py": {
   "purpose": "Fiber class - represents a single fiber with 3D geometry, cross-section, and material.",
@@ -2882,7 +2882,7 @@
    "TestIonicBond",
    "TestCrosslinkState"
   ],
-  "sha256": "07cd8b9392f36ebe83e1e6447413b30f540ad56ece5f346806775450bc6c66fa"
+  "sha256": "47f82080582d7e1061992467db3117a6a8bdd357255d4faf80df4c54a8fa3d18"
  },
  "tests/test_doe.py": {
   "purpose": "Tests for design of experiments module.",
@@ -4445,5 +4445,19 @@
    "test_empty_cell_stays_empty"
   ],
   "sha256": "d81d26fa4199e110f850c8c3ddf11849fd333784bdb95a7d8f7ebd16c9ec72a4"
+ },
+ "tests/test_crosslink_force_contract.py": {
+  "purpose": "Endpoint, energy-gradient and compatibility checks for crosslink forces.",
+  "status": "active",
+  "symbols": [
+   "_negative_gradient",
+   "test_ionic_force_is_negative_first_endpoint_energy_gradient",
+   "test_ionic_direction_energy_and_endpoint_reversal",
+   "test_existing_elastic_models_share_first_endpoint_convention",
+   "test_ionic_breaking_threshold_and_transition_force_are_preserved",
+   "test_ionic_near_coincidence_guard_is_unchanged",
+   "test_ionic_force_with_zero_charge_remains_zero"
+  ],
+  "sha256": "8441cd1556b04315276069e758c3ab21b78bc055c84bcda8a9e4e7f284a195dd"
  }
 }

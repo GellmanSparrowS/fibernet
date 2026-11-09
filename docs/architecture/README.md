@@ -9,6 +9,7 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [Linear FEM quickstart](linear-fem-quickstart.md)
 - [Reference research journey](reference-research-journey.md)
 - [Material consumption](material-consumption-contract.md)
+- [Crosslink force endpoints](crosslink-force-contract.md)
 - [Result identity](result-identity-contract.md)
 - [Direct FEM array identity](raw-array-identity-migration.md)
 - [Snapshot graph identity](snapshot-identity-contract.md)
