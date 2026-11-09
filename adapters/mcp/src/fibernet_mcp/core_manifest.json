@@ -39,7 +39,7 @@
   "core/transforms.py": "e8adcc6a2ec72d7e0cef419b0d1afa95dc8f0a0021e4aaf06f96c2d8fc4610e3",
   "core/viscoelastic.py": "e8fd07c5c06bbf85569c7c92f8806f983fb53a649eef03f52e8dd2ef22cb3f92",
   "doe.py": "c2b2c740a9b2f250f07ee1295972a79fb3feb7c0fd47f0ddac83c01c56f7efaf",
-  "easy.py": "b84560498114f5107aa36245a6600017fb42a75b91e92827c8617943b2068da3",
+  "easy.py": "d27c8a40ed8465c808393b42becb5c23e4dadc0a4eaa1b35d03b69afe8a14783",
   "examples/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "examples/basic_usage.py": "92c33e7dc8c1a13f6594437c78f100cd9f5c4edab5cebe265b5d867e6db81fdb",
   "examples/linear_static_network.py": "fa7d5758e95b106f0e057507ef32c22151173420ae7b08b87080fceeedefba1d",

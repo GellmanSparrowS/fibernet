@@ -542,6 +542,9 @@ def train_model(
         ordinary save failures preserve previous bytes or destination absence.
         Existing targets must be regular files without special permission bits.
         Parent directories must exist. No crash/concurrent-writer guarantee.
+        For CSV training, the destination must not identify the input CSV entry.
+        Ambiguous same-inode paths require readable parent-directory entries and
+        exact entry spellings; path and link changes during a call are unsupported.
     split : {"row", "group"}, keyword-only
         Required explicitly for native data; omitted for CSV compatibility.
     groups : list or tuple of str, keyword-only
@@ -576,6 +579,9 @@ def train_model(
     import os
     if not isinstance(csv_path, (str, bytes, os.PathLike)):
         raise ValueError("csv_path must be a CSV path or an explicit FiberNetDataset")
+    if save_path and _model_save_overwrites_csv(csv_path, save_path):
+        raise ValueError("save_path must not overwrite the input CSV; "
+                         "choose a different model destination")
 
     try:
         import pandas as pd
@@ -906,6 +912,35 @@ def _xgb_point_predictions(raw, n_rows):
     if not np.isfinite(values).all():
         raise ValueError("XGBoost predictions must be finite")
     return values
+
+
+def _model_save_overwrites_csv(csv_path, save_path):
+    """Distinguish lookup aliases from separately replaceable hardlink entries."""
+    import os
+
+    source = Path(os.fsdecode(csv_path)).resolve()
+    destination = Path(os.fsdecode(save_path)).resolve()
+    # Compare exact spellings: WindowsPath equality folds case even on a
+    # case-sensitive directory that can contain distinct case-only hardlinks.
+    if str(source) == str(destination):
+        return True
+    try:
+        same_file = source.samefile(destination)
+    except FileNotFoundError:
+        return False
+    if not same_file or not source.parent.samefile(destination.parent):
+        return False
+    names = {source.name, destination.name}
+    if len(names) == 1:
+        return True  # The same entry through differently spelled parent paths.
+    # Do not guess filesystem case/Unicode rules. Only two actual, exact entry
+    # names establish separate hardlinks. Ambiguity or scan errors fail closed.
+    with os.scandir(source.parent) as entries:
+        for entry in entries:
+            names.discard(entry.name)
+            if not names:
+                return False
+    return True
 
 
 def _save_model_artifact(path, artifact):
