@@ -1854,7 +1854,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "407acaff350a837ae44c95070fe4f56fc9b93b3c80a48d865ad7fb9560e1d6a3"
+  "sha256": "7bd23982678d878f76ebb125e68eac1f4ea9c54a32a5ce9d93ff746715fc80f3"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -3512,9 +3512,10 @@
   "purpose": "Check that the public package reports its packaged version.",
   "status": "active",
   "symbols": [
-   "test_version_matches_package_metadata"
+   "test_version_matches_package_metadata",
+   "test_release_installation_guides_match_package_version"
   ],
-  "sha256": "9f4ce1bb254e68296884311cf46586a41bfde7f22f98d11455c83166798a9970"
+  "sha256": "844ed2e03447c5fc4392c0d8a005350144d7030e41ffd56abbc9fe9ac777b2b9"
  },
  "benchmarks/percolation_pruning_pilot.py": {
   "purpose": "Small, resumable intervention audit for thresholded tensile recruitment.",

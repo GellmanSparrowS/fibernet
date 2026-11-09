@@ -274,10 +274,10 @@ def main() -> None:
     zh_links = {canonical_destination(x) for x in destinations(chinese) if not x.startswith("#")}
     require(en_links == zh_links, f"Language content links differ: {en_links ^ zh_links}")
 
-    require("fibernet==4.2.0" in english and "4.3.0" in english,
-            "Published/development install distinction missing")
-    require("pip install fibernet==4.3.0" not in english + chinese,
-            "Unpublished package command advertised")
+    require("fibernet==4.4.1" in english and "pip install -e ." in english,
+            "Pinned release/source installation commands missing")
+    require("pip install fibernet==4.2.0" not in english + chinese,
+            "Stale published-package command advertised")
     document_checks = [check_links(ROOT / name) for name in
                        ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md", "docs/HOMEPAGE_EXAMPLE_SCOPE.md")]
     for path in sorted((MEDIA / "ui").glob("*.svg")):

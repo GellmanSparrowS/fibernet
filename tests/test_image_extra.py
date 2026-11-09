@@ -51,6 +51,7 @@ class TestImageExtra(unittest.TestCase):
     def test_installation_guide_distinguishes_source_and_release(self):
         guide = (self.root / 'docs/getting_started.rst').read_text(encoding='utf-8')
         self.assertIn('python -m pip install -e ".[image]"', guide)
+        self.assertIn('python -m pip install "fibernet[image]==4.4.1"', guide)
         self.assertIn('published 4.4.0 extras', guide)
         self.assertIn('dependency_missing.cv2', guide)
         self.assertIn('Use only one OpenCV distribution', guide)

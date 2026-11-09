@@ -57,7 +57,7 @@ so shells do not interpret square brackets:
 * ``python -m pip install "fibernet[rl]"``: reinforcement-learning dependencies
 * ``python -m pip install "fibernet[accel]"``: optional Taichi backend
 * ``python -m pip install "fibernet[io]"``: HDF5 support
-* ``python -m pip install -e ".[fracture]"``: experimental fracture backend (4.3.0 source)
+* ``python -m pip install "fibernet[fracture]"``: experimental fracture backend
 
 For a checkout, use the equivalent editable command, for example
 ``python -m pip install -e ".[ml]"``. The desktop application has its own
@@ -73,8 +73,10 @@ and contact fields in ``GraphFeatureExtractor``:
 
    python -m pip install -e ".[image]"
 
-This extra is also included in the source ``full`` extra. It is not part of
-the published 4.4.0 extras; with that release, install
+The ``image`` extra is available in FiberNet 4.4.1 and is also included in
+``full``. For the published package, use
+``python -m pip install "fibernet[image]==4.4.1"``. The published 4.4.0 extras
+do not contain it; with that older release, install
 ``python -m pip install opencv-python-headless`` separately. OpenCV remains
 optional for the core library and is not required by ``SnapshotFeatureExtractor``.
 

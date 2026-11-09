@@ -245,7 +245,7 @@
   "utils/parametric.py": "2b015cee598191397637ef44150aa1e7bee81b3943003a25904fd309e3a83ec5",
   "utils/units.py": "14b08a370ad77420052eb858eb811fbb5a17eaa68e9ec76e9aae070cb62721fc",
   "utils/validation.py": "69df0f555a70af5f9d6e4bce16eb506f8d7db5479068669b28a7f5f0c7f2a927",
-  "version.py": "407acaff350a837ae44c95070fe4f56fc9b93b3c80a48d865ad7fb9560e1d6a3",
+  "version.py": "7bd23982678d878f76ebb125e68eac1f4ea9c54a32a5ce9d93ff746715fc80f3",
   "visualization.py": "0a42323486f655f7288e856d3a17d8f7006d0beed6328eb396b98eec3cb8bdcd",
   "viz/__init__.py": "c64befa58239e6a8f9e90da2751c9879721d9d56f04e2816d4a86e6be4dc9098",
   "viz/advanced.py": "dc33f2098860639ec60ba5b0f1c7e8dd5c06cb2280a5c29a2ac9c9ed759b23d8",
