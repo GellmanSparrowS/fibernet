@@ -608,10 +608,12 @@
    "_check_boundary_contact",
    "_extend_to_boundary",
    "_bridge_small_components",
+   "_bridge_owned_components",
+   "_bridge_components_inplace",
    "_clip_segment_to_box",
    "_unit_voronoi"
   ],
-  "sha256": "bcfa1962b9afe2bb0d49fd80fc80e13ede43b154b8274cc215d83896e836aa03"
+  "sha256": "875fb9b56f6c671f23f7c50b5dc54fc12e543576f4170a9bf5f079c59f736619"
  },
  "fibernet/gen/regular.py": {
   "purpose": "Regular fiber network generators.",
@@ -4556,5 +4558,21 @@
    "test_tampered_schedule_cannot_lower_the_bound"
   ],
   "sha256": "b4353811c37c8f3b5087aacec1faa03ce07007b6f27b3d922db9ed2561965f68"
+ },
+ "tests/test_pattern_3d_box_contract.py": {
+  "purpose": "Reject invalid native 3-D cell extents before factories or meshing run.",
+  "status": "active",
+  "symbols": [
+   "test_cubic_rejects_collapsed_reflected_or_nonreal_cells",
+   "test_invalid_box_precedes_factory_tiling_repair_and_rng",
+   "test_invalid_box_does_not_bypass_admission_with_zero_grid",
+   "test_overridden_unit_kwargs_cannot_rescue_invalid_top_level_box",
+   "test_valid_top_level_box_still_overrides_unit_kwargs",
+   "test_valid_box_objects_reach_custom_factory_unchanged_and_detach_from_output",
+   "test_valid_rectangular_builtin_geometry_and_native_roundtrip",
+   "test_real_tpms_rectangular_box_preserves_provider_geometry_and_native_roundtrip",
+   "test_valid_box_keeps_empty_tiling_contract"
+  ],
+  "sha256": "a29024b0c510828de9b803818d475df301ab302fcd65e83faeed78c7b578518a"
  }
 }

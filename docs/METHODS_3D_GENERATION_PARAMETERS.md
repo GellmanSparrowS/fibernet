@@ -5,6 +5,39 @@
 This note describes parameter acceptance, not mechanical validity or a new
 geometry capability.
 
+## Unit-cell dimensions
+
+`pattern_3d` requires `box` to be a sequence or one-dimensional NumPy array
+containing exactly three finite positive real dimensions `(w, h, d)`.
+Zero, negative, nonfinite, boolean, string, complex and missing values raise
+`ValueError` before a built-in or registered factory runs. This also applies
+when a grid axis is zero. A valid box with a zero grid axis still produces an
+empty tiling after unit construction.
+
+Previously a zero-width cubic cell could collapse to a planar graph, negative
+widths could yield negative nominal extents, and complex NumPy coordinates could
+lose their imaginary parts. Such inputs now fail explicitly. Choose positive
+real cell dimensions rather than relying on collapse, reflection or coercion.
+
+```python
+from fibernet import pattern_3d
+
+graph = pattern_3d(unit="cubic", box=(6.0, 8.0, 10.0), grid=(2, 1, 1))
+assert (graph.num_nodes, graph.num_edges) == (12, 20)
+```
+
+For this 3D entry point, top-level arguments override `unit_kwargs` entries.
+In particular, `unit_kwargs={"box": ...}` neither overrides nor repairs the
+top-level box. The separate 2D built-in factory override policy is unchanged.
+Valid input containers and scalar types are passed through without normalization,
+so existing provider arithmetic, geometry, IDs, metadata and material forwarding
+are retained. An unmasked NumPy masked array remains valid; missing coordinates
+do not. Custom factories now share this public entry-point dimension contract.
+
+This check does not change direct tiling or private unit-factory APIs, introduce
+length units, or guarantee that extreme dimensions, grid products or requested
+meshing allocations are representable. Existing downstream checks still apply.
+
 ## TPMS units
 
 The built-in `gyroid`, `schwarz_p`, `schwarz_d`, `iwp`, `neovius` and `lidinoid`
@@ -58,7 +91,13 @@ It does not change the 2D custom-points `fit_to_box` restriction.
 
 ## Verification scope
 
-Focused tests use the real cubic and octet generators and a deliberately substituted
+The box-contract tests exercise all eight built-in edge-based units, native
+serialization roundtrips and all six TPMS families with real scikit-image
+meshing when that optional dependency is installed. TPMS provider tests skip
+when scikit-image is absent. Invalid-box sentinel tests verify rejection before
+factory, tiling, connectivity repair or random-number generation.
+
+The earlier subdivision-contract tests use the real cubic and octet generators and a deliberately substituted
 2-node/1-edge TPMS builder to test public parameter routing. Sentinel tests do
 not validate actual TPMS meshes. They assert unsupported requests reject before
 that builder, while default/no-op routing and existing graph identities remain

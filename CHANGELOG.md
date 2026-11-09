@@ -1,3 +1,11 @@
+## [Unreleased] - Native 3D cell dimension validation
+
+- Reject invalid `pattern_3d` box dimensions before built-in or registered
+  factory work, including zero-width cells, negative extents and complex values
+  that previously could collapse, reflect or silently change the generated
+  geometry. Valid scalar types, argument precedence and zero-grid behavior are
+  preserved. See the [3D dimension contract](docs/METHODS_3D_GENERATION_PARAMETERS.md).
+
 ## [Unreleased] - Unprofiled harmonic output admission
 
 - Reject unprofiled LAMMPS harmonic tasks whose mandatory trajectory atom rows
@@ -597,4 +605,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 - Total: 180 passing
-
