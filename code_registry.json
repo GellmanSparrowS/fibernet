@@ -266,13 +266,20 @@
   "purpose": "Tiling and welding engine for StructureGraph.",
   "status": "active",
   "symbols": [
+   "_known_equal",
+   "_canonical_curve",
+   "_same_curve",
+   "_place_node",
+   "_maximum_shared_matching",
+   "_place_cell_edges",
+   "_geometry_bounds",
    "_detect_boundary_nodes",
    "tile_2d",
    "tile_3d",
    "tile_with_transforms",
    "fit_unit_to_box"
   ],
-  "sha256": "b7a0d8236cd2508dc884419f1cb58327bb77862614a4080bd308afe66b69e084"
+  "sha256": "f73cbd41aa7a6b26808a762e69d9f505e1b51789a080820f3b3343f76b7f12a4"
  },
  "fibernet/core/transform.py": {
   "purpose": "Network transformation operations.",
@@ -4421,5 +4428,22 @@
    "test_default_and_2d_axis_behavior_is_unchanged"
   ],
   "sha256": "a8551e9c72d2d17ff9b97629c9470ff642e4e5f45d5481901cf664c10a0cd25e"
+ },
+ "tests/test_transformed_tiling_boundaries.py": {
+  "purpose": "Transformed tiling labels the nominal outer XY faces after welding.",
+  "status": "active",
+  "symbols": [
+   "_square",
+   "_assert_faces",
+   "test_identity_tiling_matches_tile_2d_labels_and_geometry",
+   "test_transformed_cells_recompute_faces_in_the_final_frame",
+   "test_faces_are_nominal_cell_planes_not_transformed_geometry_extrema",
+   "test_face_tolerance_is_strict_and_uses_effective_tolerance",
+   "test_merged_labels_belong_to_retained_representative_not_union",
+   "test_xy_tiling_keeps_z_faces_false_and_respects_box_override",
+   "test_empty_grid_stays_empty_and_does_not_invoke_transforms",
+   "test_empty_cell_stays_empty"
+  ],
+  "sha256": "d81d26fa4199e110f850c8c3ddf11849fd333784bdb95a7d8f7ebd16c9ec72a4"
  }
 }

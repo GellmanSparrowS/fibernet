@@ -1,3 +1,12 @@
+## [Unreleased] - transformed tiling boundary labels
+
+- Recompute `tile_with_transforms` node flags on the nominal outer XY planes
+  after per-cell transformation and translation. Keep the first welded
+  representative's labels and leave both Z flags false. Geometry and public
+  signatures are unchanged. Boundary/internal selections and derived features
+  intentionally change from the previous all-false labels; see the
+  [usage and compatibility contract](docs/architecture/transformed-tiling-boundaries.md).
+
 ## [4.4.1] - 2026-11-09
 
 See [4.4.1 release notes and migration](docs/RELEASE_4_4_1.md) for changes
