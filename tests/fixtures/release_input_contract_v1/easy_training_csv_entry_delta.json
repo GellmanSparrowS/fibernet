@@ -1,0 +1,21 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "CSV model destination directory-entry preservation source delta",
+  "base_sha256": "d9cc297448398605c084cebb6a2a5f0306e2c6dd76b0ac740bcd954dbfcf6b5a",
+  "result_sha256": "d27c8a40ed8465c808393b42becb5c23e4dadc0a4eaa1b35d03b69afe8a14783",
+  "hunks": [
+    {
+      "before": "        For CSV training, the destination must not resolve to the input CSV path;\n        path and link changes during the call are unsupported.\n",
+      "after": "        For CSV training, the destination must not identify the input CSV entry.\n        Ambiguous same-inode paths require readable parent-directory entries and\n        exact entry spellings; path and link changes during a call are unsupported.\n"
+    },
+    {
+      "before": "    if save_path:\n        source = Path(os.fsdecode(csv_path)).resolve()\n        destination = Path(os.fsdecode(save_path)).resolve()\n        if source == destination:\n            raise ValueError(\"save_path must not overwrite the input CSV; \"\n                             \"choose a different model destination\")\n",
+      "after": "    if save_path and _model_save_overwrites_csv(csv_path, save_path):\n        raise ValueError(\"save_path must not overwrite the input CSV; \"\n                         \"choose a different model destination\")\n"
+    },
+    {
+      "before": "def _save_model_artifact(path, artifact):\n",
+      "after": "def _model_save_overwrites_csv(csv_path, save_path):\n    \"\"\"Distinguish lookup aliases from separately replaceable hardlink entries.\"\"\"\n    import os\n\n    source = Path(os.fsdecode(csv_path)).resolve()\n    destination = Path(os.fsdecode(save_path)).resolve()\n    # Compare exact spellings: WindowsPath equality folds case even on a\n    # case-sensitive directory that can contain distinct case-only hardlinks.\n    if str(source) == str(destination):\n        return True\n    try:\n        same_file = source.samefile(destination)\n    except FileNotFoundError:\n        return False\n    if not same_file or not source.parent.samefile(destination.parent):\n        return False\n    names = {source.name, destination.name}\n    if len(names) == 1:\n        return True  # The same entry through differently spelled parent paths.\n    # Do not guess filesystem case/Unicode rules. Only two actual, exact entry\n    # names establish separate hardlinks. Ambiguity or scan errors fail closed.\n    with os.scandir(source.parent) as entries:\n        for entry in entries:\n            names.discard(entry.name)\n            if not names:\n                return False\n    return True\n\n\ndef _save_model_artifact(path, artifact):\n"
+    }
+  ]
+}

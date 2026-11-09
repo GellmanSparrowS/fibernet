@@ -7,6 +7,14 @@
   See [migration guidance](docs/architecture/graph-feature-3d-kcore.md) before
   combining corrected feature values with existing datasets or models.
 
+## [Unreleased] - CSV training input preservation
+
+- Reject model destinations that identify the input CSV entry before training,
+  including symlink, case-insensitive and Unicode-normalization aliases. Distinct
+  hardlink entries remain supported; ambiguous same-parent aliases require readable
+  directory entries and exact spellings. Native Dataset training and model
+  serialization are unchanged.
+
 ## [Unreleased] - LAMMPS dual-reference displacement
 
 - Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`
