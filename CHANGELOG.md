@@ -1,3 +1,12 @@
+## [Unreleased] - Unprofiled harmonic output admission
+
+- Reject unprofiled LAMMPS harmonic tasks whose mandatory trajectory atom rows
+  alone exceed the explicit aggregate or per-file output budget, before runtime
+  validation or launch. This lower bound is not a size forecast or native-engine
+  qualification. Public signatures, graph/SI unit semantics, named-profile
+  forecasts and runtime watchdogs are unchanged. See the
+  [admission scope](docs/integrations/LAMMPS_HARMONIC_CLI.md#explicit-runtime-and-lifecycle).
+
 ## [Unreleased] - Manufacturing provider requirement
 
 - Require `manifold3d>=3.2.0` in the manufacturing/full extras and check
