@@ -8,6 +8,14 @@
   custom registry entries and root exports are unchanged. See the
   [compatibility contract](docs/architecture/legacy-metamaterial-factory.md).
 
+## [Unreleased] - Manufacturing provider requirement
+
+- Require `manifold3d>=3.2.0` in the manufacturing/full extras and check
+  `Manifold.simplify` before constructing native geometry. Version 3.1.0 exposes
+  `to_mesh64` but lacks `simplify`, so the old unversioned dependency could fail
+  late with `AttributeError`. Public signatures, meshing and export algorithms
+  are unchanged. See [provider requirements and validation](docs/solid_validation.md#surface-extraction-precision).
+
 ## [Unreleased] - Kagome lattice perturbation
 
 - Honor positive `perturbation` and its `seed` in `lattice_2d(topology="kagome")`,

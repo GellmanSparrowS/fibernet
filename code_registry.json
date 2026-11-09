@@ -3758,7 +3758,7 @@
   "symbols": [
    "tube_mesh"
   ],
-  "sha256": "129eb464f8f01deec310f7d26194f5bb1f65c717078cff8f2120c4f80aa0b7f2"
+  "sha256": "c80b8fffb84e5ad61638752c98c8982c02d9a9f792ddb6275d577256e5470685"
  },
  "tests/test_manufacturing_export.py": {
   "purpose": "Exercise installable-library solid exports without FiberScope imports.",
@@ -4478,6 +4478,28 @@
    "test_kagome_does_not_consume_global_random_state"
   ],
   "sha256": "288937cccbed51e897443dfd523cead1d749ff8debfc3b9a468342d002f70a93"
+ },
+ "tests/test_manifold_provider_contract.py": {
+  "purpose": "Optional native manufacturing APIs fail before geometry work.",
+  "status": "active",
+  "symbols": [
+   "test_manufacturing_extras_declare_simplify_floor",
+   "test_native_provider_remains_optional_for_core",
+   "test_missing_native_capability_fails_before_geometry"
+  ],
+  "sha256": "0ec8b50df3cc972598f00a74ef5f20b90228609918263846acde69843710d120"
+ },
+ "tests/test_manifold_native_workflow.py": {
+  "purpose": "Small real-provider manufacturing journeys, not general mesh qualification.",
+  "status": "active",
+  "symbols": [
+   "provider",
+   "_assert_owned_closed_mesh",
+   "test_real_capsule_binary64_geometry_and_input_ownership",
+   "test_real_public_solid_export_and_readback",
+   "test_real_cancellation_then_retry_preserves_inputs"
+  ],
+  "sha256": "1167370838b7489799a552765bcc2a52b7d7ba551edf8c66597b86a16b87e7b1"
  },
  "tests/test_legacy_metamaterial_factory.py": {
   "purpose": "Historical metamaterial factory names keep their own parameter contracts.",
