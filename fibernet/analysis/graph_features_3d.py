@@ -44,6 +44,9 @@ class GraphFeatureExtractor3D:
     attributes, or ``StructureGraph`` objects without parallel physical edges.
     ``FiberNetwork`` inputs retain the existing centerline-segment conversion.
     StructureGraph edges use straight endpoint chords in this feature schema.
+    ``max_k_core`` is the maximum unweighted core number. ``kcore_frac`` is
+    that value divided by the unweighted mean degree over all nodes, including
+    isolates (zero when the mean degree is zero). It can exceed one.
     
     Parameters
     ----------
@@ -285,11 +288,13 @@ class GraphFeatureExtractor3D:
             feat['triangle_count'] = 0.0
             feat['triangle_ratio'] = 0.0
         
-        # K-core
+        # K-core: normalize by unweighted degree across all nodes, including isolates.
+        degrees = [degree for _, degree in G.degree()]
+        mean_degree = float(np.mean(degrees)) if degrees else 0.0
         try:
             kcore = nx.core_number(G)
             feat['max_k_core'] = float(max(kcore.values())) if kcore else 0.0
-            feat['kcore_frac'] = float(feat['max_k_core'] / max(feat['mean_degree'], 1e-12)) if feat['mean_degree'] > 0 else 0.0
+            feat['kcore_frac'] = float(feat['max_k_core'] / max(mean_degree, 1e-12)) if mean_degree > 0 else 0.0
         except Exception:
             feat['max_k_core'] = 0.0
             feat['kcore_frac'] = 0.0
@@ -610,10 +615,6 @@ class GraphFeatureExtractor3D:
         topo = self._graph_topology(G)
         # Merge (topo fills in some struct keys)
         feat.update(struct)
-        # Add mean_degree for kcore_frac
-        if 'mean_degree' not in feat:
-            degrees = [d for _, d in G.degree()]
-            feat['mean_degree'] = float(np.mean(degrees)) if degrees else 0.0
         feat.update(topo)
         
         # 3D Geometric (12)

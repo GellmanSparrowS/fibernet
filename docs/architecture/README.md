@@ -13,6 +13,7 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [Direct FEM array identity](raw-array-identity-migration.md)
 - [Snapshot graph identity](snapshot-identity-contract.md)
 - [3D rotation axes](rotation-axis-contract.md)
+- [3D graph k-core features](graph-feature-3d-kcore.md)
 - [Linear FEM diagnostics](fem-linear-diagnostics-usage.md)
 - [3D reaction definition](fem-3d-reaction-contract.md)
 - [Dataset persistence](dataset-persistence-usage.md)
