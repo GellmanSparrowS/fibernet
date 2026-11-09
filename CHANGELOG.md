@@ -1,3 +1,10 @@
+## [Unreleased] - VTU source geometry integrity
+
+- Reject masked StructureGraph geometry and boundary data before VTU export
+  can discard masks, and require node/edge record IDs to match dictionary keys.
+  Ordinary output, public signatures, units and field ordering are unchanged.
+  See [source admission and migration](docs/integrations/MESHIO_USAGE.md#source-geometry-and-identity-admission).
+
 ## [Unreleased] - Unprofiled harmonic output admission
 
 - Reject unprofiled LAMMPS harmonic tasks whose mandatory trajectory atom rows

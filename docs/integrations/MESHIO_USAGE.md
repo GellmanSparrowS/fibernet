@@ -67,6 +67,25 @@ Edges with internal points are rejected even if those points are collinear;
 explicit subdivision and interpolation are a later feature. Empty graphs or
 graphs without edges are rejected. Arbitrary metadata keys must be strings.
 
+## Source geometry and identity admission
+
+Node and edge record IDs must be nonnegative int64 integers and agree with
+their dictionary keys. NumPy integer scalars are accepted; booleans, floats,
+masked scalars and contradictory IDs are rejected, including isolated nodes.
+
+Masked graph coordinates, radii, internal-point arrays, box sizes and boundary
+flags are rejected before conversion, including all-false and empty masks.
+Nested coordinate/boundary lists and object arrays are also checked. The
+adapter never interprets a mask as permission to export its hidden values.
+This follows the existing extra-field mask policy. If your data are complete,
+explicitly supply ordinary unmasked values and consistent record IDs before
+exporting. The adapter does not fill missing geometry or repair identity.
+
+These errors are raised before importing meshio or creating a bundle staging
+directory. They leave the graph and existing destinations unchanged. Valid
+ordinary graphs retain the same coordinates, order, fields and manifest data.
+This is export admission, not a full graph or physical-model validator.
+
 ## Verified scope
 
 Tested with meshio 5.3.5 using actual write/read of VTU line cells: sparse IDs,
