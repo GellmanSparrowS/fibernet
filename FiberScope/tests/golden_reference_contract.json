@@ -2,10 +2,10 @@
   "reference_sha256": "f32c0b50a0af3e1d9e70d7c92cb1b31073b6ba9ad093d269df2557f81be6cc80",
   "reference_version": "e2v13",
   "current_version": "e2v15",
-  "current_engine_hash": "983e6c6bb62f",
+  "current_engine_hash": "05123a04dd1c",
   "source_sha256": {
     "FiberScope/fslab/engine2.py": "87d9014d7c66c8368c49691ba49e1c9c184ebe256fc8a468ee9ab420bf87da9d",
-    "FiberScope/fslab/simcache.py": "4f03ad28f7e73d319094261269c527bb4e231df587961f5a90ea5dc5e2b00fcc",
+    "FiberScope/fslab/simcache.py": "35fce8a8225005acd707c03d6cbb23edcd62011696b4973f33dadca9e0da1359",
     "FiberScope/fslab/structure.py": "05aeda13ac53c2f22fcb7b8a1b71b45e433283a16f7a60850c36220b98e5dc50",
     "FiberScope/fslab/cell_rules.py": "e7c123fa6d79f0d8c70356d5dcc90cc01d1636ced460a88cc57c5f5e65c76aee",
     "FiberScope/fslab/manufacturing.py": "dbd17590b4468985839977bde5c5d2a103ef76cf81ea7191c3d56bef42cd4e96",
@@ -17,7 +17,7 @@
     "fibernet/gen/cell_cycles.py": "8dd63fe03e81ee5487d3796400ae1d8d6ec827dbb3b21e5b1e25a92020f34e70",
     "fibernet/gen/manufacturing.py": "e33364a0a5d7f012a840be4f950c401c2b60a96db16c1963a4c6e76a2f4929e6",
     "fibernet/gen/surface_geometry.py": "6194bc5ee501186d08c96554a0ec0b77e030346650d4632cc59789c217ce6668",
-    "fibernet/sim/reduced_beam.py": "b4d4a57affde9f453ca59538ac13da2d43fd5e66251b6cd0bd0a69646cf081f9"
+    "fibernet/sim/reduced_beam.py": "36bc96c37262f919a4b5f49bb124a6d869f47a6ce1a241df51ee8986ba5914bf"
   },
   "driver_normalized_sha256": "f52925df1a81f7101f66ea98b013303665f06232d86c682331026dfa732e866f",
   "cases": [

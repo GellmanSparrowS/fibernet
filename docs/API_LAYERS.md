@@ -134,6 +134,9 @@ spring/stretch only. Neither is a general backend router.
   `fibernet.sim.reduced_beam` are aliases for the separate NumPy Engine2 reduced
   model (degree-2 bending surrogate and nodal contact), not beam-frame FEM,
   LAMMPS, or a supported facade backend.
+  Their [configuration contract](architecture/reduced-config-contract.md)
+  requires finite scalar controls and integer step counts before simulation
+  or desktop cache lookup.
 
 ## Typed electrical, thermal and one-way coupling routes
 

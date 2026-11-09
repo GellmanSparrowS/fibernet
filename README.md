@@ -112,7 +112,7 @@
 [api-zh-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_dataset.py#L208
 [api-zh-src-prepared_controls]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/nodal_controls.py#L27
 [api-zh-src-recruitment]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/tensile_recruitment.py#L166
-[api-zh-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128
+[api-zh-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195
 [api-zh-src-register_unit]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L1102
 [api-zh-src-regressor]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_learning.py#L109
 [api-zh-src-route_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_bridge.py#L154
@@ -311,7 +311,7 @@ graph = fn.pattern_2d(
 - ← [`fibernet.tile_2d`](#user-content-api-zh-tile) — 平铺后的图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/tiling.py#L253)
 - → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-zh-controls) — 绑定支座与载荷 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/nodal_controls.py#L74)
 - → [`fibernet.simulate`](#user-content-api-zh-simulate) — 几何输入；spring/taichi 默认采用 reject_internal_points；显式 endpoint_chord 只计算端点弦 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L123)
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 同一 XY 平面；拒绝非空 internal_points；调用方需先准备实际图节点与直边 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 - → [`fibernet.solve_linear_transport`](#user-content-api-zh-transport) — 几何与稳定 ID · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/linear_transport.py#L125)
 - → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-zh-lammps_prepare) — 明确的三维几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/integrations/lammps_backend.py#L135)
 - → [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/graph_features.py#L98)
@@ -644,7 +644,7 @@ graph = fn.pattern_2d(
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
 
 </details>
 
@@ -864,7 +864,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 提取对齐的应变、边与夹持数组 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 
@@ -943,7 +943,7 @@ graph = fn.pattern_2d(
 <summary>文档中的数据传递 · 2</summary>
 
 - → [`fibernet.ml.PhysicalRegressor`](#user-content-api-zh-regressor) — arrays()：X 与 Y · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_learning.py#L109)
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 所配置的物理标签 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 
@@ -1016,7 +1016,7 @@ graph = fn.pattern_2d(
 <details>
 <summary>文档中的数据传递 · 1</summary>
 
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-zh-reduced) — 默认候选评估器 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 
@@ -1588,7 +1588,7 @@ The 49 API-to-workflow memberships appear in the branches below; grouping is not
 [api-en-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_dataset.py#L208
 [api-en-src-prepared_controls]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/nodal_controls.py#L27
 [api-en-src-recruitment]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/tensile_recruitment.py#L166
-[api-en-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128
+[api-en-src-reduced]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195
 [api-en-src-register_unit]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L1102
 [api-en-src-regressor]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_learning.py#L109
 [api-en-src-route_from_graph]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_bridge.py#L154
@@ -1787,7 +1787,7 @@ graph = fn.pattern_2d(
 - ← [`fibernet.tile_2d`](#user-content-api-en-tile) — tiled graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/tiling.py#L253)
 - → [`fibernet.sim.prepare_nodal_controls`](#user-content-api-en-controls) — binds support/load IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/nodal_controls.py#L74)
 - → [`fibernet.simulate`](#user-content-api-en-simulate) — geometry input; spring/taichi defaults to reject_internal_points; explicit endpoint_chord is endpoint-only · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L123)
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — one XY plane; reject nonempty internal_points; caller supplies graph nodes and straight edges first · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 - → [`fibernet.solve_linear_transport`](#user-content-api-en-transport) — geometry and stable IDs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/linear_transport.py#L125)
 - → [`fibernet.integrations.lammps_backend.prepare_harmonic_beads`](#user-content-api-en-lammps_prepare) — explicit 3D geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/integrations/lammps_backend.py#L135)
 - → [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/graph_features.py#L98)
@@ -2120,7 +2120,7 @@ Run the shared NumPy axial, degree-2 bending and node-contact model.
 
 </details>
 
-[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
+[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/METHODS_CURVE_INVERSE_UNIFIED.md)
 
 </details>
 
@@ -2340,7 +2340,7 @@ Track positive-strain edge recruitment and grip-connected paths across frames.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — extract aligned strain/edge/grip arrays · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 
@@ -2419,7 +2419,7 @@ Generate bounded planar samples using the shared reduced-solver workflow.
 <summary>Documented handoffs · 2</summary>
 
 - → [`fibernet.ml.PhysicalRegressor`](#user-content-api-en-regressor) — arrays(): X and Y · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_learning.py#L109)
-- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- ← [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — configured physics labels · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 
@@ -2492,7 +2492,7 @@ Search graph-builder parameters with a fixed evaluation budget.
 <details>
 <summary>Documented handoffs · 1</summary>
 
-- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L128)
+- → [`fibernet.ReducedBeamSolver`](#user-content-api-en-reduced) — default candidate evaluator · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/sim/reduced_beam.py#L195)
 
 </details>
 

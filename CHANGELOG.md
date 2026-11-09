@@ -1,3 +1,12 @@
+## [Unreleased] - Reduced-model configuration admission
+
+- Reject nonfinite, malformed and out-of-range reduced-model controls at
+  config/solver entry and before desktop cache lookup. Revalidate mutable
+  configs at run entry, and normalize admitted NumPy scalars for float64
+  coefficient arithmetic and JSON metadata. Public fields and ordinary
+  Python-float numerical behavior are unchanged; see the
+  [configuration and migration contract](docs/architecture/reduced-config-contract.md).
+
 ## [Unreleased] - Kagome lattice perturbation
 
 - Honor positive `perturbation` and its `seed` in `lattice_2d(topology="kagome")`,

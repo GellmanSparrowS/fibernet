@@ -227,7 +227,7 @@
   "sim/l3_result.py": "ba90c63ee5c2e18e625d7c6fcf705df140b715b6585a4cc4b2c823925a5cdc2f",
   "sim/linear_transport.py": "8fe7103ebc90a7ed5a443dfb25e0cf9881cbf9c67da9f6ee47c2e82a150ba480",
   "sim/nodal_controls.py": "f47a2ad19f57a4f6aaf647d8740f7e9589c69b609faec44a6c0f02ce4e9e2e3b",
-  "sim/reduced_beam.py": "b4d4a57affde9f453ca59538ac13da2d43fd5e66251b6cd0bd0a69646cf081f9",
+  "sim/reduced_beam.py": "36bc96c37262f919a4b5f49bb124a6d869f47a6ce1a241df51ee8986ba5914bf",
   "sim/rl_env.py": "b86256969e2db9b422cf303106de9455d395c006009b0bd972ab37554c1df783",
   "sim/saved_electrothermal.py": "113afa9374e9f63d6376055f139e0ffef14a82f071446790705bbd5924375386",
   "sim/saved_temperature.py": "c176f4108ed0f7cc5baea2bce9f33c8201c8a25a8263bad5fdb175c2dd42736a",
