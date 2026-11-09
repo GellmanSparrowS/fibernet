@@ -14,6 +14,7 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [Direct FEM array identity](raw-array-identity-migration.md)
 - [Snapshot graph identity](snapshot-identity-contract.md)
 - [Transformed tiling boundary labels](transformed-tiling-boundaries.md)
+- [Lattice perturbation](lattice-perturbation-contract.md)
 - [3D rotation axes](rotation-axis-contract.md)
 - [3D graph k-core features](graph-feature-3d-kcore.md)
 - [Linear FEM diagnostics](fem-linear-diagnostics-usage.md)

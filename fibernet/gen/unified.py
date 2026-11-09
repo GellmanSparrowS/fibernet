@@ -479,8 +479,9 @@ def lattice_2d(
 ) -> FiberNetwork:
     """Unified 2D lattice generator.
     
-    Generates periodic 2D lattices using direct coordinate construction
-    (no tiling) for guaranteed connectivity.
+    Builds square, triangular and honeycomb lattices directly, and uses
+    the legacy tiled unit cell for Kagome. Displacement is applied after
+    connectivity construction and before global rotation.
     
     Parameters
     ----------
@@ -491,7 +492,10 @@ def lattice_2d(
     grid_size : (int, int)
         Grid dimensions (nx, ny). Meaning depends on topology.
     perturbation : float
-        Random node displacement (fraction of cell_size). 0 = perfect lattice.
+        Independent uniform x/y node displacements in
+        [-perturbation, perturbation] * cell_size before rotation.
+        0 leaves the base geometry unchanged. Existing node identities and
+        edge references are retained; coincident distinct nodes are not welded.
     rotation : float
         Global rotation angle in radians.
     radius : float
@@ -535,8 +539,8 @@ def lattice_2d(
     else:
         raise ValueError(f"Unknown topology '{topology}'. Available: square, triangular, honeycomb, kagome")
     
-    # Apply perturbation if requested
-    if perturbation > 0 and topology != 'kagome':
+    # Displace after tiling so shared endpoint references stay shared.
+    if perturbation > 0:
         rng = np.random.RandomState(seed)
         for nid in nodes:
             x, y = nodes[nid]
