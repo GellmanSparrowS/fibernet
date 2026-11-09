@@ -292,11 +292,12 @@
    "merge",
    "tile",
    "trim_to_box",
+   "_trim_crosslink_parameter",
    "duplicate_and_transform",
    "align_by_anchor",
    "create_pattern"
   ],
-  "sha256": "e15d8c0b2d3597fa69f7583cedb7d25617561d680918b6cce317962f7f7489e1"
+  "sha256": "c7b8abaa3312fc25392640235aabe73ac9cc484c91dd11f55e4e3d07eaa23cd5"
  },
  "fibernet/core/transforms.py": {
   "purpose": "Geometric transforms for StructureGraph.",
@@ -4459,5 +4460,31 @@
    "test_ionic_force_with_zero_charge_remains_zero"
   ],
   "sha256": "8441cd1556b04315276069e758c3ab21b78bc055c84bcda8a9e4e7f284a195dd"
+ },
+ "tests/test_legacy_trim_crosslinks.py": {
+  "purpose": "Crosslink preservation in the legacy sampled-vertex trim operation.",
+  "status": "active",
+  "symbols": [
+   "fiber",
+   "link",
+   "network",
+   "test_keep_order_multiplicity_remap_indices_and_preserve_fields",
+   "test_whole_fiber_mode_keeps_outside_links_when_both_fibers_survive",
+   "test_sampled_mode_remaps_vertices_and_segment_interiors",
+   "test_sampled_mode_drops_removed_or_invalid_endpoint_parameters",
+   "test_separated_runs_do_not_move_links_onto_artificial_chords",
+   "test_roundoff_at_surviving_vertex_next_to_removed_segment",
+   "test_empty_no_crosslinks_and_no_geometric_intersection_insertion",
+   "test_signature_defaults_unchanged"
+  ],
+  "sha256": "a551fea326b3105d32db6fa9cae7b278f60ea2c6bb73dfa7630e3be5ff15d41c"
+ },
+ "tests/test_legacy_trim_bridge_integration.py": {
+  "purpose": "Native junctions remain usable after the legacy sampled trim bridge.",
+  "status": "active",
+  "symbols": [
+   "test_native_chain_trim_preserves_topology_and_json_roundtrip"
+  ],
+  "sha256": "8181a97e370ad8596d24ae721f1e0119cb233d982378ef1bd3be33ce4aa1a2fc"
  }
 }

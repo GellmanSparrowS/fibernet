@@ -42,6 +42,11 @@ values are copied without unit conversion or unit inference. Keep the original
 `StructureGraph` or its native serialization for authoritative geometry and IDs.
 Legacy OBJ export still writes endpoint cylinders, not the stored source curves.
 
+Legacy `core.transform.trim_to_box` preserves surviving crosslinks and remaps
+fiber indices and sampled attachment parameters. Its geometry remains a
+sample-selection operation, not exact clipping; see the
+[trimming contract and migration guidance](architecture/legacy-trim-crosslinks.md).
+
 ### Edit geometry before preparing solver controls
 
 Use `graph.displace_node(node_id, [dx, dy])`,
