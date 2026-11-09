@@ -4510,5 +4510,51 @@
    "test_non_json_metadata_does_not_modify_outputs"
   ],
   "sha256": "1ff7c8f0f8e301327b0139254ca12ce707f0930cea20bbe112c30c548fce0789"
+ },
+ "fibernet/integrations/lammps_backend.py": {
+  "purpose": "Bounded CLI adapter for explicit SI bead-and-harmonic-bond models.",
+  "status": "active",
+  "symbols": [
+   "LAMMPSContractError",
+   "_number",
+   "_integer",
+   "_vector",
+   "_json",
+   "_digest",
+   "HarmonicBond",
+   "RunSpec",
+   "PreparedRun",
+   "prepare_harmonic_beads",
+   "validate_prepared",
+   "TrajectoryFrame",
+   "ThermoFrame",
+   "LAMMPSRunResult",
+   "parse_outputs",
+   "TaskState",
+   "ResourceLimits",
+   "_check_serial_static_elf",
+   "_check_serial_static_runtime",
+   "RuntimeSpec",
+   "LAMMPSTask",
+   "parse_output_files",
+   "EdgeLengthHistory",
+   "edge_length_history"
+  ],
+  "sha256": "81352701c47dd50bc3fae19400c4b012c0598a8b89cb19e2ef9ca2e261772fa7"
+ },
+ "tests/test_lammps_unprofiled_output_admission.py": {
+  "purpose": "No-engine lower-bound admission tests; no native physics claims.",
+  "status": "active",
+  "symbols": [
+   "forbid_launch",
+   "chain",
+   "test_impossible_maximum_rejected_without_runtime_or_files",
+   "test_budget_boundary_is_strict_and_checks_each_limit",
+   "test_small_and_run_zero_admitted_without_preparation_changes",
+   "test_floor_is_loose_and_admission_does_not_promise_fit",
+   "test_public_dispatch_rejects_before_native_runtime_validation",
+   "test_tampered_schedule_cannot_lower_the_bound"
+  ],
+  "sha256": "b4353811c37c8f3b5087aacec1faa03ce07007b6f27b3d922db9ed2561965f68"
  }
 }
