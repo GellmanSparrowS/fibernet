@@ -1412,15 +1412,15 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` 指 1% 伸长；`nonlinear=False` 明确选择小变形线性梁 FEM。坐标和半径按米解释，`E=1e9` Pa，`nu=0.3` 无量纲，输出位移为米、力为牛顿；程序不自动换算单位，也不从图的材料记录读取模量。省略拉伸比仍使用兼容默认值 2.0，二维会进入未验证最终平衡的实验增量路径，不适合作为线性入门调用。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-### 已发布版本：4.2.0
+### 已发布版本：4.3.0
 
 如果应用使用已发布的 API，可选择下面的安装方式，**无需再安装上方源码版**：
 
 ```bash
-python -m pip install fibernet==4.2.0
+python -m pip install fibernet==4.3.0
 ```
 
-请使用与版本对应的 [4.2.0 入门示例](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/PYPI_README.md#generate-simulate-save-and-analyze)。该版本的 FEM 示例使用 `strain=1.01`，上方源码示例使用 `stretch_ratio=1.01`。
+请使用与版本对应的 [4.3.0 包说明与入门示例](https://pypi.org/project/fibernet/4.3.0/)。该版本的 FEM 示例与上方源码示例均使用 `stretch_ratio=1.01`。
 
 ## 1. 生成网络
 
@@ -2888,15 +2888,15 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` means 1% extension; `nonlinear=False` explicitly selects small-deformation linear beam FEM. Coordinates and radii are in m, `E=1e9` is in Pa, and `nu=0.3` is dimensionless; displacements are in m and forces in N. Units are not converted automatically, and graph material records do not supply the modulus. Omitting the ratio retains the legacy default 2.0, which selects an experimental 2-D incremental path with unverified final equilibrium, not the linear introductory example. [FEM contract](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-### Published release: 4.2.0
+### Published release: 4.3.0
 
 For an application that uses the published API, install this version **instead of** the source checkout:
 
 ```bash
-python -m pip install fibernet==4.2.0
+python -m pip install fibernet==4.3.0
 ```
 
-Follow the version-matched [4.2.0 quick start](https://github.com/GellmanSparrowS/fibernet/blob/v4.2.0/PYPI_README.md#generate-simulate-save-and-analyze). Its FEM example uses `strain=1.01`; the source example above uses `stretch_ratio=1.01`.
+Follow the version-matched [4.3.0 package guide and quick start](https://pypi.org/project/fibernet/4.3.0/). Its FEM example and the source example above use `stretch_ratio=1.01`.
 
 ## 1. Generate networks
 
