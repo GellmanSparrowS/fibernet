@@ -43,6 +43,7 @@ def _json_copy(value):
 def _ids(values, label):
     values = list(values)
     for value in values:
+        _unmasked_field(value, label)
         if (isinstance(value, (bool, np.bool_)) or
                 not isinstance(value, (int, np.integer)) or
                 value < 0 or value > np.iinfo(np.int64).max):
@@ -60,6 +61,9 @@ def _unmasked_field(value, label):
         if isinstance(item, (list, tuple)) and id(item) not in seen:
             seen.add(id(item))
             pending.extend(item)
+        elif isinstance(item, np.ndarray) and item.dtype.kind == 'O' and id(item) not in seen:
+            seen.add(id(item))
+            pending.extend(item.flat)
 
 
 def _fields(values, count, specs, location):
@@ -117,7 +121,9 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     Points follow sorted node IDs. Cells follow graph edge insertion order.
     Field arrays must already follow those orders; ID mappings are aligned here.
     Each location accepts arrays or complete ID mappings, never both.
-    Masked arrays/scalars are unsupported, including all-false masks.
+    Graph record IDs must agree with their dictionary keys. Masked graph
+    coordinates, radii, curves, box sizes, boundary flags and extra fields are
+    unsupported, including all-false masks.
     Only edges without internal
     points are accepted. Parallel edges and isolated nodes are retained.
     Units are one of m, cm, mm, um, nm; no conversion is performed.
@@ -134,6 +140,13 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     if not len(node_ids) or not len(edge_ids):
         raise ValueError('line export requires at least one edge and its nodes')
     rows = {int(nid): i for i, nid in enumerate(node_ids)}
+    _unmasked_field(graph.box_size, 'box_size')
+    for nid in node_ids:
+        node = graph.nodes[int(nid)]
+        if _ids([node.node_id], 'node record IDs')[0] != nid:
+            raise ValueError('node record ID must match its dictionary key')
+        _unmasked_field(node.position, 'node positions')
+        _unmasked_field(node.boundary, 'node boundary')
     positions = np.array([graph.nodes[int(nid)].position for nid in node_ids], dtype=np.float64)
     if positions.shape != (len(node_ids), 3) or not np.isfinite(positions).all():
         raise ValueError('node positions must be finite (N,3) coordinates')
@@ -141,6 +154,10 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     material_lookup = {}
     for eid in edge_ids:
         edge = graph.edges[int(eid)]
+        if _ids([edge.edge_id], 'edge record IDs')[0] != eid:
+            raise ValueError('edge record ID must match its dictionary key')
+        _unmasked_field(edge.internal_points, 'edge internal_points')
+        _unmasked_field(edge.radius, 'edge radius')
         if edge.internal_points is not None and np.asarray(edge.internal_points).size:
             raise ValueError('unsupported geometry: internal-point edges require explicit subdivision')
         ends = _ids([edge.node_i, edge.node_j], 'edge endpoints')

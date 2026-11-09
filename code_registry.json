@@ -4556,5 +4556,31 @@
    "test_tampered_schedule_cannot_lower_the_bound"
   ],
   "sha256": "b4353811c37c8f3b5087aacec1faa03ce07007b6f27b3d922db9ed2561965f68"
+ },
+ "fibernet/io/meshio_adapter.py": {
+  "purpose": "Optional, straight-line VTU interoperability; not a solver or project format.",
+  "status": "active",
+  "symbols": [
+   "_json_copy",
+   "_ids",
+   "_unmasked_field",
+   "_fields",
+   "_fields_by_id",
+   "to_meshio",
+   "write_vtu_bundle"
+  ],
+  "sha256": "24da165455a39689f900a9eff43e708541998f297cc64a57cebd49c1a3eab321"
+ },
+ "tests/test_meshio_source_integrity.py": {
+  "purpose": "Preserve declared graph geometry and identity at the VTU export boundary.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "no_meshio",
+   "test_masked_source_rejected_before_dependency_and_io",
+   "test_record_ids_rejected_before_dependency_and_io",
+   "test_valid_numpy_record_ids_and_empty_curves_preserve_bundle"
+  ],
+  "sha256": "271f72f08499d9d4b466b41a23439bc0c8552ac2b5d768174395ecdb4f8f08ea"
  }
 }
