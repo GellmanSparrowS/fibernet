@@ -1,3 +1,12 @@
+## [Unreleased] - Preserve geometry-analysis input meaning
+
+- Reject nested masked coordinates and mixed boolean coordinates before NumPy
+  promotion in explicit geometry/path analysis. Hidden coordinates no longer
+  silently determine lengths, route selection or tortuosity.
+- Preserve valid numeric geometry, stable-ID ordering, budgets and schema.
+  Document explicit normalization of fully observed masked containers in the
+  [geometry/path contract](docs/architecture/geometry-paths.md).
+
 ## [Unreleased] - Per-member cylinder geometry
 
 - Preserve each represented edge's radius-length association in 3D cylinder

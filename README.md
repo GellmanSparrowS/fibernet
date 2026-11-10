@@ -324,7 +324,7 @@ python -m pip install fibernet==4.4.1
 [api-zh-src-material]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/material.py#L14
 [api-zh-src-networkx]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/structure_graph.py#L1008
 [api-zh-src-octet]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/standard_lattice.py#L99
-[api-zh-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74
+[api-zh-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87
 [api-zh-src-pattern_2d]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L1888
 [api-zh-src-pattern_3d]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L2331
 [api-zh-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_dataset.py#L208
@@ -535,7 +535,7 @@ graph = fn.pattern_2d(
 - → [`fibernet.GraphFeatureExtractor`](#user-content-api-zh-features94) — 受支持的特征输入 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/graph_features.py#L98)
 - → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-zh-snapshot) — extract_graph(graph) · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/snapshot_features.py#L694)
 - → [`fibernet.analysis.analyze_topology`](#user-content-api-zh-topology) — 物理拓扑 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/topology_metrics.py#L36)
-- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74)
+- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-zh-paths) — 已保存的 XYZ 几何 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87)
 - → [`fibernet.ml.graph_batch`](#user-content-api-zh-graph_batch) — 创建主结构图快照 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/graph_data.py#L210)
 - → [`fibernet.manufacturing_from_graph`](#user-content-api-zh-route_from_graph) — 连通全偶度图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_bridge.py#L154)
 - → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-zh-trails_from_graph) — 允许奇度节点的连通图 · [源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_trails.py#L149)
@@ -1062,7 +1062,7 @@ graph = fn.pattern_2d(
 
 </details>
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/architecture/geometry-paths.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/architecture/geometry-paths.md)
 
 </details>
 
@@ -1901,7 +1901,7 @@ The 49 API-to-workflow memberships appear in the branches below; grouping is not
 [api-en-src-material]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/material.py#L14
 [api-en-src-networkx]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/core/structure_graph.py#L1008
 [api-en-src-octet]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/standard_lattice.py#L99
-[api-en-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74
+[api-en-src-paths]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87
 [api-en-src-pattern_2d]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L1888
 [api-en-src-pattern_3d]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/pattern.py#L2331
 [api-en-src-physical_dataset]: https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/physical_dataset.py#L208
@@ -2112,7 +2112,7 @@ graph = fn.pattern_2d(
 - → [`fibernet.GraphFeatureExtractor`](#user-content-api-en-features94) — supported feature input · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/graph_features.py#L98)
 - → [`fibernet.analysis.SnapshotFeatureExtractor`](#user-content-api-en-snapshot) — extract_graph(graph) · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/snapshot_features.py#L694)
 - → [`fibernet.analysis.analyze_topology`](#user-content-api-en-topology) — physical topology · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/topology_metrics.py#L36)
-- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-en-paths) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74)
+- → [`fibernet.analysis.analyze_geometry_paths`](#user-content-api-en-paths) — stored XYZ geometry · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87)
 - → [`fibernet.ml.graph_batch`](#user-content-api-en-graph_batch) — snapshots authoritative graphs · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/ml/graph_data.py#L210)
 - → [`fibernet.manufacturing_from_graph`](#user-content-api-en-route_from_graph) — connected all-even graph · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_bridge.py#L154)
 - → [`fibernet.manufacturing_trails_from_graph`](#user-content-api-en-trails_from_graph) — connected graph, odd degrees allowed · [Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/gen/manufacturing_trails.py#L149)
@@ -2639,7 +2639,7 @@ Measure XYZ chord/polyline lengths and selected undirected shortest paths.
 
 </details>
 
-[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L74) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/architecture/geometry-paths.md)
+[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/geometry_paths.py#L87) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/analysis/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/architecture/geometry-paths.md)
 
 </details>
 

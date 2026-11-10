@@ -51,8 +51,21 @@ def _distance(a, b):
 
 
 def _geometry(value, shape, label):
-    if np.ma.isMaskedArray(value):
-        raise ValueError(f'{label} must not be masked')
+    # Inspect original containers before dtype promotion can discard masks or
+    # turn mixed boolean/numeric coordinates into ordinary integers or floats.
+    pending, seen = [value], set()
+    while pending:
+        item = pending.pop()
+        if np.ma.isMaskedArray(item):
+            raise ValueError(f'{label} must not be masked')
+        if (isinstance(item, (bool, np.bool_)) or
+                (isinstance(item, np.ndarray) and item.dtype.kind == 'b')):
+            raise ValueError(f'{label} must not contain boolean coordinates')
+        if isinstance(item, (list, tuple)) or (
+                isinstance(item, np.ndarray) and item.dtype.kind == 'O'):
+            if id(item) not in seen:
+                seen.add(id(item))
+                pending.extend(item.flat if isinstance(item, np.ndarray) else item)
     try:
         raw = np.asarray(value)
         if raw.shape != shape or raw.dtype.kind not in 'iuf' or not np.isfinite(raw).all():
