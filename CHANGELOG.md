@@ -1,3 +1,12 @@
+## [Unreleased] - Nested planar pore boundaries
+
+- Partition disconnected nested centerlines into non-overlapping bounded pore
+  faces, including inner boundary lengths and edge-sharing neighbors. Count both
+  sides of disconnected interior branches in the containing pore's perimeter.
+- Preserve public signatures, feature names and non-pore calculations. Add
+  analytical, graph/JSON and independent planar-cell regression checks. See
+  [pore geometry and migration](docs/SNAPSHOT_PORE_SCALING.md).
+
 ## [Unreleased] - Per-member cylinder geometry
 
 - Preserve each represented edge's radius-length association in 3D cylinder
