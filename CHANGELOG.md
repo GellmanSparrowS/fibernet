@@ -1,3 +1,12 @@
+## [Unreleased] - Consistent scalar graph scaling
+
+- Treat NumPy real numeric scalars and zero-dimensional numeric arrays like
+  Python scalar factors when resizing StructureGraph radii as well as geometry.
+  Keep vector coordinate-only behavior, material values and stable IDs unchanged.
+- Reject masked scalar factors before reading hidden values. Add scalar parity,
+  copy/serialization and analytical 2-D/3-D axial/bending FEM checks. See the
+  [geometric scaling guide](docs/graph_scaling.rst) for units and vector semantics.
+
 ## [Unreleased] - Per-edge linear beam materials
 
 - Add explicit graph-material selection for linear 2-D/3-D beam FEM using the
