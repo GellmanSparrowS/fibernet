@@ -50,6 +50,9 @@ class GraphFeatureExtractor3D:
     Cylinder volume and lateral area sum each edge's own radius and chord
     length; a missing NetworkX radius retains the 0.05 default. These are
     additive cylinder estimates, not a union solid or exposed surface.
+    ``edge_betweenness_gini`` is the population Gini coefficient of normalized,
+    unweighted edge betweenness. Larger values mean greater concentration;
+    the existing zero fallback for graphs with 500 or more nodes is unchanged.
     
     Parameters
     ----------
@@ -309,7 +312,9 @@ class GraphFeatureExtractor3D:
                 vals = list(eb.values())
                 feat['edge_betweenness_max'] = float(max(vals)) if vals else 0.0
                 if len(vals) > 1 and max(vals) > 0:
-                    sorted_vals = sorted(vals, reverse=True)
+                    # The rank-weighted population Gini formula requires
+                    # ascending values; descending order reverses its sign.
+                    sorted_vals = sorted(vals)
                     n = len(sorted_vals)
                     gini = sum((2 * (i + 1) - n - 1) * v for i, v in enumerate(sorted_vals)) / (n * sum(sorted_vals))
                     feat['edge_betweenness_gini'] = float(gini)

@@ -1,3 +1,12 @@
+## [Unreleased] - 3D betweenness concentration
+
+- Correct the sign of `GraphFeatureExtractor3D.edge_betweenness_gini` by
+  applying the population Gini formula to ascending centralities. Unequal
+  networks now have positive concentration instead of negative values.
+- Preserve the 60-column layout, unweighted centrality, computation cutoff
+  and zero fallbacks. Add exact shortest-path and pairwise-inequality oracles,
+  persistence tests and [feature migration guidance](docs/graph_betweenness.rst).
+
 ## [Unreleased] - Per-member cylinder geometry
 
 - Preserve each represented edge's radius-length association in 3D cylinder

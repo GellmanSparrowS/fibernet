@@ -139,7 +139,7 @@
   "symbols": [
    "GraphFeatureExtractor3D"
   ],
-  "sha256": "5caf81a13116e0e019fedb28e998d7fb835ca3fbdbef3aac7885c8b8c2bab230"
+  "sha256": "7a03e21bf27f8641cd3ed485355df856fe83eea6a83144ccb1f2a293c5e5a402"
  },
  "fibernet/api.py": {
   "purpose": "High-level convenience API for FiberNet.",
@@ -4922,5 +4922,27 @@
   "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
   "status": "active",
   "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
+ },
+ "tests/test_graph_feature_3d_betweenness.py": {
+  "sha256": "5c6cd5a75fe3c527160bc1993c054bd01b3de545f24ad76a81bc040b1cc214f8",
+  "status": "active",
+  "symbols": [
+   "pairwise_gini",
+   "shortest_path_counts",
+   "positioned",
+   "test_public_values_vector_and_batch_layout",
+   "test_exact_shortest_path_oracle_and_insertion_order",
+   "test_structure_graph_saved_workflow_and_sparse_ids",
+   "test_generated_network_persistence",
+   "test_fiber_network_keeps_centerline_segment_conversion",
+   "test_existing_compute_cutoff_is_unchanged",
+   "test_existing_failure_fallback_is_unchanged"
+  ],
+  "purpose": "The 3D betweenness concentration feature agrees with pairwise inequality."
+ },
+ "docs/graph_betweenness.rst": {
+  "sha256": "63b51f550fb1ba7d50d79c95e2278a60503caea264a7fef3477cfccd7c3ab27d",
+  "status": "active",
+  "purpose": "Population edge-betweenness concentration and revision-aware feature usage."
  }
 }

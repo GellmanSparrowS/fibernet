@@ -66,8 +66,10 @@ particular it does not fix existing scientific limitations in legacy outputs:
   `mean_degree` value was caught as an exception. The separate
   [k-core correction](graph-feature-3d-kcore.md) restores the existing formula;
   old datasets and models need explicit migration before consuming it.
-  The 3D edge-betweenness Gini still uses reversed ordering and can be negative.
-  Disconnected graphs report zero
+  The separate [betweenness correction](../graph_betweenness.rst) restores the
+  nonnegative population Gini by using ascending ranks. Historical negative
+  values need the same explicit revision-based migration.
+  Disconnected graphs still report zero
   `lambda_max` even when the Laplacian has positive eigenvalues.
 - Legacy orientation entropy can depend on arbitrary undirected edge
   orientation. Spectrum and shortest-path routines do not have one consistent
