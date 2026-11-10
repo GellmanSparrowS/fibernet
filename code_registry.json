@@ -4850,5 +4850,66 @@
    "run"
   ],
   "sha256": "78dea315ab52c120bafeb7d82d55d7e2b4916920acf92309aa0e2a245f85c3a5"
+ },
+ "fibernet/sim/_transport_graph.py": {
+  "purpose": "Lossless admission of graph identities and coordinate provenance for transport.",
+  "status": "active",
+  "symbols": [
+   "_identifier",
+   "_position",
+   "transport_graph_snapshot"
+  ],
+  "sha256": "d08c4f6cb3464c74f941da5daf097c9c989eca76b4cabe91d108ca7d35baa6c7"
+ },
+ "fibernet/sim/linear_transport.py": {
+  "purpose": "Steady scalar electrical transport with explicit edge conductances.",
+  "status": "active",
+  "symbols": [
+   "FloatingComponentError",
+   "TransportSolveError",
+   "_identifier",
+   "_number",
+   "_metadata",
+   "_readonly",
+   "LinearTransportResult",
+   "solve_linear_transport"
+  ],
+  "sha256": "8a6b0994a26a085da6d89c78ab72d87ba6e5195dd3582ee08e3fe34c584cdf92"
+ },
+ "fibernet/sim/transient_thermal.py": {
+  "purpose": "Explicit lumped thermal network; constant inputs and backward Euler only.",
+  "status": "active",
+  "symbols": [
+   "ThermalSolveError",
+   "_ro",
+   "TransientThermalResult",
+   "_id",
+   "_num",
+   "_mapping",
+   "_solve_transient_thermal",
+   "solve_transient_thermal",
+   "_solve_thermal_interval"
+  ],
+  "sha256": "e99162e17f5c63b35f92077abdd2b216068472a60fcbe1bce8075061a73823f0"
+ },
+ "tests/test_transport_graph_admission.py": {
+  "purpose": "Graph identity and coordinate admission shared by both transport owners.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "electrical",
+   "thermal",
+   "solve",
+   "invalid_positions",
+   "test_invalid_geometry_rejected_before_sparse_assembly",
+   "test_record_id_must_be_valid_and_match_key",
+   "test_extended_precision_conversion_cannot_erase_nonzero",
+   "test_supported_coordinates_preserve_fields_and_fingerprint",
+   "test_stable_order_parallel_inactive_and_detached_results",
+   "test_max_int64_ids_and_singleton_transport_remain_supported",
+   "test_thermal_saved_temperature_binding_retains_exact_graph_fields",
+   "test_geometry_is_provenance_not_a_conductance_law"
+  ],
+  "sha256": "04a83e6782d82dc9094bd1a0aeefbca215357e1b3e6ba35a18d92e41ecaeb6cd"
  }
 }

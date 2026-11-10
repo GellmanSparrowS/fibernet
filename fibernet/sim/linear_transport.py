@@ -20,9 +20,9 @@ from scipy.sparse import coo_matrix, diags
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import MatrixRankWarning, spsolve
 
+from ._transport_graph import transport_graph_snapshot
 from ._roundoff import upper_sum, upper_product, evaluation_ulp
 from ._roundoff import _require_gradual_for_subnormal, _SubnormalRoundoffError
-
 
 class FloatingComponentError(ValueError):
     """At least one conducting component has no prescribed voltage."""
@@ -145,28 +145,14 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     current_atol_A = _number(current_atol_A, 'current_atol_A', True)
     power_atol_W = _number(power_atol_W, 'power_atol_W', True)
     meta = _metadata(model_metadata)
-    node_ids = sorted(_identifier(i, 'node ID') for i in graph.nodes)
-    edge_ids = [_identifier(i, 'edge ID') for i in graph.edges]
-    if not node_ids:
-        raise ValueError('transport requires a nonempty node set')
+    node_ids, edge_ids, positions, endpoints = transport_graph_snapshot(graph)
     rows = {nid: i for i, nid in enumerate(node_ids)}
-    positions = np.asarray([graph.nodes[i].position for i in node_ids], dtype=np.float64)
-    if positions.shape != (len(node_ids), 3) or not np.isfinite(positions).all():
-        raise ValueError('geometry positions must be finite (N,3) values')
     if not isinstance(conductance_S, Mapping):
         raise ValueError('conductance_S must map every stable edge ID to its conductance')
     supplied = {_identifier(k, 'conductance edge ID'): _number(v, 'conductance', True)
                 for k, v in conductance_S.items()}
     if set(supplied) != set(edge_ids):
         raise ValueError('conductance keys must match graph edge IDs exactly (no missing or unknown IDs)')
-    endpoints = []
-    for eid in edge_ids:
-        edge = graph.edges[eid]
-        a = _identifier(edge.node_i, 'endpoint ID')
-        b = _identifier(edge.node_j, 'endpoint ID')
-        if a not in rows or b not in rows or a == b:
-            raise ValueError('each edge needs two distinct existing endpoint IDs')
-        endpoints.append((a, b))
     g = np.asarray([supplied[i] for i in edge_ids], dtype=np.float64)
     conn = np.array([(rows[a], rows[b]) for a, b in endpoints], dtype=np.int64).reshape(-1, 2)
     prescribed = {}
