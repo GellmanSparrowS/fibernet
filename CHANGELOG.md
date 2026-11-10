@@ -1,3 +1,10 @@
+## [Unreleased] - Static network workflow checks
+
+- Add real small-network static FEM, saved-result analysis and VTK workflow
+  tests with an independent energy-Hessian oracle. Document stored material
+  precedence, numerical regularization and axial-proxy versus full beam energy.
+  No solver law or public API changes.
+
 ## [Unreleased] - Legacy VTK attribute admission
 
 - Reject malformed field names, nonnumeric/complex/nonfinite attributes and
