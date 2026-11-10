@@ -318,7 +318,7 @@
    "make_mirror",
    "make_scale"
   ],
-  "sha256": "f5d67e9c82ad28e3e0824ea9bec0d2d0144e54dc306f1a2e43af724964fb6732"
+  "sha256": "5909270435c51da173ba329b50b2be2fb0944b0d35c3bad8b7e68b32e2fcb6fc"
  },
  "fibernet/doe.py": {
   "purpose": "Design of Experiments (DOE) Module for Fiber Networks",
@@ -4801,5 +4801,22 @@
    "test_raw_permuted_rows_and_ids_preserve_material_and_physics"
   ],
   "sha256": "efcdffa7366e4c56333593f604c80cb1120f8c622be46d54b5e8420a3831bd4f"
+ },
+ "tests/test_graph_scalar_scale.py": {
+  "purpose": "Scalar representation must not change a graph's cross-section scaling.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "test_numpy_scalar_matches_python_geometry_radii_and_ownership",
+   "test_signed_zero_fractional_and_empty_scalar_parity",
+   "test_vectors_retain_historical_coordinate_only_policy",
+   "test_masked_scalar_rejects_without_mutation_even_for_empty_graph",
+   "test_composed_transform_and_json_roundtrip",
+   "test_timedelta_is_not_reclassified_as_a_numeric_scalar",
+   "test_numpy_integer_extrema_use_float64_radius_arithmetic",
+   "test_existing_float64_scalar_radius_promotion_is_preserved",
+   "test_scaled_cantilever_fem_matches_analytical_response"
+  ],
+  "sha256": "dcd0b5d08e12521d1fafa411342be890bfcb95d3f767c4048475ff6199eba994"
  }
 }
