@@ -4574,5 +4574,42 @@
    "test_valid_box_keeps_empty_tiling_contract"
   ],
   "sha256": "a29024b0c510828de9b803818d475df301ab302fcd65e83faeed78c7b578518a"
+ },
+ "fibernet/ml/graph_data.py": {
+  "purpose": "Versioned, detached NumPy views of authoritative StructureGraph objects.",
+  "status": "active",
+  "symbols": [
+   "_float64_identity",
+   "_distance",
+   "_array",
+   "_id",
+   "_freeze",
+   "_metadata",
+   "_coordinates",
+   "GraphBatchProvenance",
+   "GraphBatch",
+   "_stored_provenance",
+   "graph_batch",
+   "_reject_masked_geometry",
+   "MaterialFeatureView",
+   "_material_bits",
+   "_material_number",
+   "_material_normalize",
+   "_material_identity",
+   "material_features_from_batch"
+  ],
+  "sha256": "6e37a06726885c9a77eabeb18cac7a6a58b8ccb64c1accb6d0406c2c090d34ff"
+ },
+ "tests/test_graph_data_nested_masks.py": {
+  "purpose": "Reject nested masked geometry before building detached learning inputs.",
+  "status": "active",
+  "symbols": [
+   "_batch",
+   "_nested",
+   "test_nested_masked_geometry_is_not_a_valid_snapshot",
+   "test_masked_empty_internal_array_still_rejects",
+   "test_generated_transport_and_bound_learning_rows_agree"
+  ],
+  "sha256": "ba9adb9535427bc288c72a0376b12ebc38ed7f4420ae8dd002f47999acb9be1b"
  }
 }

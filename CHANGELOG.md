@@ -1,3 +1,12 @@
+## [Unreleased] - Nested masked learning geometry
+
+- Reject masked coordinates and internal-point rows nested in lists, tuples or
+  object arrays before creating a `GraphBatch`, including all-false masks.
+  NumPy conversion previously could silently expose hidden internal-point
+  values as valid geometry and length features. Ordinary numeric snapshots,
+  v1/v2 schemas, ID mappings and public signatures remain unchanged. See the
+  [graph-data contract](docs/architecture/graph-data-usage.md).
+
 ## [Unreleased] - Native 3D cell dimension validation
 
 - Reject invalid `pattern_3d` box dimensions before built-in or registered
