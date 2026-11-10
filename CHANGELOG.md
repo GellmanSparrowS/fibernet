@@ -1,3 +1,11 @@
+## [Unreleased] - Beam FEM radius admission
+
+- Reject nonpositive, boolean and non-real beam radii before FEM graph dispatch,
+  and reject unrepresentable circular sections instead of returning invalid
+  stresses. Use float64 section arithmetic to prevent NumPy integer-power
+  overflow. Graph storage, explicit material precedence, units and public
+  signatures are unchanged. See the [FEM radius contract](docs/METHODS_BEAM_FEM_CONTRACT.md#circular-section-radius-admission).
+
 ## [Unreleased] - Nested masked learning geometry
 
 - Reject masked coordinates and internal-point rows nested in lists, tuples or

@@ -950,9 +950,10 @@
   "purpose": "Beam Frame FEM - Corrected & Enhanced",
   "status": "active",
   "symbols": [
+   "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "1e34ab0e2a2a51612db8817416b7fbdeaa63c78318cedb02c1b8610feaf0639f"
+  "sha256": "ec9a8d440cd97684eb97e2e3fdd7e633a0ead0223e24b564dc9ded47bdd61154"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -4611,5 +4612,13 @@
    "test_generated_transport_and_bound_learning_rows_agree"
   ],
   "sha256": "ba9adb9535427bc288c72a0376b12ebc38ed7f4420ae8dd002f47999acb9be1b"
+ },
+ "tests/test_fem_radius_admission.py": {
+  "purpose": "Beam radii are physical inputs, not signed or truth-valued graph labels.",
+  "status": "active",
+  "symbols": [
+   "FEMRadiusAdmissionTests"
+  ],
+  "sha256": "7b0fbe0bca2732f54cc722574165c19bea67d5b93cfbd90084607e8a05da2a07"
  }
 }
