@@ -217,6 +217,23 @@ class RestoredGalleryTests(unittest.TestCase):
                 with self.subTest(language=language, label=label):
                     self.assertIn(label, body)
 
+    def test_viscoelastic_caption_describes_saved_free_dynamics(self):
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        expected = {
+            'en': ('### Viscoelastic dynamics', '### Viscoelastic relaxation',
+                   'Initial velocities excite free motion, with zero constant external load and zero numerical drag.'),
+            'zh': ('### 黏弹性动力学', '### 黏弹松弛',
+                   '初始速度激发自由运动，恒定外载荷和数值阻力均为零。'),
+        }
+        for language, (heading, incorrect_heading, excitation) in expected.items():
+            body = CHECK.locale_block(homepage, language)
+            with self.subTest(language=language):
+                self.assertIn(heading, body)
+                self.assertNotIn(incorrect_heading, body)
+                section = body.split(heading, 1)[1].split('\n### ', 1)[0]
+                self.assertIn(excitation, section)
+                self.assertIn('docs/media/new/viscoelastic/README.md', section)
+
     def test_named_github_anchors_are_checked_but_literals_are_not(self):
         source = ('<a name="api-en-graph"></a>\n<a id="sample"></a>\n'
                   '<!-- <a name="comment"></a> -->\n'

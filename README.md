@@ -123,11 +123,11 @@ python -m pip install fibernet==4.4.1
 
 **Taichi：已保存的运动。** 显示 4,340 节点轴向网络的全部九个存档状态，采用无量纲量、固定相机，位移放大 1,000 倍。[后端数据、单位与放大倍数](docs/media/new/backends/data/SAVED_BACKEND_DYNAMICS.md) · [LAMMPS / Taichi 示例](docs/media/new/backends/README.md)
 
-### 黏弹松弛
+### 黏弹性动力学
 
 <img src="docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif" alt="已保存的广义 Maxwell 轴向网络动力学：位移放大 3000 倍，显示有符号应力并区分能量损耗" width="600">
 
-**已保存的材料动力学。** 0.5 秒内共保存 129 个状态，动图显示其中 65 帧。位移放大 3,000 倍，应力和能量使用未放大的数据；材料耗散与数值损耗分别显示。[模型与轨迹数组](docs/media/new/viscoelastic/README.md)
+**已保存的材料动力学。** 初始速度激发自由运动，恒定外载荷和数值阻力均为零。0.5 秒内共保存 129 个状态，动图显示其中 65 帧。位移放大 3,000 倍，应力和能量使用未放大的数据；材料耗散与数值损耗分别显示。[模型与轨迹数组](docs/media/new/viscoelastic/README.md)
 
 ### 断裂观测
 
@@ -1696,11 +1696,11 @@ Original animation, preserved byte-for-byte. Its historical axis label “strain
 
 **Taichi: saved motion.** All nine archived states of a 4,340-node axial network; nondimensional quantities, fixed camera, displacement ×1,000. [Backend sources, units and amplification](docs/media/new/backends/data/SAVED_BACKEND_DYNAMICS.md) · [LAMMPS / Taichi examples](docs/media/new/backends/README.md)
 
-### Viscoelastic relaxation
+### Viscoelastic dynamics
 
 <img src="docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif" alt="Saved generalized-Maxwell axial-network dynamics, displacement magnified 3000 times, signed stress and separate energy losses" width="600">
 
-**Saved material dynamics.** 65 displayed states from 129 saved states over 0.5 s. Displacement is magnified ×3,000; stress and energy use the unamplified data. Material dissipation and numerical loss are shown separately. [Model and recorded arrays](docs/media/new/viscoelastic/README.md)
+**Saved material dynamics.** Initial velocities excite free motion, with zero constant external load and zero numerical drag. 65 displayed states from 129 saved states over 0.5 s. Displacement is magnified ×3,000; stress and energy use the unamplified data. Material dissipation and numerical loss are shown separately. [Model and recorded arrays](docs/media/new/viscoelastic/README.md)
 
 ### Fracture observations
 
