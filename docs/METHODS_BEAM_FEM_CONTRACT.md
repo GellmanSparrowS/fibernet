@@ -52,6 +52,39 @@ transformed stiffness and summed sparse stiffness before solving. These are
 calculation failures, distinct from invalid material inputs; nonfinite entries
 are never silently treated as zero stiffness.
 
+## Circular-section radius admission
+
+`BeamFrameFEM.section_properties` requires a finite positive Python/NumPy real
+scalar radius. Zero, negative values, booleans, strings, complex values, arrays
+and duration scalars are rejected with `ValueError`. Circular area and moments
+of area must remain finite and positive in float64 arithmetic. Integer and
+lower-precision NumPy radii are evaluated in float64 to avoid integer-power
+overflow or premature low-precision underflow. The returned `r` field retains
+the caller's original scalar.
+
+`graph_to_fem_input`, and hence the direct and easy FEM stretch shortcuts,
+validate each original edge radius before constructing a NumPy radius array
+or selecting the solver. This prevents mixed boolean/float records from being
+silently converted into numeric radii. Direct 2-D and 3-D `BeamFrameFEM` solves
+use the same check when forming each participating section. Invalid inputs do
+not mutate the graph. This contract is specific to `BeamFrameFEM`; it does not
+change `StructureGraph` storage, generator admission, or the separate
+`SparseBeamFrameFEM` implementation.
+
+Previously, negative radii could produce the same stiffness as positive radii,
+boolean radii could become one, and zero radii could produce invalid stress
+divisions. Those outputs should be recomputed with physically meaningful
+sections, rather than repaired by taking absolute values or replacing zeros.
+
+Coordinates and radii must use the same chosen length unit. No unit conversion
+is inferred: for N and metres use `E` in N/m²; for N and millimetres use `E` in
+N/mm². Stored edge `Material` does not override explicit `E` or `nu`. The
+regression `tests/test_fem_radius_admission.py` checks a metre/millimetre axial
+bar pair with the caller explicitly converting both geometry and modulus, and
+generated 2-D/3-D graphs through material-preserving serialization, FEM and
+result save/reload. These are software interoperability checks, not a material
+calibration or general unit-invariance proof for regularized solves.
+
 ## FEM automatic grip fraction
 
 For FEM stretch, `pct` is a fraction of node rows per side, not a percentage

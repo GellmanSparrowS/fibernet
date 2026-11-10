@@ -98,9 +98,29 @@ class BeamFrameFEM:
     
     @staticmethod
     def section_properties(r: float) -> Dict[str, float]:
-        A = np.pi * r**2
-        I = np.pi * r**4 / 4
-        J = np.pi * r**4 / 2
+        """Circular section from a finite positive real radius.
+
+        Section arithmetic uses float64, like the assembled stiffness. Reject
+        unrepresentable sections rather than emitting zero or infinite moments
+        of area. The original radius object is retained in the returned record.
+        """
+        if (isinstance(r, (bool, np.bool_, np.timedelta64)) or
+                not isinstance(r, (int, float, np.integer, np.floating))):
+            raise ValueError('beam radius must be a finite positive real scalar, not bool')
+        try:
+            radius = float(r)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError('beam radius must be a finite positive real scalar') from exc
+        if not np.isfinite(radius) or radius <= 0:
+            raise ValueError('beam radius must be a finite positive real scalar')
+        try:
+            A = np.pi * radius**2
+            I = (np.pi / 4) * radius**4
+            J = (np.pi / 2) * radius**4
+        except OverflowError as exc:
+            raise ValueError('beam radius produces unrepresentable section properties') from exc
+        if not all(np.isfinite(value) and value > 0 for value in (A, I, J)):
+            raise ValueError('beam radius produces unrepresentable section properties')
         return {'A': A, 'I': I, 'J': J, 'r': r}
     
     @staticmethod
@@ -924,6 +944,8 @@ class BeamFrameFEM:
         graph : StructureGraph
             Straight members between graph nodes. Nonempty edge-owned
             internal_points are not a curved-beam discretization and reject.
+            Every edge radius must be a finite positive real scalar, not a
+            boolean, with representable positive circular section properties.
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
@@ -971,6 +993,13 @@ class BeamFrameFEM:
                 + '. Represent the fiber with actual intermediate graph nodes '
                 'and straight edges, with separately specified mechanics.'
             )
+        # Validate original scalar values before NumPy can turn a mixed
+        # bool/float radius sequence into an apparently valid floating array.
+        for edge_id, edge in graph.edges.items():
+            try:
+                BeamFrameFEM.section_properties(edge.radius)
+            except ValueError as exc:
+                raise ValueError(f'FEM edge {edge_id}: {exc}') from exc
         from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
         pos, elements, _, _ = _graph_to_arrays(graph)
         edge_index = elements.T.astype(np.int64)
