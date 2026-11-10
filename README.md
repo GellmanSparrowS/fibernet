@@ -1272,7 +1272,7 @@ graph = fn.pattern_2d(
 
 > 当前不可用：安装可选依赖也不能启用这条内置路径。
 
-[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L1107) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/RL_COMPATIBILITY.md)
+[源码](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L1109) · [公共导出](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [文档](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/RL_COMPATIBILITY.md)
 
 </details>
 
@@ -2849,7 +2849,7 @@ Preserve the old random-rollout name; it does not train a policy.
 
 > Unavailable: installing optional dependencies does not enable this built-in route.
 
-[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L1107) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/RL_COMPATIBILITY.md)
+[Source](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/easy.py#L1109) · [Public export](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/fibernet/__init__.py) · [Documentation](https://github.com/GellmanSparrowS/fibernet/blob/1fe71539cfd23101db55791a34697e6289741167/docs/RL_COMPATIBILITY.md)
 
 </details>
 

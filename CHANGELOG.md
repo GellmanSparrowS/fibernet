@@ -1,3 +1,11 @@
+## [Unreleased] - Per-edge linear beam materials
+
+- Add explicit graph-material selection for linear 2-D/3-D beam FEM using the
+  existing StructureGraph. Preserve uniform defaults; validate and snapshot
+  per-edge isotropic properties through assembly, recovery and result metadata.
+- Add heterogeneous series, parallel, network, bending/torsion and ownership
+  checks. Document material precedence, explicit units and axial-proxy energy.
+
 ## [Unreleased] - Static network workflow checks
 
 - Add real small-network static FEM, saved-result analysis and VTK workflow
