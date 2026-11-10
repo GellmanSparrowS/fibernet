@@ -13,6 +13,20 @@ Click a language heading to expand or collapse it on this page. English is open 
 
 [Static views and media sources / 静态图与媒体来源](docs/MEDIA_GALLERY.md)
 
+## Quick start
+
+**Source checkout · 源码安装** (Python 3.9+)
+
+```bash
+git clone https://github.com/GellmanSparrowS/fibernet.git
+cd fibernet
+python -m pip install -e .
+python -m examples.open_source_workflow --output-dir demo_output
+```
+
+This entry stays visible when either language is collapsed. Expand a language below for the full examples and module gallery.
+此入口不受语言折叠影响。展开下方语言标题，可查看完整示例与模块动图。
+
 <details>
 <summary>中文</summary>
 
@@ -158,6 +172,10 @@ python -m pip install fibernet==4.4.1
 <img src="docs/media/new/learning/media/rl_environment_fixed_actions.gif" alt="每个网络的三个存档阶段：重置、给定动作与有限时域瞬态响应；未使用训练策略" width="600">
 
 **给定动作，未训练策略。** 每个存档案例记录重置几何、一次给定动作及其有限时域瞬态响应、奖励和终止标记。这些离散状态不是策略训练历史。[RL 记录与来源](docs/media/new/learning/README.md) · [当前 RL 接口](docs/RL_COMPATIBILITY.md)
+
+### RL 兼容性
+
+根命名空间的 `fibernet.train_rl` 是历史随机 rollout 包装器，不是策略训练器。其内置 E*/ν* 环境当前不可用，会在模拟开始前拒绝调用，不再将失败的评估作为奖励返回。独立的 `fibernet.rl.train_rl` 策略训练器仍接受调用方管理的环境。详见 [RL 接口与兼容性](docs/RL_COMPATIBILITY.md)。
 
 ![FiberScope 学习与逆向设计的已保存界面导览](docs/media/learning_inverse_workflow.gif)
 
@@ -1586,11 +1604,11 @@ graph = fn.pattern_2d(
 <summary>English</summary>
 
 <!-- locale:en:start -->
-[Quick start](#quick-start) · [Generate](#1-generate-networks) → [Simulate](#2-simulate-response) → [Analyze / Learn](#3-analyze-and-learn) → [Design / Export](#4-design-and-export) · [API index](#choose-a-workflow)
+[Quick start](#quick-start-details) · [Generate](#1-generate-networks) → [Simulate](#2-simulate-response) → [Analyze / Learn](#3-analyze-and-learn) → [Design / Export](#4-design-and-export) · [API index](#choose-a-workflow)
 
 FiberNet is a Python library for fiber-network modeling. FiberScope provides a desktop interface.
 
-## Quick start
+## Quick start details
 
 ### Install and run the source quick start
 
@@ -1727,6 +1745,14 @@ The original research view retains a fixed solved field and final predictions be
 <img src="docs/media/new/learning/media/rl_environment_fixed_actions.gif" alt="Three archived stages per network: reset, prescribed action and finite-horizon transient response; no trained policy" width="600">
 
 **Prescribed actions, no trained policy.** Each archived case contains reset geometry, one prescribed action and its finite-horizon transient response, reward and termination. These discrete states are not a policy-training history. [RL records and provenance](docs/media/new/learning/README.md) · [Current RL entry points](docs/RL_COMPATIBILITY.md)
+
+### RL compatibility
+
+The root `fibernet.train_rl` is a historical random-rollout wrapper, not a policy
+trainer. Its built-in E*/ν* environment is unavailable and now rejects calls
+before simulation instead of reporting failed evaluations as rewards. The
+separate `fibernet.rl.train_rl` policy trainer still accepts caller-managed
+environments. See [RL entry points and compatibility](docs/RL_COMPATIBILITY.md).
 
 ![Saved FiberScope learning and inverse-design interface tour](docs/media/learning_inverse_workflow.gif)
 
@@ -3150,11 +3176,3 @@ Branches represent workflows, not inheritance. Relationship links target entries
 <!-- locale:en:end -->
 
 </details>
-
-### RL compatibility
-
-The root `fibernet.train_rl` is a historical random-rollout wrapper, not a policy
-trainer. Its built-in E*/ν* environment is unavailable and now rejects calls
-before simulation instead of reporting failed evaluations as rewards. The
-separate `fibernet.rl.train_rl` policy trainer still accepts caller-managed
-environments. See [RL entry points and compatibility](docs/RL_COMPATIBILITY.md).

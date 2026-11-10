@@ -175,8 +175,28 @@ class RestoredGalleryTests(unittest.TestCase):
             with self.subTest(language=language):
                 self.assertTrue(originals <= set(CHECK.inline_gifs(visible)))
                 self.assertEqual(len(CHECK.inline_gifs(visible)), 22)
-                quick_start = '## Quick start' if language == 'en' else '## 快速开始'
+                quick_start = '## Quick start details' if language == 'en' else '## 快速开始'
                 self.assertLess(body.index(quick_start), body.index('<!-- api-navigation:'))
+
+    def test_brand_quick_start_is_outside_both_language_folds(self):
+        homepage = (ROOT / 'README.md').read_text()
+        prefix = homepage.split('<details>', 1)[0]
+        self.assertIn('<a href="#quick-start">', prefix)
+        self.assertEqual(homepage.count('\n## Quick start\n'), 1)
+        self.assertIn('\n## Quick start\n', prefix)
+        self.assertIn('python -m pip install -e .', prefix)
+        self.assertIn('python -m examples.open_source_workflow', prefix)
+
+    def test_rl_compatibility_is_localized_and_not_an_english_footer(self):
+        homepage = (ROOT / 'README.md').read_text()
+        for language, heading in (('en', '### RL compatibility'), ('zh', '### RL 兼容性')):
+            body = CHECK.locale_block(homepage, language)
+            with self.subTest(language=language):
+                self.assertIn(heading, body)
+                self.assertIn('`fibernet.train_rl`', body)
+                self.assertIn('`fibernet.rl.train_rl`', body)
+        suffix = homepage.split('<!-- locale:en:end -->', 1)[1].strip()
+        self.assertEqual(suffix, '</details>')
 
     def test_scope_labels_preserve_scientific_distinctions(self):
         homepage = (ROOT / 'README.md').read_text()

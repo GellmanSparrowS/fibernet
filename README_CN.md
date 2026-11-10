@@ -145,6 +145,10 @@ python -m pip install fibernet==4.4.1
 
 **给定动作，未训练策略。** 每个存档案例记录重置几何、一次给定动作及其有限时域瞬态响应、奖励和终止标记。这些离散状态不是策略训练历史。[RL 记录与来源](docs/media/new/learning/README.md) · [当前 RL 接口](docs/RL_COMPATIBILITY.md)
 
+### RL 兼容性
+
+根命名空间的 `fibernet.train_rl` 是历史随机 rollout 包装器，不是策略训练器。其内置 E*/ν* 环境当前不可用，会在模拟开始前拒绝调用，不再将失败的评估作为奖励返回。独立的 `fibernet.rl.train_rl` 策略训练器仍接受调用方管理的环境。详见 [RL 接口与兼容性](docs/RL_COMPATIBILITY.md)。
+
 ![FiberScope 学习与逆向设计的已保存界面导览](docs/media/learning_inverse_workflow.gif)
 
 **已保存的界面导览。** 高亮区域在学习和逆向设计截图之间移动，曲线和数值保持不变。[截图来源](docs/MEDIA_GALLERY.md#learning-and-inverse-design-workspaces)
