@@ -119,9 +119,11 @@ mixed translation/rotation scaling, not a unit-invariant physical measure.
 
 ``SimResult.energy`` is labeled ``axial_stress_proxy``; it excludes bending. In
 these examples, bending accounts for about 96–99.5% of full beam energy.
-The full linear energy can be calculated from the raw FEM result as
-``0.5 * u.ravel() @ K @ u.ravel()``. Raw ``u`` includes rotations, while the
-canonical ``SimResult.displacements`` contains translations only. Do not
+The additive ``result.metadata["beam_energy"]`` record retains the full
+linear energy ``0.5 * u.ravel() @ K @ u.ravel()`` using physical stiffness.
+Raw ``u`` includes rotations, while the canonical ``SimResult.displacements``
+contains translations only. See :doc:`linear_beam_energy` for availability,
+unit declarations and the numerical-regularization work correction. Do not
 interpret the axial proxy as total work or compare it to total grip work.
 
 A two-member series bar provides a separate material-semantics check. With

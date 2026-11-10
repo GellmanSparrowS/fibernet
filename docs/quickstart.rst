@@ -60,7 +60,10 @@ that a structure remains within small-deformation assumptions.
 The example checks the software workflow; it is not a calibrated material
 prediction. ``max_force`` is the largest individual beam axial force, not a
 grip reaction or effective modulus. The result's ``energy`` is an axial-stress
-proxy rather than total bending-plus-contact energy.
+proxy rather than total bending-plus-contact energy. Linear FEM additionally
+retains axial/bending/torsional strain energy in
+``result.metadata["beam_energy"]``; see :doc:`linear_beam_energy` for
+availability and units. This does not add contact physics.
 
 Analyze tensile recruitment
 ---------------------------

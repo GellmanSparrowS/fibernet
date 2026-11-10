@@ -66,6 +66,7 @@ Features Overview
    quickstart
    static_network_workflow
    heterogeneous_fem
+   linear_beam_energy
    api/index
    tutorials
    changelog
