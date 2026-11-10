@@ -4620,5 +4620,17 @@
    "FEMRadiusAdmissionTests"
   ],
   "sha256": "7b0fbe0bca2732f54cc722574165c19bea67d5b93cfbd90084607e8a05da2a07"
+ },
+ "tests/test_stretch_boundary_fraction_source.py": {
+  "purpose": "Source-only FEM grip admission checks; no project import or physical solve.",
+  "status": "active",
+  "symbols": [
+   "extract",
+   "graph_fixture",
+   "legacy_percentile_rows",
+   "SolverCapture",
+   "GripAdmission"
+  ],
+  "sha256": "ff79b9a752359aa70a2dc64ba90192c9bd8d93a24a3e27f0479b39486f3eea6a"
  }
 }
