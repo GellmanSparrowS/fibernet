@@ -65,6 +65,7 @@ Features Overview
    getting_started
    quickstart
    static_network_workflow
+   heterogeneous_fem
    api/index
    tutorials
    changelog

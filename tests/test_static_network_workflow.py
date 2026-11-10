@@ -439,7 +439,7 @@ def series_material_gap():
         "heterogeneous_series_oracle_force_N": heterogeneous_force,
         "actual_midpoint_displacement_m": float(result.displacements[1, 0]),
         "heterogeneous_midpoint_displacement_m": heterogeneous_force / (E * area),
-        "conclusion": "Heterogeneous static Material mechanics are not implemented by this API; not a regression.",
+        "conclusion": "The default uniform route does not consume stored Material; use explicit graph material mode for heterogeneous mechanics.",
     }
 
 

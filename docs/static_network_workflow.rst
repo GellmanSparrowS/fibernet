@@ -3,11 +3,12 @@ Stored materials, static FEM, analysis and export
 
 A graph can contain several ``Material`` records without its selected solver
 using several constitutive laws. The FEM stretch API uses one explicit ``E``
-and ``nu`` for every member. Stored edge moduli are preserved by native graph
+and ``nu`` for every member by default. Stored edge moduli are preserved by native graph
 JSON but do not override those parameters. Changing a stored material alone
 does not change this solver's displacement or force result.
 
-This page demonstrates that existing contract, not heterogeneous mechanics.
+This page demonstrates that default contract, not heterogeneous mechanics.
+For the explicit per-edge-material option, see :doc:`heterogeneous_fem`.
 It needs the core dependencies only. Native VTK-reader verification is an
 optional test; VTK is not needed to write the file below.
 
@@ -126,8 +127,9 @@ interpret the axial proxy as total work or compare it to total grip work.
 A two-member series bar provides a separate material-semantics check. With
 unit member lengths, radius ``.02``, stored moduli ``1e6`` and ``4e6``, uniform
 solver ``E=1e6`` and total extension ``.002``, the solver approaches ``1.256637 N``.
-A genuinely heterogeneous bar would carry ``2.010619 N``. The mismatch is
-expected for this API and must not be described as heterogeneous validation.
+A genuinely heterogeneous bar carries ``2.010619 N`` through the explicit
+graph-material mode. The mismatch is expected for this default uniform route
+and must not be described as heterogeneous validation.
 
 These are bounded numerical and integration checks for straight, welded,
 small-deformation 2D frames. They do not validate large deformation, material

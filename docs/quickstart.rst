@@ -134,3 +134,7 @@ For an actual graph → static FEM → saved-result analysis → VTK journey, se
 The example preserves multiple material records while explicitly using the
 FEM stretch API's uniform material, and distinguishes axial proxy energy
 from full beam energy.
+
+For actual per-edge isotropic elasticity in the same graph, see
+:doc:`heterogeneous_fem`. It explicitly selects graph materials and linear
+kinematics, while the default uniform-material route remains unchanged.
