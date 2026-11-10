@@ -861,7 +861,7 @@
    "to_vtk",
    "to_vtk_xml"
   ],
-  "sha256": "8aa93ccfe8fd158aebe27fabe84c9c2973df2ca941a30466e6b218cfc45202f0"
+  "sha256": "154f2565f969a9f3bc3afefa61926faed6204ee53db925971239eed116788355"
  },
  "fibernet/io/xyz.py": {
   "purpose": "XYZ file format I/O.",
@@ -4632,5 +4632,20 @@
    "GripAdmission"
   ],
   "sha256": "ff79b9a752359aa70a2dc64ba90192c9bd8d93a24a3e27f0479b39486f3eea6a"
+ },
+ "tests/test_vtk_attribute_admission.py": {
+  "purpose": "Reject malformed legacy VTK attributes before opening the destination.",
+  "status": "active",
+  "symbols": [
+   "_network",
+   "test_invalid_values_do_not_touch_destination",
+   "test_invalid_names_do_not_open_destination",
+   "test_nonmapping_attributes_are_not_silently_ignored",
+   "test_valid_numeric_and_boolean_fields_keep_legacy_format",
+   "test_all_false_masks_remain_accepted",
+   "test_255_character_name_is_supported",
+   "test_valid_numpy_dtypes_do_not_warn"
+  ],
+  "sha256": "b526bee2f1016052f6bd2ea442e69811474ec3868db6653b471692b95c18e3ae"
  }
 }
