@@ -4118,7 +4118,7 @@
    "candidate_pairs",
    "ContactConfig"
   ],
-  "sha256": "6139c7aaebd82ab032f052cc64b30a2674155bf3c4a45981843a9914e55798f7"
+  "sha256": "47ba97424dd46d6e8068a9ed45ed9c210cc1a54ec8916d27fe74b76aea26667c"
  },
  "tests/test_snapshot_features_cross_end.py": {
   "purpose": "The desktop snapshot-feature contract remains numerically unchanged.",
@@ -4917,6 +4917,24 @@
   "status": "active",
   "sha256": "bf65e4e5a542d78f9b0a2db83f35be403177f0f9e95c98f02962efb129d1d37b",
   "symbols": []
+ },
+ "tests/test_width_contact_scale.py": {
+  "purpose": "Finite-width raster decisions must not depend on the length unit.",
+  "status": "active",
+  "symbols": [
+   "exact_crossing_pixels",
+   "test_crossing_contacts_match_exact_pixel_oracle_at_every_unit",
+   "test_translation_edge_reversal_and_no_input_mutation",
+   "test_non_crossing_overlapping_capsules_and_shared_nodes",
+   "test_coincident_zero_length_segments_are_disks",
+   "test_snapshot_public_route_preserves_contact_unit_contract",
+   "test_pixel_budget_is_not_changed_by_units",
+   "test_unrepresentable_pixel_area_fails_explicitly",
+   "test_unrepresentable_coordinate_extent_fails_explicitly",
+   "test_zero_width_and_empty_edges_preserve_short_circuits",
+   "test_large_integer_coordinates_normalize_without_integer_overflow"
+  ],
+  "sha256": "933ad923ef0aa3ede345eb896c7c729d3c78f458843b26bbcd31b5e9d7134616"
  },
  "docs/static_network_workflow.rst": {
   "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
