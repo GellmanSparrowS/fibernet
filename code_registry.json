@@ -3557,7 +3557,7 @@
   "sha256": "b2ad3b060a908effa69f40e04022e8622060e1641edb788053e75d4359144544"
  },
  "fibernet/analysis/tensile_recruitment.py": {
-  "purpose": "Thresholded tensile-strain recruitment on a network trajectory.",
+  "purpose": "Thresholded tensile-strain recruitment with float64 replayable onset thresholds.",
   "status": "active",
   "symbols": [
    "PercolationResult",
@@ -3567,7 +3567,7 @@
    "analyze_tensile_recruitment",
    "compute_percolation"
   ],
-  "sha256": "d07de49e170122e4e459d948ebd10509b3620831f2dc991e365bbd7710e12c89"
+  "sha256": "4738580c09b2b1a3df005b72b096768c8178710d71e6491432f43231958b57f1"
  },
  "tests/test_tensile_recruitment.py": {
   "purpose": "Public API and APP compatibility checks for tensile recruitment.",
@@ -4911,5 +4911,16 @@
    "test_geometry_is_provenance_not_a_conductance_law"
   ],
   "sha256": "04a83e6782d82dc9094bd1a0aeefbca215357e1b3e6ba35a18d92e41ecaeb6cd"
+ },
+ "tests/test_recruitment_threshold_precision.py": {
+  "purpose": "Independent threshold-history replay through strict boundaries, hysteresis, JSON and saved FEM networks.",
+  "status": "active",
+  "sha256": "bf65e4e5a542d78f9b0a2db83f35be403177f0f9e95c98f02962efb129d1d37b",
+  "symbols": []
+ },
+ "docs/static_network_workflow.rst": {
+  "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
+  "status": "active",
+  "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
  }
 }
