@@ -1,3 +1,12 @@
+## [Unreleased] - Finite-width contact scaling
+
+- Normalize contact raster geometry and width together so a change of length
+  unit does not erase short-segment contacts through an absolute projection
+  floor. Preserve field names, adjacency exclusions and raster budgets.
+- Restore pixel spacing and overlap area to caller units, reject unrepresentable
+  output scales, and add exact-pixel and public-route regressions. See
+  [finite-width contact units](docs/FINITE_WIDTH_CONTACT_SCALING.md).
+
 ## [Unreleased] - Per-member cylinder geometry
 
 - Preserve each represented edge's radius-length association in 3D cylinder

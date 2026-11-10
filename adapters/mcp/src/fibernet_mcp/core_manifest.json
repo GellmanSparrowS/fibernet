@@ -21,7 +21,7 @@
   "analysis/spectrum_metrics.py": "97fe6c808c1b25b9072bacbe799407f86a1e7171aee48c378e656b49084cbf73",
   "analysis/tensile_recruitment.py": "4738580c09b2b1a3df005b72b096768c8178710d71e6491432f43231958b57f1",
   "analysis/topology_metrics.py": "ebe3da4b038337cfb07c492fda89e5214a91cd5dc9bae923047997e08be83bec",
-  "analysis/width_contact.py": "859929f169356c782b348cc9749ccb58117cf7bdd1ada95bc966605f8d833c23",
+  "analysis/width_contact.py": "47ba97424dd46d6e8068a9ed45ed9c210cc1a54ec8916d27fe74b76aea26667c",
   "api.py": "56ffbe75b08c9d20fc708aa8f3e3fe2e4f1d41a9a1628507a3997a7aa58e5a6e",
   "core/__init__.py": "b82340b22d87cb24d1e47c235b685050745fd6ae97401dc3f0214045198663af",
   "core/_grid_contract.py": "03bdfc3506dcfc98fff05d5c2ebb8dbc3a7c3823cfacebc2df7544533f6620b8",

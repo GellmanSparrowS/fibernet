@@ -24,6 +24,12 @@ def candidate_pairs(pos, edges, padding=0.0, limit=300000):
 
 @dataclass
 class ContactConfig:
+    """Rasterized endpoint-segment overlap in the caller's length unit.
+
+    Geometry and width are normalized together for pixel classification.
+    Returned pixel spacing and overlap area retain caller units and squared
+    units. Resolution, not a mechanical contact law, sets the approximation.
+    """
     width: float = 0.2
     resolution: int = 512
     max_pixels: int = 2000000
@@ -40,10 +46,28 @@ class ContactConfig:
                    contact_graph_max=0)
         if not len(edges) or width == 0:
             return out
-        lo = pos.min(0) - width
-        span = float(np.max(pos.max(0) - lo) + width)
+        # Work in a translated, dimensionless canvas. Squaring caller-unit
+        # edge lengths (or flooring them at a fixed 1e-30) changes projection
+        # and contact decisions when the same geometry uses another unit.
+        with np.errstate(over='ignore', invalid='ignore', under='ignore'):
+            pos = np.asarray(pos, dtype=np.float64)
+            shifted = pos - pos.min(0)
+            scale = max(float(np.max(shifted)), width)
+            pos = shifted / scale
+            normalized_width = width / scale
+        if (not np.isfinite(scale) or scale <= 0
+                or not np.isfinite(pos).all() or normalized_width <= 0):
+            raise ValueError('contact coordinate/width scale is not representable')
+        width = normalized_width
+        lo = np.full(2, -width)
+        span = float(np.max(pos) + 2 * width)
         step = span / (resolution - 1)
-        out['contact_pixel_size'] = step
+        pixel_size = step * scale
+        pixel_area = pixel_size * pixel_size
+        if (not np.isfinite(pixel_size) or pixel_size <= 0
+                or not np.isfinite(pixel_area) or pixel_area <= 0):
+            raise ValueError('contact pixel/area scale is not representable')
+        out['contact_pixel_size'] = pixel_size
         union = np.zeros(resolution * resolution, bool)
         overlap = np.zeros_like(union)
         pixels = []
@@ -56,8 +80,11 @@ class ContactConfig:
                                np.arange(start[1], stop[1]+1))
             xy = np.column_stack((x.ravel(), y.ravel())) * step + lo
             v = q-p
-            t = np.clip((xy-p) @ v / max(float(v @ v), 1e-30), 0, 1)
-            hit = np.sum((xy-p-t[:, None]*v)**2, axis=1) <= (width/2)**2
+            length_squared = float(v @ v)
+            t = (np.clip((xy-p) @ v / length_squared, 0, 1)
+                 if length_squared > 0 else np.zeros(len(xy)))
+            delta = xy-p-t[:, None]*v
+            hit = np.hypot(delta[:, 0], delta[:, 1]) <= width/2
             ids = (y.ravel()*resolution+x.ravel())[hit].astype(np.int32)
             budget += len(ids)
             if budget > self.max_pixels:
@@ -102,8 +129,11 @@ class ContactConfig:
                     if j in pending:
                         pending.remove(j)
                         stack.append(j)
+        overlap_area = float(overlap.sum()) * pixel_area
+        if not np.isfinite(overlap_area):
+            raise ValueError('contact overlap area is not representable')
         out.update(contact_edge_ratio=float(len(active)/len(edges)),
-                   contact_overlap_area=float(overlap.sum()*step**2),
+                   contact_overlap_area=overlap_area,
                    contact_coverage_ratio=float(overlap.sum()/max(1, union.sum())),
                    contact_patch_count=patches)
         return out
