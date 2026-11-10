@@ -34,7 +34,13 @@ NumPy integer scalars are accepted and output IDs are Python integers.
 No absolute epsilon is used to define degeneracy. Full XYZ positions must have
 shape `(3,)`; internal points, if provided, must have shape `(M, 3)`. Masked,
 nonfinite, nonnumeric or malformed arrays are rejected rather than filled or
-projected. Every node and edge is checked, not only selected routes. Self-loops
+projected. Masks are rejected in nested lists, tuples and object arrays too,
+including all-false or empty masked arrays. Boolean coordinates are rejected
+before mixed numeric sequences can promote them to 0 or 1. If a fully observed
+masked container is intentional, explicitly convert it to an ordinary numeric
+array before calling this API. Resolve genuinely missing coordinates yourself;
+the analyzer neither reads their hidden payload nor fills or removes them.
+Every node and edge is checked, not only selected routes. Self-loops
 are rejected; distinct nodes with coincident coordinates are allowed. The input
 graph is not modified. Reversing an edge record requires reversing its internal
 points to describe the same curve. The resulting path graph remains undirected.

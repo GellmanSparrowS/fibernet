@@ -14,7 +14,7 @@
   "analysis/_archived/stress_strain.py": "ef8a6b5b1bf3c8498629bdaaef5e0615f45599c864bc1fcbf20ecf54cff150ce",
   "analysis/_archived/topology.py": "b82df9c452b7e3dc2d0d0a9500e0e09e02ced736f62672b3a0e1388ffe132917",
   "analysis/_legacy_summary.py": "6b46fb81288c4df40387de7518737a4b2e06674a59855ec0a178999801e119e2",
-  "analysis/geometry_paths.py": "b102a8d3f97af335da31e9b379f8388549779fc50172b841b1551188f591d251",
+  "analysis/geometry_paths.py": "ec85d4b8695caccc17514d2e3a5410dc69fcd47a122db23b0bb49dc57089132d",
   "analysis/graph_features.py": "f0b7077309565ef942499319497a52c52d82df347ff707b1ddaf24ba2506c035",
   "analysis/graph_features_3d.py": "5caf81a13116e0e019fedb28e998d7fb835ca3fbdbef3aac7885c8b8c2bab230",
   "analysis/snapshot_features.py": "ed9c751ea1336c3e310b5287baca1108f5794b971f3d0cad2fb856e4ce8ef51b",

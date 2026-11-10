@@ -4922,5 +4922,36 @@
   "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
   "status": "active",
   "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
+ },
+ "fibernet/analysis/geometry_paths.py": {
+  "purpose": "Bounded explicit-edge geometry and selected pair distances, schema 1.",
+  "status": "active",
+  "symbols": [
+   "GeometryPathMetricsV1",
+   "_integer",
+   "_finite",
+   "_ratio",
+   "_distance",
+   "_geometry",
+   "analyze_geometry_paths",
+   "compare_lammps_node_displacements"
+  ],
+  "sha256": "ec85d4b8695caccc17514d2e3a5410dc69fcd47a122db23b0bb49dc57089132d"
+ },
+ "tests/test_geometry_paths_admission.py": {
+  "purpose": "Geometry analysis must not invent observations during NumPy promotion.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "analyze",
+   "masked_position",
+   "test_nested_masked_positions_rejected_even_on_isolates",
+   "test_nested_masked_rows_rejected_before_path_selection",
+   "test_scalar_and_empty_masks_are_not_laundered",
+   "test_boolean_coordinates_rejected_before_numeric_promotion",
+   "test_numeric_containers_and_explicit_unmasking_preserve_results",
+   "test_shared_containers_and_recursive_invalid_inputs_terminate"
+  ],
+  "sha256": "85411551b69db05ab400e8c5d7ad5149ed036f38de331cbc1ae703ab0e9f581c"
  }
 }
