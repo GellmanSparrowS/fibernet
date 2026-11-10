@@ -973,7 +973,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "edfdcda193b950c319f480fa86cac9d71952228eeb915c881b0eb8720b4fdf60"
+  "sha256": "5e443da3ed19c65ac14e6e3a698af83fddf3b188a8bcfcd966ac867d0d41cd9a"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -4801,5 +4801,36 @@
    "test_raw_permuted_rows_and_ids_preserve_material_and_physics"
   ],
   "sha256": "efcdffa7366e4c56333593f604c80cb1120f8c622be46d54b5e8420a3831bd4f"
+ },
+ "tests/test_fem_energy_contract.py": {
+  "purpose": "Additive, detached linear-beam energy without changing the legacy proxy.",
+  "status": "active",
+  "symbols": [
+   "graph_fixture",
+   "raw_fixture",
+   "test_additive_snapshot_without_graph_and_with_other_converter",
+   "test_graph_si_route_and_json_persistence",
+   "test_legacy_raw_dictionary_does_not_infer_energy_from_stiffness",
+   "test_malformed_snapshot_rejects_conversion_without_mutation",
+   "test_missing_snapshot_fields_reject",
+   "test_non_json_and_unrepresentable_values_reject",
+   "test_invalid_quadratic_is_unavailable_not_zero",
+   "test_nonlinear_inner_energy_is_not_retained_as_final_energy"
+  ],
+  "sha256": "d632fa829286f395e51399d274a5eeafb31ef56f097812380707776ec67debc1"
+ },
+ "tests/test_fem_energy_physics.py": {
+  "purpose": "Physical beam energy against analytical laws and independent quadrature.",
+  "status": "active",
+  "symbols": [
+   "energy",
+   "test_cantilever_energy_closed_form_and_length_unit_rescaling",
+   "test_3d_mixed_axial_biaxial_bending_and_torsion_energy",
+   "test_heterogeneous_series_torsion_energy_uses_each_poisson_ratio",
+   "test_rigid_motion_has_zero_physical_energy",
+   "test_heterogeneous_network_energy_quadrature_and_regularized_work",
+   "test_numerical_regularization_is_excluded_from_force_loaded_energy"
+  ],
+  "sha256": "d5000c18ec1bc3b9be6ecd1fa93c6d2bc657dcd75733efbf4a68d2d1468db84a"
  }
 }

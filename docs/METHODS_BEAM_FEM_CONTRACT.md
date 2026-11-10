@@ -52,6 +52,16 @@ transformed stiffness and summed sparse stiffness before solving. These are
 calculation failures, distinct from invalid material inputs; nonfinite entries
 are never silently treated as zero stiffness.
 
+## Full linear beam energy
+
+Linear 2-D/3-D results also carry an additive `beam_energy` record, retained in
+`SimResult.metadata["beam_energy"]` and summary/detailed JSON. Its finite,
+nonnegative `strain_energy` is `0.5 * u.T @ K_physical @ u`, including bending
+and (3-D) torsion but excluding the numerical diagonal. `SimResult.energy`
+remains the axial-stress proxy. Nonlinear final energy is explicitly unavailable;
+no inner increment is relabeled as total energy. See [full beam energy](linear_beam_energy.rst)
+for availability, units, copying and the physical-work correction.
+
 ## Opt-in per-edge linear elasticity
 
 `simulate(..., backend="fem", material_mode="graph", nonlinear=False,

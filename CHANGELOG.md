@@ -1,3 +1,11 @@
+## [Unreleased] - Full linear beam strain energy
+
+- Add a detached full-strain-energy record to linear 2-D/3-D beam results and
+  converted result metadata, including summary JSON. Include bending/torsion
+  while excluding numerical regularization; preserve the legacy axial proxy.
+- Mark unrecovered nonlinear and invalid numerical energy unavailable. Add
+  analytical/quadrature tests and document units, work balance and persistence.
+
 ## [Unreleased] - Per-edge linear beam materials
 
 - Add explicit graph-material selection for linear 2-D/3-D beam FEM using the
