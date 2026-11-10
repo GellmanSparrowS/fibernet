@@ -164,10 +164,10 @@ class NativeDisclosureParserTests(unittest.TestCase):
 
 class RestoredGalleryTests(unittest.TestCase):
     def test_all_originals_are_visible_without_an_extra_gallery_fold(self):
-        selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text())
+        selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
         originals = {record['path'] for record in selection['original_gifs']}
         self.assertEqual(len(originals), 19)
-        homepage = (ROOT / 'README.md').read_text()
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
             # Only API documentation is nested; every GIF precedes that fold.
@@ -179,7 +179,7 @@ class RestoredGalleryTests(unittest.TestCase):
                 self.assertLess(body.index(quick_start), body.index('<!-- api-navigation:'))
 
     def test_brand_quick_start_is_outside_both_language_folds(self):
-        homepage = (ROOT / 'README.md').read_text()
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         prefix = homepage.split('<details>', 1)[0]
         self.assertIn('<a href="#quick-start">', prefix)
         self.assertEqual(homepage.count('\n## Quick start\n'), 1)
@@ -188,7 +188,7 @@ class RestoredGalleryTests(unittest.TestCase):
         self.assertIn('python -m examples.open_source_workflow', prefix)
 
     def test_rl_compatibility_is_localized_and_not_an_english_footer(self):
-        homepage = (ROOT / 'README.md').read_text()
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         for language, heading in (('en', '### RL compatibility'), ('zh', '### RL 兼容性')):
             body = CHECK.locale_block(homepage, language)
             with self.subTest(language=language):
@@ -199,7 +199,7 @@ class RestoredGalleryTests(unittest.TestCase):
         self.assertEqual(suffix, '</details>')
 
     def test_scope_labels_preserve_scientific_distinctions(self):
-        homepage = (ROOT / 'README.md').read_text()
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         required = {
             'en': ('undeformed geometry', 'fixed geometry', 'displacement ×1,000',
                    '×3,000', 'Prescribed actions, no trained policy',
