@@ -125,3 +125,12 @@ Next steps
 
 Read :doc:`getting_started` for model choices and optional dependencies, or
 :doc:`api/index` for the API reference.
+
+Stored materials and a complete static workflow
+-----------------------------------------------
+
+For an actual graph → static FEM → saved-result analysis → VTK journey, see
+:doc:`static_network_workflow`.
+The example preserves multiple material records while explicitly using the
+FEM stretch API's uniform material, and distinguishes axial proxy energy
+from full beam energy.

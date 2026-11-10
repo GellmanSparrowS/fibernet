@@ -64,6 +64,7 @@ Features Overview
 
    getting_started
    quickstart
+   static_network_workflow
    api/index
    tutorials
    changelog

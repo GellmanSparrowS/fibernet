@@ -4647,5 +4647,23 @@
    "test_valid_numpy_dtypes_do_not_warn"
   ],
   "sha256": "b526bee2f1016052f6bd2ea442e69811474ec3868db6653b471692b95c18e3ae"
+ },
+ "tests/test_static_network_workflow.py": {
+  "purpose": "Exercise real static network mechanics, saved analysis and VTK with an independent beam-energy oracle.",
+  "status": "active",
+  "symbols": [
+   "synthetic_graph",
+   "quadrature_matrix",
+   "dense_oracle",
+   "recruitment_oracle",
+   "export_and_read",
+   "network_case",
+   "series_material_gap",
+   "test_material_metadata_static_network_workflow",
+   "test_optional_native_vtk_static_network_readback",
+   "test_stored_materials_do_not_enable_heterogeneous_static_mechanics",
+   "test_quadrature_oracle_axial_bending_and_rigid_motion"
+  ],
+  "sha256": "2e3368ba522e666fc6b7b5d97ee46426403287a00414e712753112dd32a33f1f"
  }
 }
