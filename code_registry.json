@@ -139,7 +139,7 @@
   "symbols": [
    "GraphFeatureExtractor3D"
   ],
-  "sha256": "644385dc3cba763019a29a5872c893615e5655f14a91bd997b8701c438996ebc"
+  "sha256": "5caf81a13116e0e019fedb28e998d7fb835ca3fbdbef3aac7885c8b8c2bab230"
  },
  "fibernet/api.py": {
   "purpose": "High-level convenience API for FiberNet.",
@@ -4818,5 +4818,37 @@
    "test_scaled_cantilever_fem_matches_analytical_response"
   ],
   "sha256": "dcd0b5d08e12521d1fafa411342be890bfcb95d3f767c4048475ff6199eba994"
+ },
+ "tests/test_graph_feature_cylinder_sums.py": {
+  "purpose": "Per-member cylinder estimates retain the radius/length association.",
+  "status": "active",
+  "symbols": [
+   "expected_metrics",
+   "nonuniform_graph",
+   "test_independent_member_sums",
+   "test_radius_length_association_is_not_averaged",
+   "test_equal_lengths_still_require_mean_square_radius",
+   "test_native_generated_members_and_json_roundtrip",
+   "test_geometric_similarity",
+   "test_edgeless_positions_retain_zero_estimates",
+   "test_geometry_analysis_does_not_mutate_input"
+  ],
+  "sha256": "b444d8a88cad5aca66f021d38630adef5330baa1b8dbfd1a1d4a513eae91c193"
+ },
+ "tests/test_heterogeneous_radius_workflow.py": {
+  "purpose": "Real native generation, linear solve, persisted analysis and VTK ordering.",
+  "status": "active",
+  "symbols": [
+   "test_generated_radius_workflow"
+  ],
+  "sha256": "b6e3fb6fe04143dcee27068fe8b6576db43769545bb55e5fa1039e31457bbd19"
+ },
+ "examples/heterogeneous_radius_workflow.py": {
+  "purpose": "Generated octet radii through linear FEM, saved analysis and VTK fields.",
+  "status": "active",
+  "symbols": [
+   "run"
+  ],
+  "sha256": "78dea315ab52c120bafeb7d82d55d7e2b4916920acf92309aa0e2a245f85c3a5"
  }
 }
