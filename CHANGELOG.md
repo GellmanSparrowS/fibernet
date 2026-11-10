@@ -1,3 +1,11 @@
+## [Unreleased] - Legacy VTK attribute admission
+
+- Reject malformed field names, nonnumeric/complex/nonfinite attributes and
+  float32-overflowing values before legacy VTK export opens its destination.
+  Invalid attributes no longer truncate an existing output or emit invalid
+  records. Public signatures, coordinate and valid attribute bytes are
+  unchanged. See [attribute ordering and precision](docs/io/legacy_vtk_attributes.md).
+
 ## [Unreleased] - Beam FEM radius admission
 
 - Reject nonpositive, boolean and non-real beam radii before FEM graph dispatch,
