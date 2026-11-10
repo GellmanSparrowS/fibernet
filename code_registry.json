@@ -4088,7 +4088,7 @@
   "sha256": "21abf5cacc33b7ce51f800e96303ac53d41ce8360916cf56a9fe8faefd05ab58"
  },
  "fibernet/analysis/snapshot_features.py": {
-  "purpose": "Structure feature extraction for fiber networks (pure numpy).",
+  "purpose": "Snapshot structure, nested planar-face pore and optional finite-width contact features.",
   "status": "active",
   "symbols": [
    "feature_name",
@@ -4104,12 +4104,14 @@
    "_poly_area",
    "_poly_perim",
    "_faces",
+   "_inside_boundary",
    "_pore_features",
    "_contact_features",
    "compute_features",
-   "SnapshotFeatureExtractor"
+   "SnapshotFeatureExtractor",
+   "_normalized_pore_features"
   ],
-  "sha256": "a7afe442ed2d5a80effbc065310e3b9f5bd02c7ef803019232266a6c66923fcd"
+  "sha256": "43c9bb6020f30c66a43761c443b1150427a33dfdd6305c673f9ead874c379a74"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -4922,5 +4924,41 @@
   "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
   "status": "active",
   "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
+ },
+ "tests/test_snapshot_nested_pores.py": {
+  "purpose": "Analytical nested-face area, perimeter, adjacency, slit and graph/JSON workflow regressions.",
+  "status": "active",
+  "sha256": "364cc0b0944a4d51622c3f90e1ae396d08a958dac69426e1ee7b567d86faac96",
+  "symbols": [
+   "add_polygon",
+   "square",
+   "nested",
+   "check",
+   "test_nested_cycles_partition_area_and_share_boundaries",
+   "test_multiple_holes_and_three_nesting_levels",
+   "test_subdivided_inner_component_is_subtracted_once",
+   "test_concave_parent_does_not_capture_component_in_its_notch",
+   "test_disconnected_trees_contribute_both_sides_only_to_containing_pore",
+   "test_connected_annulus_with_bridge_and_inner_tree",
+   "test_component_with_internal_bridge_has_one_exterior_boundary",
+   "test_order_direction_parallel_edges_and_isolates_preserve_face_metrics",
+   "test_sparse_structure_graph_json_and_direct_array_routes",
+   "test_generated_network_inside_frame_obeys_euler_and_area_partition",
+   "test_tree_roundoff_does_not_hide_slit_or_remove_area",
+   "test_contact_enabled_preserves_nested_pore_metrics",
+   "test_point_touching_cycles_have_no_edge_adjacency",
+   "test_inner_loop_outward_branch_is_part_of_annular_boundary",
+   "test_loop_in_bridged_annular_face_removes_area_from_that_face_only"
+  ]
+ },
+ "docs/SNAPSHOT_PORE_SCALING.md": {
+  "purpose": "Pore scale, nested-boundary semantics, usage and numerical migration.",
+  "status": "active",
+  "sha256": "ddeae43287ad87285d72653108484406ee41a782a3d31d154df10e245904cd55"
+ },
+ "docs/architecture/snapshot-identity-contract.md": {
+  "purpose": "Stable graph identity and snapshot feature semantics.",
+  "status": "active",
+  "sha256": "f73d349cc4318032bbd729bd41756098d8e5ba9b1f72311aa0447c5ea7efd174"
  }
 }
