@@ -1,3 +1,13 @@
+## [Unreleased] - Per-member cylinder geometry
+
+- Preserve each represented edge's radius-length association in 3D cylinder
+  volume and lateral-area sums, correcting five derived geometry features for
+  heterogeneous radii, including native octet networks. Keep feature names,
+  ordering, default missing radii and historical cap/floor conventions.
+- Add analytical, generated-structure and scaling tests plus a runnable
+  generation-to-FEM-to-JSON/CSV/VTK workflow. See the
+  [radius workflow guide](docs/heterogeneous_radius_workflow.rst) for scope.
+
 ## [Unreleased] - Consistent scalar graph scaling
 
 - Treat NumPy real numeric scalars and zero-dimensional numeric arrays like
