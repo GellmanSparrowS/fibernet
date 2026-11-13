@@ -25,7 +25,7 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
 ENGINE_VERSION = "e2v15"
-ENGINE_SRC_HASH = "983e6c6bb62f"
+ENGINE_SRC_HASH = "82efae58144d"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
