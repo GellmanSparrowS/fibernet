@@ -131,3 +131,60 @@ def prepare_nodal_controls(graph, *, fixed_node_ids=None, forces_by_id=None,
     return PreparedNodalControls(tuple(node_ids), tuple(edge_ids), tuple(fixed),
                                  tuple(tuple(row) for row in forces.tolist()),
                                  int(dimension), _signature(graph))
+
+
+@dataclass(frozen=True)
+class PreparedTaichiSchedule:
+    """Detached row schedule bound to the exact graph at preparation time."""
+    node_ids: tuple
+    graph_signature: str
+    schedules: tuple
+
+    def taichi_kwargs(self, graph):
+        """Return independent row-keyed dynamics kwargs after a graph check."""
+        if _signature(graph) != self.graph_signature:
+            raise ValueError('graph changed since preparation; prepare the schedule again')
+        return {'displacement_schedule': {
+            row: [(step, np.array(vector, dtype=float)) for step, vector in points]
+            for row, points in self.schedules}}
+
+
+def prepare_taichi_schedule_by_id(graph, schedule_by_id):
+    """Prepare an explicit stable-node-ID schedule for Taichi dynamics.
+
+    Values are existing (integration step, 3-component displacement) waypoints.
+    Steps are not seconds. The initial recorded state is unchanged; schedules
+    first apply after the first integration step. The existing validator uses
+    float64 coercion, which may accept booleans or convertible values and does
+    not protect masks. Caller units are unchanged. Empty waypoints impose no
+    constraint. This does not infer fixed
+    nodes, loads or material parameters. A scheduled node also marked fixed is
+    finally clamped to its scheduled displacement by the existing kernel. Dynamic
+    material and state observers reject nonempty schedules. This helper does not
+    check the other options supplied to dynamics or execute a solver. There is
+    no waypoint count or total-memory limit. Avoid changing the graph after the
+    signature check and before the solve; this is not a concurrency guarantee.
+    """
+    from fibernet.core.structure_graph import StructureGraph
+    from .accelerated import (_graph_to_arrays, _strict_state_ids,
+                              _prepare_displacement_schedule)
+    if not isinstance(graph, StructureGraph):
+        raise TypeError('graph must be a StructureGraph')
+    if not isinstance(schedule_by_id, Mapping):
+        raise ValueError('schedule_by_id must be an ID-to-waypoints mapping')
+    node_ids = _strict_state_ids(list(graph.nodes), nonnegative=True)
+    _strict_state_ids(list(graph.edges), 'edge_ids', nonnegative=True)
+    if not node_ids:
+        raise ValueError('graph must have at least one node')
+    _, _, adapter_ids, rows = _graph_to_arrays(graph)
+    if adapter_ids != node_ids:
+        raise ValueError('graph node order changed during preparation')
+    ids = _strict_state_ids(list(schedule_by_id), 'schedule_by_id keys', nonnegative=True)
+    unknown = [nid for nid in ids if nid not in rows]
+    if unknown:
+        raise ValueError(f'unknown schedule_by_id keys: {unknown}')
+    row_schedule = {rows[nid]: schedule_by_id[nid] for nid in ids}
+    normalized = _prepare_displacement_schedule(row_schedule, len(node_ids), 3)
+    frozen = tuple((row, tuple((step, tuple(vector.tolist())) for step, vector in points))
+                   for row, points in normalized.items())
+    return PreparedTaichiSchedule(tuple(node_ids), _signature(graph), frozen)
