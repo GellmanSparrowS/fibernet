@@ -244,7 +244,11 @@ def scale(
     ----------
     graph : StructureGraph
     factor : float or (sx, sy[, sz])
-        Scale factor(s). If float, uniform scaling.
+        Scale factor(s). Python and NumPy real numeric scalars, including
+        zero-dimensional numeric arrays, scale coordinates and radii uniformly.
+        Array-like vectors scale coordinates only, even when all components
+        are equal. A masked real-numeric scalar is rejected instead of using
+        hidden data.
     center : (cx, cy[, cz]), optional
         Center of scaling. Defaults to origin.
 
@@ -252,6 +256,21 @@ def scale(
     -------
     StructureGraph
     """
+    # Normalize previously unrecognized NumPy scalars once for both branches.
+    # Retain existing Python/float64 scalar arithmetic, including promotion
+    # with a stored low-precision NumPy radius.
+    if not isinstance(factor, (int, float)) and ((
+        isinstance(factor, (np.integer, np.floating))
+        and factor.dtype.kind in 'iuf'
+    ) or (
+        isinstance(factor, np.ndarray)
+        and factor.ndim == 0
+        and factor.dtype.kind in 'iuf'
+    )):
+        if np.ma.isMaskedArray(factor) and np.ma.is_masked(factor):
+            raise ValueError("factor must not contain a masked scalar")
+        factor = float(factor)
+
     ctr = np.zeros(3)
     if center is not None:
         ctr = np.asarray(center, dtype=np.float64).ravel()

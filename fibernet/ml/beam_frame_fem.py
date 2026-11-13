@@ -50,7 +50,9 @@ class BeamFrameFEM:
     The uniform isotropic material requires finite real scalars ``E > 0`` and
     ``-1 < nu < 0.5``; booleans are not material values. The derived shear
     modulus must also be finite and positive. Graph Material does not override
-    these explicit constructor parameters.
+    these explicit constructor parameters in the default uniform mode. Linear
+    raw solves accept edge_materials; stretch_test can explicitly select the
+    graph's materials. Neither mode infers or converts units.
     """
     
     def __init__(self, E: float = 1e9, nu: float = 0.3):
@@ -75,6 +77,94 @@ class BeamFrameFEM:
         self.nu = nu
         self.G = G
 
+    @staticmethod
+    def _snapshot_edge_materials(edge_materials, n_edges):
+        """Validate all original rows, then detach the isotropic E/nu/G values."""
+        if edge_materials is None:
+            return None
+        from fibernet.core.material import Material
+        try:
+            materials = list(edge_materials)
+        except TypeError as exc:
+            raise ValueError('edge_materials must contain one Material per input edge row') from exc
+        if len(materials) != n_edges:
+            raise ValueError('edge_materials must contain one Material per input edge row')
+        snapshot = []
+        for row, material in enumerate(materials):
+            try:
+                if type(material) is not Material:
+                    raise ValueError('requires a Material, not a missing or custom constitutive object')
+                if material.stiffness_tensor is not None:
+                    raise ValueError('anisotropic stiffness_tensor is unsupported')
+                law = BeamFrameFEM(E=material.youngs_modulus, nu=material.poissons_ratio)
+                # The working matrix is float64. Check its represented values,
+                # including a longdouble input that underflows on conversion.
+                law = BeamFrameFEM(E=float(law.E), nu=float(law.nu))
+                if material.shear_modulus is not None:
+                    supplied = material.shear_modulus
+                    if (isinstance(supplied, (bool, np.bool_, np.timedelta64))
+                            or not isinstance(supplied, (int, float, np.integer, np.floating))
+                            or not np.isfinite(float(supplied)) or float(supplied) <= 0):
+                        raise ValueError('shear_modulus must be a finite positive real scalar, not bool')
+                    supplied = float(supplied)
+                    if not np.isclose(supplied, law.G, rtol=1e-6, atol=0.0):
+                        raise ValueError('shear_modulus must agree with E / (2 * (1 + nu))')
+                snapshot.append(Material(youngs_modulus=law.E,
+                                         poissons_ratio=law.nu, shear_modulus=law.G))
+            except (ValueError, OverflowError) as exc:
+                raise ValueError(f'FEM material input edge row {row}: {exc}') from exc
+        return tuple(snapshot)
+
+    @staticmethod
+    def _edge_material_record(materials, edge_list):
+        if materials is None:
+            return {}
+        selected = [materials[int(row)] for row in edge_list]
+        return {'material_contract': {
+            'schema_version': 1, 'model': 'isotropic_linear_elastic',
+            'source': 'edge_materials', 'unit_system': 'not_declared',
+            'input_edge_rows': [int(row) for row in edge_list],
+            'youngs_modulus': [m.youngs_modulus for m in selected],
+            'poissons_ratio': [m.poissons_ratio for m in selected],
+            'shear_modulus': [m.shear_modulus for m in selected],
+            'shear_modulus_rule': 'E / (2 * (1 + nu))',
+        }}
+
+    @staticmethod
+    def _copy_material_record(record, edge_list):
+        """Admit and detach the producer's selected-row material snapshot."""
+        if (not isinstance(record, dict) or type(record.get('schema_version')) is not int
+                or record['schema_version'] != 1
+                or record.get('model') != 'isotropic_linear_elastic'
+                or record.get('source') not in ('edge_materials', 'graph')
+                or record.get('unit_system') not in ('not_declared', 'SI')
+                or record.get('shear_modulus_rule') != 'E / (2 * (1 + nu))'):
+            raise ValueError('invalid FEM material_contract')
+        rows = record.get('input_edge_rows')
+        selected = np.asarray(edge_list)
+        if (not isinstance(rows, list) or any(type(row) is not int or row < 0 for row in rows)
+                or len(set(rows)) != len(rows)
+                or selected.ndim != 1 or selected.dtype.kind not in 'iu'
+                or any(isinstance(row, (bool, np.bool_)) for row in edge_list)
+                or rows != list(edge_list)):
+            raise ValueError('material_contract input_edge_rows must match edge_list')
+        values = []
+        for name in ('youngs_modulus', 'poissons_ratio', 'shear_modulus'):
+            column = record.get(name)
+            if not isinstance(column, list) or len(column) != len(rows):
+                raise ValueError('material_contract values must match selected edge rows')
+            values.append(column)
+        from fibernet.core.material import Material
+        if any(value is None for column in values for value in column):
+            raise ValueError('material_contract requires effective E, nu and G values')
+        materials = [Material(youngs_modulus=E, poissons_ratio=nu, shear_modulus=G)
+                     for E, nu, G in zip(*values)]
+        materials = BeamFrameFEM._snapshot_edge_materials(materials, len(rows))
+        result = BeamFrameFEM._edge_material_record(materials, range(len(rows)))['material_contract']
+        result.update(input_edge_rows=rows.copy(), source=record['source'],
+                      unit_system=record['unit_system'])
+        return result
+
     def history(self, graph, *, material, times, constraints, loads=None,
                 length_unit, initial_state=None):
         """Quasistatic 2-D viscoelastic response through the existing frame.
@@ -98,9 +188,29 @@ class BeamFrameFEM:
     
     @staticmethod
     def section_properties(r: float) -> Dict[str, float]:
-        A = np.pi * r**2
-        I = np.pi * r**4 / 4
-        J = np.pi * r**4 / 2
+        """Circular section from a finite positive real radius.
+
+        Section arithmetic uses float64, like the assembled stiffness. Reject
+        unrepresentable sections rather than emitting zero or infinite moments
+        of area. The original radius object is retained in the returned record.
+        """
+        if (isinstance(r, (bool, np.bool_, np.timedelta64)) or
+                not isinstance(r, (int, float, np.integer, np.floating))):
+            raise ValueError('beam radius must be a finite positive real scalar, not bool')
+        try:
+            radius = float(r)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError('beam radius must be a finite positive real scalar') from exc
+        if not np.isfinite(radius) or radius <= 0:
+            raise ValueError('beam radius must be a finite positive real scalar')
+        try:
+            A = np.pi * radius**2
+            I = (np.pi / 4) * radius**4
+            J = (np.pi / 2) * radius**4
+        except OverflowError as exc:
+            raise ValueError('beam radius produces unrepresentable section properties') from exc
+        if not all(np.isfinite(value) and value > 0 for value in (A, I, J)):
+            raise ValueError('beam radius produces unrepresentable section properties')
         return {'A': A, 'I': I, 'J': J, 'r': r}
     
     @staticmethod
@@ -282,7 +392,9 @@ class BeamFrameFEM:
                 unique.append(e)
         return np.array(unique)
     
-    def build_stiffness_2d(self, edge_index, node_pos, radii, deduplicate=False):
+    def build_stiffness_2d(self, edge_index, node_pos, radii, deduplicate=False,
+                           *, edge_materials=None):
+        materials = self._snapshot_edge_materials(edge_materials, edge_index.shape[1])
         if deduplicate:
             edge_list = self._deduplicate_edges(edge_index)
         else:
@@ -305,7 +417,7 @@ class BeamFrameFEM:
             cx, cy = dx / L, dy / L
             props = self.section_properties(r)
             A, I = props['A'], props['I']
-            E = self.E
+            E = self.E if materials is None else materials[e].youngs_modulus
             L2, L3 = L**2, L**3
             
             k_local = np.array([
@@ -356,7 +468,7 @@ class BeamFrameFEM:
         return second_derivatives @ transverse_dofs
 
     def _compute_element_stress_2d(self, node_pos, u, edge_index, edge_list, radii,
-                                 *, axial_eigenstrain=None):
+                                 *, axial_eigenstrain=None, edge_materials=None):
         """Recover linear stresses from cubic Hermite curvature.
 
         The scalar convention M=-EI*v'' gives M_i=q_local[2],
@@ -364,6 +476,7 @@ class BeamFrameFEM:
         Thus the endpoint energy-gradient vectors are (-N,-V,M_i) and
         (N,V,-M_j); reported endpoint moments are not both nodal moments.
         """
+        materials = self._snapshot_edge_materials(edge_materials, edge_index.shape[1])
         if axial_eigenstrain is not None:
             axial_eigenstrain = np.asarray(axial_eigenstrain, dtype=float)
             if (axial_eigenstrain.shape != (edge_index.shape[1],)
@@ -376,6 +489,7 @@ class BeamFrameFEM:
         edge_forces = np.zeros((n_edges, 3))  # [axial_N, shear_V, moment_avg]
         
         for idx, e in enumerate(edge_list):
+            E = self.E if materials is None else materials[e].youngs_modulus
             i, j = int(edge_index[0, e]), int(edge_index[1, e])
             r = radii[e]
             
@@ -400,12 +514,12 @@ class BeamFrameFEM:
             eps_axial = (uj_local[0] - ui_local[0]) / L
             if axial_eigenstrain is not None:
                 eps_axial = eps_axial - axial_eigenstrain[e]
-            sigma_axial[idx] = self.E * eps_axial
+            sigma_axial[idx] = E * eps_axial
             
             # Rotational DOFs are the transverse slopes in the local plane.
             d_trans = np.array([v_i, th_i, v_j, th_j])
             curvature = self._hermite_endpoint_curvatures(L, d_trans)
-            M_i, M_j = -self.E * I_val * curvature
+            M_i, M_j = -E * I_val * curvature
 
             moments[idx] = [M_i, M_j]
             
@@ -416,7 +530,7 @@ class BeamFrameFEM:
             sigma_bending[idx] = max(sigma_b_i, sigma_b_j)
             
             # Axial force and shear
-            N = self.E * A * eps_axial
+            N = E * A * eps_axial
             # Shear from V = dM/dx ≈ (M_j - M_i) / L
             V = (M_j - M_i) / L
             edge_forces[idx] = [N, V, (M_i + M_j) / 2]
@@ -427,7 +541,7 @@ class BeamFrameFEM:
     def solve_2d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=False):
+                 damping=1e-6, deduplicate=False, *, edge_materials=None):
         """Solve 2D beam frame with force and/or displacement BCs.
 
         edge_forces columns are [axial_N, shear_V, mean_bending_moment];
@@ -436,6 +550,12 @@ class BeamFrameFEM:
 
         forces: None (zero loads), or an exact (n_nodes, 2) array [Fx, Fy].
         Applied nodal moments are unsupported; extra columns raise ValueError.
+
+        edge_materials: optional Material sequence in original input edge-row
+        order, before deduplication. Overrides constructor E/nu for this solve.
+        Only isotropic linear elasticity is consumed; no density, strengths,
+        thermal or interface law. Coordinates/radii and moduli must use a
+        consistent unit system supplied by the caller. No conversion is done.
         
         Returns dict with:
             u: (n_nodes, 3) [ux, uy, theta]
@@ -466,7 +586,10 @@ class BeamFrameFEM:
         
         self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
-        K, edge_list = self.build_stiffness_2d(edge_index, node_pos, radii, deduplicate)
+        materials = self._snapshot_edge_materials(edge_materials, edge_index.shape[1])
+        material_kwargs = {} if materials is None else {'edge_materials': materials}
+        K, edge_list = self.build_stiffness_2d(
+            edge_index, node_pos, radii, deduplicate, **material_kwargs)
         n_nodes = node_pos.shape[0]
         n_dof = 3 * n_nodes
         
@@ -516,7 +639,8 @@ class BeamFrameFEM:
         
         # Compute stresses with corrected formula
         sigma_axial, sigma_bending, sigma_total, moments, edge_forces = \
-            self._compute_element_stress_2d(node_pos, u, edge_index, edge_list, radii)
+            self._compute_element_stress_2d(
+                node_pos, u, edge_index, edge_list, radii, **material_kwargs)
         
         # Per-node max stress
         node_stress = np.zeros(n_nodes)
@@ -539,6 +663,7 @@ class BeamFrameFEM:
             'node_moment': node_moment, 'reactions': reactions,
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            **self._edge_material_record(materials, edge_list),
             'numerical_diagnostics': self._linear_numerical_diagnostics(
                 reactions, free_dofs, damping),
         }
@@ -717,7 +842,7 @@ class BeamFrameFEM:
     def solve_3d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
-                 damping=1e-6, deduplicate=False):
+                 damping=1e-6, deduplicate=False, *, edge_materials=None):
         """Solve 3D beam frame with corrected stress computation.
 
         edge_forces retains [axial_N, shear_V_y, shear_V_z] for compatibility.
@@ -727,6 +852,8 @@ class BeamFrameFEM:
 
         forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
         Applied nodal moments are unsupported; extra columns raise ValueError.
+        edge_materials follows solve_2d's original-row, isotropic and unit
+        contract. Derived per-edge G also controls torsional stiffness.
         """
         torch = sys.modules.get("torch")
         if torch is not None and isinstance(edge_index, torch.Tensor):
@@ -749,6 +876,7 @@ class BeamFrameFEM:
         
         self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
         
+        materials = self._snapshot_edge_materials(edge_materials, edge_index.shape[1])
         edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
         n_nodes = node_pos.shape[0]
         n_dof = 6 * n_nodes
@@ -770,7 +898,8 @@ class BeamFrameFEM:
             
             props = self.section_properties(r)
             A, I, J = props['A'], props['I'], props['J']
-            E, G = self.E, self.G
+            E, G = ((self.E, self.G) if materials is None else
+                    (materials[e].youngs_modulus, materials[e].shear_modulus))
             L2, L3 = L**2, L**3
             
             k_local = np.zeros((12, 12))
@@ -850,7 +979,8 @@ class BeamFrameFEM:
             ui_axial = np.dot(e1, u[i, :3])
             uj_axial = np.dot(e1, u[j, :3])
             eps = (uj_axial - ui_axial) / L
-            sigma_axial[idx] = self.E * eps
+            E = self.E if materials is None else materials[e].youngs_modulus
+            sigma_axial[idx] = E * eps
             
             ref = np.array([0, 1.0, 0]) if abs(e1[0]) > 0.9 else np.array([1.0, 0, 0])
             e2 = np.cross(e1, ref); e2 /= np.linalg.norm(e2)
@@ -870,7 +1000,7 @@ class BeamFrameFEM:
 
             # Circular-section peak normal stress uses the moment norm at
             # each endpoint, then the maximum; the curvature is linear in x.
-            moment_norms = self.E * I_val * np.hypot(curvature_v, curvature_w)
+            moment_norms = E * I_val * np.hypot(curvature_v, curvature_w)
             sigma_bending[idx] = np.max(moment_norms) * r / I_val
 
         sigma_total = np.abs(sigma_axial) + sigma_bending
@@ -897,7 +1027,8 @@ class BeamFrameFEM:
             A = props['A']
             ui_axial = np.dot(e1_dir, u[i, :3])
             uj_axial = np.dot(e1_dir, u[j, :3])
-            N = self.E * A * (uj_axial - ui_axial) / L
+            E = self.E if materials is None else materials[e].youngs_modulus
+            N = E * A * (uj_axial - ui_axial) / L
             edge_forces[idx, 0] = N
         
         return {
@@ -907,6 +1038,7 @@ class BeamFrameFEM:
             'beam_resultant_contract': _beam_resultant_contract(3),
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            **self._edge_material_record(materials, edge_list),
             'numerical_diagnostics': self._linear_numerical_diagnostics(
                 reactions, free_dofs, damping),
         }
@@ -924,6 +1056,8 @@ class BeamFrameFEM:
         graph : StructureGraph
             Straight members between graph nodes. Nonempty edge-owned
             internal_points are not a curved-beam discretization and reject.
+            Every edge radius must be a finite positive real scalar, not a
+            boolean, with representable positive circular section properties.
         dim : int
             2 for 2D, 3 for 3D analysis.
         pct : float
@@ -971,6 +1105,13 @@ class BeamFrameFEM:
                 + '. Represent the fiber with actual intermediate graph nodes '
                 'and straight edges, with separately specified mechanics.'
             )
+        # Validate original scalar values before NumPy can turn a mixed
+        # bool/float radius sequence into an apparently valid floating array.
+        for edge_id, edge in graph.edges.items():
+            try:
+                BeamFrameFEM.section_properties(edge.radius)
+            except ValueError as exc:
+                raise ValueError(f'FEM edge {edge_id}: {exc}') from exc
         from fibernet.sim.accelerated import _graph_to_arrays, _get_boundary_indices
         pos, elements, _, _ = _graph_to_arrays(graph)
         edge_index = elements.T.astype(np.int64)
@@ -995,7 +1136,8 @@ class BeamFrameFEM:
         }
 
     def stretch_test(self, graph, target_stretch=2.0, dim=2, pct=0.10,
-                     nonlinear=None, deduplicate=False):
+                     nonlinear=None, deduplicate=False, *,
+                     material_mode='uniform', length_unit=None):
         """One-liner uniaxial stretch test using beam frame FEM.
         
         Analogous to TaichiEngine.stretch_test() but uses FEM.
@@ -1024,6 +1166,18 @@ class BeamFrameFEM:
         deduplicate : bool
             False preserves independent parallel fibers. True is available
             only for reproducing legacy simple-graph calculations.
+        material_mode : {'uniform', 'graph'}, keyword-only
+            Default uniform uses constructor E/nu and ignores stored materials.
+            Graph uses every edge's isotropic Material instead, with no fallback.
+            Requires explicit nonlinear=False and length_unit='m'. Constructor
+            E/nu remain unused uniform defaults in graph mode. The easy simulate
+            facade rejects combining graph mode with explicit E or nu.
+        length_unit : {'m'} or None, keyword-only
+            Graph mode requires the caller to declare that coordinates/radii
+            are metres and material moduli are pascals. No units are inferred
+            or converted. Uniform mode keeps the legacy undeclared-unit path
+            and requires None. Different materials share welded graph nodes;
+            no interface, slip, failure or anisotropic law is introduced.
         
         Returns
         -------
@@ -1039,10 +1193,37 @@ class BeamFrameFEM:
                 or not isinstance(target_stretch, (int, float, np.integer, np.floating))
                 or not np.isfinite(target_stretch)):
             raise ValueError('target_stretch must be a finite real stretch ratio')
+        if not isinstance(material_mode, str) or material_mode not in ('uniform', 'graph'):
+            raise ValueError("material_mode must be 'uniform' or 'graph'")
+        material_kwargs = {}
+        if material_mode == 'graph':
+            if nonlinear is None or bool(nonlinear):
+                raise ValueError("graph material mode requires explicit nonlinear=False")
+            if not isinstance(length_unit, str) or length_unit != 'm':
+                raise ValueError("graph material mode requires length_unit='m'; convert geometry to metres first")
+            materials = []
+            for edge_id, edge in graph.edges.items():
+                try:
+                    materials.extend(self._snapshot_edge_materials([edge.material], 1))
+                except ValueError as exc:
+                    raise ValueError(f'FEM graph edge {edge_id}: {exc}') from exc
+            material_kwargs['edge_materials'] = tuple(materials)
+        elif length_unit is not None:
+            raise ValueError("length_unit is only supported with material_mode='graph'")
         if dim == 3 and abs(target_stretch - 1.0) > 0.3:
             warnings.warn('3-D beam-frame stretch uses a small-deformation linear solver even at large stretch; '
                           'no 3-D nonlinear solver is available', UserWarning, stacklevel=2)
         inp = self.graph_to_fem_input(graph, dim=dim, pct=pct)
+        if material_mode == 'graph':
+            positions = np.asarray([node.position for node in graph.nodes.values()], dtype=float)
+            if not np.isfinite(positions).all():
+                raise ValueError('graph material mode requires finite node coordinates')
+            if dim == 2 and np.any(positions[:, 2] != positions[0, 2]):
+                raise ValueError('2-D graph material mode requires nodes in one XY plane')
+            vectors = inp['node_pos'][inp['edge_index'][1]] - inp['node_pos'][inp['edge_index'][0]]
+            lengths = np.linalg.norm(vectors, axis=1)
+            if not np.isfinite(lengths).all() or np.any(lengths < 1e-12):
+                raise ValueError('graph material mode requires finite member lengths >= 1e-12 m')
         
         left = inp['boundaries'].get('left', [])
         right = inp['boundaries'].get('right', [])
@@ -1071,15 +1252,17 @@ class BeamFrameFEM:
                 result = self.solve_2d(
                     inp['edge_index'], inp['node_pos'], inp['radii'],
                     fixed_nodes=left, prescribed_disp=prescribed,
-                    deduplicate=deduplicate
+                    deduplicate=deduplicate, **material_kwargs
                 )
         else:
             prescribed = {ni: (target_disp, 0.0, 0.0) for ni in right}
             result = self.solve_3d(
                 inp['edge_index'], inp['node_pos'], inp['radii'],
                 fixed_nodes=left, prescribed_disp=prescribed,
-                deduplicate=deduplicate
+                deduplicate=deduplicate, **material_kwargs
             )
+        if material_mode == 'graph':
+            result['material_contract'].update(source='graph', unit_system='SI')
         displacement = np.asarray(result['u'])[:, :dim]
         result['max_displacement'] = float(np.linalg.norm(displacement, axis=1).max())
         return result
@@ -1185,6 +1368,17 @@ class BeamFrameFEM:
                 fem_result['numerical_diagnostics'], n_nodes, u.shape[1],
                 node_ids if graph is not None else None)
 
+        material_metadata = {}
+        effective_moduli = None
+        if 'material_contract' in fem_result:
+            material_record = self._copy_material_record(fem_result['material_contract'], edge_list)
+            effective_moduli = material_record['youngs_modulus']
+            if len(effective_moduli) != len(fem_result.get('sigma_axial', [])):
+                raise ValueError('material_contract must match axial stress rows')
+            if graph is not None:
+                material_record['edge_ids'] = identity['edge_ids'].copy()
+            material_metadata['material_contract'] = material_record
+
         # Displacement magnitude
         if u.shape[1] == 3 and fem_result.get('edge_list') is not None:
             # 2D: u is (n, 3) = [ux, uy, theta]
@@ -1237,8 +1431,9 @@ class BeamFrameFEM:
                 except Exception:
                     pass
                 A = np.pi * r**2
-                strain = sigma_axial[idx] / self.E if self.E > 0 else 0
-                energy += 0.5 * self.E * strain**2 * A * L
+                E = self.E if effective_moduli is None else effective_moduli[idx]
+                strain = sigma_axial[idx] / E if E > 0 else 0
+                energy += 0.5 * E * strain**2 * A * L
         
         # Do not invent validity for legacy/linear dictionaries. Only nonlinear
         # producers currently emit this availability contract.
@@ -1272,6 +1467,7 @@ class BeamFrameFEM:
                 **availability,
                 **numerical,
                 **resultant_contract,
+                **material_metadata,
                 'sigma_axial': sigma_axial,
                 'sigma_bending': sigma_bending,
                 'sigma_total': fem_result.get('sigma_total', np.array([])),

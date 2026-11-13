@@ -1,23 +1,32 @@
-# FiberNet 4.4.1
+# FiberNet 4.4.2
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
+
+## Changes in 4.4.2
+
+This release detaches exported graph metadata, corrects heterogeneous-radius
+features, contact scaling and ionic force direction, and strengthens graph/FEM
+input admission. It also adds per-edge linear beam materials and saved
+recruitment replay. Some corrected numerical results intentionally change;
+see [release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_2.md)
+before comparing historical results.
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.4.1"
+python -m pip install "fibernet==4.4.2"
 ```
 
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.4.1"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.4.1"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.4.1"       # experimental fracture backend
+python -m pip install "fibernet[ml]==4.4.2"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.4.2"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.4.2"       # experimental fracture backend
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.

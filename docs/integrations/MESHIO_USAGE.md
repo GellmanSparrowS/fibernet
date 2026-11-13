@@ -123,3 +123,10 @@ generated square through native JSON reload, explicit-conductance transport and
 ID-keyed VTU export. All voltages in that journey are prescribed: it validates
 interchange, not a new free-node solver case. Equivalent array and ID-map
 exports are checked byte-for-byte for both VTU and manifest.
+
+## Legacy VTK comparison
+
+For the separate `FiberNetwork` ASCII `to_vtk` exporter, see
+[attribute ordering, input admission and precision](../io/legacy_vtk_attributes.md).
+It uses duplicated per-fiber point rows and float32 attributes, not this
+adapter's stable-ID fields and manifest.

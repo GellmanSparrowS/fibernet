@@ -20,11 +20,27 @@ from PIL import Image, ImageChops
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
 HOMEPAGE_GIFS = (
+    "docs/media/network_workflow_hero.gif",
     "docs/media/three_dimensional_topologies.gif",
     "docs/media/spectrum_four_topologies.gif",
     "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
+    "docs/media/tensile_recruitment_kagome.gif",
+    "docs/media/new/backends/lammps_saved_dynamics.gif",
+    "docs/media/new/backends/taichi_saved_dynamics.gif",
+    "docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif",
+    "docs/media/new/fracture/fracture_sequence.gif",
+    "docs/media/electrical_torus_field.gif",
+    "docs/media/new/thermal/transient_thermal_network.gif",
+    "docs/media/directional_recruitment_hexagon.gif",
+    "docs/media/tensile_threshold_sensitivity.gif",
     "docs/media/homepage_overview/gine_overview.gif",
+    "docs/media/new/learning/media/gine_training_history.gif",
+    "docs/media/new/learning/media/rl_environment_fixed_actions.gif",
+    "docs/media/learning_inverse_workflow.gif",
     "docs/media/continuous_route_kagome.gif",
+    "docs/media/route_preserving_intervention_kagome.gif",
+    "docs/media/route_preserving_intervention_ring.gif",
+    "docs/media/surface_export_workflow.gif",
     "docs/media/homepage_overview/fiberscope_overview.gif",
 )
 
@@ -184,6 +200,24 @@ def canonical_destination(target: str) -> str:
             .replace("api-relationship-map-zh.svg", "api-relationship-map-en.svg"))
 
 
+def explicit_anchors(text: str) -> set[str]:
+    """Named README anchors, including GitHub's sanitized user-content prefix."""
+    class AnchorParser(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.names = set()
+
+        def handle_starttag(self, tag, attrs):
+            if tag == "a":
+                self.names.update(value for name, value in attrs
+                                  if name in {"name", "id"} and value)
+
+    parser = AnchorParser()
+    parser.feed(_without_markdown_code(text))
+    parser.close()
+    return parser.names | {"user-content-" + name for name in parser.names}
+
+
 def check_links(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     links = destinations(text)
@@ -197,7 +231,8 @@ def check_links(path: Path) -> dict:
         linked = path.parent / unquote(parsed.path) if parsed.path else path
         require(linked.exists(), f"Missing link in {path.name}: {target}")
         if parsed.fragment and linked.suffix == ".md":
-            require(unquote(parsed.fragment) in headings(linked.read_text(encoding="utf-8")),
+            source = linked.read_text(encoding="utf-8")
+            require(unquote(parsed.fragment) in headings(source) | explicit_anchors(source),
                     f"Missing anchor in {path.name}: {target}")
     return {"document": str(path.relative_to(ROOT)), "links_checked": len(links)}
 
@@ -293,6 +328,8 @@ def main() -> None:
     originals = selection["original_gifs"]
     require(len(originals) == len({r["path"] for r in originals}) == 19,
             "Expected 19 preserved original GIFs")
+    require({r["path"] for r in originals} <= set(HOMEPAGE_GIFS),
+            "Every preserved original GIF must be displayed on the homepage")
     for record in originals + selection["derivatives"] + selection["renderers"]:
         require(digest(ROOT / record["path"]) == record["sha256"],
                 f"Homepage source/media hash differs: {record['path']}")
@@ -365,7 +402,8 @@ def main() -> None:
     require(hero_gif["duration_ms"] == hero["canvas"]["duration_ms"],
             "Hero decoded timing differs from manifest")
     report = {"status": "PASS", "documents": document_checks,
-              "bilingual_code_and_link_parity": True, "language_buttons": 4,
+              "bilingual_code_and_link_parity": True, "language_disclosures": 2,
+              "displayed_gifs_per_language": len(HOMEPAGE_GIFS),
               "ui_svg_assets_checked": len(list((MEDIA / "ui").glob("*.svg"))),
               "historical_media": historical, "gifs": gifs,
               "physical_solver_executed": False}

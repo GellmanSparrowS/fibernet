@@ -33,8 +33,10 @@ has mean 0.0. Pore topology is calculated after translating and normalizing
 coordinates by the larger XY span of active edge endpoints, then pore areas
 are returned in caller units squared and perimeters in caller units. Approximate
 tolerances remain;
-structure/contact calculations, including the 1e-12 straightness cutoff,
-are not normalized. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md).
+structure and centerline-contact calculations, including the 1e-12 straightness
+cutoff, are not normalized. Finite-width raster contact fields normalize width
+and coordinates together. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md)
+and [finite-width raster units](../FINITE_WIDTH_CONTACT_SCALING.md).
 
 ## Preserved behavior
 

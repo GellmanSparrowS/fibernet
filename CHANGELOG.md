@@ -7,6 +7,100 @@
   Python-float numerical behavior are unchanged; see the
   [configuration and migration contract](docs/architecture/reduced-config-contract.md).
 
+## [4.4.2] - 2026-11-13
+
+See [4.4.2 release notes and migration](docs/RELEASE_4_4_2.md) for the complete
+changes since published 4.4.1: detached StructureGraph metadata snapshots,
+geometry/force corrections, per-edge FEM materials and stricter admission.
+Shared transport graph validation, float64 recruitment thresholds and the
+versioned recruitment replay archive are also included. Historical Unreleased
+entries below remain as development history.
+
+## [Unreleased] - Finite-width contact scaling
+
+- Normalize contact raster geometry and width together so a change of length
+  unit does not erase short-segment contacts through an absolute projection
+  floor. Preserve field names, adjacency exclusions and raster budgets.
+- Restore pixel spacing and overlap area to caller units, reject unrepresentable
+  output scales, and add exact-pixel and public-route regressions. See
+  [finite-width contact units](docs/FINITE_WIDTH_CONTACT_SCALING.md).
+
+## [Unreleased] - Per-member cylinder geometry
+
+- Preserve each represented edge's radius-length association in 3D cylinder
+  volume and lateral-area sums, correcting five derived geometry features for
+  heterogeneous radii, including native octet networks. Keep feature names,
+  ordering, default missing radii and historical cap/floor conventions.
+- Add analytical, generated-structure and scaling tests plus a runnable
+  generation-to-FEM-to-JSON/CSV/VTK workflow. See the
+  [radius workflow guide](docs/heterogeneous_radius_workflow.rst) for scope.
+
+## [Unreleased] - Consistent scalar graph scaling
+
+- Treat NumPy real numeric scalars and zero-dimensional numeric arrays like
+  Python scalar factors when resizing StructureGraph radii as well as geometry.
+  Keep vector coordinate-only behavior, material values and stable IDs unchanged.
+- Reject masked scalar factors before reading hidden values. Add scalar parity,
+  copy/serialization and analytical 2-D/3-D axial/bending FEM checks. See the
+  [geometric scaling guide](docs/graph_scaling.rst) for units and vector semantics.
+
+## [Unreleased] - Per-edge linear beam materials
+
+- Add explicit graph-material selection for linear 2-D/3-D beam FEM using the
+  existing StructureGraph. Preserve uniform defaults; validate and snapshot
+  per-edge isotropic properties through assembly, recovery and result metadata.
+- Add heterogeneous series, parallel, network, bending/torsion and ownership
+  checks. Document material precedence, explicit units and axial-proxy energy.
+
+## [Unreleased] - Static network workflow checks
+
+- Add real small-network static FEM, saved-result analysis and VTK workflow
+  tests with an independent energy-Hessian oracle. Document stored material
+  precedence, numerical regularization and axial-proxy versus full beam energy.
+  No solver law or public API changes.
+
+## [Unreleased] - Legacy VTK attribute admission
+
+- Reject malformed field names, nonnumeric/complex/nonfinite attributes and
+  float32-overflowing values before legacy VTK export opens its destination.
+  Invalid attributes no longer truncate an existing output or emit invalid
+  records. Public signatures, coordinate and valid attribute bytes are
+  unchanged. See [attribute ordering and precision](docs/io/legacy_vtk_attributes.md).
+
+## [Unreleased] - Beam FEM radius admission
+
+- Reject nonpositive, boolean and non-real beam radii before FEM graph dispatch,
+  and reject unrepresentable circular sections instead of returning invalid
+  stresses. Use float64 section arithmetic to prevent NumPy integer-power
+  overflow. Graph storage, explicit material precedence, units and public
+  signatures are unchanged. See the [FEM radius contract](docs/METHODS_BEAM_FEM_CONTRACT.md#circular-section-radius-admission).
+
+## [Unreleased] - Nested masked learning geometry
+
+- Reject masked coordinates and internal-point rows nested in lists, tuples or
+  object arrays before creating a `GraphBatch`, including all-false masks.
+  NumPy conversion previously could silently expose hidden internal-point
+  values as valid geometry and length features. Ordinary numeric snapshots,
+  v1/v2 schemas, ID mappings and public signatures remain unchanged. See the
+  [graph-data contract](docs/architecture/graph-data-usage.md).
+
+## [Unreleased] - Native 3D cell dimension validation
+
+- Reject invalid `pattern_3d` box dimensions before built-in or registered
+  factory work, including zero-width cells, negative extents and complex values
+  that previously could collapse, reflect or silently change the generated
+  geometry. Valid scalar types, argument precedence and zero-grid behavior are
+  preserved. See the [3D dimension contract](docs/METHODS_3D_GENERATION_PARAMETERS.md).
+
+## [Unreleased] - Unprofiled harmonic output admission
+
+- Reject unprofiled LAMMPS harmonic tasks whose mandatory trajectory atom rows
+  alone exceed the explicit aggregate or per-file output budget, before runtime
+  validation or launch. This lower bound is not a size forecast or native-engine
+  qualification. Public signatures, graph/SI unit semantics, named-profile
+  forecasts and runtime watchdogs are unchanged. See the
+  [admission scope](docs/integrations/LAMMPS_HARMONIC_CLI.md#explicit-runtime-and-lifecycle).
+
 ## [Unreleased] - Manufacturing provider requirement
 
 - Require `manifold3d>=3.2.0` in the manufacturing/full extras and check
@@ -597,4 +691,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 - Total: 180 passing
-

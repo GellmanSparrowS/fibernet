@@ -31,8 +31,10 @@ A supplied region still filters edges by midpoint;
 faces are not clipped to its boundary.
 Results near the former absolute tolerances may differ from earlier releases.
 
-This change concerns pore metrics only. Structure and optional contact metrics
-retain their existing calculations and tolerances; scaling all input coordinates
-does not establish scale invariance for those other outputs. With contact
+This pore change concerns pore metrics only. Finite-width contact raster fields
+have their separate [normalization contract](FINITE_WIDTH_CONTACT_SCALING.md).
+Structure and centerline contact metrics retain their existing calculations and
+tolerances; scaling all input coordinates does not establish scale invariance
+for those other outputs. With contact
 features enabled, intersections are computed separately for pores and contact.
 Existing graph budgets remain in force; this is not a performance improvement.

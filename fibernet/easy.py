@@ -273,6 +273,8 @@ def simulate(
             dim = kwargs.setdefault("dim", graph.dimension)
             if isinstance(dim, (bool, np.bool_)) or not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
                 raise ValueError("The FEM dimension must be 2 or 3")
+            if kwargs.get("material_mode") == "graph" and ("E" in kwargs or "nu" in kwargs):
+                raise ValueError("graph material mode cannot be combined with explicit E or nu")
             E = kwargs.pop("E", 1e9)
             nu = kwargs.pop("nu", 0.3)
             signature(BeamFrameFEM.stretch_test).bind(None, graph, target_stretch=strain, **kwargs)
