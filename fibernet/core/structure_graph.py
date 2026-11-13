@@ -1140,6 +1140,9 @@ class StructureGraph:
         (M, 3) coordinates. MaskedArray inputs are accepted only when no entries
         are masked. Saving also requires scalar types supported by the standard
         JSON encoder. Curve validation does not mutate stored coordinates.
+        Graph, node and edge metadata are copied with ``copy.deepcopy``; edits
+        to exported standard containers do not mutate the graph. The live
+        graph/node/edge metadata accessors remain mutable.
         """
 
         def material_record(material):
@@ -1157,13 +1160,13 @@ class StructureGraph:
             "next_node_id": self._next_node_id,
             "next_edge_id": self._next_edge_id,
             "box_size": self._box_size.tolist() if self._box_size is not None else None,
-            "metadata": self._metadata,
+            "metadata": copy.deepcopy(self._metadata),
             "nodes": [
                 {
                     "id": nid,
                     "position": node.position.tolist(),
                     "boundary": [bool(b) for b in node.boundary],
-                    "metadata": node.metadata,
+                    "metadata": copy.deepcopy(node.metadata),
                 }
                 for nid, node in sorted(self._nodes.items())
             ],
@@ -1180,7 +1183,7 @@ class StructureGraph:
                             edge.internal_points, eid, allow_unmasked=True
                         ).tolist() if edge.internal_points is not None else None
                     ),
-                    "metadata": edge.metadata,
+                    "metadata": copy.deepcopy(edge.metadata),
                 }
                 for eid, edge in sorted(self._edges.items())
             ],
