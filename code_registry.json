@@ -3954,13 +3954,15 @@
   "status": "active",
   "symbols": [
    "Engine2Config",
+   "_validate_config",
    "Engine2Result",
    "_grips",
    "_degree2_triplets",
    "_excluded_pairs",
+   "_validate_planar_geometry",
    "Engine2"
   ],
-  "sha256": "bdf554a0c1b096d2f88fbd4a6d7ed7f44ad6bdf9d41ecdc9ea511e40cbe6f1b7"
+  "sha256": "36bc96c37262f919a4b5f49bb124a6d869f47a6ce1a241df51ee8986ba5914bf"
  },
  "tests/test_reduced_beam_cross_end.py": {
   "purpose": "Public reduced solver matches the APP and feeds recruitment directly.",
@@ -4940,5 +4942,58 @@
   "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
   "status": "active",
   "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
+ },
+ "tests/test_reduced_beam_config_validation.py": {
+  "purpose": "Admission contracts for the mutable reduced-model configuration.",
+  "status": "active",
+  "symbols": [
+   "_bar",
+   "test_nonfinite_config_is_rejected",
+   "test_numeric_controls_require_real_scalars",
+   "test_step_controls_require_integers",
+   "test_out_of_range_controls_are_rejected",
+   "test_mutated_config_is_rejected_before_geometry",
+   "test_mutation_after_solver_construction_cannot_produce_nonfinite_result",
+   "test_valid_numpy_scalars_keep_analytical_spring_response",
+   "test_zero_stiffness_remains_supported",
+   "test_extended_precision_scalars_cannot_reach_float64_force_accumulation",
+   "test_feature_switches_require_booleans",
+   "test_supported_numpy_floating_precisions_and_booleans_run",
+   "test_overlapping_grip_bands_keep_legacy_midpoint_fallback",
+   "test_large_python_integer_coefficient_does_not_require_numpy_int64",
+   "test_real_control_outside_float64_conversion_range_is_rejected",
+   "test_low_precision_bending_fraction_uses_float64_coefficient_arithmetic",
+   "test_invalid_mutation_does_not_partially_normalize_other_fields"
+  ],
+  "sha256": "4fd3a3ff734b9917b5a5619795f6ab9451d7867170a3ca9bd327f3f24cfaf9ac"
+ },
+ "tests/test_fiberscope_geometry_cache.py": {
+  "purpose": "Runner/NPZ/UI contracts with isolated caches and a small solver roundtrip.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "Factory",
+   "result",
+   "engine",
+   "tag",
+   "test_required_graph_and_no_build",
+   "test_consumed_changes_miss",
+   "test_hit_sentinel_runtime_fields_and_old_namespace",
+   "test_unreadable_is_miss",
+   "test_no_cache_does_not_require_factory_key",
+   "test_nonfinite_config_rejects_before_cache_lookup",
+   "test_app_step_validation_precedes_scaling",
+   "test_numpy_controls_survive_real_solver_cache_roundtrip",
+   "test_post_weld_graph_built_once",
+   "test_numeric_canonicalization_and_unused_fields",
+   "test_unsupported_geometry_cannot_reuse_a_planar_cache",
+   "test_unsupported_source_geometry_rejects_before_weld_and_cache",
+   "test_discretized_planar_factory_runs_and_caches_with_weld_option",
+   "test_invalid_inputs_rejected",
+   "test_worker_uses_actual_status",
+   "test_actual_legacy_generator_change_rejects_saved_xy",
+   "test_write_failure_is_fresh_status"
+  ],
+  "sha256": "8383fade572c4c2904ab3456dd4f2424b4e804f88073d811c22366a69f33f1ae"
  }
 }
