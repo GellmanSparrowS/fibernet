@@ -1,3 +1,12 @@
+## [4.4.2] - 2026-11-13
+
+See [4.4.2 release notes and migration](docs/RELEASE_4_4_2.md) for the complete
+changes since published 4.4.1: detached StructureGraph metadata snapshots,
+geometry/force corrections, per-edge FEM materials and stricter admission.
+Shared transport graph validation, float64 recruitment thresholds and the
+versioned recruitment replay archive are also included. Historical Unreleased
+entries below remain as development history.
+
 ## [Unreleased] - Finite-width contact scaling
 
 - Normalize contact raster geometry and width together so a change of length

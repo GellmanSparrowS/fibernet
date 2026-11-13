@@ -11,7 +11,9 @@ FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界�
 
 ### 安装并运行源码入门示例
 
-**开发版源码：4.4.1——本页推荐入口**
+**开发版源码：4.4.2——本页推荐入口**
+
+4.4.2 的 PyPI 发布正在准备中。发布验证完成后，可用 `python -m pip install fibernet==4.4.2` 安装；现在请使用下方源码安装，或选择后文的已发布版本。
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
