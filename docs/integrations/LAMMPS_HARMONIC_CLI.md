@@ -72,6 +72,22 @@ result = task.result
 
 Construction performs no native run. Tasks are one-shot and expose created/running/succeeded/failed/cancelled/timed-out/resource-limit states. Invalid inputs, native nonzero exit, missing/truncated output, wrong version banner and parsing errors never become an empty successful result. Process-group termination/reaping occurs on terminal and exception paths. Mocked lifecycle tests are not proof of all real OS cancellation scenarios.
 
+For unprofiled harmonic runs, task construction rejects a provably impossible
+output budget before runtime validation/hashing, directory creation or launch.
+Mandatory trajectory atom rows alone require at least
+`22 * number_of_sites * (steps + 1)` bytes: each of the eleven fields needs at
+least one byte, followed by ten separators and a newline. Both `output_bytes`
+and `file_size_bytes` must cover this floor. For example, 256 sites and 100,000
+steps require at least 563,205,632 bytes, exceeding the unprofiled 16 MiB cap.
+Reduce the run size or duration; the compiler's input ceilings are not a promise
+that all combinations fit the task budget.
+
+This deliberately loose lower bound excludes headers, thermo output, prepared
+artifacts and longer numeric fields. Passing it, including exact equality, does
+not establish that a run will fit. `task.output_forecast` remains `None` for
+unprofiled runs; named-profile forecasts and runtime resource controls remain
+unchanged. The check does not run or qualify a native engine.
+
 The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall and recursive aggregate-artifact limits are sampled failure thresholds with a final check; output can overshoot between samples. `file_size_bytes` is distinct from `output_bytes`: runtime ordinary scratch files may require a larger per-file allowance than retained logs. Anonymous/shared-memory and all writable paths are not certified task-local. This is resource control, not a filesystem or hostile-code security sandbox. Typed result arrays also consume memory in the parent process. Save any additional result exports within your application's own resource budget.
 
 ## Results and scientific scope
@@ -79,6 +95,11 @@ The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall
 `LAMMPSRunResult` contains typed trajectory and thermo frames. Trajectories map back to stable graph IDs and expose positions in m, velocities in m/s and forces in N. Thermo energies are J. The six global pressure components are Pa, compression-positive. This fixed-box mechanical virial is not a calibrated fiber or bulk material stress; site kinetic energy is not automatically physical material temperature.
 
 ### Reopen saved output files
+
+For a complete existing task directory without a separately retained
+`PreparedRun`, see [offline saved-run restoration](LAMMPS_SAVED_RUN.md).
+That bounded POSIX route restores the stored preparation and checks output
+protocols; it does not authenticate the output or run an engine.
 
 If the matching `PreparedRun` is available or deterministically reconstructed,
 saved files can be parsed again without starting or resuming an engine:

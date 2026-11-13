@@ -76,8 +76,13 @@ planarity certification.
 
 Node/internal coordinates must be finite real numeric arrays of the stated
 shape. MaskedArray coordinates and internal points are rejected before conversion,
-including arrays whose masks are entirely false; unavailable coordinates cannot
-be silently interpreted as valid geometry. Selected present features must be
+including arrays whose masks are entirely false and masked arrays nested in
+lists, tuples or object arrays. For example, `edge.internal_points = [masked_row]`
+is not an ordinary numeric polyline: NumPy conversion could otherwise discard
+the row's mask and turn its hidden values into available geometry and length
+features. Resolve missing coordinates explicitly upstream, then supply ordinary
+finite numeric arrays. The adapter does not fill, drop or unmask coordinates.
+Selected present features must be
 finite real scalars and remain finite after float64 conversion. Unselected radius
 values are not inspected. Metadata must be JSON-native with finite numbers and
 string keys; cycles/depth >100 and unsupported objects fail. Metadata is captured

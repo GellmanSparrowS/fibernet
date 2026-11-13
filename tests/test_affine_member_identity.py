@@ -169,17 +169,17 @@ def test_copy_box_ownership_in_both_directions(dimension, kind):
 
 @pytest.mark.parametrize('dimension', [2, 3])
 @pytest.mark.parametrize('entry', ['constructor', 'setter'])
-def test_copy_detaches_retained_float64_input_without_changing_input_policy(dimension, entry):
+def test_copy_and_input_assignment_detach_float64_storage(dimension, entry):
     box = np.array([1.25, 7.75, 3.5], dtype=np.float64)
     source = StructureGraph(dimension=dimension, **({'box_size': box} if entry == 'constructor' else {}))
     if entry == 'setter':
         source.box_size = box
     duplicate = source.copy()
     expected = duplicate.box_size
-    # Existing constructor/setter alias policy is intentionally unchanged.
-    assert np.shares_memory(source._box_size, box)
+    # Input assignment and graph copying both own independent cell storage.
+    assert not np.shares_memory(source._box_size, box)
     box[0] = 99.
-    assert source.box_size[0] == 99.
+    np.testing.assert_array_equal(source.box_size, expected)
     np.testing.assert_array_equal(duplicate.box_size, expected)
     duplicate._box_size[1] = 88.
     assert box[1] == source.box_size[1] == 7.75

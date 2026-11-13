@@ -2348,7 +2348,9 @@ def pattern_3d(
     unit : str
         Built-in 3D unit type. Use ``list_units_3d()`` to see available types.
     box : (w, h, d)
-        Unit cell dimensions.
+        Three finite positive real unit-cell dimensions. Booleans, strings,
+        complex values and missing dimensions are rejected before the factory
+        runs. The original valid sequence and scalar types are retained.
     grid : int or (nx, ny, nz)
         Grid dimensions.
     n_internal : int
@@ -2373,7 +2375,8 @@ def pattern_3d(
     seed : int, optional
         Random seed for auto-generated displacements.
     unit_kwargs : dict, optional
-        Extra keyword arguments passed to the unit factory.
+        Extra keyword arguments passed to the unit factory. Top-level arguments,
+        including ``box``, take precedence over entries in this dictionary.
 
     Returns
     -------
@@ -2400,6 +2403,18 @@ def pattern_3d(
         raise ValueError(
             f"Unknown 3D unit \'{unit}\'. Available: {available}"
         )
+
+    try:
+        if (isinstance(box, (str, bytes))
+                or not isinstance(box, (Sequence, np.ndarray))
+                or len(box) != 3):
+            raise ValueError
+        for size in box:
+            _positive_real(size, "box dimension")
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "box must contain three finite positive real dimensions"
+        ) from exc
 
     factory = _UNIT_FACTORIES_3D[unit_name]
     fkwargs = dict(unit_kwargs) if unit_kwargs else {}

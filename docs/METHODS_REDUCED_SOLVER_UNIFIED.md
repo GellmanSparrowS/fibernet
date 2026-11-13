@@ -51,3 +51,8 @@ internally; result metadata includes `node_ids` and `edge_ids` to map replay
 arrays back to the input graph. Input `weld_triplets` refer to original node IDs.
 Disabling contact skips candidate construction as well as contact forces; it
 does not change the axial or bending model.
+
+The [saved recruitment workflow](REDUCED_RECRUITMENT_REPLAY.md) exports these
+ID maps, grip rows, native graph, complete configurations and energy arrays
+alongside the original trajectory fields. Its examples show independent
+recruitment analysis and a fresh native solver run with `allow_pickle=False`.

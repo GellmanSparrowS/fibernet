@@ -35,7 +35,16 @@ class CrosslinkModel(ABC):
         p2: np.ndarray,
         state: CrosslinkState,
     ) -> Tuple[np.ndarray, CrosslinkState]:
-        """Compute crosslink force and update state."""
+        """Return the force on endpoint ``p1`` and the updated state.
+
+        The equal-and-opposite force on ``p2`` is the negative of the returned
+        vector. With displacement ``dr = p2 - p1``, a positive component
+        along ``dr`` pulls ``p1`` toward ``p2``. For an active conservative
+        radial interaction this is ``-grad_p1(energy) = dU/dr * dr / |dr|``.
+        Constraint, slip and rupture behavior is model-specific. The returned
+        state may retain a previous diagnostic force after rupture; use the
+        returned vector, not ``state.force``, as the current endpoint force.
+        """
         pass
     
     @abstractmethod
@@ -510,6 +519,13 @@ class IonicBond(CrosslinkModel):
     
     Long-range electrostatic interactions with screening.
     Can break under mechanical load.
+
+    ``compute_force`` returns the force on ``p1``: opposite charges attract
+    and like charges repel. ``energy`` is the unbroken Yukawa potential.
+    The threshold-crossing call returns its force and a broken state;
+    subsequent calls with that state return zero force. At separations below
+    1e-15 m the force is zero by the existing guard, not an energy gradient;
+    the energy remains singular at coincidence.
     
     Parameters
     ----------
@@ -558,9 +574,9 @@ class IonicBond(CrosslinkModel):
             if state.broken:
                 return np.zeros(3), state
             
-            # Yukawa potential (screened Coulomb)
+            # Force on p1 is dU/dr * r_hat for dr = p2 - p1.
             exp_term = np.exp(-r / self.lambda_D)
-            force_mag = self.k_e * self.q1 * self.q2 / r**2 * exp_term * (1 + r / self.lambda_D)
+            force_mag = -self.k_e * self.q1 * self.q2 / r**2 * exp_term * (1 + r / self.lambda_D)
             
             force = force_mag * r_hat
             

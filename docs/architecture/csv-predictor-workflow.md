@@ -21,6 +21,25 @@ metrics = train_model(
 Select inputs appropriate to the study. Do not include the target or other
 simulation outputs as predictors simply because they are numeric.
 
+## Preserving CSV training inputs
+
+When using `train_model(..., save_path="model.pkl")`, choose a destination that
+does not identify the input CSV directory entry. Identical paths and aliases
+through file or parent-directory symlinks, filesystem case rules, or Unicode
+normalization are rejected before training.
+
+Different hardlink entries remain supported: replacing the destination leaves
+the input CSV inode and bytes unchanged. For same-inode paths in the same parent
+directory, the preflight must be able to read that directory and find both exact
+entry spellings. Ambiguous aliases are rejected rather than guessing filesystem
+naming rules. Use the actual directory-entry spellings for distinct hardlinks;
+noncanonical spellings can conservatively reject even when a save would be safe.
+Existing artifact-target restrictions still apply.
+
+This is a static path check, not a filesystem transaction. Do not change input
+or output paths, symlinks, or directories during the call. Native in-memory
+Dataset training and calls without `save_path` keep their existing behavior.
+
 ## Prefixed-feature CSV
 
 `predict_from_csv` selects varying columns beginning with `feat_` by default:

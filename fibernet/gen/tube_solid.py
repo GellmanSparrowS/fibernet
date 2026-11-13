@@ -5,15 +5,18 @@ import numpy as np
 def tube_mesh(points, edges, radius, progress=None, stop_cb=None, sides=16):
     """Return owned float64 positions and int32 faces after native Mesh64 cleanup.
 
-    The optional provider must expose ``Manifold.to_mesh64`` (verified with
-    manifold3d 3.5.1). Triangle counts/order and coordinates are not a stable
-    serialization contract. Native cleanup can change topology and face properties.
+    The optional provider must expose ``Manifold.to_mesh64`` and
+    ``Manifold.simplify`` (manifold3d >=3.2.0). Triangle counts/order and
+    coordinates are not a stable serialization contract. Native cleanup can
+    change topology and face properties.
     Halfedge tangents are unsupported by this cleanup path. Callers must
     independently validate the resulting geometry and fidelity.
     """
     import manifold3d as m
     if not callable(getattr(m.Manifold, 'to_mesh64', None)):
-        raise RuntimeError('solid meshing requires Manifold.to_mesh64 (verified with manifold3d 3.5.1)')
+        raise RuntimeError('solid meshing requires Manifold.to_mesh64; install manifold3d>=3.2.0')
+    if not callable(getattr(m.Manifold, 'simplify', None)):
+        raise RuntimeError('solid meshing requires Manifold.simplify; install manifold3d>=3.2.0')
     unique,inverse=np.unique(np.round(points,8),axis=0,return_inverse=True)
     edges=np.unique(np.sort(inverse[np.asarray(edges,int)],axis=1),axis=0)
     edges=edges[edges[:,0]!=edges[:,1]]

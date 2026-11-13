@@ -95,12 +95,15 @@ class GripAdmission(unittest.TestCase):
                                 "_get_boundary_indices", namespace)
         conversion = extract("fibernet/ml/beam_frame_fem.py",
                              "graph_to_fem_input", namespace, "BeamFrameFEM")
+        section = extract("fibernet/ml/beam_frame_fem.py",
+                          "section_properties", namespace, "BeamFrameFEM")
         stretch = extract("fibernet/ml/beam_frame_fem.py",
                           "stretch_test", namespace, "BeamFrameFEM")
         owner = self
 
         class FEM:
             graph_to_fem_input = staticmethod(conversion)
+            section_properties = staticmethod(section)
             stretch_test = stretch
 
             def __init__(self, E=1e9, nu=.3):
@@ -121,6 +124,7 @@ class GripAdmission(unittest.TestCase):
             def to_sim_result(self, *args, **kwargs):
                 raise AssertionError("result conversion must not execute")
 
+        namespace["BeamFrameFEM"] = FEM
         self.FEM = FEM
         self.simulate = extract("fibernet/easy.py", "simulate", {"np": np})
         real_import = builtins.__import__
@@ -167,6 +171,14 @@ class GripAdmission(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "pct"):
                     self.FEM.graph_to_fem_input(graph_fixture(), pct=pct)
                 self.assertIsNone(self.captured)
+
+    def test_extracted_radius_check_is_real_and_precedes_backend_import(self):
+        graph = graph_fixture()
+        next(iter(graph.edges.values())).radius = -.05
+        with self.assertRaisesRegex(ValueError, "radius"):
+            self.FEM.graph_to_fem_input(graph)
+        self.assertEqual(self.import_calls, [])
+        self.assertIsNone(self.captured)
 
     def test_empty_and_single_node_graphs_have_clear_admission_error(self):
         for count in (0, 1):

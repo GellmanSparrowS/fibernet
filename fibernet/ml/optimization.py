@@ -168,7 +168,7 @@ class MultiObjectiveOptimizer:
         """Suggest parameters from space definition."""
         params = {}
         for name, spec in self.param_space.items():
-            if isinstance(spec, (list, tuple)) and len(spec) == 2:
+            if isinstance(spec, tuple) and len(spec) == 2:
                 low, high = spec
                 if isinstance(low, int) and isinstance(high, int):
                     params[name] = trial.suggest_int(name, low, high)

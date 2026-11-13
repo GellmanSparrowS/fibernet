@@ -245,7 +245,12 @@ def _nn_distances(pos, budget=2000000):
 
 
 def _chain_straightness(pos, edges):
-    '''Chord/arc-length of every maximal degree-2 walk (fiber line).'''
+    '''Chord/arc for open chains containing at least one degree-2 node.
+
+    Boundary nodes are included; walks returning to the same node and
+    individual edges are excluded. Lengths at or below 1e-12 in caller units
+    remain excluded.
+    '''
     if edges.shape[0] == 0:
         return np.zeros(0)
     n = pos.shape[0]
@@ -269,7 +274,13 @@ def _chain_straightness(pos, edges):
                 arm.append(cur)
                 a, b = adj[cur]
                 prev, cur = cur, (b if a == prev else a)
+            # Stop at a non-degree-2 boundary. Reaching a seen degree-2
+            # node instead identifies a closed walk with no distinct ends.
+            if deg[cur] != 2:
+                arm.append(cur)
             arms.append(arm)
+        if not all(arms) or arms[0][-1] == arms[1][-1]:
+            continue
         chain = arms[0][::-1] + [v] + arms[1]
         p = pos[chain]
         arclen = float(np.hypot(np.diff(p[:, 0]), np.diff(p[:, 1])).sum())
@@ -655,13 +666,19 @@ def _contact_features(pos, edges, inter):
 
 
 def compute_features(pos, edges, rect=None, contact_config=None, include_contact=False):
-    '''Scalar feature dict + histogram arrays for one network snapshot.'''
+    '''Scalar feature dict + histogram arrays for one network snapshot.
+
+    Pore detection uses coordinates normalized by the active edge-endpoint
+    span, then returns areas in caller units squared and perimeters in caller
+    units. Approximate tolerances remain; this is not full-extractor unit
+    invariance.
+    '''
     pos, edges = _filter_region(pos, edges, rect)
     feats, lens, ang, deg = _structure_features(pos, edges)
     feats.update(_structure_extra(pos, edges, lens, ang, deg, rect))
-    inter = _segment_interactions(pos, edges)
+    inter = _segment_interactions(pos, edges) if include_contact else None
     area = _region_area(pos, rect)
-    pore_feats, pore_arr = _pore_features(pos, edges, inter, area)
+    pore_feats, pore_arr = _normalized_pore_features(pos, edges, rect, area)
     feats.update(pore_feats)
     if include_contact:
         feats.update(_contact_features(pos, edges, inter))
@@ -679,6 +696,16 @@ class SnapshotFeatureExtractor:
 
     Coordinates and width share the caller's length unit. Pore areas and
     contact overlap areas use its square. Parallel edges remain independent.
+    Pore topology uses coordinates normalized by the larger XY span of active
+    edge endpoints. Areas use caller units squared and perimeters caller units.
+    This reduces length-unit sensitivity for well-conditioned geometry; tiny or
+    nearly degenerate features remain subject to approximate tolerances.
+    Structure/contact calculations retain their original caller-unit paths.
+    ``segment_straightness`` reports endpoint chord / full path length for
+    open chains containing degree-2 nodes. Individual edges and walks returning
+    to the same node are excluded, as are paths at or below 1e-12 in the caller's
+    length unit. Distinct endpoint nodes at the same coordinates have ratio 0.
+    An empty distribution has the legacy ``straightness_mean`` value 0.0.
     """
 
     def __init__(self, include_contact=False, contact_config=None,
@@ -759,3 +786,51 @@ class SnapshotFeatureExtractor:
         if not is_structure_graph:
             edges = graph.edge_array()
         return self.extract(positions, edges, rect=rect)
+
+
+def _normalized_pore_features(pos, edges, rect, original_area):
+    """Run only the pore topology calculation at a geometry-relative scale."""
+    if not len(pos) or not len(edges):
+        empty_inter = _segment_interactions(pos, edges)
+        return _pore_features(pos, edges, empty_inter, original_area)
+    with np.errstate(over='ignore', under='ignore', invalid='ignore'):
+        active = pos[np.unique(edges)]
+        origin = active.min(axis=0)
+        scale = float(np.max(active.max(axis=0) - origin))
+        if not np.isfinite(scale):
+            raise ValueError('pore geometry extent is not representable')
+        if scale == 0.0:
+            scale = 1.0
+        scale2 = scale * scale
+        if not np.isfinite(scale2) or scale2 == 0.0:
+            raise ValueError('pore geometry area scale is not representable')
+        normalized = (pos - origin) / scale
+        if rect is None:
+            normalized_rect = None
+        else:
+            x0,y0,x1,y1 = np.asarray(rect, dtype=float)
+            normalized_rect = ((x0-origin[0])/scale, (y0-origin[1])/scale,
+                               (x1-origin[0])/scale, (y1-origin[1])/scale)
+        if (not np.isfinite(normalized).all() or
+                (normalized_rect is not None and not np.isfinite(normalized_rect).all())):
+            raise ValueError('normalized pore geometry is not representable')
+        normalized_area = _region_area(normalized, normalized_rect)
+        if not np.isfinite(normalized_area):
+            raise ValueError('normalized pore region area is not representable')
+        inter = _segment_interactions(normalized, edges)
+        feats, arrays = _pore_features(normalized, edges, inter,
+                                      normalized_area)
+        normalized_mean = feats['pore_area_mean']
+        normalized_perim = feats['pore_perim_mean']
+        normalized_areas = arrays['areas']
+        feats['pore_area_mean'] *= scale2
+        feats['pore_perim_mean'] *= scale
+        arrays['areas'] = normalized_areas * scale2
+        if (not np.isfinite(feats['pore_area_mean']) or
+                not np.isfinite(feats['pore_perim_mean']) or
+                not np.isfinite(arrays['areas']).all() or
+                (normalized_mean > 0 and feats['pore_area_mean'] == 0) or
+                (normalized_perim > 0 and feats['pore_perim_mean'] == 0) or
+                np.any((normalized_areas > 0) & (arrays['areas'] == 0))):
+            raise ValueError('pore measurements are not representable in caller units')
+    return feats, arrays
