@@ -254,7 +254,7 @@
   "viz/graph_plot.py": "1139e1ac87d1072c947fc58d194245f11be14023feb17c26cec6320fe8cc6c49",
   "viz/plot2d.py": "0f7cf902d59feb2975f6b6e921fb2eedbeb588db6c9d33cfa06a9804df09d8b4",
   "viz/plotly_viz.py": "9cf845c5a745ed43dff906181cfdf4e9489a39cf24d18d37b0df318a659b39bb",
-  "viz/render.py": "15c5c0ceb4574097205a06874437801733c4113a8f2504d7ce8c4a97c20a0b3c",
+  "viz/render.py": "b240218e601187a26dfad265b420fbc47b5b60bf2ffd9f016a6c6c418a2be82b",
   "viz/render3d.py": "686a9c502ccc4442dd575abf3ca6c513c80b2168b63e4986f6a836fe1eac5865",
   "viz/renderer.py": "1f07093ebf1e73ecdccd43a27bb12297f302de03729a67ce92b6e2d15a9be34f",
   "viz/showcase.py": "86d861c861f49bc640873bbdd6effc6e37d098e294089ca11ea0aa0477b4962a",
