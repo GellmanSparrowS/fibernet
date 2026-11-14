@@ -1717,7 +1717,7 @@
    "_element_data",
    "TaichiEngine"
   ],
-  "sha256": "c610d42339ed566c326bfbbc24796220211f582aa09a90518cbcf8413e43e82d"
+  "sha256": "cd8c99669b511bbdbbf1c913974ae739959103402119f910051e0e853554ff16"
  },
  "fibernet/sim/fem.py": {
   "purpose": "BeamFEM has been removed. All simulation now uses TaichiEngine (mass-spring dynamics).",
@@ -4690,7 +4690,7 @@
   "sha256": "f2f1c6e615be22ddc2c7767404149e7b40f1235c6e6f68f78064d8a9559823b5"
  },
  "tests/test_taichi_event_compat_source.py": {
-  "purpose": "AST-isolated event/state checks; never import FiberNet or Taichi.",
+  "purpose": "Exact reversible historical and current source admission; optional-import and detailed-result identity layers.",
   "status": "active",
   "symbols": [
    "isolated",
@@ -4764,7 +4764,7 @@
    "ResultProcessingSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "592667e66772df6a1188a20dadb78737e58f7a8209a167f2fc315e63d574d65f"
+  "sha256": "20fdb8a719ba505b29b22f8321f1b0508891540fd2ac7ae3c25b99e5d4c89873"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -5022,5 +5022,17 @@
    "test_native_chain_trim_preserves_topology_and_json_roundtrip"
   ],
   "sha256": "8181a97e370ad8596d24ae721f1e0119cb233d982378ef1bd3be33ce4aa1a2fc"
+ },
+ "tests/test_result_identity_contract.py": {
+  "purpose": "Detailed-result identity, geometry admission and atomic result persistence contracts.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "37b34872da116afb17af78ad462a82ce8a2fa16e5857a8818255b8cf2b2ec2c6"
+ },
+ "tests/test_source_checkout_bytes.py": {
+  "purpose": "Byte-sealed source and fixture Git checkout preservation.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "61f88f090a1e99eed7b860abb6509b72b47e63e2d445086f4958c513948cbf43"
  }
 }

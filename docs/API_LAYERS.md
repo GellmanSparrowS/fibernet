@@ -2,6 +2,15 @@
 
 [Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
 
+## Detailed-result identity boundary
+
+`SimResult.compute_detailed` checks strict graph key/record identity for nodes
+and selected edges before committing metrics. With deformed positions, exact
+reference-endpoint coincidence is rejected on selected edges only. This is not
+full graph-schema or physical validation; signed IDs, backend-specific routing
+and the existing length floor remain unchanged. See the
+[result identity contract](architecture/result-identity-contract.md).
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,

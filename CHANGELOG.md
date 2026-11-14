@@ -1,3 +1,12 @@
+## [Unreleased] - Detailed-result identity admission
+
+- Validate node and selected-edge record IDs before ordinary detailed metrics
+  are committed. Reject exactly coincident selected reference endpoints when
+  deformed positions are supplied, preserving signed IDs, selected-edge order,
+  force/energy provenance and existing backend routing. No new positive-length
+  threshold or solver arithmetic is introduced. See the
+  [identity contract](docs/architecture/result-identity-contract.md).
+
 ## [Unreleased] - Legacy trim crosslink preservation
 
 - Preserve and remap surviving crosslinks in `core.transform.trim_to_box`.
