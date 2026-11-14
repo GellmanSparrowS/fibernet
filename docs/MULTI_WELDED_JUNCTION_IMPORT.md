@@ -72,3 +72,35 @@ physical contact, or mechanical equivalence. Nor does it guarantee that
 arbitrary copied metadata or material fields satisfy JSON or native-v1
 serialization requirements. Source information lost before this call cannot
 be recovered.
+
+## Serialization boundary
+
+The report describes the objects passed to this function. Legacy
+`FiberNetwork.load_json` already renumbers fiber IDs to their list indices;
+this converter cannot restore labels lost during that earlier load. For direct
+in-memory conversion, repeated or sparse source IDs remain report labels, not
+mapping keys. Default legacy weld properties serialize as Python JSON's
+`Infinity`, whereas native JSON compatibility depends on the copied fields.
+Use the native graph for editing after an admitted conversion; do not claim
+arbitrary legacy or metadata serialization is lossless.
+
+## Regression checks
+
+`tests/test_multi_junction_import.py` covers the explicit-weld admission and
+mapping contract. `tests/test_multi_junction_saved_workflow.py` adds a real
+legacy JSON save/load, conversion, and native JSON save/load workflow. Its
+assertions bind each source list index and split parameter to the corresponding
+junction, oriented edge, radius and material, including an unwelded fiber.
+It also checks nested material, network metadata, coordinate and box ownership
+in both directions. These are geometry/data regressions, not mechanical tests.
+
+Both modules use `unittest` and are discoverable by the repository's test suite.
+With the repository dependencies available, their focused commands are:
+
+```bash
+python -m unittest discover -s tests -p 'test_multi_junction_import.py' -v
+python -m unittest discover -s tests -p 'test_multi_junction_saved_workflow.py' -v
+```
+
+The saved workflow explicitly expects legacy loading to renumber fiber labels.
+It does not claim arbitrary legacy JSON or material metadata is lossless.

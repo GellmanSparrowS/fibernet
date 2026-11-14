@@ -2,6 +2,15 @@
 
 [Feature availability and checked dataset selections](FEATURE_AVAILABILITY.md)
 
+## Detailed-result identity boundary
+
+`SimResult.compute_detailed` checks strict graph key/record identity for nodes
+and selected edges before committing metrics. With deformed positions, exact
+reference-endpoint coincidence is rejected on selected edges only. This is not
+full graph-schema or physical validation; signed IDs, backend-specific routing
+and the existing length floor remain unchanged. See the
+[result identity contract](architecture/result-identity-contract.md).
+
 ## Choose a phenomenon, then an explicit supported route
 
 FiberNet's conceptual order is **graph → physical model and material → analysis,
@@ -22,9 +31,9 @@ not two different solvers. CPU/GPU is a Taichi device choice, not a physical mod
   contracts; they are not interchangeable implementations of a universal solver.
 
 `StructureGraph` is the authoritative structure and stable identity source.
-`FiberNetwork` and its generators are legacy/interoperability APIs. Conversion
+`FiberNetwork` and its generators are legacy/interoperability APIs. The default conversion
 from a legacy network is approximate, not lossless preservation of curved fibers
-or every crosslink. NetworkX, learning features and manufacturing routes/solids
+or every crosslink. Separate opt-in importers admit narrow exact weld contracts. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
 
 `graph.to_fiber_network()` returns a legacy endpoint-chord projection with
@@ -41,6 +50,23 @@ crosslink construction remain unchanged. Geometry coordinates, radii and box
 values are copied without unit conversion or unit inference. Keep the original
 `StructureGraph` or its native serialization for authoritative geometry and IDs.
 Legacy OBJ export still writes endpoint cylinders, not the stored source curves.
+
+Legacy `core.transform.trim_to_box` preserves surviving crosslinks and remaps
+fiber indices and sampled attachment parameters. Its geometry remains a
+sample-selection operation, not exact clipping; see the
+[trimming contract and migration guidance](architecture/legacy-trim-crosslinks.md).
+
+### Import explicitly recorded straight-fiber welds
+
+`fibernet.core.single_junction_import.convert_exact_welded_crosslinks` is an
+opt-in legacy-to-native geometry/topology bridge, not a root-level export or a
+replacement for `StructureGraph.from_fiber_network`. It admits bounded exact
+interior welded records on index-uniform straight circular fibers. Explicit
+connected weld records share a node; unrecorded crossings are not inferred.
+Mapping uses fiber list indices, with stored `fiber_id` retained only as a source
+label. Native node/edge IDs are newly allocated. This is not a unit, boundary
+condition or mechanical-equivalence conversion; see the
+[accepted inputs, ownership and serialization contract](MULTI_WELDED_JUNCTION_IMPORT.md).
 
 ### Edit geometry before preparing solver controls
 
@@ -79,7 +105,7 @@ for the small-strain FEM model.
 | `spring` or `taichi` | `stretch` | Axial springs, explicit global force-like stiffness; no graph `Material` inference | Automatic left/right grips, target ratio, ramp and step/sampling options | `SimResult` |
 | `spring` or `taichi` | `dynamics` | Axial springs; scalar/per-edge `spring_k` overrides `stiffness` | Fixed rows, optional displacement schedule, force rows, `dt`, `num_steps`, `save_interval`, explicit masses/units when needed | `SimResult` |
 | `spring` or `taichi` | `dynamics` with `material` | Exact `LinearViscoelasticMaterial`, small-strain axial generalized Maxwell/SLS; `parallel_viscosity=0` | Explicit masses, areas, rest lengths, strain bound, SI state units; fixed supports, optional initial velocities; `dashpot=0` | `SimResult` with material record |
-| `fem` | `stretch` | Beam-frame elasticity; explicit `E` and `nu`, not graph moduli | Automatic grips; `dim`, `pct`, `nonlinear`; target ratio | `SimResult` converted from beam-frame result |
+| `fem` | `stretch` | Beam-frame elasticity; uniform `E`/`nu` by default, explicit graph-material mode for per-edge isotropic elasticity | Automatic grips; `dim`, `pct`, `nonlinear`; target ratio; opt-in `material_mode` | `SimResult` converted from beam-frame result |
 | `fem` | `history` | 2-D small-strain viscoelastic beam frame, axial and bending | `material`, `times`, `constraints`, optional `loads`, explicit `length_unit`, optional `initial_state` | `ViscoelasticResult` |
 | `lammps` | `dynamics` | Explicit 3-D harmonic beads, or `CGRequest` harmonic bonds/cosine angles/optional projectile pairs | Typed model/run records, pinned `runtime`, new owned `workdir`, `limits`; optional `record_state` | `SimResult`; task API returns `LAMMPSRunResult` |
 
@@ -130,10 +156,19 @@ spring/stretch only. Neither is a general backend router.
   `fibernet.ml.beam_frame_fem` for historical reasons. Its raw `solve_2d` and
   `solve_3d` expose DOFs, constraints, loads, reactions and beam resultants, not
   the facade's automatic grip protocol.
+- FEM graph-material mode requires `material_mode="graph"`, explicit
+  `nonlinear=False` and `length_unit="m"`. It uses each edge's validated
+  isotropic E/nu/derived G, rejects explicit facade E/nu conflicts, and records
+  effective properties with result edge identity. The declaration asserts
+  metre geometry and Pa moduli; no conversion occurs. Uniform defaults and
+  history are unchanged. See [per-edge linear beam materials](heterogeneous_fem.rst).
 - `ReducedBeamSolver`, `ReducedBeamConfig`, and `ReducedBeamResult` in
   `fibernet.sim.reduced_beam` are aliases for the separate NumPy Engine2 reduced
   model (degree-2 bending surrogate and nodal contact), not beam-frame FEM,
   LAMMPS, or a supported facade backend.
+  Their [configuration contract](architecture/reduced-config-contract.md)
+  requires finite scalar controls and integer step counts before simulation
+  or desktop cache lookup.
 
 ## Typed electrical, thermal and one-way coupling routes
 
@@ -158,6 +193,7 @@ expansion or provide fully coupled multiphysics. See the executable
 | Taichi `fixed_nodes`, `displacement_schedule`, `external_force` | Insertion-order node **rows**, not stable IDs; schedule waypoints use **steps**, not seconds | Ordinary `state_units` are labels, not conversion or SI validation |
 | Taichi `nodal_masses_by_id`, `rest_lengths_by_id`, `reference_areas_by_id`, `initial_velocities_by_id` | Stable node or edge IDs as named | Material mode requires exact SI declaration and explicit SI numerical inputs |
 | FEM raw solves | DOF/row arrays and constraints defined by the raw solver | Graph coordinates and radii used as supplied; choose a consistent `E` unit system |
+| FEM graph-material stretch | Insertion-order graph rows; stable IDs in result metadata | Requires `length_unit="m"`, metre geometry and Pa material moduli; no conversion |
 | FEM `history` | Stable node-ID constraints and load maps; `times` in seconds | `length_unit` is `m`, `mm`, or `um`; geometry/radii converted to SI. ux/uy in m, rz in rad; Fx/Fy in N, Mz in N·m |
 | Electrical/thermal/Joule | Stable node/edge IDs; thermal `times_s` in seconds | `length_unit`: `m`, `cm`, `mm`, `um`, `nm`; geometry declaration does not infer physical coefficients |
 | Bounded LAMMPS | Stable node/edge/angle IDs; `RunSpec.timestep_s` and integer steps | Declared graph length converted to SI for native work; supplied masses/forces/velocities/bond parameters already SI |

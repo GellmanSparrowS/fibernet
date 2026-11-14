@@ -79,8 +79,8 @@ def _metadata(value):
 
 
 def _coordinates(value, shape, label):
-    if np.ma.isMaskedArray(value):
-        raise ValueError(label + ' must not be a MaskedArray')
+    # Inspect source containers before ndarray conversion can discard a mask.
+    _reject_masked_geometry(value, label)
     raw = np.asarray(value)
     if raw.shape != shape or raw.dtype.kind not in 'iuf':
         raise ValueError(label + ' must have real numeric shape ' + str(shape))
@@ -219,6 +219,8 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
     internal points yield endpoint length (not an assertion about a smooth curve).
     Distance features reject a computed zero for distinct stored endpoints or
     a zero polyline sum of nonzero segments; caller floating-point mode is unchanged.
+    Masked geometry rejects before conversion, including nested list/tuple/object
+    array entries and all-false masks; callers must explicitly resolve missing data.
     Metadata must be JSON-native finite values; lists become tuples and dictionaries
     read-only mappings. Default v1 does not inspect material, boundary or segments.
     include_provenance=True selects v2 and snapshots stored Material records,
@@ -284,8 +286,7 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
             interior = edge.internal_points
             has_interior = interior is not None
             if has_interior:
-                if np.ma.isMaskedArray(interior):
-                    raise ValueError('internal_points must not be a MaskedArray')
+                _reject_masked_geometry(interior, 'internal_points')
                 raw = np.asarray(interior)
                 if raw.ndim != 2 or raw.shape[1] != 3:
                     raise ValueError('internal_points must have shape (M, 3)')
@@ -348,6 +349,26 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
         _array(features, np.float64, (e, len(names))),
         _array(masks, bool, (e, len(names))), tuple(gm), tuple(nm), tuple(em),
         _stored_provenance(graphs) if include_provenance else None)
+
+
+def _reject_masked_geometry(value, label):
+    """Inspect source containers before NumPy can discard a nested mask."""
+    pending, seen = [value], set()
+    while pending:
+        item = pending.pop()
+        if np.ma.isMaskedArray(item):
+            raise ValueError(label + ' must not contain a MaskedArray')
+        if isinstance(item, (list, tuple)):
+            children = item
+        elif isinstance(item, np.ndarray) and item.dtype.hasobject:
+            children = item.flat
+        else:
+            continue
+        # Repeated references are harmless; cyclic malformed inputs must not
+        # trap this inspection. Existing NumPy shape/dtype admission follows.
+        if id(item) not in seen:
+            seen.add(id(item))
+            pending.extend(children)
 
 
 @dataclass(frozen=True)

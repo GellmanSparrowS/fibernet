@@ -136,8 +136,8 @@ class TestIonicBond:
         p2 = np.array([0.5e-9, 0, 0])
         state = CrosslinkState()
         force, _ = bond.compute_force(p1, p2, state)
-        # Force should exist (direction depends on convention)
-        assert np.linalg.norm(force) > 0
+        # Force on p1 points toward p2 for opposite charges.
+        assert force[0] > 0
     
     def test_repulsive_force(self):
         """Test repulsive force between like charges"""
@@ -146,8 +146,8 @@ class TestIonicBond:
         p2 = np.array([0.5e-9, 0, 0])
         state = CrosslinkState()
         force, _ = bond.compute_force(p1, p2, state)
-        # Force should exist (direction depends on convention)
-        assert np.linalg.norm(force) > 0
+        # Force on p1 points away from p2 for like charges.
+        assert force[0] < 0
     
     def test_debye_screening(self):
         """Test Debye screening reduces force at distance"""

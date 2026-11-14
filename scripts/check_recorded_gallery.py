@@ -2,9 +2,8 @@
 from pathlib import Path
 import hashlib
 import json
-import re
 from PIL import Image
-from check_bilingual_homepage import locale_block
+from check_bilingual_homepage import destinations as all_destinations, inline_gifs, locale_block
 
 ROOT = Path(__file__).resolve().parents[1]
 GALLERY = ROOT / 'docs/media/new'
@@ -34,15 +33,20 @@ def check():
             elapsed += image.info.get('duration', 0)
         assert elapsed == entry['duration_ms'], relative
         assert abs(image.height / image.width - 2**0.5) < .004, relative
-    destinations = []
-    for filename in ('README.md', 'README_CN.md'):
-        text = (ROOT / filename).read_text()
-        text = locale_block(text, 'en' if filename == 'README.md' else 'zh')
-        paths = re.findall(r'\]\((docs/media/new/[^)#]+)(?:#[^)]*)?\)', text)
-        assert paths, filename
-        assert all((ROOT / path).is_file() for path in paths), filename
-        destinations.append(sorted(paths))
-    assert destinations[0] == destinations[1], 'Bilingual gallery links differ'
+    locale_destinations = []
+    homepage = (ROOT / 'README.md').read_text()
+    expected_gifs = {'docs/media/new/' + path for path in manifest['animations']}
+    for language in ('en', 'zh'):
+        text = locale_block(homepage, language)
+        paths = [target.split('#', 1)[0] for target in all_destinations(text)
+                 if target.startswith('docs/media/new/')]
+        assert paths, language
+        assert all((ROOT / path).is_file() for path in paths), language
+        assert expected_gifs <= set(inline_gifs(text)), language
+        locale_destinations.append(sorted(paths))
+    assert locale_destinations[0] == locale_destinations[1], 'Bilingual gallery links differ'
+    assert locale_block(homepage, 'zh') == locale_block(
+        (ROOT / 'README_CN.md').read_text(), 'zh'), 'Standalone Chinese differs'
     assert len(manifest['animations']) == 7
     assert len(list((ROOT / 'docs/media').glob('*.gif'))) == 12
     print(json.dumps({'status': 'PASS', 'payload_files': len(listed),

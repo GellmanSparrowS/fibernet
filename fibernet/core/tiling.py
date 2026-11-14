@@ -451,6 +451,12 @@ def tile_with_transforms(
     Notes
     -----
     Shared fibers follow the matching and multiplicity rules of :func:`tile_2d`.
+    Boundary flags are recomputed from the transformed, translated positions
+    against the nominal outer XY planes (0 and the grid count times the cell
+    width or height), using strict distance < tolerance. They are not inherited
+    from the unit cell or inferred from transformed geometry extrema. Welded
+    nodes retain the first stored representative's flags. Both Z flags remain
+    false, including for a 3D unit cell tiled on this two-dimensional grid.
 
     Examples
     --------
@@ -496,7 +502,14 @@ def tile_with_transforms(
             for nid in sorted(cell.nodes.keys()):
                 node = cell.nodes[nid]
                 new_pos = node.position + offset
-                new_nid = _place_node(result, node, new_pos)
+                bnd = (
+                    abs(new_pos[0]) < tol,
+                    abs(new_pos[0] - w * nx) < tol,
+                    abs(new_pos[1]) < tol,
+                    abs(new_pos[1] - h * ny) < tol,
+                    False, False,
+                )
+                new_nid = _place_node(result, node, new_pos, boundary=bnd)
                 id_map[nid] = new_nid
 
             _place_cell_edges(result, cell, id_map, offset, edge_groups)

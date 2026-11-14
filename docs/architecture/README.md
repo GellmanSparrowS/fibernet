@@ -9,9 +9,15 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [Linear FEM quickstart](linear-fem-quickstart.md)
 - [Reference research journey](reference-research-journey.md)
 - [Material consumption](material-consumption-contract.md)
+- [Per-edge linear beam materials](../heterogeneous_fem.rst)
+- [Crosslink force endpoints](crosslink-force-contract.md)
 - [Result identity](result-identity-contract.md)
 - [Direct FEM array identity](raw-array-identity-migration.md)
 - [Snapshot graph identity](snapshot-identity-contract.md)
+- [Transformed tiling boundary labels](transformed-tiling-boundaries.md)
+- [Lattice perturbation](lattice-perturbation-contract.md)
+- [3D rotation axes](rotation-axis-contract.md)
+- [3D graph k-core features](graph-feature-3d-kcore.md)
 - [Linear FEM diagnostics](fem-linear-diagnostics-usage.md)
 - [3D reaction definition](fem-3d-reaction-contract.md)
 - [Dataset persistence](dataset-persistence-usage.md)
@@ -26,8 +32,9 @@ calibration, realistic-network accuracy or independent-origin generalization.
 
 ## Scientific and compatibility boundaries
 
-Mechanical shortcuts consume global E or explicit spring k as documented;
-persisted per-edge materials do not imply heterogeneous constitutive support.
+Mechanical shortcuts retain their global E or explicit spring k defaults.
+Linear beam FEM offers explicit graph-material selection; persisted per-edge
+materials alone do not activate it or change another backend's constitutive law.
 Parallel-member handling is backend-specific; inspect the selected backend's
 contract rather than inferring it from graph serialization.
 

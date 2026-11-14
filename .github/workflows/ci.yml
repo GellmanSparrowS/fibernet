@@ -23,7 +23,8 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    # Keep the matrix label stable; Ubuntu 26.04 has no setup-python 3.9 build.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9' && 'ubuntu-24.04' || matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -62,6 +63,39 @@ jobs:
     - name: Run tests (Windows)
       if: runner.os == 'Windows'
       run: pytest tests/ -v --tb=short -o addopts="" -k "not (TestSimulation3D or TestVisualization3D or TestEnergyComputation or TestOOMGuard)"
+
+    - name: Verify real manufacturing provider floor and reference
+      if: runner.os == 'Linux' && matrix.python-version == '3.12'
+      shell: bash
+      run: |
+        for version in 3.2.0 3.5.1; do
+          python -m pip install --force-reinstall --no-deps --only-binary=:all: "manifold3d==$version"
+          timeout --kill-after=15s 90s python - "$version" <<'PY'
+        import importlib.metadata
+        from pathlib import Path
+        import sys
+        import manifold3d
+        import pytest
+
+        distribution = importlib.metadata.distribution("manifold3d")
+        assert distribution.version == sys.argv[1]
+        assert Path(manifold3d.__file__).resolve().parent == Path(distribution.locate_file("")).resolve()
+        print("Native manufacturing provider:", distribution.version, manifold3d.__file__)
+
+        class NoSkippedTests:
+            def pytest_sessionfinish(self, session, exitstatus):
+                reporter = session.config.pluginmanager.get_plugin("terminalreporter")
+                if reporter.stats.get("skipped"):
+                    session.exitstatus = 1
+
+        raise SystemExit(pytest.main([
+            "-q", "--tb=short", "-o", "addopts=",
+            "tests/test_manifold_provider_contract.py",
+            "tests/test_manifold_native_workflow.py",
+            "tests/test_manufacturing_export.py",
+        ], plugins=[NoSkippedTests()]))
+        PY
+        done
 
   training-cpu-contracts:
     name: CPU training contracts (Python 3.12)

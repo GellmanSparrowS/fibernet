@@ -33,6 +33,77 @@ when |λ−1|>0.3. The warnings describe the actual branch; they do not change i
 numerical results. The legacy 0.3 switch is not a validated small-deformation
 limit. A call without a warning still needs an appropriate model and loading.
 
+## Uniform isotropic material admission
+
+`BeamFrameFEM(E=..., nu=...)` requires finite Python/NumPy real scalars, excluding
+booleans: `E > 0` and `-1 < nu < 0.5`. The derived shear modulus
+`E / (2 * (1 + nu))` must also remain finite and positive. Invalid values raise
+`ValueError` at construction, before graph conversion, stiffness assembly or
+solving, including through `simulate(..., backend="fem", mode="stretch")`.
+Negative Poisson ratios inside this range remain supported. This validates the
+uniform isotropic constitutive parameters; it does not certify model applicability
+or equilibrium. In default uniform mode, explicit constructor parameters still
+take precedence over descriptive edge `Material` values. FEM history still uses its explicit
+`LinearViscoelasticMaterial` law rather than the constructor's static `E`.
+
+Finite admitted parameters can still overflow when combined with geometry.
+The 2-D and 3-D assemblers reject nonfinite beam lengths, local stiffness,
+transformed stiffness and summed sparse stiffness before solving. These are
+calculation failures, distinct from invalid material inputs; nonfinite entries
+are never silently treated as zero stiffness.
+
+## Opt-in per-edge linear elasticity
+
+`simulate(..., backend="fem", material_mode="graph", nonlinear=False,
+length_unit="m")` uses every edge's isotropic Material E/nu and derived G.
+The facade rejects simultaneous explicit E/nu. Default uniform behavior is
+unchanged. Direct linear raw solves accept an original-row `edge_materials`
+sequence; 3-D torsional stiffness uses each member's derived G. The graph path
+requires metre geometry and Pa moduli, without inferring or converting units.
+It rejects nonplanar 2-D geometry and members shorter than the raw solver's
+1e-12 omission threshold. See [the full contract and runnable example](heterogeneous_fem.rst).
+
+Missing/custom materials, tensors and inconsistent stored shear moduli reject.
+Only linear isotropic E/nu/G are consumed; welded joints and circular sections
+are unchanged. Effective values and selected edge identity are retained in
+`material_contract` metadata. The axial proxy uses the captured per-edge E,
+not the current graph material or converter's uniform E. No nonlinear,
+viscoelastic-history, failure or interface extension is implied.
+
+## Circular-section radius admission
+
+`BeamFrameFEM.section_properties` requires a finite positive Python/NumPy real
+scalar radius. Zero, negative values, booleans, strings, complex values, arrays
+and duration scalars are rejected with `ValueError`. Circular area and moments
+of area must remain finite and positive in float64 arithmetic. Integer and
+lower-precision NumPy radii are evaluated in float64 to avoid integer-power
+overflow or premature low-precision underflow. The returned `r` field retains
+the caller's original scalar.
+
+`graph_to_fem_input`, and hence the direct and easy FEM stretch shortcuts,
+validate each original edge radius before constructing a NumPy radius array
+or selecting the solver. This prevents mixed boolean/float records from being
+silently converted into numeric radii. Direct 2-D and 3-D `BeamFrameFEM` solves
+use the same check when forming each participating section. Invalid inputs do
+not mutate the graph. This contract is specific to `BeamFrameFEM`; it does not
+change `StructureGraph` storage, generator admission, or the separate
+`SparseBeamFrameFEM` implementation.
+
+Previously, negative radii could produce the same stiffness as positive radii,
+boolean radii could become one, and zero radii could produce invalid stress
+divisions. Those outputs should be recomputed with physically meaningful
+sections, rather than repaired by taking absolute values or replacing zeros.
+
+Coordinates and radii must use the same chosen length unit. No unit conversion
+is inferred: for N and metres use `E` in N/m²; for N and millimetres use `E` in
+N/mm². In default uniform mode, stored edge `Material` does not override
+explicit `E` or `nu`. The
+regression `tests/test_fem_radius_admission.py` checks a metre/millimetre axial
+bar pair with the caller explicitly converting both geometry and modulus, and
+generated 2-D/3-D graphs through material-preserving serialization, FEM and
+result save/reload. These are software interoperability checks, not a material
+calibration or general unit-invariance proof for regularized solves.
+
 ## FEM automatic grip fraction
 
 For FEM stretch, `pct` is a fraction of node rows per side, not a percentage
@@ -158,11 +229,12 @@ Applied nodal moments are not supported; extra rotational columns are rejected.
 Rotational displacement DOFs and recovered reaction couples do not add a nodal
 moment loading API. See the [force-shape contract](architecture/fem-force-shape-contract.md).
 
-This beam backend uses the solver-wide `E` and `nu`, with `G=E/[2(1+nu)]`,
+By default, this beam backend uses solver-wide `E` and `nu`, with `G=E/[2(1+nu)]`,
 and per-edge radii. The public FEM shortcut defaults to `E=1e9`, `nu=0.3`
 unless explicitly supplied. Stored graph `Material` records, including tensors
 and unequal per-edge moduli, are not automatically applied as heterogeneous beam
-constitutive parameters. Material persistence alone does not imply that capability.
+constitutive parameters. The linear graph-material option described above must
+be selected explicitly; stored tensors remain unsupported in that option.
 These statements concern `BeamFrameFEM`, not every other backend.
 
 Use consistent length and force units: translations have length units, rotations

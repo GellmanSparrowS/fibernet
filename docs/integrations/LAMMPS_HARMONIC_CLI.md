@@ -72,11 +72,59 @@ result = task.result
 
 Construction performs no native run. Tasks are one-shot and expose created/running/succeeded/failed/cancelled/timed-out/resource-limit states. Invalid inputs, native nonzero exit, missing/truncated output, wrong version banner and parsing errors never become an empty successful result. Process-group termination/reaping occurs on terminal and exception paths. Mocked lifecycle tests are not proof of all real OS cancellation scenarios.
 
+For unprofiled harmonic runs, task construction rejects a provably impossible
+output budget before runtime validation/hashing, directory creation or launch.
+Mandatory trajectory atom rows alone require at least
+`22 * number_of_sites * (steps + 1)` bytes: each of the eleven fields needs at
+least one byte, followed by ten separators and a newline. Both `output_bytes`
+and `file_size_bytes` must cover this floor. For example, 256 sites and 100,000
+steps require at least 563,205,632 bytes, exceeding the unprofiled 16 MiB cap.
+Reduce the run size or duration; the compiler's input ceilings are not a promise
+that all combinations fit the task budget.
+
+This deliberately loose lower bound excludes headers, thermo output, prepared
+artifacts and longer numeric fields. Passing it, including exact equality, does
+not establish that a run will fit. `task.output_forecast` remains `None` for
+unprofiled runs; named-profile forecasts and runtime resource controls remain
+unchanged. The check does not run or qualify a native engine.
+
 The child has kernel CPU/address-space/per-file/core limits. The watchdog's wall and recursive aggregate-artifact limits are sampled failure thresholds with a final check; output can overshoot between samples. `file_size_bytes` is distinct from `output_bytes`: runtime ordinary scratch files may require a larger per-file allowance than retained logs. Anonymous/shared-memory and all writable paths are not certified task-local. This is resource control, not a filesystem or hostile-code security sandbox. Typed result arrays also consume memory in the parent process. Save any additional result exports within your application's own resource budget.
 
 ## Results and scientific scope
 
 `LAMMPSRunResult` contains typed trajectory and thermo frames. Trajectories map back to stable graph IDs and expose positions in m, velocities in m/s and forces in N. Thermo energies are J. The six global pressure components are Pa, compression-positive. This fixed-box mechanical virial is not a calibrated fiber or bulk material stress; site kinetic energy is not automatically physical material temperature.
+
+### Reopen saved output files
+
+For a complete existing task directory without a separately retained
+`PreparedRun`, see [offline saved-run restoration](LAMMPS_SAVED_RUN.md).
+That bounded POSIX route restores the stored preparation and checks output
+protocols; it does not authenticate the output or run an engine.
+
+If the matching `PreparedRun` is available or deterministically reconstructed,
+saved files can be parsed again without starting or resuming an engine:
+
+```python
+from fibernet.integrations import parse_output_files
+
+raw = parse_output_files(
+    prepared, workdir / 'trajectory.dump', workdir / 'log.lammps',
+    max_output_bytes=8 * 1024 * 1024,
+    expected_banner=runtime.expected_banner,
+)
+```
+
+The helper reads UTF-8 regular-file targets and passes their contents to the
+same strict `parse_outputs` protocol parser. The combined raw file limit is
+caller-selected, defaults to 8 MiB and cannot exceed 64 MiB; it is not a total
+memory limit. A selected parser profile may impose a lower cap on that value.
+`expected_banner` is optional and checks only the log's first
+line. Files must stay stable while read; ordinary filesystem symlinks are
+followed. The byte cap is not a read timeout; even regular network files may
+block. A matching marker, model identity or banner is not an authenticity
+proof and does not verify the executable, runtime, or that LAMMPS actually ran.
+This helper does not read or authenticate the work directory manifest, and the
+returned result's `workdir` is empty because the paths may be unrelated.
 
 Dump units, time, integer steps, complete unique identities, expected types, box, finite values, initial state, PE+KE consistency and a graph/contract-bound completion marker are checked. Returned energy is the engine's mechanical thermo energy. Explicit constant nodal forces and whole-node fixed constraints have compiler/protocol tests, but the native scientific qualification below uses zero loads and no fixed sites. External work is not integrated into the result, so do not apply closed-system energy conservation to loaded runs. Geometric boundary flags are preserved as provenance; fixed sites are an explicit separate argument.
 

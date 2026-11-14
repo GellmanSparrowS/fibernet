@@ -8,6 +8,8 @@ Physics model (all tunables in Engine2Config):
 Boundary: left 10% percentile nodes fixed, right 10% displaced (fibernet grip).
 """
 from dataclasses import dataclass, field
+from math import isfinite
+from numbers import Integral
 import time
 
 import numpy as np
@@ -15,6 +17,15 @@ import numpy as np
 
 @dataclass
 class Engine2Config:
+    """Reduced-model controls, validated again when a mutable config is used.
+
+    Real-valued controls must be finite scalars (at most float64 precision);
+    step counts must be integers and feature switches must be booleans.
+    Stretch, contact radius and timestep are positive; stiffnesses and drag
+    are nonnegative. Ramp fraction is in [0, 1], grip fraction is nonnegative.
+    Counts are positive except n_increments=0 selects the dynamic ramp.
+    """
+
     target_stretch: float = 2.0
     stiffness: float = 1.0e5
     k_bend_frac: float = 0.25      # k_bend = k_bend_frac * stiffness
@@ -30,6 +41,62 @@ class Engine2Config:
     n_increments: int = 0      # >0: quasi-static increments (affine predictor + relaxation); 0 = legacy ramp dynamics
     contact_rebuild: int = 100     # rebuild contact candidates every N steps
     grip_pct: float = 0.05   # width fraction clamped at each end
+
+    def __post_init__(self):
+        _validate_config(self)
+
+
+def _validate_config(cfg):
+    """Reject malformed controls before geometry, contact or time integration."""
+    real_fields = ("target_stretch", "stiffness", "k_bend_frac", "k_contact",
+                   "r_contact", "dt", "drag", "ramp_fraction", "grip_pct")
+    count_fields = ("num_steps", "save_interval", "n_increments", "contact_rebuild")
+    switch_fields = ("use_bending", "use_contact")
+    for name in real_fields:
+        value = getattr(cfg, name)
+        if (isinstance(value, (bool, np.bool_))
+                or not isinstance(value, (int, float, np.integer, np.floating))):
+            raise ValueError(f"{name} must be a finite real scalar")
+        if isinstance(value, np.floating) and value.dtype.itemsize > 8:
+            raise ValueError(f"{name} supports floating scalars up to float64 precision")
+        try:
+            finite = isfinite(value)
+        except (TypeError, OverflowError):
+            finite = False
+        if not finite:
+            raise ValueError(f"{name} must be a finite real scalar")
+
+    for name in ("target_stretch", "r_contact", "dt"):
+        if getattr(cfg, name) <= 0:
+            raise ValueError(f"{name} must be positive")
+    for name in ("stiffness", "k_bend_frac", "k_contact", "drag"):
+        if getattr(cfg, name) < 0:
+            raise ValueError(f"{name} must be nonnegative")
+    if not 0 <= cfg.ramp_fraction <= 1:
+        raise ValueError("ramp_fraction must be between 0 and 1")
+    if cfg.grip_pct < 0:
+        raise ValueError("grip_pct must be nonnegative")
+
+    for name in count_fields:
+        value = getattr(cfg, name)
+        minimum = 0 if name == "n_increments" else 1
+        if (isinstance(value, (bool, np.bool_))
+                or not isinstance(value, Integral) or value < minimum):
+            raise ValueError(f"{name} must be an integer >= {minimum}")
+    for name in switch_fields:
+        if not isinstance(getattr(cfg, name), (bool, np.bool_)):
+            raise ValueError(f"{name} must be a boolean")
+
+    # Admit into the solver's float64 arithmetic, rather than letting a
+    # float16/32 scalar downcast a coefficient product before array math.
+    # Native scalar metadata also survives the desktop JSON cache path.
+    # Do this only after all fields have passed, so rejection is atomic.
+    for name in real_fields:
+        setattr(cfg, name, float(getattr(cfg, name)))
+    for name in count_fields:
+        setattr(cfg, name, int(getattr(cfg, name)))
+    for name in switch_fields:
+        setattr(cfg, name, bool(getattr(cfg, name)))
 
 
 @dataclass
@@ -128,6 +195,7 @@ def _validate_planar_geometry(graph, positions):
 class Engine2:
     def __init__(self, graph, cfg: Engine2Config = None):
         self.cfg = cfg or Engine2Config()
+        _validate_config(self.cfg)
         positions = np.asarray(graph.node_positions(), dtype=np.float64)
         _validate_planar_geometry(graph, positions)
         pos = positions[:, :2]
@@ -351,6 +419,7 @@ class Engine2:
     # ---------------- main loop ----------------
     def run(self, progress_cb=None) -> Engine2Result:
         cfg = self.cfg
+        _validate_config(cfg)
         n = self.n
         pos = self.pos0.copy()
         vel = np.zeros_like(pos)

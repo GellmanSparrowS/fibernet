@@ -125,10 +125,10 @@ def test_signature_preserves_old_positional_controls_and_makes_declaration_keywo
     params = list(inspect.signature(refit.Regressor.train).parameters.values())
     assert [p.name for p in params] == [
         'self', 'X', 'Y', 'lr', 'epochs', 'batch', 'val_frac', 'patience',
-        'min_delta', 'epoch_cb', 'stop_cb', 'feature_schema']
-    assert all(p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD for p in params[:-1])
-    assert params[-1].kind == inspect.Parameter.KEYWORD_ONLY
-    assert params[-1].default is None
+        'min_delta', 'epoch_cb', 'stop_cb', 'feature_schema', 'validation_indices']
+    assert all(p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD for p in params[:-2])
+    assert all(p.kind == inspect.Parameter.KEYWORD_ONLY for p in params[-2:])
+    assert all(p.default is None for p in params[-2:])
 
 
 def _definition(relative, name, namespace, method=None):

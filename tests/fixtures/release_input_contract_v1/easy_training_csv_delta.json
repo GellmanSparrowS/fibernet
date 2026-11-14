@@ -1,0 +1,17 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "CSV training input preservation candidate; independent review required",
+  "base_sha256": "b84560498114f5107aa36245a6600017fb42a75b91e92827c8617943b2068da3",
+  "result_sha256": "d9cc297448398605c084cebb6a2a5f0306e2c6dd76b0ac740bcd954dbfcf6b5a",
+  "hunks": [
+    {
+      "before": "        Parent directories must exist. No crash/concurrent-writer guarantee.\n",
+      "after": "        Parent directories must exist. No crash/concurrent-writer guarantee.\n        For CSV training, the destination must not resolve to the input CSV path;\n        path and link changes during the call are unsupported.\n"
+    },
+    {
+      "before": "    if not isinstance(csv_path, (str, bytes, os.PathLike)):\n        raise ValueError(\"csv_path must be a CSV path or an explicit FiberNetDataset\")\n",
+      "after": "    if not isinstance(csv_path, (str, bytes, os.PathLike)):\n        raise ValueError(\"csv_path must be a CSV path or an explicit FiberNetDataset\")\n    if save_path:\n        source = Path(os.fsdecode(csv_path)).resolve()\n        destination = Path(os.fsdecode(save_path)).resolve()\n        if source == destination:\n            raise ValueError(\"save_path must not overwrite the input CSV; \"\n                             \"choose a different model destination\")\n"
+    }
+  ]
+}
