@@ -337,11 +337,14 @@ try:
         return method.lineno, method.end_lineno
     with patch.object(contract, '_result_detail_span', side_effect=uncached_span):
         expected = contract.reviewed_result_identity_source()
-        expected_current = contract.reviewed_taichi_import_source()
+        expected_prior = contract.reviewed_taichi_import_source()
+        expected_current = contract.reviewed_compute_detailed_validation_source()
     span.cache_clear()
     assert contract.reviewed_result_identity_source() == expected
     assert contract.reviewed_result_identity_source() == expected
-    assert contract.reviewed_taichi_import_source() == expected_current
+    assert contract.reviewed_taichi_import_source() == expected_prior
+    assert contract.reviewed_compute_detailed_validation_source() == expected_current
+    assert contract.reviewed_compute_detailed_validation_source(reverse=expected_current) == expected_prior
     assert expected_current == contract.SOURCE.read_bytes()
 
     # Warm-cache reconstruction still rereads both fixtures and checks lineage.
