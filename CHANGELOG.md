@@ -1,3 +1,12 @@
+## [Unreleased] - Legacy trim crosslink preservation
+
+- Preserve and remap surviving crosslinks in `core.transform.trim_to_box`.
+  Whole-fiber mode keeps original attachments; sampled mode remaps attachments
+  on retained vertices and intact original segments. Geometry selection and
+  public signatures are unchanged. Crosslink-based derived results intentionally
+  change from the old empty-link output; see the
+  [compatibility and migration contract](docs/architecture/legacy-trim-crosslinks.md).
+
 ## [Unreleased] - Reduced-model configuration admission
 
 - Reject nonfinite, malformed and out-of-range reduced-model controls at

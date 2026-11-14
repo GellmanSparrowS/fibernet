@@ -321,13 +321,23 @@ def trim_to_box(
     box_max : np.ndarray
         Maximum corner of trim box.
     remove_outside : bool
-        If True, remove fibers completely outside box.
-        If False, also trim fibers that partially extend outside.
+        If True, keep each whole fiber with at least one sampled point inside
+        the inclusive box. If False, retain only its inside sampled points,
+        and omit fibers with fewer than two such points. This legacy operation
+        does not insert intersections or split disjoint retained runs.
     
     Returns
     -------
     FiberNetwork
-        Trimmed network.
+        Trimmed network with surviving crosslinks in their original order.
+        Crosslink fiber indices are remapped to the result's dense list order.
+        With ``remove_outside=True``, links between retained whole fibers keep
+        their parameters, even if the link position is outside the box.
+        Otherwise, normalized sample-index parameters are remapped only when
+        both attachment vertices or original bracketing segments survive.
+        Links on removed geometry are omitted, including across gaps between
+        retained runs. Link positions and other fields are copied unchanged.
+        The source network is not modified.
     """
     box_min = np.asarray(box_min)
     box_max = np.asarray(box_max)
@@ -338,7 +348,9 @@ def trim_to_box(
         periodic=network.periodic,
     )
     
-    for fiber in network.fibers:
+    fiber_map = {}
+    retained_samples = {}
+    for old_index, fiber in enumerate(network.fibers):
         pts = fiber.centerline
         inside = np.all((pts >= box_min) & (pts <= box_max), axis=1)
         
@@ -346,7 +358,7 @@ def trim_to_box(
             if np.any(inside):
                 new_fiber = deepcopy(fiber)
                 new_fiber.fiber_id = result.num_fibers
-                result.add_fiber(new_fiber)
+                fiber_map[old_index] = result.add_fiber(new_fiber)
         else:
             inside_pts = pts[inside]
             if len(inside_pts) >= 2:
@@ -358,9 +370,51 @@ def trim_to_box(
                     cross_section_params=fiber.cross_section_params,
                     fiber_id=result.num_fibers,
                 )
-                result.add_fiber(new_fiber)
-    
+                fiber_map[old_index] = result.add_fiber(new_fiber)
+                retained_samples[old_index] = (np.flatnonzero(inside), len(pts))
+
+    for crosslink in network.crosslinks:
+        if crosslink.fiber_i not in fiber_map or crosslink.fiber_j not in fiber_map:
+            continue
+        param_i, param_j = crosslink.param_i, crosslink.param_j
+        if not remove_outside:
+            param_i = _trim_crosslink_parameter(
+                param_i, *retained_samples[crosslink.fiber_i]
+            )
+            param_j = _trim_crosslink_parameter(
+                param_j, *retained_samples[crosslink.fiber_j]
+            )
+            if param_i is None or param_j is None:
+                continue
+        new_crosslink = deepcopy(crosslink)
+        new_crosslink.fiber_i = fiber_map[crosslink.fiber_i]
+        new_crosslink.fiber_j = fiber_map[crosslink.fiber_j]
+        new_crosslink.param_i = param_i
+        new_crosslink.param_j = param_j
+        result.add_crosslink(new_crosslink)
+
     return result
+
+
+def _trim_crosslink_parameter(parameter, retained, num_points):
+    """Map sample-index coordinates only along surviving original geometry."""
+    if not np.isfinite(parameter) or not 0 <= parameter <= 1:
+        return None
+    sample = parameter * (num_points - 1)
+    nearest = int(round(sample))
+    # Normalized sample indices may not multiply back to an exact integer.
+    tolerance = 8 * np.finfo(float).eps * max(1, num_points - 1)
+    if abs(sample - nearest) <= tolerance:
+        sample = nearest
+    right = int(np.searchsorted(retained, sample))
+    if right < len(retained) and retained[right] == sample:
+        return right / (len(retained) - 1)
+    if right == 0 or right == len(retained):
+        return None
+    left = right - 1
+    if retained[right] != retained[left] + 1:
+        return None
+    return (left + sample - retained[left]) / (len(retained) - 1)
 
 
 def duplicate_and_transform(
