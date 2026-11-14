@@ -25,7 +25,7 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
 ENGINE_VERSION = "e2v15"
-ENGINE_SRC_HASH = "983e6c6bb62f"
+ENGINE_SRC_HASH = "1b2b1b4f71c5"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -280,18 +280,18 @@ class RunConfig:
     weld_intersections: bool = False
 
     def engine_cfg(self, n_nodes=None) -> Engine2Config:
-        steps = self.num_steps
-        if self.auto_scale and n_nodes:
-            fac = min(max((n_nodes / 600.0) ** 0.5, 1.0), 2.0)
-            steps = int(steps * fac)
-        return Engine2Config(
+        config = Engine2Config(
             target_stretch=self.target_stretch, stiffness=self.stiffness,
             k_bend_frac=self.k_bend_frac, k_contact=self.k_contact,
             r_contact=self.r_contact, use_bending=self.use_bending,
             use_contact=self.use_contact, drag=self.drag,
-            num_steps=steps, save_interval=self.save_interval,
+            num_steps=self.num_steps, save_interval=self.save_interval,
             ramp_fraction=self.ramp_fraction,
             n_increments=self.n_increments, grip_pct=self.grip_pct)
+        if self.auto_scale and n_nodes:
+            fac = min(max((n_nodes / 600.0) ** 0.5, 1.0), 2.0)
+            config.num_steps = int(config.num_steps * fac)
+        return config
 
 
 @dataclass
@@ -357,6 +357,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
         from .welding import IntersectionWelder
         graph = IntersectionWelder().apply(graph)
     n_nodes = len(graph.node_positions())
+    engine_cfg = cfg.engine_cfg(n_nodes)
 
     path = None
     key = ""
@@ -375,7 +376,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
                 cached.cache_key = key
                 return cached
 
-    res = Engine2(graph, cfg.engine_cfg(n_nodes)).run(progress_cb=progress_cb)
+    res = Engine2(graph, engine_cfg).run(progress_cb=progress_cb)
     res.metadata['weld_intersections'] = cfg.weld_intersections
     # no fracture in this model -> grip force must not soften; clip the
     # tiny numerical transients so the curve is monotone non-decreasing

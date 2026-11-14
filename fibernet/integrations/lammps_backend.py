@@ -705,6 +705,19 @@ class LAMMPSTask:
         contract = json.loads(self.prepared.contract_json)
         self.output_forecast = None
         profile = _profiles.contract_profile(contract)
+        if prepared.profile is None and contract['model'] == 'explicit-synthetic-or-coarse-grained-beads':
+            # The validated unprofiled compiler dumps every step, including zero.
+            # Each atom row has 11 nonempty tokens, 10 separators and a newline.
+            # This integer-only floor excludes headers, thermo and setup files;
+            # it is not a forecast or a promise that an admitted run will fit.
+            trajectory_floor = 22 * len(prepared.node_ids) * (prepared.steps + 1)
+            if (trajectory_floor > self.limits.output_bytes or
+                    trajectory_floor > self.limits.file_size_bytes):
+                raise LAMMPSContractError(
+                    f'unprofiled harmonic trajectory atom rows alone require at least '
+                    f'{trajectory_floor} bytes, exceeding output_bytes='
+                    f'{self.limits.output_bytes} or file_size_bytes='
+                    f'{self.limits.file_size_bytes}')
         if _profiles.variable_steps(profile):
             size = _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),profile['prepared_bytes'])
             manifest = dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))

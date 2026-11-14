@@ -279,9 +279,13 @@ def insert_section(document, language, content):
     if "\r" in remainder or ("\r\n" in document and "\n" in remainder):
         raise ValueError("Mixed or unsupported document line endings")
     newline = "\r\n" if "\r\n" in document else "\n"
-    anchor = "<!-- locale:" + language + ":start -->"
-    if document.count(anchor) != 1:
+    locale_anchor = "<!-- locale:" + language + ":start -->"
+    slot = "<!-- api-navigation:" + language + ":slot -->"
+    if document.count(locale_anchor) != 1:
         raise ValueError("Expected exactly one locale anchor: " + language)
+    if document.count(slot) > 1:
+        raise ValueError("Duplicate navigation slot: " + language)
+    anchor = slot if slot in document else locale_anchor
     begin = "<!-- api-navigation:" + language + ":start -->"
     end = "<!-- api-navigation:" + language + ":end -->"
     if begin in document or end in document:
