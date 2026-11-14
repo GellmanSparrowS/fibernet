@@ -111,3 +111,8 @@ With `stiffness=None`, geometric metrics are refreshed while force, energy and
 coefficient provenance are retained. Explicit spring coefficients follow the
 selected edge order. FEM solver channels and backend-specific result contracts
 retain their own recomputation rules.
+
+The checks above validate the consumed identity records and metric inputs, not
+a complete graph schema. They do not add generic dangling-endpoint validation,
+a positive length threshold, or solver/constitutive-law qualification. Existing
+backend delegation and the shared element-length floor are unchanged.

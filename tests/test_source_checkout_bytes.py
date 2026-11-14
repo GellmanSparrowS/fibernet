@@ -10,6 +10,13 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 PROTECTED = (
+    'fibernet/_json.py',
+    'tests/fixtures/release_input_contract_v1/easy_json_delta.json',
+    'tests/fixtures/release_input_contract_v1/api_json_delta.json',
+    'tests/fixtures/release_input_contract_v1/easy_batch_input_delta.json',
+    'tests/fixtures/release_input_contract_v1/easy_output_collision_delta.json',
+    'tests/fixtures/release_input_contract_v1/easy_training_csv_delta.json',
+    'tests/fixtures/release_input_contract_v1/easy_training_csv_entry_delta.json',
     'tests/fixtures/legacy_analysis_v1/api_delta.json',
     'tests/fixtures/deformed_transport_preparation_v1/arithmetic_reference.py.txt',
     'tests/fixtures/deformed_transport_preparation_v1/planar_golden.json',

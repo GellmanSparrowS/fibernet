@@ -50,6 +50,18 @@ def _ids(values, label):
     return np.asarray(values, dtype=np.int64)
 
 
+def _unmasked_field(value, label):
+    """Reject masks before array coercion, including nested ID-aligned values."""
+    pending, seen = [value], set()
+    while pending:
+        item = pending.pop()
+        if np.ma.isMaskedArray(item):
+            raise ValueError(f'{label}: masked arrays/scalars are unsupported, including all-false masks')
+        if isinstance(item, (list, tuple)) and id(item) not in seen:
+            seen.add(id(item))
+            pending.extend(item)
+
+
 def _fields(values, count, specs, location):
     result = {}
     if values is not None and not isinstance(values, dict):
@@ -59,6 +71,7 @@ def _fields(values, count, specs, location):
     for name, value in (values or {}).items():
         if not isinstance(name, str) or not name or name in _RESERVED:
             raise ValueError('field names must be nonempty and not reserved')
+        _unmasked_field(value, f'{location} field {name}')
         arr = np.asarray(value)
         if arr.shape not in ((count,), (count, 3)) or arr.dtype.kind not in 'fiu':
             raise ValueError(f'{location} field {name} must be numeric scalar or 3-vector data')
@@ -104,6 +117,7 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     Points follow sorted node IDs. Cells follow graph edge insertion order.
     Field arrays must already follow those orders; ID mappings are aligned here.
     Each location accepts arrays or complete ID mappings, never both.
+    Masked arrays/scalars are unsupported, including all-false masks.
     Only edges without internal
     points are accepted. Parallel edges and isolated nodes are retained.
     Units are one of m, cm, mm, um, nm; no conversion is performed.

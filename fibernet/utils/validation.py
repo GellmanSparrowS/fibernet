@@ -61,8 +61,13 @@ def validate_type(
         return
     
     if not isinstance(value, expected_type):
+        def type_name(classinfo):
+            if isinstance(classinfo, tuple):
+                return " or ".join(type_name(item) for item in classinfo)
+            return classinfo.__name__
+
         raise ValidationError(
-            f"{name} must be of type {expected_type.__name__}, "
+            f"{name} must be of type {type_name(expected_type)}, "
             f"got {type(value).__name__}"
         )
 
@@ -104,6 +109,8 @@ def validate_range(
     >>> validate_range(0.5, 'ratio', min_val=0.0, max_val=1.0)
     """
     validate_type(value, name, (int, float))
+    if value != value:
+        raise ValidationError(f"{name} must not be NaN")
     
     if min_val is not None:
         if min_inclusive:
@@ -185,9 +192,9 @@ def validate_array(
     shape : tuple, optional
         Expected shape
     min_length : int, optional
-        Minimum length (for 1D arrays)
+        Minimum length along the first axis; scalars have no length.
     max_length : int, optional
-        Maximum length (for 1D arrays)
+        Maximum length along the first axis; scalars have no length.
     
     Returns
     -------
@@ -215,6 +222,9 @@ def validate_array(
                 f"{name} must have shape {shape}, got {arr.shape}"
             )
     
+    if (min_length is not None or max_length is not None) and arr.ndim == 0:
+        raise ValidationError(f"{name} must have a length; got a scalar")
+
     if min_length is not None:
         if len(arr) < min_length:
             raise ValidationError(

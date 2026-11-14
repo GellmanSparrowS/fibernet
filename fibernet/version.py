@@ -2,9 +2,9 @@
 FiberNet Version Information
 """
 
-__version__ = "4.3.0"
-__author__ = "FiberNet Contributors"
-__email__ = "fibernet@example.com"
+__version__ = "4.4.2"
+__author__ = "Yunhao Yang"
+__email__ = ""
 __license__ = "MIT"
 __url__ = "https://github.com/GellmanSparrowS/fibernet"
 

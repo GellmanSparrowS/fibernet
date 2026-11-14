@@ -30,12 +30,15 @@ This gives full control over beam geometry — straight, curved, wavy, or custom
 from __future__ import annotations
 
 import copy
+from numbers import Integral
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
 from fibernet.core.structure_graph import StructureGraph
 from fibernet.core.material import Material
+from fibernet.core._grid_contract import normalize_grid
+from fibernet.gen._input_contract import positive_real as _positive_real
 from fibernet.core.transforms import (
     translate, rotate, mirror_x as _mirror_x, mirror_y as _mirror_y,
     mirror as _mirror, scale as _scale, compose,
@@ -1916,7 +1919,8 @@ def pattern_2d(
     box : (w, h)
         Unit cell dimensions.
     grid : int or (nx, ny)
-        Tiling grid size.
+        Nonnegative integer counts, or a Python/NumPy integer scalar broadcast
+        to both axes. Bool and floats are rejected; zero produces an empty tiling.
     n_internal : int
         Internal points per edge (for FEM deformation visualization).
     n_pts_per_side : int
@@ -1954,11 +1958,16 @@ def pattern_2d(
         Extra kwargs for the unit factory (e.g., ``angle=20`` for reentrant).
         These override top-level factory arguments, including ``seed``. For
         Voronoi, an overriding ``seed=None`` also uses the default seed 42.
+        The effective ``box`` must contain two finite positive real dimensions.
+        It also sets tiling spacing, transform origins, boundary handling and
+        box metadata. Custom ``points`` retain the top-level ``box`` and do
+        not use ``unit_kwargs``.
 
     Returns
     -------
     StructureGraph
     """
+    grid = normalize_grid(grid, 2)
     if not isinstance(boundary_mode, str) or boundary_mode not in ("none", "extend", "error"):
         raise ValueError("boundary_mode must be 'none', 'extend', or 'error'")
     if unit is None and points is None:
@@ -2000,6 +2009,18 @@ def pattern_2d(
             "seed": seed,
         }
         factory_kwargs.update(ukw)
+        box = factory_kwargs["box"]
+        try:
+            if (isinstance(box, (str, bytes))
+                    or not isinstance(box, (Sequence, np.ndarray))
+                    or len(box) != 2):
+                raise ValueError
+            for size in box:
+                _positive_real(size, "box dimension")
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "box must contain two finite positive real dimensions"
+            ) from exc
         if unit_name == "voronoi" and factory_kwargs["seed"] is None:
             factory_kwargs["seed"] = 42
         factory = _UNIT_FACTORIES[unit_name]
@@ -2327,7 +2348,9 @@ def pattern_3d(
     unit : str
         Built-in 3D unit type. Use ``list_units_3d()`` to see available types.
     box : (w, h, d)
-        Unit cell dimensions.
+        Three finite positive real unit-cell dimensions. Booleans, strings,
+        complex values and missing dimensions are rejected before the factory
+        runs. The original valid sequence and scalar types are retained.
     grid : int or (nx, ny, nz)
         Grid dimensions.
     n_internal : int
@@ -2335,6 +2358,7 @@ def pattern_3d(
         TPMS units support only 0.
     n_pts_per_side : int
         Intermediate graph nodes per edge (affects structure topology).
+        Must be a nonnegative Python or NumPy integer, not a boolean.
         TPMS units support only 0.
     point_displacements : list of (dx, dy, dz), optional
         Explicit displacement per intermediate node. For non-TPMS built-in
@@ -2351,7 +2375,8 @@ def pattern_3d(
     seed : int, optional
         Random seed for auto-generated displacements.
     unit_kwargs : dict, optional
-        Extra keyword arguments passed to the unit factory.
+        Extra keyword arguments passed to the unit factory. Top-level arguments,
+        including ``box``, take precedence over entries in this dictionary.
 
     Returns
     -------
@@ -2366,8 +2391,11 @@ def pattern_3d(
     degree-one pass, in raw graph coordinate units, not inferred metres or mm.
     These reports do not describe tiling welds or certify mechanical stability.
     """
-    if isinstance(grid, int):
-        grid = (grid, grid, grid)
+    if (isinstance(n_pts_per_side, (bool, np.bool_))
+            or not isinstance(n_pts_per_side, Integral) or n_pts_per_side < 0):
+        raise ValueError("n_pts_per_side must be a nonnegative integer, not bool")
+    n_pts_per_side = int(n_pts_per_side)
+    grid = normalize_grid(grid, 3)
 
     unit_name = unit.lower()
     if unit_name not in _UNIT_FACTORIES_3D:
@@ -2375,6 +2403,18 @@ def pattern_3d(
         raise ValueError(
             f"Unknown 3D unit \'{unit}\'. Available: {available}"
         )
+
+    try:
+        if (isinstance(box, (str, bytes))
+                or not isinstance(box, (Sequence, np.ndarray))
+                or len(box) != 3):
+            raise ValueError
+        for size in box:
+            _positive_real(size, "box dimension")
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "box must contain three finite positive real dimensions"
+        ) from exc
 
     factory = _UNIT_FACTORIES_3D[unit_name]
     fkwargs = dict(unit_kwargs) if unit_kwargs else {}

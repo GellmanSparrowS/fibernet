@@ -1,3 +1,272 @@
+## [Unreleased] - Detailed-result identity admission
+
+- Validate node and selected-edge record IDs before ordinary detailed metrics
+  are committed. Reject exactly coincident selected reference endpoints when
+  deformed positions are supplied, preserving signed IDs, selected-edge order,
+  force/energy provenance and existing backend routing. No new positive-length
+  threshold or solver arithmetic is introduced. See the
+  [identity contract](docs/architecture/result-identity-contract.md).
+
+## [Unreleased] - Legacy trim crosslink preservation
+
+- Preserve and remap surviving crosslinks in `core.transform.trim_to_box`.
+  Whole-fiber mode keeps original attachments; sampled mode remaps attachments
+  on retained vertices and intact original segments. Geometry selection and
+  public signatures are unchanged. Crosslink-based derived results intentionally
+  change from the old empty-link output; see the
+  [compatibility and migration contract](docs/architecture/legacy-trim-crosslinks.md).
+
+## [Unreleased] - Reduced-model configuration admission
+
+- Reject nonfinite, malformed and out-of-range reduced-model controls at
+  config/solver entry and before desktop cache lookup. Revalidate mutable
+  configs at run entry, and normalize admitted NumPy scalars for float64
+  coefficient arithmetic and JSON metadata. Public fields and ordinary
+  Python-float numerical behavior are unchanged; see the
+  [configuration and migration contract](docs/architecture/reduced-config-contract.md).
+
+## [4.4.2] - 2026-11-13
+
+See [4.4.2 release notes and migration](docs/RELEASE_4_4_2.md) for the complete
+changes since published 4.4.1: detached StructureGraph metadata snapshots,
+geometry/force corrections, per-edge FEM materials and stricter admission.
+Shared transport graph validation, float64 recruitment thresholds and the
+versioned recruitment replay archive are also included. Historical Unreleased
+entries below remain as development history.
+
+## [Unreleased] - Finite-width contact scaling
+
+- Normalize contact raster geometry and width together so a change of length
+  unit does not erase short-segment contacts through an absolute projection
+  floor. Preserve field names, adjacency exclusions and raster budgets.
+- Restore pixel spacing and overlap area to caller units, reject unrepresentable
+  output scales, and add exact-pixel and public-route regressions. See
+  [finite-width contact units](docs/FINITE_WIDTH_CONTACT_SCALING.md).
+
+## [Unreleased] - Per-member cylinder geometry
+
+- Preserve each represented edge's radius-length association in 3D cylinder
+  volume and lateral-area sums, correcting five derived geometry features for
+  heterogeneous radii, including native octet networks. Keep feature names,
+  ordering, default missing radii and historical cap/floor conventions.
+- Add analytical, generated-structure and scaling tests plus a runnable
+  generation-to-FEM-to-JSON/CSV/VTK workflow. See the
+  [radius workflow guide](docs/heterogeneous_radius_workflow.rst) for scope.
+
+## [Unreleased] - Consistent scalar graph scaling
+
+- Treat NumPy real numeric scalars and zero-dimensional numeric arrays like
+  Python scalar factors when resizing StructureGraph radii as well as geometry.
+  Keep vector coordinate-only behavior, material values and stable IDs unchanged.
+- Reject masked scalar factors before reading hidden values. Add scalar parity,
+  copy/serialization and analytical 2-D/3-D axial/bending FEM checks. See the
+  [geometric scaling guide](docs/graph_scaling.rst) for units and vector semantics.
+
+## [Unreleased] - Per-edge linear beam materials
+
+- Add explicit graph-material selection for linear 2-D/3-D beam FEM using the
+  existing StructureGraph. Preserve uniform defaults; validate and snapshot
+  per-edge isotropic properties through assembly, recovery and result metadata.
+- Add heterogeneous series, parallel, network, bending/torsion and ownership
+  checks. Document material precedence, explicit units and axial-proxy energy.
+
+## [Unreleased] - Static network workflow checks
+
+- Add real small-network static FEM, saved-result analysis and VTK workflow
+  tests with an independent energy-Hessian oracle. Document stored material
+  precedence, numerical regularization and axial-proxy versus full beam energy.
+  No solver law or public API changes.
+
+## [Unreleased] - Legacy VTK attribute admission
+
+- Reject malformed field names, nonnumeric/complex/nonfinite attributes and
+  float32-overflowing values before legacy VTK export opens its destination.
+  Invalid attributes no longer truncate an existing output or emit invalid
+  records. Public signatures, coordinate and valid attribute bytes are
+  unchanged. See [attribute ordering and precision](docs/io/legacy_vtk_attributes.md).
+
+## [Unreleased] - Beam FEM radius admission
+
+- Reject nonpositive, boolean and non-real beam radii before FEM graph dispatch,
+  and reject unrepresentable circular sections instead of returning invalid
+  stresses. Use float64 section arithmetic to prevent NumPy integer-power
+  overflow. Graph storage, explicit material precedence, units and public
+  signatures are unchanged. See the [FEM radius contract](docs/METHODS_BEAM_FEM_CONTRACT.md#circular-section-radius-admission).
+
+## [Unreleased] - Nested masked learning geometry
+
+- Reject masked coordinates and internal-point rows nested in lists, tuples or
+  object arrays before creating a `GraphBatch`, including all-false masks.
+  NumPy conversion previously could silently expose hidden internal-point
+  values as valid geometry and length features. Ordinary numeric snapshots,
+  v1/v2 schemas, ID mappings and public signatures remain unchanged. See the
+  [graph-data contract](docs/architecture/graph-data-usage.md).
+
+## [Unreleased] - Native 3D cell dimension validation
+
+- Reject invalid `pattern_3d` box dimensions before built-in or registered
+  factory work, including zero-width cells, negative extents and complex values
+  that previously could collapse, reflect or silently change the generated
+  geometry. Valid scalar types, argument precedence and zero-grid behavior are
+  preserved. See the [3D dimension contract](docs/METHODS_3D_GENERATION_PARAMETERS.md).
+
+## [Unreleased] - Unprofiled harmonic output admission
+
+- Reject unprofiled LAMMPS harmonic tasks whose mandatory trajectory atom rows
+  alone exceed the explicit aggregate or per-file output budget, before runtime
+  validation or launch. This lower bound is not a size forecast or native-engine
+  qualification. Public signatures, graph/SI unit semantics, named-profile
+  forecasts and runtime watchdogs are unchanged. See the
+  [admission scope](docs/integrations/LAMMPS_HARMONIC_CLI.md#explicit-runtime-and-lifecycle).
+
+## [Unreleased] - Manufacturing provider requirement
+
+- Require `manifold3d>=3.2.0` in the manufacturing/full extras and check
+  `Manifold.simplify` before constructing native geometry. Version 3.1.0 exposes
+  `to_mesh64` but lacks `simplify`, so the old unversioned dependency could fail
+  late with `AttributeError`. Public signatures, meshing and export algorithms
+  are unchanged. See [provider requirements and validation](docs/solid_validation.md#surface-extraction-precision).
+
+## [Unreleased] - Kagome lattice perturbation
+
+- Honor positive `perturbation` and its `seed` in `lattice_2d(topology="kagome")`,
+  including `create("lattice_2d", ...)`. Apply displacement after existing tile
+  connectivity is built and before rotation. Zero perturbation, public
+  signatures and other lattice types are unchanged. Historical Kagome calls
+  silently ignored positive perturbation; see the
+  [usage and migration contract](docs/architecture/lattice-perturbation-contract.md).
+
+## [Unreleased] - Ionic bond force direction
+
+- Correct `IonicBond.compute_force` to return force on the first endpoint,
+  matching Spring and Covalent crosslinks and the negative first-endpoint
+  energy gradient. Opposite charges attract and like charges repel. Nonzero
+  returned forces and newly stored state forces reverse sign; magnitudes,
+  energies, constructor signatures and rupture thresholds are unchanged.
+  External callers using the previous sign must follow the
+  [endpoint and migration contract](docs/architecture/crosslink-force-contract.md).
+
+## [Unreleased] - transformed tiling boundary labels
+
+- Recompute `tile_with_transforms` node flags on the nominal outer XY planes
+  after per-cell transformation and translation. Keep the first welded
+  representative's labels and leave both Z flags false. Geometry and public
+  signatures are unchanged. Boundary/internal selections and derived features
+  intentionally change from the previous all-false labels; see the
+  [usage and compatibility contract](docs/architecture/transformed-tiling-boundaries.md).
+
+## [4.4.1] - 2026-11-09
+
+See [4.4.1 release notes and migration](docs/RELEASE_4_4_1.md) for changes
+since 4.4.0, including the CSV, k-core and rotation fixes. Historical Unreleased
+entries below remain as development history.
+
+## [Unreleased] - Scale-invariant 3D rotation axes
+
+- Normalize 3D rotation axes without overflowing or underflowing their norm.
+  Large and tiny finite axis magnitudes now preserve rigid geometry. Reject
+  malformed, complex, nonfinite and zero axes before copying a 3D graph.
+  Public signatures, default-axis rotation and 2D axis behavior are unchanged.
+
+## [Unreleased] - 3D graph k-core correction
+
+- Restore `GraphFeatureExtractor3D` k-core values by computing the unweighted
+  mean degree locally, including isolated nodes. `kcore_frac` retains its
+  maximum-core-number / mean-degree formula and can exceed one. Names, order
+  and signatures are unchanged, but historical all-zero k-core values change.
+  See [migration guidance](docs/architecture/graph-feature-3d-kcore.md) before
+  combining corrected feature values with existing datasets or models.
+
+## [Unreleased] - CSV training input preservation
+
+- Reject model destinations that identify the input CSV entry before training,
+  including symlink, case-insensitive and Unicode-normalization aliases. Distinct
+  hardlink entries remain supported; ambiguous same-parent aliases require readable
+  directory entries and exact spellings. Native Dataset training and model
+  serialization are unchanged.
+
+## [Unreleased] - LAMMPS dual-reference displacement
+
+- Add `compare_lammps_node_displacements` in `fibernet.analysis.geometry_paths`
+  to compare final LAMMPS positions with the loaded initial graph and an explicit
+  reference graph. Align by stable node IDs, verify initial units and graph digest,
+  and return detached metre-valued arrays. Reference correspondence and coordinate
+  frame remain caller responsibilities. This is geometry-only post-processing.
+- Reject silent zero displacement caused by FTZ/DAZ floating-point modes,
+  including when distinct normal coordinates have a subnormal difference.
+
+## [Unreleased] - LAMMPS stable edge history
+
+- Add `EdgeLengthHistory` and `edge_length_history` in the explicit
+  `fibernet.integrations.lammps_backend` module. Extract aligned step/time/SI
+  endpoint-distance tuples by stable StructureGraph edge ID from a prepared run
+  and parsed result, including sampled CG trajectories. This is geometry-only
+  post-processing, not native output authentication or physical validation.
+
+## [Unreleased] - LAMMPS projection numeric range
+
+- Use scaled Euclidean norms for projected bond lengths and maximum displacement.
+  Compute stretch statistics without directly squaring extreme values, and
+  translate tightly clustered stretches before scaling their spread.
+  Reject nonfinite projected quantities and nonzero force/stretch values that
+  underflow to zero. Public signatures and graph/SI unit conventions are unchanged.
+  Regression evidence uses synthetic protocol fixtures, not native engine runs.
+
+## [Unreleased] - snapshot pore units
+
+- Normalize planar pore geometry by the active edge-endpoint span before
+  detecting bounded centerline faces, then return pore areas in caller units
+  squared and perimeters in caller units. For well-conditioned geometry, pore
+  results are less sensitive to length units; approximate tolerances and
+  near-degenerate geometry limitations remain.
+  Structure/contact calculations and the caller-unit straightness cutoff are
+  unchanged. Historical pore results near the old tolerances may change.
+
+## [Unreleased] - snapshot open-chain straightness
+
+- Include both boundary nodes when measuring the chord divided by full path
+  length of an open chain containing degree-2 nodes. Exclude closed walks and
+  retain the existing single-edge exclusion and 1e-12 caller-unit length cutoff.
+  Affected straightness values intentionally change; public signatures and
+  other feature calculations are unchanged by this correction. Pore unit
+  normalization is documented separately.
+
+## [Unreleased] - tutorial pipeline artifact recovery
+
+- Restore persisted native graphs instead of regenerating them when the tutorial
+  pipeline resumes. Validate generation inputs, saved simulation summaries, and
+  feature-file bindings before continuing; reject missing or inconsistent files
+  without overwriting them. Legacy checkpoints without artifact bindings require
+  a fresh data directory. This does not restore interrupted solver state.
+
+## [4.4.0] - 2026-11-06
+
+See [4.4.0 release notes and migration](docs/RELEASE_4_4_0.md) for the changes
+since 4.3.0. Historical Unreleased entries below are retained as development
+history and include changes already shipped in earlier releases.
+
+## [Unreleased] - offline LAMMPS saved-run reader
+
+- Add `read_saved_lammps_run` to reconstruct existing saved preparation files
+  and parse captured output without runtime admission or engine execution.
+- Require a caller-supplied manifest digest, exact current-compiler regeneration,
+  bounded POSIX regular-file reads and explicit nonauthentication semantics.
+  Returned SI output is protocol-checked, not certified as original engine data
+  or physically valid; compiler drift is rejected without automatic migration.
+
+## [Unreleased] - gyroid factory parameters
+
+- Forward `lattice_3d(topology="gyroid")` parameters `grid_size`, `radius`, and
+  `material` to the existing backend instead of silently discarding them.
+  Calls without these options now use the documented factory defaults
+  `(3, 3, 3)` and `0.1`, rather than the backend defaults `(2, 2, 2)` and `0.15`.
+  To retain the previous default geometry and radius, pass `grid_size=(2, 2, 2)`
+  and `radius=0.15` explicitly. Direct `gyroid_lattice_3d` defaults are unchanged.
+- This routes parameters to the existing TPMS-inspired fiber-network generator;
+  it does not produce a solid or shell gyroid or qualify mechanical behavior.
+  The existing backend does not use `threshold`, and the factory's `seed` and
+  `perturbation` do not affect this route. Those behaviors are unchanged.
+
 ## [Unreleased] - checked graph prediction
 
 - Add `predict_gnn` for existing CPU scalar FiberGNN models and GraphBatch v1,
@@ -440,4 +709,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 - Total: 180 passing
-

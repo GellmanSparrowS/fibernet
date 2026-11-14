@@ -261,3 +261,123 @@ def test_import_process_diagnostics_do_not_disclose_arguments_or_environment():
         assert record['default_cwd'] is False and record['default_env'] is False
         assert probes == []
     ''')
+
+
+def test_result_detail_span_cache_preserves_validation(tmp_path):
+    script = tmp_path / 'span_cache_controls.py'
+    script.write_text('''
+import gc
+from pathlib import Path
+import weakref
+from unittest.mock import patch
+
+import test_taichi_event_compat_source as contract
+
+span = contract._result_detail_span
+raw = b'class SimResult:\\n    def compute_detailed(self):\\n        pass\\n'
+span.cache_clear()
+try:
+    # Equal content in a new bytes object reuses parsing; changed content does not.
+    with patch.object(contract, 'result_detail_method',
+                      wraps=contract.result_detail_method) as extract:
+        first = span(raw)
+        assert first == (2, 3)
+        assert span(bytes(bytearray(raw))) == first
+        assert extract.call_count == 1
+        shifted = b'\\n' + raw
+        assert span(shifted) == (3, 4)
+        assert extract.call_count == 2
+        assert span.cache_info().maxsize == 1
+        assert span.cache_info().currsize == 1
+        assert span(raw) == first
+        assert extract.call_count == 3
+
+    # Uniqueness and parser failures propagate even after a valid cache warmup.
+    for changed, message in (
+        (b'class Other:\\n    pass\\n', 'expected one SimResult class'),
+        (raw + raw, 'expected one SimResult class'),
+        (b'class SimResult:\\n    pass\\n', 'expected one compute_detailed method'),
+        (raw + b'    def compute_detailed(self):\\n        pass\\n',
+         'expected one compute_detailed method'),
+    ):
+        with patch.object(contract, 'result_detail_method',
+                          wraps=contract.result_detail_method) as extract:
+            for _ in range(2):
+                try:
+                    span(changed)
+                except AssertionError as error:
+                    assert str(error) == message
+                else:
+                    raise AssertionError('invalid AST cardinality was cached or accepted')
+            assert extract.call_count == 2
+    try:
+        span(b'class SimResult(:\\n')
+    except SyntaxError:
+        pass
+    else:
+        raise AssertionError('invalid syntax was accepted')
+
+    # The cached value contains integers only and must not retain the AST node.
+    original_extract = contract.result_detail_method
+    references = []
+    def track_node(value):
+        node = original_extract(value)
+        references.append(weakref.ref(node))
+        return node
+    span.cache_clear()
+    with patch.object(contract, 'result_detail_method', side_effect=track_node):
+        bounds = span(raw)
+    gc.collect()
+    assert type(bounds) is tuple and all(type(value) is int for value in bounds)
+    assert len(references) == 1 and references[0]() is None
+
+    # Compare reviewed output with the unchanged uncached extractor in-process.
+    def uncached_span(value):
+        method = original_extract(value)
+        return method.lineno, method.end_lineno
+    with patch.object(contract, '_result_detail_span', side_effect=uncached_span):
+        expected = contract.reviewed_result_identity_source()
+        expected_current = contract.reviewed_taichi_import_source()
+    span.cache_clear()
+    assert contract.reviewed_result_identity_source() == expected
+    assert contract.reviewed_result_identity_source() == expected
+    assert contract.reviewed_taichi_import_source() == expected_current
+    assert expected_current == contract.SOURCE.read_bytes()
+
+    # Warm-cache reconstruction still rereads both fixtures and checks lineage.
+    baseline = contract.public_baseline('fibernet/sim/accelerated.py')
+    method_fixture = (contract.ROOT / 'tests/fixtures/result_identity_contract_v1'
+                      / 'compute_detailed.py.txt')
+    original_read = Path.read_bytes
+    for fixture, suffix, message, build in (
+        (baseline, b'\\nclass SimResult:\\n    pass\\n',
+         'expected one SimResult class', contract.reviewed_result_identity_source),
+        (method_fixture, b'\\n# changed fixture\\n',
+         'reviewed result identity method fixture changed',
+         contract.reviewed_result_identity_source),
+        (baseline, b'\\n# changed fixture\\n',
+         'spring source delta base changed', contract.reviewed_spring_provenance_source),
+    ):
+        assert contract.reviewed_result_identity_source() == expected
+        def changed_read(path):
+            value = original_read(path)
+            return value + suffix if path == fixture else value
+        with patch.object(Path, 'read_bytes', changed_read):
+            try:
+                build()
+            except AssertionError as error:
+                assert str(error) == message
+            else:
+                raise AssertionError('changed fixture was accepted after cache warmup')
+        assert contract.reviewed_result_identity_source() == expected
+    try:
+        contract.require_public_source('fibernet/sim/accelerated.py',
+                                       expected_current + b'\\n# unreviewed\\n')
+    except AssertionError as error:
+        assert str(error) == 'public source bytes changed: fibernet/sim/accelerated.py'
+    else:
+        raise AssertionError('unreviewed source was accepted after cache warmup')
+finally:
+    span.cache_clear()
+''', encoding='utf-8')
+    run_source_check(script, '--cp1252-default')

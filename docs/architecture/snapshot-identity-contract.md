@@ -24,22 +24,36 @@ The adapter does not inspect a `nodes` mapping or call a generic `to_numpy()` to
 guess a different identity contract. Sparse arbitrary endpoint IDs are rejected
 by the existing array validation.
 
-`extract(positions, edges)` remains a dense-row API. `compute_features` and all
-numerical feature algorithms are unchanged. No general graph normalization,
-reordering, duplicate removal or new validation policy is introduced.
+`extract(positions, edges)` remains a dense-row API. The identity adapter does
+not perform general graph normalization, reordering or duplicate removal.
+The separate open-chain straightness correction includes both boundary nodes
+in chord / full path length and excludes closed walks. Individual edges and
+paths at or below 1e-12 in caller units remain excluded; an empty distribution
+has mean 0.0. Pore topology is calculated after translating and normalizing
+coordinates by the larger XY span of active edge endpoints, then pore areas
+are returned in caller units squared and perimeters in caller units. Approximate
+tolerances remain;
+structure and centerline-contact calculations, including the 1e-12 straightness
+cutoff, are not normalized. Finite-width raster contact fields normalize width
+and coordinates together. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md)
+and [finite-width raster units](../FINITE_WIDTH_CONTACT_SCALING.md).
 
 ## Preserved behavior
 
 - Parallel edges are independent structural observations, even with mixed radii
-- Snapshot calculations use straight endpoint segments; graph edge radii and
-  internal points are not added to the analysis. Optional finite-width contacts
-  continue to use the explicit `ContactConfig`
-- Three-dimensional coordinate arrays are projected to XY only after the
-  existing constant-Z planarity check (tolerance 1e-9)
-- Empty graphs and isolated nodes retain existing feature behavior
+- Snapshot calculations use straight endpoint segments. Nonempty edge-owned
+  `internal_points` are rejected rather than discarded. Explicitly discretizing
+  paths into graph nodes and straight edges changes node/edge counts. Graph edge
+  radii are not added to the analysis; optional finite-width contacts continue
+  to use the explicit `ContactConfig`
+- Three-dimensional coordinate arrays are projected to XY only after validating
+  every source coordinate as finite and checking constant Z (tolerance 1e-9)
+- Empty graphs and graphs with no active edges retain existing feature behavior
 - Graph-size budgets are enforced before rectangle filtering
 - Rectangle validation, midpoint selection, output key order, histogram order,
-  exceptions and contact configuration retain their existing contracts
+  and contact configuration retain their existing contracts. The pore pipeline
+  additionally rejects unrepresentable normalized geometry, region area, area
+  scale or denormalized pore measurements with `ValueError`
 - Source graph dictionaries, node coordinates and edge records are not mutated
 
 ## Regression evidence

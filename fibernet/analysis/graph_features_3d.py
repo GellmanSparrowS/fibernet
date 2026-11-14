@@ -44,6 +44,12 @@ class GraphFeatureExtractor3D:
     attributes, or ``StructureGraph`` objects without parallel physical edges.
     ``FiberNetwork`` inputs retain the existing centerline-segment conversion.
     StructureGraph edges use straight endpoint chords in this feature schema.
+    ``max_k_core`` is the maximum unweighted core number. ``kcore_frac`` is
+    that value divided by the unweighted mean degree over all nodes, including
+    isolates (zero when the mean degree is zero). It can exceed one.
+    Cylinder volume and lateral area sum each edge's own radius and chord
+    length; a missing NetworkX radius retains the 0.05 default. These are
+    additive cylinder estimates, not a union solid or exposed surface.
     
     Parameters
     ----------
@@ -285,11 +291,13 @@ class GraphFeatureExtractor3D:
             feat['triangle_count'] = 0.0
             feat['triangle_ratio'] = 0.0
         
-        # K-core
+        # K-core: normalize by unweighted degree across all nodes, including isolates.
+        degrees = [degree for _, degree in G.degree()]
+        mean_degree = float(np.mean(degrees)) if degrees else 0.0
         try:
             kcore = nx.core_number(G)
             feat['max_k_core'] = float(max(kcore.values())) if kcore else 0.0
-            feat['kcore_frac'] = float(feat['max_k_core'] / max(feat['mean_degree'], 1e-12)) if feat['mean_degree'] > 0 else 0.0
+            feat['kcore_frac'] = float(feat['max_k_core'] / max(mean_degree, 1e-12)) if mean_degree > 0 else 0.0
         except Exception:
             feat['max_k_core'] = 0.0
             feat['kcore_frac'] = 0.0
@@ -342,18 +350,19 @@ class GraphFeatureExtractor3D:
         feat['bbox_aspect_1'] = float(dims[0] / max(dims[1], 1e-12)) if len(dims) > 1 else 1.0
         feat['bbox_aspect_2'] = float(dims[1] / max(dims[2], 1e-12)) if len(dims) > 2 else 1.0
         
-        # Volume fraction (approximate edges as cylinders)
-        mean_radius = 0.05  # default
+        # Pair each radius with its own chord length in NetworkX edge order.
+        # Averaging radii first loses both radius variance and its association
+        # with length. Keep the legacy no-edge zero-length placeholder.
         edge_data = list(G.edges(data=True))
-        if edge_data:
-            radii = [d.get('radius', 0.05) for _, _, d in edge_data]
-            mean_radius = float(np.mean(radii))
-        
-        total_vol = float(np.sum(np.pi * mean_radius ** 2 * edge_lengths))
+        radii = np.array([d.get('radius', 0.05) for _, _, d in edge_data], dtype=float) \
+            if edge_data else np.array([0.05])
+
+        # Volume fraction (approximate edges as independent cylinders)
+        total_vol = float(np.sum(np.pi * radii ** 2 * edge_lengths))
         feat['volume_fraction'] = min(total_vol / bb_volume, 1.0)
         
         # Surface area approximation
-        feat['surface_area_approx'] = float(np.sum(2 * np.pi * mean_radius * edge_lengths))
+        feat['surface_area_approx'] = float(np.sum(2 * np.pi * radii * edge_lengths))
         feat['specific_surface'] = feat['surface_area_approx'] / max(total_vol, 1e-12)
         
         # Sphericity
@@ -594,9 +603,12 @@ class GraphFeatureExtractor3D:
         Returns
         -------
         dict
-            Feature dictionary with 60 named features.
+            Feature dictionary with 60 named features. An empty supported graph
+            returns zero for every feature; no connectivity query is performed.
         """
         G = self._to_nx(obj)
+        if G.number_of_nodes() == 0:
+            return {name: 0.0 for name in self.FEATURE_NAMES}
         positions, node_list = self._get_positions(G)
         edge_lengths = self._get_edge_lengths(G, positions, node_list)
         
@@ -607,10 +619,6 @@ class GraphFeatureExtractor3D:
         topo = self._graph_topology(G)
         # Merge (topo fills in some struct keys)
         feat.update(struct)
-        # Add mean_degree for kcore_frac
-        if 'mean_degree' not in feat:
-            degrees = [d for _, d in G.degree()]
-            feat['mean_degree'] = float(np.mean(degrees)) if degrees else 0.0
         feat.update(topo)
         
         # 3D Geometric (12)

@@ -11,6 +11,36 @@ from fibernet.gen import pattern
 TPMS_UNITS = ('gyroid', 'schwarz_p', 'schwarz_d', 'iwp', 'neovius', 'lidinoid')
 
 
+@pytest.mark.parametrize('count', (
+    -1, np.int64(-1), True, False, np.bool_(True), np.bool_(False),
+    0.0, 1.0, -0.5, float('nan'), float('inf'), '1', None,
+))
+def test_public_3d_invalid_node_count_precedes_factory_and_allocation(monkeypatch, count):
+    def forbidden(*args, **kwargs):
+        raise AssertionError('invalid count must fail before delegation or allocation')
+    monkeypatch.setitem(pattern._UNIT_FACTORIES_3D, 'cubic', forbidden)
+    monkeypatch.setattr(pattern, 'StructureGraph', forbidden)
+    monkeypatch.setattr(pattern, 'normalize_grid', forbidden)
+    with pytest.raises(ValueError, match='n_pts_per_side must be a nonnegative integer'):
+        fn.pattern_3d(unit='cubic', grid=(1, 1, 1), n_pts_per_side=count)
+
+
+@pytest.mark.parametrize('count', (0, 1, 2, np.int32(0), np.int32(1), np.int64(0), np.int64(1), np.uint64(1)))
+def test_public_3d_integer_node_counts_preserve_geometry(monkeypatch, count):
+    # Exact explicit displacements avoid RNG and isolate count admission.
+    def forbidden_rng(*args, **kwargs):
+        raise AssertionError('explicit displacements must not create an RNG')
+    monkeypatch.setattr(pattern.np.random, 'default_rng', forbidden_rng)
+    kwargs = dict(unit='cubic', box=(10., 10., 10.), grid=(1, 1, 1),
+                  point_displacements=[(0., 0., 0.)] * (12 * int(count)))
+    expected = fn.pattern_3d(n_pts_per_side=int(count), **kwargs)
+    actual = fn.pattern_3d(n_pts_per_side=count, **kwargs)
+    assert _snapshot(actual) == _snapshot(expected)
+    assert (actual.num_nodes, actual.num_edges) == (8 + 12 * int(count), 12 * (int(count) + 1))
+    assert actual.metadata['pattern']['n_pts_per_side'] == int(count)
+    assert type(actual.metadata['pattern']['n_pts_per_side']) is int
+
+
 def _snapshot(graph):
     return {
         'nodes': [(nid, node.position.tolist(), tuple(node.boundary))

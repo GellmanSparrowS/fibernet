@@ -1,0 +1,12 @@
+{
+  "schema": "reviewed_pr108_source_delta/1",
+  "source": "fibernet/sim/accelerated.py",
+  "base_sha256": "9a5ede0ec36d841b824702db4b605508e18166ca3b008938aa4df78044f003b0",
+  "result_sha256": "00ed5c3cdea3315e171b0e798e7a0ab177ef6e66ee22821e2d287084dc2de6fc",
+  "hunks": [
+    {
+      "before": "                 'mean_stretch', 'std_stretch', 'max_displacement'):\n        if name in data:\n            value = data[name]\n            if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):\n                raise ValueError(name + ' must be a finite real number')\n    for name in ('n_nodes', 'n_edges'):\n        if name in data and (type(data[name]) is not int or data[name] < 0):\n",
+      "after": "                 'mean_stretch', 'std_stretch', 'max_displacement'):\n        if name in data:\n            value = data[name]\n            if isinstance(value, bool) or not isinstance(value, (int, float)):\n                raise ValueError(name + ' must be a finite real number')\n            # JSON integers can exceed NumPy integer dtypes yet remain finite\n            # in binary64. Check that conversion without changing stored values.\n            try:\n                finite = np.isfinite(float(value))\n            except (OverflowError, TypeError, ValueError):\n                finite = False\n            if not finite:\n                raise ValueError(name + ' must be a finite real number')\n    for name in ('n_nodes', 'n_edges'):\n        if name in data and (type(data[name]) is not int or data[name] < 0):\n"
+    }
+  ]
+}

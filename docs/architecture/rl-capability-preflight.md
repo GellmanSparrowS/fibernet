@@ -1,6 +1,23 @@
 # RL composition preflight
 
-`fibernet.rl.train_rl` wraps Stable-Baselines3 (SB3); it does not translate arbitrary environment protocols or action meanings. The root `fibernet.train_rl`/`easy.train_rl` random-rollout route is separate and unchanged.
+`fibernet.train_policy`, `fibernet.easy.train_policy` and `fibernet.rl.train_policy` resolve lazily to the same Stable-Baselines3 (SB3) trainer as `fibernet.rl.train_rl`. Use `train_policy` for an unambiguous policy-training entry. No wrapper changes the trainer's signature or behavior.
+
+```python
+import gymnasium as gym
+from fibernet import train_policy
+
+env = gym.make("CartPole-v1")
+try:
+    model, info = train_policy(env, algorithm="PPO", total_timesteps=10_000)
+finally:
+    env.close()
+```
+
+This example uses a standard control environment, not a fiber-network physical reward. Install the optional Gymnasium and Stable-Baselines3 dependencies for training. Resolving the entry does not import those providers; calling it without SB3 raises the existing actionable `ImportError`, with no random-policy fallback.
+
+The caller owns environment lifecycle. The return is `(model, info)`; `save_path`, if supplied, is an output directory for the final model and optional callback outputs. Algorithm, policy, callbacks, evaluation-environment isolation, and save options retain the existing trainer contract. The trainer does not translate arbitrary environment protocols or action meanings.
+
+The historical root `fibernet.train_rl` and `fibernet.easy.train_rl` keep their original `(env_config=None, n_episodes=100, save_path=None)` random-rollout contract; they do not learn a policy. Their builtin E*/ν* evaluator is currently unsupported, so normal configurations fail before simulation and produce no reward statistics. Additional dependencies do not supply that physical evaluator. `fibernet.rl.train_rl` remains the existing SB3 trainer; no old name is rebound.
 
 Before model/callback construction, learning or automatic output creation, the trainer checks known evaluation aliases, nominal environment classes and **statically available action-space families**:
 

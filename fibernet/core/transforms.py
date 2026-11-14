@@ -44,9 +44,24 @@ def _rotation_matrix_2d(angle_deg: float) -> np.ndarray:
     return np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
 
 
-def _rotation_matrix_3d(angle_deg: float, axis: np.ndarray) -> np.ndarray:
+def _rotation_matrix_3d(angle_deg: float, axis: Sequence[float]) -> np.ndarray:
     """3D rotation matrix (Rodrigues) for angle in degrees around axis."""
-    axis = np.asarray(axis, dtype=np.float64)
+    try:
+        raw_axis = np.asarray(axis)
+        if (raw_axis.shape != (3,) or np.iscomplexobj(raw_axis)
+                or any(np.iscomplexobj(value) for value in raw_axis)):
+            raise ValueError("invalid axis shape or complex components")
+        axis = np.asarray(raw_axis, dtype=np.float64)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("axis must be a finite nonzero 3-vector") from exc
+    if not np.all(np.isfinite(axis)):
+        raise ValueError("axis must be a finite nonzero 3-vector")
+    magnitude = np.max(np.abs(axis))
+    if magnitude == 0.0:
+        raise ValueError("axis must be a finite nonzero 3-vector")
+    # Scale before taking a norm: squaring raw finite components can overflow
+    # or underflow even though their direction is a valid rotation axis.
+    axis = axis / magnitude
     axis = axis / np.linalg.norm(axis)
     theta = np.radians(angle_deg)
     c, s = np.cos(theta), np.sin(theta)
@@ -132,11 +147,18 @@ def rotate(
     center : (cx, cy[, cz]), optional
         Center of rotation. Defaults to origin.
     axis : (ax, ay, az), optional
-        Rotation axis for 3D. Defaults to z-axis (0,0,1).
+        Finite, nonzero rotation axis for 3D. Only its direction matters;
+        it need not be normalized. Defaults to z-axis (0,0,1).
+        Ignored for 2D graphs, which rotate in the xy-plane.
 
     Returns
     -------
     StructureGraph
+
+    Raises
+    ------
+    ValueError
+        If an explicit 3D axis is not a finite, nonzero 3-vector.
     """
     ctr = np.zeros(3)
     if center is not None:
@@ -147,7 +169,7 @@ def rotate(
     if graph.dimension == 2 or axis is None:
         R = _rotation_matrix_2d(angle)
     else:
-        R = _rotation_matrix_3d(angle, np.asarray(axis, dtype=np.float64))
+        R = _rotation_matrix_3d(angle, axis)
 
     def t_node(pos):
         return R @ (pos - ctr) + ctr
@@ -222,7 +244,11 @@ def scale(
     ----------
     graph : StructureGraph
     factor : float or (sx, sy[, sz])
-        Scale factor(s). If float, uniform scaling.
+        Scale factor(s). Python and NumPy real numeric scalars, including
+        zero-dimensional numeric arrays, scale coordinates and radii uniformly.
+        Array-like vectors scale coordinates only, even when all components
+        are equal. A masked real-numeric scalar is rejected instead of using
+        hidden data.
     center : (cx, cy[, cz]), optional
         Center of scaling. Defaults to origin.
 
@@ -230,6 +256,21 @@ def scale(
     -------
     StructureGraph
     """
+    # Normalize previously unrecognized NumPy scalars once for both branches.
+    # Retain existing Python/float64 scalar arithmetic, including promotion
+    # with a stored low-precision NumPy radius.
+    if not isinstance(factor, (int, float)) and ((
+        isinstance(factor, (np.integer, np.floating))
+        and factor.dtype.kind in 'iuf'
+    ) or (
+        isinstance(factor, np.ndarray)
+        and factor.ndim == 0
+        and factor.dtype.kind in 'iuf'
+    )):
+        if np.ma.isMaskedArray(factor) and np.ma.is_masked(factor):
+            raise ValueError("factor must not contain a masked scalar")
+        factor = float(factor)
+
     ctr = np.zeros(3)
     if center is not None:
         ctr = np.asarray(center, dtype=np.float64).ravel()

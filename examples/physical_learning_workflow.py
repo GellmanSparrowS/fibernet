@@ -2,7 +2,22 @@
 
 Run: python -m examples.physical_learning_workflow --output-dir demo_learning
 The built-in fallback is synthetic data for an API check, not physical labels.
-Provide --data data.npz with X (N, 14) and Y (N, 3) for real training.
+Provide --data data.npz with X (N, 14) and Y (N, 3) for training.
+
+The report uses positional target_0/1/2 labels: this example reads only X/Y,
+not a target-metadata format. It does not infer physical semantics from three
+columns. rmse_by_target retains the corresponding Y-column units, if known.
+
+For data explicitly produced by PlanarPhysicalDataset, the three definitions
+are max(F), a fitted early dF/dlambda, and trapezoidal integral(F dlambda),
+where lambda is grip span / initial grip span. All have the force curve's unit;
+absolute SI units are not established here. The last two are not automatically
+displacement stiffness in N/m or energy in J, and neither is material toughness.
+This definition is documentation, not automatic provenance detection.
+
+Compatibility: the summary targets key and column order are retained; its old
+peak/stiffness/toughness labels were unjustified for arbitrary input. Consumers
+should use column positions, not those former labels. No array or metric changes.
 """
 import argparse
 import json
@@ -12,6 +27,20 @@ from pathlib import Path
 import numpy as np
 
 from fibernet.ml import PhysicalRegressor
+
+
+def _target_report(data_path):
+    """Describe output columns without inferring a physical target schema."""
+    return {
+        "targets": ["target_0", "target_1", "target_2"],
+        "target_scope": (
+            "Input NPZ X/Y columns; target definitions and units unspecified; "
+            "no target metadata consumed"
+            if data_path is not None else
+            "Synthetic API demonstration targets; arbitrary numerical units; "
+            "not physical labels"
+        ),
+    }
 
 
 class PhysicalLearningWorkflow:
@@ -61,7 +90,7 @@ class PhysicalLearningWorkflow:
                    "model": self.model, "seed": self.seed,
                    "samples": len(X), "validation_rows": len(ids),
                    "rmse_by_target": rmse.tolist(),
-                   "targets": ["peak", "stiffness", "toughness"],
+                   **_target_report(self.data_path),
                    "best_step": history["best_epoch"]}
         target = self.output_dir / "summary.json"
         temporary = target.with_suffix(".tmp.json")

@@ -6,6 +6,7 @@ FiberNet Easy API — 一行代码完成常见任务
 - simulate(graph, mode) → FEM 模拟
 - batch_simulate(configs) → 批量模拟输出 CSV
 - train_model(csv_path) → ML 训练
+- train_policy(env) → Gymnasium/SB3 策略训练，环境由调用方提供
 - train_rl(env_config) → 随机策略 rollout 基线，不进行学习；当前 E*/ν* 环境不可用
 
 Examples
@@ -20,6 +21,7 @@ Examples
 from __future__ import annotations
 
 import json
+from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -43,6 +45,7 @@ from fibernet.sim._taichi_geometry import (
 # Keep provider-independent utilities usable without probing a native engine.
 # Explicit alias access still returns the original implementation object.
 _LAZY_EXPORTS = {
+    "train_policy": "fibernet.rl.algorithms",
     "TaichiEngine": "fibernet.sim.accelerated",
     "SimResult": "fibernet.sim.accelerated",
     "render_graph": "fibernet.viz.render",
@@ -270,6 +273,8 @@ def simulate(
             dim = kwargs.setdefault("dim", graph.dimension)
             if isinstance(dim, (bool, np.bool_)) or not isinstance(dim, (int, np.integer)) or dim not in (2, 3):
                 raise ValueError("The FEM dimension must be 2 or 3")
+            if kwargs.get("material_mode") == "graph" and ("E" in kwargs or "nu" in kwargs):
+                raise ValueError("graph material mode cannot be combined with explicit E or nu")
             E = kwargs.pop("E", 1e9)
             nu = kwargs.pop("nu", 0.3)
             signature(BeamFrameFEM.stretch_test).bind(None, graph, target_stretch=strain, **kwargs)
@@ -346,6 +351,22 @@ def _write_batch_report(destination, report):
             temporary.unlink(missing_ok=True)
 
 
+def _batch_config_inputs(configs):
+    """Snapshot sized inputs and check their access contract before case work."""
+    try:
+        len(configs)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    try:
+        detached = list(configs)
+    except TypeError as exc:
+        raise ValueError("configs must be a sized iterable of dictionaries") from exc
+    for index, config in enumerate(detached):
+        if not callable(getattr(config, "get", None)):
+            raise ValueError(f"configs[{index}] must provide a callable .get method")
+    return detached
+
+
 def batch_simulate(
     configs: List[Dict[str, Any]],
     output: str = "results.csv",
@@ -360,6 +381,10 @@ def batch_simulate(
     ----------
     configs : list of dict
         每个 dict 包含: unit, box, grid, seed 等参数。
+        Sized iterables are snapshotted once before case work; every entry must
+        provide a callable .get method. Unsized iterators are rejected. Mapping
+        subclasses and compatible dictionary-like entries remain supported
+        without a report; report_path retains its stricter JSON-safe contract.
     output : str
         CSV 输出路径。
     mode : str
@@ -402,6 +427,7 @@ def batch_simulate(
     if report_path is not None:
         report_destination, report_configs = _batch_report_inputs(
             configs, output, report_path, mode, strain)
+    configs = _batch_config_inputs(configs)
     cases = []
     rows = []
     for i, cfg in enumerate(configs):
@@ -518,6 +544,9 @@ def train_model(
         ordinary save failures preserve previous bytes or destination absence.
         Existing targets must be regular files without special permission bits.
         Parent directories must exist. No crash/concurrent-writer guarantee.
+        For CSV training, the destination must not identify the input CSV entry.
+        Ambiguous same-inode paths require readable parent-directory entries and
+        exact entry spellings; path and link changes during a call are unsupported.
     split : {"row", "group"}, keyword-only
         Required explicitly for native data; omitted for CSV compatibility.
     groups : list or tuple of str, keyword-only
@@ -552,6 +581,9 @@ def train_model(
     import os
     if not isinstance(csv_path, (str, bytes, os.PathLike)):
         raise ValueError("csv_path must be a CSV path or an explicit FiberNetDataset")
+    if save_path and _model_save_overwrites_csv(csv_path, save_path):
+        raise ValueError("save_path must not overwrite the input CSV; "
+                         "choose a different model destination")
 
     try:
         import pandas as pd
@@ -884,6 +916,35 @@ def _xgb_point_predictions(raw, n_rows):
     return values
 
 
+def _model_save_overwrites_csv(csv_path, save_path):
+    """Distinguish lookup aliases from separately replaceable hardlink entries."""
+    import os
+
+    source = Path(os.fsdecode(csv_path)).resolve()
+    destination = Path(os.fsdecode(save_path)).resolve()
+    # Compare exact spellings: WindowsPath equality folds case even on a
+    # case-sensitive directory that can contain distinct case-only hardlinks.
+    if str(source) == str(destination):
+        return True
+    try:
+        same_file = source.samefile(destination)
+    except FileNotFoundError:
+        return False
+    if not same_file or not source.parent.samefile(destination.parent):
+        return False
+    names = {source.name, destination.name}
+    if len(names) == 1:
+        return True  # The same entry through differently spelled parent paths.
+    # Do not guess filesystem case/Unicode rules. Only two actual, exact entry
+    # names establish separate hardlinks. Ambiguity or scan errors fail closed.
+    with os.scandir(source.parent) as entries:
+        for entry in entries:
+            names.discard(entry.name)
+            if not names:
+                return False
+    return True
+
+
 def _save_model_artifact(path, artifact):
     """Publish one fully closed pickle; preserve old bytes on ordinary failure.
 
@@ -1057,7 +1118,8 @@ def train_rl(
     SimResult 的物理合同中，因此所有配置都会在求解前抛出 NotImplementedError，
     不生成奖励统计。安装可选依赖或修改目标值不能启用这条路线。
 
-    实际策略训练请使用 ``from fibernet.rl import train_rl``，并传入适用的、
+    实际策略训练请使用 ``from fibernet import train_policy``
+    （与 ``from fibernet.rl import train_rl`` 为同一训练器），并传入适用的、
     由调用方管理的 Gymnasium/SB3 环境。两者的参数、返回值和保存语义不同；
     策略训练器也不会自动提供物理评价器。
 
@@ -1194,7 +1256,7 @@ def train_rl(
 _BATCH_BINDING_SCHEMA = "fibernet-batch-run-1"
 _BATCH_SOURCE_RECIPE = "fibernet-batch-source-1"
 _BATCH_SOURCE_FILES = (
-    "fibernet/easy.py", "fibernet/sim/accelerated.py",
+    "fibernet/easy.py", "fibernet/_json.py", "fibernet/sim/accelerated.py",
     "fibernet/sim/_taichi_geometry.py",
     "fibernet/core/structure_graph.py", "fibernet/core/material.py",
 )
@@ -1332,7 +1394,7 @@ def _batch_graph_from_bytes(raw):
     """Match load_json's default text decoding, parsing the captured bytes only."""
     import io
     with io.TextIOWrapper(io.BytesIO(raw)) as stream:
-        return StructureGraph.from_dict(json.load(stream))
+        return StructureGraph.from_dict(json.load(stream, object_pairs_hook=_unique_json_object_pairs))
 
 
 def batch_simulate_from_json(
@@ -1412,6 +1474,10 @@ def batch_simulate_from_json(
       Existing CSV success values must be "True" or "False".
     - Each CSV checkpoint is replaced atomically after serialization succeeds.
       Malformed existing CSV files raise ValueError and are left unchanged.
+    - Result and CSV output paths must not alias any input JSON path, including
+      through symbolic or hard links. This preflight rejects collisions before
+      simulation but is not atomic with later writes. Concurrent changes to
+      input or output paths, links, or directories are unsupported.
     - Inputs must remain unchanged during a call. Preflight streams file hashes;
       pending files are captured one at a time, rechecked and parsed from those
       exact bytes. Concurrent input modification is unsupported.
@@ -1489,6 +1555,31 @@ def batch_simulate_from_json(
             pending.append(json_file)
     if not pending:
         return str(csv_file)
+
+    # A result name such as a_result.json can itself be another source file.
+    # Check the complete input set before any simulation or output write, not
+    # just the current file: atomic result replacement would still destroy that
+    # source pathname. Resolve symlinks and detect existing hard-link aliases.
+    input_paths = {path.resolve(): path for path in json_files}
+    input_ids = {}
+    for path in json_files:
+        st = path.stat()
+        if st.st_ino:
+            input_ids[(st.st_dev, st.st_ino)] = path
+    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in pending]
+    for destination in outputs:
+        source = input_paths.get(destination.resolve())
+        if source is None:
+            try:
+                st = destination.stat()
+            except FileNotFoundError:
+                pass
+            else:
+                if st.st_ino:
+                    source = input_ids.get((st.st_dev, st.st_ino))
+        if source is not None:
+            raise ValueError(f"Batch output {destination} aliases input {source}; "
+                             "choose a different output directory")
 
     engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
@@ -1572,7 +1663,8 @@ def __getattr__(name):
     # Preserve historical aliases; propagate the owning implementation's error.
     if name in _LAZY_EXPORTS:
         from importlib import import_module
-        value = getattr(import_module(_LAZY_EXPORTS[name]), name)
+        value = getattr(import_module(_LAZY_EXPORTS[name]),
+                        "train_rl" if name == "train_policy" else name)
         globals()[name] = value
         return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -1589,4 +1681,4 @@ __all__ = [name for name in globals() if not name.startswith("_")]
 _index = __all__.index("pattern_3d") + 1
 __all__[_index:_index] = ["TaichiEngine", "SimResult"]
 del _index
-__all__ += ["render_graph", "render_deformation"]
+__all__ += ["render_graph", "render_deformation", "train_policy"]

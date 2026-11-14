@@ -25,7 +25,8 @@ def _edges_to_network_safe(nodes, edges, radius=0.1, material=None, dimension=2)
         length = np.linalg.norm(p2 - p1)
         if length < 1e-10:
             continue
-        fiber = Fiber(centerline=np.array([p1, p2]), radius=radius, material=material)
+        fiber = Fiber(centerline=np.array([p1, p2]), radius=radius,
+                      material=Material() if material is None else material)
         fibers.append(fiber)
         valid_edges.append((u, v))
 
@@ -144,9 +145,18 @@ def lattice_3d_fixed(
     elif topology in ('gyroid', 'plate'):
         from fibernet.gen.metamaterials import gyroid_lattice_3d, plate_lattice_3d
         if topology == 'gyroid':
-            return gyroid_lattice_3d(cell_size=cell_size, **kwargs)
+            return gyroid_lattice_3d(
+                cell_size=cell_size, grid_size=grid_size,
+                radius=radius, material=material, **kwargs,
+            )
         else:
-            return plate_lattice_3d(cell_size=cell_size, **kwargs)
+            if 'spacing' in kwargs:
+                raise TypeError("lattice_3d(topology='plate') uses cell_size, "
+                                "not spacing")
+            return plate_lattice_3d(
+                spacing=cell_size, grid_size=grid_size,
+                radius=radius, material=material, **kwargs,
+            )
     else:
         raise ValueError(f"Unknown topology: {topology}")
 

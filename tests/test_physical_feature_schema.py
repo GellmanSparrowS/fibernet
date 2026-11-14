@@ -125,18 +125,23 @@ def test_signature_preserves_old_positional_controls_and_makes_declaration_keywo
     params = list(inspect.signature(refit.Regressor.train).parameters.values())
     assert [p.name for p in params] == [
         'self', 'X', 'Y', 'lr', 'epochs', 'batch', 'val_frac', 'patience',
-        'min_delta', 'epoch_cb', 'stop_cb', 'feature_schema']
-    assert all(p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD for p in params[:-1])
-    assert params[-1].kind == inspect.Parameter.KEYWORD_ONLY
-    assert params[-1].default is None
+        'min_delta', 'epoch_cb', 'stop_cb', 'feature_schema', 'validation_indices']
+    assert all(p.kind == inspect.Parameter.POSITIONAL_OR_KEYWORD for p in params[:-2])
+    assert all(p.kind == inspect.Parameter.KEYWORD_ONLY for p in params[-2:])
+    assert all(p.default is None for p in params[-2:])
 
 
 def _definition(relative, name, namespace, method=None):
     """Load only one named source definition, with explicitly supplied inert names."""
-    tree = ast.parse((ROOT / relative).read_text(encoding='utf-8'))
+    source = (ROOT / relative).read_text(encoding='utf-8')
+    tree = ast.parse(source)
     node = next(n for n in tree.body if isinstance(n, (ast.ClassDef, ast.FunctionDef)) and n.name == name)
     if method is not None:
         node = next(n for n in node.body if isinstance(n, ast.FunctionDef) and n.name == method)
+    if (relative, name) == ('examples/physical_learning_workflow.py', '_target_report'):
+        # Execute the reviewed literal-only source helper, never a report stub.
+        assert hashlib.sha256(ast.get_source_segment(source, node).encode()).hexdigest() == (
+            'e78d335f24689cf6f7573adfeb6f06feba553daf63aa436984385f03ea4b0437'), 'review changed workflow helper before extraction'
     module = ast.Module(body=[node], type_ignores=[])
     exec(compile(module, relative, 'exec'), namespace)
     return namespace[node.name]
@@ -240,7 +245,9 @@ def test_workflow_summary_uses_history_not_width(tmp_path, source, returned_sche
 
     Workflow = _definition('examples/physical_learning_workflow.py', 'PhysicalLearningWorkflow',
                            dict(Path=Path, np=np, os=os, json=json, PhysicalRegressor=Model,
-                                FEATURE_SCHEMA=refit._MODULE.FEATURE_SCHEMA))
+                                FEATURE_SCHEMA=refit._MODULE.FEATURE_SCHEMA,
+                                _target_report=_definition(
+                                    'examples/physical_learning_workflow.py', '_target_report', {})))
     data = None
     if source == 'npz':
         data = tmp_path / 'unknown.npz'

@@ -1,6 +1,5 @@
 """Linux-only stdio server. Bounded graph and DC electrical operations; no model-supplied paths."""
 import argparse
-import asyncio
 import base64
 import contextlib
 from dataclasses import dataclass
@@ -16,7 +15,10 @@ import sys
 import time
 import uuid
 
-import anyio
+# Preserve the imported-module API, while rejected CLI startup needs no async runtime.
+if __name__ != '__main__':
+    import asyncio
+    import anyio
 from .safety import (ContractError, MAX_BYTES, canonical, graph_preflight,
                      open_directory, read_at, read_file, sha, strict_json, write_at, _verify_core_result)
 
@@ -339,10 +341,15 @@ class BoundedOutput:
         sys.stdout.write(s)
     async def flush(self): sys.stdout.flush()
 
-async def serve(args):
+def _verify_startup_core():
     if sys.platform!='linux' or not hasattr(os,'O_NOFOLLOW'): raise ContractError('Linux confinement required')
     if importlib.metadata.version('mcp')!='1.29.0': raise ContractError('untested SDK version')
-    core_verification=_verify_core_result()
+    return _verify_core_result()
+
+async def serve(args):
+    await _serve_verified(args, _verify_startup_core())
+
+async def _serve_verified(args, core_verification):
     # Admit operator-owned bytes before optional protocol setup.
     store=ManagedStore(args.manifest,args.output_root,core_verification)
     try:
@@ -550,7 +557,13 @@ def main():
     args=parser.parse_args()
     if not .001<=args.timeout<=10: parser.error('timeout must be .001..10 seconds')
     if args.audit and not re.fullmatch('[A-Za-z0-9_-]{1,64}\\.json',args.audit): parser.error('invalid audit basename')
-    try: anyio.run(serve,args)
+    try: core_verification=_verify_startup_core()
+    except Exception:
+        sys.stderr.write('FiberNet MCP startup or transport rejected\n');sys.exit(2)
+    # Import failures remain outside the startup/transport exception handler.
+    global anyio
+    import anyio
+    try: anyio.run(_serve_verified,args,core_verification)
     except Exception:
         sys.stderr.write('FiberNet MCP startup or transport rejected\n');sys.exit(2)
 if __name__=='__main__':main()

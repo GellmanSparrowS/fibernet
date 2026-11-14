@@ -62,17 +62,42 @@ with tempfile.TemporaryDirectory(prefix='binding-', dir=ROOT / 'evidence') as te
     assert not list(output.iterdir())
     cases = [(relative, None) for relative in ('rl/algorithms.py', 'sim/electrothermal.py', 'sim/_thermal_step.py', 'sim/_taichi_viscoelastic.py', 'integrations/_lammps_cg.py', 'integrations/_harmonic_profile.py', 'integrations/_cg_network_profile.py', 'sim/_lammps_result.py', 'core/viscoelastic.py', 'sim/_viscoelastic_fem.py', 'ml/beam_frame_fem.py', 'sim/joule_heating.py', 'sim/_roundoff.py', 'sim/linear_transport.py', 'sim/transient_thermal.py',
                      'integrations/lammps_backend.py', 'integrations/_lammps_worker.py',
+                     'integrations/lammps_saved.py',
                      '__init__.py', 'gen/__init__.py', 'gen/manufacturing_bridge.py',
                      'gen/manufacturing_trails.py', 'api.py', 'easy.py', 'viz/__init__.py',
                      'sim/accelerated.py', 'sim/_energy_accounting.py', 'ml/graph_data.py', 'ml/dataset.py', 'ml/gnn.py', 'ml/__init__.py')]
+    # Bind both ordinary generator owners and their shared input admission helper.
+    cases.extend((relative, None) for relative in (
+        'gen/ordered.py', 'gen/disordered.py', 'gen/_input_contract.py'))
+    # Bind shared validation, tiling owners and their grid admission helper.
+    cases.extend((relative, None) for relative in (
+        'utils/validation.py', 'core/tiling.py', 'gen/pattern.py',
+        'core/_grid_contract.py'))
+    # Bind snapshot finite-coordinate admission and lazy image-feature imports.
+    cases.extend((relative, None) for relative in (
+        'analysis/snapshot_features.py', 'analysis/__init__.py',
+        'analysis/graph_features.py'))
+    # Bind configuration documentation, optional exports and empty 3D features.
+    cases.extend((relative, None) for relative in (
+        'utils/config.py', 'utils/io.py', 'analysis/graph_features_3d.py'))
+    # Bind finite acquisition history; beam-frame ownership is already covered.
+    cases.append(('ml/physical_learning.py', None))
+    # Bind the public policy-training facade as well as root/easy aliases.
+    cases.append(('rl/__init__.py', None))
     cases.append(('ml/edge_gine_io.py', None))
     cases.append(('ml/graph_training_contract.py', None))
+    cases.append(('sim/_transport_graph.py', None))
     cases.append(('sim/saved_temperature.py', None))
+    cases.append(('sim/l3_result.py', None))
     cases.append(('sim/thermoelastic.py', None))
     cases.append(('sim/_thermoelastic.py', None))
     cases.append(('sim/_taichi_geometry.py', None))
     cases.append(('sim/__init__.py', None))
     cases.append(('core/fiber_network_profile.py', None))
+    cases.append(('sim/isolated_taichi.py', None))
+    cases.append(('sim/_isolated_taichi_worker.py', None))
+    cases.append(('sim/_isolated_taichi_broker.py', None))
+    cases.append(('sim/_isolated_taichi_io.py', None))
     cases.append(('ml/graph_data.py', b"'youngs_modulus': 'Pa'"))
     cases.append(('ml/edge_gine.py', b"_MATERIAL_VERSION = 'fibernet.edge_gine.material_view.v1'"))
     cases.append(('io/mesh_export.py', b'vertex_offset = 0  # Convert to one-based OBJ indices only when writing.'))

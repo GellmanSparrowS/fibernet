@@ -113,7 +113,7 @@ def test_utilities_and_graph_io_do_not_probe_optional_dependencies(tmp_path):
             'Optional', 'Union', 'np', 'StructureGraph', 'pattern_2d',
             'pattern_3d', 'TaichiEngine', 'SimResult', 'show', 'simulate',
             'batch_simulate', 'train_model', 'predict_named', 'train_rl',
-            'batch_simulate_from_json', 'render_graph', 'render_deformation',
+            'batch_simulate_from_json', 'render_graph', 'render_deformation', 'train_policy',
         ]
         assert easy.__all__ == expected_easy
         assert {'TaichiEngine', 'SimResult', 'render_graph', 'render_deformation'} <= set(dir(easy))
@@ -148,6 +148,7 @@ def test_utilities_and_graph_io_do_not_probe_optional_dependencies(tmp_path):
         rl = importlib.import_module('fibernet.rl')
         assert callable(utils.plot_reward_curve)
         assert rl.__all__ == [
+            'train_policy',
             'plot_reward_curve', 'plot_convergence', 'plot_action_distribution',
             'evaluate_agent', 'save_agent', 'load_agent', 'run_bayesian_optimization',
             'ParametricStructureEnv', 'create_rl_environment',
