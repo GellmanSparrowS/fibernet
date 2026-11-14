@@ -5034,5 +5034,86 @@
   "status": "active",
   "symbols": [],
   "sha256": "61f88f090a1e99eed7b860abb6509b72b47e63e2d445086f4958c513948cbf43"
+ },
+ "fibernet/core/single_junction_import.py": {
+  "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
+  "status": "active",
+  "symbols": [
+   "_real_coordinates",
+   "convert_single_welded_crosslink",
+   "_bounded_vector",
+   "convert_exact_welded_crosslinks",
+   "contains_mask",
+   "check_integers",
+   "find"
+  ],
+  "sha256": "7119a58e30281ec3dc03671200beec3b3c7539a0a0a0cfd824ebd13faba62b68"
+ },
+ "tests/test_single_junction_import.py": {
+  "purpose": "Original exact single-weld compatibility and rejection contracts.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "SingleJunction",
+   "test_exact_crossing_has_one_shared_node_and_mapping",
+   "test_three_dimensional_reversed_indices_and_material_mapping",
+   "test_masked_complex_and_nonintegral_dimension_are_rejected",
+   "test_rejects_ambiguous_or_lossy_cases",
+   "nearby",
+   "curve",
+   "near_other_fiber",
+   "material",
+   "material_subclass",
+   "connection",
+   "finite",
+   "endpoint",
+   "extra",
+   "periodic",
+   "refs",
+   "CustomMaterial"
+  ],
+  "sha256": "0c646835b9608c7f8f7fe87cbc234b76da6aa7275d494a10ff673e0ebc307aba"
+ },
+ "tests/test_multi_junction_import.py": {
+  "purpose": "Explicit multi-weld mapping, ownership, rejection and resource-bound contracts.",
+  "status": "active",
+  "symbols": [
+   "straight",
+   "fixture",
+   "MultiJunction",
+   "test_two_junctions_one_fiber_and_detached_materials",
+   "test_transitive_weld_and_disjoint_same_coordinate",
+   "test_rejects_duplicate_invalid_or_nonexact_links",
+   "test_resource_bounds_and_endpoint_at_unrelated_weld",
+   "test_same_fiber_same_position_with_distinct_parameters_rejected",
+   "duplicate",
+   "reversed_duplicate",
+   "nearby",
+   "endpoint",
+   "bad_ref",
+   "self_link",
+   "pinned",
+   "finite",
+   "curved",
+   "noncircular",
+   "periodic",
+   "no_links",
+   "coincident_end"
+  ],
+  "sha256": "e5c4609311e52584e186eb443db1abae86f543c61bbfbae63b0a074c253c3563"
+ },
+ "tests/test_multi_junction_saved_workflow.py": {
+  "purpose": "Real saved legacy-to-native multi-weld workflow, joint source mapping and detached ownership without solving.",
+  "status": "active",
+  "symbols": [
+   "saved_design",
+   "components",
+   "MultiJunctionSavedWorkflow",
+   "assert_joint_mapping",
+   "test_saved_legacy_to_native_keeps_joint_mapping",
+   "test_nested_ownership_is_independent_in_both_directions",
+   "reject_constant"
+  ],
+  "sha256": "2ee588c3bb5f483604efb4a11e9a6bba8c1ea5241e8c0bbd4e74b7f1aba0df44"
  }
 }

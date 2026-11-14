@@ -31,9 +31,9 @@ not two different solvers. CPU/GPU is a Taichi device choice, not a physical mod
   contracts; they are not interchangeable implementations of a universal solver.
 
 `StructureGraph` is the authoritative structure and stable identity source.
-`FiberNetwork` and its generators are legacy/interoperability APIs. Conversion
+`FiberNetwork` and its generators are legacy/interoperability APIs. The default conversion
 from a legacy network is approximate, not lossless preservation of curved fibers
-or every crosslink. NetworkX, learning features and manufacturing routes/solids
+or every crosslink. Separate opt-in importers admit narrow exact weld contracts. NetworkX, learning features and manufacturing routes/solids
 are derived representations, not alternative authoritative graphs.
 
 `graph.to_fiber_network()` returns a legacy endpoint-chord projection with
@@ -55,6 +55,18 @@ Legacy `core.transform.trim_to_box` preserves surviving crosslinks and remaps
 fiber indices and sampled attachment parameters. Its geometry remains a
 sample-selection operation, not exact clipping; see the
 [trimming contract and migration guidance](architecture/legacy-trim-crosslinks.md).
+
+### Import explicitly recorded straight-fiber welds
+
+`fibernet.core.single_junction_import.convert_exact_welded_crosslinks` is an
+opt-in legacy-to-native geometry/topology bridge, not a root-level export or a
+replacement for `StructureGraph.from_fiber_network`. It admits bounded exact
+interior welded records on index-uniform straight circular fibers. Explicit
+connected weld records share a node; unrecorded crossings are not inferred.
+Mapping uses fiber list indices, with stored `fiber_id` retained only as a source
+label. Native node/edge IDs are newly allocated. This is not a unit, boundary
+condition or mechanical-equivalence conversion; see the
+[accepted inputs, ownership and serialization contract](MULTI_WELDED_JUNCTION_IMPORT.md).
 
 ### Edit geometry before preparing solver controls
 

@@ -1,3 +1,12 @@
+## [Unreleased] - Explicit multi-weld import
+
+- Add an opt-in exact legacy-to-native conversion for bounded straight fibers
+  with multiple explicitly recorded interior welds. Preserve source-list mapping,
+  per-fiber split order and detached material/metadata ownership. Do not infer
+  crossings, snap near points, preserve source IDs as native IDs, or claim
+  mechanical equivalence. Existing approximate and single-weld routes remain.
+  See the [multi-weld contract](docs/MULTI_WELDED_JUNCTION_IMPORT.md).
+
 ## [Unreleased] - Detailed-result identity admission
 
 - Validate node and selected-edge record IDs before ordinary detailed metrics
