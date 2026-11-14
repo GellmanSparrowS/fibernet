@@ -1080,9 +1080,30 @@ def reviewed_easy_collision_source(reverse=None):
         '760844c40c4f3bd3f3547da98aca228a85df87e9f67ff100ea962ea95e520b6c', reviewed_easy_batch_input_source(), reverse=reverse)
 
 
+def reviewed_easy_training_csv_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_training_csv_delta.json',
+        '6361599c47d7021b2681397379da370d95e92d8bd130675b70def650b74b6a4a', reviewed_easy_collision_source(), reverse=reverse)
+
+
+def reviewed_easy_training_csv_entry_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_training_csv_entry_delta.json',
+        '5ea3fff7fbf252a51d1d225c5f0d37d7de116437eae66a10ca23bfa850c774dc', reviewed_easy_training_csv_source(), reverse=reverse)
+
+
+def reviewed_easy_fem_material_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_fem_material_delta.json',
+        '864ab51fb8391fcb244cfd9ecce1b208aad5be2b91634a3e94a11921c137381b', reviewed_easy_training_csv_entry_source(), reverse=reverse)
+
+
 def restore_reviewed_release_easy_source(source):
+    source = reviewed_easy_fem_material_source(reverse=source)
     return reviewed_easy_json_source(reverse=reviewed_easy_batch_input_source(
-        reverse=reviewed_easy_collision_source(reverse=source)))
+        reverse=reviewed_easy_collision_source(
+            reverse=reviewed_easy_training_csv_source(
+                reverse=reviewed_easy_training_csv_entry_source(reverse=source)))))
 
 
 def require_public_source(relative, raw):
@@ -1096,7 +1117,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source(), reviewed_easy_training_csv_source(), reviewed_easy_training_csv_entry_source(), reviewed_easy_fem_material_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source()), 'public source bytes changed: '+relative
@@ -1190,6 +1211,9 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
         ('fibernet/api.py', reviewed_api_json_source, reviewed_legacy_analysis_source, 'api_json_delta.json'),
         ('fibernet/easy.py', reviewed_easy_batch_input_source, reviewed_easy_json_source, 'easy_batch_input_delta.json'),
         ('fibernet/easy.py', reviewed_easy_collision_source, reviewed_easy_batch_input_source, 'easy_output_collision_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_training_csv_source, reviewed_easy_collision_source, 'easy_training_csv_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_training_csv_entry_source, reviewed_easy_training_csv_source, 'easy_training_csv_entry_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_fem_material_source, reviewed_easy_training_csv_entry_source, 'easy_fem_material_delta.json'),
     )
 
     def test_exact_accepted_layers_and_historical_versions(self):
@@ -1202,7 +1226,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 require_public_source(relative, prior)
                 with self.assertRaises(AssertionError):
                     build(reverse=prior)
-        self.assertEqual(reviewed_easy_collision_source(), (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_easy_fem_material_source(), (ROOT/'fibernet/easy.py').read_bytes())
         self.assertEqual(reviewed_api_json_source(), (ROOT/'fibernet/api.py').read_bytes())
         self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
                          reviewed_easy_train_policy_source())
@@ -1218,6 +1242,17 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
             if filename == 'easy_batch_input_delta.json':
                 mutations.append(raw.replace(b'configs = _batch_config_inputs(configs)',
                                              b'configs = list(configs)', 1))
+            if filename == 'easy_fem_material_delta.json':
+                for before, after in (
+                    (b'kwargs.get("material_mode") == "graph"', b'False'),
+                    (b'("E" in kwargs or "nu" in kwargs)', b'("E" in kwargs and "nu" in kwargs)'),
+                    (b'("E" in kwargs or "nu" in kwargs)', b'("E" in kwargs)'),
+                    (b'("E" in kwargs or "nu" in kwargs)', b'("nu" in kwargs)'),
+                    (b'raise ValueError("graph material mode cannot be combined with explicit E or nu")', b'pass'),
+                    (b'E = kwargs.pop("E", 1e9)', b'E = kwargs.pop("E", 2e9)'),
+                ):
+                    self.assertEqual(raw.count(before), 1)
+                    mutations.append(raw.replace(before, after, 1))
             for changed in mutations:
                 with self.subTest(layer=filename, tail=changed[-40:]):
                     self.assertNotEqual(raw, changed)
@@ -1257,6 +1292,9 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
             'api_json_delta.json': ({'load'}, set()),
             'easy_batch_input_delta.json': ({'batch_simulate'}, {'_batch_config_inputs'}),
             'easy_output_collision_delta.json': ({'batch_simulate_from_json'}, set()),
+            'easy_training_csv_delta.json': ({'train_model'}, set()),
+            'easy_training_csv_entry_delta.json': ({'train_model'}, {'_model_save_overwrites_csv'}),
+            'easy_fem_material_delta.json': ({'simulate'}, set()),
         }
         for relative, build, previous, filename in self.CASES:
             old, new = ast.parse(previous()), ast.parse(build())

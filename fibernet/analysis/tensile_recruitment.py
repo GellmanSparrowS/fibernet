@@ -16,7 +16,7 @@ class PercolationResult:
     edge_in_spanning: np.ndarray # (F, E) bool
     edge_depth_norm: np.ndarray  # (F, E) float32, 0 at grips -> 1 mid-sample
     perc_frame: int              # first frame with spanning cluster, -1 if none
-    threshold_curve: np.ndarray  # (F,) strain threshold used per frame
+    threshold_curve: np.ndarray  # (F,) float64: strain threshold used per frame
 
     def active_mask(self, f: int) -> np.ndarray:
         return self.active_edges[f]
@@ -178,6 +178,10 @@ def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
     Indices must fit nonnegative int64 and lie below n_nodes.
     The threshold is ``max(alpha * frame_max, min_active)`` or a positive
     strain quantile; recruitment uses a strict greater-than comparison.
+    With Python float or NumPy float64 controls, ``threshold_curve`` retains
+    the float64 onset thresholds used by the decisions, including hysteresis
+    for previously recruited edges. Extended-precision scalar controls are
+    not an exact-replay contract.
     """
     strain = np.asarray(edge_strain, dtype=float)
     edges = _node_indices(edges, 'edges')
@@ -208,7 +212,10 @@ def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
     active_edges = np.zeros((F, E), dtype=bool)
     edge_in_spanning = np.zeros((F, E), dtype=bool)
     edge_depth_norm = np.zeros((F, E), dtype=np.float32)
-    thr_curve = np.zeros(F, dtype=np.float32)
+    # Store the same precision used by the decisions below. Narrowing to
+    # float32 can move a threshold across an edge strain (or to zero/inf), so
+    # the reported history would no longer reproduce its recruitment masks.
+    thr_curve = np.zeros(F, dtype=np.float64)
     perc_frame = -1
     prev = np.zeros(E, dtype=bool)
 

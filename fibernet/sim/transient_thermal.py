@@ -17,6 +17,7 @@ from scipy.sparse import coo_matrix, diags
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
+from ._transport_graph import transport_graph_snapshot
 from ._roundoff import upper_sum, upper_product, evaluation_ulp
 from ._roundoff import _require_gradual_for_subnormal, _SubnormalRoundoffError
 
@@ -171,17 +172,8 @@ def _solve_transient_thermal(graph, capacity_J_per_K, conductance_W_per_K,
     """
     if length_unit not in ('m','cm','mm','um','nm'):
         raise ValueError('declare geometry length_unit; no conversion inferred')
-    ids = sorted(_id(k) for k in graph.nodes)
-    eids = [_id(k) for k in graph.edges]
-    if not ids:
-        raise ValueError('at least one node required')
+    ids, eids, xyz, ends = transport_graph_snapshot(graph)
     rows = {k:i for i,k in enumerate(ids)}
-    xyz = np.array([graph.nodes[k].position for k in ids], dtype=float)
-    if xyz.shape != (len(ids),3) or not np.isfinite(xyz).all():
-        raise ValueError('finite node coordinates required')
-    ends = [(_id(graph.edges[k].node_i),_id(graph.edges[k].node_j)) for k in eids]
-    if any(a not in rows or b not in rows or a==b for a,b in ends):
-        raise ValueError('edges need distinct existing endpoints')
     conn = np.array([(rows[a],rows[b]) for a,b in ends], dtype=int).reshape(-1,2)
     C = _mapping(capacity_J_per_K,ids,'capacity',True)
     g = _mapping(conductance_W_per_K,eids,'conductance')

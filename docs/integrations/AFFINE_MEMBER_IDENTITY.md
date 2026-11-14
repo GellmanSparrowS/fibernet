@@ -19,10 +19,9 @@ The helper now uses existing StructureGraph.copy per-object deep-copy semantics.
 Node positions, internal points, graph/node/edge metadata and each edge's Material
 are detached. Shared input material instances are independently deep-copied per
 edge, as in StructureGraph.copy; cross-object alias topology is not promised.
-The box array is explicitly detached because StructureGraph.copy itself currently
-shares that private array. The previous transform helper already had detached
-box ownership through the public getter. StructureGraph.copy is not changed by
-this fix. Custom objects retain their own deepcopy behavior.
+The box array is detached by StructureGraph.copy; the transform helper also
+retains its defensive copy through the public getter. Custom objects retain
+their own deepcopy behavior.
 
 The spatial hash is rebuilt from transformed node coordinates in original
 insertion order, so subsequent merge=True lookup finds transformed stable IDs.
@@ -35,9 +34,11 @@ Coincident nodes created by a zero scale remain distinct graph records.
 - Translation and rotation keep boundary flags. Rotation is not an automatic
   recomputation of axis-aligned box-face classifications.
 - Mirror swaps the selected axis's min/max flags and reflects node/curve points.
-- Only a scalar Python int/float scale multiplies radii by abs(factor). A vector
-  scale, even an equal-component vector, keeps radii unchanged. This historical
-  policy is not a general cross-section mechanics model.
+- A Python or NumPy real numeric scalar scale, including a zero-dimensional
+  numeric array, multiplies radii by abs(factor). A vector scale, even an
+  equal-component vector, keeps radii unchanged. See the [scaling guide](../graph_scaling.rst)
+  for scalar precision and examples. This is not a general cross-section
+  mechanics model.
 - Scale updates box components by its existing scale vector, including signs.
   Other transforms retain box_size values. Box updates are not derived bounding
   boxes. No revised negative/zero scale policy is introduced.

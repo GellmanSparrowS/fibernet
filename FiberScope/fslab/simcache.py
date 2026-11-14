@@ -24,8 +24,8 @@ MAX_FRAMES = 240     # downsample cap for trajectory frames
 # carries an explicit engine version.  After changing the solver, the
 # downsampling, structure builder or shared graph run scripts/bump_engine_version.py;
 # tests/selftest.py fails loudly when the recorded source hash drifts.
-ENGINE_VERSION = "e2v14"
-ENGINE_SRC_HASH = "bf860374a873"
+ENGINE_VERSION = "e2v15"
+ENGINE_SRC_HASH = "1b2b1b4f71c5"
 ENGINE_SRC_FILES = ("engine2.py", "simcache.py", "structure.py", "cell_rules.py", "manufacturing.py", "cell_cycles.py", "welding.py")
 
 
@@ -219,7 +219,9 @@ def _load_cache(path):
                 z["frames_xy"], z["edges"], z["edge_rest"], z["edge_strain"],
                 z["strain_levels"], z["force_curve"], z["left_nodes"],
                 z["right_nodes"], energies, z["contact_pairs_last"], cf,
-                z["contact_counts"], json.loads(str(z["meta"])))
+                z["contact_counts"], json.loads(str(z["meta"])),
+                contact_history=(list(z["contact_history"])
+                                 if "contact_history" in z else None))
     except Exception as e:
         print("[simcache] drop unreadable cache %s: %s"
               % (os.path.basename(path), e))
@@ -241,6 +243,9 @@ def _save_cache(path, run):
               contact_frames=np.array(run.contact_frames, dtype=object),
               contact_counts=run.contact_counts,
               meta=json.dumps(run.metadata))
+    contact_history = getattr(run, "contact_history", None)
+    if contact_history is not None:
+        kw["contact_history"] = np.array(contact_history, dtype=object)
     for k, v in run.energies.items():
         kw["energies_" + k] = v
     try:
@@ -275,18 +280,18 @@ class RunConfig:
     weld_intersections: bool = False
 
     def engine_cfg(self, n_nodes=None) -> Engine2Config:
-        steps = self.num_steps
-        if self.auto_scale and n_nodes:
-            fac = min(max((n_nodes / 600.0) ** 0.5, 1.0), 2.0)
-            steps = int(steps * fac)
-        return Engine2Config(
+        config = Engine2Config(
             target_stretch=self.target_stretch, stiffness=self.stiffness,
             k_bend_frac=self.k_bend_frac, k_contact=self.k_contact,
             r_contact=self.r_contact, use_bending=self.use_bending,
             use_contact=self.use_contact, drag=self.drag,
-            num_steps=steps, save_interval=self.save_interval,
+            num_steps=self.num_steps, save_interval=self.save_interval,
             ramp_fraction=self.ramp_fraction,
             n_increments=self.n_increments, grip_pct=self.grip_pct)
+        if self.auto_scale and n_nodes:
+            fac = min(max((n_nodes / 600.0) ** 0.5, 1.0), 2.0)
+            config.num_steps = int(config.num_steps * fac)
+        return config
 
 
 @dataclass
@@ -306,6 +311,7 @@ class StretchRun:
     metadata: dict
     cache_hit: bool = False     # runtime only, never persisted in NPZ
     cache_key: str = ""         # empty when no cache path is selected
+    contact_history: list = None  # cumulative pairs through each retained frame
 
     @property
     def n_frames(self):
@@ -321,6 +327,16 @@ def _downsample(res):
     if F <= MAX_FRAMES:
         return res
     idx = np.unique(np.linspace(0, F - 1, MAX_FRAMES).round().astype(int))
+    # Preserve events in skipped frames separately from currently active pairs.
+    history, seen = [], set()
+    retained = set(idx.tolist())
+    for frame, pairs in enumerate(res.contact_frames):
+        seen.update((int(a), int(b)) for a, b in
+                    np.asarray(pairs, dtype=int).reshape(-1, 2))
+        if frame in retained:
+            history.append(np.asarray(sorted(seen), dtype=np.int64).reshape(-1, 2))
+    res.contact_history = history
+    res.contact_frames = [res.contact_frames[i] for i in idx]
     res.frames_xy = res.frames_xy[idx]
     res.edge_strain = res.edge_strain[idx]
     res.strain_levels = res.strain_levels[idx]
@@ -341,6 +357,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
         from .welding import IntersectionWelder
         graph = IntersectionWelder().apply(graph)
     n_nodes = len(graph.node_positions())
+    engine_cfg = cfg.engine_cfg(n_nodes)
 
     path = None
     key = ""
@@ -359,7 +376,7 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
                 cached.cache_key = key
                 return cached
 
-    res = Engine2(graph, cfg.engine_cfg(n_nodes)).run(progress_cb=progress_cb)
+    res = Engine2(graph, engine_cfg).run(progress_cb=progress_cb)
     res.metadata['weld_intersections'] = cfg.weld_intersections
     # no fracture in this model -> grip force must not soften; clip the
     # tiny numerical transients so the curve is monotone non-decreasing
@@ -368,7 +385,8 @@ def run_stretch(factory, cfg: RunConfig = None, cache_dir: str = None,
     run = StretchRun(res.frames_xy, res.edges, res.edge_rest, res.edge_strain,
                      res.strain_levels, res.force_curve, res.left_nodes,
                      res.right_nodes, res.energies, res.contact_pairs_last,
-                     res.contact_frames, res.contact_counts, res.metadata)
+                     res.contact_frames, res.contact_counts, res.metadata,
+                     contact_history=getattr(res, "contact_history", None))
 
     run.cache_key = key
     if path:

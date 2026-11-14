@@ -57,11 +57,39 @@ so shells do not interpret square brackets:
 * ``python -m pip install "fibernet[rl]"``: reinforcement-learning dependencies
 * ``python -m pip install "fibernet[accel]"``: optional Taichi backend
 * ``python -m pip install "fibernet[io]"``: HDF5 support
-* ``python -m pip install -e ".[fracture]"``: experimental fracture backend (4.3.0 source)
+* ``python -m pip install "fibernet[fracture]"``: experimental fracture backend
 
 For a checkout, use the equivalent editable command, for example
 ``python -m pip install -e ".[ml]"``. The desktop application has its own
 requirements; library extras do not replace them.
+
+Legacy graph image features
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The source checkout provides an ``image`` extra for the OpenCV-backed pore
+and contact fields in ``GraphFeatureExtractor``:
+
+.. code-block:: bash
+
+   python -m pip install -e ".[image]"
+
+The ``image`` extra is available in FiberNet 4.4.1 and is also included in
+``full``. For the published package, use
+``python -m pip install "fibernet[image]==4.4.1"``. The published 4.4.0 extras
+do not contain it; with that older release, install
+``python -m pip install opencv-python-headless`` separately. OpenCV remains
+optional for the core library and is not required by ``SnapshotFeatureExtractor``.
+
+OpenCV packages share the ``cv2`` namespace. Use only one OpenCV distribution
+in an environment. If a working ``opencv-python`` or contrib distribution is
+already installed, keep it and do not add the headless extra alongside it.
+
+When legacy extraction raises ``FeatureUnavailableError`` with
+``dependency_missing.cv2``, check the environment running your script with
+``python -c "import cv2; print(cv2.__version__); print(cv2.__file__)"``.
+Restart the interpreter after installation. Use ``extract_with_status()`` to
+inspect feature availability; installing OpenCV does not resolve missing
+positions or change the feature definitions.
 
 Choose the model deliberately
 -----------------------------

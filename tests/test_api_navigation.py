@@ -99,6 +99,27 @@ class APINavigationTests(unittest.TestCase):
         self.assertNotEqual(left.encode('utf-8'), right.encode('utf-8'))
         self.assertEqual(NAV.strip_navigation(right), second)
 
+    def test_explicit_navigation_slot_preserves_quick_start_order(self):
+        for newline in ('\n', '\r\n'):
+            original = newline.join(('<!-- locale:en:start -->', 'Quick start',
+                                      '<details><summary>API</summary>',
+                                      '<!-- api-navigation:en:slot -->',
+                                      '</details>', '<!-- locale:en:end -->'))
+            actual = NAV.insert_section(original, 'en', 'guide\n')
+            with self.subTest(newline=repr(newline)):
+                self.assertEqual(NAV.strip_navigation(actual), original)
+                self.assertLess(actual.index('Quick start'), actual.index('guide'))
+                self.assertLess(actual.index('<summary>API'), actual.index('guide'))
+                self.assertLess(actual.index('guide'), actual.index('</details>'))
+        duplicate = original.replace('<!-- api-navigation:en:slot -->',
+                                     '<!-- api-navigation:en:slot -->' * 2)
+        with self.assertRaisesRegex(ValueError, 'Duplicate navigation slot'):
+            NAV.insert_section(duplicate, 'en', 'guide')
+        for bad in (original.replace('<!-- locale:en:start -->', ''),
+                    original + '<!-- locale:en:start -->'):
+            with self.assertRaisesRegex(ValueError, 'exactly one locale anchor'):
+                NAV.insert_section(bad, 'en', 'guide')
+
     def test_mixed_line_endings_reject(self):
         for text in ('prefix\r\n<!-- locale:en:start -->\nbody',
                      'prefix\r<!-- locale:en:start -->'):

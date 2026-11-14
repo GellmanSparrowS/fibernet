@@ -705,6 +705,19 @@ class LAMMPSTask:
         contract = json.loads(self.prepared.contract_json)
         self.output_forecast = None
         profile = _profiles.contract_profile(contract)
+        if prepared.profile is None and contract['model'] == 'explicit-synthetic-or-coarse-grained-beads':
+            # The validated unprofiled compiler dumps every step, including zero.
+            # Each atom row has 11 nonempty tokens, 10 separators and a newline.
+            # This integer-only floor excludes headers, thermo and setup files;
+            # it is not a forecast or a promise that an admitted run will fit.
+            trajectory_floor = 22 * len(prepared.node_ids) * (prepared.steps + 1)
+            if (trajectory_floor > self.limits.output_bytes or
+                    trajectory_floor > self.limits.file_size_bytes):
+                raise LAMMPSContractError(
+                    f'unprofiled harmonic trajectory atom rows alone require at least '
+                    f'{trajectory_floor} bytes, exceeding output_bytes='
+                    f'{self.limits.output_bytes} or file_size_bytes='
+                    f'{self.limits.file_size_bytes}')
         if _profiles.variable_steps(profile):
             size = _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),profile['prepared_bytes'])
             manifest = dict(prepared.manifest(),runtime=asdict(runtime),limits=asdict(self.limits))
@@ -946,3 +959,64 @@ def parse_output_files(prepared: PreparedRun, trajectory_path, log_path, *,
             raise LAMMPSContractError('native log banner differs from expected banner')
     return parse_outputs(prepared, trajectory_text, log_text, max_output_bytes=budget)
 
+
+@dataclass(frozen=True)
+class EdgeLengthHistory:
+    """Endpoint separation of one stable graph edge, in SI units."""
+    edge_id: int
+    node_i: int
+    node_j: int
+    steps: tuple
+    times_s: tuple
+    lengths_m: tuple
+
+
+def edge_length_history(prepared: PreparedRun, result: LAMMPSRunResult,
+                        edge_id: int) -> EdgeLengthHistory:
+    """Extract the endpoint distance of an edge from a parsed trajectory.
+
+    ``edge_id`` is the StructureGraph stable ID, not a LAMMPS bond index.
+    Lengths are straight endpoint separations in meters, not curve arc length,
+    strain, stress or an inferred material response. Existing prepared runs use
+    fixed nonperiodic boxes; no minimum-image correction is applied. The function checks the
+    prepared contract, identity, sampling schedule, node ordering and finite
+    positions. Identity matching detects accidental mixing; it does not
+    authenticate a manually constructed result or revalidate initial state, box,
+    bond reach, fixed constraints, forces, energies or other native output.
+    """
+    validate_prepared(prepared)
+    if not isinstance(result, LAMMPSRunResult) or result.identity != prepared.identity:
+        raise LAMMPSContractError('result identity differs from prepared run')
+    eid = _integer(edge_id, 'edge_id')
+    if eid not in prepared.edge_ids:
+        raise LAMMPSContractError('unknown graph edge ID')
+    graph = json.loads(prepared.graph_json)
+    edge = next(e for e in graph['edges'] if e['id'] == eid)
+    indices = {nid: i for i, nid in enumerate(prepared.node_ids)}
+    i, j = indices[edge['node_i']], indices[edge['node_j']]
+    expected = range(0, prepared.steps + 1, prepared.sample_every)
+    steps, times, lengths = [], [], []
+    try:
+        if len(result.trajectory) != len(expected):
+            raise LAMMPSContractError('trajectory sampling schedule differs from prepared run')
+        for frame, step in zip(result.trajectory, expected):
+            if not isinstance(frame, TrajectoryFrame) or type(frame.step) is not int or frame.step != step:
+                raise LAMMPSContractError('trajectory sampling schedule differs from prepared run')
+            actual_time = _number(frame.time_s, 'trajectory time')
+            if not math.isclose(actual_time, step * prepared.timestep_s, rel_tol=1e-12, abs_tol=0.0):
+                raise LAMMPSContractError('trajectory time differs from prepared run')
+            if (len(frame.node_ids) != len(prepared.node_ids)
+                    or any(type(n) is not int for n in frame.node_ids)
+                    or tuple(frame.node_ids) != prepared.node_ids):
+                raise LAMMPSContractError('trajectory node order differs from prepared run')
+            if len(frame.positions_m) != len(prepared.node_ids):
+                raise LAMMPSContractError('trajectory position count differs from prepared run')
+            positions = tuple(_vector(v, 'trajectory position') for v in frame.positions_m)
+            distance = _number(math.dist(positions[i], positions[j]), 'edge length')
+            steps.append(step)
+            times.append(actual_time)
+            lengths.append(distance)
+    except (TypeError, OverflowError) as exc:
+        raise LAMMPSContractError('malformed trajectory geometry') from exc
+    return EdgeLengthHistory(eid, edge['node_i'], edge['node_j'],
+                             tuple(steps), tuple(times), tuple(lengths))

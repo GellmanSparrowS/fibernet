@@ -55,15 +55,19 @@ This API does not change `GraphFeatureExtractor`, `GraphFeatureExtractor3D`,
 `SnapshotFeatureExtractor`, dataset features or saved-model inputs. In
 particular it does not fix existing scientific limitations in legacy outputs:
 
-- The two legacy graph extractors project `StructureGraph` to a simple graph,
-  collapsing parallel edges. Their geometric lengths use endpoint chords,
-  not internal-point contour lengths.
+- Historical graph-extractor conversions collapsed parallel physical edges.
+  The current 2D and 3D extractors reject these inputs rather than silently
+  projecting them. Their geometric lengths still use endpoint chords, not
+  internal-point contour lengths.
 - The legacy 3D tortuosity path requests `length` weights that its own adapter
   does not populate; absent attributes default to hop counts. Dividing these
   by geometric distance is dimensionally invalid and scale-dependent.
-- Legacy 3D k-core reporting can return zero because a missing local
-  `mean_degree` value is caught as an exception. Its edge-betweenness Gini uses
-  reversed ordering and can be negative. Disconnected graphs report zero
+- Historical 3D k-core outputs were silently zero because a missing local
+  `mean_degree` value was caught as an exception. The separate
+  [k-core correction](graph-feature-3d-kcore.md) restores the existing formula;
+  old datasets and models need explicit migration before consuming it.
+  The 3D edge-betweenness Gini still uses reversed ordering and can be negative.
+  Disconnected graphs report zero
   `lambda_max` even when the Laplacian has positive eigenvalues.
 - Legacy orientation entropy can depend on arbitrary undirected edge
   orientation. Spectrum and shortest-path routines do not have one consistent
@@ -72,8 +76,9 @@ particular it does not fix existing scientific limitations in legacy outputs:
 These outputs must not be interpreted as validated physical measurements.
 Compatibility with old artifacts is not scientific validation. Existing
 artifacts must retain their original feature definitions for reproducibility;
-corrected numerical metrics require a new feature-schema version, named
-columns with explicit scope/units/undefined policies, regeneration of training
+pipelines adopting corrected numerical metrics need an explicit feature-schema
+or implementation version, named columns with explicit scope/units/undefined
+policies, regeneration of training
 features, retraining and validation, and schema checks at inference. Do not
 silently substitute corrected values under an old artifact's feature names.
 The topology result is not automatically integrated into that training or

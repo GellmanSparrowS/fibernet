@@ -1,6 +1,7 @@
 """Regression controls for displayed-image source counting, not visual rendering."""
 from pathlib import Path
 import importlib.util
+import json
 import re
 import unittest
 
@@ -74,9 +75,9 @@ class InlineGifParserTests(unittest.TestCase):
         target, src = image[0], image[1]
         for name, text in NEGATIVE.items():
             bad = english.replace(target, text.replace('x.gif', src), 1)
-            # An unclosed fence masks the language closing tag, so malformed
-            # disclosure structure is rejected before image-count validation.
-            message = ('Unclosed details control' if name == 'unclosed_fence'
+            # A fence can hide nested API controls before a later code fence
+            # closes it, so either unbalanced-control direction may be found.
+            message = ('Unclosed details control|Unmatched details close' if name == 'unclosed_fence'
                        else 'inline animations must match the homepage selection')
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
@@ -159,6 +160,88 @@ class NativeDisclosureParserTests(unittest.TestCase):
                                   '<!-- locale:zh:start -->changed', 1)
         with self.assertRaisesRegex(ValueError, 'Standalone Chinese differs'):
             CHECK.check_locale_structure(readme, altered)
+
+
+class RestoredGalleryTests(unittest.TestCase):
+    def test_all_originals_are_visible_without_an_extra_gallery_fold(self):
+        selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
+        originals = {record['path'] for record in selection['original_gifs']}
+        self.assertEqual(len(originals), 19)
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        for language in ('en', 'zh'):
+            body = CHECK.locale_block(homepage, language)
+            # Only API documentation is nested; every GIF precedes that fold.
+            visible = body.split('<details>', 1)[0]
+            with self.subTest(language=language):
+                self.assertTrue(originals <= set(CHECK.inline_gifs(visible)))
+                self.assertEqual(len(CHECK.inline_gifs(visible)), 22)
+                quick_start = '## Quick start details' if language == 'en' else '## 快速开始'
+                self.assertLess(body.index(quick_start), body.index('<!-- api-navigation:'))
+
+    def test_brand_quick_start_is_outside_both_language_folds(self):
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        prefix = homepage.split('<details>', 1)[0]
+        self.assertIn('<a href="#quick-start">', prefix)
+        self.assertEqual(homepage.count('\n## Quick start\n'), 1)
+        self.assertIn('\n## Quick start\n', prefix)
+        self.assertIn('python -m pip install -e .', prefix)
+        self.assertIn('python -m examples.open_source_workflow', prefix)
+
+    def test_rl_compatibility_is_localized_and_not_an_english_footer(self):
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        for language, heading in (('en', '### RL compatibility'), ('zh', '### RL 兼容性')):
+            body = CHECK.locale_block(homepage, language)
+            with self.subTest(language=language):
+                self.assertIn(heading, body)
+                self.assertIn('`fibernet.train_rl`', body)
+                self.assertIn('`fibernet.rl.train_rl`', body)
+        suffix = homepage.split('<!-- locale:en:end -->', 1)[1].strip()
+        self.assertEqual(suffix, '</details>')
+
+    def test_scope_labels_preserve_scientific_distinctions(self):
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        required = {
+            'en': ('undeformed geometry', 'fixed geometry', 'displacement ×1,000',
+                   '×3,000', 'Prescribed actions, no trained policy',
+                   'current `train_gnn` does not accept `GINERegressor`',
+                   'That trajectory is absent from this media bundle',
+                   '1.0042%', '2.2234%', 'Saved interface tour', 'rotating camera'),
+            'zh': ('未变形几何', '固定几何', '1,000 倍', '3,000 倍',
+                   '给定动作，未训练策略', '当前 `train_gnn` 不接受 `GINERegressor`',
+                   '当前媒体包缺少该轨迹', '1.0042%', '2.2234%',
+                   '已保存的界面导览', '相机旋转'),
+        }
+        for language, labels in required.items():
+            body = CHECK.locale_block(homepage, language)
+            for label in labels:
+                with self.subTest(language=language, label=label):
+                    self.assertIn(label, body)
+
+    def test_viscoelastic_caption_describes_saved_free_dynamics(self):
+        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        expected = {
+            'en': ('### Viscoelastic dynamics', '### Viscoelastic relaxation',
+                   'Initial velocities excite free motion, with zero constant external load and zero numerical drag.'),
+            'zh': ('### 黏弹性动力学', '### 黏弹松弛',
+                   '初始速度激发自由运动，恒定外载荷和数值阻力均为零。'),
+        }
+        for language, (heading, incorrect_heading, excitation) in expected.items():
+            body = CHECK.locale_block(homepage, language)
+            with self.subTest(language=language):
+                self.assertIn(heading, body)
+                self.assertNotIn(incorrect_heading, body)
+                section = body.split(heading, 1)[1].split('\n### ', 1)[0]
+                self.assertIn(excitation, section)
+                self.assertIn('docs/media/new/viscoelastic/README.md', section)
+
+    def test_named_github_anchors_are_checked_but_literals_are_not(self):
+        source = ('<a name="api-en-graph"></a>\n<a id="sample"></a>\n'
+                  '<!-- <a name="comment"></a> -->\n'
+                  '`<a name="inline"></a>`\n'
+                  '```html\n<a name="fenced"></a>\n```')
+        self.assertEqual(CHECK.explicit_anchors(source),
+                         {'api-en-graph', 'user-content-api-en-graph',
+                          'sample', 'user-content-sample'})
 
 
 if __name__ == '__main__':

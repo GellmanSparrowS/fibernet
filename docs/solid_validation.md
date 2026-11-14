@@ -36,10 +36,21 @@ check: deletion can open the surface.
 
 ## Surface extraction precision
 
-`tube_mesh` requires the optional Manifold provider's `Manifold.to_mesh64` API,
-available in the verified 3.5.1 provider. An unavailable or non-callable API raises
-a clear error before primitive construction; there is no float32 fallback or
+`tube_mesh` requires `manifold3d>=3.2.0`, including the provider's
+`Manifold.to_mesh64` and `Manifold.simplify` APIs. The `manufacturing` and `full`
+extras declare this minimum. Version 3.1.0 has `to_mesh64` but lacks `simplify`;
+earlier unversioned dependency declarations could admit it and fail only after
+building the native geometry. An unavailable or non-callable required API now
+raises a clear error before primitive construction; there is no float32 fallback or
 automatic dependency installation. The provider remains a lazy optional import.
+
+Existing environments with an older provider should upgrade it with
+`python -m pip install "manifold3d>=3.2.0"`. The minimum selects the required
+interface, not a guarantee that every geometry succeeds. The small real-provider
+suite in `tests/test_manifold_native_workflow.py` covers binary64 tube extraction,
+planar and curved STL/3MF export, input ownership, cancellation and retry. CI runs
+it with pinned 3.2.0 and 3.5.1 wheels on Linux/Python 3.12. Other platforms and
+provider releases retain their own wheel-availability and numerical constraints.
 
 The mesher extracts the initially simplified native solid directly in binary64.
 It no longer rounds surface coordinates to four decimal places or reconstructs

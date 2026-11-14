@@ -26,6 +26,18 @@ import numpy as np
 # Visualization
 # ======================================================================
 
+def _plot_figure(show, *, figsize, nrows=1, ncols=1, squeeze=True):
+    """Allocate an export-only figure or use the caller's plotting backend."""
+    if show:
+        import matplotlib.pyplot as plt
+        return plt.subplots(nrows, ncols, figsize=figsize, squeeze=squeeze)
+    from matplotlib.figure import Figure
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+    fig = Figure(figsize=figsize)
+    FigureCanvasAgg(fig)
+    return fig, fig.subplots(nrows, ncols, squeeze=squeeze)
+
+
 def plot_reward_curve(
     rewards: Sequence[float],
     *,
@@ -52,12 +64,11 @@ def plot_reward_curve(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, the figure is detached from pyplot and uses an Agg
+        canvas for headless export without changing the caller's backend or
+        current figure. Edit/save the returned figure directly. With show=True,
+        the figure is pyplot-managed and uses the caller's backend.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     rewards = np.asarray(rewards)
     episodes = np.arange(1, len(rewards) + 1)
 
@@ -70,7 +81,7 @@ def plot_reward_curve(
         smoothed = rewards
         smooth_x = episodes
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = _plot_figure(show, figsize=(10, 6))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
 
@@ -96,11 +107,12 @@ def plot_reward_curve(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
@@ -127,12 +139,11 @@ def plot_convergence(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, the figure is detached from pyplot and uses an Agg
+        canvas for headless export without changing the caller's backend or
+        current figure. Edit/save the returned figure directly. With show=True,
+        the figure is pyplot-managed and uses the caller's backend.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     values = np.asarray(values)
     iters = np.arange(1, len(values) + 1)
 
@@ -143,7 +154,7 @@ def plot_convergence(
         best_so_far = np.maximum.accumulate(values)
         best_label = "Best (max)"
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = _plot_figure(show, figsize=(10, 6))
     fig.patch.set_facecolor("#0a0a0f")
     ax.set_facecolor("#0a0a0f")
 
@@ -163,11 +174,12 @@ def plot_convergence(
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 
@@ -192,12 +204,11 @@ def plot_action_distribution(
     Returns
     -------
     matplotlib.figure.Figure
+        With show=False, the figure is detached from pyplot and uses an Agg
+        canvas for headless export without changing the caller's backend or
+        current figure. Edit/save the returned figure directly. With show=True,
+        the figure is pyplot-managed and uses the caller's backend.
     """
-    import matplotlib
-    if not show:
-        matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
     # Convert to numpy
     if isinstance(actions[0], dict):
         keys = list(actions[0].keys())
@@ -222,8 +233,8 @@ def plot_action_distribution(
 
     ncols = min(3, n_dim)
     nrows = (n_dim + ncols - 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols,
-                              figsize=(5 * ncols, 4 * nrows), squeeze=False)
+    fig, axes = _plot_figure(show, nrows=nrows, ncols=ncols,
+                             figsize=(5 * ncols, 4 * nrows), squeeze=False)
     fig.patch.set_facecolor("#0a0a0f")
 
     keys = list(data.keys())
@@ -245,11 +256,12 @@ def plot_action_distribution(
         axes[idx // ncols][idx % ncols].set_visible(False)
 
     fig.suptitle(title, color="#ddd", fontsize=14)
-    plt.tight_layout()
+    fig.tight_layout()
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches="tight",
                     facecolor=fig.get_facecolor())
     if show:
+        import matplotlib.pyplot as plt
         plt.show()
     return fig
 

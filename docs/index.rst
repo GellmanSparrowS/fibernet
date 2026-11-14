@@ -64,6 +64,10 @@ Features Overview
 
    getting_started
    quickstart
+   graph_scaling
+   static_network_workflow
+   heterogeneous_fem
+   heterogeneous_radius_workflow
    api/index
    tutorials
    changelog

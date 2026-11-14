@@ -26,10 +26,14 @@ These grids show saved final networks and complete reaction curves, normalized b
 
 ![Ring static intervention results at stretch ratio 1.40](media/homepage_overview/intervention_ring_grid.svg)
 
-The reduced axial-model cases remove 1% of edge length while retaining an Euler route. Color marks strain-threshold recruitment and grip-spanning components, not force flow. High-late-strain deletion lowers final reaction to 0.850 of the original for kagome and 0.814 for ring. Low-early-strain and fixed-random results coincide in both cases.
+The saved reduced axial-model cases remove 1.0042% of edge length for kagome and 2.2234% for ring while retaining an Euler route, as recorded in the [kagome](media/route_preserving_intervention_kagome.json) and [ring](media/route_preserving_intervention_ring.json) manifests. Color marks strain-threshold recruitment and grip-spanning components, not force flow. High-late-strain deletion lowers final reaction to 0.850 of the original for kagome and 0.814 for ring. Low-early-strain and fixed-random results coincide in both cases.
 
 [Full study and adverse results](CONSTRAINED_CYCLE_INTERVENTION_2026-09-24.md) · [Cross-model study](INDEPENDENT_FEM_CYCLE_INTERVENTION_2026-09-24.md) · [Saved results](../benchmarks/results/constrained_cycle_intervention.json) · [SVG relayout source](../scripts/relayout_homepage_interventions.py) · [Path-preservation receipt](media/homepage_overview/interventions_receipt.json)
 
 ## Original gallery
 
-The original animations, source data, parameters and renderers remain in the [media gallery](MEDIA_GALLERY.md). The [selection manifest](media/homepage_overview/selection.json) records the displayed subset and the hashes of all 19 original GIFs.
+All 19 original GIFs are directly embedded in each language of the repository homepage, grouped by workflow, alongside three overview derivatives. Their bytes and recorded hashes are unchanged. The [selection manifest](media/homepage_overview/selection.json) records the 22 displayed animations and original hashes; the [media gallery](MEDIA_GALLERY.md) retains source data, parameters, static alternatives and renderers.
+
+The language headings use independent native disclosures, with English open and Chinese closed initially. They are not script-driven mutually exclusive tabs. GIFs loop without a README playback control; use the linked static alternatives when motion is distracting.
+
+Camera orbits, geometric design sweeps, graph traversal and saved interface tours are labeled separately from recorded simulation and training histories. LAMMPS and Taichi show actual saved displacement amplified ×1,000; viscoelastic motion is amplified ×3,000. Fracture observations use undeformed geometry, and thermal evolution uses fixed geometry with one-way Joule heating. This media bundle does not contain a deformation-coupled electrical trajectory. The GINE history comes from an archived research trainer; RL records use prescribed actions, not a trained policy.

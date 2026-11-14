@@ -1076,13 +1076,22 @@ def render_trajectory_3d(
     figsize : tuple, optional
         Figure size. Auto-calculated if None.
     color_by : str
-        "displacement" or "stretch".
+        "displacement" is supported. "stretch" raises NotImplementedError:
+        this renderer has no per-frame edge stretch data, and endpoint motion
+        does not determine the deformed arc length of curved fibers.
 
     Returns
     -------
     plt.Figure
         One combined figure with all frames as subplots.
     """
+    if color_by == "stretch":
+        raise NotImplementedError(
+            "trajectory stretch coloring is not implemented; per-frame edge stretch "
+            "data and a defined reference length are required; "
+            "use color_by='displacement' for displacement coloring")
+    if color_by != "displacement":
+        raise ValueError("color_by must be 'displacement'; 'stretch' is not implemented")
     # Direct arrays have their own map, never an unrelated result's metadata.
     if trajectory is not None:
         _, order = _identity_order(node_ids, sorted(graph.nodes), 'node_ids')

@@ -1,0 +1,13 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "Opt-in graph material conflicts with explicit uniform E or nu",
+  "base_sha256": "d27c8a40ed8465c808393b42becb5c23e4dadc0a4eaa1b35d03b69afe8a14783",
+  "result_sha256": "4e6140629e92dcdadb16cdd49639418280037b4caf09c9ee0e34465cba9fd97d",
+  "hunks": [
+    {
+      "before": "            E = kwargs.pop(\"E\", 1e9)\n",
+      "after": "            if kwargs.get(\"material_mode\") == \"graph\" and (\"E\" in kwargs or \"nu\" in kwargs):\n                raise ValueError(\"graph material mode cannot be combined with explicit E or nu\")\n            E = kwargs.pop(\"E\", 1e9)\n"
+    }
+  ]
+}
