@@ -1,3 +1,11 @@
+## [Unreleased] - FEA coordinate interpolation
+
+- Use validated float64 endpoint snapshots when exporting Abaqus, ANSYS and
+  Gmsh line geometry. Reassigned integer and float32 centerlines no longer
+  overflow during interpolation; ordinary numeric lists export consistently
+  with arrays. Reject masked, complex, boolean and nonnumeric coordinates before
+  opening the output file. Source coordinates remain unchanged.
+
 ## [Unreleased] - Explicit multi-weld import
 
 - Add an opt-in exact legacy-to-native conversion for bounded straight fibers

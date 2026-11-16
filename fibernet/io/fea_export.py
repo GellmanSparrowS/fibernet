@@ -48,11 +48,33 @@ def _beam_properties(fiber):
     return tuple(float(v) for v in values)
 
 
+def _check_coordinate_values(value):
+    """Check source values before conversion can erase masks or scalar types."""
+    if np.ma.isMaskedArray(value):
+        raise ValueError('legacy FEA coordinates must be unmasked real numeric data')
+    if isinstance(value, np.ndarray):
+        if value.dtype.kind in 'iuf':
+            return
+        if value.dtype.kind == 'O':
+            for item in value.flat:
+                _check_coordinate_values(item)
+            return
+        raise ValueError('legacy FEA coordinates must be unmasked real numeric data')
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _check_coordinate_values(item)
+        return
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError('legacy FEA coordinates must be unmasked real numeric data')
+
+
 def _preflight(network, segments_per_fiber, *, beam_properties=False, abaqus_orientation=False):
     """Reject unsupported source data before any destination can be opened.
 
     This is input admission, not commercial solver/deck validation. Fibers stay
-    independent even when endpoints coincide. Only floating-point roundoff is
+    independent even when endpoints coincide. Returned float64 endpoint copies
+    are also used for writing, so source dtypes cannot change interpolation.
+    Only floating-point roundoff is
     allowed when checking ordered straight sampled centerlines.
     """
     if not isinstance(network, FiberNetwork):
@@ -68,7 +90,9 @@ def _preflight(network, segments_per_fiber, *, beam_properties=False, abaqus_ori
     if network.crosslinks:
         raise ValueError('legacy FEA export cannot encode crosslinks or welded incidence; preserve native JSON')
     first_properties = None
+    endpoints = []
     for fiber in network.fibers:
+        _check_coordinate_values(fiber.centerline)
         points = np.asarray(fiber.centerline, dtype=float)
         if (points.ndim != 2 or points.shape[1] != 3 or len(points) < 2
                 or not np.isfinite(points).all()):
@@ -88,12 +112,14 @@ def _preflight(network, segments_per_fiber, *, beam_properties=False, abaqus_ori
             raise ValueError('legacy FEA export requires ordered straight centerlines; preserve native JSON')
         if abaqus_orientation and np.linalg.norm((chord / length)[:2]) <= 64 * np.finfo(float).eps:
             raise ValueError('legacy Abaqus fixed orientation (0, 0, 1) cannot support Z-parallel fibers')
+        endpoints.append(points[[0, -1]].copy())
         if beam_properties:
             properties = _beam_properties(fiber)
             if first_properties is None:
                 first_properties = properties
             elif properties != first_properties:
                 raise ValueError('legacy FEA beam templates require uniform radius, E, nu and density')
+    return endpoints
 
 
 def export_to_abaqus(
@@ -139,7 +165,7 @@ def export_to_abaqus(
     if (isinstance(element_size, (bool, np.bool_)) or not isinstance(element_size, Real)
             or not np.isfinite(element_size) or element_size != 1.0):
         raise ValueError('element_size is an unused legacy placeholder; only its default 1.0 is accepted')
-    _preflight(network, segments_per_fiber, beam_properties=True, abaqus_orientation=True)
+    endpoints = _preflight(network, segments_per_fiber, beam_properties=True, abaqus_orientation=True)
     path = Path(filename)
     
     with open(path, 'w') as f:
@@ -158,14 +184,14 @@ def export_to_abaqus(
         node_id = 1
         node_map = {}  # Map (fiber_id, segment_id) -> node_id
         
-        for fiber_idx, fiber in enumerate(network.fibers):
+        for fiber_idx, (start, end) in enumerate(endpoints):
             # Generate nodes along fiber
             for seg_id in range(segments_per_fiber + 1):
                 t = seg_id / segments_per_fiber
                 # Linear interpolation
-                position = (fiber.start_point if seg_id == 0 else
-                            fiber.end_point if seg_id == segments_per_fiber else
-                            fiber.start_point + t * (fiber.end_point - fiber.start_point))
+                position = (start if seg_id == 0 else
+                            end if seg_id == segments_per_fiber else
+                            start + t * (end - start))
                 f.write(f"{node_id}, {position[0]:.17g}, {position[1]:.17g}, {position[2]:.17g}\n")
                 node_map[(fiber_idx, seg_id)] = node_id
                 node_id += 1
@@ -270,7 +296,7 @@ def export_to_ansys(
     """
     if element_type != 'BEAM188':
         raise ValueError('legacy ANSYS export supports only two-node BEAM188 elements')
-    _preflight(network, segments_per_fiber, beam_properties=True)
+    endpoints = _preflight(network, segments_per_fiber, beam_properties=True)
     path = Path(filename)
     
     with open(path, 'w') as f:
@@ -309,12 +335,12 @@ def export_to_ansys(
         node_id = 1
         node_map = {}
         
-        for fiber_idx, fiber in enumerate(network.fibers):
+        for fiber_idx, (start, end) in enumerate(endpoints):
             for seg_id in range(segments_per_fiber + 1):
                 t = seg_id / segments_per_fiber
-                position = (fiber.start_point if seg_id == 0 else
-                            fiber.end_point if seg_id == segments_per_fiber else
-                            fiber.start_point + t * (fiber.end_point - fiber.start_point))
+                position = (start if seg_id == 0 else
+                            end if seg_id == segments_per_fiber else
+                            start + t * (end - start))
                 f.write(f"N, {node_id}, {position[0]:.17g}, {position[1]:.17g}, {position[2]:.17g}\n")
                 node_map[(fiber_idx, seg_id)] = node_id
                 node_id += 1
@@ -377,7 +403,7 @@ def export_to_gmsh(
     >>> net = gen.random_straight_3d(num_fibers=50, box_size=(50, 50, 50))
     >>> export_to_gmsh(net, "network.msh")
     """
-    _preflight(network, segments_per_fiber)
+    endpoints = _preflight(network, segments_per_fiber)
     if not network.fibers:
         raise ValueError('legacy Gmsh line export requires at least one fiber')
     path = Path(filename)
@@ -399,12 +425,12 @@ def export_to_gmsh(
         node_id = 1
         node_map = {}
         
-        for fiber_idx, fiber in enumerate(network.fibers):
+        for fiber_idx, (start, end) in enumerate(endpoints):
             for seg_id in range(segments_per_fiber + 1):
                 t = seg_id / segments_per_fiber
-                position = (fiber.start_point if seg_id == 0 else
-                            fiber.end_point if seg_id == segments_per_fiber else
-                            fiber.start_point + t * (fiber.end_point - fiber.start_point))
+                position = (start if seg_id == 0 else
+                            end if seg_id == segments_per_fiber else
+                            start + t * (end - start))
                 f.write(f"{node_id} {position[0]:.17g} {position[1]:.17g} {position[2]:.17g}\n")
                 node_map[(fiber_idx, seg_id)] = node_id
                 node_id += 1
