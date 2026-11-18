@@ -17,22 +17,44 @@ import numpy as np
 from fibernet.core.network import FiberNetwork
 
 
+def _vtp_float_token(value):
+    token = f'{float(value):.17g}'
+    if token in ('0', '-0'):
+        # Dragon4 reads the original IEEE bits even if native arithmetic
+        # flushes subnormals. Keep the existing text for actual signed zeros.
+        return np.format_float_scientific(
+            value, precision=16, unique=False, trim='-').removesuffix('e+00')
+    return token
+
+
 def _vtp_values(data):
     """Preserve integer sequence values before NumPy's mixed-type promotion."""
     if not isinstance(data, Sequence) or isinstance(data, (str, bytes, bytearray, memoryview, typed_array, np.ndarray)):
         return np.asarray(data)
     raw = np.asarray(data, dtype=object)
-    values = list(raw.flat)
+    # Boxing ndarray rows can promote float32 subnormals to zero. Keep each
+    # original vector component and use NumPy's object array only for shape.
+    if raw.ndim == 2:
+        rows = (np.asarray(row) if isinstance(row, (memoryview, typed_array)) else row
+                for row in data)
+        values = [value for row in rows for value in row]
+    else:
+        values = list(raw.flat)
     if not values:
         return np.empty(raw.shape, dtype=np.float64)
     def integer(value):
         return (isinstance(value, (bool, np.bool_, int, np.integer))
                 and not isinstance(value, np.timedelta64))
+    def integer_value(value):
+        if isinstance(value, (bool, np.bool_)):
+            return int(value)
+        # On Python 3.9 operator.index may return an int subclass.
+        return int.__index__(operator.index(value))
+
     if all(integer(value) for value in values):
         if all(isinstance(value, (bool, np.bool_)) for value in values):
             return np.asarray(data, dtype=bool)
-        ints = [int(value) if isinstance(value, (bool, np.bool_)) else operator.index(value)
-                for value in values]
+        ints = [integer_value(value) for value in values]
         low, high = min(ints), max(ints)
         if low >= 0 and high <= np.iinfo(np.uint64).max and (
                 high > np.iinfo(np.int64).max
@@ -46,7 +68,7 @@ def _vtp_values(data):
     floating_values = []
     for value in values:
         if integer(value):
-            number = int(value) if isinstance(value, (bool, np.bool_)) else operator.index(value)
+            number = integer_value(value)
             try:
                 floating = float(number)
             except OverflowError as exc:
@@ -57,7 +79,11 @@ def _vtp_values(data):
         elif isinstance(value, (float, np.floating)):
             if isinstance(value, np.floating) and value.dtype.itemsize > 8:
                 raise ValueError('VTP floating fields support at most Float64 precision')
-            floating_values.append(float(value))
+            floating = float(value)
+            if isinstance(value, np.floating) and value.dtype.itemsize < 8 and floating == 0.:
+                # Nonzero float16/32 values are normal when stored in Float64.
+                floating = float(_vtp_float_token(value))
+            floating_values.append(floating)
         else:
             raise ValueError('VTP fields must contain real numeric scalar values')
     return np.asarray(floating_values, dtype=np.float64).reshape(raw.shape)
@@ -78,7 +104,7 @@ def _write_vtp_attributes(stream, tag, arrays):
                      f'NumberOfComponents="{components}" format="ascii">\n')
         for row in array.reshape(-1, components):
             if array.dtype.kind == 'f':
-                tokens = [f'{float(value):.17g}' for value in row]
+                tokens = [_vtp_float_token(value) for value in row]
             elif array.dtype.kind == 'b':
                 tokens = [str(int(value)) for value in row]
             else:

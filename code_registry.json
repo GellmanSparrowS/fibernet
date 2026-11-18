@@ -888,6 +888,7 @@
   "purpose": "VTK file export for visualization in Paraview/VisIt.",
   "status": "active",
   "symbols": [
+   "_vtp_float_token",
    "_vtp_values",
    "_write_vtp_attributes",
    "_has_masked_value",
@@ -895,7 +896,7 @@
    "to_vtk",
    "to_vtk_xml"
   ],
-  "sha256": "6cf9d6ce5bde6f39cd05ebff0823b86826e04eb664ed7275bfe44487d28c8168"
+  "sha256": "3e56f2273f81f51e341f8924595776748fd9f062bc8a42c09378f48b5ce8c295"
  },
  "fibernet/io/xyz.py": {
   "purpose": "XYZ file format I/O.",
@@ -4737,6 +4738,8 @@
    "reviewed_result_identity_source",
    "reviewed_spring_provenance_source",
    "candidate_result_processing_source",
+   "candidate_compute_detailed_validation_source",
+   "reviewed_compute_detailed_validation_source",
    "normalize_result_identity_method",
    "reviewed_easy_stretch_ratio_source",
    "reviewed_easy_rl_failure_source",
@@ -4769,6 +4772,7 @@
    "_reviewed_release_input_delta",
    "reviewed_easy_json_source",
    "reviewed_api_json_source",
+   "reviewed_api_vtp_fields_source",
    "reviewed_easy_batch_input_source",
    "reviewed_easy_collision_source",
    "reviewed_easy_training_csv_source",
@@ -4792,9 +4796,10 @@
    "TaichiOptionalImportSourceAdmission",
    "BackendLazySourceComposition",
    "ResultProcessingSourceAdmission",
+   "ComputeDetailedValidationSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "20fdb8a719ba505b29b22f8321f1b0508891540fd2ac7ae3c25b99e5d4c89873"
+  "sha256": "47fbcec5b147527f993d6c87b17c2097ce8ab11f6634f32dccd491740b8a185f"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -5062,8 +5067,24 @@
  "tests/test_source_checkout_bytes.py": {
   "purpose": "Byte-sealed source and fixture Git checkout preservation.",
   "status": "active",
-  "symbols": [],
-  "sha256": "61f88f090a1e99eed7b860abb6509b72b47e63e2d445086f4958c513948cbf43"
+  "symbols": [
+   "_staging_size",
+   "_diagnostic_tail",
+   "_git",
+   "test_checkout_inventory_covers_the_native_core_manifest",
+   "test_byte_sealed_checkout_preserves_raw_hashes",
+   "test_bulk_add_file_count_boundary",
+   "test_bulk_add_byte_boundary",
+   "test_bulk_add_rejects_invalid_inputs_before_git",
+   "test_bulk_add_rejects_implicit_pathspecs",
+   "test_bulk_add_rejects_symlink_component_without_launch",
+   "test_diagnostic_tail_handles_empty_text_and_bytes",
+   "test_git_budget_and_options",
+   "test_bulk_add_failure_diagnostics_and_no_retry",
+   "test_diagnostic_failure_preserves_original_error",
+   "test_roundtrip_stops_before_checkout_when_staging_fails"
+  ],
+  "sha256": "d757eeccbe6222557ed222e0a78fb8782de5cddb0730ed000ad977409b84bc0f"
  },
  "fibernet/core/single_junction_import.py": {
   "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
@@ -5600,7 +5621,7 @@
    "network",
    "VTPResults"
   ],
-  "sha256": "34a81844cd6eb7d3faf8dd2ee7f87439ed8fd8d35151f956a91701973fa859e6"
+  "sha256": "06c903646c4d9430223d2201c396dd0c71619e6019677d505acb314df8e62fc6"
  },
  "tests/test_pdb_export_capacity.py": {
   "purpose": "PDB identifiers stay in their fields across export and re-import.",
