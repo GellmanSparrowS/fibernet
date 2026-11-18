@@ -1,0 +1,35 @@
+name: RL plot macOS cold-start diagnostics
+'on':
+  push:
+    branches:
+    - diagnostics/rl-plot-macos-20261118
+  workflow_dispatch: {}
+permissions:
+  contents: read
+env:
+  CI: 'true'
+  TI_DISABLE_VERSION_CHECK: '1'
+jobs:
+  profile:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install the regular CI dependency set
+      run: python -m pip install -e ".[dev,io]"
+    - name: Inspect original plotting scenarios and font-discovery control
+      run: python scripts/diagnose_rl_plot_cold_start.py --output-dir "${{ runner.temp
+        }}/fibernet-rl-plot-diagnostic"
+    - name: Retain bounded diagnostic evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: rl-plot-cold-start-macos
+        path: ${{ runner.temp }}/fibernet-rl-plot-diagnostic
+        if-no-files-found: warn
+        retention-days: 14
