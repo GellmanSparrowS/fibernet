@@ -144,3 +144,26 @@ repeatability, nonmutation, unit nonconversion and a generated square network.
 Injected nonfinite, singular-warning and nonconserving solver outputs are
 rejected. This is a software/analytical validation of the defined linear model,
 not calibration or experimental validation of any material.
+
+## Graph admission and coordinate provenance
+
+Before sparse assembly, node and edge dictionary keys, record IDs, and endpoint
+IDs must be nonnegative integers fitting int64, with each record ID equal to
+its key. Isolated nodes and inactive edges are checked too. IDs are never
+repaired or renumbered by the solver.
+
+Each node position must contain three finite real numeric coordinates. Integer
+and floating NumPy arrays and numeric lists/tuples are supported. Masked arrays
+and scalars (including all-false masks), booleans, complex values, numeric text,
+and object arrays are rejected before coercion. Float64 conversion must not
+produce infinity or erase a nonzero coordinate as zero. Ordinary float64
+rounding remains part of this numerical interface; this is not an exact-real
+coordinate format. Resolve missing data or choose any conversion explicitly
+before constructing the graph rather than relying on silent solver coercion.
+
+These rules also apply to `solve_transient_thermal` and to coupled workflows
+that delegate to either owner. They protect stable-ID and coordinate provenance,
+not a geometry-derived constitutive law. Node sorting, physical-edge insertion
+order, valid-input hashes, solver equations and units are unchanged. Radii,
+internal curves and materials are still not used to infer conductance or heat
+capacity, and coincident coordinates remain valid for distinct explicit nodes.

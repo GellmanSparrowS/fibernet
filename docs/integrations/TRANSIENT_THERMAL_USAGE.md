@@ -17,7 +17,7 @@ The method is backward Euler, solving increments and checking the fields reconst
 - `free_node_residual_J`: backward-Euler interval energy residual; fixed-node entries are unavailable
 - `component_energy_residual_J`: component storage change minus source/reservoir heat during that interval
 - `node_acceptance_bound_J`, `component_acceptance_bound_J`: actual accepted numerical bounds
-- `interval_diagnostics_available`: false at t=0, true thereafter. Unavailable numerical entries are NaN in NumPy arrays, **not valid JSON**. For any strict JSON export, explicitly replace unavailable values with null and preserve the availability mask; no automatic JSON method is currently exposed
+- `interval_diagnostics_available`: false at t=0, true thereafter. Unavailable numerical entries are NaN in NumPy arrays, **not valid JSON**. Use `to_dict()` for strict JSON export: it replaces unavailable values with null and preserves the availability mask
 - `completed`: all requested intervals passed the discrete numerical checks. It does not certify time accuracy for arbitrary networks
 - `provenance_json`: explicit method, units, SciPy version and `time_accuracy_verified=false`
 
@@ -53,3 +53,22 @@ Public call signatures and result fields are unchanged; provenance gains the pro
 Very small heat increments at a nonzero absolute temperature can still be lost or exceed the permitted representation-to-heat ratio. Refining the time step can therefore trigger an explicit precision refusal rather than improve the computed trajectory. No dimensional absolute floor, automatic time-step adjustment or tolerance relaxation is introduced. Inspect the partial result and failure reason; a rejected interval is not an accepted state.
 
 This profile bounds only the current reconstruction relative to the previous stored temperature. It does not bound solve, assembly, physical input or historical state error, and is not a forward-accuracy, time-convergence, nonlinear-convergence or coupled-energy certificate. Internal signed-source test fixtures do not expand the public nonnegative-source contract. Representative trajectory and independent balance checks remain necessary for application-specific accuracy claims.
+
+## Graph admission and saved-field binding
+
+The thermal solver shares [the electrical graph admission contract](LINEAR_TRANSPORT_USAGE.md#graph-admission-and-coordinate-provenance).
+Every stable ID must fit nonnegative int64, and each node/edge record ID must
+match its dictionary key, including isolated nodes and inactive edges. Node
+positions are finite numeric triples. Masks (even all-false), booleans, complex
+values, text and object arrays are refused before conversion; float64 conversion
+cannot overflow or turn a nonzero coordinate into zero. Invalid input raises
+`ValueError` before sparse assembly, without producing an accepted prefix.
+
+For valid inputs, the copied positions, input hash, stable row order and thermal
+solution are unchanged. This protects the field binding used when reopening a
+saved thermal result; it does not authenticate a result or infer material laws.
+Use `result.to_dict()` for detached strict-JSON data, then pass the saved object
+to `prepare_saved_temperature` for a separately requested mechanics solve.
+Unavailable interval diagnostics become JSON null while their availability mask
+is retained. No interpolation, unit conversion or mechanical solve happens as
+a side effect of the thermal solve or serialization.

@@ -47,6 +47,12 @@ class GraphFeatureExtractor3D:
     ``max_k_core`` is the maximum unweighted core number. ``kcore_frac`` is
     that value divided by the unweighted mean degree over all nodes, including
     isolates (zero when the mean degree is zero). It can exceed one.
+    Cylinder volume and lateral area sum each edge's own radius and chord
+    length; a missing NetworkX radius retains the 0.05 default. These are
+    additive cylinder estimates, not a union solid or exposed surface.
+    ``edge_betweenness_gini`` is the population Gini coefficient of normalized,
+    unweighted edge betweenness. Larger values mean greater concentration;
+    the existing zero fallback for graphs with 500 or more nodes is unchanged.
     
     Parameters
     ----------
@@ -306,7 +312,9 @@ class GraphFeatureExtractor3D:
                 vals = list(eb.values())
                 feat['edge_betweenness_max'] = float(max(vals)) if vals else 0.0
                 if len(vals) > 1 and max(vals) > 0:
-                    sorted_vals = sorted(vals, reverse=True)
+                    # The rank-weighted population Gini formula requires
+                    # ascending values; descending order reverses its sign.
+                    sorted_vals = sorted(vals)
                     n = len(sorted_vals)
                     gini = sum((2 * (i + 1) - n - 1) * v for i, v in enumerate(sorted_vals)) / (n * sum(sorted_vals))
                     feat['edge_betweenness_gini'] = float(gini)
@@ -347,18 +355,19 @@ class GraphFeatureExtractor3D:
         feat['bbox_aspect_1'] = float(dims[0] / max(dims[1], 1e-12)) if len(dims) > 1 else 1.0
         feat['bbox_aspect_2'] = float(dims[1] / max(dims[2], 1e-12)) if len(dims) > 2 else 1.0
         
-        # Volume fraction (approximate edges as cylinders)
-        mean_radius = 0.05  # default
+        # Pair each radius with its own chord length in NetworkX edge order.
+        # Averaging radii first loses both radius variance and its association
+        # with length. Keep the legacy no-edge zero-length placeholder.
         edge_data = list(G.edges(data=True))
-        if edge_data:
-            radii = [d.get('radius', 0.05) for _, _, d in edge_data]
-            mean_radius = float(np.mean(radii))
-        
-        total_vol = float(np.sum(np.pi * mean_radius ** 2 * edge_lengths))
+        radii = np.array([d.get('radius', 0.05) for _, _, d in edge_data], dtype=float) \
+            if edge_data else np.array([0.05])
+
+        # Volume fraction (approximate edges as independent cylinders)
+        total_vol = float(np.sum(np.pi * radii ** 2 * edge_lengths))
         feat['volume_fraction'] = min(total_vol / bb_volume, 1.0)
         
         # Surface area approximation
-        feat['surface_area_approx'] = float(np.sum(2 * np.pi * mean_radius * edge_lengths))
+        feat['surface_area_approx'] = float(np.sum(2 * np.pi * radii * edge_lengths))
         feat['specific_surface'] = feat['surface_area_approx'] / max(total_vol, 1e-12)
         
         # Sphericity

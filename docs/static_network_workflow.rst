@@ -91,6 +91,34 @@ material calibration. A spanning recruited component is a positive-strain
 connectivity statistic, not a full load path: bending, compression and shear
 can carry force outside it.
 
+Use Python ``float`` or NumPy ``float64`` threshold controls, and keep
+``recruitment.threshold_curve`` in float64 when saving or replaying the
+analysis. For these controls it contains the exact onset thresholds used by
+the calculation. Extended-precision scalar controls such as ``longdouble``
+are not covered by this replay guarantee.
+Narrowing these values to float32 can change a strict ``strain > threshold``
+decision, even for ordinary strains very close to the threshold. JSON numeric
+lists preserve these binary64 values through Python's normal roundtrip::
+
+   import json
+
+   thresholds = json.loads(json.dumps(recruitment.threshold_curve.tolist(),
+                                     allow_nan=False))
+   assert np.array_equal(thresholds, recruitment.threshold_curve)
+
+For each frame, a previously inactive edge must exceed the reported onset
+threshold. An edge retained in the previous frame may instead exceed
+``hysteresis * threshold``. Both cases require positive strain, and
+``grip_connected=True`` then removes components touching neither grip.
+Thus replay needs the same strain history, edge order, grip sets, hysteresis
+and grip-connectivity option, as well as the thresholds. A threshold history
+alone does not identify a network or certify a physical load path.
+
+``tests/test_recruitment_threshold_precision.py`` checks this replay with an
+independent NetworkX oracle, including the saved 18-node and 60-node FEM
+networks. It also checks tiny and large finite thresholds numerically; those
+stress-test values are not claims about physically applicable strain ranges.
+
 Numerical meaning and independent checks
 ----------------------------------------
 

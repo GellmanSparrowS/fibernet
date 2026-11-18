@@ -139,7 +139,7 @@
   "symbols": [
    "GraphFeatureExtractor3D"
   ],
-  "sha256": "644385dc3cba763019a29a5872c893615e5655f14a91bd997b8701c438996ebc"
+  "sha256": "7a03e21bf27f8641cd3ed485355df856fe83eea6a83144ccb1f2a293c5e5a402"
  },
  "fibernet/api.py": {
   "purpose": "High-level convenience API for FiberNet.",
@@ -292,11 +292,12 @@
    "merge",
    "tile",
    "trim_to_box",
+   "_trim_crosslink_parameter",
    "duplicate_and_transform",
    "align_by_anchor",
    "create_pattern"
   ],
-  "sha256": "e15d8c0b2d3597fa69f7583cedb7d25617561d680918b6cce317962f7f7489e1"
+  "sha256": "c7b8abaa3312fc25392640235aabe73ac9cc484c91dd11f55e4e3d07eaa23cd5"
  },
  "fibernet/core/transforms.py": {
   "purpose": "Geometric transforms for StructureGraph.",
@@ -318,7 +319,7 @@
    "make_mirror",
    "make_scale"
   ],
-  "sha256": "f5d67e9c82ad28e3e0824ea9bec0d2d0144e54dc306f1a2e43af724964fb6732"
+  "sha256": "5909270435c51da173ba329b50b2be2fb0944b0d35c3bad8b7e68b32e2fcb6fc"
  },
  "fibernet/doe.py": {
   "purpose": "Design of Experiments (DOE) Module for Fiber Networks",
@@ -1716,7 +1717,7 @@
    "_element_data",
    "TaichiEngine"
   ],
-  "sha256": "c610d42339ed566c326bfbbc24796220211f582aa09a90518cbcf8413e43e82d"
+  "sha256": "cd8c99669b511bbdbbf1c913974ae739959103402119f910051e0e853554ff16"
  },
  "fibernet/sim/fem.py": {
   "purpose": "BeamFEM has been removed. All simulation now uses TaichiEngine (mass-spring dynamics).",
@@ -3557,7 +3558,7 @@
   "sha256": "b2ad3b060a908effa69f40e04022e8622060e1641edb788053e75d4359144544"
  },
  "fibernet/analysis/tensile_recruitment.py": {
-  "purpose": "Thresholded tensile-strain recruitment on a network trajectory.",
+  "purpose": "Thresholded tensile-strain recruitment with float64 replayable onset thresholds.",
   "status": "active",
   "symbols": [
    "PercolationResult",
@@ -3567,7 +3568,7 @@
    "analyze_tensile_recruitment",
    "compute_percolation"
   ],
-  "sha256": "d07de49e170122e4e459d948ebd10509b3620831f2dc991e365bbd7710e12c89"
+  "sha256": "4738580c09b2b1a3df005b72b096768c8178710d71e6491432f43231958b57f1"
  },
  "tests/test_tensile_recruitment.py": {
   "purpose": "Public API and APP compatibility checks for tensile recruitment.",
@@ -3954,13 +3955,15 @@
   "status": "active",
   "symbols": [
    "Engine2Config",
+   "_validate_config",
    "Engine2Result",
    "_grips",
    "_degree2_triplets",
    "_excluded_pairs",
+   "_validate_planar_geometry",
    "Engine2"
   ],
-  "sha256": "bdf554a0c1b096d2f88fbd4a6d7ed7f44ad6bdf9d41ecdc9ea511e40cbe6f1b7"
+  "sha256": "36bc96c37262f919a4b5f49bb124a6d869f47a6ce1a241df51ee8986ba5914bf"
  },
  "tests/test_reduced_beam_cross_end.py": {
   "purpose": "Public reduced solver matches the APP and feeds recruitment directly.",
@@ -4088,7 +4091,7 @@
   "sha256": "21abf5cacc33b7ce51f800e96303ac53d41ce8360916cf56a9fe8faefd05ab58"
  },
  "fibernet/analysis/snapshot_features.py": {
-  "purpose": "Structure feature extraction for fiber networks (pure numpy).",
+  "purpose": "Snapshot structure, nested planar-face pore and optional finite-width contact features.",
   "status": "active",
   "symbols": [
    "feature_name",
@@ -4104,12 +4107,14 @@
    "_poly_area",
    "_poly_perim",
    "_faces",
+   "_inside_boundary",
    "_pore_features",
    "_contact_features",
    "compute_features",
-   "SnapshotFeatureExtractor"
+   "SnapshotFeatureExtractor",
+   "_normalized_pore_features"
   ],
-  "sha256": "a7afe442ed2d5a80effbc065310e3b9f5bd02c7ef803019232266a6c66923fcd"
+  "sha256": "43c9bb6020f30c66a43761c443b1150427a33dfdd6305c673f9ead874c379a74"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -4118,7 +4123,7 @@
    "candidate_pairs",
    "ContactConfig"
   ],
-  "sha256": "6139c7aaebd82ab032f052cc64b30a2674155bf3c4a45981843a9914e55798f7"
+  "sha256": "47ba97424dd46d6e8068a9ed45ed9c210cc1a54ec8916d27fe74b76aea26667c"
  },
  "tests/test_snapshot_features_cross_end.py": {
   "purpose": "The desktop snapshot-feature contract remains numerically unchanged.",
@@ -4687,7 +4692,7 @@
   "sha256": "f2f1c6e615be22ddc2c7767404149e7b40f1235c6e6f68f78064d8a9559823b5"
  },
  "tests/test_taichi_event_compat_source.py": {
-  "purpose": "AST-isolated event/state checks; never import FiberNet or Taichi.",
+  "purpose": "Exact reversible historical and current source admission; optional-import and detailed-result identity layers.",
   "status": "active",
   "symbols": [
    "isolated",
@@ -4761,7 +4766,7 @@
    "ResultProcessingSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "592667e66772df6a1188a20dadb78737e58f7a8209a167f2fc315e63d574d65f"
+  "sha256": "20fdb8a719ba505b29b22f8321f1b0508891540fd2ac7ae3c25b99e5d4c89873"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -4802,6 +4807,370 @@
   ],
   "sha256": "efcdffa7366e4c56333593f604c80cb1120f8c622be46d54b5e8420a3831bd4f"
  },
+ "tests/test_graph_scalar_scale.py": {
+  "purpose": "Scalar representation must not change a graph's cross-section scaling.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "test_numpy_scalar_matches_python_geometry_radii_and_ownership",
+   "test_signed_zero_fractional_and_empty_scalar_parity",
+   "test_vectors_retain_historical_coordinate_only_policy",
+   "test_masked_scalar_rejects_without_mutation_even_for_empty_graph",
+   "test_composed_transform_and_json_roundtrip",
+   "test_timedelta_is_not_reclassified_as_a_numeric_scalar",
+   "test_numpy_integer_extrema_use_float64_radius_arithmetic",
+   "test_existing_float64_scalar_radius_promotion_is_preserved",
+   "test_scaled_cantilever_fem_matches_analytical_response"
+  ],
+  "sha256": "dcd0b5d08e12521d1fafa411342be890bfcb95d3f767c4048475ff6199eba994"
+ },
+ "tests/test_graph_feature_cylinder_sums.py": {
+  "purpose": "Per-member cylinder estimates retain the radius/length association.",
+  "status": "active",
+  "symbols": [
+   "expected_metrics",
+   "nonuniform_graph",
+   "test_independent_member_sums",
+   "test_radius_length_association_is_not_averaged",
+   "test_equal_lengths_still_require_mean_square_radius",
+   "test_native_generated_members_and_json_roundtrip",
+   "test_geometric_similarity",
+   "test_edgeless_positions_retain_zero_estimates",
+   "test_geometry_analysis_does_not_mutate_input"
+  ],
+  "sha256": "b444d8a88cad5aca66f021d38630adef5330baa1b8dbfd1a1d4a513eae91c193"
+ },
+ "tests/test_heterogeneous_radius_workflow.py": {
+  "purpose": "Real native generation, linear solve, persisted analysis and VTK ordering.",
+  "status": "active",
+  "symbols": [
+   "test_generated_radius_workflow"
+  ],
+  "sha256": "b6e3fb6fe04143dcee27068fe8b6576db43769545bb55e5fa1039e31457bbd19"
+ },
+ "examples/heterogeneous_radius_workflow.py": {
+  "purpose": "Generated octet radii through linear FEM, saved analysis and VTK fields.",
+  "status": "active",
+  "symbols": [
+   "run"
+  ],
+  "sha256": "78dea315ab52c120bafeb7d82d55d7e2b4916920acf92309aa0e2a245f85c3a5"
+ },
+ "fibernet/sim/_transport_graph.py": {
+  "purpose": "Lossless admission of graph identities and coordinate provenance for transport.",
+  "status": "active",
+  "symbols": [
+   "_identifier",
+   "_position",
+   "transport_graph_snapshot"
+  ],
+  "sha256": "d08c4f6cb3464c74f941da5daf097c9c989eca76b4cabe91d108ca7d35baa6c7"
+ },
+ "fibernet/sim/linear_transport.py": {
+  "purpose": "Steady scalar electrical transport with explicit edge conductances.",
+  "status": "active",
+  "symbols": [
+   "FloatingComponentError",
+   "TransportSolveError",
+   "_identifier",
+   "_number",
+   "_metadata",
+   "_readonly",
+   "LinearTransportResult",
+   "solve_linear_transport"
+  ],
+  "sha256": "8a6b0994a26a085da6d89c78ab72d87ba6e5195dd3582ee08e3fe34c584cdf92"
+ },
+ "fibernet/sim/transient_thermal.py": {
+  "purpose": "Explicit lumped thermal network; constant inputs and backward Euler only.",
+  "status": "active",
+  "symbols": [
+   "ThermalSolveError",
+   "_ro",
+   "TransientThermalResult",
+   "_id",
+   "_num",
+   "_mapping",
+   "_solve_transient_thermal",
+   "solve_transient_thermal",
+   "_solve_thermal_interval"
+  ],
+  "sha256": "e99162e17f5c63b35f92077abdd2b216068472a60fcbe1bce8075061a73823f0"
+ },
+ "tests/test_transport_graph_admission.py": {
+  "purpose": "Graph identity and coordinate admission shared by both transport owners.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "electrical",
+   "thermal",
+   "solve",
+   "invalid_positions",
+   "test_invalid_geometry_rejected_before_sparse_assembly",
+   "test_record_id_must_be_valid_and_match_key",
+   "test_extended_precision_conversion_cannot_erase_nonzero",
+   "test_supported_coordinates_preserve_fields_and_fingerprint",
+   "test_stable_order_parallel_inactive_and_detached_results",
+   "test_max_int64_ids_and_singleton_transport_remain_supported",
+   "test_thermal_saved_temperature_binding_retains_exact_graph_fields",
+   "test_geometry_is_provenance_not_a_conductance_law"
+  ],
+  "sha256": "04a83e6782d82dc9094bd1a0aeefbca215357e1b3e6ba35a18d92e41ecaeb6cd"
+ },
+ "tests/test_recruitment_threshold_precision.py": {
+  "purpose": "Independent threshold-history replay through strict boundaries, hysteresis, JSON and saved FEM networks.",
+  "status": "active",
+  "sha256": "bf65e4e5a542d78f9b0a2db83f35be403177f0f9e95c98f02962efb129d1d37b",
+  "symbols": []
+ },
+ "tests/test_width_contact_scale.py": {
+  "purpose": "Finite-width raster decisions must not depend on the length unit.",
+  "status": "active",
+  "symbols": [
+   "exact_crossing_pixels",
+   "test_crossing_contacts_match_exact_pixel_oracle_at_every_unit",
+   "test_translation_edge_reversal_and_no_input_mutation",
+   "test_non_crossing_overlapping_capsules_and_shared_nodes",
+   "test_coincident_zero_length_segments_are_disks",
+   "test_snapshot_public_route_preserves_contact_unit_contract",
+   "test_pixel_budget_is_not_changed_by_units",
+   "test_unrepresentable_pixel_area_fails_explicitly",
+   "test_unrepresentable_coordinate_extent_fails_explicitly",
+   "test_zero_width_and_empty_edges_preserve_short_circuits",
+   "test_large_integer_coordinates_normalize_without_integer_overflow"
+  ],
+  "sha256": "933ad923ef0aa3ede345eb896c7c729d3c78f458843b26bbcd31b5e9d7134616"
+ },
+ "docs/static_network_workflow.rst": {
+  "purpose": "Stored-material static FEM, analysis, threshold replay and export workflow.",
+  "status": "active",
+  "sha256": "da837adb8b829f77ecacc7843d1252a35cc897a7757facd57be4439eacafb830"
+ },
+ "tests/test_reduced_beam_config_validation.py": {
+  "purpose": "Admission contracts for the mutable reduced-model configuration.",
+  "status": "active",
+  "symbols": [
+   "_bar",
+   "test_nonfinite_config_is_rejected",
+   "test_numeric_controls_require_real_scalars",
+   "test_step_controls_require_integers",
+   "test_out_of_range_controls_are_rejected",
+   "test_mutated_config_is_rejected_before_geometry",
+   "test_mutation_after_solver_construction_cannot_produce_nonfinite_result",
+   "test_valid_numpy_scalars_keep_analytical_spring_response",
+   "test_zero_stiffness_remains_supported",
+   "test_extended_precision_scalars_cannot_reach_float64_force_accumulation",
+   "test_feature_switches_require_booleans",
+   "test_supported_numpy_floating_precisions_and_booleans_run",
+   "test_overlapping_grip_bands_keep_legacy_midpoint_fallback",
+   "test_large_python_integer_coefficient_does_not_require_numpy_int64",
+   "test_real_control_outside_float64_conversion_range_is_rejected",
+   "test_low_precision_bending_fraction_uses_float64_coefficient_arithmetic",
+   "test_invalid_mutation_does_not_partially_normalize_other_fields"
+  ],
+  "sha256": "4fd3a3ff734b9917b5a5619795f6ab9451d7867170a3ca9bd327f3f24cfaf9ac"
+ },
+ "tests/test_fiberscope_geometry_cache.py": {
+  "purpose": "Runner/NPZ/UI contracts with isolated caches and a small solver roundtrip.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "Factory",
+   "result",
+   "engine",
+   "tag",
+   "test_required_graph_and_no_build",
+   "test_consumed_changes_miss",
+   "test_hit_sentinel_runtime_fields_and_old_namespace",
+   "test_unreadable_is_miss",
+   "test_no_cache_does_not_require_factory_key",
+   "test_nonfinite_config_rejects_before_cache_lookup",
+   "test_app_step_validation_precedes_scaling",
+   "test_numpy_controls_survive_real_solver_cache_roundtrip",
+   "test_post_weld_graph_built_once",
+   "test_numeric_canonicalization_and_unused_fields",
+   "test_unsupported_geometry_cannot_reuse_a_planar_cache",
+   "test_unsupported_source_geometry_rejects_before_weld_and_cache",
+   "test_discretized_planar_factory_runs_and_caches_with_weld_option",
+   "test_invalid_inputs_rejected",
+   "test_worker_uses_actual_status",
+   "test_actual_legacy_generator_change_rejects_saved_xy",
+   "test_write_failure_is_fresh_status"
+  ],
+  "sha256": "8383fade572c4c2904ab3456dd4f2424b4e804f88073d811c22366a69f33f1ae"
+ },
+ "tests/test_legacy_trim_crosslinks.py": {
+  "purpose": "Crosslink preservation in the legacy sampled-vertex trim operation.",
+  "status": "active",
+  "symbols": [
+   "fiber",
+   "link",
+   "network",
+   "test_keep_order_multiplicity_remap_indices_and_preserve_fields",
+   "test_whole_fiber_mode_keeps_outside_links_when_both_fibers_survive",
+   "test_sampled_mode_remaps_vertices_and_segment_interiors",
+   "test_sampled_mode_drops_removed_or_invalid_endpoint_parameters",
+   "test_separated_runs_do_not_move_links_onto_artificial_chords",
+   "test_roundoff_at_surviving_vertex_next_to_removed_segment",
+   "test_empty_no_crosslinks_and_no_geometric_intersection_insertion",
+   "test_signature_defaults_unchanged"
+  ],
+  "sha256": "a551fea326b3105d32db6fa9cae7b278f60ea2c6bb73dfa7630e3be5ff15d41c"
+ },
+ "tests/test_legacy_trim_bridge_integration.py": {
+  "purpose": "Native junctions remain usable after the legacy sampled trim bridge.",
+  "status": "active",
+  "symbols": [
+   "test_native_chain_trim_preserves_topology_and_json_roundtrip"
+  ],
+  "sha256": "8181a97e370ad8596d24ae721f1e0119cb233d982378ef1bd3be33ce4aa1a2fc"
+ },
+ "tests/test_result_identity_contract.py": {
+  "purpose": "Detailed-result identity, geometry admission and atomic result persistence contracts.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "37b34872da116afb17af78ad462a82ce8a2fa16e5857a8818255b8cf2b2ec2c6"
+ },
+ "tests/test_source_checkout_bytes.py": {
+  "purpose": "Byte-sealed source and fixture Git checkout preservation.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "61f88f090a1e99eed7b860abb6509b72b47e63e2d445086f4958c513948cbf43"
+ },
+ "fibernet/core/single_junction_import.py": {
+  "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
+  "status": "active",
+  "symbols": [
+   "_real_coordinates",
+   "convert_single_welded_crosslink",
+   "_bounded_vector",
+   "convert_exact_welded_crosslinks",
+   "contains_mask",
+   "check_integers",
+   "find"
+  ],
+  "sha256": "7119a58e30281ec3dc03671200beec3b3c7539a0a0a0cfd824ebd13faba62b68"
+ },
+ "tests/test_single_junction_import.py": {
+  "purpose": "Original exact single-weld compatibility and rejection contracts.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "SingleJunction",
+   "test_exact_crossing_has_one_shared_node_and_mapping",
+   "test_three_dimensional_reversed_indices_and_material_mapping",
+   "test_masked_complex_and_nonintegral_dimension_are_rejected",
+   "test_rejects_ambiguous_or_lossy_cases",
+   "nearby",
+   "curve",
+   "near_other_fiber",
+   "material",
+   "material_subclass",
+   "connection",
+   "finite",
+   "endpoint",
+   "extra",
+   "periodic",
+   "refs",
+   "CustomMaterial"
+  ],
+  "sha256": "0c646835b9608c7f8f7fe87cbc234b76da6aa7275d494a10ff673e0ebc307aba"
+ },
+ "tests/test_multi_junction_import.py": {
+  "purpose": "Explicit multi-weld mapping, ownership, rejection and resource-bound contracts.",
+  "status": "active",
+  "symbols": [
+   "straight",
+   "fixture",
+   "MultiJunction",
+   "test_two_junctions_one_fiber_and_detached_materials",
+   "test_transitive_weld_and_disjoint_same_coordinate",
+   "test_rejects_duplicate_invalid_or_nonexact_links",
+   "test_resource_bounds_and_endpoint_at_unrelated_weld",
+   "test_same_fiber_same_position_with_distinct_parameters_rejected",
+   "duplicate",
+   "reversed_duplicate",
+   "nearby",
+   "endpoint",
+   "bad_ref",
+   "self_link",
+   "pinned",
+   "finite",
+   "curved",
+   "noncircular",
+   "periodic",
+   "no_links",
+   "coincident_end"
+  ],
+  "sha256": "e5c4609311e52584e186eb443db1abae86f543c61bbfbae63b0a074c253c3563"
+ },
+ "tests/test_multi_junction_saved_workflow.py": {
+  "purpose": "Real saved legacy-to-native multi-weld workflow, joint source mapping and detached ownership without solving.",
+  "status": "active",
+  "symbols": [
+   "saved_design",
+   "components",
+   "MultiJunctionSavedWorkflow",
+   "assert_joint_mapping",
+   "test_saved_legacy_to_native_keeps_joint_mapping",
+   "test_nested_ownership_is_independent_in_both_directions",
+   "reject_constant"
+  ],
+  "sha256": "2ee588c3bb5f483604efb4a11e9a6bba8c1ea5241e8c0bbd4e74b7f1aba0df44"
+ },
+ "tests/test_graph_feature_3d_betweenness.py": {
+  "sha256": "5c6cd5a75fe3c527160bc1993c054bd01b3de545f24ad76a81bc040b1cc214f8",
+  "status": "active",
+  "symbols": [
+   "pairwise_gini",
+   "shortest_path_counts",
+   "positioned",
+   "test_public_values_vector_and_batch_layout",
+   "test_exact_shortest_path_oracle_and_insertion_order",
+   "test_structure_graph_saved_workflow_and_sparse_ids",
+   "test_generated_network_persistence",
+   "test_fiber_network_keeps_centerline_segment_conversion",
+   "test_existing_compute_cutoff_is_unchanged",
+   "test_existing_failure_fallback_is_unchanged"
+  ],
+  "purpose": "The 3D betweenness concentration feature agrees with pairwise inequality."
+ },
+ "docs/graph_betweenness.rst": {
+  "sha256": "63b51f550fb1ba7d50d79c95e2278a60503caea264a7fef3477cfccd7c3ab27d",
+  "status": "active",
+  "purpose": "Population edge-betweenness concentration and revision-aware feature usage."
+ },
+ "fibernet/analysis/geometry_paths.py": {
+  "purpose": "Bounded explicit-edge geometry and selected pair distances, schema 1.",
+  "status": "active",
+  "symbols": [
+   "GeometryPathMetricsV1",
+   "_integer",
+   "_finite",
+   "_ratio",
+   "_distance",
+   "_geometry",
+   "analyze_geometry_paths",
+   "compare_lammps_node_displacements"
+  ],
+  "sha256": "ec85d4b8695caccc17514d2e3a5410dc69fcd47a122db23b0bb49dc57089132d"
+ },
+ "tests/test_geometry_paths_admission.py": {
+  "purpose": "Geometry analysis must not invent observations during NumPy promotion.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "analyze",
+   "masked_position",
+   "test_nested_masked_positions_rejected_even_on_isolates",
+   "test_nested_masked_rows_rejected_before_path_selection",
+   "test_scalar_and_empty_masks_are_not_laundered",
+   "test_boolean_coordinates_rejected_before_numeric_promotion",
+   "test_numeric_containers_and_explicit_unmasking_preserve_results",
+   "test_shared_containers_and_recursive_invalid_inputs_terminate"
+  ],
+  "sha256": "85411551b69db05ab400e8c5d7ad5149ed036f38de331cbc1ae703ab0e9f581c"
+ },
  "tests/test_fem_energy_contract.py": {
   "purpose": "Additive, detached linear-beam energy without changing the legacy proxy.",
   "status": "active",
@@ -4832,5 +5201,41 @@
    "test_numerical_regularization_is_excluded_from_force_loaded_energy"
   ],
   "sha256": "d5000c18ec1bc3b9be6ecd1fa93c6d2bc657dcd75733efbf4a68d2d1468db84a"
+ },
+ "tests/test_snapshot_nested_pores.py": {
+  "purpose": "Analytical nested-face area, perimeter, adjacency, slit and graph/JSON workflow regressions.",
+  "status": "active",
+  "sha256": "364cc0b0944a4d51622c3f90e1ae396d08a958dac69426e1ee7b567d86faac96",
+  "symbols": [
+   "add_polygon",
+   "square",
+   "nested",
+   "check",
+   "test_nested_cycles_partition_area_and_share_boundaries",
+   "test_multiple_holes_and_three_nesting_levels",
+   "test_subdivided_inner_component_is_subtracted_once",
+   "test_concave_parent_does_not_capture_component_in_its_notch",
+   "test_disconnected_trees_contribute_both_sides_only_to_containing_pore",
+   "test_connected_annulus_with_bridge_and_inner_tree",
+   "test_component_with_internal_bridge_has_one_exterior_boundary",
+   "test_order_direction_parallel_edges_and_isolates_preserve_face_metrics",
+   "test_sparse_structure_graph_json_and_direct_array_routes",
+   "test_generated_network_inside_frame_obeys_euler_and_area_partition",
+   "test_tree_roundoff_does_not_hide_slit_or_remove_area",
+   "test_contact_enabled_preserves_nested_pore_metrics",
+   "test_point_touching_cycles_have_no_edge_adjacency",
+   "test_inner_loop_outward_branch_is_part_of_annular_boundary",
+   "test_loop_in_bridged_annular_face_removes_area_from_that_face_only"
+  ]
+ },
+ "docs/SNAPSHOT_PORE_SCALING.md": {
+  "purpose": "Pore scale, nested-boundary semantics, usage and numerical migration.",
+  "status": "active",
+  "sha256": "7d1c098064d8c27eb372f74652c961521611ac8a257371aa3a62de7b81aca9d6"
+ },
+ "docs/architecture/snapshot-identity-contract.md": {
+  "purpose": "Stable graph identity and snapshot feature semantics.",
+  "status": "active",
+  "sha256": "8e2da8fd0b8dd59801a28793de812e81602b14dec64c534183ce051f034ed48b"
  }
 }

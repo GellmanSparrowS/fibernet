@@ -331,12 +331,70 @@ def candidate_result_processing_source(reverse=None):
     return reverse
 
 
+COMPUTE_DETAILED_VALIDATION_DELTA_PIN = '825a92957ab57531433aa54a29a0101470b7808e7430ad9c659f704f7a53bbb6'
+
+
+def candidate_compute_detailed_validation_source(reverse=None):
+    raw = (ROOT/'tests/fixtures/compute_detailed_validation_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == COMPUTE_DETAILED_VALIDATION_DELTA_PIN, 'compute detailed validation delta changed'
+    delta = json.loads(raw)
+    assert delta['schema'] == 'candidate_compute_detailed_validation_delta/1'
+    source = candidate_result_processing_source()
+    assert hashlib.sha256(source).hexdigest() == delta['base_sha256'], 'compute detailed validation base changed'
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'compute detailed validation delta not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'compute detailed validation source changed'
+    if reverse is None:
+        return source
+    assert reverse == source, 'unreviewed compute detailed validation source'
+    for hunk in reversed(delta['hunks']):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert after and reverse.count(after) == 1, 'compute detailed validation inverse not uniquely located'
+        reverse = reverse.replace(after, before, 1)
+    assert reverse == candidate_result_processing_source(), 'compute detailed validation inverse changed prior source'
+    return reverse
+
+
+# Current-main composition reuses the immutable historical hunks, not its old source identity.
+CURRENT_COMPUTE_DETAILED_BASE_SHA256 = '68da6a68016ef7e13e45c3b2b42ac7d9b772fb849f65a6a1252d5617abe0f8dc'
+CURRENT_COMPUTE_DETAILED_RESULT_SHA256 = 'cd8c99669b511bbdbbf1c913974ae739959103402119f910051e0e853554ff16'
+
+
+def reviewed_compute_detailed_validation_source(reverse=None):
+    # Revalidate the original pinned fixture and its historical forward/inverse contract.
+    historical = candidate_compute_detailed_validation_source()
+    assert candidate_compute_detailed_validation_source(reverse=historical) == candidate_result_processing_source()
+    raw = (ROOT/'tests/fixtures/compute_detailed_validation_v1/accelerated_delta.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == COMPUTE_DETAILED_VALIDATION_DELTA_PIN, 'compute detailed validation delta changed'
+    delta = json.loads(raw)
+    prior = reviewed_taichi_import_source()
+    assert hashlib.sha256(prior).hexdigest() == CURRENT_COMPUTE_DETAILED_BASE_SHA256, 'current detailed validation base changed'
+    source = prior
+    for hunk in delta['hunks']:
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert before and source.count(before) == 1, 'current detailed validation delta not uniquely located'
+        source = source.replace(before, after, 1)
+    assert hashlib.sha256(source).hexdigest() == CURRENT_COMPUTE_DETAILED_RESULT_SHA256, 'current detailed validation source changed'
+    if reverse is None:
+        return source
+    assert reverse == source, 'unreviewed current detailed validation source'
+    for hunk in reversed(delta['hunks']):
+        before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
+        assert after and reverse.count(after) == 1, 'current detailed validation inverse not uniquely located'
+        reverse = reverse.replace(after, before, 1)
+    assert reverse == prior, 'current detailed validation inverse changed prior source'
+    return reverse
+
+
 def normalize_result_identity_method(function):
     """Qualify the complete reviewed prefix; retain every appended statement."""
     historical = result_detail_method(public_baseline('fibernet/sim/accelerated.py').read_bytes())
     approved = result_detail_method(b'class SimResult:\n' + reviewed_result_identity_method())
     provenance = result_detail_method(reviewed_spring_provenance_source())
-    for reference in (provenance, approved, historical):
+    validated = result_detail_method(reviewed_compute_detailed_validation_source())
+    for reference in (validated, provenance, approved, historical):
         prefix = copy.deepcopy(function)
         suffix = prefix.body[len(reference.body):]
         prefix.body = prefix.body[:len(reference.body)]
@@ -1128,7 +1186,7 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source(), candidate_result_processing_source(), reviewed_mechanical_json_scalar_source(), reviewed_taichi_import_source()), 'public source bytes changed: '+relative
+        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source(), candidate_result_processing_source(), reviewed_mechanical_json_scalar_source(), reviewed_taichi_import_source(), candidate_compute_detailed_validation_source(), reviewed_compute_detailed_validation_source()), 'public source bytes changed: '+relative
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative
@@ -1326,7 +1384,7 @@ class PR108ReviewedSourceAdmission(unittest.TestCase):
                 prior = previous()
                 actual = (ROOT/relative).read_bytes()
                 if relative == 'fibernet/sim/accelerated.py':
-                    actual = reviewed_taichi_import_source(reverse=actual)
+                    actual = reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=actual))
                 elif relative == 'fibernet/easy.py':
                     actual = restore_reviewed_release_easy_source(actual)
                 self.assertEqual(current, actual)
@@ -1572,7 +1630,7 @@ class GeometryPolicySourceAdmission(unittest.TestCase):
             with self.subTest(source=relative):
                 expected = (reviewed_taichi_controls_source() if relative == 'fibernet/sim/accelerated.py'
                             else reviewed_easy_optional_import_source())
-                self.assertEqual(reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=(ROOT/relative).read_bytes()))))
+                self.assertEqual(reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=(ROOT/relative).read_bytes())))))
                                  if relative == 'fibernet/sim/accelerated.py' else reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/relative).read_bytes())), expected)
                 require_public_source(relative, expected)
                 for changed in (expected+b'\n# unreviewed\n',
@@ -1677,7 +1735,7 @@ class SavedEnergyDiagnosticsSourceAdmission(unittest.TestCase):
         prior = reviewed_taichi_geometry_source('fibernet/sim/accelerated.py')
         current = reviewed_saved_energy_diagnostics_source()
         self.assertEqual(current, restore_reviewed_lammps_metadata_source(
-            reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes())))))))
+            reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))))))))
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
         old, new = ast.parse(prior), ast.parse(current)
@@ -1720,7 +1778,7 @@ class LammpsMetadataSourceAdmission(unittest.TestCase):
     def test_exact_reversible_delta_changes_only_two_methods(self):
         prior = reviewed_saved_energy_diagnostics_source()
         current = reviewed_lammps_metadata_source()
-        self.assertEqual(current, reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes()))))))
+        self.assertEqual(current, reviewed_taichi_controls_source(reverse=reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes())))))))
         self.assertEqual(restore_reviewed_lammps_metadata_source(current), prior)
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
@@ -1791,7 +1849,7 @@ class TaichiControlsSourceAdmission(unittest.TestCase):
     def test_exact_reversible_delta_changes_only_dynamics_body(self):
         prior = reviewed_lammps_metadata_source()
         current = reviewed_taichi_controls_source()
-        self.assertEqual(current, reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes())))))
+        self.assertEqual(current, reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))))))
         self.assertEqual(reviewed_taichi_controls_source(reverse=current), prior)
         require_public_source('fibernet/sim/accelerated.py', prior)
         require_public_source('fibernet/sim/accelerated.py', current)
@@ -1844,7 +1902,7 @@ class LammpsReferenceSourceAdmission(unittest.TestCase):
     def test_exact_current_forward_inverse_and_historical_admission(self):
         prior = reviewed_taichi_controls_source()
         current = reviewed_lammps_reference_source()
-        self.assertEqual(current, candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes()))))
+        self.assertEqual(current, candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes())))))
         self.assertEqual(reviewed_lammps_reference_source(reverse=current), prior)
         for raw in (prior, current):
             require_public_source('fibernet/sim/accelerated.py', raw)
@@ -1927,7 +1985,7 @@ class LammpsReferenceControlsComposition(unittest.TestCase):
         combined = reviewed_lammps_reference_source()
         controls = reviewed_lammps_reference_source(reverse=combined)
         baseline = reviewed_taichi_controls_source(reverse=controls)
-        self.assertEqual(combined, candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes()))))
+        self.assertEqual(combined, candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes())))))
         self.assertEqual(baseline, reviewed_lammps_metadata_source())
         self.assertEqual(hashlib.sha256(baseline).hexdigest(),
                          'b77aaa7b37216174d97805b4529f1dbaec3d3099106f630221b60147124ccf82')
@@ -1973,7 +2031,7 @@ class TaichiOptionalImportSourceAdmission(unittest.TestCase):
     def test_exact_forward_inverse_and_historical_admission(self):
         prior = reviewed_mechanical_json_scalar_source()
         current = reviewed_taichi_import_source()
-        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(current, reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))
         self.assertEqual(reviewed_taichi_import_source(reverse=current), prior)
         self.assertNotEqual(current, prior)
         for raw in (prior, current):
@@ -2016,12 +2074,12 @@ class TaichiOptionalImportSourceAdmission(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     reviewed_taichi_import_source()
                 with self.assertRaises(AssertionError):
-                    reviewed_taichi_import_source(reverse=SOURCE.read_bytes())
+                    reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))
 
 
 class BackendLazySourceComposition(unittest.TestCase):
     def test_current_pair_preserves_both_ordered_lineages(self):
-        accelerated = reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes()))
+        accelerated = reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes())))
         easy = reviewed_easy_train_policy_source(reverse=restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()))
         self.assertEqual(hashlib.sha256(candidate_result_processing_source(reverse=accelerated)).hexdigest(), LAMMPS_REFERENCE_RESULT_SHA256)
         self.assertEqual(hashlib.sha256(easy).hexdigest(), EASY_OPTIONAL_IMPORT_SHA256)
@@ -2050,7 +2108,7 @@ class BackendLazySourceComposition(unittest.TestCase):
 class ResultProcessingSourceAdmission(unittest.TestCase):
     def test_exact_candidate_and_prior_sources_are_admitted(self):
         current = candidate_result_processing_source()
-        self.assertEqual(current, reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes())))
+        self.assertEqual(current, reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))))
         self.assertEqual(candidate_result_processing_source(reverse=current), reviewed_lammps_reference_source())
         with self.assertRaises(AssertionError):
             candidate_result_processing_source(reverse=reviewed_lammps_reference_source())
@@ -2095,6 +2153,72 @@ class ResultProcessingSourceAdmission(unittest.TestCase):
                 candidate_result_processing_source()
 
 
+class ComputeDetailedValidationSourceAdmission(unittest.TestCase):
+    def test_exact_candidate_and_prior_roundtrip(self):
+        current = reviewed_compute_detailed_validation_source()
+        prior = reviewed_taichi_import_source()
+        self.assertEqual(current, SOURCE.read_bytes())
+        self.assertEqual(reviewed_compute_detailed_validation_source(reverse=current), prior)
+        with self.assertRaises(AssertionError):
+            reviewed_compute_detailed_validation_source(reverse=prior)
+        for raw in (prior, current):
+            require_public_source('fibernet/sim/accelerated.py', raw)
+
+    def test_only_compute_detailed_differs(self):
+        def without_compute_detailed(raw):
+            tree = ast.parse(raw)
+            result = next(n for n in tree.body if getattr(n, 'name', None)=='SimResult')
+            result.body = [n for n in result.body if getattr(n, 'name', None)!='compute_detailed']
+            return canonical_ast(tree)
+        self.assertEqual(without_compute_detailed(reviewed_taichi_import_source()),
+                         without_compute_detailed(reviewed_compute_detailed_validation_source()))
+
+    def test_unreviewed_identity_geometry_and_unrelated_changes_rejected(self):
+        raw = reviewed_compute_detailed_validation_source()
+        replacements = (
+            (b'if record_nodes != graph_node_ids or record_edges != edge_ids:', b'if False:'),
+            (b"_strict_state_ids(list(graph.nodes), 'graph node keys')", b'list(graph.nodes)'),
+            (b'if np.any(np.all(pos_orig[elements[:, 0]] == pos_orig[elements[:, 1]], axis=1)):', b'if False:'),
+            (b'if _plain_full_history_export(self, detailed):', b'if True:'),
+        )
+        for before, after in replacements:
+            self.assertEqual(raw.count(before), 1)
+            changed = raw.replace(before, after, 1)
+            with self.subTest(mutation=before):
+                with self.assertRaises(AssertionError):
+                    require_public_source('fibernet/sim/accelerated.py', changed)
+                with self.assertRaises(AssertionError):
+                    reviewed_compute_detailed_validation_source(reverse=changed)
+        for changed in (raw+b'\npass\n', raw+b'\n# unreviewed comment\n', raw.replace(b'\n', b'\r\n')):
+            with self.assertRaises(AssertionError):
+                require_public_source('fibernet/sim/accelerated.py', changed)
+            with self.assertRaises(AssertionError):
+                reviewed_compute_detailed_validation_source(reverse=changed)
+
+    def test_delta_digest_is_not_self_accepting(self):
+        fixture = ROOT/'tests/fixtures/compute_detailed_validation_v1/accelerated_delta.json'
+        original = Path.read_bytes
+        def changed_read(path):
+            raw = original(path)
+            return raw+b'\n' if path==fixture else raw
+        with patch.object(Path, 'read_bytes', changed_read):
+            with self.assertRaisesRegex(AssertionError, 'compute detailed validation delta changed'):
+                reviewed_compute_detailed_validation_source()
+
+    def test_frozen_historical_delta_remains_exact(self):
+        historical = candidate_compute_detailed_validation_source()
+        prior = candidate_result_processing_source()
+        self.assertEqual(candidate_compute_detailed_validation_source(reverse=historical), prior)
+        self.assertNotEqual(historical, reviewed_compute_detailed_validation_source())
+        self.assertEqual(canonical_ast(result_detail_method(historical)),
+                         canonical_ast(result_detail_method(reviewed_compute_detailed_validation_source())))
+        for raw in (prior, historical):
+            require_public_source('fibernet/sim/accelerated.py', raw)
+        with self.assertRaises(AssertionError):
+            reviewed_compute_detailed_validation_source(reverse=historical)
+
+
+
 class SourceShape(unittest.TestCase):
     def test_spring_provenance_delta_is_scoped_and_bound(self):
         before = ast.parse(reviewed_result_identity_source().decode('utf-8'))
@@ -2113,7 +2237,7 @@ class SourceShape(unittest.TestCase):
             self.assertEqual(set(old_methods), set(new_methods))
             for name in set(old_methods)-allowed:
                 self.assertEqual(canonical_ast(old_methods[name]), canonical_ast(new_methods[name]), name)
-        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes())))))
+        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))))))
 
     def test_spring_provenance_persistence_mutations_are_refused(self):
         raw = SOURCE.read_bytes()
@@ -2149,7 +2273,7 @@ class SourceShape(unittest.TestCase):
 
     def test_result_identity_reviewed_source_is_method_scoped(self):
         baseline = public_baseline('fibernet/sim/accelerated.py').read_bytes()
-        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=SOURCE.read_bytes())))))
+        self.assertEqual(reviewed_taichi_controls_source(), reviewed_lammps_reference_source(reverse=candidate_result_processing_source(reverse=reviewed_mechanical_json_scalar_source(reverse=reviewed_taichi_import_source(reverse=reviewed_compute_detailed_validation_source(reverse=SOURCE.read_bytes()))))))
         require_public_source('fibernet/sim/accelerated.py', reviewed_result_identity_source())
         require_public_source('fibernet/sim/accelerated.py', baseline)
         require_public_source('fibernet/sim/accelerated.py', SOURCE.read_bytes())

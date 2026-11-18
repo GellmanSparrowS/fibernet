@@ -31,10 +31,15 @@ in chord / full path length and excludes closed walks. Individual edges and
 paths at or below 1e-12 in caller units remain excluded; an empty distribution
 has mean 0.0. Pore topology is calculated after translating and normalizing
 coordinates by the larger XY span of active edge endpoints, then pore areas
-are returned in caller units squared and perimeters in caller units. Approximate
+are returned in caller units squared and perimeters in caller units. Nested
+disconnected components contribute inner face boundaries: areas exclude holes,
+perimeters include both sides of interior branches, and shared edges determine
+pore adjacency. Approximate
 tolerances remain;
-structure/contact calculations, including the 1e-12 straightness cutoff,
-are not normalized. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md).
+structure and centerline-contact calculations, including the 1e-12 straightness
+cutoff, are not normalized. Finite-width raster contact fields normalize width
+and coordinates together. See [pore units and scale](../SNAPSHOT_PORE_SCALING.md)
+and [finite-width raster units](../FINITE_WIDTH_CONTACT_SCALING.md).
 
 ## Preserved behavior
 
