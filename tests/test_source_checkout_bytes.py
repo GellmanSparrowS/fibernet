@@ -13,6 +13,7 @@ PROTECTED = (
     'fibernet/_json.py',
     'tests/fixtures/release_input_contract_v1/easy_json_delta.json',
     'tests/fixtures/release_input_contract_v1/api_json_delta.json',
+    'tests/fixtures/release_input_contract_v1/api_vtp_fields_delta.json',
     'tests/fixtures/release_input_contract_v1/easy_batch_input_delta.json',
     'tests/fixtures/release_input_contract_v1/easy_output_collision_delta.json',
     'tests/fixtures/release_input_contract_v1/easy_training_csv_delta.json',

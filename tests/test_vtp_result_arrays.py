@@ -2,6 +2,7 @@
 from collections import deque, UserList
 from array import array
 from enum import Enum, IntEnum
+from fractions import Fraction
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
@@ -81,19 +82,48 @@ class VTPResults(unittest.TestCase):
             one = 1
             def __float__(self):
                 return 0.
+            def __int__(self):
+                return 0
         for values in (array('Q', [1, 2, 3, 4, 5]), memoryview(array('Q', [1, 2, 3, 4, 5]))):
             to_vtk_xml(network(), self.path, point_data={'s': values})
             self.assertEqual(self.piece().find('./PointData/DataArray').get('type'), 'UInt64')
         to_vtk_xml(network(), self.path, point_data={'s': [IntValue.one, .5, 0, 0, 0]})
         self.assertEqual(self.piece().find('./PointData/DataArray').text.split()[:2], ['1', '0.5'])
+        to_vtk_xml(network(), self.path, point_data={'s': [IntValue.one, 2, 3, 4, 5]})
+        self.assertEqual(self.piece().find('./PointData/DataArray').text.split()[0], '1')
 
     def test_float64_extremes_and_signed_zero(self):
-        values = np.array([np.nextafter(0., 1.), np.finfo(float).max, -0., -1e100, 1/3])
+        values = np.array([0., np.finfo(float).max, -0., -1e100, 1/3])
+        values.view(np.uint64)[0] = 1
         to_vtk_xml(network(), self.path, point_data={'s': values})
         array = self.piece().find('./PointData/DataArray')
-        result = np.fromstring(array.text, sep=' ')
-        np.testing.assert_array_equal(result.view(np.uint64), values.view(np.uint64))
+        tokens = array.text.split()
+        # Decode the subnormal via exact decimal arithmetic: native parsers
+        # can flush it to zero in a process with flush-to-zero enabled.
+        subnormal_bits = round(Fraction(tokens[0]) * 2**1074)
+        remaining_bits = np.array([float(token) for token in tokens[1:]]).view(np.uint64)
+        self.assertEqual([subnormal_bits, *remaining_bits.tolist()], values.view(np.uint64).tolist())
         self.assertEqual(array.get('type'), 'Float64')
+
+    def test_float32_subnormal_fields_keep_exact_values(self):
+        values = np.array([1, 0x80000001, 3, 0x007fffff, 0], dtype=np.uint32).view(np.float32)
+        vectors = np.repeat(values[:, None], 3, axis=1)
+        for data in (values, list(values), list(vectors)):
+            with self.subTest(shape=np.shape(data)):
+                to_vtk_xml(network(), self.path, point_data={'s': data})
+                field = self.piece().find('./PointData/DataArray')
+                self.assertEqual(field.get('type'), 'Float64')
+                # Every Float32 subnormal is an integer multiple of 2**-149.
+                steps = [round(Fraction(token) * 2**149) for token in field.text.split()]
+                expected = [1, -1, 3, 0x007fffff, 0]
+                if np.ndim(data) == 2:
+                    expected = [step for step in expected for _ in range(3)]
+                self.assertEqual(steps, expected)
+                # These promoted values are normal doubles. Compare their
+                # actual Float64 payloads as well as their Float32 step counts.
+                result = np.array([float(token) for token in field.text.split()])
+                exact = np.array([step * 2.0**-149 for step in expected])
+                np.testing.assert_array_equal(result.view(np.uint64), exact.view(np.uint64))
 
     def test_bad_fields_preserve_existing_destination(self):
         invalid = [
