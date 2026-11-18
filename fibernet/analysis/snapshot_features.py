@@ -504,7 +504,16 @@ def _planarize(pos, edges, inter):
                 new_edges.append(sorted((n1, n2)))
     new_pos = np.asarray(nodes, float)
     if new_edges:
-        new_edges = np.asarray(sorted(set(map(tuple, new_edges))), int)
+        # Exact duplicate coordinates are one vertex in this planar embedding,
+        # even when the caller used separate IDs for a touching endpoint.
+        first_at = {}
+        representative = np.asarray([
+            first_at.setdefault(tuple(point), i) for i, point in enumerate(new_pos)
+        ], int)
+        if len(first_at) != len(new_pos):
+            new_edges = np.sort(representative[np.asarray(new_edges, int)], axis=1).tolist()
+        new_edges = np.asarray(sorted({tuple(edge) for edge in new_edges
+                                       if edge[0] != edge[1]}), int).reshape(-1, 2)
     else:
         new_edges = np.zeros((0, 2), int)
     return new_pos, new_edges
@@ -626,15 +635,21 @@ def _pore_features(pos, edges, inter, area):
                      pore_neighbor_mean=0.0)
         return feats, dict(areas=empty, aspects=empty, neighbors=empty)
     polys = [ppos[f] for f in faces]
+    # A point outside a face's inclusive bounds cannot have nonzero winding.
+    # Keep exact boundary membership and owner ordering for the survivors.
+    lower = np.asarray([q.min(axis=0) for q in polys])
+    upper = np.asarray([q.max(axis=0) for q in polys])
+    face_roots = np.asarray([roots[i] for i in bounded])
     areas = signed[bounded].copy()
     perims = np.asarray([_poly_perim(q) for q in polys], float)
     # An exterior walk belongs to the smallest containing bounded face of a
     # different component. Its clockwise area removes the hole; its length
     # adds the inner perimeter, including both sides of a tree/bridge slit.
     for root, wi in exterior.items():
-        candidates = [fi for fi, bi in enumerate(bounded)
-                      if roots[wi] != roots[bi]
-                      and _inside_boundary(ppos[walks[wi][0]], polys[fi])]
+        point = ppos[walks[wi][0]]
+        possible = np.flatnonzero((face_roots != root)
+                                  & np.all((lower <= point) & (point <= upper), axis=1))
+        candidates = [fi for fi in possible if _inside_boundary(point, polys[fi])]
         if candidates:
             fi = min(candidates, key=lambda k: signed[bounded[k]])
             # Sum the component's inner walks, rather than its exterior's

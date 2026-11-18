@@ -1,3 +1,29 @@
+## [Unreleased] - Pore boundaries at coincident endpoints
+
+- Treat exactly coincident XY endpoints as one vertex in the private pore
+  embedding. Point-touching loops with separate input IDs keep their full
+  areas without false hole subtraction or edge adjacency. Input graph IDs,
+  structure metrics, geometric tolerances and owner screening remain unchanged.
+
+## [Unreleased] - Polyline construction rollback
+
+- Restore the original graph when polyline edge construction raises, including
+  stable IDs, merge buckets and parallel-edge representatives. Successful calls
+  retain their existing edge admission and no-op behavior.
+
+## [Unreleased] - Pore owner candidate screening
+
+- Screen containing-face candidates by component and inclusive bounding box
+  before exact winding queries. Disjoint pore components skip winding work;
+  nested-hole ownership, metrics, ordering and tolerances stay unchanged.
+
+
+## [Unreleased] - Polyline coordinate preflight
+
+- Validate every polyline coordinate and spatial lookup key before inserting
+  nodes. A later invalid point leaves node/edge IDs, geometry and merge lookup
+  unchanged, so the graph can be reused immediately after rejection.
+
 ## [Unreleased] - Nested planar pore boundaries
 
 - Partition disconnected nested centerlines into non-overlapping bounded pore

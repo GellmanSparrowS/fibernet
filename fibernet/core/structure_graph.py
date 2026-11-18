@@ -391,6 +391,16 @@ class StructureGraph:
         except (ValueError, OverflowError, FloatingPointError, IndexError) as exc:
             raise ValueError("position exceeds the spatial hash coordinate range or has missing coordinates") from exc
 
+    def _prepare_node_position(self, position):
+        """Normalize coordinates and validate their merge-lookup key."""
+        _reject_masked_coordinates(position, "position")
+        pos = np.asarray(position, dtype=np.float64).ravel()
+        if len(pos) == 2:
+            pos = np.append(pos, 0.0)
+        if len(pos) != 3:
+            raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
+        return pos, self._checked_position_key(pos)
+
     def add_node(
         self,
         position: Sequence[float],
@@ -409,14 +419,7 @@ class StructureGraph:
         int
             Node ID.
         """
-        _reject_masked_coordinates(position, "position")
-        pos = np.asarray(position, dtype=np.float64).ravel()
-        if len(pos) == 2:
-            pos = np.append(pos, 0.0)
-        if len(pos) != 3:
-            raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
-
-        key = self._checked_position_key(pos)
+        pos, key = self._prepare_node_position(position)
         if merge:
             for nk in self._nearby_keys(key):
                 for nid in self._spatial_hash.get(nk, []):
@@ -676,6 +679,10 @@ class StructureGraph:
     ) -> List[int]:
         """Add a chain of edges through a sequence of points.
 
+        All point coordinates are checked before any nodes are inserted.
+        If construction raises, nodes and edges added by this call are removed
+        and their ID counters are restored.
+
         Parameters
         ----------
         points : sequence of (x, y[, z])
@@ -694,19 +701,47 @@ class StructureGraph:
         for point in points:
             _reject_masked_coordinates(point, "position")
             pts.append(np.asarray(point, dtype=np.float64))
-        nids = [self.add_node(p) for p in pts]
-        edge_ids = []
-        pairs = list(zip(nids[:-1], nids[1:]))
-        if closed and len(nids) > 2:
-            pairs.append((nids[-1], nids[0]))
-        for ni, nj in pairs:
-            eid = self.add_edge(
-                ni, nj, radius=radius, material=material,
-                n_internal=n_internal, segments=segments, **metadata,
-            )
-            if eid >= 0:
-                edge_ids.append(eid)
-        return edge_ids
+        existing_hash_keys = set()
+        for point in pts:
+            _, key = self._prepare_node_position(point)
+            if key in self._spatial_hash:
+                existing_hash_keys.add(key)
+        node_start, edge_start = self._next_node_id, self._next_edge_id
+        try:
+            nids = [self.add_node(p) for p in pts]
+            edge_ids = []
+            pairs = list(zip(nids[:-1], nids[1:]))
+            if closed and len(nids) > 2:
+                pairs.append((nids[-1], nids[0]))
+            for ni, nj in pairs:
+                eid = self.add_edge(
+                    ni, nj, radius=radius, material=material,
+                    n_internal=n_internal, segments=segments, **metadata,
+                )
+                if eid >= 0:
+                    edge_ids.append(eid)
+            return edge_ids
+        except Exception:
+            # IDs allocated by this call are monotonic. Remove only those
+            # elements, preserving existing objects and parallel representatives.
+            for eid in range(self._next_edge_id - 1, edge_start - 1, -1):
+                edge = self._edges.pop(eid, None)
+                if edge is not None:
+                    key = frozenset({edge.node_i, edge.node_j})
+                    if self._edge_set.get(key) == eid:
+                        self._edge_set.pop(key)
+            for nid in range(self._next_node_id - 1, node_start - 1, -1):
+                node = self._nodes.pop(nid, None)
+                if node is not None:
+                    key = self._pos_key(node.position)
+                    bucket = self._spatial_hash.get(key)
+                    if bucket is not None:
+                        if nid in bucket:
+                            bucket.remove(nid)
+                        if not bucket and key not in existing_hash_keys:
+                            self._spatial_hash.pop(key)
+            self._next_node_id, self._next_edge_id = node_start, edge_start
+            raise
 
     # ------------------------------------------------------------------
     # Query
