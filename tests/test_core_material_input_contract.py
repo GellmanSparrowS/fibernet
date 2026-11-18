@@ -21,6 +21,46 @@ class CoreMaterialInputContractTests(unittest.TestCase):
         self.assertEqual(list_materials(), names)
         self.assertEqual({name: value.to_dict() for name, value in MATERIAL_DB.items()}, before)
 
+    def test_custom_catalog_lookups_own_separate_nested_extras(self):
+        class CustomMaterial(Material):
+            pass
+
+        key = 'temporary_catalog_ownership_test'
+        prototype = CustomMaterial(
+            name=key,
+            density=1200.0,
+            thermal_conductivity=0.25,
+            stiffness_tensor=np.eye(6),
+            extra={'measurements': [{'samples': np.array([1.0, 2.0]), 'tag': 'original'}]},
+        )
+        self.assertNotIn(key, MATERIAL_DB)
+        MATERIAL_DB[key] = prototype
+        try:
+            first = get_material(key)
+            sibling = get_material(key)
+            self.assertIs(type(first), Material)
+            self.assertEqual(first.density, prototype.density)
+            self.assertEqual(first.thermal_conductivity, prototype.thermal_conductivity)
+            self.assertEqual(first.shear_modulus, prototype.shear_modulus)
+            np.testing.assert_array_equal(first.stiffness_tensor, prototype.stiffness_tensor)
+
+            first.extra['measurements'][0]['samples'][0] = 99.0
+            first.extra['measurements'].append({'tag': 'added'})
+            first.stiffness_tensor[0, 0] = 99.0
+            for label, material in (
+                ('prototype', prototype), ('sibling', sibling), ('new lookup', get_material(key))
+            ):
+                with self.subTest(record=label):
+                    np.testing.assert_array_equal(material.extra['measurements'][0]['samples'], [1.0, 2.0])
+                    self.assertEqual(len(material.extra['measurements']), 1)
+                    self.assertEqual(material.stiffness_tensor[0, 0], 1.0)
+
+            prototype.extra['measurements'][0]['tag'] = 'catalog edit'
+            self.assertEqual(first.extra['measurements'][0]['tag'], 'original')
+            self.assertEqual(sibling.extra['measurements'][0]['tag'], 'original')
+        finally:
+            del MATERIAL_DB[key]
+
     def test_core_catalog_mixed_case_name_lookup(self):
         for name in ('uHMWPE', 'UHMWPE', 'uhmwpe', ' uHmWpE '):
             with self.subTest(name=name):

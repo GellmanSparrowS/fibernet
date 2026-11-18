@@ -230,7 +230,7 @@
    "get_material",
    "list_materials"
   ],
-  "sha256": "73035226ae3959d44c2a7fadf69fff2f814599a53104fdbbee8bae3dba84d87a"
+  "sha256": "3129f432cf7728ae604e1d709bc42f1113f5dda5329bda0d898342beb7be9245"
  },
  "fibernet/core/network.py": {
   "purpose": "FiberNetwork - core data structure for a collection of fibers with connectivity.",
@@ -5295,5 +5295,13 @@
    "test_custom_material_copy_protocol_runs_once_per_retained_fiber"
   ],
   "sha256": "b8b634684788d45adeb29fa61c88a3c8ee24b647515a3c17eebd21ffc65f19d2"
+ },
+ "tests/test_core_material_input_contract.py": {
+  "purpose": "Direct core material contracts, runnable with the stdlib unittest runner.",
+  "status": "active",
+  "symbols": [
+   "CoreMaterialInputContractTests"
+  ],
+  "sha256": "050a85c51c8c2649f252a98ac1715505320819faea3f4aba63a1e1612b400325"
  }
 }

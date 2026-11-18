@@ -5,9 +5,11 @@ Supports isotropic and anisotropic materials, with built-in database
 of common fiber materials (polymers, metals, ceramics, biological).
 """
 
-import numpy as np
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
+
+import numpy as np
 
 
 @dataclass
@@ -272,7 +274,7 @@ def get_material(name: str) -> Material:
     Returns
     -------
     Material
-        A copy of the material from the database.
+        A copy of the material from the database, including its custom properties.
     
     Raises
     ------
@@ -285,7 +287,10 @@ def get_material(name: str) -> Material:
     if key not in MATERIAL_DB:
         available = ", ".join(sorted(MATERIAL_DB.keys()))
         raise KeyError(f"Material '{name}' not found. Available: {available}")
-    return Material.from_dict(MATERIAL_DB[key].to_dict())
+    record = MATERIAL_DB[key].to_dict()
+    if "extra" in record:
+        record = {**record, "extra": deepcopy(record["extra"])}
+    return Material.from_dict(record)
 
 
 def list_materials() -> list:

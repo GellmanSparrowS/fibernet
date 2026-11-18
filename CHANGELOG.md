@@ -1,3 +1,7 @@
+## [Unreleased] - Independent catalog material properties
+
+- Return independent nested custom property records from material catalog lookups.
+
 ## [Unreleased] - Independent imported materials
 
 - Keep per-fiber materials independent when importing endpoint graphs, enabling
