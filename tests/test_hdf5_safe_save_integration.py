@@ -6,6 +6,7 @@ Schema checks cover the existing writer schema, not fields it never serialized.
 
 import json
 import os
+from copy import deepcopy
 from pathlib import Path
 import stat
 import tempfile
@@ -117,6 +118,143 @@ class Hdf5SafeSaveIntegrationTests(unittest.TestCase):
         net = self.network()
         net.save_hdf5(StringPath(target))
         self.assert_schema(target, net)
+        self.assert_no_temporary()
+
+    def test_extended_section_and_link_fields_on_disk(self):
+        net = self.network()
+        net.dimension = 3
+        sections = (
+            (CrossSection.RECTANGULAR, {'width': .28, 'height': .14,
+                                        'supplier': {'notes': ['λ', True, None]}}),
+            (CrossSection.HOLLOW_CIRCULAR, {'inner_radius': .15}),
+        )
+        for index, (section, params) in enumerate(sections):
+            net.fibers.append(Fiber(
+                np.array([[1., 1., 0.], [.75, 1.5, .25], [index, 2., 0.]]),
+                radius=.3, material=Material(name=f'other-{index}'),
+                cross_section=section, cross_section_params=params, fiber_id=16 + index,
+            ))
+        net.crosslinks.extend([
+            Crosslink(1, 2, 1., 0., np.array([1., 1., 0.]),
+                      crosslink_type='bonded', strength=0., stiffness=np.float32(152.5)),
+            Crosslink(1, 3, 1., 0., np.array([1., 1., 0.])),
+        ])
+        target = self.root / 'extended.h5'
+        before = deepcopy(net.to_dict())
+        net.save_hdf5(StringPath(target), format_version='0.2.0')
+        with h5py.File(target, 'r') as saved:
+            self.assertEqual(set(saved), {'fibers', 'crosslinks'})
+            self.assertEqual(set(saved.attrs), {'version', 'dimension', 'periodic',
+                                                'box_size', 'metadata'})
+            self.assertEqual(saved.attrs['version'], '0.2.0')
+            for name in ('dimension', 'periodic'):
+                self.assertEqual(saved.attrs[name], before[name])
+            self.assertEqual(json.loads(saved.attrs['metadata']), before['metadata'])
+            np.testing.assert_array_equal(saved.attrs['box_size'], before['box_size'])
+            self.assertEqual(len(saved['fibers']), len(before['fibers']))
+            for i, fiber in enumerate(before['fibers']):
+                record = saved['fibers'][f'fiber_{i}']
+                self.assertEqual(set(record), {'centerline'})
+                np.testing.assert_array_equal(record['centerline'][...], fiber['centerline'])
+                self.assertEqual(set(record.attrs), set(fiber) - {'centerline'})
+                for name in ('radius', 'fiber_id', 'segments', 'cross_section'):
+                    self.assertEqual(record.attrs[name], fiber[name])
+                for name in ('material', 'cross_section_params'):
+                    self.assertEqual(json.loads(record.attrs[name]), fiber[name])
+            self.assertEqual(len(saved['crosslinks']), len(before['crosslinks']))
+            for i, crosslink in enumerate(before['crosslinks']):
+                record = saved['crosslinks'][f'cl_{i}']
+                self.assertEqual(set(record), {'position'})
+                np.testing.assert_array_equal(record['position'][...], crosslink['position'])
+                self.assertEqual(set(record.attrs), set(crosslink) - {'position'})
+                for name in record.attrs:
+                    self.assertEqual(record.attrs[name], crosslink[name])
+            self.assertEqual(saved['crosslinks']['cl_1'].attrs['stiffness'].dtype,
+                             np.dtype('float32'))
+        self.assertEqual(net.to_dict(), before)
+        self.assert_no_temporary()
+
+    def test_extended_params_preflight_and_legacy_opaque_params(self):
+        cases = (
+            ({'opaque': np.array([1., 2.])}, TypeError),
+            ({'nested': [{1: 'int', '1': 'str'}]}, TypeError),
+            (None, TypeError),
+            ({'nested': [float('inf')]}, ValueError),
+        )
+        for params, error in cases:
+            for existing in (False, True):
+                with self.subTest(params=params, existing=existing):
+                    target = self.root / 'params.h5'
+                    net = self.network()
+                    net.fibers[-1].cross_section_params = params
+                    old = None
+                    if existing:
+                        net.save_hdf5(target, format_version='0.1.0')
+                        self.assert_schema(target, net)
+                        old = target.read_bytes()
+                    with patch('tempfile.mkstemp') as mkstemp:
+                        with self.assertRaises(error):
+                            net.save_hdf5(target, format_version='0.2.0')
+                        mkstemp.assert_not_called()
+                    if existing:
+                        self.assertEqual(target.read_bytes(), old)
+                        target.unlink()
+                    else:
+                        self.assertFalse(target.exists())
+                    self.assert_no_temporary()
+
+    def test_supported_version_strings_are_written_as_canonical_text(self):
+        class Version(str):
+            def __str__(self):
+                raise AssertionError('version should be written from a canonical literal')
+
+        net = self.network()
+        target = self.root / 'version.h5'
+        for version in ('0.1.0', '0.2.0'):
+            for string_type in (Version, np.str_):
+                with self.subTest(version=version, string_type=string_type):
+                    net.save_hdf5(target, format_version=string_type(version))
+                    with h5py.File(target, 'r') as saved:
+                        self.assertEqual(saved.attrs['version'], version)
+                    if version == '0.1.0':
+                        self.assert_schema(target, net)
+                    self.assert_no_temporary()
+
+    def test_extended_rejects_invalid_link_values_during_temporary_file_write(self):
+        target = self.root / 'bad-link.h5'
+        cases = (
+            ('strength', '8.0'),
+            ('stiffness', np.array([9.])),
+            ('strength', True),
+            ('stiffness', 9. + 0j),
+            ('strength', np.ma.array(8., mask=True)),
+            ('stiffness', object()),
+        )
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                net = self.network()
+                setattr(net.crosslinks[0], field, value)
+                net.save_hdf5(target)
+                self.assert_schema(target, net)
+                old = target.read_bytes()
+                with patch('h5py.File', wraps=h5py.File) as hdf5_file:
+                    with self.assertRaisesRegex(TypeError, f'{field} must be a real numeric scalar'):
+                        net.save_hdf5(target, format_version='0.2.0')
+                    hdf5_file.assert_called_once()
+                    temporary = Path(hdf5_file.call_args.args[0])
+                    self.assertEqual(temporary.parent, target.parent)
+                    self.assertNotEqual(temporary, target)
+                self.assertEqual(target.read_bytes(), old)
+                self.assert_no_temporary()
+
+    def test_unknown_version_preserves_target(self):
+        target = self.root / 'bad-version.h5'
+        net = self.network()
+        net.save_hdf5(target)
+        old = target.read_bytes()
+        with self.assertRaisesRegex(ValueError, 'format_version'):
+            net.save_hdf5(target, format_version='0.3.0')
+        self.assertEqual(target.read_bytes(), old)
         self.assert_no_temporary()
 
     def test_json_preflight_preserves_old_or_absent_destination(self):

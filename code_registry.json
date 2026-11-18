@@ -236,10 +236,11 @@
   "purpose": "FiberNetwork - core data structure for a collection of fibers with connectivity.",
   "status": "active",
   "symbols": [
+   "_hdf5_section_params_json",
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "94c82ab935d3d54fe8e3032263a75f528fee8e9c78fac3bb81d92a3d2ac8ceab"
+  "sha256": "c2509e91467ec60e82f50596ee8708992ef56636e1a4dde79c7d63a406d3a071"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5473,5 +5474,14 @@
    "test_inplace_transform_supports_crosslink_memoryview_positions"
   ],
   "sha256": "4ace6ce7aa597bf4de446172084df3825dd3e560da9abfcb8c6e422d68e72da1"
+ },
+ "tests/test_hdf5_safe_save_integration.py": {
+  "purpose": "Real h5py I/O plus explicitly injected filesystem commit failures.",
+  "status": "active",
+  "symbols": [
+   "StringPath",
+   "Hdf5SafeSaveIntegrationTests"
+  ],
+  "sha256": "4f31df98ab184f289646a6678d966bc9eea6a98806111827a881baf86a0b6b80"
  }
 }

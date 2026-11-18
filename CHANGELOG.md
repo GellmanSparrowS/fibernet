@@ -1,3 +1,9 @@
+## [Unreleased] - Optional HDF5 mechanical property records
+
+- Select HDF5 format 0.2.0 to retain JSON cross-section parameters and native
+  numeric crosslink strength and stiffness. Existing calls continue to write
+  the 0.1.0 layout with the same file replacement behavior.
+
 ## [Unreleased] - Shared geometry in network transforms
 
 - Mirror, rotate, scale and translate each fiber or crosslink object once,
