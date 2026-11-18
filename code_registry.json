@@ -997,7 +997,7 @@
   "symbols": [
    "SparseBeamFrameFEM"
   ],
-  "sha256": "ea886b2cc6d16fe13f733f4b13a9d9baa38c887585ce5ce229c6dcfb8bfc529e"
+  "sha256": "14668501dabca16d6639a99964fdf47ad58256529379d06758db1403848f6732"
  },
  "fibernet/ml/beam_frame_fem_v6.py": {
   "purpose": "Backward-compatibility shim. Use fibernet.ml.beam_frame_fem instead.",
