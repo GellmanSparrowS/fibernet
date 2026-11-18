@@ -264,7 +264,7 @@
    "SEdge",
    "StructureGraph"
   ],
-  "sha256": "ee999fa839c06554415dcac8416cca7b09b33ce73927bf1c09dda36b9a55a550"
+  "sha256": "6f6ae79329f00dcb1fa524765147f77ecaa60712c06005144d76c16207bea48d"
  },
  "fibernet/core/tiling.py": {
   "purpose": "Tiling and welding engine for StructureGraph.",
@@ -4118,7 +4118,7 @@
    "SnapshotFeatureExtractor",
    "_normalized_pore_features"
   ],
-  "sha256": "d7ba430e41ca01a062b6990f128719e7162bfe90d5ff99be13888893979eec6c"
+  "sha256": "ec1e7bb0161b4ec9eb4ffc344ab976f6265fe0f48d9117ba9cb4db3938423811"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -5266,5 +5266,21 @@
    "test_inclusive_bbox_keeps_boundary_aligned_query"
   ],
   "sha256": "f758db5139bcce27009114021451e7d9bc72dfb754704d91a304818202c49fbb"
+ },
+ "tests/test_structure_graph_polyline_rollback.py": {
+  "purpose": "Edge-building failures undo only elements allocated by that polyline.",
+  "status": "active",
+  "symbols": [
+   "fixture_graph",
+   "state",
+   "identities",
+   "assert_reusable",
+   "test_edge_parameter_failure_restores_state_and_ids",
+   "test_later_edge_failure_restores_duplicates_and_parallel_representative",
+   "test_hash_rollback_preserves_existing_populated_and_empty_buckets",
+   "test_existing_noop_self_loop_duplicate_admission_is_unchanged",
+   "test_single_new_vertex_still_succeeds_without_edge_parameter_validation"
+  ],
+  "sha256": "3302ab502cc943d275f77fe208d7a1f9397c331a5c8477d2bee68aa3e5bdb568"
  }
 }

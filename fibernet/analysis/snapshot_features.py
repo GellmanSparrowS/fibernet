@@ -504,7 +504,16 @@ def _planarize(pos, edges, inter):
                 new_edges.append(sorted((n1, n2)))
     new_pos = np.asarray(nodes, float)
     if new_edges:
-        new_edges = np.asarray(sorted(set(map(tuple, new_edges))), int)
+        # Exact duplicate coordinates are one vertex in this planar embedding,
+        # even when the caller used separate IDs for a touching endpoint.
+        first_at = {}
+        representative = np.asarray([
+            first_at.setdefault(tuple(point), i) for i, point in enumerate(new_pos)
+        ], int)
+        if len(first_at) != len(new_pos):
+            new_edges = np.sort(representative[np.asarray(new_edges, int)], axis=1).tolist()
+        new_edges = np.asarray(sorted({tuple(edge) for edge in new_edges
+                                       if edge[0] != edge[1]}), int).reshape(-1, 2)
     else:
         new_edges = np.zeros((0, 2), int)
     return new_pos, new_edges

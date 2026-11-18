@@ -1,3 +1,16 @@
+## [Unreleased] - Pore boundaries at coincident endpoints
+
+- Treat exactly coincident XY endpoints as one vertex in the private pore
+  embedding. Point-touching loops with separate input IDs keep their full
+  areas without false hole subtraction or edge adjacency. Input graph IDs,
+  structure metrics, geometric tolerances and owner screening remain unchanged.
+
+## [Unreleased] - Polyline construction rollback
+
+- Restore the original graph when polyline edge construction raises, including
+  stable IDs, merge buckets and parallel-edge representatives. Successful calls
+  retain their existing edge admission and no-op behavior.
+
 ## [Unreleased] - Pore owner candidate screening
 
 - Screen containing-face candidates by component and inclusive bounding box

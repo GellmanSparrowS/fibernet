@@ -1,7 +1,12 @@
 # Snapshot pore units and numerical scale
 
 Pores here are bounded faces of planar centerlines, not finite-width voids or a
-mechanical response. The pore pipeline translates the filtered positions and
+mechanical response. In the private pore embedding, exactly coincident XY
+endpoints share one planar vertex even when input IDs differ; resulting
+undirected duplicate edges are counted once. This does not snap nearby points
+or rewrite the input graph and its structure features. Loops meeting at a point
+keep their enclosed areas and are not neighbors unless they share an edge.
+The pore pipeline translates the filtered positions and
 uses the larger XY span of edge endpoints as its length scale before detecting intersections,
 splitting segments and walking faces. It converts pore areas and perimeters
 back to the caller's units squared and caller's units, respectively. Counts,
