@@ -109,12 +109,14 @@ class FiberNetwork:
         return np.mean([f.radius for f in self.fibers])
 
     def density(self) -> float:
-        """Volume fraction (solid volume / bounding box volume).
-        
-        For 2D networks, returns area fraction.
-        For 3D networks, returns volume fraction.
+        """Estimate the fraction occupied by fibers in the network box.
+
+        The planar estimate divides the sum of nominal fiber strip areas by
+        the XY box area. Each strip has width twice that fiber's radius and
+        length equal to its centerline arc length. Overlapping strips
+        contribute separately. The 3D estimate uses fiber volumes based
+        on the cross-sectional areas and the box volume.
         """
-        vol = self.total_volume
         if self.box_size is not None:
             dims = np.array(self.box_size, dtype=float)
         else:
@@ -127,11 +129,12 @@ class FiberNetwork:
             area = dims[0] * dims[1] if dims[0] > 0 and dims[1] > 0 else 0.0
             if area <= 0:
                 return 0.0
-            # Approximate fiber area as total_length * 2 * mean_radius
-            fiber_area = self.total_length * 2 * self.mean_radius
+            # Keep the strip products and sum in native float precision.
+            fiber_area = sum((2.0 * fiber.length) * float(fiber.radius) for fiber in self.fibers)
             return fiber_area / area
         else:
             # 3D: volume fraction
+            vol = self.total_volume
             box_vol = float(np.prod(np.maximum(dims, 1e-12)))
             return vol / box_vol if box_vol > 0 else 0.0
 

@@ -10,10 +10,12 @@ import unittest
 class TestRLPlotState(unittest.TestCase):
     def run_scenario(self, name):
         with tempfile.TemporaryDirectory() as temporary:
+            # These backend/state checks can render with Matplotlib's bundled fonts.
             env = dict(os.environ, MPLBACKEND='TkAgg' if name == 'fresh_headless' else 'svg',
                        MPLCONFIGDIR=temporary, XDG_CACHE_HOME=temporary,
                        OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1',
-                       MKL_NUM_THREADS='1', NUMEXPR_NUM_THREADS='1')
+                       MKL_NUM_THREADS='1', NUMEXPR_NUM_THREADS='1',
+                       MPL_IGNORE_SYSTEM_FONTS='1')
             result = subprocess.run(
                 [sys.executable, '-B', str(Path(__file__).resolve()), '--scenario', name],
                 env=env, capture_output=True, text=True, timeout=45)

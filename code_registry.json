@@ -239,7 +239,7 @@
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "2ccd8ef0769bb928fdea9dde94e52c9aadbd30fb7096501449edff0633b93449"
+  "sha256": "94c82ab935d3d54fe8e3032263a75f528fee8e9c78fac3bb81d92a3d2ac8ceab"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5422,5 +5422,28 @@
    "DataFrameImportContract"
   ],
   "sha256": "be4e903c46c59672de8d6e92839e3fa05b06e30de8c989b6c4d142686bd88712"
+ },
+ "tests/test_fiber_network_density.py": {
+  "purpose": "Analytical strip area and volume fractions for the public FiberNetwork.",
+  "status": "active",
+  "symbols": [
+   "test_planar_density_adds_each_fiber_strip_and_is_partition_invariant",
+   "test_planar_density_for_equal_radii_or_equal_lengths",
+   "test_3d_density_retains_actual_cross_section_volumes",
+   "test_planar_density_of_empty_network_or_degenerate_xy_box_is_zero",
+   "test_planar_density_accumulates_numpy_half_radii_in_native_precision",
+   "test_planar_density_avoids_overflow_when_a_wide_strip_is_short",
+   "test_planar_density_retains_a_representable_subnormal_strip"
+  ],
+  "sha256": "95229bafae6a30e96dbda581ba7953d038eba56656db61aa71dbaf82e702f033"
+ },
+ "tests/test_rl_plot_state.py": {
+  "purpose": "Small RL plotting contracts, isolated from the test collector's backend.",
+  "status": "active",
+  "symbols": [
+   "TestRLPlotState",
+   "_run_scenario"
+  ],
+  "sha256": "96a6ae23067423652871983064009c19f2bf3cc957df655f98557864be7177b4"
  }
 }
