@@ -110,9 +110,10 @@ sections and row maps when converting raw results.
 
 ``SimResult.energy`` keeps ``energy_kind="axial_stress_proxy"`` and uses
 ``sum(sigma_axial**2 * A * L / (2 * E_edge))``. It excludes bending and torsion.
-For full linear frame energy, retain the raw rotational DOFs and stiffness
-and compute ``0.5 * u.ravel() @ K @ u.ravel()``. Numerical regularization is
-not included in that physical stiffness. Three-dimensional shear/resultant
+The additive ``result.metadata["beam_energy"]`` record retains full linear
+strain energy, including bending and torsion, from the physical stiffness.
+Numerical regularization is excluded. See :doc:`linear_beam_energy` for units,
+availability, work balance and persistence. Three-dimensional shear/resultant
 recovery remains limited exactly as documented by ``beam_resultant_contract``.
 
 Verification

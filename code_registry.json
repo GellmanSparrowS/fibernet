@@ -974,7 +974,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "edfdcda193b950c319f480fa86cac9d71952228eeb915c881b0eb8720b4fdf60"
+  "sha256": "5e443da3ed19c65ac14e6e3a698af83fddf3b188a8bcfcd966ac867d0d41cd9a"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -4091,7 +4091,7 @@
   "sha256": "21abf5cacc33b7ce51f800e96303ac53d41ce8360916cf56a9fe8faefd05ab58"
  },
  "fibernet/analysis/snapshot_features.py": {
-  "purpose": "Structure feature extraction for fiber networks (pure numpy).",
+  "purpose": "Snapshot structure, nested planar-face pore and optional finite-width contact features.",
   "status": "active",
   "symbols": [
    "feature_name",
@@ -4107,12 +4107,14 @@
    "_poly_area",
    "_poly_perim",
    "_faces",
+   "_inside_boundary",
    "_pore_features",
    "_contact_features",
    "compute_features",
-   "SnapshotFeatureExtractor"
+   "SnapshotFeatureExtractor",
+   "_normalized_pore_features"
   ],
-  "sha256": "a7afe442ed2d5a80effbc065310e3b9f5bd02c7ef803019232266a6c66923fcd"
+  "sha256": "43c9bb6020f30c66a43761c443b1150427a33dfdd6305c673f9ead874c379a74"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -5168,5 +5170,72 @@
    "test_shared_containers_and_recursive_invalid_inputs_terminate"
   ],
   "sha256": "85411551b69db05ab400e8c5d7ad5149ed036f38de331cbc1ae703ab0e9f581c"
+ },
+ "tests/test_fem_energy_contract.py": {
+  "purpose": "Additive, detached linear-beam energy without changing the legacy proxy.",
+  "status": "active",
+  "symbols": [
+   "graph_fixture",
+   "raw_fixture",
+   "test_additive_snapshot_without_graph_and_with_other_converter",
+   "test_graph_si_route_and_json_persistence",
+   "test_legacy_raw_dictionary_does_not_infer_energy_from_stiffness",
+   "test_malformed_snapshot_rejects_conversion_without_mutation",
+   "test_missing_snapshot_fields_reject",
+   "test_non_json_and_unrepresentable_values_reject",
+   "test_invalid_quadratic_is_unavailable_not_zero",
+   "test_nonlinear_inner_energy_is_not_retained_as_final_energy"
+  ],
+  "sha256": "d632fa829286f395e51399d274a5eeafb31ef56f097812380707776ec67debc1"
+ },
+ "tests/test_fem_energy_physics.py": {
+  "purpose": "Physical beam energy against analytical laws and independent quadrature.",
+  "status": "active",
+  "symbols": [
+   "energy",
+   "test_cantilever_energy_closed_form_and_length_unit_rescaling",
+   "test_3d_mixed_axial_biaxial_bending_and_torsion_energy",
+   "test_heterogeneous_series_torsion_energy_uses_each_poisson_ratio",
+   "test_rigid_motion_has_zero_physical_energy",
+   "test_heterogeneous_network_energy_quadrature_and_regularized_work",
+   "test_numerical_regularization_is_excluded_from_force_loaded_energy"
+  ],
+  "sha256": "d5000c18ec1bc3b9be6ecd1fa93c6d2bc657dcd75733efbf4a68d2d1468db84a"
+ },
+ "tests/test_snapshot_nested_pores.py": {
+  "purpose": "Analytical nested-face area, perimeter, adjacency, slit and graph/JSON workflow regressions.",
+  "status": "active",
+  "sha256": "364cc0b0944a4d51622c3f90e1ae396d08a958dac69426e1ee7b567d86faac96",
+  "symbols": [
+   "add_polygon",
+   "square",
+   "nested",
+   "check",
+   "test_nested_cycles_partition_area_and_share_boundaries",
+   "test_multiple_holes_and_three_nesting_levels",
+   "test_subdivided_inner_component_is_subtracted_once",
+   "test_concave_parent_does_not_capture_component_in_its_notch",
+   "test_disconnected_trees_contribute_both_sides_only_to_containing_pore",
+   "test_connected_annulus_with_bridge_and_inner_tree",
+   "test_component_with_internal_bridge_has_one_exterior_boundary",
+   "test_order_direction_parallel_edges_and_isolates_preserve_face_metrics",
+   "test_sparse_structure_graph_json_and_direct_array_routes",
+   "test_generated_network_inside_frame_obeys_euler_and_area_partition",
+   "test_tree_roundoff_does_not_hide_slit_or_remove_area",
+   "test_contact_enabled_preserves_nested_pore_metrics",
+   "test_point_touching_cycles_have_no_edge_adjacency",
+   "test_inner_loop_outward_branch_is_part_of_annular_boundary",
+   "test_loop_in_bridged_annular_face_removes_area_from_that_face_only"
+  ]
+ },
+ "docs/SNAPSHOT_PORE_SCALING.md": {
+  "purpose": "Pore scale, nested-boundary semantics, usage and numerical migration.",
+  "status": "active",
+  "sha256": "7d1c098064d8c27eb372f74652c961521611ac8a257371aa3a62de7b81aca9d6"
+ },
+ "docs/architecture/snapshot-identity-contract.md": {
+  "purpose": "Stable graph identity and snapshot feature semantics.",
+  "status": "active",
+  "sha256": "8e2da8fd0b8dd59801a28793de812e81602b14dec64c534183ce051f034ed48b"
  }
 }

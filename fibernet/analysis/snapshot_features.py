@@ -522,13 +522,15 @@ def _poly_perim(q):
 
 
 def _faces(pos, edges):
-    '''Bounded faces of a planar straight-line graph.
+    '''All boundary walks of a planar straight-line graph.
 
     Half-edge walk over the angular rotation system: from directed edge
     (u, v) the next edge is (v, w) where w is the neighbour of v just
     clockwise of the reverse direction.  Bounded faces come out CCW
-    (positive signed shoelace area); the unbounded face is discarded.
-    Returns per-face vertex-id arrays and per-face directed edges.
+    (positive signed shoelace area). Each component also has an exterior
+    walk, clockwise for cyclic components or zero-area for trees. Keep these
+    walks so a containing face can account for holes and both sides of slits.
+    Returns per-walk vertex-id arrays and directed edges.
     '''
     if edges.shape[0] == 0:
         return [], []
@@ -569,19 +571,53 @@ def _faces(pos, edges):
                 if (u, v) == (u0, v0):
                     closed = True
                     break
-            if not closed or len(face) < 3:
+            if not closed or len(face) < 2:
                 continue
-            q = pos[face]
-            if _poly_area(q) > 1e-9:
-                faces.append(np.asarray(face, int))
-                dired.append(list(zip(face, face[1:] + face[:1])))
+            faces.append(np.asarray(face, int))
+            dired.append(list(zip(face, face[1:] + face[:1])))
     return faces, dired
+
+
+def _inside_boundary(point, polygon):
+    """Nonzero winding membership; bridge traversals cancel each other.
+
+    The query comes from a different planarized component, so it is not on
+    this boundary. Half-open vertical intervals count vertices only once.
+    """
+    start = polygon
+    end = np.roll(polygon, -1, axis=0)
+    cross = ((end[:, 0] - start[:, 0]) * (point[1] - start[:, 1])
+             - (end[:, 1] - start[:, 1]) * (point[0] - start[:, 0]))
+    up = (start[:, 1] <= point[1]) & (point[1] < end[:, 1]) & (cross > 0)
+    down = (end[:, 1] <= point[1]) & (point[1] < start[:, 1]) & (cross < 0)
+    return np.count_nonzero(up) != np.count_nonzero(down)
 
 
 def _pore_features(pos, edges, inter, area):
     '''Bounded faces of the planarized network + shape/adjacency stats.'''
     ppos, pedges = _planarize(pos, edges, inter)
-    faces, dired = _faces(ppos, pedges)
+    walks, directed = _faces(ppos, pedges)
+    signed = np.asarray([_poly_area(ppos[walk]) for walk in walks])
+    parent = np.arange(len(ppos))
+
+    def component(node):
+        while parent[node] != node:
+            parent[node] = parent[parent[node]]
+            node = parent[node]
+        return node
+
+    for a, b in pedges:
+        parent[component(a)] = component(b)
+    roots = [component(walk[0]) for walk in walks]
+    exterior = {}
+    for wi, root in enumerate(roots):
+        if root not in exterior or signed[wi] < signed[exterior[root]]:
+            exterior[root] = wi
+    exterior_ids = set(exterior.values())
+    bounded = [wi for wi in range(len(walks))
+               if wi not in exterior_ids and signed[wi] > 1e-9]
+    faces = [walks[i] for i in bounded]
+    dired = [list(directed[i]) for i in bounded]
     empty = np.zeros(0)
     if not faces:
         feats = dict(pore_count=0, pore_area_mean=0.0, pore_area_cv=0.0,
@@ -590,8 +626,24 @@ def _pore_features(pos, edges, inter, area):
                      pore_neighbor_mean=0.0)
         return feats, dict(areas=empty, aspects=empty, neighbors=empty)
     polys = [ppos[f] for f in faces]
-    areas = np.asarray([_poly_area(q) for q in polys], float)
+    areas = signed[bounded].copy()
     perims = np.asarray([_poly_perim(q) for q in polys], float)
+    # An exterior walk belongs to the smallest containing bounded face of a
+    # different component. Its clockwise area removes the hole; its length
+    # adds the inner perimeter, including both sides of a tree/bridge slit.
+    for root, wi in exterior.items():
+        candidates = [fi for fi, bi in enumerate(bounded)
+                      if roots[wi] != roots[bi]
+                      and _inside_boundary(ppos[walks[wi][0]], polys[fi])]
+        if candidates:
+            fi = min(candidates, key=lambda k: signed[bounded[k]])
+            # Sum the component's inner walks, rather than its exterior's
+            # independently rounded shoelace value. Trees have no inner walk
+            # and remove exactly zero area even if their signed sum drifts.
+            areas[fi] -= sum(signed[i] for i, r in enumerate(roots)
+                             if r == root and i != wi)
+            perims[fi] += _poly_perim(ppos[walks[wi]])
+            dired[fi].extend(directed[wi])
     ws = np.asarray([q[:, 0].max() - q[:, 0].min() for q in polys])
     hs = np.asarray([q[:, 1].max() - q[:, 1].min() for q in polys])
     aspects = np.maximum(ws, hs) / np.maximum(np.minimum(ws, hs), 1e-12)
@@ -671,7 +723,9 @@ def compute_features(pos, edges, rect=None, contact_config=None, include_contact
     Pore detection uses coordinates normalized by the active edge-endpoint
     span, then returns areas in caller units squared and perimeters in caller
     units. Approximate tolerances remain; this is not full-extractor unit
-    invariance.
+    invariance. Disconnected nested components contribute inner boundaries
+    to their containing pore; areas do not overlap and perimeters include
+    both sides of zero-width interior branches.
     '''
     pos, edges = _filter_region(pos, edges, rect)
     feats, lens, ang, deg = _structure_features(pos, edges)
@@ -701,6 +755,9 @@ class SnapshotFeatureExtractor:
     This reduces length-unit sensitivity for well-conditioned geometry; tiny or
     nearly degenerate features remain subject to approximate tolerances.
     Structure/contact calculations retain their original caller-unit paths.
+    Pores are bounded faces, including holes from disconnected components.
+    Their perimeters include inner boundaries and both sides of interior
+    zero-width branches; adjacency means sharing a boundary edge.
     ``segment_straightness`` reports endpoint chord / full path length for
     open chains containing degree-2 nodes. Individual edges and walks returning
     to the same node are excluded, as are paths at or below 1e-12 in the caller's

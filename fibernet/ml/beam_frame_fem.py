@@ -250,6 +250,93 @@ class BeamFrameFEM:
             )
 
     @staticmethod
+    def _linear_beam_energy(K, u, dimension):
+        """Snapshot the assembled physical quadratic form, not load work.
+
+        K excludes the numerical diagonal used in the solve. Availability is
+        not an equilibrium, conditioning or model-validity certificate. Keep
+        invalid numerical outcomes explicit rather than clipping them to zero.
+        """
+        with np.errstate(over='ignore', invalid='ignore'):
+            value = float(0.5 * np.dot(u, K @ u))
+        record = {
+            'schema_version': 1, 'model': 'linear_beam_frame',
+            'dimension': dimension, 'status': 'available',
+            'strain_energy': value,
+            'definition': '0.5 * u.T @ K_physical @ u',
+            'included_terms': ['axial', 'bending'] + (['torsion'] if dimension == 3 else []),
+            'excluded_terms': ['numerical_regularization'],
+            'unit_system': 'not_declared',
+        }
+        if not np.isfinite(value) or value < 0:
+            record.update(
+                status='unavailable', strain_energy=None,
+                reason=('nonfinite_quadratic_form' if not np.isfinite(value)
+                        else 'negative_quadratic_form'))
+        return record
+
+    @staticmethod
+    def _copy_beam_energy(record, dimension):
+        """Validate and detach an explicit producer snapshot; never infer one."""
+        from copy import deepcopy
+        from math import isfinite
+        record = deepcopy(record)
+
+        def invalid():
+            raise ValueError('beam_energy requires a valid dimension-matched v1 producer record')
+
+        common = {'schema_version', 'model', 'dimension', 'status',
+                  'strain_energy', 'unit_system'}
+        if (not isinstance(record, dict) or type(record.get('schema_version')) is not int
+                or record['schema_version'] != 1 or type(record.get('dimension')) is not int
+                or record['dimension'] != dimension
+                or any(type(record.get(key)) is not str
+                       for key in ('model', 'status', 'unit_system'))
+                or record.get('unit_system') not in ('not_declared', 'SI')):
+            invalid()
+        if 'reason' in record and type(record['reason']) is not str:
+            invalid()
+        if record.get('model') == 'incremental_updated_geometry_linear_solves':
+            if (set(record) != common | {'reason'} or dimension != 2
+                    or record.get('status') != 'unavailable'
+                    or record.get('strain_energy', object()) is not None
+                    or record.get('reason') != 'final_nonlinear_energy_not_recovered'
+                    or record['unit_system'] != 'not_declared'):
+                invalid()
+            return record
+        keys = common | {'definition', 'included_terms', 'excluded_terms'}
+        if (record.get('model') != 'linear_beam_frame'
+                or type(record.get('definition')) is not str
+                or record.get('definition') != '0.5 * u.T @ K_physical @ u'
+                or any(type(record.get(key)) is not list
+                       or any(type(term) is not str for term in record[key])
+                       for key in ('included_terms', 'excluded_terms'))
+                or record.get('included_terms') != ['axial', 'bending'] + (
+                    ['torsion'] if dimension == 3 else [])
+                or record.get('excluded_terms') != ['numerical_regularization']):
+            invalid()
+        if record.get('status') == 'available':
+            value = record.get('strain_energy')
+            if set(record) != keys or type(value) not in (int, float):
+                invalid()
+            try:
+                value = float(value)
+            except (OverflowError, TypeError, ValueError):
+                invalid()
+            if not isfinite(value) or value < 0:
+                invalid()
+            record['strain_energy'] = value
+        elif record.get('status') == 'unavailable':
+            if (set(record) != keys | {'reason'}
+                    or record.get('strain_energy', object()) is not None
+                    or record.get('reason') not in (
+                        'nonfinite_quadratic_form', 'negative_quadratic_form')):
+                invalid()
+        else:
+            invalid()
+        return record
+
+    @staticmethod
     def _linear_numerical_diagnostics(reactions, free_dofs, damping):
         """Copy physical free-DOF residuals; this is not a stability verdict."""
         if np.ndim(reactions) != 2 or reactions.shape[1] not in (3, 6):
@@ -547,6 +634,9 @@ class BeamFrameFEM:
         edge_forces columns are [axial_N, shear_V, mean_bending_moment];
         the third is (M_i + M_j) / 2, not a force or endpoint moment.
         beam_resultant_contract describes their quantity kinds and availability.
+        beam_energy snapshots the full physical quadratic strain energy,
+        including bending and excluding the numerical regularization diagonal.
+        It does not change the converted SimResult.energy axial proxy.
 
         forces: None (zero loads), or an exact (n_nodes, 2) array [Fx, Fy].
         Applied nodal moments are unsupported; extra columns raise ValueError.
@@ -663,6 +753,7 @@ class BeamFrameFEM:
             'node_moment': node_moment, 'reactions': reactions,
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            'beam_energy': self._linear_beam_energy(K, u_full, 2),
             **self._edge_material_record(materials, edge_list),
             'numerical_diagnostics': self._linear_numerical_diagnostics(
                 reactions, free_dofs, damping),
@@ -786,6 +877,12 @@ class BeamFrameFEM:
         # The last inner solve describes an increment on updated geometry, not
         # the total state above. Do not expose its diagnostics as final fields.
         model = 'incremental_updated_geometry_linear_solves'
+        result['beam_energy'] = {
+            'schema_version': 1, 'model': model, 'dimension': 2,
+            'status': 'unavailable', 'strain_energy': None,
+            'reason': 'final_nonlinear_energy_not_recovered',
+            'unit_system': 'not_declared',
+        }
         result['numerical_diagnostics'] = {
             'schema_version': 1, 'model': model,
             'regularization': {
@@ -854,6 +951,8 @@ class BeamFrameFEM:
         Applied nodal moments are unsupported; extra columns raise ValueError.
         edge_materials follows solve_2d's original-row, isotropic and unit
         contract. Derived per-edge G also controls torsional stiffness.
+        beam_energy includes axial, bending and torsional strain energy from
+        the physical stiffness, without numerical regularization energy.
         """
         torch = sys.modules.get("torch")
         if torch is not None and isinstance(edge_index, torch.Tensor):
@@ -1038,6 +1137,7 @@ class BeamFrameFEM:
             'beam_resultant_contract': _beam_resultant_contract(3),
             'edge_list': edge_list, 'K': K,
             'n_nodes': n_nodes, 'n_edges': len(edge_list),
+            'beam_energy': self._linear_beam_energy(K, u_full, 3),
             **self._edge_material_record(materials, edge_list),
             'numerical_diagnostics': self._linear_numerical_diagnostics(
                 reactions, free_dofs, damping),
@@ -1263,6 +1363,7 @@ class BeamFrameFEM:
             )
         if material_mode == 'graph':
             result['material_contract'].update(source='graph', unit_system='SI')
+            result['beam_energy']['unit_system'] = 'SI'
         displacement = np.asarray(result['u'])[:, :dim]
         result['max_displacement'] = float(np.linalg.norm(displacement, axis=1).max())
         return result
@@ -1279,6 +1380,10 @@ class BeamFrameFEM:
         legacy placeholders, not measured zero forces. No unit system is inferred.
         Present numerical diagnostics are independently copied; input-row
         residual records become stable-node-ID records only with a graph map.
+        An explicit beam_energy producer record is validated and copied into
+        metadata, including in summary exports. No energy is inferred for old
+        dictionaries without it. This detached snapshot includes linear beam
+        bending/torsion; the legacy energy attribute remains an axial proxy.
         
         Parameters
         ----------
@@ -1367,6 +1472,11 @@ class BeamFrameFEM:
             numerical['numerical_diagnostics'] = self._copy_numerical_diagnostics(
                 fem_result['numerical_diagnostics'], n_nodes, u.shape[1],
                 node_ids if graph is not None else None)
+        if 'beam_energy' in fem_result:
+            if np.ndim(u) != 2 or u.shape[0] != n_nodes or u.shape[1] not in (3, 6):
+                raise ValueError('beam_energy requires matching raw u rows and n_nodes')
+            numerical['beam_energy'] = self._copy_beam_energy(
+                fem_result['beam_energy'], 2 if u.shape[1] == 3 else 3)
 
         material_metadata = {}
         effective_moduli = None

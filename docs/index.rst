@@ -68,6 +68,7 @@ Features Overview
    graph_betweenness
    static_network_workflow
    heterogeneous_fem
+   linear_beam_energy
    heterogeneous_radius_workflow
    api/index
    tutorials

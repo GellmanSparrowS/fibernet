@@ -1,3 +1,22 @@
+## [Unreleased] - Nested planar pore boundaries
+
+- Partition disconnected nested centerlines into non-overlapping bounded pore
+  faces, including inner boundary lengths and edge-sharing neighbors. Count both
+  sides of disconnected interior branches in the containing pore's perimeter.
+- Preserve public signatures, feature names and non-pore calculations. Add
+  analytical, graph/JSON and independent planar-cell regression checks. See
+  [pore geometry and migration](docs/SNAPSHOT_PORE_SCALING.md).
+
+
+
+## [Unreleased] - Full linear beam strain energy
+
+- Add a detached full-strain-energy record to linear 2-D/3-D beam results and
+  converted result metadata, including summary JSON. Include bending/torsion
+  while excluding numerical regularization; preserve the legacy axial proxy.
+- Mark unrecovered nonlinear and invalid numerical energy unavailable. Add
+  analytical/quadrature tests and document units, work balance and persistence.
+
 ## [Unreleased] - Preserve geometry-analysis input meaning
 
 - Reject nested masked coordinates and mixed boolean coordinates before NumPy
