@@ -371,6 +371,7 @@ class FiberNetwork:
             best_dist = float('inf')
             best_pts = None
             best_fibers = None
+            best_samples = None
             
             # Find nearest pair of fibers between main and this component
             main_fibers = list(main_comp)
@@ -398,11 +399,16 @@ class FiberNetwork:
                     if d < best_dist:
                         best_dist = d
                         best_pts = (ci[idx[0]], cj[idx[1]])
-                        best_fibers = (fi, fj)
+                        best_fibers = (int(fi), int(fj))
+                        best_samples = idx
             
             if best_dist <= max_gap and best_pts is not None:
                 p1, p2 = best_pts
                 fi, fj = best_fibers
+                si, sj = best_samples
+                # A single-sample fiber attaches at parameter zero.
+                pi = int(si) / max(1, len(self.fibers[fi].centerline) - 1)
+                pj = int(sj) / max(1, len(self.fibers[fj].centerline) - 1)
                 
                 # Add bridging fiber
                 bridge = Fiber.straight(
@@ -417,12 +423,12 @@ class FiberNetwork:
                 # Add crosslinks at both ends
                 self.add_crosslink(Crosslink(
                     fiber_i=fi, fiber_j=self.num_fibers - 1,
-                    param_i=0.5, param_j=0.0,
+                    param_i=pi, param_j=0.0,
                     position=p1.copy(), crosslink_type="welded",
                 ))
                 self.add_crosslink(Crosslink(
                     fiber_i=fj, fiber_j=self.num_fibers - 1,
-                    param_i=0.5, param_j=1.0,
+                    param_i=pj, param_j=1.0,
                     position=p2.copy(), crosslink_type="welded",
                 ))
                 
@@ -1025,6 +1031,7 @@ class FiberNetwork:
             best_dist = float('inf')
             best_pts = None
             best_fibers = None
+            best_samples = None
             
             # Find nearest pair of fibers between main and this component
             main_fibers = list(main_comp)
@@ -1052,11 +1059,16 @@ class FiberNetwork:
                     if d < best_dist:
                         best_dist = d
                         best_pts = (ci[idx[0]], cj[idx[1]])
-                        best_fibers = (fi, fj)
+                        best_fibers = (int(fi), int(fj))
+                        best_samples = idx
             
             if best_dist <= max_gap and best_pts is not None:
                 p1, p2 = best_pts
                 fi, fj = best_fibers
+                si, sj = best_samples
+                # A single-sample fiber attaches at parameter zero.
+                pi = int(si) / max(1, len(self.fibers[fi].centerline) - 1)
+                pj = int(sj) / max(1, len(self.fibers[fj].centerline) - 1)
                 
                 # Add bridging fiber
                 bridge = Fiber.straight(
@@ -1071,12 +1083,12 @@ class FiberNetwork:
                 # Add crosslinks at both ends
                 self.add_crosslink(Crosslink(
                     fiber_i=fi, fiber_j=self.num_fibers - 1,
-                    param_i=0.5, param_j=0.0,
+                    param_i=pi, param_j=0.0,
                     position=p1.copy(), crosslink_type="welded",
                 ))
                 self.add_crosslink(Crosslink(
                     fiber_i=fj, fiber_j=self.num_fibers - 1,
-                    param_i=0.5, param_j=1.0,
+                    param_i=pj, param_j=1.0,
                     position=p2.copy(), crosslink_type="welded",
                 ))
                 
