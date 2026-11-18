@@ -30,9 +30,27 @@ def to_pdb(
         PDB atom name.
     residue_name : str
         PDB residue name.
+
+    Exports above 9,999 beads number residues separately for each chain
+    label. Exports that exceed fixed-width atom serial or residue sequence
+    capacity raise ValueError before opening the destination. Connectivity
+    records follow all coordinate records.
     """
     if bead_spacing is None:
         bead_spacing = network.mean_radius * 3
+
+    bead_counts = [max(2, int(fiber.length / bead_spacing) + 1)
+                   for fiber in network.fibers]
+    atom_count = sum(bead_counts)
+    if atom_count > 99999:
+        raise ValueError("PDB atom serial field supports at most 99999 beads")
+
+    chain_local_numbering = atom_count > 9999
+    if chain_local_numbering:
+        for index in range(26):
+            if sum(bead_counts[index::26]) > 9999:
+                chain = chr(65 + index)
+                raise ValueError(f"PDB residue sequence field supports at most 9999 beads in chain {chain}")
     
     with open(filename, 'w') as f:
         f.write(f"HEADER    FIBER NETWORK\n")
@@ -41,17 +59,19 @@ def to_pdb(
         
         atom_id = 1
         residue_id = 1
+        next_residue_by_chain = [1] * 26
         
-        for f_idx, fiber in enumerate(network.fibers):
-            length = fiber.length
-            num_pts = max(2, int(length / bead_spacing) + 1)
+        for f_idx, (fiber, num_pts) in enumerate(zip(network.fibers, bead_counts)):
             
             if num_pts == 2:
                 pts = np.array([fiber.start_point, fiber.end_point])
             else:
                 pts = fiber.resample(num_pts).centerline
             
-            chain_id = chr(65 + (f_idx % 26))  # A-Z
+            chain_index = f_idx % 26
+            chain_id = chr(65 + chain_index)  # A-Z
+            if chain_local_numbering:
+                residue_id = next_residue_by_chain[chain_index]
             
             for pt in pts:
                 # PDB coordinate convention (Å)
@@ -66,12 +86,16 @@ def to_pdb(
                 f.write(line)
                 atom_id += 1
                 residue_id += 1
-            
-            # Connect atoms in fiber
-            for i in range(num_pts - 1):
-                f.write(f"CONECT{atom_id - num_pts + i:5d}{atom_id - num_pts + i + 1:5d}\n")
+            if chain_local_numbering:
+                next_residue_by_chain[chain_index] = residue_id
             
             f.write("TER\n")
+
+        first_atom_id = 1
+        for num_pts in bead_counts:
+            for atom in range(first_atom_id, first_atom_id + num_pts - 1):
+                f.write(f"CONECT{atom:5d}{atom + 1:5d}\n")
+            first_atom_id += num_pts
         
         f.write("END\n")
     

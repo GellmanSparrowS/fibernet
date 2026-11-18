@@ -882,7 +882,7 @@
    "to_pdb",
    "from_pdb"
   ],
-  "sha256": "4adc6f923c8cc9926d6bd06be4053d08d0ed31f24acebc16571683b3d07168c0"
+  "sha256": "9acb6b79e6a7ddc5882fb3b5e0128e594bc9e1ab7a31244adfa109f00c0f61cc"
  },
  "fibernet/io/vtk.py": {
   "purpose": "VTK file export for visualization in Paraview/VisIt.",
@@ -3578,10 +3578,12 @@
    "_UnionFind",
    "_frame_analysis",
    "_grip_prune",
+   "_require_unmasked",
+   "_node_indices",
    "analyze_tensile_recruitment",
    "compute_percolation"
   ],
-  "sha256": "4738580c09b2b1a3df005b72b096768c8178710d71e6491432f43231958b57f1"
+  "sha256": "5ef1f5ea0dcbebed942430ae214c81ceddc206638aa53edf0331fe948512704c"
  },
  "tests/test_tensile_recruitment.py": {
   "purpose": "Public API and APP compatibility checks for tensile recruitment.",
@@ -5599,5 +5601,29 @@
    "VTPResults"
   ],
   "sha256": "34a81844cd6eb7d3faf8dd2ee7f87439ed8fd8d35151f956a91701973fa859e6"
+ },
+ "tests/test_pdb_export_capacity.py": {
+  "purpose": "PDB identifiers stay in their fields across export and re-import.",
+  "status": "active",
+  "symbols": [
+   "make_fiber",
+   "test_pdb_small_multifiber_export_preserves_atom_records_and_defers_connectivity",
+   "test_pdb_default_zigzag_roundtrip_keeps_fixed_width_and_chain_residue_ids",
+   "test_pdb_atom_serial_overflow_does_not_overwrite_existing_file",
+   "test_pdb_reused_chain_residue_overflow_does_not_overwrite_existing_file"
+  ],
+  "sha256": "d9eadd9d7e272d0db903ca8291db019875a1efd341499cfbedd600d20b21ea98"
+ },
+ "tests/test_tensile_recruitment_masks.py": {
+  "purpose": "Missing measurements and identities cannot define a recruitment path.",
+  "status": "active",
+  "symbols": [
+   "inputs",
+   "test_missing_values_are_rejected_before_numpy_conversion",
+   "test_unmasked_arrays_keep_the_complete_output",
+   "test_run_adapter_rejects_a_hidden_grip",
+   "test_generated_octet_missing_cut_cannot_determine_spanning"
+  ],
+  "sha256": "7619ea339898288ae9953afebf2b29ce79e0ae8d9379627b5de496346d31d699"
  }
 }
