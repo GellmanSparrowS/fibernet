@@ -264,7 +264,7 @@
    "SEdge",
    "StructureGraph"
   ],
-  "sha256": "6f6ae79329f00dcb1fa524765147f77ecaa60712c06005144d76c16207bea48d"
+  "sha256": "51bd21ad6501b9de235fa729d6d8beda9144e6bf305722da697be0a0557e09e5"
  },
  "fibernet/core/tiling.py": {
   "purpose": "Tiling and welding engine for StructureGraph.",
@@ -5282,5 +5282,18 @@
    "test_single_new_vertex_still_succeeds_without_edge_parameter_validation"
   ],
   "sha256": "3302ab502cc943d275f77fe208d7a1f9397c331a5c8477d2bee68aa3e5bdb568"
+ },
+ "tests/test_fiber_network_import_ownership.py": {
+  "purpose": "Independent material parameter edits after legacy endpoint import stay local.",
+  "status": "active",
+  "symbols": [
+   "source_network",
+   "change",
+   "test_parameter_edits_do_not_change_source_or_other_imports",
+   "test_import_keeps_existing_endpoint_projection_and_default_material",
+   "test_omitted_collapsed_fiber_does_not_copy_material",
+   "test_custom_material_copy_protocol_runs_once_per_retained_fiber"
+  ],
+  "sha256": "b8b634684788d45adeb29fa61c88a3c8ee24b647515a3c17eebd21ffc65f19d2"
  }
 }

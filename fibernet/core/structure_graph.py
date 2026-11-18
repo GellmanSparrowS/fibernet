@@ -1135,12 +1135,14 @@ class StructureGraph:
 
     @classmethod
     def from_fiber_network(cls, net, tolerance: float = 1e-6) -> "StructureGraph":
-        """Create a StructureGraph from a FiberNetwork (approximate)."""
+        """Create an approximate endpoint graph with detached per-fiber materials."""
         g = cls(dimension=net.dimension, tolerance=tolerance, box_size=net.box_size)
         for fiber in net.fibers:
             n_start = g.add_node(fiber.start_point, merge=True)
             n_end = g.add_node(fiber.end_point, merge=True)
-            g.add_edge(n_start, n_end, radius=fiber.radius, material=fiber.material,
+            if n_start == n_end:
+                continue
+            g.add_edge(n_start, n_end, radius=fiber.radius, material=copy.deepcopy(fiber.material),
                        allow_parallel=True)
         return g
 

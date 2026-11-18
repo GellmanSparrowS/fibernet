@@ -1,3 +1,8 @@
+## [Unreleased] - Independent imported materials
+
+- Keep per-fiber materials independent when importing endpoint graphs, enabling
+  repeatable parameter sweeps across source networks and sibling designs.
+
 ## [Unreleased] - Pore boundaries at coincident endpoints
 
 - Treat exactly coincident XY endpoints as one vertex in the private pore
