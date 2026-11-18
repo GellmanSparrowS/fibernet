@@ -757,7 +757,7 @@ def export(
         to_vtk(network, filename, **kwargs)
     elif format == 'vtp':
         from fibernet.io.vtk import to_vtk_xml
-        to_vtk_xml(network, filename)
+        to_vtk_xml(network, filename, **kwargs)
     elif format == 'xyz':
         from fibernet.io.xyz import to_xyz
         to_xyz(network, filename, **kwargs)

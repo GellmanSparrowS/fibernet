@@ -1165,13 +1165,13 @@ class FiberNetwork:
         return components_joined
 
     def to_networkx(self):
-        """Convert fiber network to NetworkX graph.
+        """Return the simple undirected NetworkX graph of fiber adjacencies.
 
-        Creates a graph where:
-        - Nodes represent fibers
-        - Edges represent crosslinks between fibers
-        - Node attributes: length, radius, material
-        - Edge attributes: stiffness, strength
+        Nodes are keyed by fiber list index. Each node includes the stored
+        ``fiber_id`` label, length, radius, material name and Young's modulus.
+        Edges represent crosslinks. For a repeated pair, the last record
+        supplies the stiffness, strength and crosslink type. Keep the source
+        network for individual crosslink records and physical joint geometry.
 
         Returns
         -------
@@ -1194,8 +1194,9 @@ class FiberNetwork:
         G = nx.Graph()
 
         # Add nodes (fibers)
-        for fiber in self.fibers:
-            G.add_node(fiber.fiber_id,
+        for index, fiber in enumerate(self.fibers):
+            G.add_node(index,
+                      fiber_id=fiber.fiber_id,
                       length=fiber.length,
                       radius=fiber.radius,
                       material=fiber.material.name,
