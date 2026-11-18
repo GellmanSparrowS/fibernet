@@ -22,4 +22,4 @@ The RL animation records prescribed actions and native environment responses, re
 
 ## Installation and API selection
 
-PyPI 4.2.0 is the published package; the 4.3.0 development checkout contains newer APIs. Module-level solvers have explicit input and result contracts. Select supported entry points with the [API map](API_LAYERS.md), including the distinction between beam-frame FEM and the reduced spring/bending/contact model.
+For a repository checkout, start with the [source quickstart](../README.md#quick-start). For an installed package, use the example for your version on [PyPI](https://pypi.org/project/fibernet/). Module-level solvers have explicit input and result contracts. Select supported entry points with the [API map](API_LAYERS.md), including the distinction between beam-frame FEM and the reduced spring/bending/contact model.

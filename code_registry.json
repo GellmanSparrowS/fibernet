@@ -738,7 +738,7 @@
   "symbols": [
    "ZigZagGenerator"
   ],
-  "sha256": "0d863a081af0f1b3fafc61f3f4d32e80132fdfc55b4adaaa19bfcb5bd03404ac"
+  "sha256": "fb1deae814d9c367a80791781f445d0138a36e4df9b01ee7678aecc927d9aec3"
  },
  "fibernet/graph/__init__.py": {
   "purpose": "Graph-based operations for fiber networks.",
@@ -5483,5 +5483,16 @@
    "Hdf5SafeSaveIntegrationTests"
   ],
   "sha256": "4f31df98ab184f289646a6678d966bc9eea6a98806111827a881baf86a0b6b80"
+ },
+ "tests/test_zigzag_weld_parameters.py": {
+  "purpose": "Crosslinks on a generated zigzag reference the actual sampled endpoints.",
+  "status": "active",
+  "symbols": [
+   "assert_welds_match_samples",
+   "test_generated_zigzag_welds_preserve_fibers_and_locate_shared_nodes",
+   "test_mirrored_zigzag_native_json_keeps_weld_endpoints",
+   "test_trim_near_zigzag_peak_keeps_shared_endpoint_weld"
+  ],
+  "sha256": "83660a402e25f528f7c4eae522f4e65ac844b756e7799bcfe3db4a0a7c8420fd"
  }
 }
