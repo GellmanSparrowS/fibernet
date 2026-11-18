@@ -1,3 +1,14 @@
+## [Unreleased] - Isolated RL rendering checks
+
+- Use Matplotlib's bundled-font setting in plotting test subprocesses, keeping
+  their data, backend, state and export checks within the existing deadline.
+
+## [Unreleased] - Length-weighted planar fiber density
+
+- Sum each fiber's nominal strip area when computing planar area fractions.
+  Mixed radii now retain the same density when an unchanged centerline is
+  divided into shorter fibers.
+
 ## [Unreleased] - Network DataFrame interchange
 
 - Preserve the standard column schema for empty exports and import only
