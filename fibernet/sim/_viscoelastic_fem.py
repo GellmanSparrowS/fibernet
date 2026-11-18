@@ -15,6 +15,7 @@ from scipy.sparse.linalg import spsolve, MatrixRankWarning
 from fibernet.core.viscoelastic import LinearViscoelasticMaterial
 from ._frame_linear_common import (
     _finite, _geometry, _histories, _check_supports, _solve_constrained_sparse,
+    _reject_masked_values,
 )
 
 _STATE_SCHEMA = 'fibernet.viscoelastic_state/1'
@@ -150,6 +151,7 @@ def solve_history(solver, graph, *, material, times, constraints, loads=None,
     """Implementation of BeamFrameFEM.history; see VISCOELASTIC_NETWORK.md."""
     if not isinstance(material, LinearViscoelasticMaterial):
         raise ValueError('material must be a LinearViscoelasticMaterial')
+    _reject_masked_values(times, 'times')
     t = np.asarray(times)
     t = _finite(times, t.shape, 'times')
     if t.ndim != 1 or len(t) < 2 or not np.isfinite(t).all() or np.any(np.diff(t) <= 0):

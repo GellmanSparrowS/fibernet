@@ -134,28 +134,22 @@ def test_true_signed_zero_endpoints_are_equal():
     assert thermal.completed and np.all(thermal.edge_heat_rate_W==0.)
 
 
-@pytest.mark.parametrize('offset',[-1e6,0.,.02,1e6,1e14])
+@pytest.mark.parametrize('offset',[-1e6,-.5,0.,.02,1e6,1e14])
 @pytest.mark.parametrize('scale',[1e-150,1.,1e150])
 def test_electrical_gauges_scales_and_resolved_bad_solver(monkeypatch,offset,scale):
     g=graph([(0,1),(1,2),(1,3)])
     base=el.spsolve
-    # Existing component-power checks intentionally fail closed when the
-    # absolute-coordinate solve loses the driven drop at extreme gauge/scale.
-    expected_unresolved=(scale==1. and offset==1e14) or (scale==1e150 and offset in (1e6,1e14))
-    if expected_unresolved:
-        with pytest.raises(el.TransportSolveError,match='component-local'):
-            el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
-    else:
-        try:
-            clean=el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
-        except el.TransportSolveError as exc:
-            # These ill-resolved negative-gauge cases depend on the numeric
-            # stack. Only the unchanged conservative component guard is valid.
-            assert offset==-1e6 and scale in (1e-150,1e150)
-            assert str(exc)=='component-local current conservation or power balance tolerance failed'
-        else:
-            assert clean.status=='converged'
-            assert clean.provenance['achieved_limits']['roundoff_coordinates']=='absolute solved voltage'
+    # Preserve the series solution and the zero-current dangling branch.
+    clean=el.solve_linear_transport(g,{0:scale,1:scale,2:scale},{0:offset+1,2:offset},length_unit='m')
+    assert clean.status=='converged'
+    np.testing.assert_allclose(clean.voltage_V,[offset+1,offset+.5,offset,offset+.5],
+                               rtol=0.,atol=4*np.finfo(float).eps)
+    np.testing.assert_allclose(clean.current_A/scale,[.5,.5,0.],rtol=1e-14,atol=4*np.finfo(float).eps)
+    np.testing.assert_allclose(clean.edge_power_W/scale,[.25,.25,0.],rtol=1e-14,atol=4*np.finfo(float).eps)
+    np.testing.assert_allclose([clean.dissipated_power_W/scale,clean.boundary_power_W/scale],
+                               [.5,.5],rtol=1e-14,atol=0.)
+    assert clean.provenance['achieved_limits']['roundoff_coordinates']=='absolute returned voltage'
+    assert 'component-local voltage reference' in clean.provenance['solver']
     # Deliberately perturb above the stated engineering resolution at this
     # gauge. A fixed tiny perturbation is not resolvable at arbitrary offset.
     perturb=max(.01,512*np.finfo(float).eps*max(1,abs(offset)))

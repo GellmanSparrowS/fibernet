@@ -4896,7 +4896,7 @@
    "LinearTransportResult",
    "solve_linear_transport"
   ],
-  "sha256": "8a6b0994a26a085da6d89c78ab72d87ba6e5195dd3582ee08e3fe34c584cdf92"
+  "sha256": "c3b843167aa86a1d6d8d2d7305f0b6204efa22517ae77beb6a560c47d34f4a49"
  },
  "fibernet/sim/transient_thermal.py": {
   "purpose": "Explicit lumped thermal network; constant inputs and backward Euler only.",
@@ -5316,5 +5316,103 @@
    "CoreMaterialInputContractTests"
   ],
   "sha256": "050a85c51c8c2649f252a98ac1715505320819faea3f4aba63a1e1612b400325"
+ },
+ "fibernet/sim/_frame_linear_common.py": {
+  "purpose": "Shared existing planar frame geometry and strict constrained sparse solve.",
+  "status": "active",
+  "symbols": [
+   "_reject_masked_values",
+   "_finite",
+   "_geometry",
+   "_histories",
+   "_check_supports",
+   "_solve_constrained_sparse"
+  ],
+  "sha256": "aeb7139ce887f34b0f0e080f1aa5db20c1794c28a486e8fc6a6ace3a152f1a61"
+ },
+ "fibernet/sim/_viscoelastic_fem.py": {
+  "purpose": "History extension of BeamFrameFEM's existing 2-D sparse assembly.",
+  "status": "active",
+  "symbols": [
+   "_json",
+   "_hash",
+   "ViscoelasticResult",
+   "_assemble",
+   "_section",
+   "_residual",
+   "_stored",
+   "solve_history"
+  ],
+  "sha256": "8a111509d2a8bb588ad3a1b1c24a31e77934a7178c29d0418336170955316814"
+ },
+ "tests/test_linear_transport.py": {
+  "purpose": "Analytical/software checks; explicit conductance is not inferred physics.",
+  "status": "active",
+  "symbols": [
+   "network",
+   "solve",
+   "test_saved_analytic_fixture",
+   "test_series",
+   "test_small_signal_with_common_mode_matches_series_parallel_oracle",
+   "test_small_signal_on_long_chain_has_exact_current_and_power",
+   "test_unrepresentable_absolute_voltages_still_fail_conservation",
+   "test_parallel_members_sum_and_orientation",
+   "test_zero_conductance_no_path_is_valid_with_all_components_anchored",
+   "test_floating_components_rejected",
+   "test_separate_anchored_components_and_isolated_node",
+   "test_singleton_without_edges",
+   "test_invalid_conductance",
+   "test_conductance_keys",
+   "test_invalid_dirichlet",
+   "test_identical_boundary_duplicates_coalesce",
+   "test_permutation_reruns_voltage_scaling_and_nonmutation",
+   "test_solver_nonfinite_and_conservation_failures",
+   "test_canonical_square_network_e2e",
+   "test_sparse_rank_warning_is_failure",
+   "test_invalid_controls",
+   "test_geometry_unit_has_no_electrical_rescaling",
+   "test_zero_edge_does_not_short_circuit_components",
+   "test_assembly_overflow_is_explicit_failure",
+   "test_large_branch_cannot_mask_wrong_small_node",
+   "test_default_controls_reject_wrong_tiny_solution",
+   "test_nonrepresentable_fields_rejected",
+   "test_clean_uniform_scales_default_controls",
+   "test_heterogeneous_equipotential_is_exact",
+   "test_boundary_power_uses_stable_gauge_shift"
+  ],
+  "sha256": "d1c235f869ced898a0a7af9b23c7aea10ca83f2d53563201f4768e3024a77d78"
+ },
+ "tests/test_transport_roundoff.py": {
+  "purpose": "Local representation contracts, not representative-network substitutes.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "test_upward_budget_operations_and_negative_ulp",
+   "test_budget_rejects_invalid_values_before_arithmetic",
+   "test_budget_exact_signed_zero_and_normal_values",
+   "test_subnormal_input_boundary_and_true_signed_zero",
+   "test_lost_nonzero_endpoint_difference_and_equal_endpoint_control",
+   "test_stored_subnormal_solver_output_difference",
+   "test_true_signed_zero_endpoints_are_equal",
+   "test_electrical_gauges_scales_and_resolved_bad_solver",
+   "test_electrical_components_ids_orientation",
+   "test_thermal_deadend_components_and_bad_solver",
+   "test_thermal_all_fixed_component_and_zero_scale",
+   "test_thermal_scale_ids_orientation",
+   "test_thermal_unresolved_precision_cap_stays_closed"
+  ],
+  "sha256": "b54eae346d43125d3ef91b4a827f4f27421e2a67204da77074c2d33a21f3c0b1"
+ },
+ "tests/test_history_masked_controls.py": {
+  "purpose": "Missing history samples must not be silently replaced by masked payloads.",
+  "status": "active",
+  "symbols": [
+   "_case",
+   "_wrap",
+   "test_public_history_rejects_missing_controls_before_assembly",
+   "test_all_valid_masked_controls_preserve_public_solution_and_analytic_force",
+   "test_all_valid_masked_constraints_preserve_none_as_free_dof"
+  ],
+  "sha256": "76a73aae4328e376af11e2def83a103c49c3e24171ff6af8c9bce0a763b4f176"
  }
 }

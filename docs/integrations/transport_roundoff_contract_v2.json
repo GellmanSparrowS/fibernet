@@ -12,7 +12,7 @@
     "lost_difference_guard": "An active edge whose stored endpoint values differ but whose computed voltage/temperature difference is zero fails explicitly. These guards cover the stated scalar inputs, differences and budget operations; they are not a general guarantee for every floating-point environment or solver operation. Information already lost before or during conversion to binary64 is outside these guards."
   },
   "electrical": {
-    "solve_coordinates": "actual absolute V, not reference-shifted V",
+    "solve_coordinates": "component-local V relative to the point in the prescribed voltage interval closest to zero; reconstructed absolute V is used for returned fields and acceptance checks",
     "solve_allowance_A": "32*eps*sum_incident g_e*(abs(V_a)+abs(V_b))",
     "edge_evaluation_A": "g_e*R(dV_e)+R(q_e)",
     "node_evaluation_A": "sum_incident edge_evaluation_A + gamma_degree*sum_incident abs(q_e), gamma_k=k*u/(1-k*u)",

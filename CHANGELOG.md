@@ -1,3 +1,15 @@
+## [Unreleased] - Small-signal transport at nonzero reference voltage
+
+- Solve each conducting component around a local voltage reference, then
+  recover absolute potentials for field and conservation checks. Resolve
+  small voltage differences on nonzero common-mode inputs.
+
+## [Unreleased] - Complete history input samples
+
+- Check time, load and constraint samples before NumPy conversion, retaining
+  missing-value masks until validation. Fully specified histories keep their
+  existing numerical results and free-constraint semantics.
+
 ## [Unreleased] - Concave OBJ surface domains
 
 - Preserve planar concave boundaries and winding during quad conversion, including

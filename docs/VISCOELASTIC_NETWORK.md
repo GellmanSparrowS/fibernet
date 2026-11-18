@@ -68,6 +68,8 @@ every prescribed/load history must therefore be zero. Specify a finite ramp
 explicitly. No automatic interpolation, load-step jump, or prestress is used.
 
 `constraints` and `loads` map stable node IDs to `(len(times), 3)` samples.
+Time, load and constraint samples must be complete. NumPy masked samples
+raise `ValueError`; arrays with no masked samples retain their numeric meaning.
 Constraints are `[ux, uy, rz]` in m/m/radians; `None` is free, `0` constrained.
 The free/constrained pattern is constant in a run and its restart. Loads are
 `[Fx, Fy, Mz]` in N/N/N m. Omitted loads are zero; omitted constraints are free.

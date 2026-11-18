@@ -94,22 +94,25 @@ without an explicit area/length convention.
 ## Numerical checks and limits
 
 The backend assembles the sparse weighted Laplacian and eliminates prescribed
-voltages. `spsolve(use_umfpack=False)` selects the SciPy path without optional
-UMFPACK dispatch. Singular-matrix warnings and nonfinite outputs fail.
+voltages. For each driven component it takes the point in the prescribed
+voltage interval closest to zero as the numerical reference, then restores
+absolute voltages before evaluating the returned fields.
+`spsolve(use_umfpack=False)` selects the SciPy path without optional UMFPACK
+dispatch. Singular-matrix warnings and nonfinite outputs fail.
 All-prescribed systems do not need a linear solve.
 
 Default checks are local, so an unrelated high-current branch/component cannot
 supply the acceptance scale for a low-current free node:
 
 - Each free-node current residual is checked against its own incident absolute current sum, multiplied by rtol
-- A local floating-point allowance adds 32 times float64 machine epsilon times the incident conductance-weighted absolute node/neighbor voltages relative to that component's reference potential
+- A local floating-point allowance adds 32 times float64 machine epsilon times the incident conductance-weighted absolute voltages returned for the node and its neighbors
 - Each positive-conductance component independently checks signed current balance against its boundary absolute injection sum, and power balance against its own dissipated/supplied power
 - Component boundary power is computed after shifting voltage by a component boundary reference, reducing arbitrary-offset cancellation; returned boundary_power_W is the stable sum of these component-local values, not a cancellation-prone global raw voltage/injection dot product
 - Defaults: rtol 1e-10; current_atol_A = 0 A; power_atol_W = 0 W
 
 The local floating-point term is a backward-error allowance, not a voltage
-error bound. It uses only conductances incident on that node and component-
-relative voltages, never a global maximum current. Components with identical
+error bound. It uses conductances incident on that node and the absolute
+voltages returned for those incident edges. Components with identical
 prescribed voltages use their exact constant solution, avoiding spurious
 roundoff currents for zero-driving cases.
 

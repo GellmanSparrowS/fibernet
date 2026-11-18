@@ -4,7 +4,20 @@ import warnings
 import numpy as np
 from scipy.sparse.linalg import spsolve, MatrixRankWarning
 
+def _reject_masked_values(value, name):
+    """Keep missing controls from becoming hidden data during NumPy conversion."""
+    if np.ma.isMaskedArray(value) and np.ma.is_masked(value):
+        raise ValueError(f'{name} must not contain masked values')
+    if isinstance(value, (list, tuple)):
+        for item in value:
+            _reject_masked_values(item, name)
+    elif isinstance(value, np.ndarray) and value.dtype.kind == 'O':
+        for item in value.flat:
+            _reject_masked_values(item, name)
+
+
 def _finite(value, shape, name):
+    _reject_masked_values(value, name)
     obj = np.asarray(value, dtype=object)
     if any(isinstance(item, (bool, np.bool_)) or
            not isinstance(item, (int, float, np.integer, np.floating)) for item in obj.ravel()):
@@ -96,6 +109,7 @@ def _histories(times, node_ids, loads, constraints):
             if kind == 'loads':
                 force[:, i] = _finite(history, (nt, 3), 'load history')
             else:
+                _reject_masked_values(history, 'constraint history')
                 h = np.asarray(history, dtype=object)
                 if h.shape != (nt, 3):
                     raise ValueError('constraint history requires (times,3) samples')

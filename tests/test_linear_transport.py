@@ -50,6 +50,64 @@ def test_series():
     assert r.dissipated_power_W == pytest.approx(6)
 
 
+@pytest.mark.parametrize('common_mode_V', [120., -120.])
+def test_small_signal_with_common_mode_matches_series_parallel_oracle(common_mode_V):
+    graph = network([(10, 20), (30, 20), (20, 30), (30, 40), (50, 40), (101, 102)],
+                    [102, 101, 50, 10, 40, 20, 30, 202])
+    conductance = {0: 1., 1: .25, 2: .75, 3: 1., 4: 1., 5: 2.}
+    excitation = 2.**-10
+    # Four equal series sections, with the second section split into two
+    # oppositely oriented parallel members carrying one quarter and three quarters.
+    drop = excitation / 4
+    chain_voltages = [common_mode_V + remaining * drop for remaining in (4, 3, 2, 1, 0)]
+    expected_currents = [drop, -drop / 4, 3 * drop / 4, drop, -drop, -4.]
+    result = solve(graph, conductance,
+                   {10: common_mode_V + excitation, 50: common_mode_V,
+                    101: -1., 102: 1., 202: 7.})
+    zero_reference = solve(graph, conductance, {10: excitation, 50: 0., 101: -1., 102: 1., 202: 7.})
+
+    np.testing.assert_array_equal(result.node_ids, [10, 20, 30, 40, 50, 101, 102, 202])
+    np.testing.assert_array_equal(result.voltage_V, chain_voltages + [-1., 1., 7.])
+    np.testing.assert_array_equal(result.current_A, expected_currents)
+    np.testing.assert_allclose(result.current_A, zero_reference.current_A, rtol=1e-14, atol=0)
+    np.testing.assert_array_equal(result.node_injection_A, [drop, 0., 0., 0., -drop, -4., 4., 0.])
+    np.testing.assert_array_equal(result.edge_power_W,
+                                  [drop**2, drop**2 / 4, 3 * drop**2 / 4, drop**2, drop**2, 8.])
+    assert result.free_node_residual_A == 0.
+    assert result.global_current_balance_A == 0.
+    assert result.dissipated_power_W == result.boundary_power_W == excitation * drop + 8.
+    assert len(result.provenance['achieved_limits']['components']) == 3
+    json.dumps(result.to_dict(), allow_nan=False)
+
+
+def test_small_signal_on_long_chain_has_exact_current_and_power():
+    edge_count = 32
+    edges = [(i + 1, i) if i % 2 else (i, i + 1) for i in range(edge_count)]
+    graph = network(edges)
+    common_mode = 120.
+    excitation = 2.**-10
+    drop = 2.**-15
+    result = solve(graph, {i: 1. for i in graph.edges},
+                   {0: common_mode + excitation, edge_count: common_mode})
+    expected = common_mode + drop * np.arange(edge_count, -1, -1)
+    np.testing.assert_array_equal(result.voltage_V, expected)
+    np.testing.assert_array_equal(result.current_A, np.tile([drop, -drop], edge_count // 2))
+    assert result.free_node_residual_A == 0.
+    assert result.dissipated_power_W == result.boundary_power_W == 2.**-25
+
+
+@pytest.mark.parametrize('reverse', [False, True])
+def test_unrepresentable_absolute_voltages_still_fail_conservation(reverse):
+    low, high = 120., np.nextafter(120., np.inf)
+    edges = [(0, 1), (1, 2), (2, 3)]
+    if reverse:
+        edges = [(b, a) for a, b in edges]
+        low, high = high, low
+    # Neither one-third point in this nonzero interval can be stored in float64.
+    with pytest.raises(TransportSolveError, match='component-local'):
+        solve(network(edges), {0: 1., 1: 1., 2: 1.}, {0: low, 3: high})
+
+
 def test_parallel_members_sum_and_orientation():
     g = network([(10, 30), (30, 10), (10, 30)])
     r = solve(g, {0: 2, 1: 3, 2: 0}, [(10, 1), (30, 0)])
