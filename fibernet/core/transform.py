@@ -13,10 +13,26 @@ Provides powerful tools for manipulating fiber networks:
 
 import numpy as np
 from typing import List, Tuple, Optional, Union
-from copy import deepcopy
+from copy import copy, deepcopy
 from fibernet.core.fiber import CrossSection, Fiber
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.utils.geometry import rotation_matrix_axis_angle
+
+
+def _unique_entities(entities):
+    """Visit object identities once without altering network list order."""
+    seen = set()
+    for entity in entities:
+        identity = id(entity)
+        if identity not in seen:
+            seen.add(identity)
+            yield entity
+
+
+def _copy_crosslink_position(position):
+    if isinstance(position, memoryview):
+        return memoryview(np.asarray(position).copy())
+    return copy(position)
 
 
 def mirror(
@@ -36,7 +52,7 @@ def mirror(
     origin : np.ndarray, optional
         Point on the mirror plane. Defaults to network center.
     inplace : bool
-        If True, modify network in place. Otherwise return new network.
+        If True, modify network in place. Geometry arrays may be replaced. Otherwise return new network.
     
     Returns
     -------
@@ -52,13 +68,17 @@ def mirror(
         bb_min, bb_max = net.bounding_box()
         origin = 0.5 * (bb_min + bb_max)
     
-    origin = np.asarray(origin)
+    origin = np.asarray(origin).copy()
     
-    for fiber in net.fibers:
-        fiber.centerline[:, axis] = 2 * origin[axis] - fiber.centerline[:, axis]
+    for fiber in _unique_entities(net.fibers):
+        reflected = fiber.centerline.copy()
+        reflected[:, axis] = 2 * origin[axis] - reflected[:, axis]
+        fiber.centerline = reflected
     
-    for cl in net.crosslinks:
-        cl.position[axis] = 2 * origin[axis] - cl.position[axis]
+    for cl in _unique_entities(net.crosslinks):
+        reflected = _copy_crosslink_position(cl.position)
+        reflected[axis] = 2 * origin[axis] - reflected[axis]
+        cl.position = reflected
     
     return net
 
@@ -96,14 +116,14 @@ def rotate(
         bb_min, bb_max = net.bounding_box()
         origin = 0.5 * (bb_min + bb_max)
     
-    origin = np.asarray(origin)
+    origin = np.asarray(origin).copy()
     R = rotation_matrix_axis_angle(axis, angle)
     
-    for fiber in net.fibers:
+    for fiber in _unique_entities(net.fibers):
         centered = fiber.centerline - origin
         fiber.centerline = (R @ centered.T).T + origin
     
-    for cl in net.crosslinks:
+    for cl in _unique_entities(net.crosslinks):
         centered = cl.position - origin
         cl.position = (R @ centered.T) + origin
     
@@ -142,8 +162,8 @@ def scale(
         bb_min, bb_max = net.bounding_box()
         origin = 0.5 * (bb_min + bb_max)
     
-    origin = np.asarray(origin)
-    factor = np.asarray(factor)
+    origin = np.asarray(origin).copy()
+    factor = np.asarray(factor).copy()
     section_dtype = np.result_type(factor.dtype, np.float64)
     section_lengths = {
         CrossSection.RECTANGULAR: ('width', 'height'),
@@ -151,12 +171,15 @@ def scale(
         CrossSection.HOLLOW_CIRCULAR: ('inner_radius',),
     }
 
-    for fiber in net.fibers:
+    for fiber in _unique_entities(net.fibers):
         centered = fiber.centerline - origin
         fiber.centerline = centered * factor + origin
         # Keep dimension products out of low-precision scalar arithmetic.
         section_factor = np.mean(factor, dtype=section_dtype)
-        fiber.radius *= section_factor
+        # A radius can itself be a NumPy scalar view into shared geometry.
+        radius = copy(fiber.radius)
+        radius *= section_factor
+        fiber.radius = radius
         params = fiber.cross_section_params
         scaled_lengths = {
             key: params[key] * section_factor
@@ -166,7 +189,7 @@ def scale(
             # Different fibers can use the same parameter mapping.
             fiber.cross_section_params = {**params, **scaled_lengths}
     
-    for cl in net.crosslinks:
+    for cl in _unique_entities(net.crosslinks):
         centered = cl.position - origin
         cl.position = centered * factor + origin
     
@@ -190,7 +213,7 @@ def translate(
     offset : np.ndarray
         Translation vector.
     inplace : bool
-        If True, modify network in place.
+        If True, modify network in place. Geometry arrays may be replaced.
     
     Returns
     -------
@@ -198,13 +221,17 @@ def translate(
         Translated network.
     """
     net = network if inplace else deepcopy(network)
-    offset = np.asarray(offset)
+    offset = np.asarray(offset).copy()
     
-    for fiber in net.fibers:
-        fiber.centerline += offset
+    for fiber in _unique_entities(net.fibers):
+        translated = fiber.centerline.copy()
+        translated += offset
+        fiber.centerline = translated
     
-    for cl in net.crosslinks:
-        cl.position += offset
+    for cl in _unique_entities(net.crosslinks):
+        translated = _copy_crosslink_position(cl.position)
+        translated += offset
+        cl.position = translated
     
     return net
 

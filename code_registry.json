@@ -289,6 +289,8 @@
   "purpose": "Network transformation operations.",
   "status": "active",
   "symbols": [
+   "_unique_entities",
+   "_copy_crosslink_position",
    "mirror",
    "rotate",
    "scale",
@@ -301,7 +303,7 @@
    "align_by_anchor",
    "create_pattern"
   ],
-  "sha256": "9901b85f0b2cf1cbf2c1f0451d0904f4910a4cf08a69860b9cb574713b3455b4"
+  "sha256": "95ea9b8690835b38a106ba15ab12aeaf9939938701638cdefd2da99c9f94ef42"
  },
  "fibernet/core/transforms.py": {
   "purpose": "Geometric transforms for StructureGraph.",
@@ -5458,5 +5460,18 @@
    "test_section_scaling_preserves_extended_precision"
   ],
   "sha256": "39571eb5b46b66abafb600e1d85df6dee524540abbb123a8bd72be24f525aad3"
+ },
+ "tests/test_legacy_transform_aliases.py": {
+  "purpose": "Legacy affine transforms apply one operation to every physical entity.",
+  "status": "active",
+  "symbols": [
+   "_network",
+   "test_legacy_affine_transforms_use_frozen_geometry_once",
+   "test_mirror_and_translate_retain_legacy_crosslink_container_and_dtype",
+   "test_scale_preserves_shared_radius_views_and_crosslink_coordinates",
+   "test_scale_retains_legacy_integer_radius_casting_refusal",
+   "test_inplace_transform_supports_crosslink_memoryview_positions"
+  ],
+  "sha256": "4ace6ce7aa597bf4de446172084df3825dd3e560da9abfcb8c6e422d68e72da1"
  }
 }
