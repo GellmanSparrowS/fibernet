@@ -1,3 +1,9 @@
+## [Unreleased] - Shared geometry in network transforms
+
+- Mirror, rotate, scale and translate each fiber or crosslink object once,
+  retaining repeated list entries and crosslink indices. Shared coordinate
+  buffers, radius views and transformation controls stay independent.
+
 ## [Unreleased] - Consistent cross-section scaling
 
 - Scale explicit rectangular, elliptical and hollow-tube section dimensions
