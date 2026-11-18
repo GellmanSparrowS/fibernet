@@ -868,12 +868,13 @@
   "status": "active",
   "symbols": [
    "_require_pandas",
+   "_integer_positions",
    "to_dataframe",
    "from_dataframe",
    "network_summary",
    "parametric_to_dataframe"
   ],
-  "sha256": "7551716cad673aec72797c40c260197a41a888c261dbb096e31d0d97010b64a9"
+  "sha256": "01c795ace70b76dc26b13d1f9ce642804c6b23d37bf1b6d7e54abe08d0f38722"
  },
  "fibernet/io/pdb.py": {
   "purpose": "PDB (Protein Data Bank) file format I/O.",
@@ -5656,6 +5657,14 @@
    "test_nonperiodic_merge_of_separated_zigzags_preserves_sampled_welds",
    "test_repeated_input_at_shared_endpoint_gets_a_cross_input_weld",
    "test_merge_keeps_original_parallel_records_and_detects_cross_input_contacts"
+  ]
+ },
+ "tests/test_dataframe_fiber_identity.py": {
+  "purpose": "Round-trip coverage for DataFrame fiber identity.",
+  "status": "active",
+  "sha256": "117fcb6787a78db4e54fd9ec6aa3520c5c92d51a18e2383dce29640d21abb9c6",
+  "symbols": [
+   "DataFrameFiberIdentity"
   ]
  }
 }

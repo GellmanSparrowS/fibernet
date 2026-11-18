@@ -6,6 +6,8 @@ Requires: pandas
 
 from __future__ import annotations
 
+from operator import index
+
 import numpy as np
 from typing import Optional, List, Dict, Any
 from ..core.network import FiberNetwork
@@ -20,9 +22,22 @@ except ImportError:
     pd = None
 
 
+_FIBER_POSITION = 'fibernet_fiber_index'
+
+
 def _require_pandas():
     if not PANDAS_AVAILABLE:
         raise ImportError("pandas is required. Install with: pip install pandas")
+
+
+def _integer_positions(values, field):
+    keys = []
+    for value in values:
+        position = index(value) if pd.api.types.is_integer(value) else -1
+        if position < 0:
+            raise ValueError(f'{field} must contain a nonnegative integer for every row')
+        keys.append(position)
+    return keys
 
 
 def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.DataFrame':
@@ -44,6 +59,9 @@ def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.
         material_name, youngs_modulus, density. Empty networks retain these
         columns. If requested and crosslinks exist, has_crosslink marks
         each point on a fiber referenced by a crosslink.
+        When stored fiber_id labels differ from the fiber list positions,
+        the last column, fibernet_fiber_index, stores those positions.
+        Keep it with the geometry when exporting or filtering the table.
     """
     _require_pandas()
 
@@ -55,6 +73,13 @@ def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.
                             for position in (link.fiber_i, link.fiber_j)}
     if linked_positions:
         columns.append('has_crosslink')
+
+    include_positions = any(
+        pd.isna(fiber.fiber_id) or fiber.fiber_id != position
+        for position, fiber in enumerate(network.fibers)
+    )
+    if include_positions:
+        columns.append(_FIBER_POSITION)
 
     rows = []
     for fiber_index, fiber in enumerate(network.fibers):
@@ -77,6 +102,8 @@ def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.
             }
             if linked_positions:
                 row['has_crosslink'] = has_crosslink
+            if include_positions:
+                row[_FIBER_POSITION] = fiber_index
             rows.append(row)
 
     return pd.DataFrame(rows, columns=columns)
@@ -91,8 +118,14 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
         DataFrame with x and y columns and a fiber_id column or named index
         level. If z is absent, points are padded with z=0 and the network
         dimension is 2; otherwise it is 3. Every row needs a fiber_id.
-        Categorical groups follow category order and skip unused labels.
-        Rows are sorted by point_idx when present.
+        The reserved fibernet_fiber_index column or named index level, when
+        present, groups rows by nonnegative integer fiber position in
+        ascending order. Each position needs a consistent fiber_id. Its
+        point_idx column or named index level, when present, must contain
+        unique nonnegative integers and is sorted numerically.
+        Without this reserved key, rows are grouped by fiber_id. Categorical
+        groups follow category order and skip unused labels. Rows are sorted
+        by point_idx when present.
     material : Material, optional
         Material for all fibers, taking precedence over table material columns.
         If omitted, material columns are used when youngs_modulus is present;
@@ -115,9 +148,23 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     labels = df.index.get_level_values(group_key) if indexed_labels else df[group_key]
     if labels.isna().any():
         raise ValueError('fiber_id must be present for every DataFrame row')
+    indexed_positions = _FIBER_POSITION in df.index.names
+    has_position_column = _FIBER_POSITION in df.columns
+    if indexed_positions and has_position_column:
+        raise ValueError(
+            f'{_FIBER_POSITION!r} is both an index level and a column label, which is ambiguous.'
+        )
+    has_positions = indexed_positions or has_position_column
+    if has_positions:
+        positions = (
+            df.index.get_level_values(_FIBER_POSITION) if indexed_positions else df[_FIBER_POSITION]
+        )
+        if not isinstance(positions, (pd.Series, pd.Index)):
+            raise ValueError(f'{_FIBER_POSITION} must be a single column or index level')
+        group_key = pd.Index(_integer_positions(positions, _FIBER_POSITION), dtype=object)
     # Older pandas sorts observed categoricals in category order only if
     # marked ordered. Use a temporary key so the caller's dtype is preserved.
-    if isinstance(labels, pd.CategoricalIndex):
+    elif isinstance(labels, pd.CategoricalIndex):
         group_key = labels.as_ordered()
     elif isinstance(labels.dtype, pd.CategoricalDtype):
         group_key = labels.cat.as_ordered()
@@ -130,7 +177,27 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     coord_cols = [c for c in ['x', 'y', 'z'] if c in df.columns]
 
     for fiber_id, group in df.groupby(group_key, observed=True):
-        if 'point_idx' in group.columns:
+        if has_positions:
+            group_labels = (
+                group.index.get_level_values('fiber_id') if indexed_labels else group['fiber_id']
+            )
+            if group_labels.nunique() != 1:
+                raise ValueError(f'{_FIBER_POSITION} {fiber_id} has conflicting fiber_id labels')
+            indexed_points = 'point_idx' in group.index.names
+            if indexed_points and 'point_idx' in group.columns:
+                raise ValueError(
+                    "'point_idx' is both an index level and a column label, which is ambiguous."
+                )
+            point_indices = (
+                group.index.get_level_values('point_idx') if indexed_points else group.get('point_idx')
+            )
+            if point_indices is not None:
+                point_keys = _integer_positions(point_indices, 'point_idx')
+                if len(set(point_keys)) != len(point_keys):
+                    raise ValueError(f'{_FIBER_POSITION} {fiber_id} has duplicate point_idx values')
+                order = sorted(range(len(point_keys)), key=point_keys.__getitem__)
+                group = group.iloc[order]
+        elif 'point_idx' in group.columns:
             group = group.sort_values('point_idx')
         points = group[coord_cols].values.astype(float)
         if coord_cols == ['x', 'y']:

@@ -13,6 +13,7 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [Crosslink force endpoints](crosslink-force-contract.md)
 - [Result identity](result-identity-contract.md)
 - [NetworkX topology and VTP result fields](network-export-fields.md)
+- [Fiber identity in point tables](dataframe-fiber-identity.md)
 - [PDB sampled-network export](pdb-network-export.md)
 - [Observed tensile-recruitment inputs](tensile-recruitment-inputs.md)
 - [Crosslinks between merged inputs](inter-input-crosslinks.md)
