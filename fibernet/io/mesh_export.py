@@ -259,7 +259,8 @@ def export_obj(
     This legacy FiberNetwork exporter writes one capped cylinder between each
     fiber's first and last centerline points. Intermediate centerline points,
     material records and fiber IDs are not serialized. Faces use one-based OBJ
-    vertex references; the internal cylinder mesh remains zero-based.
+    vertex references; the internal cylinder mesh remains zero-based. Vertex
+    coordinates use round-trip float64 text precision.
     
     Examples
     --------
@@ -297,7 +298,7 @@ def export_obj(
         
         # Vertices
         for v in vertices:
-            f.write(f"v {v[0]:.6f} {v[1]:.6f} {v[2]:.6f}\n")
+            f.write(f"v {v[0]:.17g} {v[1]:.17g} {v[2]:.17g}\n")
         
         f.write("\n")
         

@@ -325,3 +325,63 @@ def test_raw_permuted_rows_and_ids_preserve_material_and_physics():
     assert result.metadata["material_contract"]["youngs_modulus"] == [
         m.youngs_modulus for m in laws
     ]
+
+
+@pytest.mark.parametrize("dimension, unit", [(2, "honeycomb"), (3, "octet")])
+def test_sampled_fiber_radii_preserve_public_axial_energy(tmp_path, dimension, unit):
+    factory = fn.pattern_2d if dimension == 2 else fn.pattern_3d
+    graph = factory(unit=unit, box=(.03,) * dimension, grid=(3,) * dimension,
+                    n_pts_per_side=0, seed=23)
+    radii_m = np.array([8e-5, 1e-4, 1.25e-4], dtype=np.float16)
+    laws = materials()
+    for row, edge in enumerate(graph.edges.values()):
+        edge.radius = radii_m[row % len(radii_m)]
+        edge.material = laws[row % len(laws)]
+
+    reference = copy.deepcopy(graph)
+    for edge in reference.edges.values():
+        edge.radius = float(edge.radius)
+    options = dict(backend="fem", stretch_ratio=1.001, nonlinear=False,
+                   material_mode="graph", length_unit="m")
+    result = fn.simulate(graph, **options)
+    wide = fn.simulate(reference, **options)
+
+    # Half the work of each axial force over its projected extension.
+    node_rows = {nid: i for i, nid in enumerate(result.metadata["node_ids"])}
+    work = []
+    for eid, force in zip(result.metadata["edge_ids"], result.edge_forces):
+        edge = graph.edges[eid]
+        axis = graph.nodes[edge.node_j].position - graph.nodes[edge.node_i].position
+        delta = (result.displacements[node_rows[edge.node_j]] -
+                 result.displacements[node_rows[edge.node_i]])
+        extension = np.dot(delta, axis) / np.linalg.norm(axis)
+        work.append(0.5 * force * extension)
+    expected = sum(work)
+    assert expected > 0
+    assert result.energy == pytest.approx(expected, rel=2e-11, abs=0.)
+    assert result.energy == wide.energy
+    np.testing.assert_array_equal(result.displacements, wide.displacements)
+    np.testing.assert_array_equal(result.edge_forces, wide.edge_forces)
+    for key in ("sigma_axial", "sigma_bending", "reactions"):
+        np.testing.assert_array_equal(result.metadata[key], wide.metadata[key])
+    assert result.metadata["beam_energy"] == wide.metadata["beam_energy"]
+    assert result.metadata["energy_kind"] == "axial_stress_proxy"
+
+    path = tmp_path / "typed-radius.json"
+    result.save(path, detailed=True)
+    restored = fn.SimResult.load(path)
+    assert restored.energy == result.energy
+    assert restored.metadata["beam_energy"] == result.metadata["beam_energy"]
+
+
+def test_integer_radius_axial_energy_matches_stretched_bar():
+    graph = fn.StructureGraph(dimension=2)
+    left = graph.add_node([0., 0., 0.])
+    right = graph.add_node([5000., 0., 0.])
+    graph.add_edge(left, right, radius=np.int16(200))
+    modulus = 1e-6
+    ratio = 1.001
+    result = fn.simulate(graph, backend="fem", stretch_ratio=ratio,
+                         nonlinear=False, E=modulus)
+    expected = 0.5 * modulus * np.pi * 200.0**2 * 5000.0 * (ratio - 1.0)**2
+    assert result.energy == pytest.approx(expected, rel=1e-13, abs=0.)
