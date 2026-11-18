@@ -30,7 +30,7 @@
   "core/fiber.py": "32382b63db6b71e9c6ff48aee9c3f656f46a0d3b636547d7c61671c6dc9e681c",
   "core/fiber_network_profile.py": "08fb72065aa9c6a05888a5aa627816d44153387a714fa6a89f61c635699a7b9c",
   "core/material.py": "3129f432cf7728ae604e1d709bc42f1113f5dda5329bda0d898342beb7be9245",
-  "core/network.py": "9e5d450b2bf804a9f21c864bcc2386030f4bd3b2d60254bd70abdd60ee48c36f",
+  "core/network.py": "a5b7d5fa5c85b85695ddbfd45bd89ec6e2a08c3d9e0e3365bd746eba6b089795",
   "core/pbc.py": "b2f9c65ef55e2e49c890401450c0e88396ae2f8f1391746afd4f4e8d283782e4",
   "core/sampled_weld_import.py": "88b35512624aa8fb8a2eae59ea8d1b6368aaad12d7265b697c05ed6401645f7b",
   "core/single_junction_import.py": "7119a58e30281ec3dc03671200beec3b3c7539a0a0a0cfd824ebd13faba62b68",

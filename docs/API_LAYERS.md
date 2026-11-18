@@ -61,6 +61,10 @@ components it successfully joins. Exactly coincident selected samples receive
 one direct weld. Distinct selected samples receive a bridging fiber with a weld
 at each end. Use the change in `num_fibers` to count newly added fibers.
 
+Use `FiberNetwork.connectivity_matrix(sparse=True)` for crosslink counts
+without allocating a dense matrix. See the
+[sparse connectivity contract and example](architecture/legacy-sparse-connectivity.md).
+
 ### Import explicitly recorded straight-fiber welds
 
 `fibernet.core.single_junction_import.convert_exact_welded_crosslinks` is an

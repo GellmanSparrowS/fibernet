@@ -240,7 +240,7 @@
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "9e5d450b2bf804a9f21c864bcc2386030f4bd3b2d60254bd70abdd60ee48c36f"
+  "sha256": "a5b7d5fa5c85b85695ddbfd45bd89ec6e2a08c3d9e0e3365bd746eba6b089795"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5540,5 +5540,22 @@
    "test_direct_weld_leaves_degenerate_source_geometry_for_import_validation"
   ],
   "sha256": "88527ca86b9abbec3845dc7803b90abc7f24b29687c1ace4611fcee3ec901f5e"
+ },
+ "tests/test_sparse_fiber_connectivity.py": {
+  "purpose": "Counts and ordering for the opt-in legacy sparse fiber adjacency.",
+  "status": "active",
+  "symbols": [
+   "network_with_fibers",
+   "link",
+   "test_sparse_counts_every_record_and_uses_list_order",
+   "test_sparse_empty_and_isolated_fibers_keep_shape",
+   "test_sparse_uses_integer_indices_even_if_int_conversion_differs",
+   "test_sparse_rejects_noninteger_coordinate_types",
+   "test_sparse_bounds_are_checked_before_index_dtype_conversion",
+   "test_sparse_flag_is_boolean",
+   "test_legacy_dense_advanced_indexing_is_unchanged",
+   "test_large_zigzag_sparse_connectivity_uses_source_graph_degrees"
+  ],
+  "sha256": "d2c0e8455203033566b8296c5431129eb3a2734a8266b3b8998f583876223d99"
  }
 }
