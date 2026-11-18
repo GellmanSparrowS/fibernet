@@ -1,3 +1,13 @@
+## [Unreleased] - Network DataFrame interchange
+
+- Preserve the standard column schema for empty exports and import only
+  observed categorical fiber groups. Report missing fiber labels before
+  grouping instead of discarding their rows.
+- Preserve categorical ordering and named-index grouping across supported
+  pandas versions.
+- Mark crosslinked fibers by network position, including networks whose
+  displayed fiber labels differ from their list indices.
+
 ## [Unreleased] - Small-signal transport at nonzero reference voltage
 
 - Solve each conducting component around a local voltage reference, then

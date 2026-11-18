@@ -40,13 +40,25 @@ def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.
     Returns
     -------
     pd.DataFrame
-        DataFrame with columns: fiber_id, x, y, z, radius, material_name,
-        youngs_modulus, density.
+        DataFrame with columns: fiber_id, point_idx, x, y, z, radius,
+        material_name, youngs_modulus, density. Empty networks retain these
+        columns. If requested and crosslinks exist, has_crosslink marks
+        each point on a fiber referenced by a crosslink.
     """
     _require_pandas()
 
+    columns = ['fiber_id', 'point_idx', 'x', 'y', 'z', 'radius',
+               'material_name', 'youngs_modulus', 'density']
+    linked_positions = set()
+    if include_crosslinks:
+        linked_positions = {position for link in network.crosslinks
+                            for position in (link.fiber_i, link.fiber_j)}
+    if linked_positions:
+        columns.append('has_crosslink')
+
     rows = []
-    for fiber in network.fibers:
+    for fiber_index, fiber in enumerate(network.fibers):
+        has_crosslink = fiber_index in linked_positions
         cl = np.asarray(fiber.centerline)
         n_pts = len(cl)
         dim = cl.shape[1] if cl.ndim > 1 else 1
@@ -63,21 +75,11 @@ def to_dataframe(network: FiberNetwork, include_crosslinks: bool = True) -> 'pd.
                 'youngs_modulus': fiber.material.youngs_modulus,
                 'density': fiber.material.density,
             }
+            if linked_positions:
+                row['has_crosslink'] = has_crosslink
             rows.append(row)
 
-    if not rows:
-        return pd.DataFrame()
-
-    df = pd.DataFrame(rows)
-
-    if include_crosslinks and network.crosslinks:
-        cl_fiber_set = set()
-        for cl in network.crosslinks:
-            cl_fiber_set.add(cl.fiber_i)
-            cl_fiber_set.add(cl.fiber_j)
-        df['has_crosslink'] = df['fiber_id'].isin(cl_fiber_set)
-
-    return df
+    return pd.DataFrame(rows, columns=columns)
 
 
 def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
@@ -86,9 +88,11 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     Parameters
     ----------
     df : pd.DataFrame
-        DataFrame with columns: fiber_id, x, y (at minimum). If z is absent,
-        points are padded with z=0 and the network dimension is 2; otherwise
-        the network dimension is 3. Rows are sorted by point_idx when present.
+        DataFrame with x and y columns and a fiber_id column or named index
+        level. If z is absent, points are padded with z=0 and the network
+        dimension is 2; otherwise it is 3. Every row needs a fiber_id.
+        Categorical groups follow category order and skip unused labels.
+        Rows are sorted by point_idx when present.
     material : Material, optional
         Material for all fibers, taking precedence over table material columns.
         If omitted, material columns are used when youngs_modulus is present;
@@ -104,6 +108,20 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     """
     _require_pandas()
 
+    group_key = 'fiber_id'
+    indexed_labels = group_key in df.index.names
+    if indexed_labels and group_key in df.columns:
+        raise ValueError("'fiber_id' is both an index level and a column label, which is ambiguous.")
+    labels = df.index.get_level_values(group_key) if indexed_labels else df[group_key]
+    if labels.isna().any():
+        raise ValueError('fiber_id must be present for every DataFrame row')
+    # Older pandas sorts observed categoricals in category order only if
+    # marked ordered. Use a temporary key so the caller's dtype is preserved.
+    if isinstance(labels, pd.CategoricalIndex):
+        group_key = labels.as_ordered()
+    elif isinstance(labels.dtype, pd.CategoricalDtype):
+        group_key = labels.cat.as_ordered()
+
     supplied_material = material is not None
     if material is None:
         material = Material(name='default')
@@ -111,7 +129,7 @@ def from_dataframe(df: 'pd.DataFrame', material=None) -> FiberNetwork:
     network = FiberNetwork(dimension=3 if 'z' in df.columns else 2)
     coord_cols = [c for c in ['x', 'y', 'z'] if c in df.columns]
 
-    for fiber_id, group in df.groupby('fiber_id'):
+    for fiber_id, group in df.groupby(group_key, observed=True):
         if 'point_idx' in group.columns:
             group = group.sort_values('point_idx')
         points = group[coord_cols].values.astype(float)
