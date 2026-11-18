@@ -28,6 +28,35 @@ Results expose stable original node/edge IDs, failure events, pre/post event obs
 
 CLI: `python -m fibernet.sim.fracture --graph graph.json --config fracture_config.json --fixed 0 --loaded 2 --length-unit m --output fracture.json`. Config JSON contains the FractureConfig fields. Geometry JSON must use the dedicated `fibernet-fracture-geometry-1` schema with `nodes: [{id,position}]` and `edges: [{id,node_i,node_j,radius,material,internal_points?}]`; each edge material requires explicit `youngs_modulus`, `poissons_ratio`, and `shear_modulus`. This intentionally rejects legacy StructureGraph JSON, which does not preserve the required material/ID contract. Optional arguments are `--initially-broken`, `--checkpoint`, and `--resume`.
 
+## Reproducible notched-network scan
+
+From a source checkout, install the fracture dependencies and run:
+
+```bash
+python -m pip install -e ".[fracture]"
+python -m examples.fracture_scan --output-dir fracture_scan
+```
+
+The example generates three seeded, notched triangulated networks, each with
+63 nodes and 158 original members. Each geometry is loaded to both 10 and
+400 micrometres under the same material, notch and grip conditions. The short
+and full runs retain the same geometry for each seed. An existing output
+directory is refused.
+
+Each case saves its complete input and native result. `scan.csv` and
+`summary.json` collect peak reaction, first failure, observed material-path
+loss, external work, final elastic strain energy and released elastic energy.
+The summary retains completion and termination states. A path-loss displacement
+is recorded only when loss is observed; a run that retains a path at its loading
+limit has a null threshold rather than a zero-valued failure label.
+
+External work is integrated along the recorded loading sequence, retaining
+force drops at repeated displacement. Released elastic energy is external work
+minus final stored energy and is checked against the energy drops at fixed
+displacement. It measures energy released by this member-removal model, rather
+than a calibrated material fracture energy. Seeds, geometry, explicit SI
+parameters and source bindings accompany the results for reproduction.
+
 ## Distribution and provenance
 
 `PROVENANCE.json` records the original hashes and verbatim extracted function names for beam, sparse and event kernels; the public adapter, guard, driver and checkpoint envelope are new. MIT repository attribution is preserved. NumPy/SciPy/psutil/threadpoolctl retain their separate licenses. No LAMMPS source, DLL, executable, private study request/result, research image or unpublished manuscript is part of this addition. The separate LAMMPS route is a different model with separate distribution obligations and platform validation; installing stock LAMMPS cannot replace the patched research engine.

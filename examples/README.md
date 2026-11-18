@@ -18,6 +18,20 @@ is needed. Reuse saved data without another solve with
 `python -m examples.linear_fem_quickstart --output-dir EXISTINGDIR --plot-only`.
 The PNG/SVG layout is A4 portrait. This does not validate the historical scripts below.
 
+## Notched-network fracture scan
+
+From a source checkout with `.[fracture]` installed:
+
+```bash
+python -m examples.fracture_scan --output-dir fracture_scan
+```
+
+Run three seeded, 63-node notched networks at two matched loading horizons.
+The new directory receives complete case inputs/results and CSV/JSON summaries
+of peak force, observed path loss and the work/elastic-energy ledger. Unobserved
+path-loss thresholds remain null. See the [fracture scan guide](../docs/FRACTURE_METHODS.md#reproducible-notched-network-scan)
+for units, reproduction and outcome states.
+
 ## Historical quick-start commands
 
 ```bash
