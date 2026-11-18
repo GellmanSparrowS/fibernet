@@ -5494,5 +5494,27 @@
    "test_trim_near_zigzag_peak_keeps_shared_endpoint_weld"
   ],
   "sha256": "83660a402e25f528f7c4eae522f4e65ac844b756e7799bcfe3db4a0a7c8420fd"
+ },
+ "fibernet/core/sampled_weld_import.py": {
+  "purpose": "Convert sampled legacy fiber geometry with explicitly recorded welds.",
+  "status": "active",
+  "symbols": [
+   "_sample_index",
+   "convert_sampled_welded_fibers"
+  ],
+  "sha256": "88b35512624aa8fb8a2eae59ea8d1b6368aaad12d7265b697c05ed6401645f7b"
+ },
+ "tests/test_sampled_weld_import.py": {
+  "purpose": "Analytical and generated-network checks for the sampled weld import.",
+  "status": "active",
+  "symbols": [
+   "check_sample_mapping",
+   "test_curve_shape_length_and_recorded_topology",
+   "test_canonical_sample_knot_and_nearby_parameter_rejection",
+   "test_parallel_edges_and_unwelded_coincident_occurrences",
+   "test_incompatible_records_are_rejected",
+   "test_generated_zigzag_json_geometry_and_topology"
+  ],
+  "sha256": "87ca382865ffc8fe9985bed72bd704206b922ecb20ab506a08414f5a4622aa66"
  }
 }
