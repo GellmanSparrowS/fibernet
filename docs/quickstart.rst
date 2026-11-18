@@ -1,16 +1,15 @@
 Quick Start Guide
 =================
 
-This guide uses the current 4.3.0 development checkout, not the published PyPI
-4.2.0 API, which does not accept the ``stretch_ratio`` keyword below. From the
-cloned repository's root, install the development checkout and its base Python
-dependencies before running the examples:
+From the root of a FiberNet source checkout, install the library and its base
+Python dependencies before running the examples:
 
 .. code-block:: bash
 
    python -m pip install -e .
 
-This command installs the source checkout rather than a PyPI release.
+For a PyPI installation, use the example for your installed version on the
+`FiberNet package page <https://pypi.org/project/fibernet/>`_.
 See :doc:`getting_started` for other installation options. The example
 generates a graph, runs a small-extension beam-FEM simulation, and verifies that
 a saved result can be read back. It does not require FiberScope or an optional
