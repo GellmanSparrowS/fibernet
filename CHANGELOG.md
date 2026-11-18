@@ -1,3 +1,11 @@
+## [Unreleased] - FEA coordinate interpolation
+
+- Use validated float64 endpoint snapshots when exporting Abaqus, ANSYS and
+  Gmsh line geometry. Reassigned integer and float32 centerlines no longer
+  overflow during interpolation; ordinary numeric lists export consistently
+  with arrays. Reject masked, complex, boolean and nonnumeric coordinates before
+  opening the output file. Source coordinates remain unchanged.
+
 ## [Unreleased] - 3D betweenness concentration
 
 - Correct the sign of `GraphFeatureExtractor3D.edge_betweenness_gini` by
