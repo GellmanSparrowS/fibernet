@@ -65,6 +65,7 @@ Features Overview
    getting_started
    quickstart
    graph_scaling
+   graph_betweenness
    static_network_workflow
    heterogeneous_fem
    heterogeneous_radius_workflow
