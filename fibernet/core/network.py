@@ -903,10 +903,9 @@ class FiberNetwork:
 
         Checks for:
         - Empty networks
-        - Invalid fiber geometries (zero-length, NaN values)
-        - Invalid crosslinks (out-of-bounds fiber IDs)
+        - Invalid fiber geometries (zero-length, nonfinite coordinates)
+        - Invalid crosslinks (invalid fiber list indices)
         - Disconnected components
-        - Overlapping fibers (optional)
 
         Returns
         -------
@@ -917,6 +916,10 @@ class FiberNetwork:
             - 'warnings': list of str - Non-critical issues
             - 'stats': dict - Network statistics
 
+        If there are crosslink records, component counts use all fibers and
+        only the records with valid references. Nonfinite coordinates leave
+        the length statistics as NaN.
+
         Examples
         --------
         >>> net = gen.random_straight_2d(num_fibers=50, fiber_length=10, box_size=(30, 30))
@@ -926,7 +929,7 @@ class FiberNetwork:
         ... else:
         ...     print(f"Errors: {result['errors']}")
         """
-        import numpy as np
+        from collections import defaultdict
         
         errors = []
         warnings = []
@@ -941,48 +944,63 @@ class FiberNetwork:
             errors.append("Network has no fibers")
             return {'valid': False, 'errors': errors, 'warnings': warnings, 'stats': stats}
 
-        # Check each fiber
+        # Check each fiber and retain its length for the summary.
         zero_length_count = 0
         nan_count = 0
+        infinite_count = 0
+        lengths = []
         for i, fiber in enumerate(self.fibers):
-            # Check for NaN in centerline
-            if np.any(np.isnan(fiber.centerline)):
-                nan_count += 1
-            
-            # Check for zero length
-            if fiber.length < 1e-12:
-                zero_length_count += 1
-            
+            coordinates = fiber.centerline
+            if np.isfinite(coordinates).all():
+                length = fiber.length
+                if length < 1e-12:
+                    zero_length_count += 1
+            else:
+                nan_count += int(np.isnan(coordinates).any())
+                infinite_count += int(np.isinf(coordinates).any())
+                if len(coordinates) == 1:
+                    zero_length_count += 1
+                length = np.nan
+            lengths.append(length)
             # Check radius
             if fiber.radius <= 0:
                 warnings.append(f"Fiber {i} has non-positive radius: {fiber.radius}")
 
         if nan_count > 0:
             errors.append(f"{nan_count} fiber(s) have NaN values in centerline")
+        if infinite_count > 0:
+            errors.append(f"{infinite_count} fiber(s) have infinite values in centerline")
         
         if zero_length_count > 0:
             errors.append(f"{zero_length_count} fiber(s) have zero length")
 
-        # Check crosslinks
+        def fiber_index(value):
+            if (isinstance(value, (bool, np.bool_, np.timedelta64))
+                    or not isinstance(value, (int, np.integer))):
+                return None
+            try:
+                index = operator.index(value)
+            except TypeError:
+                return None
+            return index if 0 <= index < self.num_fibers else None
+
+        # Use only fully valid records for connectivity.
+        adj = defaultdict(set)
         invalid_crosslinks = 0
         for cl in self.crosslinks:
-            if cl.fiber_i < 0 or cl.fiber_i >= self.num_fibers:
+            i = fiber_index(cl.fiber_i)
+            j = fiber_index(cl.fiber_j)
+            if i is None or j is None:
                 invalid_crosslinks += 1
-            if cl.fiber_j < 0 or cl.fiber_j >= self.num_fibers:
-                invalid_crosslinks += 1
+                continue
+            adj[i].add(j)
+            adj[j].add(i)
 
         if invalid_crosslinks > 0:
             errors.append(f"{invalid_crosslinks} crosslink(s) reference invalid fiber IDs")
 
         # Check connectivity (if crosslinks exist)
         if self.num_crosslinks > 0:
-            # Build adjacency
-            from collections import defaultdict
-            adj = defaultdict(set)
-            for cl in self.crosslinks:
-                adj[cl.fiber_i].add(cl.fiber_j)
-                adj[cl.fiber_j].add(cl.fiber_i)
-            
             # BFS to find connected components
             visited = set()
             components = 0
@@ -1004,7 +1022,6 @@ class FiberNetwork:
             warnings.append("No crosslinks - fibers may not be mechanically connected")
 
         # Add statistics
-        lengths = [f.length for f in self.fibers]
         stats['mean_length'] = np.mean(lengths)
         stats['total_length'] = np.sum(lengths)
         stats['mean_radius'] = np.mean([f.radius for f in self.fibers])
