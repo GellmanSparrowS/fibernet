@@ -3807,15 +3807,19 @@
   "symbols": [
    "load_obj"
   ],
-  "sha256": "8e54787f85474ad22096d1388fad296b54cefe692b6a0aba880b650791660529"
+  "sha256": "d630f51293afc528453fde3dd7f673ed6e3663fc77208b17c468d1d68bda5b8e"
  },
  "fibernet/gen/obj_polygons.py": {
   "purpose": "Bounded projected ear clipping for ordinary OBJ polygon faces.",
   "status": "active",
   "symbols": [
-   "triangulate"
+   "_cross_2d",
+   "_cross_roundoff",
+   "_clip_ears",
+   "triangulate",
+   "_split_planar_concave_faces"
   ],
-  "sha256": "17855317c1e6326de7d7a319125e2335ef1a71620e3a2f2bf9795cd705a8e1b0"
+  "sha256": "1db8138ed3e033be7218aab2314eb74801405100af890a1cc31105b4c50e33f2"
  },
  "tests/test_surface_obj_import.py": {
   "purpose": "Public OBJ import should match the APP and reject invalid geometry.",
@@ -3823,9 +3827,18 @@
   "symbols": [
    "test_import_bundled_surface_without_app_import",
    "test_invalid_obj_indices",
-   "test_obj_to_closed_route_workflow"
+   "test_obj_to_closed_route_workflow",
+   "_write_obj",
+   "_signed_areas",
+   "_crosses_notch",
+   "test_concave_obj_preserves_area_winding_and_notch",
+   "test_concave_obj_retains_short_boundary_edges",
+   "test_skinny_concave_obj_is_still_quadrangulated",
+   "test_concave_quad_is_repaired_in_all_quad_obj",
+   "test_concave_face_keeps_collinear_shared_edges_with_convex_quads",
+   "test_concave_obj_workflows_leave_the_notch_unmapped"
   ],
-  "sha256": "86d12394c5fe6424af9a4563cde1e305839bd34d667f8b9abda5ae6370f4cba8"
+  "sha256": "0f95759e08577aef4d373d99017b9447b8bb7cec47ac799a88bf81fb440f4fe5"
  },
  "examples/obj_surface_workflow.py": {
   "purpose": "Import an OBJ and compile a continuous curved fiber route.",
