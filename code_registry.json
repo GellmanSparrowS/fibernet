@@ -240,7 +240,7 @@
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "296177478c73d8495ecbbd7dde4e3d50305a26db31380eca65c656fc732719c8"
+  "sha256": "9e5d450b2bf804a9f21c864bcc2386030f4bd3b2d60254bd70abdd60ee48c36f"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5528,5 +5528,17 @@
    "test_sampled_large_components_keep_serializable_fiber_indices"
   ],
   "sha256": "24237c62517b32e7fe89e25f11e4dd5a54ab07573605bf8ad541a8a366f6d79b"
+ },
+ "tests/test_zero_gap_component_welds.py": {
+  "purpose": "Exact component coincidences become direct welds without artificial fibers.",
+  "status": "active",
+  "symbols": [
+   "test_direct_weld_preserves_geometry_and_correct_attachment",
+   "test_distinct_coordinates_keep_the_positive_gap_path",
+   "test_mixed_component_joins_keep_indices_through_json_and_graph_import",
+   "test_large_sampled_component_direct_weld_retains_json_integer_indices",
+   "test_direct_weld_leaves_degenerate_source_geometry_for_import_validation"
+  ],
+  "sha256": "88527ca86b9abbec3845dc7803b90abc7f24b29687c1ace4611fcee3ec901f5e"
  }
 }

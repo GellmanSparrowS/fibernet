@@ -312,10 +312,10 @@ class FiberNetwork:
 
 
     def connect_components(self, max_gap: float = None, strategy: str = "nearest") -> int:
-        """Connect disconnected components by adding bridging fibers.
-        
-        Finds the nearest points between disconnected components and adds
-        short bridging fibers with crosslinks to merge them.
+        """Join disconnected components at their selected nearest samples.
+
+        Exactly coincident samples receive one weld and no new fiber. When
+        the samples differ, a bridging fiber carries one weld at each end.
         
         Parameters
         ----------
@@ -326,7 +326,7 @@ class FiberNetwork:
             
         Returns
         -------
-        int : Number of bridges added.
+        int : Number of components successfully joined.
         """
         from collections import defaultdict
         
@@ -359,7 +359,7 @@ class FiberNetwork:
             max_gap = 10 * self.mean_fiber_length if self.mean_fiber_length > 0 else 50.0
         
         mat = self.fibers[0].material if self.fibers else Material()
-        bridges_added = 0
+        components_joined = 0
         
         # Sort components by size (largest first)
         components.sort(key=len, reverse=True)
@@ -410,33 +410,40 @@ class FiberNetwork:
                 pi = int(si) / max(1, len(self.fibers[fi].centerline) - 1)
                 pj = int(sj) / max(1, len(self.fibers[fj].centerline) - 1)
                 
-                # Add bridging fiber
-                bridge = Fiber.straight(
-                    p1, p2,
-                    radius=self.fibers[fi].radius,
-                    material=mat,
-                    fiber_id=self.num_fibers,
-                    segments=4,
-                )
-                self.add_fiber(bridge)
-                
-                # Add crosslinks at both ends
-                self.add_crosslink(Crosslink(
-                    fiber_i=fi, fiber_j=self.num_fibers - 1,
-                    param_i=pi, param_j=0.0,
-                    position=p1.copy(), crosslink_type="welded",
-                ))
-                self.add_crosslink(Crosslink(
-                    fiber_i=fj, fiber_j=self.num_fibers - 1,
-                    param_i=pj, param_j=1.0,
-                    position=p2.copy(), crosslink_type="welded",
-                ))
-                
+                if np.array_equal(p1, p2):
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fi, fiber_j=fj,
+                        param_i=pi, param_j=pj,
+                        position=p1.copy(), crosslink_type="welded",
+                    ))
+                else:
+                    # Add bridging fiber
+                    bridge = Fiber.straight(
+                        p1, p2,
+                        radius=self.fibers[fi].radius,
+                        material=mat,
+                        fiber_id=self.num_fibers,
+                        segments=4,
+                    )
+                    self.add_fiber(bridge)
+
+                    # Add crosslinks at both ends
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fi, fiber_j=self.num_fibers - 1,
+                        param_i=pi, param_j=0.0,
+                        position=p1.copy(), crosslink_type="welded",
+                    ))
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fj, fiber_j=self.num_fibers - 1,
+                        param_i=pj, param_j=1.0,
+                        position=p2.copy(), crosslink_type="welded",
+                    ))
+
                 # Merge this component into main
                 main_comp.update(comp)
-                bridges_added += 1
+                components_joined += 1
         
-        return bridges_added
+        return components_joined
 
     def to_networkx(self):
         """Convert to a NetworkX graph for topology analysis."""
@@ -972,10 +979,10 @@ class FiberNetwork:
 
 
     def connect_components(self, max_gap: float = None, strategy: str = "nearest") -> int:
-        """Connect disconnected components by adding bridging fibers.
-        
-        Finds the nearest points between disconnected components and adds
-        short bridging fibers with crosslinks to merge them.
+        """Join disconnected components at their selected nearest samples.
+
+        Exactly coincident samples receive one weld and no new fiber. When
+        the samples differ, a bridging fiber carries one weld at each end.
         
         Parameters
         ----------
@@ -986,7 +993,7 @@ class FiberNetwork:
             
         Returns
         -------
-        int : Number of bridges added.
+        int : Number of components successfully joined.
         """
         from collections import defaultdict
         
@@ -1019,7 +1026,7 @@ class FiberNetwork:
             max_gap = 10 * self.mean_fiber_length if self.mean_fiber_length > 0 else 50.0
         
         mat = self.fibers[0].material if self.fibers else Material()
-        bridges_added = 0
+        components_joined = 0
         
         # Sort components by size (largest first)
         components.sort(key=len, reverse=True)
@@ -1070,33 +1077,40 @@ class FiberNetwork:
                 pi = int(si) / max(1, len(self.fibers[fi].centerline) - 1)
                 pj = int(sj) / max(1, len(self.fibers[fj].centerline) - 1)
                 
-                # Add bridging fiber
-                bridge = Fiber.straight(
-                    p1, p2,
-                    radius=self.fibers[fi].radius,
-                    material=mat,
-                    fiber_id=self.num_fibers,
-                    segments=4,
-                )
-                self.add_fiber(bridge)
-                
-                # Add crosslinks at both ends
-                self.add_crosslink(Crosslink(
-                    fiber_i=fi, fiber_j=self.num_fibers - 1,
-                    param_i=pi, param_j=0.0,
-                    position=p1.copy(), crosslink_type="welded",
-                ))
-                self.add_crosslink(Crosslink(
-                    fiber_i=fj, fiber_j=self.num_fibers - 1,
-                    param_i=pj, param_j=1.0,
-                    position=p2.copy(), crosslink_type="welded",
-                ))
-                
+                if np.array_equal(p1, p2):
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fi, fiber_j=fj,
+                        param_i=pi, param_j=pj,
+                        position=p1.copy(), crosslink_type="welded",
+                    ))
+                else:
+                    # Add bridging fiber
+                    bridge = Fiber.straight(
+                        p1, p2,
+                        radius=self.fibers[fi].radius,
+                        material=mat,
+                        fiber_id=self.num_fibers,
+                        segments=4,
+                    )
+                    self.add_fiber(bridge)
+
+                    # Add crosslinks at both ends
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fi, fiber_j=self.num_fibers - 1,
+                        param_i=pi, param_j=0.0,
+                        position=p1.copy(), crosslink_type="welded",
+                    ))
+                    self.add_crosslink(Crosslink(
+                        fiber_i=fj, fiber_j=self.num_fibers - 1,
+                        param_i=pj, param_j=1.0,
+                        position=p2.copy(), crosslink_type="welded",
+                    ))
+
                 # Merge this component into main
                 main_comp.update(comp)
-                bridges_added += 1
+                components_joined += 1
         
-        return bridges_added
+        return components_joined
 
     def to_networkx(self):
         """Convert fiber network to NetworkX graph.

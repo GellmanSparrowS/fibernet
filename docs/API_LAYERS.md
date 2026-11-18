@@ -56,6 +56,11 @@ fiber indices and sampled attachment parameters. Its geometry remains a
 sample-selection operation, not exact clipping; see the
 [trimming contract and migration guidance](architecture/legacy-trim-crosslinks.md).
 
+`FiberNetwork.connect_components(max_gap=...)` returns the number of
+components it successfully joins. Exactly coincident selected samples receive
+one direct weld. Distinct selected samples receive a bridging fiber with a weld
+at each end. Use the change in `num_fibers` to count newly added fibers.
+
 ### Import explicitly recorded straight-fiber welds
 
 `fibernet.core.single_junction_import.convert_exact_welded_crosslinks` is an
