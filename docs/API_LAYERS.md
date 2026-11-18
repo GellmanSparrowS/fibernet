@@ -68,6 +68,15 @@ label. Native node/edge IDs are newly allocated. This is not a unit, boundary
 condition or mechanical-equivalence conversion; see the
 [accepted inputs, ownership and serialization contract](MULTI_WELDED_JUNCTION_IMPORT.md).
 
+### Import explicitly recorded welds on sampled fibers
+
+`fibernet.core.sampled_weld_import.convert_sampled_welded_fibers` expands
+sampled centerlines to straight graph edges and joins only the samples
+identified by explicit weld records. It accepts sample knots and endpoints
+and provides a mapping from source fibers, samples and welds to new graph IDs.
+Source metadata stays in the report. See the
+[sampled weld contract and ZigZag example](SAMPLED_WELDED_FIBER_IMPORT.md).
+
 ### Edit geometry before preparing solver controls
 
 Use `graph.displace_node(node_id, [dx, dy])`,
