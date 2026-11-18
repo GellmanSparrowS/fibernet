@@ -359,36 +359,32 @@ def random_straight_2d(
         net.add_fiber(fiber)
         fibers.append(fiber)
     
-    # Detect 2D intersections (line segment crossing)
-    for i in range(len(fibers)):
-        fi = fibers[i]
-        p1, p2 = fi.centerline[0], fi.centerline[-1]
-        
-        for j in range(i + 1, len(fibers)):
-            fj = fibers[j]
-            p3, p4 = fj.centerline[0], fj.centerline[-1]
-            
-            # 2D line intersection
-            d1 = p2 - p1
-            d2 = p4 - p3
-            cross = d1[0] * d2[1] - d1[1] * d2[0]
-            
-            if abs(cross) < 1e-10:
-                continue  # Parallel
-            
-            dp = p3 - p1
-            t = (dp[0] * d2[1] - dp[1] * d2[0]) / cross
-            u = (dp[0] * d1[1] - dp[1] * d1[0]) / cross
-            
-            if 0 <= t <= 1 and 0 <= u <= 1:
-                pos = p1 + t * d1
+    # Keep at most one row of the all-pairs search in memory.
+    if len(fibers) > 1:
+        starts = np.array([fiber.centerline[0] for fiber in fibers])
+        directions = np.array([fiber.centerline[-1] for fiber in fibers]) - starts
+        for i, (p1, d1) in enumerate(zip(starts[:-1], directions[:-1])):
+            d2 = directions[i + 1:]
+            cross = d1[0] * d2[:, 1] - d1[1] * d2[:, 0]
+            candidates = np.flatnonzero(~(np.abs(cross) < 1e-10))
+            if candidates.size == 0:
+                continue
+
+            js = i + 1 + candidates
+            d2 = d2[candidates]
+            cross = cross[candidates]
+            dp = starts[js] - p1
+            t = (dp[:, 0] * d2[:, 1] - dp[:, 1] * d2[:, 0]) / cross
+            u = (dp[:, 0] * d1[1] - dp[:, 1] * d1[0]) / cross
+            hits = np.flatnonzero((0 <= t) & (t <= 1) & (0 <= u) & (u <= 1))
+            for hit in hits:
                 net.add_crosslink(Crosslink(
-                    fiber_i=i, fiber_j=j,
-                    param_i=t, param_j=u,
-                    position=pos,
+                    fiber_i=i, fiber_j=int(js[hit]),
+                    param_i=t[hit], param_j=u[hit],
+                    position=p1 + t[hit] * d1,
                     crosslink_type="welded",
                 ))
-    
+
     if ensure_connected:
         _ensure_connected(net)
     
