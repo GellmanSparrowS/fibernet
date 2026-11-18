@@ -626,15 +626,21 @@ def _pore_features(pos, edges, inter, area):
                      pore_neighbor_mean=0.0)
         return feats, dict(areas=empty, aspects=empty, neighbors=empty)
     polys = [ppos[f] for f in faces]
+    # A point outside a face's inclusive bounds cannot have nonzero winding.
+    # Keep exact boundary membership and owner ordering for the survivors.
+    lower = np.asarray([q.min(axis=0) for q in polys])
+    upper = np.asarray([q.max(axis=0) for q in polys])
+    face_roots = np.asarray([roots[i] for i in bounded])
     areas = signed[bounded].copy()
     perims = np.asarray([_poly_perim(q) for q in polys], float)
     # An exterior walk belongs to the smallest containing bounded face of a
     # different component. Its clockwise area removes the hole; its length
     # adds the inner perimeter, including both sides of a tree/bridge slit.
     for root, wi in exterior.items():
-        candidates = [fi for fi, bi in enumerate(bounded)
-                      if roots[wi] != roots[bi]
-                      and _inside_boundary(ppos[walks[wi][0]], polys[fi])]
+        point = ppos[walks[wi][0]]
+        possible = np.flatnonzero((face_roots != root)
+                                  & np.all((lower <= point) & (point <= upper), axis=1))
+        candidates = [fi for fi in possible if _inside_boundary(point, polys[fi])]
         if candidates:
             fi = min(candidates, key=lambda k: signed[bounded[k]])
             # Sum the component's inner walks, rather than its exterior's

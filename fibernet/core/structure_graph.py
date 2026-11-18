@@ -391,6 +391,16 @@ class StructureGraph:
         except (ValueError, OverflowError, FloatingPointError, IndexError) as exc:
             raise ValueError("position exceeds the spatial hash coordinate range or has missing coordinates") from exc
 
+    def _prepare_node_position(self, position):
+        """Normalize coordinates and validate their merge-lookup key."""
+        _reject_masked_coordinates(position, "position")
+        pos = np.asarray(position, dtype=np.float64).ravel()
+        if len(pos) == 2:
+            pos = np.append(pos, 0.0)
+        if len(pos) != 3:
+            raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
+        return pos, self._checked_position_key(pos)
+
     def add_node(
         self,
         position: Sequence[float],
@@ -409,14 +419,7 @@ class StructureGraph:
         int
             Node ID.
         """
-        _reject_masked_coordinates(position, "position")
-        pos = np.asarray(position, dtype=np.float64).ravel()
-        if len(pos) == 2:
-            pos = np.append(pos, 0.0)
-        if len(pos) != 3:
-            raise ValueError(f"position must be 2D or 3D, got shape {pos.shape}")
-
-        key = self._checked_position_key(pos)
+        pos, key = self._prepare_node_position(position)
         if merge:
             for nk in self._nearby_keys(key):
                 for nid in self._spatial_hash.get(nk, []):
@@ -676,6 +679,8 @@ class StructureGraph:
     ) -> List[int]:
         """Add a chain of edges through a sequence of points.
 
+        All point coordinates are checked before any nodes are inserted.
+
         Parameters
         ----------
         points : sequence of (x, y[, z])
@@ -694,6 +699,8 @@ class StructureGraph:
         for point in points:
             _reject_masked_coordinates(point, "position")
             pts.append(np.asarray(point, dtype=np.float64))
+        for point in pts:
+            self._prepare_node_position(point)
         nids = [self.add_node(p) for p in pts]
         edge_ids = []
         pairs = list(zip(nids[:-1], nids[1:]))

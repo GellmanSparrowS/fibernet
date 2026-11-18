@@ -256,11 +256,15 @@
   "purpose": "StructureGraph — The unified graph representation for FiberNet.",
   "status": "active",
   "symbols": [
+   "_reject_masked_coordinates",
+   "_graph_identifier",
+   "_serialized_internal_points",
+   "_material_record",
    "SNode",
    "SEdge",
    "StructureGraph"
   ],
-  "sha256": "79004f2275787fee77668a4200cc0a41d900173ed5cc5d89569b9a5b96120d85"
+  "sha256": "ee999fa839c06554415dcac8416cca7b09b33ce73927bf1c09dda36b9a55a550"
  },
  "fibernet/core/tiling.py": {
   "purpose": "Tiling and welding engine for StructureGraph.",
@@ -4114,7 +4118,7 @@
    "SnapshotFeatureExtractor",
    "_normalized_pore_features"
   ],
-  "sha256": "43c9bb6020f30c66a43761c443b1150427a33dfdd6305c673f9ead874c379a74"
+  "sha256": "d7ba430e41ca01a062b6990f128719e7162bfe90d5ff99be13888893979eec6c"
  },
  "fibernet/analysis/width_contact.py": {
   "purpose": "Finite-width geometric overlap, with explicit resolution and memory budgets.",
@@ -5237,5 +5241,30 @@
   "purpose": "Stable graph identity and snapshot feature semantics.",
   "status": "active",
   "sha256": "8e2da8fd0b8dd59801a28793de812e81602b14dec64c534183ce051f034ed48b"
+ },
+ "tests/test_structure_graph_polyline_coordinates.py": {
+  "purpose": "A rejected polyline coordinate leaves the existing graph ready for reuse.",
+  "status": "active",
+  "symbols": [
+   "existing_graph",
+   "state",
+   "test_late_bad_coordinate_preserves_graph_and_future_use",
+   "test_valid_flattened_and_repeated_points_preserve_identity"
+  ],
+  "sha256": "47e5c536c3315f022a51465151f72cbc573955baa6fdfb8a7f7c32457401f61c"
+ },
+ "tests/test_snapshot_pore_owner_prefilter.py": {
+  "purpose": "Exact pore ownership with fewer winding queries for disjoint components.",
+  "status": "active",
+  "symbols": [
+   "add_polygon",
+   "squares",
+   "pore_metrics",
+   "test_disjoint_loops_skip_all_winding_queries",
+   "test_many_inner_loops_keep_only_actual_parent_candidates",
+   "test_concave_bbox_is_only_prefilter_not_membership",
+   "test_inclusive_bbox_keeps_boundary_aligned_query"
+  ],
+  "sha256": "f758db5139bcce27009114021451e7d9bc72dfb754704d91a304818202c49fbb"
  }
 }
