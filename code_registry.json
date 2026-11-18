@@ -240,7 +240,7 @@
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "c2509e91467ec60e82f50596ee8708992ef56636e1a4dde79c7d63a406d3a071"
+  "sha256": "296177478c73d8495ecbbd7dde4e3d50305a26db31380eca65c656fc732719c8"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5516,5 +5516,17 @@
    "test_generated_zigzag_json_geometry_and_topology"
   ],
   "sha256": "87ca382865ffc8fe9985bed72bd704206b922ecb20ab506a08414f5a4622aa66"
+ },
+ "tests/test_component_weld_parameters.py": {
+  "purpose": "Component bridges locate their welded attachments on the source samples.",
+  "status": "active",
+  "symbols": [
+   "assert_weld_positions",
+   "test_component_bridge_welds_reach_endpoint_and_non_midpoint_sample",
+   "test_component_repair_preserves_real_welds_in_multiple_curved_islands",
+   "test_bridge_can_still_attach_to_single_sample_fiber",
+   "test_sampled_large_components_keep_serializable_fiber_indices"
+  ],
+  "sha256": "24237c62517b32e7fe89e25f11e4dd5a54ab07573605bf8ad541a8a366f6d79b"
  }
 }
