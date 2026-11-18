@@ -19,6 +19,27 @@ from fibernet.core.fiber import Fiber, CrossSection
 from fibernet.core.material import Material
 
 
+def _hdf5_section_params_json(params: Dict[str, Any]) -> str:
+    """Encode section parameters without coercing object keys to strings."""
+    if not isinstance(params, dict):
+        raise TypeError("HDF5 cross_section_params must be a JSON object")
+
+    def require_string_keys(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if not isinstance(key, str):
+                    raise TypeError("HDF5 cross_section_params object keys must be strings")
+                require_string_keys(child)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                require_string_keys(child)
+
+    # Let the JSON encoder report unsupported values and cycles before traversal.
+    encoded = json.dumps(params, allow_nan=False)
+    require_string_keys(params)
+    return encoded
+
+
 @dataclass
 class Crosslink:
     """Represents a crosslink (junction) between two fibers.
@@ -504,8 +525,12 @@ class FiberNetwork:
             data = json.load(f, object_pairs_hook=_unique_json_object_pairs)
         return cls.from_dict(data)
 
-    def save_hdf5(self, filepath: str):
+    def save_hdf5(self, filepath: str, *, format_version: str = '0.1.0'):
         """Atomically replace a new or writable single-link regular HDF5 file.
+
+        The default format, 0.1.0, preserves the legacy layout. Format 0.2.0
+        also saves JSON cross-section parameters and the strength and stiffness
+        of each crosslink.
 
         Accept str or PathLike[str], not bytes. Existing targets with no write
         mode bits, symlinks and nonregular/multiply-linked files are rejected.
@@ -519,12 +544,18 @@ class FiberNetwork:
         import tempfile
         import h5py
 
+        if not isinstance(format_version, str) or format_version not in ('0.1.0', '0.2.0'):
+            raise ValueError("HDF5 format_version must be '0.1.0' or '0.2.0'")
+        extended = format_version == '0.2.0'
         path = os.fspath(filepath)
         if not isinstance(path, str):
             raise TypeError("save_hdf5 requires str or PathLike[str], not bytes")
         target = os.path.abspath(path)
         metadata_json = json.dumps(self.metadata)
         materials_json = [json.dumps(f.material.to_dict()) for f in self.fibers]
+        if extended:
+            section_params_json = [_hdf5_section_params_json(f.cross_section_params)
+                                   for f in self.fibers]
         try:
             previous = os.lstat(target)
         except FileNotFoundError:
@@ -547,7 +578,7 @@ class FiberNetwork:
                 raise
             hf = h5py.File(temporary, 'w')
             try:
-                hf.attrs['version'] = '0.1.0'
+                hf.attrs['version'] = '0.2.0' if extended else '0.1.0'
                 hf.attrs['dimension'] = self.dimension
                 hf.attrs['periodic'] = self.periodic
                 if self.box_size is not None:
@@ -562,6 +593,8 @@ class FiberNetwork:
                     fg.attrs['cross_section'] = f.cross_section.value
                     fg.attrs['segments'] = f.segments
                     fg.attrs['material'] = materials_json[i]
+                    if extended:
+                        fg.attrs['cross_section_params'] = section_params_json[i]
                 cl_grp = hf.create_group('crosslinks')
                 for i, cl in enumerate(self.crosslinks):
                     cg = cl_grp.create_group(f'cl_{i}')
@@ -571,6 +604,14 @@ class FiberNetwork:
                     cg.attrs['param_j'] = cl.param_j
                     cg.create_dataset('position', data=cl.position)
                     cg.attrs['crosslink_type'] = cl.crosslink_type
+                    if extended:
+                        for name in ('strength', 'stiffness'):
+                            value = getattr(cl, name)
+                            array = np.asarray(value)
+                            if (array.ndim != 0 or array.dtype.kind not in 'iuf'
+                                    or np.ma.is_masked(value)):
+                                raise TypeError(f"HDF5 crosslink {name} must be a real numeric scalar")
+                            cg.attrs[name] = value
             except BaseException as error:
                 try:
                     hf.close()

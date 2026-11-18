@@ -1,8 +1,10 @@
 # Saving a FiberNetwork as HDF5
 
-`FiberNetwork.save_hdf5(path)` writes the legacy HDF5 representation. It requires
-the optional `h5py` package and accepts a string or `os.PathLike[str]`, including
-`pathlib.Path`. Byte paths are not supported. Create the parent directory first.
+`FiberNetwork.save_hdf5(path)` writes the legacy HDF5 representation by default.
+Pass `format_version="0.2.0"` to include cross-section parameters and crosslink
+mechanical properties. Both formats require the optional `h5py` package and
+accept a string or `os.PathLike[str]`, including `pathlib.Path`. Byte paths are
+not supported. Create the parent directory first.
 
 ```python
 from pathlib import Path
@@ -23,7 +25,7 @@ or convert a `StructureGraph` into a `FiberNetwork`.
 
 ## What the file contains
 
-The existing format remains version `0.1.0`:
+Both formats use these groups and attributes.
 
 | Location | Stored data |
 | --- | --- |
@@ -31,26 +33,38 @@ The existing format remains version `0.1.0`:
 | `fibers/fiber_N` | `centerline` dataset; `radius`, `fiber_id`, `cross_section`, `segments`, and JSON `material` attributes |
 | `crosslinks/cl_N` | `position` dataset; `fiber_i`, `fiber_j`, `param_i`, `param_j`, and `crosslink_type` attributes |
 
-This is not a lossless serialization of every model field. In particular, the
-legacy HDF5 format does not store fiber `cross_section_params` or crosslink
-`strength` and `stiffness`. Do not infer those values from the saved file. Use
-`FiberNetwork.save_json` and `FiberNetwork.load_json` when those fields must be
-preserved in the native network representation.
+The default `0.1.0` format omits fiber `cross_section_params` and crosslink
+`strength` and `stiffness`. Export again from the original network if you need
+these values for an existing `0.1.0` file.
+
+Format `0.2.0` adds a JSON `cross_section_params` attribute to every fiber group,
+including fibers with empty parameters. Section parameters must be a dictionary
+representable as standard JSON, with finite numbers and string keys in every
+object. Crosslink `strength` and `stiffness` must be unmasked real numeric
+scalars. HDF5 stores these directly, including the default infinite values.
+The root `version` attribute identifies the format so readers can check whether
+these attributes are available. For a network file that FiberNet itself can
+load, use `FiberNetwork.save_json` and `FiberNetwork.load_json`.
 
 Files can be inspected directly with h5py:
 
 ```python
+import json
+
 import h5py
 
-with h5py.File("network.h5", "r") as saved:
+network.save_hdf5(Path("network-state.h5"), format_version="0.2.0")
+with h5py.File("network-state.h5", "r") as saved:
     centerline = saved["fibers/fiber_0/centerline"][...]
+    section_params = json.loads(saved["fibers/fiber_0"].attrs["cross_section_params"])
 ```
 
 ## Replacement and failure behavior
 
-Metadata and material JSON are serialized before an output file is created. The
-HDF5 data is then written to a temporary file in the destination directory. Only
-after HDF5 closes successfully is the destination replaced with `os.replace`.
+Metadata, material, and any included section parameter JSON are serialized before
+an output file is created. The HDF5 data is then written to a temporary file in
+the destination directory. After HDF5 closes successfully, `os.replace` commits
+the file to the destination.
 A serialization or write failure before this commit leaves an existing
 destination unchanged; an absent destination remains absent.
 

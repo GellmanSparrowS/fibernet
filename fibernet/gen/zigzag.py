@@ -152,6 +152,9 @@ class ZigZagGenerator:
 
     def to_fiber_network(self, radius: float = 0.1, material=None):
         """Convert the nx.Graph to a FiberNetwork.
+
+        Welded crosslinks at shared nodes attach to the corresponding start
+        or end of each fiber.
         
         Parameters
         ----------
@@ -190,25 +193,23 @@ class ZigZagGenerator:
                 radius=radius, material=mat,
                 fiber_id=net.num_fibers,
             )
-            net.add_fiber(fiber)
+            fiber_index = net.add_fiber(fiber)
             
-            for node in edge:
-                if node not in node_to_fibers:
-                    node_to_fibers[node] = []
-                node_to_fibers[node].append(net.num_fibers - 1)
+            for node, parameter in ((edge[0], 0.0), (edge[1], 1.0)):
+                node_to_fibers.setdefault(node, []).append((fiber_index, parameter))
         
         # Add crosslinks at shared nodes
-        for node, fiber_ids in node_to_fibers.items():
-            if len(fiber_ids) < 2:
+        for node, incidences in node_to_fibers.items():
+            if len(incidences) < 2:
                 continue
             pos = G.nodes[node]['pos']
             if len(pos) == 2:
                 pos = (*pos, 0.0)
-            for i, fi in enumerate(fiber_ids):
-                for fj in fiber_ids[i+1:]:
+            for i, (fi, pi) in enumerate(incidences):
+                for fj, pj in incidences[i + 1:]:
                     net.add_crosslink(Crosslink(
                         fiber_i=fi, fiber_j=fj,
-                        param_i=0.5, param_j=0.5,
+                        param_i=pi, param_j=pj,
                         position=np.array(pos),
                         crosslink_type="welded",
                     ))
