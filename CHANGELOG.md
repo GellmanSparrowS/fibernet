@@ -1,3 +1,8 @@
+## [Unreleased] - Concave OBJ surface domains
+
+- Preserve planar concave boundaries and winding during quad conversion, including
+  short and collinear boundary edges shared with adjacent faces.
+
 ## [Unreleased] - Independent catalog material properties
 
 - Return independent nested custom property records from material catalog lookups.
