@@ -839,7 +839,7 @@
   "symbols": [
    "to_gmsh"
   ],
-  "sha256": "5fb7635fb2fb1a8a00d93e1a1d3b38bd3f11cd37476e1ebcf1885d5fc83e67c4"
+  "sha256": "4e0898d4a2def56f426420cadc2db858a76264df814151639aa8d1db87ba178f"
  },
  "fibernet/io/lammps.py": {
   "purpose": "LAMMPS data file I/O.",
@@ -5666,5 +5666,16 @@
   "symbols": [
    "DataFrameFiberIdentity"
   ]
+ },
+ "tests/test_gmsh_physical_line_group.py": {
+  "purpose": "The named physical group of a legacy MSH export contains all line elements.",
+  "status": "active",
+  "symbols": [
+   "_section",
+   "_check_mesh",
+   "test_default_export_names_every_zigzag_beam",
+   "test_explicit_3d_export_names_curves_without_changing_xyz"
+  ],
+  "sha256": "ef6648c1c2baad6557ed8a34e982b7db856ce191b03555193a3d6bdce51ba4ab"
  }
 }
