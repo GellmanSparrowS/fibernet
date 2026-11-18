@@ -138,6 +138,9 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     and geometry are copied, never rescaled. ``length_unit`` declares geometric
     provenance only; conductance remains caller-provided in S. Parallel members
     remain separate rows and contribute additively to the nodal equations.
+    Each driven component is solved relative to the point in its prescribed
+    voltage interval closest to zero. Absolute voltages are restored before
+    computing currents, powers and conservation checks.
     """
     if not isinstance(length_unit, str) or length_unit not in {'m', 'cm', 'mm', 'um', 'nm'}:
         raise ValueError('declare geometry length_unit: m, cm, mm, um or nm')
@@ -203,16 +206,23 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
         if np.all(values == values[0]):
             v[component_free] = values[0]
             continue
-        rhs = -L[component_free, :][:, component_fixed] @ values
+        # A local reference avoids solving for a common-mode offset. Keep
+        # zero in the interval when endpoints straddle it, avoiding overflow
+        # from subtracting opposite-sign boundary values.
+        solve_reference = min(max(0., float(values.min())), float(values.max()))
+        boundary_values = values - solve_reference if solve_reference else values
+        rhs = -L[component_free, :][:, component_fixed] @ boundary_values
         if not np.isfinite(rhs).all():
             raise TransportSolveError('Dirichlet right-hand side overflowed')
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter('error', MatrixRankWarning)
-                v[component_free] = spsolve(
+                free_voltage = spsolve(
                     L[component_free, :][:, component_free], rhs, use_umfpack=False)
         except (MatrixRankWarning, RuntimeError, ValueError) as exc:
             raise TransportSolveError('sparse transport solve failed') from exc
+        with np.errstate(over='ignore', invalid='ignore'):
+            v[component_free] = free_voltage + solve_reference if solve_reference else free_voltage
     with np.errstate(over='ignore', invalid='ignore'):
         dv = B @ v
         endpoint_bits = v[conn].view(np.uint64)
@@ -241,10 +251,9 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     residual = float(np.max(np.abs(injection[free]))) if len(free) else 0.
     balance = float(np.sum(injection))
     incident_current = np.asarray(abs(B).T @ np.abs(q))
-    # The sparse solve uses ABSOLUTE voltages. The existing 32*eps factor is
-    # an engineering backward-residual margin, not a sparse-LU theorem or a
-    # forward-accuracy certificate at arbitrarily large voltage offsets.
-    # Separately account for evaluation on the actual returned float fields.
+    # The unchanged 32*eps backward-residual margin uses reconstructed
+    # absolute voltages. This is an engineering margin, not a forward error
+    # bound. Account separately for evaluation on the returned float fields.
     try:
         edge_evaluation = [upper_sum([upper_product(float(g[j]), evaluation_ulp(dv[j])),
                                      evaluation_ulp(q[j])]) if g[j] else 0.0 for j in range(e)]
@@ -311,7 +320,7 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                       length_unit=length_unit, geometry_conversion='none',
                       units={'conductance': 'S', 'voltage': 'V', 'current': 'A', 'power': 'W'},
                       boundary_power_convention='sum of component reference-shifted boundary supply',
-                      solver='scipy.sparse.linalg.spsolve; use_umfpack=False',
+                      solver='scipy.sparse.linalg.spsolve; use_umfpack=False; component-local voltage reference',
                       scipy_version=scipy.__version__, input_sha256=fingerprint,
                       tolerances=dict(rtol=rtol, current_atol_A=current_atol_A,
                                       power_atol_W=power_atol_W),
@@ -319,7 +328,7 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                                            roundoff_factor=32*np.finfo(float).eps,
                                            solve_roundoff_A=solve_allowance.tolist(),
                                            field_evaluation_roundoff_A=evaluation_allowance.tolist(),
-                                           roundoff_coordinates='absolute solved voltage',
+                                           roundoff_coordinates='absolute returned voltage',
                                            roundoff_scope='engineering backward-residual margin; not forward accuracy'),
                       model_metadata=meta)
     return LinearTransportResult(
