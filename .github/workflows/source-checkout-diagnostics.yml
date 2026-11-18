@@ -1,0 +1,31 @@
+name: Windows byte-sealed checkout diagnostics
+'on':
+  push:
+    branches:
+    - diagnostics/source-checkout-windows-20261118
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install the regular CI dependency set
+      run: python -m pip install -e ".[dev,io]"
+    - name: Run original inventory and isolated checkout cases
+      run: python scripts/diagnose_source_checkout_windows.py --output-dir "${{ runner.temp }}/fibernet-source-checkout-diagnostic"
+    - name: Retain filtered diagnostic evidence
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: source-checkout-windows
+        path: ${{ runner.temp }}/fibernet-source-checkout-diagnostic/report.json
+        if-no-files-found: warn
+        retention-days: 14
