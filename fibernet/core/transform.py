@@ -14,7 +14,7 @@ Provides powerful tools for manipulating fiber networks:
 import numpy as np
 from typing import List, Tuple, Optional, Union
 from copy import deepcopy
-from fibernet.core.fiber import Fiber
+from fibernet.core.fiber import CrossSection, Fiber
 from fibernet.core.network import FiberNetwork, Crosslink
 from fibernet.utils.geometry import rotation_matrix_axis_angle
 
@@ -124,6 +124,8 @@ def scale(
         Input network.
     factor : float or np.ndarray
         Scale factor(s). Scalar for uniform, array for anisotropic.
+        Radii and explicit section lengths use the scalar factor or the
+        mean of the array factors.
     origin : np.ndarray, optional
         Scaling center. Defaults to network center.
     inplace : bool
@@ -142,14 +144,27 @@ def scale(
     
     origin = np.asarray(origin)
     factor = np.asarray(factor)
-    
+    section_dtype = np.result_type(factor.dtype, np.float64)
+    section_lengths = {
+        CrossSection.RECTANGULAR: ('width', 'height'),
+        CrossSection.ELLIPTICAL: ('semi_minor',),
+        CrossSection.HOLLOW_CIRCULAR: ('inner_radius',),
+    }
+
     for fiber in net.fibers:
         centered = fiber.centerline - origin
         fiber.centerline = centered * factor + origin
-        if np.isscalar(factor):
-            fiber.radius *= factor
-        else:
-            fiber.radius *= np.mean(factor)
+        # Keep dimension products out of low-precision scalar arithmetic.
+        section_factor = np.mean(factor, dtype=section_dtype)
+        fiber.radius *= section_factor
+        params = fiber.cross_section_params
+        scaled_lengths = {
+            key: params[key] * section_factor
+            for key in section_lengths.get(fiber.cross_section, ()) if key in params
+        }
+        if scaled_lengths:
+            # Different fibers can use the same parameter mapping.
+            fiber.cross_section_params = {**params, **scaled_lengths}
     
     for cl in net.crosslinks:
         centered = cl.position - origin

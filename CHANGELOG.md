@@ -1,3 +1,9 @@
+## [Unreleased] - Consistent cross-section scaling
+
+- Scale explicit rectangular, elliptical and hollow-tube section dimensions
+  with network geometry. Uniform scaling preserves section area, fiber volume
+  and volume fraction; scalar and vector factors retain calculation precision.
+
 ## [Unreleased] - Isolated RL rendering checks
 
 - Use Matplotlib's bundled-font setting in plotting test subprocesses, keeping

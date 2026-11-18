@@ -301,7 +301,7 @@
    "align_by_anchor",
    "create_pattern"
   ],
-  "sha256": "c7b8abaa3312fc25392640235aabe73ac9cc484c91dd11f55e4e3d07eaa23cd5"
+  "sha256": "9901b85f0b2cf1cbf2c1f0451d0904f4910a4cf08a69860b9cb574713b3455b4"
  },
  "fibernet/core/transforms.py": {
   "purpose": "Geometric transforms for StructureGraph.",
@@ -5445,5 +5445,18 @@
    "_run_scenario"
   ],
   "sha256": "96a6ae23067423652871983064009c19f2bf3cc957df655f98557864be7177b4"
+ },
+ "tests/test_legacy_network_scaling_sections.py": {
+  "purpose": "Keep explicit cross-section dimensions consistent with legacy geometric scaling.",
+  "status": "active",
+  "symbols": [
+   "test_public_scale_preserves_mixed_section_area_and_volume_ratios",
+   "test_vector_inplace_scale_handles_shared_dimension_mappings_once_per_fiber",
+   "test_uniform_scale_keeps_implicit_section_dimensions_implicit",
+   "test_half_precision_scale_factor_keeps_large_sections_representable",
+   "test_half_precision_identity_scale_preserves_a_thin_wall",
+   "test_section_scaling_preserves_extended_precision"
+  ],
+  "sha256": "39571eb5b46b66abafb600e1d85df6dee524540abbb123a8bd72be24f525aad3"
  }
 }
