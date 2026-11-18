@@ -15,6 +15,7 @@ calibration, realistic-network accuracy or independent-origin generalization.
 - [NetworkX topology and VTP result fields](network-export-fields.md)
 - [PDB sampled-network export](pdb-network-export.md)
 - [Observed tensile-recruitment inputs](tensile-recruitment-inputs.md)
+- [Crosslinks between merged inputs](inter-input-crosslinks.md)
 - [Direct FEM array identity](raw-array-identity-migration.md)
 - [Snapshot graph identity](snapshot-identity-contract.md)
 - [Transformed tiling boundary labels](transformed-tiling-boundaries.md)

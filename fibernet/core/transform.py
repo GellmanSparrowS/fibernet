@@ -268,6 +268,8 @@ def merge(
         periodic=any(n.periodic for n in networks),
     )
     
+    detect_new_contacts = bool(merge_crosslinks and proximity_threshold)
+    fiber_sources = []
     fiber_offset = 0
     
     for i, net in enumerate(networks):
@@ -292,10 +294,15 @@ def merge(
             )
             merged.add_crosslink(new_cl)
         
+        if detect_new_contacts:
+            fiber_sources.extend([i] * net.num_fibers)
         fiber_offset += net.num_fibers
     
-    if merge_crosslinks and proximity_threshold:
-        merged.auto_crosslink(threshold=proximity_threshold)
+    if detect_new_contacts:
+        for contact in merged.detect_contacts(threshold=proximity_threshold):
+            if fiber_sources[contact.fiber_i] != fiber_sources[contact.fiber_j]:
+                contact.crosslink_type = "welded"
+                merged.add_crosslink(contact)
     
     return merged
 
