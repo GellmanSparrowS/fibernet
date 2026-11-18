@@ -365,6 +365,115 @@ class ResultIdentityContractTests(unittest.TestCase):
         result.compute_detailed(graph, self.coefficients([90, 3, 44]))
         self.assertEqual((result.n_nodes, result.n_edges), (3, 3))
 
+    def test_graph_record_ids_rejected_atomically_in_mapped_and_legacy_results(self):
+        for legacy in (False, True):
+            for kind, bad in (('node', 999), ('edge', 999),
+                              ('node', 40.), ('edge', 90.),
+                              ('node', True), ('edge', False)):
+                with self.subTest(legacy=legacy, kind=kind, bad=bad):
+                    graph = self.graph()
+                    result = self.result(graph)
+                    if legacy:
+                        result.metadata.pop('node_ids')
+                        result.metadata.pop('edge_ids')
+                    if kind == 'node':
+                        graph.nodes[40].node_id = bad
+                    else:
+                        graph.edges[90].edge_id = bad
+                    self.assert_rejected_unchanged(result, graph, 3.)
+
+    def test_graph_keys_remain_strict_in_mapped_and_legacy_results(self):
+        for legacy in (False, True):
+            for kind in ('node', 'edge'):
+                with self.subTest(legacy=legacy, kind=kind):
+                    graph = self.graph()
+                    result = self.result(graph)
+                    if legacy:
+                        result.metadata.pop('node_ids')
+                        result.metadata.pop('edge_ids')
+                    if kind == 'node':
+                        graph._nodes = {float(k): v for k, v in graph.nodes.items()}
+                    else:
+                        graph._edges = {float(k): v for k, v in graph.edges.items()}
+                    self.assert_rejected_unchanged(result, graph)
+
+    def test_selected_coincident_reference_endpoints_rejected_atomically(self):
+        for dim in (2, 3):
+            for stiffness in (None, 3.):
+                for legacy in (False, True):
+                    with self.subTest(dim=dim, stiffness=stiffness, legacy=legacy):
+                        graph = self.graph(dim)
+                        result = self.result(graph)
+                        result.deformed_positions = result.deformed_positions[:, :dim]
+                        graph.nodes[7].position = graph.nodes[40].position.copy()
+                        if legacy:
+                            result.metadata.pop('node_ids')
+                            result.metadata.pop('edge_ids')
+                        self.assert_rejected_unchanged(result, graph, stiffness)
+
+    def test_unselected_bad_edge_record_and_geometry_are_irrelevant(self):
+        graph = self.graph()
+        result = self.result(graph, [44])
+        # Only edge 44 is consumed. Edges 90 and 3 may be coincident here.
+        graph.nodes[40].position = graph.nodes[7].position.copy()
+        graph.edges[90].edge_id = False
+        graph.edges[3].edge_id = 999
+        result.compute_detailed(graph, np.array([7.]))
+        np.testing.assert_allclose(result.edge_stretches, [1.4])
+        np.testing.assert_allclose(result.edge_forces, [2.8])
+        self.assertAlmostEqual(result.energy, .56)
+
+    def test_coincidence_check_only_applies_to_geometric_recomputation(self):
+        graph = self.graph()
+        result = self.result(graph)
+        result.deformed_positions = None
+        graph.nodes[7].position = graph.nodes[40].position.copy()
+        before = copy.deepcopy(vars(result))
+        result.compute_detailed(graph)
+        for name in ('edge_forces', 'edge_stretches', 'energy', 'metadata'):
+            self.assert_nested_equal(getattr(result, name), before[name])
+        self.assertAlmostEqual(result.max_displacement, np.sqrt(.2 ** 2 + .4 ** 2))
+
+    def test_exact_coincidence_check_does_not_impose_length_threshold(self):
+        graph, result = self.signed_native_case()
+        graph.nodes[-7].position = np.array([1e-14, 0., 0.])
+        result.deformed_positions = np.array([[0., 0., 0.], [1e-14, 0., 0.]])
+        result.compute_detailed(graph)
+        # Preserve the existing shared element-length convention, not a new
+        # small-length physical accuracy claim.
+        np.testing.assert_allclose(result.edge_stretches, [.01, .01])
+
+    def test_empty_and_edgeless_geometric_results_remain_supported(self):
+        for empty in (False, True):
+            for legacy in (False, True):
+                with self.subTest(empty=empty, legacy=legacy):
+                    nodes = [] if empty else [{'id': 4, 'position': [0., 0., 0.]}]
+                    graph = StructureGraph.from_dict({
+                        'dimension': 3, 'nodes': nodes, 'edges': []})
+                    positions = np.zeros((len(nodes), 3))
+                    metadata = {} if legacy else {'node_ids': list(graph.nodes), 'edge_ids': []}
+                    result = SimResult(mode='dynamics', deformed_positions=positions,
+                                       displacements=positions.copy(), metadata=metadata)
+                    result.compute_detailed(graph, np.array([]))
+                    self.assertEqual((result.n_nodes, result.n_edges), (len(nodes), 0))
+                    self.assertEqual(result.edge_stretches.shape, (0,))
+                    self.assertEqual(result.energy, 0.)
+
+    def test_finite_input_metric_overflow_remains_atomic(self):
+        for cause in ('coordinate', 'stiffness', 'displacement'):
+            with self.subTest(cause=cause):
+                graph = self.graph()
+                result = self.result(graph)
+                stiffness = 3.
+                if cause == 'coordinate':
+                    result.deformed_positions[1, 0] = 1e308
+                elif cause == 'stiffness':
+                    result.deformed_positions[1, 0] = 20.
+                    stiffness = 1e308
+                else:
+                    result.displacements[1, 0] = 1e308
+                self.assert_rejected_unchanged(result, graph, stiffness)
+
     def test_legacy_mapless_result_and_file_keep_insertion_order(self):
         graph = self.graph()
         result = self.result(graph)

@@ -1,4 +1,4 @@
-"""Synthetic runner/NPZ/UI contract tests; no numerical solve or user cache."""
+"""Runner/NPZ/UI contracts with isolated caches and a small solver roundtrip."""
 import ast
 import copy
 import hashlib
@@ -120,6 +120,53 @@ def test_no_cache_does_not_require_factory_key(engine):
     f = SimpleNamespace(build=graph)
     run = sc.run_stretch(f, use_cache=False)
     assert not run.cache_hit and run.cache_key == '' and len(engine) == 1
+
+
+@pytest.mark.parametrize('name', ['target_stretch', 'num_steps', 'r_contact'])
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), -float('inf')])
+@pytest.mark.parametrize('use_cache', [False, True])
+def test_nonfinite_config_rejects_before_cache_lookup(
+        name, value, use_cache, tmp_path, monkeypatch):
+    factory = Factory(graph())
+    config = sc.RunConfig(**{name: value})
+
+    def unexpected(*args, **kwargs):
+        pytest.fail('invalid config reached cache or solver')
+
+    for action in ('cache_tag', '_load_cache', 'Engine2'):
+        monkeypatch.setattr(sc, action, unexpected)
+    cache = tmp_path / 'cache'
+    with pytest.raises(ValueError, match=name):
+        sc.run_stretch(factory, config, cache_dir=str(cache), use_cache=use_cache)
+    assert not cache.exists()
+
+
+@pytest.mark.parametrize('auto_scale', [False, True])
+def test_app_step_validation_precedes_scaling(auto_scale):
+    with pytest.raises(ValueError, match='num_steps'):
+        sc.RunConfig(num_steps=1.5, auto_scale=auto_scale).engine_cfg(1200)
+    config = sc.RunConfig(num_steps=100, auto_scale=auto_scale).engine_cfg(2400)
+    assert config.num_steps == (200 if auto_scale else 100)
+
+
+def test_numpy_controls_survive_real_solver_cache_roundtrip(tmp_path):
+    factory = Factory(graph())
+    config = sc.RunConfig(
+        target_stretch=np.float32(1.2), num_steps=np.int64(2),
+        save_interval=np.int32(1), n_increments=np.int64(0),
+        use_bending=np.bool_(True), use_contact=np.bool_(False),
+    )
+    first = sc.run_stretch(factory, config, cache_dir=str(tmp_path))
+    second = sc.run_stretch(factory, config, cache_dir=str(tmp_path))
+    assert not first.cache_hit and second.cache_hit
+    assert np.isfinite(first.frames_xy).all()
+    assert np.isfinite(first.force_curve).all()
+    assert type(first.metadata['num_steps']) is int
+    assert type(first.metadata['target_stretch']) is float
+    assert type(first.metadata['use_bending']) is bool
+    assert first.metadata == second.metadata
+    np.testing.assert_array_equal(first.frames_xy, second.frames_xy)
+    np.testing.assert_array_equal(first.force_curve, second.force_curve)
 
 
 def test_post_weld_graph_built_once(tmp_path, engine, monkeypatch):

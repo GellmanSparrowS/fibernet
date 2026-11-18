@@ -7,6 +7,78 @@
   Document explicit normalization of fully observed masked containers in the
   [geometry/path contract](docs/architecture/geometry-paths.md).
 
+
+## [Unreleased] - FEA coordinate interpolation
+
+- Use validated float64 endpoint snapshots when exporting Abaqus, ANSYS and
+  Gmsh line geometry. Reassigned integer and float32 centerlines no longer
+  overflow during interpolation; ordinary numeric lists export consistently
+  with arrays. Reject masked, complex, boolean and nonnumeric coordinates before
+  opening the output file. Source coordinates remain unchanged.
+
+## [Unreleased] - 3D betweenness concentration
+
+- Correct the sign of `GraphFeatureExtractor3D.edge_betweenness_gini` by
+  applying the population Gini formula to ascending centralities. Unequal
+  networks now have positive concentration instead of negative values.
+- Preserve the 60-column layout, unweighted centrality, computation cutoff
+  and zero fallbacks. Add exact shortest-path and pairwise-inequality oracles,
+  persistence tests and [feature migration guidance](docs/graph_betweenness.rst).
+
+## [Unreleased] - Explicit multi-weld import
+
+- Add an opt-in exact legacy-to-native conversion for bounded straight fibers
+  with multiple explicitly recorded interior welds. Preserve source-list mapping,
+  per-fiber split order and detached material/metadata ownership. Do not infer
+  crossings, snap near points, preserve source IDs as native IDs, or claim
+  mechanical equivalence. Existing approximate and single-weld routes remain.
+  See the [multi-weld contract](docs/MULTI_WELDED_JUNCTION_IMPORT.md).
+
+## [Unreleased] - Detailed-result identity admission
+
+- Validate node and selected-edge record IDs before ordinary detailed metrics
+  are committed. Reject exactly coincident selected reference endpoints when
+  deformed positions are supplied, preserving signed IDs, selected-edge order,
+  force/energy provenance and existing backend routing. No new positive-length
+  threshold or solver arithmetic is introduced. See the
+  [identity contract](docs/architecture/result-identity-contract.md).
+
+## [Unreleased] - Legacy trim crosslink preservation
+
+- Preserve and remap surviving crosslinks in `core.transform.trim_to_box`.
+  Whole-fiber mode keeps original attachments; sampled mode remaps attachments
+  on retained vertices and intact original segments. Geometry selection and
+  public signatures are unchanged. Crosslink-based derived results intentionally
+  change from the old empty-link output; see the
+  [compatibility and migration contract](docs/architecture/legacy-trim-crosslinks.md).
+
+## [Unreleased] - Reduced-model configuration admission
+
+- Reject nonfinite, malformed and out-of-range reduced-model controls at
+  config/solver entry and before desktop cache lookup. Revalidate mutable
+  configs at run entry, and normalize admitted NumPy scalars for float64
+  coefficient arithmetic and JSON metadata. Public fields and ordinary
+  Python-float numerical behavior are unchanged; see the
+  [configuration and migration contract](docs/architecture/reduced-config-contract.md).
+
+## [4.4.2] - 2026-11-13
+
+See [4.4.2 release notes and migration](docs/RELEASE_4_4_2.md) for the complete
+changes since published 4.4.1: detached StructureGraph metadata snapshots,
+geometry/force corrections, per-edge FEM materials and stricter admission.
+Shared transport graph validation, float64 recruitment thresholds and the
+versioned recruitment replay archive are also included. Historical Unreleased
+entries below remain as development history.
+
+## [Unreleased] - Finite-width contact scaling
+
+- Normalize contact raster geometry and width together so a change of length
+  unit does not erase short-segment contacts through an absolute projection
+  floor. Preserve field names, adjacency exclusions and raster budgets.
+- Restore pixel spacing and overlap area to caller units, reject unrepresentable
+  output scales, and add exact-pixel and public-route regressions. See
+  [finite-width contact units](docs/FINITE_WIDTH_CONTACT_SCALING.md).
+
 ## [Unreleased] - Per-member cylinder geometry
 
 - Preserve each represented edge's radius-length association in 3D cylinder
