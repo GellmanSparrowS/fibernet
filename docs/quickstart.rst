@@ -1,6 +1,16 @@
 Quick Start Guide
 =================
 
+An installed FiberNet 4.4.2 wheel includes a runnable example. From any
+directory, run:
+
+.. code-block:: bash
+
+   python -m fibernet.examples.basic_usage --output-dir fibernet_demo
+
+It generates its input network and writes ``network.json``, ``network.png``,
+``fem_result.json``, and ``summary.json``. No checkout or input files are needed.
+
 From the root of a FiberNet source checkout, install the library and its base
 Python dependencies before running the examples:
 

@@ -77,6 +77,115 @@ Explicit groups do not prevent every form of leakage: target-derived features,
 repeated tuning on the same holdout, or incorrectly declared origins remain the
 caller's responsibility. Keep the original Dataset and its generation lineage.
 
+## Standardize on training groups
+
+When features have different scales, fit the scaler only on the training rows.
+Pass your loaded Dataset, selected raw feature names, target name, and
+caller-declared origin labels in sample order. This recipe uses the native
+group split's seed 42 and holds out 25% of the groups. It writes into a new
+directory and records the fitted rows and column mapping with the model.
+
+```python
+from dataclasses import replace
+from hashlib import sha256
+import json
+from pathlib import Path
+
+from sklearn.model_selection import GroupShuffleSplit
+from sklearn.preprocessing import StandardScaler
+
+from fibernet import train_model
+from fibernet.ml.dataset import FiberNetDataset
+
+
+def fit_scaled_groups(dataset, raw_names, target, groups, directory):
+    raw_names = list(raw_names)
+    if set(raw_names) & set(dataset.target_names):
+        raise ValueError("Selected inputs must exclude every declared target")
+    if not raw_names or not set(raw_names).issubset(dataset.feature_names):
+        raise ValueError("Select declared raw Dataset feature names")
+
+    raw = FiberNetDataset(dataset.samples, feature_names=raw_names).features
+    test_size = .25
+    splitter = GroupShuffleSplit(n_splits=1, test_size=test_size, random_state=42)
+    train, test = next(splitter.split(raw, groups=groups))
+    scaler = StandardScaler().fit(raw[train])
+    z_names = [f"z_{name}" for name in raw_names]
+    samples = [replace(sample, features=dict(zip(z_names, row.tolist())))
+               for sample, row in zip(dataset.samples, scaler.transform(raw))]
+    scaled = FiberNetDataset(samples, feature_names=z_names,
+                             target_names=dataset.target_names)
+
+    directory = Path(directory)
+    directory.mkdir(parents=True, exist_ok=False)
+    model_path = directory / "model.pkl"
+    metrics = train_model(scaled, target=target, model_type="lr", split="group",
+                          groups=groups, test_size=test_size, save_path=model_path)
+    split = metrics["training_data"]["split"]
+    if (split["train_rows"], split["test_rows"]) != (train.tolist(), test.tolist()):
+        raise RuntimeError("Training split differs from the scaler's split")
+
+    state = {
+        "raw_names": raw_names, "z_names": z_names,
+        "mean": scaler.mean_.tolist(), "scale": scaler.scale_.tolist(),
+        "fit_rows": train.tolist(),
+        "fit_sample_ids": [dataset.samples[i].sample_id for i in train],
+        "fit_groups": [groups[i] for i in train],
+        "model_sha256": sha256(model_path.read_bytes()).hexdigest(),
+    }
+    (directory / "preprocessing.json").write_text(json.dumps(state, indent=2, allow_nan=False),
+                                                  encoding="utf-8")
+    return metrics
+```
+
+Call `fit_scaled_groups(dataset, raw_names, target, groups, "scaled-model")`
+with your inputs. For prediction, pass raw feature mappings in the original
+units and keep the sample IDs in the same order. The digest matches the model
+bytes to the recorded scaler state. Reload only the trusted local model you
+created, using `predict_scaled_groups("scaled-model", raw_rows)`.
+The recipe converts finite real inputs to float64 before doing the same
+subtraction and division used in training.
+
+```python
+from hashlib import sha256
+import json
+from numbers import Real
+from pathlib import Path
+import pickle
+
+import numpy as np
+
+from fibernet import predict_named
+
+
+def _raw_float(value):
+    message = "Raw features must be finite real numbers"
+    if np.ma.is_masked(value) or not isinstance(value, (Real, np.bool_)):
+        raise ValueError(message)
+    try:
+        number = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(message) from exc
+    if not np.isfinite(number):
+        raise ValueError(message)
+    return number
+
+
+def predict_scaled_groups(directory, raw_rows):
+    directory = Path(directory)
+    state = json.loads((directory / "preprocessing.json").read_text(encoding="utf-8"))
+    payload = (directory / "model.pkl").read_bytes()
+    if sha256(payload).hexdigest() != state["model_sha256"]:
+        raise ValueError("Model does not match the saved scaler")
+    artifact = pickle.loads(payload)
+    if artifact["features"] != state["z_names"]:
+        raise ValueError("Model features do not match the scaler output columns")
+    columns = list(zip(state["raw_names"], state["z_names"], state["mean"], state["scale"]))
+    rows = [{z: (_raw_float(row[raw]) - mean) / scale for raw, z, mean, scale in columns}
+            for row in raw_rows]
+    return predict_named(artifact, rows)
+```
+
 ## Preserve selected source assertions
 
 Native results always retain source row indices, sample IDs, actual train/test

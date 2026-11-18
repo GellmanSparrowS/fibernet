@@ -21,6 +21,15 @@ Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, Network
 python -m pip install "fibernet==4.4.2"
 ```
 
+Run the installed example from any directory:
+
+```bash
+python -m fibernet.examples.basic_usage --output-dir fibernet_demo
+```
+
+It generates its own network and writes `network.json`, `network.png`,
+`fem_result.json`, and `summary.json`. No source checkout or input data is needed.
+
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
