@@ -10,13 +10,19 @@ from __future__ import annotations
 import numpy as np
 # from scipy.spatial import cKDTree  # Lazy import to avoid C extension loading
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Tuple, Any, Union
+from typing import Optional, List, Dict, Tuple, Any, Union, TYPE_CHECKING
 import json
+import operator
 from fibernet._json import unique_object_pairs as _unique_json_object_pairs
 import warnings
 
 from fibernet.core.fiber import Fiber, CrossSection
 from fibernet.core.material import Material
+
+if TYPE_CHECKING:
+    from scipy.sparse import csr_matrix as _CSRMatrix
+else:
+    _CSRMatrix = Any  # Runtime type inspection does not import SciPy.
 
 
 def _hdf5_section_params_json(params: Dict[str, Any]) -> str:
@@ -205,9 +211,38 @@ class FiberNetwork:
     def fiber_lengths(self) -> np.ndarray:
         return np.array([f.length for f in self.fibers])
 
-    def connectivity_matrix(self) -> np.ndarray:
-        """Sparse connectivity matrix (NxN) where N is number of fibers."""
+    def connectivity_matrix(self, *, sparse: bool = False) -> Union[np.ndarray, _CSRMatrix]:
+        """Return the symmetric crosslink-count matrix in fiber list order.
+
+        The default is a dense NumPy array. Use ``sparse=True`` for a SciPy
+        CSR matrix without a dense allocation. Each crosslink increments
+        both directions, including two increments for a self-link.
+
+        Sparse coordinates must be Python or NumPy integer scalars other
+        than booleans. Negative indices in range wrap as in NumPy.
+        """
+        if not isinstance(sparse, (bool, np.bool_)):
+            raise TypeError('sparse must be a boolean')
         n = self.num_fibers
+        if sparse:
+            from scipy.sparse import coo_matrix
+
+            def coordinate(value):
+                if (isinstance(value, (bool, np.bool_, np.timedelta64))
+                        or not isinstance(value, (int, np.integer))):
+                    raise TypeError('sparse connectivity requires integer fiber indices')
+                index = operator.index(value)
+                if not -n <= index < n:
+                    raise IndexError(f'fiber index {index} is out of bounds for {n} fibers')
+                return index % n
+
+            endpoints = np.empty((len(self.crosslinks), 2), dtype=np.intp)
+            for row, link in enumerate(self.crosslinks):
+                endpoints[row] = coordinate(link.fiber_i), coordinate(link.fiber_j)
+            entries = (endpoints.ravel(), endpoints[:, ::-1].ravel())
+            return coo_matrix((np.ones(endpoints.size, dtype=int), entries),
+                              shape=(n, n)).tocsr()
+
         conn = np.zeros((n, n), dtype=int)
         for cl in self.crosslinks:
             conn[cl.fiber_i, cl.fiber_j] += 1
