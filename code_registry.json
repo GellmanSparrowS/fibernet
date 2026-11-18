@@ -868,7 +868,7 @@
    "network_summary",
    "parametric_to_dataframe"
   ],
-  "sha256": "2099a6a0fb555d6df4330eef9b5f4ce84536dbb06214d8ef76032bdcd655817a"
+  "sha256": "7551716cad673aec72797c40c260197a41a888c261dbb096e31d0d97010b64a9"
  },
  "fibernet/io/pdb.py": {
   "purpose": "PDB (Protein Data Bank) file format I/O.",
@@ -5414,5 +5414,13 @@
    "test_all_valid_masked_constraints_preserve_none_as_free_dof"
   ],
   "sha256": "76a73aae4328e376af11e2def83a103c49c3e24171ff6af8c9bce0a763b4f176"
+ },
+ "tests/test_dataframe_import_contract.py": {
+  "purpose": "Focused DataFrame import workflow regressions.",
+  "status": "active",
+  "symbols": [
+   "DataFrameImportContract"
+  ],
+  "sha256": "be4e903c46c59672de8d6e92839e3fa05b06e30de8c989b6c4d142686bd88712"
  }
 }
