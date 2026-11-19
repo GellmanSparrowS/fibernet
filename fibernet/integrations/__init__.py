@@ -114,3 +114,13 @@ __all__.extend([
     'SavedLAMMPSRead', 'LAMMPSSavedReadLimits', 'LAMMPSSavedReadError',
     'LAMMPSCompilerCompatibilityError', 'read_saved_lammps_run',
 ])
+
+# Explicit rotational BPM, compiled without importing a native engine.
+from .lammps_bpm import (
+    BPMParticle, RotationalBPMBond, BPMFrame, BPMBreak, BPMCheckpoint, BPMRunResult,
+    prepare_rotational_bpm,
+)
+__all__.extend([
+    'BPMParticle', 'RotationalBPMBond', 'BPMFrame', 'BPMBreak', 'BPMCheckpoint',
+    'BPMRunResult', 'prepare_rotational_bpm',
+])
