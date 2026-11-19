@@ -47,15 +47,16 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 
 `stretch_ratio=1.01` 指 1% 伸长；`nonlinear=False` 明确选择小变形线性梁 FEM。坐标和半径按米解释，`E=1e9` Pa，`nu=0.3` 无量纲，输出位移为米、力为牛顿；程序不自动换算单位，也不从图的材料记录读取模量。省略拉伸比仍使用兼容默认值 2.0，二维会进入未验证最终平衡的实验增量路径，不适合作为线性入门调用。[FEM 接口约定](docs/METHODS_BEAM_FEM_CONTRACT.md)
 
-### 对应安装包版本：4.4.3
+### 从 PyPI 安装
 
-在 [PyPI 发布列表](https://pypi.org/project/fibernet/#history) 中确认该版本可用后，可直接安装对应软件包。
+安装 PyPI 上当前可用的正式版本：
 
 ```bash
-python -m pip install fibernet==4.4.3
+python -m pip install fibernet
+python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 ```
 
-请使用与版本对应的 [4.4.3 入门示例](https://pypi.org/project/fibernet/4.4.3/#generate-analyze-simulate-and-save)。该版本的 FEM 示例与上方源码示例均使用 `stretch_ratio=1.01`，表示 1% 伸长。
+请使用 [PyPI 页面上的入门示例](https://pypi.org/project/fibernet/)。需要固定版本复现时，使用所安装发行版本页面给出的精确版本命令。上方源码示例对应当前仓库版本，可能与已安装的发行版本不同。
 
 ## 1. 生成网络
 

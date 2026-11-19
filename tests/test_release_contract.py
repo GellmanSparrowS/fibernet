@@ -27,9 +27,14 @@ def test_release_installation_guides_match_package_version():
 
     root = Path(__file__).resolve().parents[1]
     version = fibernet.__version__
-    for name in ('README.md', 'README_CN.md', 'PYPI_README.md'):
+    # Packaged instructions describe this exact artifact; repository homepages
+    # instead follow the independently available public PyPI channel.
+    for name in ('PYPI_README.md',):
         text = (root / name).read_text(encoding='utf-8')
         assert 'fibernet==' + version in text
+    assert 'Development checkout: ' + version in (root / 'README.md').read_text(encoding='utf-8')
+    for name in ('README.md', 'README_CN.md'):
+        assert '开发版源码：' + version in (root / name).read_text(encoding='utf-8')
     pypi_readme = (root / 'PYPI_README.md').read_text(encoding='utf-8')
     assert pypi_readme.startswith('# FiberNet ' + version + '\n')
     for extra in ('ml', 'manufacturing', 'fracture'):
