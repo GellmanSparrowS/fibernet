@@ -70,6 +70,40 @@ curves and periodic metadata are not remeshed or converted into new electrical
 connections: only the explicit graph endpoints and supplied conductances are
 used. The solver makes no electrical continuity inference from crossings.
 
+## Finite-network edge removal
+
+Run the [edge-removal example](../../examples/percolation_transport.py) from
+the repository with FiberNet installed.
+
+```bash
+python examples/percolation_transport.py --output-dir percolation_run
+```
+
+The example generates a 289-node triangular network with 800 straight circular
+members in metres. It explicitly assigns each edge conductance
+`g = σπr²/L` with a synthetic conductivity of 1 S/m. Opposite sides
+of the original graph form fixed electrodes at 1 V and 0 V for separate x and
+y runs. Each run removes batches of eight edges by setting their conductance
+to zero. The low-flow schedule ranks active edges by absolute current divided
+by the maximum absolute current of the current state, rounded to 12 decimal
+places. A PCG64 permutation breaks ties. Five random schedules use the same
+seeds in both directions, with all seeds recorded in `case.json`.
+
+An active-edge component that contains neither electrode gets one explicit
+0 V gauge at its smallest node ID. The example records those IDs and checks
+that their injections are exactly zero. It stops at the first sampled state
+without an electrode-spanning component. The output gives that state's
+bracket and the exact first loss within the batch from topology-only replay.
+Removed edge fraction and summed nominal member volume fraction use separate
+denominators. The resulting loss points and electrical conductance describe
+this finite graph and the recorded deletion schedules.
+
+`graph.json` and `case.json` retain the original geometry, electrodes and
+member data. `history.json` records deleted edge IDs, gauges, and metrics,
+and `history.csv` provides the scalar history. `fields.npz` holds node
+voltages, node injections and edge currents in stable-ID order, indexed by
+`field_row` in the histories. The output directory must be new.
+
 ## Result and provenance
 
 `LinearTransportResult` is separate from mechanical SimResult. Arrays are
