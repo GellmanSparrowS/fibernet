@@ -774,7 +774,7 @@
   "purpose": "FiberNet Integrations Module",
   "status": "active",
   "symbols": [],
-  "sha256": "46de04cb33ad3252aeb8dff6ce785132bea62a98bae08bb02a6fd641e52a7f59"
+  "sha256": "04ede86e77633fbd77983c2a85345f10601740aca3346cabca79366de5519c7a"
  },
  "fibernet/integrations/lammps_integration.py": {
   "purpose": "LAMMPS Integration for FiberNet",
@@ -4598,7 +4598,7 @@
    "EdgeLengthHistory",
    "edge_length_history"
   ],
-  "sha256": "81352701c47dd50bc3fae19400c4b012c0598a8b89cb19e2ef9ca2e261772fa7"
+  "sha256": "64d039e1fa30c1eb4d42bbf12afb67d21836592b143c82650fc9487cf88367f2"
  },
  "tests/test_lammps_unprofiled_output_admission.py": {
   "purpose": "No-engine lower-bound admission tests; no native physics claims.",
@@ -5677,5 +5677,37 @@
    "test_explicit_3d_export_names_curves_without_changing_xyz"
   ],
   "sha256": "ef6648c1c2baad6557ed8a34e982b7db856ce191b03555193a3d6bdce51ba4ab"
+ },
+ "fibernet/integrations/lammps_bpm.py": {
+  "purpose": "Explicit rotational BPM models for the pinned 30 September 2026 CLI.",
+  "status": "active",
+  "symbols": [
+   "BPMParticle",
+   "RotationalBPMBond",
+   "BPMFrame",
+   "BPMBreak",
+   "BPMCheckpoint",
+   "BPMRunResult",
+   "_scale",
+   "_record",
+   "_pairs",
+   "_mapped",
+   "prepare_rotational_bpm",
+   "_compile",
+   "_fmt",
+   "_script",
+   "_dumps",
+   "regenerate",
+   "manifest_fields",
+   "check_runtime",
+   "_native_real",
+   "_native_int",
+   "_read_text",
+   "_rows",
+   "_atom_frame",
+   "_close_rows",
+   "parse_task_output"
+  ],
+  "sha256": "51755bdba48c87a20738f3703ee8df23bb3dd6c38fced54b6c103032f023b36b"
  }
 }

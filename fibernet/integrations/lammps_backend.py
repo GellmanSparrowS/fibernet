@@ -28,6 +28,9 @@ from fibernet.units import LENGTH_FACTORS
 from . import _harmonic_profile as _profiles
 
 
+_BPM_MODEL = 'explicit-rotational-bpm-micro/1'
+
+
 class LAMMPSContractError(ValueError):
     """Invalid or unsupported input/output; never a successful empty result."""
 
@@ -120,6 +123,9 @@ class PreparedRun:
         return 'FIBERNET_LAMMPS_COMPLETE_' + _digest(_json([self.graph_json,self.contract_json,self.data_text]))
 
     def manifest(self):
+        if json.loads(self.contract_json).get('model') == _BPM_MODEL:
+            from .lammps_bpm import manifest_fields
+            return manifest_fields(self)
         return dict(schema=('fibernet.lammps.conservative-cg/1' if json.loads(self.contract_json).get('model') == 'conservative-ball-cosine-strand-cg/1' else 'fibernet.lammps.explicit-beads-exact-mass-types.v3'), identity=self.identity,
                     graph_sha256=_digest(self.graph_json),
                     files={'model.data': _digest(self.data_text), 'in.model': _digest(self.input_text)},
@@ -339,6 +345,11 @@ def validate_prepared(prepared: PreparedRun):
             _profiles.string_bytes((prepared.graph_json, prepared.contract_json, prepared.data_text,
                                     prepared.input_text), requested['prepared_bytes'])
         c = json.loads(prepared.contract_json)
+        if c.get('model') == _BPM_MODEL:
+            from .lammps_bpm import regenerate
+            if type(prepared) is not PreparedRun or regenerate(prepared, c) != prepared:
+                raise LAMMPSContractError('BPM files differ from deterministic compiler')
+            return prepared
         if c.get('model') == 'conservative-ball-cosine-strand-cg/1':
             _profiles.string_bytes((prepared.graph_json,prepared.contract_json,prepared.data_text,prepared.input_text),requested['prepared_bytes'] if requested else 1024*1024)
             from ._lammps_cg import regenerate
@@ -398,6 +409,8 @@ def parse_outputs(prepared: PreparedRun, trajectory_text: str, log_text: str,
     validate_prepared(prepared)
     # PreparedRun is revalidated above; reuse only this call's immutable JSON.
     contract = json.loads(prepared.contract_json)
+    if contract.get('model') == _BPM_MODEL:
+        raise LAMMPSContractError('read BPM output through its managed LAMMPSTask result')
     selected = _profiles.contract_profile(contract)
     if selected:
         _integer(max_output_bytes, 'max_output_bytes', 1, selected['raw_bytes'])
@@ -749,6 +762,9 @@ class LAMMPSTask:
         lower_bound = contract['type_pair_cutoff_payload_lower_bound_bytes']
         if lower_bound > self.limits.memory_bytes:
             raise LAMMPSContractError('type-pair cutoff tables alone exceed declared memory budget')
+        if contract.get('model') == _BPM_MODEL:
+            from .lammps_bpm import check_runtime
+            check_runtime(runtime)
         self.runtime = runtime.checked()
         self.workdir = Path(workdir).absolute()
         self.state, self.error, self.result = TaskState.CREATED, None, None
@@ -762,6 +778,9 @@ class LAMMPSTask:
             if os.name != 'posix':
                 raise LAMMPSContractError('bounded execution currently requires POSIX resource limits')
             validate_prepared(self.prepared)
+            if json.loads(self.prepared.contract_json).get('model') == _BPM_MODEL:
+                from .lammps_bpm import check_runtime
+                check_runtime(self.runtime)
             self.runtime.checked()
             self.workdir.mkdir(parents=False, exist_ok=False)
             try:
@@ -875,6 +894,11 @@ class LAMMPSTask:
                     return
                 if self._process.returncode:
                     self.state, self.error = TaskState.FAILED, f'native child exit {self._process.returncode}; see process.log'
+                    return
+                if json.loads(self.prepared.contract_json).get('model') == _BPM_MODEL:
+                    from .lammps_bpm import parse_task_output
+                    self.result = parse_task_output(self.prepared,self.workdir,self.runtime,self.limits.output_bytes)
+                    self.state = TaskState.SUCCEEDED
                     return
                 texts = []
                 for name in ('trajectory.dump','log.lammps'):
