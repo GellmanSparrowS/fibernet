@@ -1,23 +1,29 @@
-# FiberNet 4.4.3
+# FiberNet 4.4.4
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.4.3
+## Changes in 4.4.4
 
-This release preserves network identities in analysis and export, corrects
-planar density and recovered 2D sparse-beam moments, and speeds random
-generation and 3MF export. It includes an installed example and source guides
-for grouped CPU training and fracture scans. See [release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_3.md)
-for changes that affect historical results.
+This release adds native StructureGraph input to the fracture CLI and an
+opt-in rotational BPM interface for a pinned external LAMMPS provider. It
+preserves fitted regressors after rejected inputs, reports target-axis errors,
+and corrects deformation-frame alignment and slow GIF playback.
+See [release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_4.md).
+
+The top-level paired-fracture, electrical-history, matched-backend and
+thermal-to-transport/export examples run from a version-matched source checkout
+or extracted source distribution. They are distinct from the installed
+`fibernet.examples` commands. The thermal-to-transport example is sequential
+one-way transfer; the fracture-history circuit uses fixed reference geometry.
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.4.3"
+python -m pip install "fibernet==4.4.4"
 ```
 
 Run the installed example from any directory:
@@ -32,9 +38,9 @@ It generates its own network and writes `network.json`, `network.png`,
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.4.3"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.4.3"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.4.3"       # experimental fracture backend
+python -m pip install "fibernet[ml]==4.4.4"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.4.4"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.4.4"       # experimental fracture backend
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.

@@ -1,3 +1,16 @@
+## [4.4.4]
+
+- Read explicitly selected native StructureGraph 3.1 inputs in the fracture CLI.
+- Add opt-in rotational BPM preparation and typed results for a pinned external
+  LAMMPS provider, retaining stable identities and native rupture steps.
+- Reject masked regression inputs before conversion, preserve fitted models
+  after rejected refits, and report expected and received training shapes.
+- Align each animated fiber with its own displacement rows and preserve slow
+  GIF playback durations.
+- Add versioned source examples for paired fracture, reference conductance,
+  matched axial backends and sequential thermal-to-mechanics/transport export.
+- See [4.4.4 release notes and migration](docs/RELEASE_4_4_4.md).
+
 ## [4.4.3]
 
 - Preserve sampled welds, stable fiber identities and scientific values across
