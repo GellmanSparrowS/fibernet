@@ -191,7 +191,7 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
                     continue
                 
                 # Skip already checked pair
-                pair_key = (min(i1, i2), max(i1, i2))
+                pair_key = (i1, i2) if i1 < i2 else (i2, i1)
                 if pair_key in checked_pairs:
                     continue
                 
@@ -223,7 +223,7 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
             for idx2 in range(idx1 + 1, len(segments)):
                 i2, _ = segments[idx2]
                 if i1 != i2:
-                    pair_key = (min(i1, i2), max(i1, i2))
+                    pair_key = (i1, i2) if i1 < i2 else (i2, i1)
                     checked_pairs.add(pair_key)
     
     # Midpoints in neighboring cells may be close even though the existing
@@ -231,7 +231,7 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
     # the legacy pair-level cache can suppress a later contact in another cell.
     from itertools import product
 
-    linked = {(min(i, j), max(i, j)) for i, j, _, _, _ in crosslinks}
+    linked = {(i, j) if i < j else (j, i) for i, j, _, _, _ in crosslinks}
     bounds = {}
     for members in grid.values():
         for i, si in members:
@@ -251,7 +251,7 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
                     j, sj = others[other_index]
                     if i == j:
                         continue
-                    pair = (min(i, j), max(i, j))
+                    pair = (i, j) if i < j else (j, i)
                     if pair in linked or (pair in best and best[pair][0] == 0):
                         continue
                     fi, fj = fibers[i], fibers[j]
@@ -260,8 +260,9 @@ def _detect_intersections_3d(fibers, threshold_factor=2.0):
                         continue
                     low_i, high_i = bounds[(i, si)]
                     low_j, high_j = bounds[(j, sj)]
-                    if any(low_i[d] > high_j[d] + threshold or
-                           low_j[d] > high_i[d] + threshold for d in range(3)):
+                    if (low_i[0] > high_j[0] + threshold or low_j[0] > high_i[0] + threshold
+                            or low_i[1] > high_j[1] + threshold or low_j[1] > high_i[1] + threshold
+                            or low_i[2] > high_j[2] + threshold or low_j[2] > high_i[2] + threshold):
                         continue
                     p, q = fi.centerline[si:si + 2]
                     a, b = fj.centerline[sj:sj + 2]
