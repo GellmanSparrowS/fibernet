@@ -88,7 +88,7 @@ def test_quote_and_option_do_not_constrain_unpinned_optional_extras(tmp_path):
 
 
 def test_checker_parses_on_python39_without_package_or_toml_import():
-    tree=ast.parse((ROOT/'scripts/check_bilingual_homepage.py').read_text(),feature_version=(3,9))
+    tree=ast.parse((ROOT/'scripts/check_bilingual_homepage.py').read_text(encoding='utf-8'),feature_version=(3,9))
     imports=[n.module for n in ast.walk(tree) if isinstance(n,ast.ImportFrom)]
     imports += [a.name for n in ast.walk(tree) if isinstance(n,ast.Import) for a in n.names]
     assert not any(x and (x in ('tomllib','tomli') or x.startswith('fibernet')) for x in imports)
@@ -99,8 +99,24 @@ def test_real_homepages_accept_next_unpublished_source_version(tmp_path):
     standalone=(ROOT/'README_CN.md').read_text(encoding='utf-8')
     english,chinese=CHECK.check_locale_structure(homepage,standalone)
     _config(tmp_path,'9.9.0')
-    current=re.search(r'(?m)^version = "([^"]+)"', (ROOT/'pyproject.toml').read_text()).group(1)
+    current=re.search(r'(?m)^version = "([^"]+)"', (ROOT/'pyproject.toml').read_text(encoding='utf-8')).group(1)
     english=english.replace('Development checkout: '+current,'Development checkout: 9.9.0')
     chinese=chinese.replace('开发版源码：'+current,'开发版源码：9.9.0')
     CHECK.check_install_commands(english,chinese,root=tmp_path)
     assert 'python -m pip install fibernet==9.9.0' not in english+chinese
+
+
+def test_homepage_source_reads_ignore_windows_default_encoding(monkeypatch, tmp_path):
+    original_read_text = Path.read_text
+
+    def windows_read_text(path, *args, **kwargs):
+        if not args and kwargs.get('encoding') is None:
+            kwargs['encoding'] = 'cp1252'
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, 'read_text', windows_read_text)
+    # Same source bytes and implicit decoding boundary as the Windows failure.
+    with pytest.raises(UnicodeDecodeError):
+        (ROOT/'scripts/check_bilingual_homepage.py').read_text()
+    test_checker_parses_on_python39_without_package_or_toml_import()
+    test_real_homepages_accept_next_unpublished_source_version(tmp_path)
