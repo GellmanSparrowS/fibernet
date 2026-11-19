@@ -54,6 +54,43 @@ def require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
+
+def check_install_commands(english: str, chinese: str, root: Path = ROOT) -> None:
+    """Check README commands against the literal project version, without imports.
+
+    The repository uses a literal project.version. Keep this narrow reader
+    compatible with Python 3.9 without importing FiberNet or adding a TOML dependency.
+    """
+    import shlex
+
+    config = (root / "pyproject.toml").read_text(encoding="utf-8")
+    section = re.search(r"(?ms)^\[project\][ \t]*\n(.*?)(?=^\[|\Z)", config)
+    version = (re.search(r"(?m)^version[ \t]*=[ \t]*([\"'])([^\"' \t\r\n]+)\1[ \t]*(?:#.*)?$",
+                         section.group(1)) if section else None)
+    require(version is not None, "Missing literal project.version in package configuration")
+    expected = version.group(2)
+    pattern = r"(?m)^[ \t]*python -m pip install fibernet==([^ \t\r\n]+)[ \t]*(?:#.*)?$"
+    for language, text in (("English", english), ("Chinese", chinese)):
+        versions = re.findall(pattern, text)
+        require(bool(versions) and all(value == expected for value in versions),
+                f"{language} pinned installation must use fibernet=={expected}")
+        # Check additional pip lines too: shell quotes or options must not hide
+        # a second, obsolete FiberNet pin beside the canonical command.
+        for line in text.splitlines():
+            if not re.match(r"^[ \t]*python -m pip install(?:[ \t]|$)", line):
+                continue
+            try:
+                tokens = shlex.split(line, comments=True)
+            except ValueError as exc:
+                raise ValueError(f"{language} installation command has invalid quoting") from exc
+            for token in tokens[4:]:
+                pin = re.fullmatch(r"fibernet(?:\[[^\]]+\])?==(.+)", token, re.I)
+                require(pin is None or pin.group(1) == expected,
+                        f"{language} pinned installation must use fibernet=={expected}")
+    require(re.search(r"(?m)^[ \t]*python -m pip install -e \.[ \t]*(?:#.*)?$", english) is not None,
+            "English editable source installation command missing")
+
+
 def headings(text: str) -> set[str]:
     """GitHub-compatible slugs for this documentation's plain headings."""
     result = set()
@@ -309,8 +346,7 @@ def main() -> None:
     zh_links = {canonical_destination(x) for x in destinations(chinese) if not x.startswith("#")}
     require(en_links == zh_links, f"Language content links differ: {en_links ^ zh_links}")
 
-    require("fibernet==4.4.1" in english and "pip install -e ." in english,
-            "Pinned release/source installation commands missing")
+    check_install_commands(english, chinese)
     require("pip install fibernet==4.2.0" not in english + chinese,
             "Stale published-package command advertised")
     document_checks = [check_links(ROOT / name) for name in
