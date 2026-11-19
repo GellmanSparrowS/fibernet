@@ -65,6 +65,12 @@ Use `FiberNetwork.connectivity_matrix(sparse=True)` for crosslink counts
 without allocating a dense matrix. See the
 [sparse connectivity contract and example](architecture/legacy-sparse-connectivity.md).
 
+`FiberNetwork.validate()` reports nonfinite centerline coordinates and invalid
+fiber list references. If crosslink records are present, its `num_components`
+includes all fibers and uses only crosslinks with valid references. The
+`num_crosslinks` count includes every stored record. Nonfinite coordinates
+leave `mean_length` and `total_length` as NaN.
+
 ### Import explicitly recorded straight-fiber welds
 
 `fibernet.core.single_junction_import.convert_exact_welded_crosslinks` is an

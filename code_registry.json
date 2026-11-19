@@ -240,7 +240,7 @@
    "Crosslink",
    "FiberNetwork"
   ],
-  "sha256": "a5b7d5fa5c85b85695ddbfd45bd89ec6e2a08c3d9e0e3365bd746eba6b089795"
+  "sha256": "1423d2b0237a905987341baeba3b446b825f4fbbd1f442a1a85cf957de4eb273"
  },
  "fibernet/core/pbc.py": {
   "purpose": "Periodic boundary conditions for fiber networks.",
@@ -5557,5 +5557,22 @@
    "test_large_zigzag_sparse_connectivity_uses_source_graph_degrees"
   ],
   "sha256": "d2c0e8455203033566b8296c5431129eb3a2734a8266b3b8998f583876223d99"
+ },
+ "tests/test_network_validation_references.py": {
+  "purpose": "Legacy network diagnostics use finite geometry and actual fiber references.",
+  "status": "active",
+  "symbols": [
+   "network_with_fibers",
+   "contact",
+   "test_empty_and_ordinary_reports_keep_existing_fields_and_warnings",
+   "test_infinite_coordinates_give_diagnostics_without_length_evaluation",
+   "test_nan_and_zero_length_diagnostics_remain_distinct",
+   "test_nonfinite_single_sample_retains_the_zero_length_diagnostic",
+   "test_bad_fiber_reference_returns_diagnostic",
+   "test_invalid_shared_reference_cannot_join_other_components",
+   "test_integer_index_protocol_keeps_valid_integer_subclasses",
+   "test_generated_zigzag_valid_report_matches_independent_geometry_counts"
+  ],
+  "sha256": "7043f8691026ddeb7260ed29d34a4ecd198df889caccba4c118ccc85873e546a"
  }
 }
