@@ -25,7 +25,8 @@ def to_gmsh(
     segments_per_fiber : int
         Number of beam elements per fiber.
     dimension : int
-        Mesh dimension (2 or 3).
+        Coordinate dimension (2 or 3), retained for compatibility. The file
+        always stores XYZ coordinates and the fibers form a 1D physical group.
     """
     # Build mesh
     nodes = []
@@ -66,7 +67,7 @@ def to_gmsh(
         # Physical groups
         f.write("$PhysicalNames\n")
         f.write(f"{1}\n")
-        f.write(f'{dimension} 1 "fibers"\n')
+        f.write('1 1 "fibers"\n')
         f.write("$EndPhysicalNames\n")
         
         # Nodes
