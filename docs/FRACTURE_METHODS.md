@@ -81,6 +81,25 @@ displacement. It measures energy released by this member-removal model, rather
 than a calibrated material fracture energy. Seeds, geometry, explicit SI
 parameters and source bindings accompany the results for reproduction.
 
+The paired mode compares an intact network with its notched counterpart.
+
+```bash
+python -m examples.fracture_scan --output-dir fracture_paired --compare-notch
+```
+
+Each seed and loading bound produces one `unnotched` and one `notched` case.
+Cases in a pair share the same generated graph, material, grips and displacement
+settings. Only the list of initially absent edges changes. Join cases by
+`pair_id` in the CSV or JSON. The shared `source_graph_sha256` hashes the
+pre-notch graph as compact UTF-8 JSON with sorted keys. The solver's geometry
+binding also includes the initial active mask, so the two bindings differ.
+
+Read peak reaction, external work and released elastic energy alongside each
+case's `final_displacement_m` and status. Full runs can stop at different
+displacements when a load path is lost. A completed run that reaches its
+loading limit with a path is right-censored. Incomplete runs and early stops
+with a remaining path have separate statuses and no observed path-loss displacement.
+
 ## Distribution and provenance
 
 `PROVENANCE.json` records the original hashes and verbatim extracted function names for beam, sparse and event kernels; the public adapter, guard, driver and checkpoint envelope are new. MIT repository attribution is preserved. NumPy/SciPy/psutil/threadpoolctl retain their separate licenses. No LAMMPS source, DLL, executable, private study request/result, research image or unpublished manuscript is part of this addition. The separate LAMMPS route is a different model with separate distribution obligations and platform validation; installing stock LAMMPS cannot replace the patched research engine.
