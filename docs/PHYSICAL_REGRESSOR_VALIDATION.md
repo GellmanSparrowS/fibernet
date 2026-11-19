@@ -54,3 +54,12 @@ Y_observed = np.asarray(Y[complete], dtype=float)
 Use the same `complete` selector for group labels, then choose validation indices
 within the filtered dataset. Nonfinite values still require separate handling.
 A rejected refit leaves the previously fitted model available.
+
+## Training array shapes
+
+Pass features as `X` with shape `(N, D)` and labels as `Y` with shape `(N, 3)`.
+This regressor fits three targets together; record their meanings and units in
+one fixed column order. A two-column label table, a one-dimensional target
+vector, or a transposed table reports the expected and received shapes before
+creating or replacing a fitted backend. For named single-target regression,
+use `fibernet.train_model` with an explicit dataset target and split.

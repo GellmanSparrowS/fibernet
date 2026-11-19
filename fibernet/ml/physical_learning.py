@@ -125,6 +125,9 @@ class Regressor:
               feature_schema=None, validation_indices=None):
         """Publish a completed fit together; callbacks see the previous fit.
 
+        X has shape (N, D); Y has exactly three target columns, shape (N, 3).
+        The caller supplies their physical meanings and units in a fixed order.
+
         ``feature_schema`` is an optional caller-declared identity, not inferred
         from width or verified from values. Use ``FEATURE_SCHEMA`` only for the
         canonical 14 ``light_features`` columns. Other nonempty printable strings
@@ -144,7 +147,12 @@ class Regressor:
         _require_unmasked(X, 'training features')
         _require_unmasked(Y, 'training targets')
         X, Y = np.asarray(X, float), np.asarray(Y, float)
-        if X.ndim != 2 or Y.shape != (len(X), 3) or len(X) < 5 or not np.isfinite(X).all() or not np.isfinite(Y).all():
+        if X.ndim != 2:
+            raise ValueError(f'training features must have shape (N, D); got {X.shape}')
+        expected = (len(X), 3)
+        if Y.shape != expected:
+            raise ValueError(f'training targets must have shape {expected}; got {Y.shape}')
+        if len(X) < 5 or not np.isfinite(X).all() or not np.isfinite(Y).all():
             raise ValueError('training requires at least 5 finite, physically labelled samples')
         if (not 0 < val_frac < 0.5 or int(epochs) < 1 or int(batch) < 1 or
                 int(patience) < 1 or not np.isfinite(lr) or lr <= 0):
