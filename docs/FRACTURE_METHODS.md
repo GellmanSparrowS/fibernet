@@ -61,6 +61,30 @@ parameters and source bindings accompany the results for reproduction.
 
 `PROVENANCE.json` records the original hashes and verbatim extracted function names for beam, sparse and event kernels; the public adapter, guard, driver and checkpoint envelope are new. MIT repository attribution is preserved. NumPy/SciPy/psutil/threadpoolctl retain their separate licenses. No LAMMPS source, DLL, executable, private study request/result, research image or unpublished manuscript is part of this addition. The separate LAMMPS route is a different model with separate distribution obligations and platform validation; installing stock LAMMPS cannot replace the patched research engine.
 
+## Track electrical conductance during fracture
+
+From a checkout installed with the fracture extra, run the seed 11 notched
+case with fixed electrodes on the original grip node IDs.
+
+```bash
+python -m examples.fracture_transport --output-dir fracture_transport
+```
+
+The one-way model assigns each intact member a reference conductance
+`G = σπr²/L₀` in S with conductivity `σ = 1 S/m`, the original radius `r`
+and original length `L₀` in m. Failed or initially absent members keep their
+stable edge IDs and carry zero current. Components without electrodes receive
+a zero-voltage reference with zero injection. An open circuit reports zero
+effective conductance and a null resistance.
+
+`electrical-history.csv` records every pre- and post-break observation,
+including consecutive changes at equal displacement. Each row pairs the
+mechanical reaction and strain energy with the electrical values. The JSON
+retains stable ID-ordered fields and hashes for the source graph and fracture result.
+The mechanical observation history does not supply per-observation nodal
+poses, so the calculation holds geometry and area at their reference values.
+It uses no electrical feedback into fracture.
+
 ## Manuscript wording draft
 
 We implemented an experimental progressive member-removal backend using linear, small-displacement Timoshenko frame elements with six degrees of freedom per node. Circular beam sections shared isotropic elastic constants and prescribed brittle strength parameters. A conservative combined normal/shear stress envelope determined member removal. At each event displacement, near-tied members were grouped by a versioned numerical tolerance and equilibrium was recomputed at the same displacement until no further member met the removal condition. Observations immediately before removal preserve the failure criterion and end resultants. Source, geometry and parameter hashes bind resumable equilibrated checkpoints. Loss of a grip-spanning material path was recorded as a topological endpoint; absolute poses of unrestrained fragments were left undefined. The model excludes automatic contact and finite-kinematic separation, and no experimental calibration or fracture-toughness identification is asserted. This software description must be paired with the actual release commit and the independently reported validation scope; it does not establish a new empirical result.
