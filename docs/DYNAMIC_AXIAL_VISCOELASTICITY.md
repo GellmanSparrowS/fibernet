@@ -164,3 +164,44 @@ curves; sparse sample intervals must not be summed or interpolated to recover
 omitted updates. Constitutive and dynamic channels are checked separately so
 one does not obscure the other, and per-edge values expose cross-edge
 cancellation.
+
+## Animate saved Taichi states
+
+`fibernet.viz.visualize_deformation` consumes one displacement row per sampled
+`FiberNetwork` centerline point, in fiber iteration order. A shared endpoint
+therefore appears separately for every incident fiber. Native Taichi results
+instead use graph-node rows identified by `result.metadata['node_ids']`.
+For the straight-member 105-node example, map these rows explicitly:
+
+```python
+import numpy as np
+from examples.dynamic_viscoelastic_105 import run
+from fibernet.viz import visualize_deformation
+
+graph, result = run('coarse')  # Actual 1024-step CPU simulation, 0.5 s.
+network = graph.to_fiber_network()
+rows = {nid: i for i, nid in enumerate(result.metadata['node_ids'])}
+reference = np.asarray(result.positions_trajectory[0])
+selected = np.linspace(0, len(result.positions_trajectory)-1, 9, dtype=int)
+frames = []
+for index in selected:
+    nodal = np.asarray(result.positions_trajectory[index]) - reference
+    frames.append(np.concatenate([
+        np.linspace(nodal[rows[edge.node_i]], nodal[rows[edge.node_j]],
+                    len(fiber.centerline))
+        for fiber, edge in zip(network.fibers, graph.edges.values())
+    ]))
+animation = visualize_deformation(network, frames, interval=500,
+                                    save_path='taichi_motion.gif')
+```
+
+This mapping applies to the example's nondegenerate straight edges retained in
+iteration order. The animation is an XY projection, so Z motion is not shown.
+It uses endpoint interpolation along each rendered chord;
+no additional time states are generated. `interval` controls playback in
+milliseconds per displayed frame, independently of simulation `dt`, `num_steps`
+and `save_interval`. Nine frames at 500 ms occupy a 4.5-second GIF loop, including
+the final-frame dwell; the physical trajectory here spans 0.5 seconds. GIF
+frame durations are quantized to 10 ms, and identical rendered frames may be
+combined by the encoder. MP4 export requires FFmpeg. Show any displacement
+magnification explicitly; do not change the saved simulation coordinates.

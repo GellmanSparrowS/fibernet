@@ -614,61 +614,102 @@ def visualize_deformation(
     theme: str = "light",
     **kwargs,
 ):
-    """Animate deformation of a fiber network over time.
-    
-    Parameters
-    ----------
-    network : FiberNetwork
-        Original (undeformed) network.
-    displacement_history : list of ndarray
-        List of Nx3 displacement arrays (one per timestep).
-    interval : int
-        Animation interval in ms.
-    save_path : str, optional
-        Path to save animation (.mp4 or .gif).
-    
-    Returns
-    -------
-    anim : FuncAnimation
+    """Animate per-point displacements in fiber iteration/centerline row order.
+
+    Each history frame has shape (sum(len(f.centerline)), 3). Shared endpoints
+    occur once per incident fiber. Convert solver stable-node rows explicitly
+    before calling; no nearest-node or row-prefix inference is performed.
+    The plot is an XY projection; Z displacements are not shown.
+    ``interval`` is positive playback milliseconds per saved frame, independent
+    of the physical simulation timestep. GIF durations are quantized by its
+    format. ``save_path`` accepts GIF or MP4 (the latter requires FFmpeg).
     """
+    from collections.abc import Sequence
+    from fractions import Fraction
+    import math
+    import numbers
+    from pathlib import Path
     import matplotlib.pyplot as plt
     from matplotlib.animation import FuncAnimation
-    
+
+    if (isinstance(interval, (bool, np.bool_)) or
+            not isinstance(interval, numbers.Real) or
+            not math.isfinite(interval) or interval <= 0):
+        raise ValueError("interval must be positive finite playback milliseconds")
+    centerlines = [np.asarray(f.centerline, dtype=float).copy() for f in network.fibers]
+    if not centerlines or any(c.ndim != 2 or c.shape[1] != 3 or
+                              not len(c) or not np.isfinite(c).all()
+                              for c in centerlines):
+        raise ValueError("network requires nonempty finite XYZ fiber centerlines")
+    offsets = np.r_[0, np.cumsum([len(c) for c in centerlines])]
+    def reject_masks(value):
+        if np.ma.isMaskedArray(value):
+            raise ValueError("displacement frames must not be masked")
+        if (isinstance(value, Sequence) and
+                not isinstance(value, (str, bytes, bytearray, memoryview))) or (
+                isinstance(value, np.ndarray) and value.dtype.kind == 'O'):
+            for item in (value.flat if isinstance(value, np.ndarray) else value):
+                reject_masks(item)
+
+    frames = []
+    for values in displacement_history:
+        reject_masks(values)
+        raw = np.asarray(values)
+        if raw.dtype.kind not in 'iuf' or raw.shape != (offsets[-1], 3):
+            raise ValueError("each displacement frame must contain one XYZ row per fiber centerline point")
+        frame = np.array(raw, dtype=float, copy=True)
+        if not np.isfinite(frame).all():
+            raise ValueError("displacement frames must be finite")
+        frames.append(frame)
+    if not frames:
+        raise ValueError("displacement history must not be empty")
+    target = Path(save_path) if save_path is not None else None
+    if target is not None and target.suffix.lower() not in ('.gif', '.mp4'):
+        raise ValueError("save_path must end in .gif or .mp4")
+    # Use the entire trajectory for a fixed camera that retains moving fibers.
+    reference = np.concatenate(centerlines)
+    low, high = reference.min(axis=0), reference.max(axis=0)
+    for frame in frames:
+        displaced = reference + frame
+        if not np.isfinite(displaced).all():
+            raise ValueError("displaced coordinates must be finite")
+        low = np.minimum(low, displaced.min(axis=0))
+        high = np.maximum(high, displaced.max(axis=0))
+    span = high[:2] - low[:2]
+    margin = .05 * np.maximum(span, max(float(span.max()), 1e-12))
     t = _THEMES.get(theme, _THEMES["light"])
     fig, ax = plt.subplots(figsize=(10, 10))
     fig.patch.set_facecolor(t["bg_color"])
     ax.set_facecolor(t["bg_color"])
-    
     lines = []
-    for fiber in network.fibers:
-        cl = fiber.centerline
+    for fiber, cl in zip(network.fibers, centerlines):
         line, = ax.plot(cl[:, 0], cl[:, 1], color=t["fiber_color"],
-                       linewidth=max(fiber.radius * 5, 0.3),
-                       solid_capstyle="round")
+                       linewidth=max(fiber.radius * 5, 0.3), solid_capstyle="round")
         lines.append(line)
-    
+    ax.set_xlim(low[0] - margin[0], high[0] + margin[0])
+    ax.set_ylim(low[1] - margin[1], high[1] + margin[1])
+    ax.set_aspect('equal')
+
     def update(frame):
-        disp = displacement_history[frame]
-        for i, (fiber, line) in enumerate(zip(network.fibers, lines)):
-            cl = fiber.centerline
-            # Displaced positions
-            if len(cl) == len(disp):
-                displaced = cl + disp
-            else:
-                # Fallback
-                displaced = cl + disp[:len(cl)] if len(disp) > len(cl) else cl
+        disp = frames[frame]
+        for i, (cl, line) in enumerate(zip(centerlines, lines)):
+            displaced = cl + disp[offsets[i]:offsets[i + 1]]
             line.set_data(displaced[:, 0], displaced[:, 1])
         return lines
-    
-    anim = FuncAnimation(fig, update, frames=len(displacement_history),
-                        interval=interval, blit=True)
-    
-    if save_path:
-        if save_path.endswith(".mp4"):
-            anim.save(save_path, writer="ffmpeg", fps=1000 // interval)
-        elif save_path.endswith(".gif"):
-            anim.save(save_path, writer="pillow", fps=1000 // interval)
-    
+
+    anim = FuncAnimation(fig, update, frames=len(frames),
+                         interval=float(interval), blit=True)
+    if target is not None:
+        writer = "ffmpeg" if target.suffix.lower() == '.mp4' else "pillow"
+        # Pillow converts reciprocal FPS to integer milliseconds; rational FPS
+        # avoids rounding 30 ms to 29 ms before GIF centisecond quantization.
+        fps = (1000.0 / float(interval) if writer == "ffmpeg" else
+               Fraction(1000, 1) / Fraction(float(interval)))
+        try:
+            anim.save(str(target), writer=writer, fps=fps)
+        except Exception:
+            plt.close(fig)
+            raise
     return anim
 
 
