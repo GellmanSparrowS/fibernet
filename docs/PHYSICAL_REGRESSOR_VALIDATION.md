@@ -36,6 +36,25 @@ selection and early stopping, so it is not an untouched final test set. Preserve
 the prior exposure history and keep final-test networks out of all fitting and
 model-selection decisions. A split alone does not establish scientific accuracy.
 
+## Missing observations
+
+Supply complete observed feature and target values to `train` and complete feature
+values to `predict`. NumPy masked arrays, including masked rows inside a sequence,
+raise `ValueError` before fitting or prediction. This includes wrappers whose masks are entirely false. First identify complete
+rows from both masks, then convert only the selected complete rows to ordinary
+arrays:
+
+```python
+complete = ~(np.ma.getmaskarray(X).any(axis=1) |
+             np.ma.getmaskarray(Y).any(axis=1))
+X_observed = np.asarray(X[complete], dtype=float)
+Y_observed = np.asarray(Y[complete], dtype=float)
+```
+
+Use the same `complete` selector for group labels, then choose validation indices
+within the filtered dataset. Nonfinite values still require separate handling.
+A rejected refit leaves the previously fitted model available.
+
 ## Training array shapes
 
 Pass features as `X` with shape `(N, D)` and labels as `Y` with shape `(N, 3)`.

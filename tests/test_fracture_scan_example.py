@@ -2,12 +2,14 @@
 import csv
 import hashlib
 import json
+import math
+import sys
 
 import numpy as np
 import pytest
 
 from examples import fracture_scan
-from fibernet import StructureGraph
+from fibernet import Material, StructureGraph
 from fibernet.sim.fracture import FractureConfig, FractureResult, FractureSolver
 
 
@@ -76,9 +78,13 @@ def test_scan_tracks_a_common_observed_failure_prefix(tmp_path):
         assert row['event_elastic_energy_drop_J'] == pytest.approx(release, rel=1e-12)
         assert abs(row['elastic_energy_ledger_residual_J']) < 1e-15
 
-    assert json.loads((out / 'summary.json').read_bytes())['cases'] == [short, full]
+    report = json.loads((out / 'summary.json').read_bytes())
+    assert report['cases'] == [short, full] and 'comparison' not in report
+    assert [row['case'] for row in report['cases']] == ['seed-11-horizon-short', 'seed-11-horizon-full']
     with (out / 'scan.csv').open(newline='') as stream:
-        table = list(csv.DictReader(stream))
+        reader = csv.DictReader(stream)
+        table = list(reader)
+        assert {'pair_id', 'notch_condition', 'source_graph_sha256'}.isdisjoint(reader.fieldnames)
     assert [case['status'] for case in table] == [short['status'], full['status']]
     assert table[0]['path_loss_displacement_m'] == ''
     with pytest.raises(FileExistsError):
@@ -133,3 +139,102 @@ def test_failed_solves_retain_inputs_and_missing_metrics(tmp_path, monkeypatch):
         assert row['error'] == 'RuntimeError: simulated failed equilibrium'
         _read_case(out, row, 'input')
         assert 'result_file' not in row and 'peak_reaction_N' not in row
+
+
+def test_opt_in_paired_cli_retains_shared_inputs_and_distinct_masks(tmp_path, monkeypatch):
+    pytest.importorskip('psutil')
+    pytest.importorskip('threadpoolctl')
+    out = tmp_path / 'paired'
+    monkeypatch.setattr(sys, 'argv', [
+        'fracture_scan', '--output-dir', str(out), '--compare-notch', '--seeds', '23',
+    ])
+    assert fracture_scan.main() == 0
+    summary = json.loads((out / 'summary.json').read_bytes())
+    assert summary['comparison']['conditions'] == ['unnotched', 'notched']
+    cases = summary['cases']
+    assert len(cases) == 4
+    with (out / 'scan.csv').open(newline='') as stream:
+        table = list(csv.DictReader(stream))
+
+    all_shared_sources = set()
+    for index, horizon in enumerate(('short', 'full')):
+        a, b = cases[2*index:2*index + 2]
+        assert a['pair_id'] == b['pair_id'] == f'seed-23-horizon-{horizon}'
+        assert [a['notch_condition'], b['notch_condition']] == ['unnotched', 'notched']
+        inputs = [_read_case(out, row, 'input') for row in (a, b)]
+        assert inputs[0]['initially_broken_edges'] == []
+        assert len(inputs[1]['initially_broken_edges']) == 6
+        different = {key for key in inputs[0] if inputs[0][key] != inputs[1][key]}
+        assert different == {'initially_broken_edges', 'notch_condition'}
+        canonical = json.dumps(inputs[0]['graph'], sort_keys=True, separators=(',', ':'), allow_nan=False)
+        source_sha = hashlib.sha256(canonical.encode('utf-8')).hexdigest()
+        assert a['source_graph_sha256'] == b['source_graph_sha256'] == source_sha
+        all_shared_sources.add(source_sha)
+        for pos, row in enumerate((a, b), 2*index):
+            assert table[pos]['pair_id'] == row['pair_id']
+            assert table[pos]['source_graph_sha256'] == source_sha
+            assert table[pos]['notch_condition'] == row['notch_condition']
+
+        results = [_read_case(out, row, 'result') for row in (a, b)]
+        assert {key for key in results[0]['binding']
+                if results[0]['binding'][key] != results[1]['binding'][key]} == {'geometry_sha256'}
+        for item, result in zip(inputs, results):
+            excluded = {i for i, active in enumerate(result['observations'][0]['mask']) if not active}
+            failures = {event['segment_id'] for event in result['events']}
+            assert excluded == set(item['initially_broken_edges']) and excluded.isdisjoint(failures)
+
+    assert len(all_shared_sources) == 1
+    assert all(row['status'] == 'right_censored_loading_bound' and row['path_loss_displacement_m'] is None
+               for row in cases[:2])
+    assert all(row['status'] == 'path_loss_observed' and row['path_loss_displacement_m'] is not None
+               for row in cases[2:])
+
+
+@pytest.mark.parametrize('notch,load_paths', [((), 2), ((0,), 1)])
+def test_paired_analytic_axial_force_and_elastic_energy(notch, load_paths):
+    pytest.importorskip('psutil')
+    pytest.importorskip('threadpoolctl')
+    graph = StructureGraph(dimension=3)
+    for position in ((0, 0, 0), (.1, 0, 0), (0, .01, 0), (.1, .01, 0)):
+        graph.add_node(position)
+    material = Material(youngs_modulus=1e9, poissons_ratio=.3)
+    for a, b in ((0, 1), (2, 3), (0, 2), (1, 3)):
+        graph.add_edge(a, b, radius=.001, material=material)
+    sigma = 1e6
+    critical = .1 * sigma / 1e9
+    full_peak = load_paths * sigma * math.pi * .001**2
+    for bound in (critical/2, critical*2):
+        config = FractureConfig(1e9, .3, sigma, sigma, axis=0, maximum_displacement_m=bound)
+        result = FractureSolver(graph, config, fixed_nodes=[0, 2], loaded_nodes=[1, 3],
+                                length_unit='m', initially_broken_edges=notch).run()
+        row = fracture_scan.summarize_result(result)
+        end = min(critical, bound)
+        peak = full_peak * end / critical
+        work = .5 * peak * end
+        spans = bound < critical
+        assert row['final_displacement_m'] == pytest.approx(end)
+        assert row['peak_reaction_N'] == pytest.approx(peak)
+        assert row['external_work_J'] == pytest.approx(work, rel=1e-10)
+        assert row['released_elastic_energy_J'] == pytest.approx(0. if spans else work, abs=1e-15)
+        assert row['final_strain_energy_J'] == pytest.approx(work if spans else 0., abs=1e-15)
+        assert row['failed_edge_count'] == (0 if spans else load_paths)
+        if spans:
+            assert row['status'] == 'right_censored_loading_bound'
+            assert row['path_loss_displacement_m'] is None
+        else:
+            assert row['status'] == 'path_loss_observed'
+            assert row['path_loss_displacement_m'] == pytest.approx(critical)
+
+
+def test_actual_paused_notched_trace_is_incomplete_not_loading_bound():
+    pytest.importorskip('psutil')
+    pytest.importorskip('threadpoolctl')
+    graph, fixed, loaded, notch = fracture_scan.make_network(11)
+    config = FractureConfig(1e9, .3, 1e6, 1e6, maximum_displacement_m=400e-6)
+    result = FractureSolver(graph, config, fixed_nodes=fixed, loaded_nodes=loaded,
+                            length_unit='m', initially_broken_edges=notch).run(stop_after_epochs=1)
+    row = fracture_scan.summarize_result(result)
+    assert row['status'] == 'incomplete' and row['termination_reason'] == 'paused'
+    assert row['complete'] is False and row['path_loss_displacement_m'] is None
+    assert 0 < row['final_displacement_m'] < config.maximum_displacement_m
+    assert row['peak_reaction_N'] > 0 and row['failed_edge_count'] > 0

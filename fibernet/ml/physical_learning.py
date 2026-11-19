@@ -137,12 +137,15 @@ class Regressor:
         ``validation_indices`` is an optional explicit list, tuple or 1-D array
         of distinct integer row indices. At least five total rows are required,
         with at least two in each partition. The complement trains the model and
-        fits normalization.
+        fits normalization. Masked features or targets are rejected before conversion;
+        select complete observed rows explicitly rather than discarding their masks.
         It overrides the random row split; ``val_frac`` is still validated.
         Callers must assign every related source-network variant to the same
         partition. Validation guides model selection and is not a final test set.
         """
         import copy
+        _require_unmasked(X, 'training features')
+        _require_unmasked(Y, 'training targets')
         X, Y = np.asarray(X, float), np.asarray(Y, float)
         if X.ndim != 2:
             raise ValueError(f'training features must have shape (N, D); got {X.shape}')
@@ -262,6 +265,7 @@ class Regressor:
         if (not hasattr(self, 'estimator') or
                 getattr(self, 'x_mean', None) is None):
             raise RuntimeError('train the physical regressor before prediction')
+        _require_unmasked(X, 'prediction features')
         X = np.asarray(X, float)
         if X.ndim not in (1, 2):
             raise ValueError('prediction features must have shape (D,) or (N, D)')
@@ -282,3 +286,16 @@ class Regressor:
 
 
 PhysicalRegressor = Regressor
+
+
+def _require_unmasked(value, label):
+    """Reject missing-data masks before NumPy can discard them."""
+    from collections.abc import Sequence
+    if np.ma.isMaskedArray(value):
+        raise ValueError(f'{label} must not be masked; provide complete observed values')
+    if (isinstance(value, Sequence) and
+            not isinstance(value, (str, bytes, bytearray, memoryview))) or (
+            isinstance(value, np.ndarray) and value.dtype.kind == 'O'):
+        for item in (value.flat if isinstance(value, np.ndarray) else value):
+            _require_unmasked(item, label)
+

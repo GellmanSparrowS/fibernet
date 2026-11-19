@@ -12,7 +12,7 @@ saved result. No GPU, Taichi, or desktop application is needed for that example.
 Installation
 ------------
 
-The library requires Python 3.9 or newer. Its base dependencies are NumPy,
+The core library requires Python 3.9 or newer. Its base dependencies are NumPy,
 SciPy, NetworkX, and Matplotlib. Use a virtual environment to keep optional
 workflows separate from your other projects:
 
@@ -62,6 +62,53 @@ so shells do not interpret square brackets:
 For a checkout, use the equivalent editable command, for example
 ``python -m pip install -e ".[ml]"``. The desktop application has its own
 requirements; library extras do not replace them.
+
+.. _taichi-installation:
+
+Taichi installation
+~~~~~~~~~~~~~~~~~~~
+
+Both ``accel`` and ``full`` include ``taichi==1.7.4``. Choose a standard
+64-bit CPython environment matching one of its official binary wheel targets:
+
+.. list-table:: Taichi 1.7.4 wheel targets
+   :header-rows: 1
+
+   * - System and architecture
+     - CPython
+     - Platform tag
+   * - Apple Silicon, macOS 11.0 or later
+     - 3.10–3.13
+     - ``macosx_11_0_arm64``
+   * - Windows x86-64
+     - 3.9–3.13
+     - ``win_amd64``
+   * - Linux x86-64, glibc 2.27 or later
+     - 3.9–3.13
+     - ``manylinux_2_27_x86_64``
+
+These are Taichi's wheel-selection targets. Pip also resolves the remaining
+requested dependencies, including the other dependencies of ``full``.
+The 1.7.4 files do not include Intel macOS, Windows ARM64, Linux ARM64/musl,
+PyPy, or CPython 3.14 wheels, and PyPI supplies no source distribution for this
+version. Use the base installation for workflows that do not need Taichi.
+
+The macOS 11.0 minimum comes from the wheel's deployment tag; GPU/Metal
+availability also depends on the runtime and hardware. Installation does not
+select or qualify a GPU backend. Check the installed Taichi version and
+initialize its CPU runtime with:
+
+.. code-block:: bash
+
+   python -c "import taichi as ti; print(ti.__version__); ti.init(arch=ti.cpu)"
+
+For FiberNet's dynamic simulator, ``arch="cpu"`` selects CPU execution;
+``arch="gpu"`` requests Taichi's GPU selection. Use the backend documented for
+your physical model and environment.
+
+The table follows the `official Taichi 1.7.4 files
+<https://pypi.org/project/taichi/1.7.4/#files>`_ and the `platform tag specification
+<https://packaging.python.org/en/latest/specifications/platform-compatibility-tags/>`_.
 
 Legacy graph image features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

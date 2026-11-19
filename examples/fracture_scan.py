@@ -1,4 +1,4 @@
-"""Scan displacement bounds for brittle-member removal in a synthetic notched mesh.
+"""Scan displacement bounds and optionally compare initial notch conditions.
 
 Run: python examples/fracture_scan.py --output-dir NEW_DIRECTORY
 """
@@ -124,16 +124,24 @@ def summarize_result(result):
     )
 
 
-def _run_case(out, seed, horizon, config, graph, fixed, loaded, notch):
-    name = f'seed-{seed}-horizon-{horizon}'
+def _run_case(out, seed, horizon, config, graph, fixed, loaded, notch, *,
+              notch_condition=None, source_graph_sha256=None):
+    pair_id = f'seed-{seed}-horizon-{horizon}'
+    name = pair_id
+    pairing = {}
+    if notch_condition is not None:
+        name = f'{pair_id}-{notch_condition}'
+        pairing = dict(pair_id=pair_id, notch_condition=notch_condition,
+                       source_graph_sha256=source_graph_sha256)
     case = out / name
     case.mkdir()
     settings = dict(seed=seed, rng='PCG64', horizon=horizon, length_unit='m',
                     graph=graph.to_dict(), config=asdict(config), fixed_nodes=fixed,
-                    loaded_nodes=loaded, initially_broken_edges=notch)
+                    loaded_nodes=loaded, initially_broken_edges=notch, **pairing)
     row = dict(
         case=name, seed=seed, horizon=horizon, displacement_bound_m=config.maximum_displacement_m,
         input_file=f'{name}/input.json', input_sha256=_write_json(case / 'input.json', settings),
+        **pairing,
     )
     try:
         solver = FractureSolver(graph, config, fixed_nodes=fixed, loaded_nodes=loaded,
@@ -153,8 +161,8 @@ def _run_case(out, seed, horizon, config, graph, fixed, loaded, notch):
     return row
 
 
-def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM):
-    """Run two matched displacement horizons per seed, into a new directory."""
+def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM, compare_notch=False):
+    """Run two horizons per seed, optionally paired by the initial notch mask."""
     seeds = tuple(seeds)
     if (not 1 <= len(seeds) <= 8 or len(set(seeds)) != len(seeds)
             or any(type(seed) is not int or not 0 <= seed < 2**32 for seed in seeds)):
@@ -168,12 +176,22 @@ def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM):
     rows = []
     for seed in seeds:
         graph, fixed, loaded, notch = make_network(seed)
+        conditions = ((None, notch),)
+        graph_sha256 = None
+        if compare_notch:
+            source = json.dumps(graph.to_dict(), sort_keys=True, separators=(',', ':'), allow_nan=False)
+            graph_sha256 = hashlib.sha256(source.encode('utf-8')).hexdigest()
+            conditions = (('unnotched', []), ('notched', notch))
         for horizon, bound_um in (('short', short_um), ('full', full_um)):
             config = FractureConfig(
                 YOUNG_PA, POISSON, STRENGTH_PA, STRENGTH_PA, axis=1,
                 maximum_displacement_m=bound_um * 1e-6, reference_displacement_m=reference_m,
             )
-            rows.append(_run_case(out, seed, horizon, config, graph, fixed, loaded, notch))
+            for condition, removed in conditions:
+                rows.append(_run_case(
+                    out, seed, horizon, config, graph, fixed, loaded, removed,
+                    notch_condition=condition, source_graph_sha256=graph_sha256,
+                ))
     fields = (
         'case', 'seed', 'horizon', 'displacement_bound_m', 'status', 'complete',
         'termination_reason', 'path_loss_observed', 'path_loss_displacement_m',
@@ -184,11 +202,13 @@ def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM):
         'input_file', 'input_sha256', 'result_file',
         'result_sha256', 'error',
     )
+    if compare_notch:
+        fields += ('pair_id', 'notch_condition', 'source_graph_sha256')
     with (out / 'scan.csv').open('x', encoding='utf-8', newline='') as stream:
         table = csv.DictWriter(stream, fieldnames=fields)
         table.writeheader()
         table.writerows({key: row.get(key) for key in fields} for row in rows)
-    _write_json(out / 'summary.json', dict(
+    summary = dict(
         example_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         seeds=list(seeds), rng='PCG64', short_um=short_um, full_um=full_um,
         grid=dict(columns=COLUMNS, rows=ROWS, spacing_m=SPACING_M,
@@ -197,7 +217,14 @@ def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM):
         energy_scope='Elastic energy release in the member-removal model, '
                      'external work minus the change in stored elastic energy.',
         cases=rows,
-    ))
+    )
+    if compare_notch:
+        summary['comparison'] = dict(
+            factor='initial notch mask',
+            conditions=['unnotched', 'notched'],
+            metric_window='Each trace ends at its recorded final displacement.',
+        )
+    _write_json(out / 'summary.json', summary)
     return rows
 
 
@@ -207,9 +234,12 @@ def main():
     parser.add_argument('--seeds', type=int, nargs='+', default=SEEDS)
     parser.add_argument('--short-um', type=float, default=SHORT_UM)
     parser.add_argument('--full-um', type=float, default=FULL_UM)
+    parser.add_argument('--compare-notch', action='store_true',
+                        help='pair an unnotched run with each notched run')
     args = parser.parse_args()
     try:
-        rows = run_scan(args.output_dir, seeds=args.seeds, short_um=args.short_um, full_um=args.full_um)
+        rows = run_scan(args.output_dir, seeds=args.seeds, short_um=args.short_um,
+                        full_um=args.full_um, compare_notch=args.compare_notch)
     except (ValueError, FileExistsError) as exc:
         parser.error(str(exc))
     for row in rows:
