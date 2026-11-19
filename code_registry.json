@@ -861,7 +861,7 @@
    "export_obj",
    "export_ply"
   ],
-  "sha256": "e7a67be27cd0d354ba9f410d8d6fd635f9b7987cad24a628dc94f2e090ff5b01"
+  "sha256": "04961468ccc4780e0994bc49a5560ba5cdf8da96b4c3b4a0df00ed1d4290b4fd"
  },
  "fibernet/io/pandas_io.py": {
   "purpose": "Pandas integration for FiberNet.",
@@ -989,7 +989,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "5e443da3ed19c65ac14e6e3a698af83fddf3b188a8bcfcd966ac867d0d41cd9a"
+  "sha256": "517415de2cf8cd1b341b45085cc7f67262224a9f868e5ba1c649c9f21a0f49ed"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -4839,7 +4839,7 @@
    "test_3d_mixed_poisson_torsion_series_prescribed_rotation",
    "test_raw_permuted_rows_and_ids_preserve_material_and_physics"
   ],
-  "sha256": "efcdffa7366e4c56333593f604c80cb1120f8c622be46d54b5e8420a3831bd4f"
+  "sha256": "d2c8b85448144e09fc0dc0d0184cb94f2d67fb8405c7dd789ec611bafdc7590f"
  },
  "tests/test_graph_scalar_scale.py": {
   "purpose": "Scalar representation must not change a graph's cross-section scaling.",

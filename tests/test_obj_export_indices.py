@@ -6,9 +6,13 @@ import warnings
 import numpy as np
 import pytest
 
+from fibernet import gen
 from fibernet.core.fiber import Fiber
 from fibernet.core.network import FiberNetwork
-from fibernet.io.mesh_export import _generate_cylinder_mesh, export_obj
+from fibernet.core.transform import scale
+from fibernet.io import export_obj
+from fibernet.io.mesh_export import _generate_cylinder_mesh
+from fibernet.units import convert_length
 
 
 SEGMENTS = (
@@ -151,6 +155,41 @@ def test_obj_preserves_endpoint_chord_and_plain_triangle_contract(tmp_path):
     assert straight.read_bytes() == curved.read_bytes()
     assert all(line.startswith(('#', 'v ', 'f ')) or not line
                for line in curved.read_text().splitlines())
+
+
+def test_obj_preserves_generated_microfibers_in_meters(tmp_path):
+    pytest.importorskip('networkx')
+    micrometers = gen.ZigZagGenerator(n_cols=3, n_rows=3).to_fiber_network(radius=0.1)
+    assert (micrometers.num_fibers, micrometers.num_crosslinks) == (45, 90)
+    factor = convert_length(1., 'um', 'm')
+    meters = scale(micrometers, factor, origin=np.zeros(3))
+    original_path, scaled_path = tmp_path / 'micrometers.obj', tmp_path / 'meters.obj'
+    export_obj(micrometers, original_path)
+    export_obj(meters, scaled_path)
+    reference_vertices, reference_faces = _parse_obj(original_path)
+    vertices, faces = _parse_obj(scaled_path)
+
+    assert len(vertices) == 810
+    assert len(faces) == 1440
+    np.testing.assert_array_equal(faces, reference_faces)
+    np.testing.assert_allclose(np.ptp(vertices[:, 2]), 2e-7, rtol=1e-13, atol=0)
+    np.testing.assert_allclose(vertices / factor, reference_vertices, atol=2e-13, rtol=1e-13)
+    generated_vertices = np.vstack([
+        _generate_cylinder_mesh(fiber.start_point, fiber.end_point, fiber.radius)[0]
+        for fiber in meters.fibers
+    ])
+    np.testing.assert_array_equal(vertices, generated_vertices)
+
+    triangles = vertices[faces - 1]
+    normal_vectors = np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0])
+    assert np.all(np.linalg.norm(normal_vectors, axis=1) > 0)
+    mesh_volume = abs(np.sum((triangles[:, 0] * normal_vectors).sum(axis=1))) / 6
+    # Area of a regular octagon times chord length, summed over the fibers.
+    expected_volume = sum(
+        4 * fiber.radius**2 * np.sin(np.pi / 4) * np.linalg.norm(fiber.end_point - fiber.start_point)
+        for fiber in meters.fibers
+    )
+    np.testing.assert_allclose(mesh_volume, expected_volume, rtol=2e-12, atol=0)
 
 
 @pytest.mark.parametrize('count', [1, 4])

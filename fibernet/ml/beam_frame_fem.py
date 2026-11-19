@@ -1540,7 +1540,8 @@ class BeamFrameFEM:
                         r = edge_vals[e].radius
                 except Exception:
                     pass
-                A = np.pi * r**2
+                # Use the same binary64 radius as the assembled circular section.
+                A = np.pi * float(r)**2
                 E = self.E if effective_moduli is None else effective_moduli[idx]
                 strain = sigma_axial[idx] / E if E > 0 else 0
                 energy += 0.5 * E * strain**2 * A * L
