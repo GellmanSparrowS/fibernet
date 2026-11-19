@@ -498,7 +498,7 @@
    "poisson_line_network_2d",
    "random_curved_fibers_3d"
   ],
-  "sha256": "f3d817981e1209e3b469bfe085a7d1bcacb61044faa4f8b352f502b23675e9ab"
+  "sha256": "e806c73698755467c55873ab5b2aaaccd69e1d8b93c76ef051eb71878bccb950"
  },
  "fibernet/gen/field_guided.py": {
   "purpose": "Field-guided fiber network generator.",
