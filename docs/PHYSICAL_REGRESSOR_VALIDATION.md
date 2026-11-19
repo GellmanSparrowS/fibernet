@@ -35,3 +35,12 @@ not infer whether networks or variants are related. Validation informs model
 selection and early stopping, so it is not an untouched final test set. Preserve
 the prior exposure history and keep final-test networks out of all fitting and
 model-selection decisions. A split alone does not establish scientific accuracy.
+
+## Training array shapes
+
+Pass features as `X` with shape `(N, D)` and labels as `Y` with shape `(N, 3)`.
+This regressor fits three targets together; record their meanings and units in
+one fixed column order. A two-column label table, a one-dimensional target
+vector, or a transposed table reports the expected and received shapes before
+creating or replacing a fitted backend. For named single-target regression,
+use `fibernet.train_model` with an explicit dataset target and split.

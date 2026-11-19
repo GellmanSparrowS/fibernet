@@ -3949,7 +3949,7 @@
    "select_candidate",
    "Regressor"
   ],
-  "sha256": "f3a137bef505f4d0eaf9ebdc8aef13f648bc8d778f6152db3e6f4a34c7347102"
+  "sha256": "3ed1bbb2aa14042de32c9aa8f60aeec584ec1609d43ca3bae8590340e5c05ec0"
  },
  "fibernet/ml/physical_surrogate.py": {
   "purpose": "NumPy-only structural descriptors and three-target surrogate MLP.",
