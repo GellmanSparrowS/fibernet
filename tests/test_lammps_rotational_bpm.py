@@ -129,7 +129,9 @@ def test_bpm_provider_requires_exact_release_and_pin(tmp_path, monkeypatch):
     task=LAMMPSTask(prepared,runtime,tmp_path/'fresh')
     assert seen==[runtime]
     task.runtime=replace(runtime,expected_version=20250722)
-    with pytest.raises(LAMMPSContractError,match='pinned official'):
+    # Non-POSIX hosts reject native execution before the start-time provider check.
+    expected = 'pinned official' if os.name == 'posix' else 'requires POSIX resource limits'
+    with pytest.raises(LAMMPSContractError,match=expected):
         task.start()
     assert not task.workdir.exists()
 
@@ -215,8 +217,11 @@ def test_reach_equality_is_checked_in_native_coordinates(tmp_path):
     ({15: math.nextafter(1., 2.),16: math.ulp(1.),18: math.nextafter(3., 4.)}, True),
     ({15: 1.000001}, False),
     ({20: 1e-6}, False),
-    ({2: math.ulp(0.)}, False),
-    ({5: math.ulp(0.)}, False),
+    # These nonzero position and velocity changes survive flush-to-zero modes.
+    ({2: sys.float_info.min}, False),
+    ({5: sys.float_info.min}, False),
+    # The stored quaternion starts at one. Even one ULP must fail at the seam.
+    ({8: math.nextafter(1., 2.)}, False),
 ])
 def test_restart_boundary_accepts_wrench_roundoff_only(tmp_path, updates, accepted):
     prepared=_stationary(tmp_path,checkpoint=True)
