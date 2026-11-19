@@ -1,3 +1,14 @@
+## [4.4.3]
+
+- Preserve sampled welds, stable fiber identities and scientific values across
+  graph conversion, component joining, interchange and export.
+- Correct sparse 2D beam moment recovery, planar density and pore geometry.
+  Preserve full linear beam strain energy separately from the axial proxy.
+- Add opt-in sparse adjacency and HDF5 mechanical properties, plus installed
+  onboarding and grouped CPU-training guidance.
+- Reduce planar and 3D generator overhead and batch 3MF XML writes.
+- See [4.4.3 release notes and migration](docs/RELEASE_4_4_3.md).
+
 ## [Unreleased] - Generated ZigZag endpoint welds
 
 - Store each welded junction's actual endpoint parameters on its fibers.
