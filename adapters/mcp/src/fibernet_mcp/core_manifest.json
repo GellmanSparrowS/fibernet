@@ -220,7 +220,7 @@
   "sim/electrothermal.py": "fdb1f74531dd7600a39a41d53caac6f1b649455969cc871e40de3b1874abd187",
   "sim/fem.py": "1d0cbc029c9eca1fa08978a4303d9b44f47b0888fb53506dec648d5b6c97f998",
   "sim/fracture/__init__.py": "02ecd9cddcc886a225874ec6f10450a3f934d1eeb255376485dee78a698ce667",
-  "sim/fracture/__main__.py": "7a371776f4ed453066953914452bdc9e07c54b93a269f06969c196d06c7aeaee",
+  "sim/fracture/__main__.py": "3fbe6dfcb8fde63594eead96c9e7b6a0a99dce0630059532817dc98eaae7c25d",
   "sim/fracture/_beam.py": "b37399d580cea864034b227bc9e769d7da9c6e9681619c1ef0d4a9c85497713a",
   "sim/fracture/_engine.py": "49c871e6b3c97e1fe089192199ad76116a39343bf15cd88f687bc82862fd8ef2",
   "sim/fracture/_sparse.py": "a1c51a35df44b1b62892cca53cfb71be9a5d5e8aa4ce86e2bb9f3cfe5a667227",

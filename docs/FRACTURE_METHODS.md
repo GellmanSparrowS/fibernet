@@ -1,6 +1,9 @@
-# Experimental linear-static fracture API (4.3.0)
+# Experimental linear-static fracture API
 
-Install `python -m pip install "fibernet[fracture]==4.3.0"`. The new, explicit API is `fibernet.sim.fracture.{FractureConfig,FractureSolver,FractureResult}`; the old `fibernet.simulate` spring/FEM behavior and stretch-ratio convention are unchanged. Run `python -m examples.fracture_quickstart` from a source checkout. The example is synthetic and is not a material experiment.
+From the checkout containing this guide, install the fracture dependencies with
+`python -m pip install '.[fracture]'`. Run
+`python -m examples.fracture_quickstart` there for a synthetic example.
+The explicit API is `fibernet.sim.fracture.{FractureConfig,FractureSolver,FractureResult}`.
 
 ## Accepted geometry and units
 
@@ -26,7 +29,28 @@ A material path loss means no connected active-edge component touches both grips
 
 Results expose stable original node/edge IDs, failure events, pre/post event observations, final state and source/config/geometry bindings. `FractureResult.save` creates a new JSON file and refuses overwrite. JSON null fragment poses must not be interpolated as zero motion. The existing physical-learning three-target schema and old archived fracture/toughness fields are unchanged; fracture labels require a separate schema and must never silently be mixed with reduced-model labels.
 
-CLI: `python -m fibernet.sim.fracture --graph graph.json --config fracture_config.json --fixed 0 --loaded 2 --length-unit m --output fracture.json`. Config JSON contains the FractureConfig fields. Geometry JSON must use the dedicated `fibernet-fracture-geometry-1` schema with `nodes: [{id,position}]` and `edges: [{id,node_i,node_j,radius,material,internal_points?}]`; each edge material requires explicit `youngs_modulus`, `poissons_ratio`, and `shear_modulus`. This intentionally rejects legacy StructureGraph JSON, which does not preserve the required material/ID contract. Optional arguments are `--initially-broken`, `--checkpoint`, and `--resume`.
+## Command line
+
+```bash
+python -m fibernet.sim.fracture --graph graph.json --config fracture_config.json --fixed 0 --loaded 2 --length-unit m --output fracture.json
+```
+
+The default `--graph-format fibernet-fracture-geometry-1` reads the dedicated
+geometry schema. Supply `nodes: [{id, position}]` and
+`edges: [{id, node_i, node_j, radius, material, internal_points?}]`.
+Each edge material must specify `youngs_modulus`, `poissons_ratio` and
+`shear_modulus`.
+
+For a native graph written with `StructureGraph.save_json` or `api.export`, add
+`--graph-format structure-graph-3.1`. Supply explicit node and edge IDs, XYZ
+positions, endpoints, radii and all three elastic constants on each edge.
+This mode retains graph metadata, internal points and parallel edges and applies
+the same fracture physics checks as `FractureSolver`. Select grips and any
+initially broken edges using the stored IDs. Supply `--length-unit` for the
+file's coordinates and radii. The material moduli and config remain in SI.
+
+The config JSON contains the `FractureConfig` fields. Optional controls are
+`--initially-broken`, `--checkpoint` and `--resume`.
 
 ## Reproducible notched-network scan
 
