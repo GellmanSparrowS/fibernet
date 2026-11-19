@@ -156,3 +156,10 @@ This slice does not qualify arbitrary mechanical results, curved conductors, 3D
 geometry, reciprocal coupling, stability, material calibration, physical
 accuracy, or production-scale performance. A later saved-mechanics reader or
 broader domain needs its own explicit contract and independent review.
+
+## Runnable sequential workflow
+
+See [saved temperature through geometry export](THERMAL_TO_TRANSPORT_EXPORT.md)
+for a complete example using existing APIs. It extracts SI translations by node
+ID from saved-temperature mechanics, prepares conductance, solves the circuit,
+and writes identity-preserving VTU and geometry-only STL.
