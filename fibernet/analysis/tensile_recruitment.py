@@ -3,6 +3,8 @@
 The result is a graph statistic of positive axial strain. It is not a complete
 force-flow, bending, compression, or contact-force measurement.
 """
+from array import array as _typed_array
+from collections.abc import Sequence as _Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -127,8 +129,24 @@ def _grip_prune(active, edges, n_nodes, left, right):
     return out
 
 
+def _require_unmasked(values, name):
+    """Check for missing observations before NumPy discards their masks."""
+    if np.ma.is_masked(values):
+        raise ValueError(f'{name} must not contain masked values')
+    if isinstance(values, np.ndarray):
+        if values.dtype.kind != 'O':
+            return
+        values = values.flat
+    elif (not isinstance(values, _Sequence)
+          or isinstance(values, (str, bytes, bytearray, memoryview, range, _typed_array))):
+        return
+    for item in values:
+        _require_unmasked(item, name)
+
+
 def _node_indices(values, name):
     """Preserve integer identity before converting public array-like inputs."""
+    _require_unmasked(values, name)
     message = f'{name} must contain finite integer-valued node indices, not bools or strings'
     range_message = f'{name} contains a node index outside the supported nonnegative int64 range'
     maximum = int(np.iinfo(np.int64).max)
@@ -176,6 +194,8 @@ def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
     integral floating-point values. Fractional values, booleans and strings
     are rejected rather than truncated or interpreted as node identities.
     Indices must fit nonnegative int64 and lie below n_nodes.
+    Strain, endpoints and grips must each be fully observed. Masked arrays
+    are accepted when all entries are present.
     The threshold is ``max(alpha * frame_max, min_active)`` or a positive
     strain quantile; recruitment uses a strict greater-than comparison.
     With Python float or NumPy float64 controls, ``threshold_curve`` retains
@@ -183,6 +203,7 @@ def analyze_tensile_recruitment(edge_strain, edges, left_nodes, right_nodes,
     for previously recruited edges. Extended-precision scalar controls are
     not an exact-replay contract.
     """
+    _require_unmasked(edge_strain, 'edge_strain')
     strain = np.asarray(edge_strain, dtype=float)
     edges = _node_indices(edges, 'edges')
     left = _node_indices(left_nodes, 'left_nodes').reshape(-1)
