@@ -6,7 +6,8 @@ retain the SI conventions documented by :class:`Material`.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections import deque
+from collections.abc import Mapping, Sequence
 
 import hashlib
 import json
@@ -41,6 +42,7 @@ def _json_copy(value):
 
 
 def _ids(values, label):
+    _unmasked_field(values, label)
     values = list(values)
     for value in values:
         if (isinstance(value, (bool, np.bool_)) or
@@ -51,15 +53,45 @@ def _ids(values, label):
 
 
 def _unmasked_field(value, label):
-    """Reject masks before array coercion, including nested ID-aligned values."""
+    """Reject masks before coercion, including empty and nested containers."""
     pending, seen = [value], set()
     while pending:
         item = pending.pop()
         if np.ma.isMaskedArray(item):
             raise ValueError(f'{label}: masked arrays/scalars are unsupported, including all-false masks')
-        if isinstance(item, (list, tuple)) and id(item) not in seen:
-            seen.add(id(item))
+        if id(item) in seen:
+            continue
+        seen.add(id(item))
+        if isinstance(item, Mapping):
+            pending.extend(item.keys())
+            pending.extend(item.values())
+        elif isinstance(item, np.ndarray):
+            if item.dtype.hasobject:
+                pending.extend(item.flat)
+        elif isinstance(item, (Sequence, deque)) and not isinstance(item, (str, bytes, bytearray, memoryview)):
             pending.extend(item)
+
+
+def _source_inputs(graph, node_ids, edge_ids):
+    """Validate raw observations before numeric/bool/JSON conversion."""
+    _unmasked_field(graph.dimension, 'geometry dimension')
+    _unmasked_field(graph.box_size, 'box_size')
+    for nid in node_ids:
+        node = graph.nodes[int(nid)]
+        record_id = _ids([node.node_id], 'node record ID')[0]
+        if record_id != nid:
+            raise ValueError('node record ID must match its dictionary key')
+        _unmasked_field(node.position, f'node {int(nid)} position')
+        _unmasked_field(node.boundary, f'node {int(nid)} boundary')
+    for eid in edge_ids:
+        edge = graph.edges[int(eid)]
+        record_id = _ids([edge.edge_id], 'edge record ID')[0]
+        if record_id != eid:
+            raise ValueError('edge record ID must match its dictionary key')
+        _unmasked_field(edge.node_i, f'edge {int(eid)} endpoint')
+        _unmasked_field(edge.node_j, f'edge {int(eid)} endpoint')
+        _unmasked_field(edge.radius, f'edge {int(eid)} radius')
+        _unmasked_field(edge.internal_points, f'edge {int(eid)} internal points')
 
 
 def _fields(values, count, specs, location):
@@ -117,8 +149,9 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     Points follow sorted node IDs. Cells follow graph edge insertion order.
     Field arrays must already follow those orders; ID mappings are aligned here.
     Each location accepts arrays or complete ID mappings, never both.
-    Masked arrays/scalars are unsupported, including all-false masks.
-    Only edges without internal
+    Masked arrays/scalars in geometry, boundaries or fields are unsupported,
+    including empty and all-false masks. Record IDs must be nonnegative int64
+    values matching their dictionary keys. Only edges without internal
     points are accepted. Parallel edges and isolated nodes are retained.
     Units are one of m, cm, mm, um, nm; no conversion is performed.
     """
@@ -131,6 +164,7 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
     node_ids = _ids(graph.nodes, 'node IDs')
     node_ids.sort()
     edge_ids = _ids(graph.edges, 'edge IDs')
+    _source_inputs(graph, node_ids, edge_ids)
     if not len(node_ids) or not len(edge_ids):
         raise ValueError('line export requires at least one edge and its nodes')
     rows = {int(nid): i for i, nid in enumerate(node_ids)}
