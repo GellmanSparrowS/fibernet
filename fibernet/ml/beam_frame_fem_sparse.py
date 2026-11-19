@@ -147,7 +147,9 @@ class SparseBeamFrameFEM:
         Returns:
             u: (n_nodes, 3) displacements [ux, uy, θ]
             sigma: (n_unique_edges,) axial stresses
-            moments: (n_unique_edges, 2) bending moments at each end
+            moments: (n_unique_edges, 2) local section bending moments
+                [M_i, M_j] in input force × length units, with M = -EI v''.
+                The element's nodal moments are [M_i, -M_j].
         """
         # Convert to numpy if needed
         if torch is not None and isinstance(edge_index, torch.Tensor):
@@ -232,10 +234,11 @@ class SparseBeamFrameFEM:
             eps = (uj_local[0] - ui_local[0]) / L
             sigma[idx] = self.E * eps
             
-            # Bending moments (from local displacements)
-            E, L2, L3 = self.E, L**2, L**3
-            M_i = E*I/L2 * (6*(ui_local[1] - uj_local[1])/L + 4*ui_local[2] + 2*uj_local[2])
-            M_j = E*I/L2 * (6*(ui_local[1] - uj_local[1])/L + 2*ui_local[2] + 4*uj_local[2])
+            # Recover M = -EI v'' from the cubic Hermite transverse field.
+            bending_scale = self.E * I / L
+            transverse_term = 6 * (ui_local[1] - uj_local[1]) / L
+            M_i = bending_scale * (transverse_term + 4*ui_local[2] + 2*uj_local[2])
+            M_j = -bending_scale * (transverse_term + 2*ui_local[2] + 4*uj_local[2])
             moments[idx] = [M_i, M_j]
         
         return u, sigma, moments, edge_list
