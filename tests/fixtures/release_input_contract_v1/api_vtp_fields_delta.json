@@ -1,0 +1,13 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/api.py",
+  "accepted_stage": "PR 223 independently reviewed VTP field dispatch; source ddc20acbcc4b8d988fffe2f25696aa3ca417b760",
+  "base_sha256": "56ffbe75b08c9d20fc708aa8f3e3fe2e4f1d41a9a1628507a3997a7aa58e5a6e",
+  "result_sha256": "4ca3eaa96933cadda1e21d114ab5565c3d0056b6e0902ef3c29e7d3cbd93ff8a",
+  "hunks": [
+    {
+      "before": "    elif format == 'vtp':\n        from fibernet.io.vtk import to_vtk_xml\n        to_vtk_xml(network, filename)\n",
+      "after": "    elif format == 'vtp':\n        from fibernet.io.vtk import to_vtk_xml\n        to_vtk_xml(network, filename, **kwargs)\n"
+    }
+  ]
+}
