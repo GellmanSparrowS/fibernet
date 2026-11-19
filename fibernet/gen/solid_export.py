@@ -356,11 +356,20 @@ def export_solid(path, solid):
                 archive.writestr('_rels/.rels','<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>')
                 with archive.open('3D/3dmodel.model','w') as stream:
                     stream.write(b'<?xml version="1.0" encoding="UTF-8"?><model unit="millimeter" xml:lang="en-US" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02"><resources><object id="1" type="model"><mesh><vertices>')
-                    for x,y,z in solid.vertices:
-                        stream.write(('<vertex x="%.17g" y="%.17g" z="%.17g"/>'%(x,y,z)).encode())
+                    batch_size = 1024
+                    for start in range(0, len(solid.vertices), batch_size):
+                        vertices = solid.vertices[start:start + batch_size]
+                        stream.write(''.join(
+                            '<vertex x="%.17g" y="%.17g" z="%.17g"/>' % (x, y, z)
+                            for x, y, z in vertices
+                        ).encode())
                     stream.write(b'</vertices><triangles>')
-                    for a,b,c in solid.faces:
-                        stream.write(('<triangle v1="%d" v2="%d" v3="%d"/>'%(a,b,c)).encode())
+                    for start in range(0, len(solid.faces), batch_size):
+                        faces = solid.faces[start:start + batch_size]
+                        stream.write(''.join(
+                            '<triangle v1="%d" v2="%d" v3="%d"/>' % (a, b, c)
+                            for a, b, c in faces
+                        ).encode())
                     stream.write(b'</triangles></mesh></object></resources><build><item objectid="1"/></build></model>')
 
 
