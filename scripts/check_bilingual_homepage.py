@@ -90,7 +90,7 @@ def check_install_commands(english: str, chinese: str, root: Path = ROOT) -> Non
         links = [urlsplit(url) for url in destinations(text)
                  if urlsplit(url).netloc == "pypi.org" and "/project/fibernet" in urlsplit(url).path]
         require(bool(links) and all(link.scheme == "https" and link.path == "/project/fibernet/"
-                                   and not link.query for link in links),
+                                   and not link.query and not link.fragment for link in links),
                 f"{language} public documentation must use the stable PyPI project page")
     require(re.search(r"(?m)^[ \t]*python -m pip install -e \.[ \t]*(?:#.*)?$", english) is not None,
             "English editable source installation command missing")

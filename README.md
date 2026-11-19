@@ -84,7 +84,7 @@ python -m pip install fibernet
 python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 ```
 
-请使用 [PyPI 页面上的入门示例](https://pypi.org/project/fibernet/#generate-analyze-simulate-and-save)。需要固定版本复现时，使用所安装发行版本页面给出的精确版本命令。上方源码示例对应当前仓库版本，可能与已安装的发行版本不同。
+请使用 [PyPI 页面上的入门示例](https://pypi.org/project/fibernet/)。需要固定版本复现时，使用所安装发行版本页面给出的精确版本命令。上方源码示例对应当前仓库版本，可能与已安装的发行版本不同。
 
 ## 1. 生成网络
 
@@ -1658,7 +1658,7 @@ python -m pip install fibernet
 python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 ```
 
-Use the [quick start on PyPI](https://pypi.org/project/fibernet/#generate-analyze-simulate-and-save). For reproducible runs, use the exact version command on the installed release's page. The source examples above follow this checkout and can differ from the installed release.
+Use the [quick start on PyPI](https://pypi.org/project/fibernet/). For reproducible runs, use the exact version command on the installed release's page. The source examples above follow this checkout and can differ from the installed release.
 
 ## 1. Generate networks
 

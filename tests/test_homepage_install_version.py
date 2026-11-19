@@ -17,7 +17,7 @@ def _config(path, version='4.4.3', quote='"'):
 
 
 def _commands(version='4.4.3'):
-    common='python -m pip install fibernet\n[PyPI](https://pypi.org/project/fibernet/#generate-analyze-simulate-and-save)\n'
+    common='python -m pip install fibernet\n[PyPI](https://pypi.org/project/fibernet/)\n'
     return ('Development checkout: '+version+'\npython -m pip install -e .\n'+common,
             '开发版源码：'+version+'\n'+common)
 
@@ -47,7 +47,7 @@ def test_public_homepage_cannot_acquire_version_constraints(tmp_path, language, 
 
 
 @pytest.mark.parametrize('language', [0,1])
-@pytest.mark.parametrize('suffix', ['4.4.3/','?version=4.4.3'])
+@pytest.mark.parametrize('suffix', ['4.4.3/','?version=4.4.3','#generate-analyze-simulate-and-save','#user-content-generate-analyze-simulate-and-save'])
 def test_version_specific_or_malformed_project_page_is_rejected(tmp_path, language, suffix):
     _config(tmp_path)
     commands=list(_commands())
