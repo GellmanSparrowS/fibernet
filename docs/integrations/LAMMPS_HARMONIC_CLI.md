@@ -280,3 +280,10 @@ Calling the accessor does not discover or admit a runtime or run a solver.
 `not_established_by_dispatch`. Actual execution still requires independently
 admitted, explicit runtime and resource contracts. Mutating any returned
 metadata does not change subsequent calls or accepted model/profile limits.
+
+## Matched Taichi comparison
+
+The [matched axial backends example](MATCHED_AXIAL_BACKENDS.md) applies one shared
+SI network, nodal masses, supports and dead load to both native solvers. It saves
+raw trajectories and energies and checks time-step convergence against an exact
+spring solution and an independent nonlinear network reference.
