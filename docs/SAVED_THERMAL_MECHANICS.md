@@ -111,3 +111,9 @@ is intended. Existing outputs are never replaced. The mechanics JSON supplies
 objects use canonical decimal string keys. No coefficient or support is inferred.
 This CLI retains default profile limits; explicit size contracts are available
 through the Python library API, not additional CLI or MCP options.
+
+## Complete one-way export workflow
+
+The [thermal-to-transport example](THERMAL_TO_TRANSPORT_EXPORT.md) generates a
+network, reloads its saved thermal field, solves mechanics and deformed
+conductance, and exports stable-ID VTU plus geometry-only STL in one command.
