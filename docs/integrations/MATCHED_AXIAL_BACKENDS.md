@@ -30,6 +30,8 @@ The three integration grids use 256, 512 and 1024 steps over each fixed duration
 
 ## Run
 
+Choose a CPython/platform combination from the [Taichi installation requirements](../getting_started.rst). The Taichi pin applies to both `accel` and `full`; LAMMPS runtime qualification remains a separate step.
+
 From a repository checkout, install FiberNet with its Taichi extra:
 
 ```bash
