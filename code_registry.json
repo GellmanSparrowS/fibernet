@@ -3788,7 +3788,7 @@
    "export_solid",
    "export_route"
   ],
-  "sha256": "5b77e8d7d4760bd87e46f91f65c32d359505d608bdf8631b5283cb280a9f08a5"
+  "sha256": "cfe4b7642f864f07f3dc027cd7ab407e3183c1835752dc6dae23b35146110503"
  },
  "fibernet/gen/tube_solid.py": {
   "purpose": "Analytic polygonal cylinders and round joints with manifold Boolean union.",
