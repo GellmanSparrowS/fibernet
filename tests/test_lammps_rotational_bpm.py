@@ -136,13 +136,22 @@ def test_bpm_provider_requires_exact_release_and_pin(tmp_path, monkeypatch):
     assert not task.workdir.exists()
 
 
-def _stationary(path, *, reach_boundary=False, checkpoint=False):
+def _stationary(path, *, reach_boundary=False, checkpoint=False, reach_override=None):
     graph=StructureGraph(dimension=3)
     left=graph.add_node([0.,0.,0.])
-    point=(.001,.081,0.) if reach_boundary else (.02,0.,0.)
+    point=(.007,.024,0.) if reach_boundary else (.02,0.,0.)
     right=graph.add_node(point)
     sid=graph.add_edge(left,right)
-    reach=math.dist([0.,0.,0.],np.asarray(point)*.001) if reach_boundary else .0001
+    native=[float(x*.001/1e-6) for x in point]
+    # Native coordinates (7, 24, 0) have the exact binary64 norm 25.
+    # Derive the SI bound from that norm, not a separately rounded SI norm.
+    reach=math.dist((0.,0.,0.),native)*1e-6 if reach_boundary else .0001
+    if reach_boundary:
+        assert native == [7.,24.,0.] and reach/1e-6 == 25.
+        # A separately rounded SI norm is one ULP above this same bound.
+        assert math.dist((0.,0.,0.),[v*1e-6 for v in native]) > reach
+    if reach_override is not None:
+        reach=reach_override
     box=((-0.0002,0.0002),)*3
     prepared=prepare_rotational_bpm(
         graph,length_unit='mm',maximum_bond_length_m=reach,
@@ -156,7 +165,6 @@ def _stationary(path, *, reach_boundary=False, checkpoint=False):
         name='ATOMS' if kind=='ATOMS' else 'ENTRIES'
         return headers+f'ITEM: {name} {cols}\n'+''.join(' '.join(map(str,row))+'\n' for row in values)
     atoms=[]
-    native=[float(x*.001/1e-6) for x in point]
     for i,pos in enumerate(((0.,0.,0.),native),1):
         atoms.append([i,1,*pos,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1000,4])
     segments = (('',range(2)),('-after',range(1,3))) if checkpoint else (('',range(3)),)
@@ -211,6 +219,22 @@ def test_reach_equality_is_checked_in_native_coordinates(tmp_path):
     runtime=RuntimeSpec('cli_serial_static',sys.executable,expected_banner=bpm._NATIVE_BANNER)
     out=bpm.parse_task_output(prepared,tmp_path,runtime,1024**2)
     assert len(out.frames)==3 and out.frames[-1].active_edge_ids==(0,)
+
+    reach=json.loads(prepared.contract_json)['maximum_bond_length_m']
+    assert reach/1e-6 == 25.
+    tighter=math.nextafter(reach,0.)
+    assert tighter/1e-6 < 25.
+    with pytest.raises(LAMMPSContractError,match='fit the declared reach'):
+        _stationary(tmp_path,reach_boundary=True,reach_override=tighter)
+
+    outside_y=math.nextafter(24.,math.inf)
+    assert math.dist((0.,0.,0.),(7.,outside_y,0.)) > 25.
+    path=tmp_path/'trajectory.dump'
+    text=path.read_text()
+    assert '2 1 7.0 24.0 0.0' in text
+    path.write_text(text.replace('2 1 7.0 24.0 0.0',f'2 1 7.0 {outside_y!r} 0.0'))
+    with pytest.raises(LAMMPSContractError,match='active bond left declared length domain'):
+        bpm.parse_task_output(prepared,tmp_path,runtime,1024**2)
 
 
 @pytest.mark.parametrize('updates, accepted', [
