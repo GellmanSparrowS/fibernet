@@ -5840,6 +5840,7 @@
   "purpose": "Bounded small-strain static elasticity on a conforming Tet4Bundle.",
   "status": "active",
   "symbols": [
+   "Tet4CellFields",
    "Tet4StaticResult",
    "_BandPlan",
    "_BandBudgetExceeded",
@@ -5855,14 +5856,19 @@
    "_pack_lower_band",
    "_strain_matrix",
    "_material_tensor",
+   "_element_kinematics",
    "_element_blocks",
+   "_exact_field_vector",
+   "_field_dot",
+   "_tensor_rows",
+   "_recover_cell_fields",
    "_assemble",
    "_checked_normal_rescale",
    "_factor_band",
    "_fixed_solve",
    "solve_static_tet4"
   ],
-  "sha256": "9265ba77df6559221ae9dc2f61784961a2c605d039c2454f3f11e1645a112660"
+  "sha256": "b37dadde2f96e332a54a37276e214ff650fc18f807cddeea8c7805a0abd1fd5a"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
@@ -5879,9 +5885,13 @@
    "test_band_budget_stops_before_assembly",
    "test_lazy_optional_meshio_and_no_implicit_facade_export",
    "test_shifted_factor_only_checks_positive_floor",
-   "test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder"
+   "test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder",
+   "test_default_does_not_recover_fields_and_legacy_positional_result",
+   "test_cell_fields_two_material_fitted_physics_and_owned_ids",
+   "test_cell_fields_tilted_mixed_affine_signed_shear",
+   "test_cell_fields_zero_supported_only_and_tiny_arithmetic"
   ],
-  "sha256": "dc8551ed9ae41a713625d84543acb1364a19a9d6b34b11c1263bc7402eb49ae8"
+  "sha256": "7c83eeeb94c199e0b062024e5cba2b4cfbf570870ad7a15fcbeee40dc3a4a2a8"
  },
  "examples/tet4_static_welded_junction.py": {
   "purpose": "Reproducible Tet4 static example: three orthogonal welded cylinders.",

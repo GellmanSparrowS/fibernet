@@ -68,3 +68,40 @@ mesh pieces, or general spatial conformity. It does not support nonzero
 prescribed motion, surface tractions as an input format, stress export,
 contact, nonlinear mechanics, or dynamics. No performance or numerical
 guarantee is made across mesh families or platforms.
+
+## Optional cell strain and stress
+
+Request fields during the solve with `return_cell_fields=True`. The default
+is `False`; `result.cell_fields` is then `None` and no fields are computed.
+
+```python
+result = solve_static_tet4(
+    bundle, forces_by_id=nodal_forces, fixed_dofs_by_id=held_axes,
+    return_cell_fields=True,
+)
+fields = result.cell_fields
+# Integrate U = Σ V σ:ε / 2. The double contraction counts both shear entries.
+import numpy as np
+energy_J = 0.5 * np.einsum("c,cij,cij->", fields.volume_m3, fields.stress_Pa, fields.strain)
+```
+
+- `Tet4CellFields` contains detached arrays in bundle **cell** order,
+  with NumPy write-protection enabled. It prevents accidental edits;
+  it does not make an array immutable if a caller deliberately re-enables
+  writing. Use exact uint64 `cell_ids` and `material_ids` to label or
+  join rows within that solve and bundle, without converting IDs to
+  floating point. Equal IDs across solves do not establish that the
+  mesh or material definitions are the same.
+- `strain` and `stress_Pa` each have shape `(M, 3, 3)`; they are full
+  symmetric tensors in global Cartesian axes. Strain is dimensionless:
+  the shear entries are tensor shear, half the engineering shear.
+  Cauchy stress is in Pa and tensile-positive. Each `volume_m3` is in m³.
+  The solve uses the bundle's coordinate unit and the correct material
+  for each cell without a caller-managed node join.
+- Recovery uses the same bounded validated cells and constitutive model.
+  Results are constant within each linear tetrahedron, not nodal averages
+  or interface tractions. Do not interpret staircase-corner or support
+  peaks as converged stresses or predictions of strength. Approximate
+  cancellation can round nominally zero components; requesting fields is
+  not a componentwise accuracy guarantee. Unrepresentable field recovery
+  raises `ValueError`; it does not fill fields with zeros or NaNs.

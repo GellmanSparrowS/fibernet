@@ -8,6 +8,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Mapping
 from dataclasses import dataclass
+from fractions import Fraction
 from itertools import combinations
 import math
 
@@ -16,10 +17,10 @@ from scipy import linalg, sparse
 from scipy.sparse.csgraph import reverse_cuthill_mckee
 
 from fibernet.io.tet4_meshio import (
-    Tet4Bundle, _float64, _integer, _row_count, _unmasked_field, _validate,
+    Tet4Bundle, _binary64_ratio, _float64, _integer, _row_count, _unmasked_field, _validate,
 )
 
-__all__ = ['Tet4StaticResult', 'solve_static_tet4']
+__all__ = ['Tet4CellFields', 'Tet4StaticResult', 'solve_static_tet4']
 
 _LENGTH_TO_M = {'m': 1., 'cm': 1e-2, 'mm': 1e-3, 'um': 1e-6, 'nm': 1e-9}
 _AXIS = {'x': 0, 'y': 1, 'z': 2}
@@ -27,7 +28,25 @@ _MAX_POINTS = 1800
 _MAX_TETS = 8000
 _MAX_FACTOR_ENTRIES = 3_000_000
 _MAX_ELEMENT_CONDITION = 1e10
+_MIN_NORMAL_BITS = 1 << 52
+_FIELD_FAST_PRODUCT_MIN_BITS = (1023 - 900) << 52  # binary64 encoding of 2**-900
+_MIN_NORMAL_EXACT = Fraction(1, 1 << 1022)
 _RIGID_RANK_TOLERANCE = 128. * np.finfo(np.float64).eps
+
+@dataclass(frozen=True)
+class Tet4CellFields:
+    """Detached SI tensors, constant in each cell and ordered by cell_ids.
+
+    Strain is dimensionless tensor strain (not engineering shear). Cauchy
+    stress is tensile-positive, and both tensors are in global x/y/z axes.
+    """
+
+    cell_ids: np.ndarray
+    material_ids: np.ndarray
+    strain: np.ndarray
+    stress_Pa: np.ndarray
+    volume_m3: np.ndarray
+
 
 @dataclass(frozen=True)
 class Tet4StaticResult:
@@ -42,6 +61,7 @@ class Tet4StaticResult:
     free_residual_inf_N: float
     normalized_backward_error: float
     relative_energy_work_error: float
+    cell_fields: Tet4CellFields | None = None
 
 @dataclass(frozen=True)
 class _BandPlan:
@@ -275,7 +295,7 @@ def _material_tensor(record):
     return c
 
 
-def _element_blocks(mesh):
+def _element_kinematics(mesh):
     x = mesh.points * _LENGTH_TO_M[mesh.length_unit]
     if not np.isfinite(x).all():
         raise ValueError('point coordinates in m are outside supported range')
@@ -293,10 +313,80 @@ def _element_blocks(mesh):
             raise ValueError(f'Tet4 row {k}: volume is outside supported numerical range')
         corner = np.linalg.inv(d) / scale
         b = _strain_matrix(np.vstack([-corner.sum(axis=0), corner]))
+        yield tet, b, tensors[int(mid)], volume
+
+
+def _element_blocks(mesh):
+    for tet, b, tensor, volume in _element_kinematics(mesh):
         dofs = (3 * tet[:, None] + np.arange(3)).ravel()
-        kc = volume * (b.T @ tensors[int(mid)] @ b)
+        kc = volume * (b.T @ tensor @ b)
         # Symmetrize once at the numerical boundary; physical operator is symmetric.
         yield dofs, 0.5 * kc + 0.5 * kc.T
+
+def _exact_field_vector(items):
+    return [Fraction(*_binary64_ratio(word)) for word in items.view(np.uint64).tolist()]
+
+
+def _field_dot(matrix, vector, exact_vector=None):
+    """Small dense products, with exact fallback near under/overflow."""
+    with np.errstate(under='ignore', over='ignore', invalid='ignore'):
+        products = matrix * vector
+        result = products.sum(axis=1)
+    mag = _magnitude_bits(products)
+    nonzero_inputs = (_magnitude_bits(matrix) != 0) & (_magnitude_bits(vector) != 0)
+    # Even two exact binary64 significands have at most 106 significant
+    # product bits. Cancellation of products >= 2**-900 cannot leave a
+    # nonzero subnormal residual, but can produce ordinary rounded zero.
+    risky = np.any(nonzero_inputs & (mag < _FIELD_FAST_PRODUCT_MIN_BITS), axis=1) | ~np.isfinite(result)
+    if exact_vector is not None:
+        risky[:] = True
+    if np.any(risky):
+        values = _exact_field_vector(vector) if exact_vector is None else exact_vector
+        for i in np.flatnonzero(risky):
+            exact = sum(a * v for a, v in zip(_exact_field_vector(matrix[i]), values))
+            if 0 < abs(exact) < _MIN_NORMAL_EXACT:
+                raise ValueError('nonzero Tet4 cell component outside supported normal binary64 range')
+            result[i] = float(exact)
+    return result
+
+
+def _tensor_rows(rows):
+    return rows[:, [[0, 3, 5], [3, 1, 4], [5, 4, 2]]]
+
+
+def _recover_cell_fields(mesh, displacement_m):
+    n = len(mesh.cell_ids)
+    strain, stress = np.empty((n, 6)), np.empty((n, 6))
+    volume = np.empty(n)
+    for i, (tet, b, tensor, cell_volume) in enumerate(_element_kinematics(mesh)):
+        volume[i] = cell_volume
+        # Local displacement differences improve translation cancellation.
+        u = displacement_m[tet]
+        with np.errstate(under='ignore', over='ignore'):
+            delta = (u[1:] - u[0]).ravel()
+        mag = _magnitude_bits(delta)
+        lost = ((mag == 0).reshape(3, 3) & (u[1:] != u[0])).any()
+        exact_delta = None
+        if lost or np.any((mag != 0) & (mag < _MIN_NORMAL_BITS)) or not np.isfinite(delta).all():
+            exact_u = _exact_field_vector(u.ravel())
+            exact_delta = [value - exact_u[k % 3]
+                           for k, value in enumerate(exact_u[3:])]
+        engineering = _field_dot(b[:, 3:], delta, exact_delta)
+        stress[i] = _field_dot(tensor, engineering)
+        strain[i] = engineering
+    _check_normal_or_zero(volume, 'Tet4 cell volume')
+    # B stores engineering shear. Halving a nonzero value may itself
+    # underflow; check before multiplying, including with FTZ enabled.
+    if np.any((_magnitude_bits(strain[:, 3:]) != 0) &
+              (_magnitude_bits(strain[:, 3:]) < 2 * _MIN_NORMAL_BITS)):
+        raise ValueError('nonzero Tet4 cell strain outside supported normal binary64 range')
+    strain[:, 3:] *= 0.5
+    arrays = (mesh.cell_ids, mesh.material_ids, _tensor_rows(strain),
+              _tensor_rows(stress), volume)
+    for a in arrays:
+        a.setflags(write=False)
+    return Tet4CellFields(*arrays)
+
 
 def _assemble(mesh):
     n = len(mesh.tetrahedra)
@@ -424,7 +514,8 @@ def _fixed_solve(stiffness, force, plan):
     return u, free, float(energy), float(half_work), backward, relative
 
 def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
-                      fixed_dofs_by_id: Mapping) -> Tet4StaticResult:
+                      fixed_dofs_by_id: Mapping,
+                      return_cell_fields: bool = False) -> Tet4StaticResult:
     """Solve first-order isotropic static elasticity with zero Cartesian holds.
 
     Supply nodal forces in N as three-component vectors keyed by stable node
@@ -436,7 +527,13 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     the order of the bundle's node IDs. Unsupported geometry, singular or
     poorly conditioned equations, or an exceeded resource limit raise
     ValueError. Does not solve beam, nonlinear, or time-dependent mechanics.
+
+    With return_cell_fields=True, also recover one constant strain tensor,
+    tensile-positive Cauchy stress tensor (Pa) and volume (m³) per validated
+    cell. This is an element-wise diagnostic, not a peak stress estimate.
     """
+    if not isinstance(return_cell_fields, bool):
+        raise TypeError('return_cell_fields must be a bool')
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if (_row_count(bundle.points, 'points') > _MAX_POINTS or
@@ -464,7 +561,14 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     if not np.isfinite([energy, half_work, worst_residual, backward, relative]).all() or energy < 0.:
         raise ValueError('Tet4 energy state is outside supported numerical range')
     u = u.reshape(fixed.shape)
+    fields = None
+    if return_cell_fields:
+        try:
+            with np.errstate(divide='raise', over='raise', invalid='raise'):
+                fields = _recover_cell_fields(mesh, u)
+        except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
+            raise ValueError('Tet4 cell fields could not be safely evaluated') from exc
     for array in (mesh.node_ids, u, reactions, fixed):
         array.setflags(write=False)
     return Tet4StaticResult(mesh.node_ids, u, reactions, fixed, energy, half_work,
-                            worst_residual, backward, relative)
+                            worst_residual, backward, relative, fields)
