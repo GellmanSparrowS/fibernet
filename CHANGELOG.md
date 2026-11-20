@@ -1,3 +1,10 @@
+## [4.4.6]
+
+- Preserve fiber endpoints when mapping a custom StructureGraph with sparse
+  node IDs onto a 3D surface. Older versions could silently connect the wrong
+  corners or raise an index error after a node was deleted.
+- See [4.4.6 release notes and migration](docs/RELEASE_4_4_6.md).
+
 ## [4.4.5]
 
 - Check historical batch-result paths before resume, including fully completed
