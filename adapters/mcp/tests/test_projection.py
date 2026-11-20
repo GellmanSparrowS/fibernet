@@ -16,6 +16,7 @@ import jsonschema
 import psutil
 import pytest
 
+from distribution_metadata import NATIVE_SOURCE_COUNT
 from projection_fixtures import fixture_bytes
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -165,7 +166,7 @@ def test_real_stdio_saved_complex_report_reference(tmp_path):
                     provenance=json.loads((await session.read_resource('fibernet://provenance/1')).contents[0].text)
                     manifest=json.loads((ROOT/'src/fibernet_mcp/core_manifest.json').read_text())
                     assert provenance['canonical_core_manifest_sha256']==sha(canonical(manifest))
-                    assert provenance['source_file_count']==263
+                    assert provenance['source_file_count']==NATIVE_SOURCE_COUNT
                     catalog=(await session.call_tool('fibernet_catalog',{})).structuredContent
                     assert 'project_fiber_network_report' in catalog['capabilities']
                     graph=catalog['graphs'][0];gid=graph['graph_id']

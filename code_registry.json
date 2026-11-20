@@ -5779,5 +5779,52 @@
    "test_existing_finite_input_boundaries_remain_unchanged"
   ],
   "sha256": "1f692282a78671131f5634aa84b75186709d9bfb94d14f2d1b11ac4679e413a3"
+ },
+ "fibernet/io/tet4_meshio.py": {
+  "purpose": "Strict optional Tet4 geometry/material interchange, not a solver.",
+  "status": "active",
+  "symbols": [
+   "Tet4Bundle",
+   "_meshio",
+   "_integer",
+   "_row_count",
+   "_bounded_counts",
+   "_integers",
+   "_float64",
+   "_points",
+   "_binary64_ratio",
+   "_nondegenerate",
+   "_validate",
+   "_hash",
+   "write_tet4_vtu_bundle",
+   "_unique_object",
+   "_manifest",
+   "_children",
+   "_array",
+   "_VTUTree",
+   "_check_vtu",
+   "_validate_zip_catalog",
+   "_read_mesh",
+   "read_tet4_vtu_bundle"
+  ],
+  "sha256": "3b3cb18d531e5534a7d520592b69d9f0aa7e4107b2fa847e7abb592daf4dd91d"
+ },
+ "tests/test_tet4_meshio.py": {
+  "purpose": "Optional v1 Tet4 bundles: synthetic geometry and actual Meshio 5.x.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "test_real_tet4_interchange_no_unit_or_id_change",
+   "test_int64_ids_and_large_offset_geometry",
+   "test_invalid_model_refused_before_optional_io",
+   "test_nonpositive_elastic_modulus_incompressibility_and_unknown_material_properties",
+   "test_no_clobber_and_cleanup_on_race_or_backend_failure",
+   "test_reader_refuses_non_v1_content",
+   "test_lazy_import_even_where_meshio_is_installed",
+   "test_writer_checks_row_limits_before_iterating_or_staging",
+   "test_reader_checks_header_row_limits_before_meshio",
+   "test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates"
+  ],
+  "sha256": "053f1ac4147a984673ca336063f82eae1effa826ad26ae0499786fd29c65fd93"
  }
 }
