@@ -94,6 +94,37 @@ def _source_inputs(graph, node_ids, edge_ids):
         _unmasked_field(edge.internal_points, f'edge {int(eid)} internal points')
 
 
+def _field_array(value, label):
+    """Preserve exact integers if NumPy promoted a sequence to floats."""
+    array = np.asarray(value)
+    if array.dtype.kind != 'f' or not isinstance(value, Sequence):
+        return array
+    # Object boxing inspects the source sequence, not its already rounded
+    # common dtype. This includes integer vectors with differing row dtypes.
+    raw = (item[()] if isinstance(item, np.ndarray) and item.ndim == 0 else item
+           for item in np.asarray(value, dtype=object).flat)
+    integers = [(i, int(item)) for i, item in enumerate(raw)
+                if isinstance(item, (int, np.integer))
+                and not isinstance(item, (bool, np.bool_, np.timedelta64))]
+    if not integers:
+        return array
+    if len(integers) == array.size:
+        values = [item for _, item in integers]
+        low, high = min(values), max(values)
+        if np.iinfo(np.int64).min <= low and high <= np.iinfo(np.int64).max:
+            dtype = np.int64
+        elif 0 <= low and high <= np.iinfo(np.uint64).max:
+            dtype = np.uint64
+        else:
+            raise ValueError(f'{label} integers must fit a common signed or unsigned 64-bit type')
+        return np.array(values, dtype=dtype).reshape(array.shape)
+    for i, item in integers:
+        converted = array.flat[i]
+        if not np.isfinite(converted) or int(converted) != item:
+            raise ValueError(f'{label} mixed floating data cannot represent this integer exactly')
+    return array
+
+
 def _fields(values, count, specs, location):
     result = {}
     if values is not None and not isinstance(values, dict):
@@ -104,7 +135,7 @@ def _fields(values, count, specs, location):
         if not isinstance(name, str) or not name or name in _RESERVED:
             raise ValueError('field names must be nonempty and not reserved')
         _unmasked_field(value, f'{location} field {name}')
-        arr = np.asarray(value)
+        arr = _field_array(value, f'{location} field {name}')
         if arr.shape not in ((count,), (count, 3)) or arr.dtype.kind not in 'fiu':
             raise ValueError(f'{location} field {name} must be numeric scalar or 3-vector data')
         if not np.isfinite(arr).all():
@@ -148,7 +179,9 @@ def to_meshio(graph, *, length_unit, point_data=None, cell_data=None,
 
     Points follow sorted node IDs. Cells follow graph edge insertion order.
     Field arrays must already follow those orders; ID mappings are aligned here.
-    Each location accepts arrays or complete ID mappings, never both.
+    Each location accepts arrays or complete ID mappings, never both. Integer
+    fields must fit a common signed or unsigned dtype without loss. Mixed
+    integer/float fields must represent their integer values exactly.
     Masked arrays/scalars in geometry, boundaries or fields are unsupported,
     including empty and all-false masks. Record IDs must be nonnegative int64
     values matching their dictionary keys. Only edges without internal
