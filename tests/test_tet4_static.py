@@ -192,3 +192,113 @@ def test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder():
         keys.append([(int(example.node_ids[k//3]),int(k%3)) for k in dof])
         assert {(int(example.node_ids[k//3]),int(k%3)) for k in np.flatnonzero(~mask.ravel())}==set(keys[-1])
     assert keys[0]==keys[1]
+
+
+def test_default_does_not_recover_fields_and_legacy_positional_result(monkeypatch):
+    b, loads, held = build_example()
+    def no_recovery(*args):
+        pytest.fail('the default solve must not recover cell fields')
+    monkeypatch.setattr(tet4, '_recover_cell_fields', no_recovery)
+    result = solve(b, loads, held)
+    assert result.cell_fields is None
+    legacy = tet4.Tet4StaticResult(result.node_ids, result.displacement_m,
+        result.reaction_N, result.fixed_mask, result.strain_energy_J,
+        result.half_external_work_J, result.free_residual_inf_N,
+        result.normalized_backward_error, result.relative_energy_work_error)
+    assert legacy.cell_fields is None
+    with pytest.raises(TypeError, match='must be a bool'):
+        tet4.solve_static_tet4(b, forces_by_id=loads, fixed_dofs_by_id=held,
+                               return_cell_fields=1)
+
+
+@pytest.mark.parametrize('axis', [0, 1])
+def test_cell_fields_two_material_fitted_physics_and_owned_ids(axis):
+    b, loads, held = build_example(axis)
+    order = np.arange(len(b.tetrahedra))[::-1]
+    b = replace(b, tetrahedra=b.tetrahedra[order], material_ids=b.material_ids[order],
+                cell_ids=np.uint64(2**64-1)-np.arange(len(order), dtype=np.uint64)*39)
+    result = tet4.solve_static_tet4(b, forces_by_id=loads, fixed_dofs_by_id=held,
+                                   return_cell_fields=True)
+    plain = solve(b, loads, held)
+    f = result.cell_fields
+    assert isinstance(f, tet4.Tet4CellFields)
+    # Requesting fields must not change any legacy return value.
+    for key in vars(plain).keys() - {'cell_fields'}:
+        np.testing.assert_array_equal(getattr(plain, key), getattr(result, key))
+    np.testing.assert_array_equal(f.cell_ids, b.cell_ids)
+    np.testing.assert_array_equal(f.material_ids, b.material_ids)
+    assert f.cell_ids.dtype == f.material_ids.dtype == np.dtype('uint64')
+    assert not np.shares_memory(f.cell_ids, b.cell_ids)
+    assert not np.shares_memory(f.material_ids, b.material_ids)
+    assert f.strain.shape == f.stress_Pa.shape == (len(order), 3, 3)
+    assert f.volume_m3.shape == (len(order),)
+    for a in (f.strain, f.stress_Pa, f.volume_m3):
+        assert a.dtype == np.dtype('float64')
+    for a in vars(f).values():
+        assert not a.flags.writeable
+    np.testing.assert_allclose(f.volume_m3, 0.5e-9/6, rtol=3e-15)
+    E = np.array([1e6 if mat == 71 else 2e6 for mat in f.material_ids])
+    expected_e = np.zeros_like(f.strain)
+    expected_e[:,0,0] = 1000./E if axis == 0 else 1000./1.5e6
+    expected_s = expected_e*E[:,None,None]  # nu = 0 for this fixture
+    np.testing.assert_allclose(f.strain, expected_e, atol=1e-15, rtol=2e-12)
+    np.testing.assert_allclose(f.stress_Pa, expected_s, atol=1e-9, rtol=2e-12)
+    np.testing.assert_allclose(.5*np.einsum('cij,cij,c->',f.strain,f.stress_Pa,f.volume_m3),
+                               result.strain_energy_J, rtol=3e-13)
+    b.cell_ids[0] = b.material_ids[0] = 4
+    assert int(f.cell_ids[0]) == 2**64-1 and int(f.material_ids[0]) == 2**64-1
+
+
+@pytest.mark.parametrize('unit,factor', [('m', 1.), ('mm', 1e3)])
+def test_cell_fields_tilted_mixed_affine_signed_shear(unit, factor):
+    x = 1e-3*np.array([[0.,0.,0.],[2.,0.,0.],[.4,1.3,0.],[.5,.3,.8]])
+    grad = 1e-3*np.array([[.8,.6,-.4],[0.,-.55,.5],[0.,0.,.2]])
+    eps = (grad+grad.T)/2
+    E, nu = 17e6, .29
+    stress = E/(1+nu)*(eps-np.trace(eps)/3*np.eye(3))
+    stress += E/(3*(1-2*nu))*np.trace(eps)*np.eye(3)
+    for expected_sign, entry in ((1,stress[0,0]),(-1,stress[1,1]),
+                                 (1,stress[0,1]),(-1,stress[0,2]),(1,stress[1,2])):
+        assert np.sign(entry) == expected_sign
+    # Exact equivalent nodal forces from constant analytical traction.
+    f = np.zeros_like(x)
+    for opposite in range(4):
+        face = [i for i in range(4) if i != opposite]
+        a,b,c = x[face]
+        area = .5*np.cross(b-a,c-a)
+        if area@(x[opposite]-a) > 0.:
+            area = -area
+        f[face] += stress@area/3
+    ids = [2**64-1,9,2**63+11,25]
+    material = 2**64-2
+    bundle = Tet4Bundle(x*factor, [[2,0,3,1]], ids, [2**64-1],
+                     [material], {material:{'young_modulus_pa':E,'poisson_ratio':nu}}, unit)
+    result = tet4.solve_static_tet4(bundle, forces_by_id=dict(zip(ids,f)),
+                   fixed_dofs_by_id={ids[0]:('x','y','z'),ids[1]:('y','z'),ids[2]:('z',)},
+                   return_cell_fields=True)
+    fields = result.cell_fields
+    np.testing.assert_allclose(result.displacement_m, x@grad.T, atol=3e-19, rtol=2e-13)
+    np.testing.assert_allclose(fields.volume_m3, 2.*1.3*.8*1e-9/6, rtol=2e-15)
+    np.testing.assert_allclose(fields.strain[0], eps, atol=1e-16, rtol=2e-13)
+    np.testing.assert_allclose(fields.stress_Pa[0], stress, atol=2e-9, rtol=2e-13)
+    np.testing.assert_array_equal(fields.strain, fields.strain.transpose(0, 2, 1))
+    np.testing.assert_array_equal(fields.stress_Pa, fields.stress_Pa.transpose(0, 2, 1))
+
+
+def test_cell_fields_zero_supported_only_and_tiny_arithmetic():
+    b,_,held = build_example()
+    result = tet4.solve_static_tet4(b, forces_by_id={next(iter(held)):(1e-170,0.,0.)},
+                  fixed_dofs_by_id=held, return_cell_fields=True)
+    assert result.strain_energy_J == 0.
+    np.testing.assert_array_equal(result.cell_fields.strain, 0.)
+    np.testing.assert_array_equal(result.cell_fields.stress_Pa, 0.)
+    assert np.all(result.cell_fields.volume_m3 > 0.)
+    # Flag a truly nonzero result that is too small, not exact tiny cancellation.
+    vector = np.array([2.**-800, 2.**-800, 1.])
+    np.testing.assert_array_equal(tet4._field_dot(np.array([[2.**-400,-2.**-400,0.],
+                                                            [2.**-400,-2.**-400,2.]]), vector),
+                                  [0.,2.])
+    with pytest.raises(ValueError, match='nonzero Tet4 cell component'):
+        tet4._field_dot(np.array([[2.**-400,0.,0.]]), vector)
+    # Recovery can also certify normal results in the presence of tiny products.
+    np.testing.assert_array_equal(tet4._field_dot(np.array([[2.**-400,0.,2.]]), vector), [2.])
