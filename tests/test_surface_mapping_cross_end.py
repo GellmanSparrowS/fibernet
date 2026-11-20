@@ -55,3 +55,30 @@ def test_surface_mapping_invalid_inputs(faces, spectrum):
                         dtype=float)
     with pytest.raises(ValueError):
         map_cells(vertices, faces, spectrum)
+
+
+@pytest.mark.parametrize("edge_rows", [
+    [(0, 1), (1, 2)],  # Stable IDs stay within row bounds but select wrong fibers.
+    [(0, 1), (1, 2), (2, 3), (3, 0)],  # The last stable ID exceeds row bounds.
+])
+def test_surface_map_preserves_base_cell_edges_after_node_deletion(edge_rows):
+    from fibernet.core.structure_graph import StructureGraph
+
+    graph = StructureGraph(dimension=2)
+    first = graph.add_node([0, 0], merge=False)
+    removed = graph.add_node([10, 10], merge=False)
+    ids = [first] + [graph.add_node(p, merge=False) for p in ([1, 0], [1, 1], [0, 1])]
+    graph.remove_node(removed)
+    for a, b in edge_rows:
+        graph.add_edge(ids[a], ids[b])
+
+    # At unit UV corners, bilinear mapping returns the corresponding 3D corner
+    # exactly. Compare geometric fibers independently of output row ordering.
+    vertices = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 1], [0, 1, 0]], dtype=float)
+    points, edges = map_cells(vertices, [[0, 1, 2, 3]], [],
+                              config=MappingConfig(overscale=1.0),
+                              base_graph=graph)
+    actual = {frozenset(map(tuple, points[edge])) for edge in edges}
+    expected = {frozenset(map(tuple, vertices[[a, b]])) for a, b in edge_rows}
+    assert len(edges) == len(expected)
+    assert actual == expected
