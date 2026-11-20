@@ -1,3 +1,10 @@
+## [4.4.7]
+
+- Preserve distinct fiber coordinates and connectivity in legacy Gmsh geometry
+  exports. Exactly coincident samples still share nodes; resampling that
+  produces a zero-length line fails before the destination is written.
+- See [4.4.7 release notes and migration](docs/RELEASE_4_4_7.md).
+
 ## [4.4.6]
 
 - Preserve fiber endpoints when mapping a custom StructureGraph with sparse
