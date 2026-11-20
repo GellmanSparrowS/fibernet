@@ -947,6 +947,8 @@ class BeamFrameFEM:
         placeholders, not measured zero shear. beam_resultant_contract marks
         these components unavailable. No unit system is inferred.
 
+        edge_index: (2, M) input connectivity with two endpoint rows per
+        beam. Tetrahedral and other volume-element meshes are not supported.
         forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
         Applied nodal moments are unsupported; extra columns raise ValueError.
         edge_materials follows solve_2d's original-row, isotropic and unit
@@ -964,6 +966,13 @@ class BeamFrameFEM:
         if torch is not None and isinstance(forces, torch.Tensor):
             forces = forces.numpy()
         
+        shape = getattr(edge_index, 'shape', ())
+        if len(shape) != 2 or shape[0] != 2:
+            raise ValueError(
+                '3-D beam FEM requires two-endpoint beam edges with edge_index '
+                'shape (2, M); it does not accept tetrahedral connectivity.'
+            )
+
         if fixed_nodes is None:
             fixed_nodes = []
         if prescribed_disp is None:

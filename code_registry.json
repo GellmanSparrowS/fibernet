@@ -989,7 +989,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "517415de2cf8cd1b341b45085cc7f67262224a9f868e5ba1c649c9f21a0f49ed"
+  "sha256": "9dcb6038299fcabab568a9aa0e2e00a5e67a2f5cf0081116bcdf01eab0d10b67"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -5756,5 +5756,15 @@
    "test_incomplete_ids_and_nan_are_not_missing_value_fills"
   ],
   "sha256": "31029fea97b24cedab4218d1cb4ef7696dfd55cc4a3cc6b3f8a3f9d2d9ffc46f"
+ },
+ "tests/test_beam_3d_edge_shape.py": {
+  "purpose": "A 3-D beam solve never treats extra connectivity rows as invisible nodes.",
+  "status": "active",
+  "symbols": [
+   "test_tet4_connectivity_rejected_before_assembly",
+   "test_two_endpoint_3d_series_beams_with_two_materials",
+   "test_empty_two_row_connectivity_keeps_existing_shape_contract"
+  ],
+  "sha256": "46eccb8061e429ae89b2a8021ab6b2945b8b48417d018abf38065ac7abf373c9"
  }
 }
