@@ -5826,5 +5826,61 @@
    "test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates"
   ],
   "sha256": "053f1ac4147a984673ca336063f82eae1effa826ad26ae0499786fd29c65fd93"
+ },
+ "examples/tet4_static_two_material.py": {
+  "purpose": "Force-controlled two-material Tet4 cube with an analytical reference.",
+  "status": "active",
+  "symbols": [
+   "build_example",
+   "main"
+  ],
+  "sha256": "403553066605bb26ba4d989b49d220815938c431427c17f7f0290837c5dd9dae"
+ },
+ "fibernet/sim/tet4.py": {
+  "purpose": "Bounded small-strain static elasticity on a conforming Tet4Bundle.",
+  "status": "active",
+  "symbols": [
+   "Tet4StaticResult",
+   "_BandPlan",
+   "_BandBudgetExceeded",
+   "_row_lookup",
+   "_loads_and_constraints",
+   "_magnitude_bits",
+   "_check_normal_or_zero",
+   "_validate_topology",
+   "_check_rigid_modes",
+   "_free_node_topology",
+   "_canonical_node_order",
+   "_plan_band",
+   "_pack_lower_band",
+   "_strain_matrix",
+   "_material_tensor",
+   "_element_blocks",
+   "_assemble",
+   "_checked_normal_rescale",
+   "_factor_band",
+   "_fixed_solve",
+   "solve_static_tet4"
+  ],
+  "sha256": "9265ba77df6559221ae9dc2f61784961a2c605d039c2454f3f11e1645a112660"
+ },
+ "tests/test_tet4_static.py": {
+  "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
+  "status": "active",
+  "symbols": [
+   "solve",
+   "test_two_material_force_control_against_closed_form",
+   "test_mixed_axis_oblique_affine_patch_relabelled_and_reordered",
+   "test_forces_on_supported_axes_are_reactions_without_work",
+   "test_rejects_invalid_or_unrepresentable_free_force",
+   "test_wider_float_is_rejected_before_narrowing",
+   "test_rejects_unknown_id_missing_rigid_modes_and_invalid_axes",
+   "test_rejects_duplicate_and_nonmanifold_connectivity",
+   "test_band_budget_stops_before_assembly",
+   "test_lazy_optional_meshio_and_no_implicit_facade_export",
+   "test_shifted_factor_only_checks_positive_floor",
+   "test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder"
+  ],
+  "sha256": "dc8551ed9ae41a713625d84543acb1364a19a9d6b34b11c1263bc7402eb49ae8"
  }
 }
