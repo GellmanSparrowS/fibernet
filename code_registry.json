@@ -989,7 +989,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "9dcb6038299fcabab568a9aa0e2e00a5e67a2f5cf0081116bcdf01eab0d10b67"
+  "sha256": "29ae839fa6acd7259762ee560aa9e992fd19882d43ba28efa983aeffe1efe245"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -5766,5 +5766,18 @@
    "test_empty_two_row_connectivity_keeps_existing_shape_contract"
   ],
   "sha256": "46eccb8061e429ae89b2a8021ab6b2945b8b48417d018abf38065ac7abf373c9"
+ },
+ "tests/test_fem_3d_stretch_zero_x_span.py": {
+  "purpose": "A nonunit x stretch must not silently become an undeformed 3-D result.",
+  "status": "active",
+  "symbols": [
+   "pinned_graph",
+   "test_nonunit_3d_x_stretch_without_x_span_refuses_before_output",
+   "test_nonzero_span_matches_series_beam_and_preserves_stable_ids",
+   "test_unit_ratio_and_manual_z_load_keep_valid_zero_x_span_uses",
+   "test_tiny_positive_x_span_does_not_trigger_zero_span_guard",
+   "test_existing_finite_input_boundaries_remain_unchanged"
+  ],
+  "sha256": "1f692282a78671131f5634aa84b75186709d9bfb94d14f2d1b11ac4679e413a3"
  }
 }
