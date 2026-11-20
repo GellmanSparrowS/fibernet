@@ -3919,7 +3919,7 @@
    "bilinear",
    "map_cells"
   ],
-  "sha256": "4395a41a37f852f36673eb856accea305430a41ff4be32d135e34f7555fc6171"
+  "sha256": "f310eddfba8030e7de78ba29022dede790e3276f1114df244e34c91a635c9bb1"
  },
  "tests/test_surface_mapping_cross_end.py": {
   "purpose": "Verify the independent surface map preserves APP geometry and seam edges.",
@@ -3928,9 +3928,10 @@
    "test_surface_map_matches_app_and_old_output",
    "test_surface_map_rejects_tiny_budget",
    "test_surface_mapping_public_workflow",
-   "test_surface_mapping_invalid_inputs"
+   "test_surface_mapping_invalid_inputs",
+   "test_surface_map_preserves_base_cell_edges_after_node_deletion"
   ],
-  "sha256": "3c8f1cca6a83d415beb2185b3d98f24f1e82a231b9da2065657865fc80180129"
+  "sha256": "20021068c45fd3f026582afb779f29456fd3fd6a58f0e77b667d2da9cd20cd45"
  },
  "examples/surface_mapping_workflow.py": {
   "purpose": "Map repeated fiber cells to an OBJ surface with explicit seam stitches.",

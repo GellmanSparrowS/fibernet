@@ -54,8 +54,9 @@ def map_cells(vertices, faces, spectrum, unit='square', config=None, base_graph=
             unit=unit, grid_x=1, grid_y=1, n_pts_per_side=len(spectrum),
             line_displacements=np.asarray(spectrum).tolist())
         graph = manufacturable_graph(spec)
-    pos = np.asarray(graph.node_positions(), float)[:, :2]
-    edges = np.asarray(graph.edge_array(), int)[:, :2]
+    # edge_array() contains stable node IDs, not rows in node_positions().
+    positions, edges, _ = graph.to_numpy()
+    pos = positions[:, :2]
     span = np.ptp(pos, axis=0)
     if len(edges) == 0 or np.any(span < 1e-9):
         raise ValueError('unit must have fibers and nonzero width/height')
