@@ -134,3 +134,54 @@ contact or mesh convergence. The existing explicit uniform viscoelastic
 .. code-block:: bash
 
    python -m pytest tests/test_fem_heterogeneous_contract.py tests/test_fem_heterogeneous_physics.py -q
+
+FCC 3D material-layout comparison
+---------------------------------
+
+Run the repository example with the base FiberNet installation (NumPy and
+SciPy; no optional native backend or ML framework is needed)::
+
+    python -m pip install fibernet
+    python examples/fcc_material_comparison.py --output fcc-material-results
+
+Run the script from a checkout containing ``examples/``. The output directory
+must be new. The script uses the public ``octet_fcc_v1`` generator and
+``BeamFrameFEM.solve_3d(edge_materials=...)`` without modifying the source graph.
+Its 123 nodes and 516 bars span 30 by 30 by 20 mm, with 0.25 mm circular-bar
+radius. Coordinates and radii passed to the solver are in metres, Young's
+moduli are in Pa, and forces are in N. All six degrees of freedom on the
+``x=0`` face are clamped; the 18 opposite-face nodes each receive 0.001 N
+along positive x. Poisson's ratio is 0.3 throughout.
+
+Three uniform-material runs use 0.5, 1 and 2 GPa. At fixed force and Poisson's
+ratio, displacement, rotation and stored energy scale as ``1/E``. Every run
+checks support-force and moment balance, free-node residuals, axial force
+``EA*elongation/L`` and the full beam-energy identity
+``U = 0.5*u.T*K*u = 0.5*F.T*u``. The effective stiffness is total x force
+divided by mean loaded-face x displacement; it is not a homogenized material
+modulus. These are small-displacement linear beam responses.
+
+Four mixed-material runs place 2 GPa on 258 bars and 0.5 GPa on the other
+258. Equal FCC bar lengths and radii give equal nominal material fractions.
+The first pair preferentially assigns the stiff material to bars with a
+nonzero x component, with a deterministic tie rule within the XY and XZ
+families. The second pair has identical material assignments outside the
+middle x band. It matches high-modulus bar counts (82, 94, 82) and x-coordinate
+first moments in three spatial bands. The exact x layers and y/z positions
+still differ. The executable layout construction and saved per-bar moduli
+make these placements reproducible.
+
+For these specific layouts, ``initial_A`` is approximately 7.56% stiffer
+than ``initial_B``, while ``interior_A`` is approximately 1.49% less stiff
+than ``interior_B``. Direction and material position are not fully independent:
+this reversal illustrates why their combined layout matters. Use this example
+to compare explicit placements under the same boundary conditions, rather
+than treating either percentage as a universal orientation benefit.
+
+``summary.json`` contains all seven responses, force/moment residuals, layout
+counts and contrasts, including the FiberNet version actually used.
+``layouts.npz`` contains unchanged node/edge IDs, connectivity, SI geometry,
+forces, clamp/load rows, per-case bar moduli and displacement/rotation arrays.
+The last array has shape ``(case, node, 6)``: its first three components are
+translations in m, followed by rotations in rad. The energy in the summary
+comes from ``beam_energy``, not the legacy axial-only ``SimResult.energy``.
