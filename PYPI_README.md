@@ -1,22 +1,24 @@
-# FiberNet 4.4.9
+# FiberNet 4.5.0
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.4.9
+## Changes in 4.5.0
 
-The 3D beam solver now rejects connectivity that does not use two endpoint
-rows per beam. The 3D x-stretch shortcut also rejects a nonunit stretch ratio
-when the graph has no extent along x, instead of returning an undeformed
-result. See [release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_9.md).
+Transfer a four-node tetrahedral mesh and its per-cell material assignments
+as one local bundle. The VTU preserves connectivity and exact node and cell
+IDs; its accompanying manifest records the coordinate unit, Young's modulus
+in pascals, and Poisson's ratio. This is a mesh interchange format, separate
+from the beam solver. See [the Tet4 example and format rules](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/TET4_VTU_BUNDLE.md)
+and [the release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_5_0.md).
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.4.9"
+python -m pip install "fibernet==4.5.0"
 ```
 
 Run the installed example from any directory:
@@ -31,9 +33,10 @@ It generates its own network and writes `network.json`, `network.png`,
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.4.9"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.4.9"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.4.9"       # experimental fracture backend
+python -m pip install "fibernet[ml]==4.5.0"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.5.0"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.5.0"       # experimental fracture backend
+python -m pip install "fibernet==4.5.0" "meshio==5.3.5" # Tet4 mesh interchange
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.

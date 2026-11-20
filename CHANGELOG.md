@@ -1,3 +1,11 @@
+## [4.5.0]
+
+- Add optional Tet4 geometry and material interchange using Meshio. Local v1
+  bundles preserve point and cell order, tetrahedral winding, exact uint64
+  IDs, declared coordinate units, and isotropic material constants.
+- See [4.5.0 release notes](docs/RELEASE_4_5_0.md) and the
+  [two-material example](docs/TET4_VTU_BUNDLE.md).
+
 ## [4.4.9]
 
 - Reject invalid connectivity layouts in the 3D beam solver before element
