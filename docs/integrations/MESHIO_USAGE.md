@@ -130,3 +130,33 @@ For the separate `FiberNetwork` ASCII `to_vtk` exporter, see
 [attribute ordering, input admission and precision](../io/legacy_vtk_attributes.md).
 It uses duplicated per-fiber point rows and float32 attributes, not this
 adapter's stable-ID fields and manifest.
+
+## Source geometry and record identity
+
+Before coordinates, boundary flags or box data are converted, the VTU adapter
+rejects NumPy masked arrays and masked scalars, including all-false and empty
+masked containers. This applies to source positions, boundaries, stored box
+size, radii, endpoints, internal points and ID records as well as attached
+fields. Nested sequence and object-array values are checked too.
+
+If a value is known to contain complete observations, confirm that explicitly
+and convert it before export:
+
+```python
+import numpy as np
+
+if np.ma.getmaskarray(values).any():
+    raise ValueError('select complete observed values before export')
+plain_values = np.asarray(values.data).copy()  # values is a MaskedArray
+```
+
+Do not fill unobserved coordinates or boundary flags to make export succeed.
+The adapter can inspect only the values still present at its entry; a mask
+already discarded by an earlier constructor, setter or explicit conversion
+cannot be recovered here.
+
+Node and edge record IDs must be nonnegative integers representable as int64
+and must match their keys in `graph.nodes` and `graph.edges`. Repair conflicting
+source identities before exporting; the adapter does not replace record IDs.
+Normal sparse IDs, isolated points, parallel edges and ID-keyed fields retain
+their documented ordering, units and values.

@@ -374,7 +374,7 @@
    "__getattr__",
    "__dir__"
   ],
-  "sha256": "4e6140629e92dcdadb16cdd49639418280037b4caf09c9ee0e34465cba9fd97d"
+  "sha256": "33775498272a42892036c61abfd4aaf349b4257cef89eb1e78b5a01b62d3be20"
  },
  "fibernet/examples/__init__.py": {
   "purpose": "__init__",

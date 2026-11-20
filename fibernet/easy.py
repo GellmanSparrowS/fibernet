@@ -1481,6 +1481,8 @@ def batch_simulate_from_json(
     - Inputs must remain unchanged during a call. Preflight streams file hashes;
       pending files are captured one at a time, rechecked and parsed from those
       exact bytes. Concurrent input modification is unsupported.
+    - Keep input and output directories separate when a current or resumed
+      case's result path aliases an input JSON, including recorded failures.
     - A matching hit reuses the CSV outcome; it does not verify result JSON files
       or make result JSON and CSV publication a single transaction.
     """
@@ -1553,9 +1555,6 @@ def batch_simulate_from_json(
             print(f"  [{json_file.name}] Already simulated, skipping")
         else:
             pending.append(json_file)
-    if not pending:
-        return str(csv_file)
-
     # A result name such as a_result.json can itself be another source file.
     # Check the complete input set before any simulation or output write, not
     # just the current file: atomic result replacement would still destroy that
@@ -1566,7 +1565,9 @@ def batch_simulate_from_json(
         st = path.stat()
         if st.st_ino:
             input_ids[(st.st_dev, st.st_ino)] = path
-    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in pending]
+    # Skipped successes and failures can already own a result path. Reserve
+    # outputs only for currently present inputs, not deleted historical files.
+    outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in json_files]
     for destination in outputs:
         source = input_paths.get(destination.resolve())
         if source is None:
@@ -1579,7 +1580,10 @@ def batch_simulate_from_json(
                     source = input_ids.get((st.st_dev, st.st_ino))
         if source is not None:
             raise ValueError(f"Batch output {destination} aliases input {source}; "
-                             "choose a different output directory")
+                             "keep input and output directories separate")
+
+    if not pending:
+        return str(csv_file)
 
     engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)

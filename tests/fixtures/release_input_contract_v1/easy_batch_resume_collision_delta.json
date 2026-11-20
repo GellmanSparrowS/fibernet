@@ -1,0 +1,25 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "Reject output paths owned by current or resumed batch inputs before the no-pending return",
+  "base_sha256": "4e6140629e92dcdadb16cdd49639418280037b4caf09c9ee0e34465cba9fd97d",
+  "result_sha256": "33775498272a42892036c61abfd4aaf349b4257cef89eb1e78b5a01b62d3be20",
+  "hunks": [
+    {
+      "before": "    - Inputs must remain unchanged during a call. Preflight streams file hashes;\n      pending files are captured one at a time, rechecked and parsed from those\n      exact bytes. Concurrent input modification is unsupported.\n    - A matching hit reuses the CSV outcome; it does not verify result JSON files\n      or make result JSON and CSV publication a single transaction.\n    \"\"\"\n",
+      "after": "    - Inputs must remain unchanged during a call. Preflight streams file hashes;\n      pending files are captured one at a time, rechecked and parsed from those\n      exact bytes. Concurrent input modification is unsupported.\n    - Keep input and output directories separate when a current or resumed\n      case's result path aliases an input JSON, including recorded failures.\n    - A matching hit reuses the CSV outcome; it does not verify result JSON files\n      or make result JSON and CSV publication a single transaction.\n    \"\"\"\n"
+    },
+    {
+      "before": "            print(f\"  [{json_file.name}] Already simulated, skipping\")\n        else:\n            pending.append(json_file)\n    if not pending:\n        return str(csv_file)\n\n    # A result name such as a_result.json can itself be another source file.\n    # Check the complete input set before any simulation or output write, not\n    # just the current file: atomic result replacement would still destroy that\n",
+      "after": "            print(f\"  [{json_file.name}] Already simulated, skipping\")\n        else:\n            pending.append(json_file)\n    # A result name such as a_result.json can itself be another source file.\n    # Check the complete input set before any simulation or output write, not\n    # just the current file: atomic result replacement would still destroy that\n"
+    },
+    {
+      "before": "        st = path.stat()\n        if st.st_ino:\n            input_ids[(st.st_dev, st.st_ino)] = path\n    outputs = [csv_file] + [output_path / f\"{path.stem}_result.json\" for path in pending]\n    for destination in outputs:\n        source = input_paths.get(destination.resolve())\n        if source is None:\n",
+      "after": "        st = path.stat()\n        if st.st_ino:\n            input_ids[(st.st_dev, st.st_ino)] = path\n    # Skipped successes and failures can already own a result path. Reserve\n    # outputs only for currently present inputs, not deleted historical files.\n    outputs = [csv_file] + [output_path / f\"{path.stem}_result.json\" for path in json_files]\n    for destination in outputs:\n        source = input_paths.get(destination.resolve())\n        if source is None:\n"
+    },
+    {
+      "before": "                    source = input_ids.get((st.st_dev, st.st_ino))\n        if source is not None:\n            raise ValueError(f\"Batch output {destination} aliases input {source}; \"\n                             \"choose a different output directory\")\n\n    engine = _taichi_engine_class()()\n    output_path.mkdir(parents=True, exist_ok=True)\n",
+      "after": "                    source = input_ids.get((st.st_dev, st.st_ino))\n        if source is not None:\n            raise ValueError(f\"Batch output {destination} aliases input {source}; \"\n                             \"keep input and output directories separate\")\n\n    if not pending:\n        return str(csv_file)\n\n    engine = _taichi_engine_class()()\n    output_path.mkdir(parents=True, exist_ok=True)\n"
+    }
+  ]
+}
