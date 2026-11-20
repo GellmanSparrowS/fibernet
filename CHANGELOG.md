@@ -1,3 +1,12 @@
+## [4.4.5]
+
+- Check historical batch-result paths before resume, including fully completed
+  input sets; reject input/output aliases before writing.
+- Reject masked VTU source geometry and boundary data, and invalid or
+  inconsistent node/edge record IDs; preserve valid stable-ID exports.
+- Extend the versioned axial-backend example to a 120-node, 573-bar 3D case.
+- See [4.4.5 release notes and migration](docs/RELEASE_4_4_5.md).
+
 ## [4.4.4]
 
 - Read explicitly selected native StructureGraph 3.1 inputs in the fracture CLI.
