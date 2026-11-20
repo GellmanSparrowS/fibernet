@@ -128,15 +128,36 @@ def _points(values):
     return np.array([_float64(item, 'points') for item in raw.flat], dtype=np.float64).reshape(raw.shape)
 
 
+def _binary64_ratio(word):
+    """Decode a finite binary64 word without floating-point arithmetic."""
+    exponent = (word >> 52) & 0x7ff
+    mantissa = word & ((1 << 52) - 1)
+    if exponent:
+        mantissa |= 1 << 52
+    elif not mantissa:
+        return 0, 1
+    if word >> 63:
+        mantissa = -mantissa
+    shift = exponent - 1075 if exponent else -1074
+    return (mantissa << shift, 1) if shift >= 0 else (mantissa, 1 << -shift)
+
+
 def _nondegenerate(points, cells):
     # Every binary64 value is a dyadic rational. Integer arithmetic evaluates
     # the zero/nonzero determinant exactly, with no length or volume cutoff.
-    # Convert only vertices referenced by this batch and discard its Python
-    # integers and tuples before the next batch. Never expand the whole mesh.
+    # Convert only vertices referenced by this batch, not the whole mesh.
     for start in range(0, len(cells), _DYADIC_BATCH):
         batch = cells[start:start + _DYADIC_BATCH]
         references, local = np.unique(batch.ravel(), return_inverse=True)
-        dyadics = [tuple(x.as_integer_ratio() for x in row) for row in points[references].tolist()]
+        vertices_in_batch = points[references]
+        words = vertices_in_batch.view(np.uint64)
+        # Some linked numerical libraries or platforms may run with subnormal
+        # operands flushed to zero. Preserve the input bits in that case.
+        subnormal = ((words & 0x7ff0000000000000) == 0) & ((words & 0x000fffffffffffff) != 0)
+        if np.any(subnormal):
+            dyadics = [tuple(_binary64_ratio(word) for word in row) for row in words.tolist()]
+        else:
+            dyadics = [tuple(x.as_integer_ratio() for x in row) for row in vertices_in_batch.tolist()]
         for i, indices in enumerate(local.reshape(batch.shape).tolist(), start):
             vertices = [dyadics[k] for k in indices]
             differences = []

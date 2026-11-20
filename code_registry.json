@@ -5792,6 +5792,7 @@
    "_integers",
    "_float64",
    "_points",
+   "_binary64_ratio",
    "_nondegenerate",
    "_validate",
    "_hash",
@@ -5806,7 +5807,7 @@
    "_read_mesh",
    "read_tet4_vtu_bundle"
   ],
-  "sha256": "787cd9f5077ac1908c13e466e9aa441c4a3d0d44d3c8ea94dddbee726528e3ef"
+  "sha256": "3b3cb18d531e5534a7d520592b69d9f0aa7e4107b2fa847e7abb592daf4dd91d"
  },
  "tests/test_tet4_meshio.py": {
   "purpose": "Optional v1 Tet4 bundles: synthetic geometry and actual Meshio 5.x.",
@@ -5824,6 +5825,6 @@
    "test_reader_checks_header_row_limits_before_meshio",
    "test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates"
   ],
-  "sha256": "71a3f6bdb212d7738c8224ffd96a2755ce92cfb2e99f991902ce854f3e14eebf"
+  "sha256": "053f1ac4147a984673ca336063f82eae1effa826ad26ae0499786fd29c65fd93"
  }
 }

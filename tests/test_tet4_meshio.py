@@ -15,8 +15,11 @@ from fibernet.io import tet4_meshio as tet4
 
 def fixture(scale=1.0):
     big = 2**64 - 1
-    return dict(points=np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0],
-                                 [0, 0, 1], [0, 0, -1]], dtype=np.float64) * scale,
+    # Construct the exact coordinate words; multiplication may flush subnormals.
+    step = int(np.asarray(scale, dtype=np.float64).view(np.uint64))
+    negative = step | (1 << 63)
+    return dict(points=np.array([[0, 0, 0], [step, 0, 0], [0, step, 0],
+                                 [0, 0, step], [0, 0, negative]], dtype=np.uint64).view(np.float64),
                 # Deliberately different winding; no permutation during I/O.
                 tetrahedra=[[1, 0, 2, 3], [0, 2, 1, 4]],
                 node_ids=[np.int64(709), np.uint64(big), 17, 7, 3],
@@ -27,7 +30,7 @@ def fixture(scale=1.0):
                 length_unit='mm')
 
 
-@pytest.mark.parametrize('scale', [1.0, 1e-200, np.nextafter(0., 1.), 1e200])
+@pytest.mark.parametrize('scale', [1.0, 1e-200, np.uint64(1).view(np.float64), 1e200])
 def test_real_tet4_interchange_no_unit_or_id_change(tmp_path, scale):
     meshio = pytest.importorskip('meshio')
     data = fixture(scale)
@@ -42,14 +45,14 @@ def test_real_tet4_interchange_no_unit_or_id_change(tmp_path, scale):
     internal = tmp_path / 'mesh.vtu'
     internal.write_bytes(ordinary_vtu)
     public = meshio.read(internal)
-    np.testing.assert_array_equal(public.points, data['points'])
+    np.testing.assert_array_equal(public.points.view(np.uint64), data['points'].view(np.uint64))
     assert len(public.cells) == 1 and public.cells[0].type == 'tetra'
     np.testing.assert_array_equal(public.cells[0].data, data['tetrahedra'])
     assert public.cell_data['cell_id'][0].tolist() == [2**63 + 1, 20]
     assert public.cell_data['material_id'][0].tolist() == [37, 2**64 - 1]
     assert public.point_data['node_id'].tolist() == [709, 2**64 - 1, 17, 7, 3]
     reread = tet4.read_tet4_vtu_bundle(path)
-    np.testing.assert_array_equal(reread.points, data['points'])
+    np.testing.assert_array_equal(reread.points.view(np.uint64), data['points'].view(np.uint64))
     np.testing.assert_array_equal(reread.tetrahedra, data['tetrahedra'])
     assert reread.materials == data['materials']
     assert reread.length_unit == 'mm'
@@ -247,7 +250,7 @@ def test_reader_checks_header_row_limits_before_meshio(tmp_path, monkeypatch, li
 
 
 def test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates(monkeypatch):
-    data = fixture(np.nextafter(0., 1.))
+    data = fixture(np.uint64(1).view(np.float64))
     monkeypatch.setattr(tet4, '_DYADIC_BATCH', 1)
     good = np.asarray(data['tetrahedra'])
     tet4._nondegenerate(data['points'], good)
