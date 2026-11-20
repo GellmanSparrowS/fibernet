@@ -1,7 +1,7 @@
 Quick Start Guide
 =================
 
-An installed FiberNet 4.4.4 wheel includes a runnable example. From any
+An installed FiberNet 4.4.5 wheel includes a runnable example. From any
 directory, run:
 
 .. code-block:: bash

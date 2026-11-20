@@ -1,29 +1,32 @@
-# FiberNet 4.4.4
+# FiberNet 4.4.5
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.4.4
+## Changes in 4.4.5
 
-This release adds native StructureGraph input to the fracture CLI and an
-opt-in rotational BPM interface for a pinned external LAMMPS provider. It
-preserves fitted regressors after rejected inputs, reports target-axis errors,
-and corrects deformation-frame alignment and slow GIF playback.
-See [release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_4.md).
+Batch JSON simulation now checks historical output paths before resuming,
+including when every input already has a CSV record. Ambiguous input/output
+paths fail before any file is written; keep source graphs and results in
+separate directories.
 
-The top-level paired-fracture, electrical-history, matched-backend and
-thermal-to-transport/export examples run from a version-matched source checkout
-or extracted source distribution. They are distinct from the installed
-`fibernet.examples` commands. The thermal-to-transport example is sequential
-one-way transfer; the fracture-history circuit uses fixed reference geometry.
+VTU export rejects masked geometry or boundary inputs and inconsistent or
+out-of-range node/edge record IDs before writing. Valid exports retain stable
+IDs, field alignment and explicitly declared length units. See
+[release notes and migration](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_4_5.md).
+
+The versioned source examples also include a 120-node, 573-bar 3D axial
+Taichi/LAMMPS comparison with shared model inputs and reference trajectories.
+It runs from a matching source checkout or extracted source distribution,
+with separately supplied native runtimes; it is not a wheel command.
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.4.4"
+python -m pip install "fibernet==4.4.5"
 ```
 
 Run the installed example from any directory:
@@ -38,9 +41,9 @@ It generates its own network and writes `network.json`, `network.png`,
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.4.4"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.4.4"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.4.4"       # experimental fracture backend
+python -m pip install "fibernet[ml]==4.4.5"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.4.5"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.4.5"       # experimental fracture backend
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.
