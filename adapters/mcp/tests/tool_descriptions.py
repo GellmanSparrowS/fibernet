@@ -16,7 +16,7 @@ from pathlib import Path
 import sys
 import unittest
 
-from distribution_metadata import CHILD, TOOLS, assert_receipt, canonical, work_area
+from distribution_metadata import CHILD, NATIVE_SOURCE_COUNT, TOOLS, assert_receipt, canonical, work_area
 
 ADAPTER = Path(__file__).resolve().parents[1]
 CORE = ADAPTER.parents[1]
@@ -123,7 +123,7 @@ class MetadataSession(unittest.TestCase):
         manifest = json.loads(manifest_raw)
         actual = {p.relative_to(CORE / 'fibernet').as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
                   for p in (CORE / 'fibernet').rglob('*.py')}
-        self.assertEqual(len(manifest), 263)
+        self.assertEqual(len(manifest), NATIVE_SOURCE_COUNT)
         self.assertIn("integrations/lammps_bpm.py", manifest)
         self.assertIn("examples/linear_static_network.py", manifest)
         self.assertEqual(actual, manifest)
