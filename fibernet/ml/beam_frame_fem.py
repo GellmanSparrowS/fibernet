@@ -1255,7 +1255,9 @@ class BeamFrameFEM:
         ----------
         graph : StructureGraph
         target_stretch : float
-            Target stretch ratio (2.0 = stretch to 2x original length).
+            Target x-axis stretch ratio (2.0 = stretch to 2x original length).
+            For 3-D, a nonunit ratio requires a nonzero x span. To load
+            along another axis, use solve_3d with explicit controls.
         dim : int
             2 for 2D, 3 for 3D.
         pct : float
@@ -1334,6 +1336,11 @@ class BeamFrameFEM:
             if not np.isfinite(lengths).all() or np.any(lengths < 1e-12):
                 raise ValueError('graph material mode requires finite member lengths >= 1e-12 m')
         
+        if dim == 3 and inp['x_range'] == 0 and target_stretch != 1.0:
+            raise ValueError(
+                '3-D FEM x stretch with a nonunit ratio requires a nonzero x span; '
+                'use solve_3d with explicit loads or prescribed displacements for another axis.'
+            )
         left = inp['boundaries'].get('left', [])
         right = inp['boundaries'].get('right', [])
         target_disp = inp['x_range'] * (target_stretch - 1.0)
