@@ -1,3 +1,10 @@
+## [4.4.8]
+
+- Prevent precision loss in custom VTU point and cell fields when mixed
+  numeric types would round integer values. Unrepresentable fields fail
+  before a bundle is written.
+- See [4.4.8 release notes and migration](docs/RELEASE_4_4_8.md).
+
 ## [4.4.7]
 
 - Preserve distinct fiber coordinates and connectivity in legacy Gmsh geometry
