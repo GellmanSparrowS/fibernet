@@ -49,3 +49,6 @@ include docs/integrations/thermal_frozen_contract.json
 
 # Small independent reference for the experimental electrothermal model.
 include benchmarks/electrothermal_two_node.py
+
+# Workflow-local PyPI visibility checks run only from the repository checkout.
+exclude tests/test_pypi_index_visibility.py

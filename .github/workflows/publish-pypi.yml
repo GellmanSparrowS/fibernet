@@ -311,6 +311,85 @@ jobs:
         run: |
           python - <<'PY'
           import json, os, time, urllib.error, urllib.request
+          import re, subprocess, sys, urllib.parse
+
+
+          def simple_index_ready(manifest, snapshot):
+              version = manifest['version']
+              expected = manifest['files']
+              names = {f'fibernet-{version}-py3-none-any.whl', f'fibernet-{version}.tar.gz'}
+              if (not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', version) or set(expected) != names
+                      or any(not re.fullmatch(r'[0-9a-f]{64}', h) for h in expected.values())):
+                  raise RuntimeError('Invalid accepted release identity')
+              if snapshot['url'] != 'https://pypi.org/simple/fibernet/':
+                  raise RuntimeError('Unexpected Simple index source')
+              if snapshot['status'] == 404:
+                  return False
+              if snapshot['status'] != 200:
+                  raise RuntimeError('Simple index request failed')
+              data = snapshot['data']
+              if data['name'] != 'fibernet' or not isinstance(data['files'], list):
+                  raise RuntimeError('Unexpected Simple project identity')
+              found = {}
+              for entry in data['files']:
+                  name = entry['filename']
+                  if name not in expected:
+                      continue
+                  if name in found or entry['hashes'].get('sha256') != expected[name]:
+                      raise RuntimeError('Simple distribution identity or hash mismatch')
+                  url = urllib.parse.urlsplit(entry['url'])
+                  if (url.scheme != 'https' or url.hostname != 'files.pythonhosted.org'
+                          or url.username is not None or url.password is not None
+                          or url.port not in (None, 443) or not url.path.startswith('/packages/')
+                          or url.fragment not in ('', 'sha256='+expected[name])
+                          or entry.get('yanked', False) is not False):
+                      raise RuntimeError('Unexpected or yanked Simple distribution source')
+                  found[name] = entry
+              return set(found) == names
+
+
+          def fetch_simple_snapshot(timeout_s):
+              # Bound the entire network operation, including DNS and body reads, in a child.
+              code = (
+                  'import json, sys, urllib.error, urllib.request\n'
+                  "url = 'https://pypi.org/simple/fibernet/'\n"
+                  "request = urllib.request.Request(url, headers={'Accept': 'application/vnd.pypi.simple.v1+json, application/vnd.pypi.simple.v1+html; q=0.1, text/html; q=0.01', 'Cache-Control': 'no-cache'})\n"
+                  'try:\n'
+                  '    with urllib.request.urlopen(request, timeout=float(sys.argv[1])) as response:\n'
+                  '        raw = response.read(2*1024*1024+1)\n'
+                  "        if len(raw) > 2*1024*1024: raise RuntimeError('Simple response exceeds byte limit')\n"
+                  "        result = dict(status=response.status, url=response.geturl(), data=json.loads(raw))\n"
+                  'except urllib.error.HTTPError as error:\n'
+                  '    if error.code != 404: raise\n'
+                  '    result = dict(status=404, url=error.geturl(), data=None)\n'
+                  'print(json.dumps(result))\n'
+              )
+              try:
+                  result = subprocess.run([sys.executable, '-I', '-S', '-c', code, str(timeout_s)],
+                                          capture_output=True, text=True, encoding='utf-8',
+                                          timeout=timeout_s, check=True)
+              except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as error:
+                  raise RuntimeError('Simple index request failed; not a missing-release retry') from error
+              return json.loads(result.stdout)
+
+
+          def wait_for_simple_index(manifest):
+              deadline = time.monotonic() + 180
+              while True:
+                  remaining = deadline - time.monotonic()
+                  if remaining <= 0:
+                      raise RuntimeError('Accepted release missing from Simple index after 180 seconds')
+                  snapshot = fetch_simple_snapshot(min(20, remaining))
+                  if time.monotonic() >= deadline:
+                      raise RuntimeError('Simple index verification exceeded 180 seconds')
+                  if simple_index_ready(manifest, snapshot):
+                      print('Official Simple index exposes both accepted distribution hashes')
+                      return
+                  remaining = deadline-time.monotonic()
+                  if remaining <= 0:
+                      raise RuntimeError('Simple index verification exceeded 180 seconds')
+                  time.sleep(min(10, remaining))
+
           manifest = json.loads(os.environ['MANIFEST'])
           url = 'https://pypi.org/pypi/fibernet/' + manifest['version'] + '/json'
           deadline = time.monotonic() + 300
@@ -329,6 +408,7 @@ jobs:
               if time.monotonic() >= deadline:
                   raise RuntimeError('Published files were not visible with the accepted hashes')
               time.sleep(15)
+          wait_for_simple_index(manifest)
           PY
       - name: Install the exact published wheel and smoke-test it
         env:
