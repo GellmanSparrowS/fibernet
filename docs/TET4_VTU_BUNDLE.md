@@ -1,9 +1,10 @@
 # Tet4 geometry and material bundles
 
 Use this optional interface to move a tetrahedral mesh and its two isotropic
-elasticity constants per material between tools. FiberNet does not solve this
-mesh or attach it to a `StructureGraph`. This interface is separate from the
-straight-line VTU adapter.
+elasticity constants per material between tools. Bundle I/O neither solves
+the mesh nor attaches it to a `StructureGraph`. For supported small-strain
+problems use the separate [Tet4 static solver](TET4_STATIC.md). This format
+is distinct from the straight-line VTU adapter.
 
 This interface was verified with the optional provider `meshio==5.3.5`.
 Importing FiberNet or this module does not load Meshio; it is only needed
