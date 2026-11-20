@@ -2,8 +2,10 @@
 
 Use `examples/matched_axial_backends.py` to run the same SI spring network through
 FiberNet's native LAMMPS and Taichi entry points. The example saves unscaled
-positions, velocities and energies from both solvers at every integration step,
-then compares their displacement histories with an independent reference.
+positions, velocities and energies, then compares their displacement histories
+with an independent reference. The original cases retain every output step; the
+optional 3D case retains every native LAMMPS step and compares both backends at
+129 common physical times.
 
 ## Shared physical model
 
@@ -85,3 +87,86 @@ in both. The position errors converge at approximately second and first order,
 respectively. Choose the time step against the quantities and accuracy needed
 for a study. This example compares undamped axial spring dynamics; rotational
 BPM and beam bending have their own model parameters and validation examples.
+
+
+## Optional 120-node 3D case
+
+The same script also builds a deterministic 6 × 5 × 4 grid with 120 nodes and
+573 physical axial bonds: nearest neighbors, three face-diagonal families and
+body diagonals. The 1 mm spacing gives a 5 × 4 × 3 mm sample. Twenty nodes on the
+left face are fixed in all three directions; twenty right-face nodes each carry
+100 nN in x. Mass, physical axial stiffness, zero initial velocity, zero damping,
+SI units and the 1 ms physical duration are exactly those used above. The same
+central-force reference equations and diagnostics are reused.
+
+There are two ways to supply FiberNet and Taichi to the example interpreter:
+
+- **Source environment:** install `'.[accel]'` from this checkout and use its
+  `examples/matched_axial_backends.py`.
+- **Installed environment:** install `'fibernet[accel]==4.4.4'` from PyPI and run
+  the script from this checkout by its absolute path, from any results directory.
+  Top-level repository examples are separate from the wheel's `fibernet.examples`
+  package; the script adds no source directory to `sys.path`.
+
+In both cases the native LAMMPS worker can use a separate, already-qualified
+interpreter/runtime. Pass your own reviewed `RuntimeSpec` JSON using `--runtime`:
+its explicit executable/package paths, exact banner, binary/library hashes and
+permitted environment entries are checked unchanged. Follow
+[the existing native qualification contract](LAMMPS_HARMONIC_CLI.md#explicit-runtime-and-lifecycle).
+There are no example-specific automatic downloads, runtime discovery or fixed
+machine paths. The demonstrated native route is Linux x86_64; see the Taichi
+platform/Python requirements linked above before choosing the example environment.
+
+```bash
+# Preparation only: no provider or runtime inventory is needed.
+python examples/matched_axial_backends.py --case braced3d
+
+# One actual resolution, starting conservatively in a new output directory.
+python examples/matched_axial_backends.py --case braced3d --steps 256 --execute \
+  --runtime /absolute/path/to/reviewed_runtime.json --output new_3d_256
+
+# Three resolutions over the same 1 ms, using the same caller-reviewed runtime.
+python examples/matched_axial_backends.py --case braced3d --execute \
+  --runtime /absolute/path/to/reviewed_runtime.json --output new_3d_convergence
+```
+
+When running outside the checkout, replace the script path by its absolute path.
+`--steps` accepts distinct values from 256, 512 and 1024; without it, all three
+run. Omitting `--case braced3d` preserves the original spring and planar cases.
+
+The 3D case uses the existing `harmonic_sampled_v1` profile. Integration steps
+are 3.90625, 1.953125 and 0.9765625 µs. Native trajectories contain 257, 513 and
+1025 frames, respectively; strides 2, 4 and 8 select the same 129 times for both
+backends. Every native frame's stable node IDs, step and time are checked before
+selection. `states.npz` also retains node IDs, edge IDs, fixed rows and physical
+inputs, so row indices are never mistaken for persistent identities. Energies
+are selected from the corresponding native thermo steps. The existing profile
+forecasts enforce the unchanged 32 MiB output/file and 2 GiB memory budgets
+before launch. At 1024 steps, the conservative aggregate native forecast was
+31,494,245 bytes; actual bytes are recorded separately in `comparison.json`.
+
+A completed Linux x86_64 CPU validation on the 4.4.4 source tree, with the
+previously qualified LAMMPS 22 Jul 2025 Update 4 and Taichi 1.7.4, produced:
+
+| Steps | LAMMPS vs reference (nm) | Taichi vs reference (nm) | Between backends (nm) | Native trajectory bytes |
+| ---: | ---: | ---: | ---: | ---: |
+| 256 | 1.308 | 23.84 | 23.54 | 5,965,611 |
+| 512 | 0.3264 | 11.84 | 11.77 | 11,948,018 |
+| 1024 | 0.08157 | 5.902 | 5.883 | 23,900,880 |
+
+The reference peak displacement was 4.54 µm. Cross-backend error at the finest
+step was 0.130% of this peak. LAMMPS and Taichi position errors converged at
+approximately second and first order; their finest normalized energy-work
+residuals were 2.94e-6 and 5.33e-4, with zero fixed-node motion. Selected NPZ
+files were about 1.39 MB each; their exact byte counts and SHA256 are recorded
+per run. Timing fields distinguish the native task (startup, integration,
+every-step I/O and parsing), the Taichi call (initialization/JIT, integration and
+state extraction), and the independent reference. They are not a pure-engine
+speed ranking, and fresh runs can differ in timings and serialized file sizes.
+
+This is a bounded undamped axial-dynamics comparison, with geometric spring
+extension. It does not test bending, contact, rotational BPM, fracture or
+experimental material calibration, and is not a 2501-node dual-engine result.
+Ordinary tests cover deterministic geometry, profile bounds, runtime arguments
+and output alignment without launching either optional provider. Native runs
+require the explicit `--execute` command; no new CI workflow is added.
