@@ -839,7 +839,7 @@
   "symbols": [
    "to_gmsh"
   ],
-  "sha256": "4e0898d4a2def56f426420cadc2db858a76264df814151639aa8d1db87ba178f"
+  "sha256": "5262b380bdb9bb68a85b4cd381c947ef6fe16a1c888dbb0a59a256a72d1b88c2"
  },
  "fibernet/io/lammps.py": {
   "purpose": "LAMMPS data file I/O.",
@@ -5710,5 +5710,21 @@
    "parse_task_output"
   ],
   "sha256": "51755bdba48c87a20738f3703ee8df23bb3dd6c38fced54b6c103032f023b36b"
+ },
+ "tests/test_gmsh_geometry_identity.py": {
+  "purpose": "Legacy public MSH export preserves representable geometric distinctions.",
+  "status": "active",
+  "symbols": [
+   "_mesh",
+   "_export",
+   "test_nearby_distinct_sparse_label_rods_do_not_become_one_line",
+   "test_short_nonzero_segment_does_not_become_self_loop_or_round_off",
+   "test_exact_coincident_endpoint_still_shares_node_after_resampling",
+   "test_real_meshio_roundtrip_keeps_disjoint_rod_rows",
+   "test_unrepresentable_resampled_segment_rejected_before_write",
+   "test_far_offset_nodes_with_distinct_tags_keep_distinct_coordinates",
+   "test_exact_sampled_interior_intersection_keeps_legacy_shared_node"
+  ],
+  "sha256": "b4b8f1e166a6031cde5c2f5e28dfd53d3169bbda7941061f097059ab8c07cd1c"
  }
 }

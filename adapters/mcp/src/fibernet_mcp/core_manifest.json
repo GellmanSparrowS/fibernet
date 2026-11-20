@@ -102,7 +102,7 @@
   "integrations/ovito_integration.py": "9cbe3ce7cc64ee0da5dc707c41f8a655c2813b21b3970e6d2587486b1d7b4d9a",
   "io/__init__.py": "766831945d4797bcf816b5c96c2bb8a53a8ed7ce23f2391e59c81b7dc7eb9643",
   "io/fea_export.py": "ab3e259d706d4159729de40b606529b568ae548eff23d5050c1a463dbb65dd34",
-  "io/gmsh.py": "4e0898d4a2def56f426420cadc2db858a76264df814151639aa8d1db87ba178f",
+  "io/gmsh.py": "5262b380bdb9bb68a85b4cd381c947ef6fe16a1c888dbb0a59a256a72d1b88c2",
   "io/lammps.py": "34f383bbe8ac86728d2251b882d04171b0c42897d2aeede823f1929131c7e249",
   "io/mesh_export.py": "04961468ccc4780e0994bc49a5560ba5cdf8da96b4c3b4a0df00ed1d4290b4fd",
   "io/meshio_adapter.py": "2bb55d2df0c1ece2c621a5d7c4e9c7ac84d6485eb3c3536daf1c0f6e4f528c03",

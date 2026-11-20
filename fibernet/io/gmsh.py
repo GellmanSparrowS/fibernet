@@ -4,7 +4,6 @@ GMSH mesh file export.
 Exports fiber networks as beam element meshes for FEM solvers.
 """
 
-import numpy as np
 from fibernet.core.network import FiberNetwork
 
 
@@ -16,6 +15,13 @@ def to_gmsh(
 ) -> str:
     """Export fiber network to GMSH .msh format (v2 ASCII).
     
+    Only exactly coincident sampled positions share a mesh node. Coordinates
+    are written with round-trip float64 precision; previously a fixed decimal
+    tolerance could merge nearby fibers or collapse short line elements.
+    This does not search for intersections or apply declared crosslinks.
+    A segment with identical sampled endpoints is rejected before writing.
+    This is a geometry export, not a stable-ID or material format.
+
     Parameters
     ----------
     network : FiberNetwork
@@ -39,10 +45,14 @@ def to_gmsh(
     for f_idx, fiber in enumerate(network.fibers):
         resampled = fiber.resample(segments_per_fiber + 1)
         pts = resampled.centerline
+        # The interpolation endpoint can round differently on adjacent fibers.
+        # Use the authoritative coordinates on both ends.
+        if len(pts) > 1:
+            pts[[0, -1]] = fiber.centerline[[0, -1]]
         
         fiber_nids = []
         for pt in pts:
-            key = tuple(np.round(pt, 8))
+            key = tuple(pt)
             if key not in node_map:
                 node_map[key] = nid
                 nodes.append(pt)
@@ -50,6 +60,9 @@ def to_gmsh(
             fiber_nids.append(node_map[key])
         
         for i in range(len(fiber_nids) - 1):
+            if fiber_nids[i] == fiber_nids[i + 1]:
+                raise ValueError('Gmsh resampling produced a zero-length line; '
+                                 'use fewer segments or check the centerline')
             elements.append({
                 'id': eid,
                 'type': 1,  # Line element
@@ -74,7 +87,7 @@ def to_gmsh(
         f.write("$Nodes\n")
         f.write(f"{len(nodes)}\n")
         for i, pt in enumerate(nodes):
-            f.write(f"{i+1} {pt[0]:.10e} {pt[1]:.10e} {pt[2]:.10e}\n")
+            f.write(f"{i+1} {pt[0]:.17g} {pt[1]:.17g} {pt[2]:.17g}\n")
         f.write("$EndNodes\n")
         
         # Elements
