@@ -5726,5 +5726,35 @@
    "test_exact_sampled_interior_intersection_keeps_legacy_shared_node"
   ],
   "sha256": "b4b8f1e166a6031cde5c2f5e28dfd53d3169bbda7941061f097059ab8c07cd1c"
+ },
+ "fibernet/io/meshio_adapter.py": {
+  "purpose": "Optional, straight-line VTU interoperability; not a solver or project format.",
+  "status": "active",
+  "symbols": [
+   "_json_copy",
+   "_ids",
+   "_unmasked_field",
+   "_source_inputs",
+   "_field_array",
+   "_fields",
+   "_fields_by_id",
+   "to_meshio",
+   "write_vtu_bundle"
+  ],
+  "sha256": "1cb495297b7c6e9c531166d0f9271628ec1250ef862b2cb8517c76b81aa52f5f"
+ },
+ "tests/test_meshio_exact_field_values.py": {
+  "purpose": "VTU numeric fields do not silently lose integer-valued external labels.",
+  "status": "active",
+  "symbols": [
+   "kwargs",
+   "test_unsigned_exact_by_physical_edge_id",
+   "test_signed_exact_vectors_keep_point_rows",
+   "test_unrepresentable_fields_reject_before_publication",
+   "test_existing_explicit_array_dtype_and_exact_mixed_float_unchanged",
+   "test_small_signed_unsigned_and_ordinary_floats_still_export",
+   "test_incomplete_ids_and_nan_are_not_missing_value_fills"
+  ],
+  "sha256": "31029fea97b24cedab4218d1cb4ef7696dfd55cc4a3cc6b3f8a3f9d2d9ffc46f"
  }
 }
