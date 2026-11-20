@@ -26,6 +26,12 @@ From an installed or editable FiberNet environment:
 python examples/tet4_static_two_material.py
 ```
 
+For a larger reproducible junction, use the
+[three-cylinder example](../examples/tet4_static_welded_junction.py) or
+[download the exact 4.6.0 version](RELEASE_4_6_0.md#run-the-welded-junction-example).
+Its quick and reference tiers are separate discretizations, not a
+mesh-convergence claim.
+
 ## Contract
 
 - Connectivity uses point row indices within the bundle. Forces and

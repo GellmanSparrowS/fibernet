@@ -1,3 +1,12 @@
+## [4.6.0]
+
+- Add a bounded linear Tet4 static solver for conforming solid meshes with
+  per-cell materials, nodal forces, and zero Cartesian restraints. The solver
+  returns SI displacements, reactions, and strain energy.
+- Add a reproducible two-tier welded-junction example. Meshio remains
+  optional for mesh exchange; the solver and existing beam APIs are independent.
+- See [4.6.0 release notes](docs/RELEASE_4_6_0.md).
+
 ## [4.5.0]
 
 - Add optional Tet4 geometry and material interchange using Meshio. Local v1

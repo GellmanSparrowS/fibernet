@@ -1900,7 +1900,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "c984ca403e38f350242c67b8a280d6262b3da019198f1f73d771b5d24dd29677"
+  "sha256": "26c0d8089aa6f1b86dd3557b5cd9aa46ebed2ce796b6d8c0b12288d989ef3dcf"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -5882,5 +5882,18 @@
    "test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder"
   ],
   "sha256": "dc8551ed9ae41a713625d84543acb1364a19a9d6b34b11c1263bc7402eb49ae8"
+ },
+ "examples/tet4_static_welded_junction.py": {
+  "purpose": "Reproducible Tet4 static example: three orthogonal welded cylinders.",
+  "status": "active",
+  "symbols": [
+   "make_geometry",
+   "boundary",
+   "load_vectors",
+   "strain_energy",
+   "run",
+   "main"
+  ],
+  "sha256": "4c9450a0029fe376f28f0e9a9edc78b73b8810318c262396442fa4de2930dccd"
  }
 }
