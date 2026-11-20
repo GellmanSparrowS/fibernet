@@ -39,7 +39,7 @@ FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界�
 
 ### 安装并运行源码入门示例
 
-**开发版源码：4.4.8——本页推荐入口**
+**开发版源码：4.4.9——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
@@ -1613,7 +1613,7 @@ FiberNet is a Python library for fiber-network modeling. FiberScope provides a d
 
 ### Install and run the source quick start
 
-**Development checkout: 4.4.8 — recommended for this page**
+**Development checkout: 4.4.9 — recommended for this page**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git

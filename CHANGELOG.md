@@ -1,3 +1,11 @@
+## [4.4.9]
+
+- Reject invalid connectivity layouts in the 3D beam solver before element
+  assembly instead of silently ignoring extra rows.
+- Reject nonunit 3D x-stretch requests on graphs with zero x span before
+  any result is written.
+- See [4.4.9 release notes and migration](docs/RELEASE_4_4_9.md).
+
 ## [4.4.8]
 
 - Prevent precision loss in custom VTU point and cell fields when mixed
