@@ -534,6 +534,12 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     """
     if not isinstance(return_cell_fields, bool):
         raise TypeError('return_cell_fields must be a bool')
+    mesh = _validate_static_mesh(bundle)
+    return _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields)
+
+
+def _validate_static_mesh(bundle):
+    # _validate creates an owned snapshot of the geometry, IDs and materials.
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if (_row_count(bundle.points, 'points') > _MAX_POINTS or
@@ -542,6 +548,10 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
                      bundle.material_ids, bundle.materials, bundle.length_unit)
     _validate_topology(mesh.tetrahedra)
+    return mesh
+
+
+def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields):
     force, fixed = _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id)
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):

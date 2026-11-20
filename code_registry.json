@@ -5866,9 +5866,11 @@
    "_checked_normal_rescale",
    "_factor_band",
    "_fixed_solve",
-   "solve_static_tet4"
+   "solve_static_tet4",
+   "_validate_static_mesh",
+   "_solve_static_validated"
   ],
-  "sha256": "b37dadde2f96e332a54a37276e214ff650fc18f807cddeea8c7805a0abd1fd5a"
+  "sha256": "3b1d4316761e0a6755f69578947b9bef3c90a20f9937ab85756f07e7e64574b8"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
@@ -5905,5 +5907,26 @@
    "main"
   ],
   "sha256": "4c9450a0029fe376f28f0e9a9edc78b73b8810318c262396442fa4de2930dccd"
+ },
+ "fibernet/io/tet4_results.py": {
+  "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",
+  "status": "active",
+  "symbols": [
+   "solve_static_tet4_to_vtu"
+  ],
+  "sha256": "5de61c8a8d721de145fe5ce7008c23c083152c1f7ccd7a11acc3074ec924b15d"
+ },
+ "tests/test_tet4_results.py": {
+  "purpose": "One-way Tet4 VTU diagnostics: alignment, analytical recovery, atomic staging.",
+  "status": "active",
+  "symbols": [
+   "fitted_patch",
+   "test_meshio_real_fitted_normal_shear_roundtrip_and_v1_refusal",
+   "test_existing_target_including_dangling_symlink_not_touched",
+   "test_staged_write_no_partial_and_no_clobber",
+   "test_import_and_request_without_meshio",
+   "test_relative_target_stays_in_resolved_parent_when_cwd_changes"
+  ],
+  "sha256": "b75cb4b7d7220b4e5a83ba4929cb11eb4e6b4490d5962c31024b0d5d2d64ccac"
  }
 }
