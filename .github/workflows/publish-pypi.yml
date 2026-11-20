@@ -305,13 +305,14 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
-      - name: Verify PyPI exposes exactly the uploaded hashes
+      - name: Verify PyPI hashes and install from the official index
         env:
           MANIFEST: ${{ needs.build.outputs.manifest }}
         run: |
           python - <<'PY'
           import json, os, time, urllib.error, urllib.request
-          import re, subprocess, sys, urllib.parse
+          import re, subprocess, sys, tempfile, urllib.parse
+          from pathlib import Path
 
 
           def simple_index_ready(manifest, snapshot):
@@ -373,22 +374,87 @@ jobs:
               return json.loads(result.stdout)
 
 
-          def wait_for_simple_index(manifest):
-              deadline = time.monotonic() + 180
+          def remaining_time(deadline):
+              remaining = deadline - time.monotonic()
+              if remaining <= 0:
+                  raise RuntimeError('Simple index and pip verification exceeded 180 seconds')
+              return remaining
+
+
+          def wait_for_simple_index(manifest, deadline):
               while True:
-                  remaining = deadline - time.monotonic()
-                  if remaining <= 0:
-                      raise RuntimeError('Accepted release missing from Simple index after 180 seconds')
-                  snapshot = fetch_simple_snapshot(min(20, remaining))
-                  if time.monotonic() >= deadline:
-                      raise RuntimeError('Simple index verification exceeded 180 seconds')
+                  snapshot = fetch_simple_snapshot(min(20, remaining_time(deadline)))
+                  remaining_time(deadline)
                   if simple_index_ready(manifest, snapshot):
-                      print('Official Simple index exposes both accepted distribution hashes')
+                      print('Official Simple index exposes both accepted distribution hashes', flush=True)
                       return
-                  remaining = deadline-time.monotonic()
-                  if remaining <= 0:
-                      raise RuntimeError('Simple index verification exceeded 180 seconds')
-                  time.sleep(min(10, remaining))
+                  time.sleep(min(10, remaining_time(deadline)))
+
+
+          def stale_root_candidate(output, version):
+              # A clean root no-match with *older* versions is the only pip failure
+              # retried. Unknown diagnostic formats fail closed.
+              lines = [line.strip() for line in output.splitlines()]
+              if any(line.startswith(('WARNING:', 'Collecting ', 'Could not fetch URL'))
+                     for line in lines):
+                  return False
+              errors = [line for line in lines if line.startswith('ERROR:')]
+              root = f'fibernet=={version}'
+              if len(errors) != 2 or errors[1] != f'ERROR: No matching distribution found for {root}':
+                  return False
+              prefix = f'ERROR: Could not find a version that satisfies the requirement {root} (from versions: '
+              if not errors[0].startswith(prefix) or not errors[0].endswith(')'):
+                  return False
+              versions = [v.strip() for v in errors[0][len(prefix):-1].split(',')]
+              target = tuple(map(int, version.split('.')))
+              return all(re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', v)
+                         and tuple(map(int, v.split('.'))) < target for v in versions)
+
+
+          def check_pip_report(report, manifest):
+              version = manifest['version']
+              wheel = f'fibernet-{version}-py3-none-any.whl'
+              expected = manifest['files'][wheel]
+              roots = [item for item in report['install']
+                       if item['metadata']['name'].lower() == 'fibernet']
+              if len(roots) != 1:
+                  raise RuntimeError('pip report must contain exactly one FiberNet wheel')
+              root = roots[0]
+              download = root['download_info']
+              url = urllib.parse.urlsplit(download['url'])
+              if (root['metadata']['version'] != version or root.get('requested') is not True
+                      or root.get('is_direct') is not False or root.get('is_yanked') is not False
+                      or url.scheme != 'https' or url.netloc != 'files.pythonhosted.org'
+                      or not url.path.startswith('/packages/') or url.path.rsplit('/', 1)[-1] != wheel
+                      or url.query or url.fragment
+                      or download['archive_info']['hashes'].get('sha256') != expected):
+                  raise RuntimeError('pip-selected wheel does not match accepted official distribution')
+
+
+          def install_from_index(python, manifest, deadline, report):
+              cmd = [str(python), '-m', 'pip', '--isolated', '--disable-pip-version-check',
+                     '--no-cache-dir', '--retries', '0', '--no-color', 'install', '--verbose',
+                     '--index-url', 'https://pypi.org/simple', '--only-binary=:all:',
+                     '--report', str(report), f"fibernet=={manifest['version']}"]
+              while True:
+                  wait_for_simple_index(manifest, deadline)
+                  try:
+                      attempt = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                               text=True, encoding='utf-8', errors='replace',
+                                               timeout=remaining_time(deadline), check=False)
+                  except subprocess.TimeoutExpired as error:
+                      if error.stdout:
+                          print(error.stdout.decode('utf-8', 'replace'), flush=True)
+                      raise RuntimeError('pip timed out; not a stale-index retry') from error
+                  print(attempt.stdout, end='', flush=True)
+                  remaining_time(deadline)
+                  if attempt.returncode == 0:
+                      check_pip_report(json.loads(report.read_text(encoding='utf-8')), manifest)
+                      return
+                  if attempt.returncode != 1 or not stale_root_candidate(attempt.stdout, manifest['version']):
+                      raise RuntimeError(f'pip install failed (exit {attempt.returncode}); not a stale-index retry')
+                  print('pip saw only older FiberNet versions; rechecking the official index', flush=True)
+                  time.sleep(min(10, remaining_time(deadline)))
 
           manifest = json.loads(os.environ['MANIFEST'])
           url = 'https://pypi.org/pypi/fibernet/' + manifest['version'] + '/json'
@@ -408,15 +474,18 @@ jobs:
               if time.monotonic() >= deadline:
                   raise RuntimeError('Published files were not visible with the accepted hashes')
               time.sleep(15)
-          wait_for_simple_index(manifest)
+          work = Path(os.environ['RUNNER_TEMP'])
+          env = work / 'published-core'
+          subprocess.run([sys.executable, '-m', 'venv', str(env)], check=True, timeout=30)
+          with tempfile.TemporaryDirectory(dir=work) as reports:
+              install_from_index(env / 'bin' / 'python', manifest, time.monotonic() + 180,
+                                 Path(reports) / 'install.json')
           PY
-      - name: Install the exact published wheel and smoke-test it
+      - name: Smoke-test the exact from-index installation
         env:
           VERSION: ${{ needs.build.outputs.version }}
           MPLBACKEND: Agg
         run: |
-          python -m venv "$RUNNER_TEMP/published-core"
-          "$RUNNER_TEMP/published-core/bin/python" -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: "fibernet==$VERSION"
           "$RUNNER_TEMP/published-core/bin/python" -m pip check
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/published-core/bin/python" -I - <<'PY'

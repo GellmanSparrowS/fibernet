@@ -5,10 +5,13 @@ import io
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
+import tempfile
 import textwrap
 import time
 import unittest
+from contextlib import redirect_stdout
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -20,11 +23,18 @@ PUBLISHED = {'info': {'version': VERSION}, 'urls': [
     {'filename': name, 'digests': {'sha256': digest}} for name, digest in FILES.items()]}
 
 
-def workflow_code():
+def workflow_verifier():
     text = WORKFLOW.read_text(encoding='utf-8')
-    section = text.split('      - name: Verify PyPI exposes exactly the uploaded hashes\n', 1)[1]
-    block = section.split('      - name: Install the exact published wheel and smoke-test it\n', 1)[0]
-    return textwrap.dedent(block.split("          python - <<'PY'\n", 1)[1].rsplit('          PY\n', 1)[0])
+    jobs = re.findall(r'(?ms)^  verify-published:\n(.*?)(?=^  [\w-]+:\n|\Z)', text)
+    assert len(jobs) == 1, 'expected exactly one verify-published job'
+    return jobs[0]
+
+
+def workflow_code():
+    blocks = re.findall(r"(?ms)^          python - <<'PY'\n(.*?)^          PY[ \t]*$",
+                        workflow_verifier())
+    assert len(blocks) == 1, 'expected exactly one Python verifier entry point'
+    return textwrap.dedent(blocks[0])
 
 
 def functions():
@@ -41,6 +51,21 @@ def snapshot(names=None):
                 {'filename': name, 'hashes': {'sha256': FILES[name]},
                  'url': 'https://files.pythonhosted.org/packages/test/'+name,
                  'yanked': False} for name in (FILES if names is None else names)]}}
+
+
+def pip_report():
+    wheel = f'fibernet-{VERSION}-py3-none-any.whl'
+    return {'install': [{
+        'metadata': {'name': 'fibernet', 'version': VERSION},
+        'requested': True, 'is_direct': False, 'is_yanked': False,
+        'download_info': {'url': 'https://files.pythonhosted.org/packages/test/' + wheel,
+                          'archive_info': {'hashes': {'sha256': FILES[wheel]}}}}]}
+
+
+def stale_pip_output(versions='4.4.2, 4.4.3'):
+    return (f'ERROR: Could not find a version that satisfies the requirement '
+            f'fibernet=={VERSION} (from versions: {versions})\n'
+            f'ERROR: No matching distribution found for fibernet=={VERSION}\n')
 
 
 class Clock:
@@ -70,7 +95,7 @@ class TestPyPIIndexVisibility(unittest.TestCase):
             data = responses[min(len(calls)-1, len(responses)-1)]
             return subprocess.CompletedProcess(argv, 0, json.dumps(data), '')
         with patch('time.monotonic',self.clock.monotonic), patch('time.sleep',self.clock.sleep), patch('subprocess.run',run):
-            self.ns['wait_for_simple_index'](MANIFEST)
+            self.ns['wait_for_simple_index'](MANIFEST, 180.)
         return calls
 
     def test_immediate_success(self):
@@ -85,7 +110,7 @@ class TestPyPIIndexVisibility(unittest.TestCase):
         self.assertEqual(len(self.wait([late,snapshot()])),2)
 
     def test_persistent_missing_stops_at_180_seconds(self):
-        with self.assertRaisesRegex(RuntimeError,'after 180 seconds'):self.wait([snapshot([])])
+        with self.assertRaisesRegex(RuntimeError,'180 seconds'):self.wait([snapshot([])])
         self.assertEqual(self.clock.now,180); self.assertEqual(len(self.clock.delays),18)
 
     def test_requests_consume_the_same_deadline(self):
@@ -108,7 +133,7 @@ class TestPyPIIndexVisibility(unittest.TestCase):
     def test_unrelated_release_does_not_satisfy_target(self):
         data=snapshot()
         for entry in data['data']['files']:entry['filename']=entry['filename'].replace('4.4.4','4.4.3')
-        with self.assertRaisesRegex(RuntimeError,'after 180 seconds'):self.wait([data])
+        with self.assertRaisesRegex(RuntimeError,'180 seconds'):self.wait([data])
         self.assertEqual(self.clock.now,180)
 
     def test_wrong_manifest_version_cannot_match_file_names(self):
@@ -174,18 +199,152 @@ class TestPyPIIndexVisibility(unittest.TestCase):
                         exec(compile(workflow_code(),str(WORKFLOW),'exec'),{})
                     child.assert_not_called();self.assertEqual(clock.now,300)
 
-    def test_correct_official_hashes_precede_simple_check(self):
-        with patch.dict(os.environ,MANIFEST=json.dumps(MANIFEST)), patch('urllib.request.urlopen',return_value=io.BytesIO(json.dumps(PUBLISHED).encode())), patch('subprocess.run',return_value=subprocess.CompletedProcess([],0,json.dumps(snapshot()),'')) as child:
-            exec(compile(workflow_code(),str(WORKFLOW),'exec'),{})
-        self.assertEqual(child.call_count,1)
+    def assert_pip_command(self, argv, python, report):
+        self.assertEqual(argv, [
+            str(python), '-m', 'pip', '--isolated', '--disable-pip-version-check',
+            '--no-cache-dir', '--retries', '0', '--no-color', 'install', '--verbose',
+            '--index-url', 'https://pypi.org/simple', '--only-binary=:all:',
+            '--report', str(report), f'fibernet=={VERSION}',
+        ])
+
+    def test_correct_official_hashes_precede_simple_check_and_pip(self):
+        calls = []
+
+        def release(request, **kwargs):
+            self.assertEqual(request.full_url, f'https://pypi.org/pypi/fibernet/{VERSION}/json')
+            calls.append('version-json')
+            return io.BytesIO(json.dumps(PUBLISHED).encode())
+
+        def child(argv, **kwargs):
+            if argv[1:3] == ['-m', 'venv']:
+                self.assertEqual(Path(argv[3]), work / 'published-core')
+                self.assertTrue(kwargs['check'])
+                calls.append('venv')
+                return subprocess.CompletedProcess(argv, 0)
+            if argv[1:4] == ['-I', '-S', '-c']:
+                calls.append('simple-json')
+                return subprocess.CompletedProcess(argv, 0, json.dumps(snapshot()), '')
+            report = Path(argv[argv.index('--report') + 1])
+            self.assert_pip_command(argv, work / 'published-core/bin/python', report)
+            self.assertEqual(report.parent.parent, work)
+            report.write_text(json.dumps(pip_report()), encoding='utf-8')
+            calls.append('pip')
+            return subprocess.CompletedProcess(argv, 0, '', '')
+
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            with patch.dict(os.environ, MANIFEST=json.dumps(MANIFEST), RUNNER_TEMP=temporary), \
+                    patch('urllib.request.urlopen', side_effect=release), patch('subprocess.run', side_effect=child):
+                exec(compile(workflow_code(), str(WORKFLOW), 'exec'), {})
+        self.assertEqual(calls, ['version-json', 'venv', 'simple-json', 'pip'])
+
+    def run_pip(self, attempts, *, snapshots=None, deadline=180.):
+        calls = []
+        self.pip_calls = calls
+        snapshots = iter(snapshots) if snapshots is not None else None
+        attempts = iter(attempts)
+
+        def child(argv, **kwargs):
+            if argv[1:4] == ['-I', '-S', '-c']:
+                calls.append('simple-json')
+                data = next(snapshots) if snapshots is not None else snapshot()
+                return subprocess.CompletedProcess(argv, 0, json.dumps(data), '')
+            self.assert_pip_command(argv, python, report)
+            self.assertEqual(kwargs['stdout'], subprocess.PIPE)
+            self.assertEqual(kwargs['stderr'], subprocess.STDOUT)
+            self.assertFalse(kwargs['check'])
+            self.assertEqual(kwargs['timeout'], deadline - self.clock.now)
+            self.assertNotIn('shell', kwargs)
+            calls.append('pip')
+            event = next(attempts)
+            if isinstance(event, Exception):
+                raise event
+            if isinstance(event, dict):
+                report.write_text(json.dumps(event), encoding='utf-8')
+                return subprocess.CompletedProcess(argv, 0, '', '')
+            return subprocess.CompletedProcess(argv, 1, event, '')
+
+        with tempfile.TemporaryDirectory() as temporary:
+            python = Path(temporary) / 'published-core/bin/python'
+            report = Path(temporary) / 'install.json'
+            with patch('time.monotonic', self.clock.monotonic), \
+                    patch('time.sleep', self.clock.sleep), \
+                    patch('subprocess.run', side_effect=child), redirect_stdout(io.StringIO()):
+                self.ns['install_from_index'](python, MANIFEST, deadline, report)
+
+    def test_stale_pip_rechecks_simple_then_installs_accepted_wheel(self):
+        self.run_pip([stale_pip_output(), pip_report()])
+        self.assertEqual(self.pip_calls, ['simple-json', 'pip', 'simple-json', 'pip'])
+        self.assertEqual(self.clock.delays, [10])
+
+    def test_stale_pip_rechecks_hash_before_retry(self):
+        bad = snapshot()
+        bad['data']['files'][0]['hashes']['sha256'] = 'c'*64
+        with self.assertRaisesRegex(RuntimeError, 'hash mismatch'):
+            self.run_pip([stale_pip_output()], snapshots=[snapshot(), bad])
+        self.assertEqual(self.pip_calls, ['simple-json', 'pip', 'simple-json'])
+
+    def test_stale_pip_shares_deadline_with_simple_checks(self):
+        with self.assertRaisesRegex(RuntimeError, '180 seconds'):
+            self.run_pip([stale_pip_output()] * 18)
+        self.assertEqual(self.pip_calls, ['simple-json', 'pip'] * 18)
+        self.assertEqual(self.clock.now, 180)
+
+    def test_pip_hard_failures_do_not_retry(self):
+        stale = stale_pip_output()
+        for diagnostic in (
+            'ERROR: No matching distribution found for required-dependency>=5',
+            'ERROR: These packages do not match the hashes',
+            'Could not fetch URL https://pypi.org/simple/fibernet/: TLS failure\n' + stale,
+            'WARNING: connection failed\n' + stale,
+            'ERROR: Ignored versions requiring a different Python version\n' + stale,
+            stale_pip_output('none'), stale_pip_output(VERSION), stale_pip_output('4.4.5'),
+        ):
+            with self.subTest(diagnostic=diagnostic):
+                with self.assertRaisesRegex(RuntimeError, 'not a stale-index retry'):
+                    self.run_pip([diagnostic])
+                self.assertEqual(self.pip_calls, ['simple-json', 'pip'])
+                self.assertEqual(self.clock.delays, [])
+
+    def test_pip_timeout_does_not_retry(self):
+        timeout = subprocess.TimeoutExpired(['pip'], 180, output=b'timed-out child diagnostic')
+        with self.assertRaisesRegex(RuntimeError, 'pip timed out'):
+            self.run_pip([timeout])
+        self.assertEqual(self.pip_calls, ['simple-json', 'pip'])
+        self.assertEqual(self.clock.delays, [])
+
+    def test_successful_pip_exit_rejects_wrong_report_without_retry(self):
+        for mutation in ('origin', 'hash', 'version', 'direct', 'yanked', 'not-requested', 'duplicate'):
+            with self.subTest(mutation=mutation):
+                value = pip_report()
+                row = value['install'][0]
+                if mutation == 'origin':
+                    row['download_info']['url'] = row['download_info']['url'].replace(
+                        'files.pythonhosted.org', 'other.example')
+                elif mutation == 'hash':
+                    row['download_info']['archive_info']['hashes']['sha256'] = 'c'*64
+                elif mutation == 'version':
+                    row['metadata']['version'] = '4.4.3'
+                elif mutation == 'direct':
+                    row['is_direct'] = True
+                elif mutation == 'yanked':
+                    row['is_yanked'] = True
+                elif mutation == 'not-requested':
+                    row['requested'] = False
+                else:
+                    value['install'].append(copy.deepcopy(row))
+                with self.assertRaisesRegex(RuntimeError, 'pip-selected|exactly one'):
+                    self.run_pip([value])
+                self.assertEqual(self.pip_calls, ['simple-json', 'pip'])
+                self.assertEqual(self.clock.delays, [])
 
     def test_workflow_keeps_installation_and_permissions_contract(self):
-        text=WORKFLOW.read_text(encoding='utf-8')
-        self.assertIn('    timeout-minutes: 10\n    permissions: {}\n',text)
-        self.assertIn('"$RUNNER_TEMP/published-core/bin/python" -m pip --isolated install --index-url https://pypi.org/simple --only-binary=:all: "fibernet==$VERSION"',text)
-        self.assertIn('"$RUNNER_TEMP/published-core/bin/python" -m pip check',text)
-        self.assertIn("assert fibernet.__version__ == importlib.metadata.version('fibernet') == os.environ['VERSION']",text)
-        self.assertIn('exclude tests/test_pypi_index_visibility.py',(ROOT/'MANIFEST.in').read_text())
+        text = workflow_verifier()
+        self.assertIn('    needs: [build, publish]\n', text)
+        self.assertIn('    timeout-minutes: 10\n    permissions: {}\n', text)
+        self.assertIn('"$RUNNER_TEMP/published-core/bin/python" -m pip check', text)
+        self.assertIn("assert fibernet.__version__ == importlib.metadata.version('fibernet') == os.environ['VERSION']", text)
+        self.assertIn('exclude tests/test_pypi_index_visibility.py', (ROOT/'MANIFEST.in').read_text())
 
 
 if __name__=='__main__':unittest.main()
