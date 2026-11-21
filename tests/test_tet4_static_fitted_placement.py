@@ -2,6 +2,7 @@
 import json
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from examples import tet4_static_fitted_placement as example
@@ -46,20 +47,38 @@ def test_fitted_rejects_failed_budget_before_default_solve(monkeypatch, capsys):
     assert 'factor-entry budget' in capsys.readouterr().err
 
 
-def test_fitted_y_preflight_selects_y_caps_without_solving(monkeypatch, capsys):
+@pytest.mark.parametrize(('axis', 'column'), [('y', 1), ('z', 2)])
+def test_fitted_transverse_preflight_without_solving(monkeypatch, capsys, axis, column):
     def no_solve(*args, **kwargs):
         pytest.fail('preflight must not solve')
     monkeypatch.setattr(example, 'solve_static_tet4', no_solve)
-    argv = ['--load-axis', 'y', '--preflight']
+    original_prepare = example._prepare
+
+    def checked_prepare(*, load_axis):
+        prepared = original_prepare(load_axis=load_axis)
+        bundles, holds, loads, force, _ = prepared
+        mesh = bundles['uniform']
+        rows = {int(node_id): row for row, node_id in enumerate(mesh.node_ids)}
+        held_rows = [rows[i] for i in holds]
+        loaded_rows = [rows[i] for i in loads]
+        np.testing.assert_array_equal(mesh.points[held_rows, column], -1.5)
+        np.testing.assert_array_equal(mesh.points[loaded_rows, column], 1.5)
+        np.testing.assert_array_equal(np.delete(force, column, axis=1), 0.)
+        np.testing.assert_allclose(force[:, column].sum(), .001, rtol=0, atol=2e-18)
+        return prepared
+
+    monkeypatch.setattr(example, '_prepare', checked_prepare)
+    argv = ['--load-axis', axis, '--preflight']
     example.main(argv)
     report = json.loads(capsys.readouterr().out)
-    assert report['load_axis'] == 'y'
+    assert report['load_axis'] == axis
     assert report['solve_performed'] is False and 'results' not in report
     assert report['fixed_cap_nodes'] == report['loaded_cap_nodes'] == 15
     assert report['loaded_cap_area_m2'] == pytest.approx(7.347315653655915e-7)
     assert report['traction_Pa'] == pytest.approx(1361.0412933632638)
     assert report['total_force_N'] == .001
     assert report['tet4_preflight']['within_factor_budget']
+    assert report['tet4_preflight']['free_dofs'] == 2037
     assert report['placements']['arm']['center_mm'] == [.82, 0., 0.]
 
 
@@ -68,6 +87,6 @@ def test_fitted_refuses_unknown_load_axis_before_preparing(monkeypatch, capsys):
         pytest.fail('invalid axis must not prepare or solve')
     monkeypatch.setattr(example, '_prepare', no_prepare)
     with pytest.raises(SystemExit, match='2'):
-        example.main(['--load-axis', 'z'])
+        example.main(['--load-axis=-x'])
     text = capsys.readouterr().err
     assert '--load-axis' in text and 'invalid choice' in text

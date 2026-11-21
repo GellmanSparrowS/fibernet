@@ -13,6 +13,8 @@ from fibernet.io.tet4_meshio import Tet4Bundle
 from fibernet.sim.tet4 import inspect_static_tet4_admission, solve_static_tet4
 from fibernet.sim.tet4_loads import nodal_forces_from_traction
 
+LOAD_AXES = ('x', 'y', 'z')
+
 FIXTURE = Path(__file__).resolve().parent / 'fixtures' / 'fitted_axial_B.json'
 FIXTURE_SHA256 = '1b064ddc15aca50f2da24a8350fb68ede109a56732b10af12a8dbcc21aef8295'
 
@@ -24,7 +26,7 @@ def _fixture():
     return json.loads(raw)
 
 
-def _y_cap_faces(points, tets, node_ids):
+def _transverse_cap_faces(points, tets, node_ids, axis_index):
     # A boundary triangle occurs once in the frozen tetrahedral topology.
     corners = tuple(combinations(range(4), 3))
     triples = np.sort(tets[:, corners].reshape(-1, 3), axis=1)
@@ -32,10 +34,10 @@ def _y_cap_faces(points, tets, node_ids):
     exterior = faces[counts == 1]
     caps = []
     for end in (-1.5, 1.5):
-        # Both planar y caps in this fixture have exact ordinates in mm.
-        cap = exterior[np.all(points[exterior, 1] == end, axis=1)]
+        # The transverse end caps in this fixture have exact ordinates in mm.
+        cap = exterior[np.all(points[exterior, axis_index] == end, axis=1)]
         if not len(cap):
-            raise ValueError('the frozen mesh is missing a y end cap')
+            raise ValueError(f'the frozen mesh is missing a {LOAD_AXES[axis_index]} end cap')
         caps.append(node_ids[cap].tolist())
     return caps
 
@@ -49,10 +51,11 @@ def _prepare(*, load_axis='x'):
     node_rows = {r[0]: i for i, r in enumerate(nodes)}
     cell_rows = {r[0]: i for i, r in enumerate(cells)}
     tets = np.asarray([[node_rows[n] for n in r[1:]] for r in cells], dtype=np.int64)
-    if load_axis == 'y':
-        fixed_faces, loaded_faces = _y_cap_faces(points, tets, node_ids)
-    else:
+    axis_index = LOAD_AXES.index(load_axis)
+    if load_axis == 'x':
         fixed_faces, loaded_faces = data['fixed_minus_x_faces'], data['loaded_plus_x_faces']
+    else:
+        fixed_faces, loaded_faces = _transverse_cap_faces(points, tets, node_ids, axis_index)
     holds = {n: ('x', 'y', 'z') for face in fixed_faces for n in face}
     cap = points[[[node_rows[n] for n in face] for face in loaded_faces]] * 1e-3
     area_m2 = float(np.linalg.norm(
@@ -98,10 +101,10 @@ def _prepare(*, load_axis='x'):
     plan = inspect_static_tet4_admission(base, fixed_dofs_by_id=holds)
     if not plan.within_factor_budget:
         raise ValueError('fitted mesh exceeds the Tet4 structural factor-entry budget')
-    traction = (0., traction_Pa, 0.) if load_axis == 'y' else (traction_Pa, 0., 0.)
+    traction = tuple(traction_Pa if i == axis_index else 0. for i in range(3))
     loads = nodal_forces_from_traction(base, loaded_faces, traction_Pa=traction)
     force = np.asarray([loads.get(int(n), (0., 0., 0.)) for n in node_ids])
-    resultant = [0., total_force_N, 0.] if load_axis == 'y' else [total_force_N, 0., 0.]
+    resultant = [total_force_N if i == axis_index else 0. for i in range(3)]
     np.testing.assert_allclose(force.sum(axis=0), resultant, rtol=0, atol=2e-18)
     output = {'input_sha256': FIXTURE_SHA256, 'tet4_preflight': asdict(plan),
               'fixed_cap_nodes': len(holds), 'loaded_cap_nodes': len(loads),
@@ -109,8 +112,8 @@ def _prepare(*, load_axis='x'):
               'total_force_N': total_force_N, 'poisson_ratio': data['poisson_ratio'],
               'base_E_Pa': base_E, 'fully_stiffened_E_Pa': data['limit_E_Pa'],
               'sphere_radius_mm': data['sphere_radius_mm'], 'placements': placement}
-    if load_axis == 'y':
-        output['load_axis'] = 'y'
+    if load_axis != 'x':
+        output['load_axis'] = load_axis
     return bundles, holds, loads, force, output
 
 
@@ -154,7 +157,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preflight', action='store_true',
                         help='check input/loads/factor budget, without solving')
-    parser.add_argument('--load-axis', choices=('x', 'y'), default='x',
+    parser.add_argument('--load-axis', choices=LOAD_AXES, default='x',
                         help='clamp the negative cap and pull the positive cap on this axis (default: x)')
     args = parser.parse_args(argv)
     try:
