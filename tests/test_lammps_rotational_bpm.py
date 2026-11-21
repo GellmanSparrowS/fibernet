@@ -368,3 +368,64 @@ def test_optional_pinned_native_bpm_restarts_generated_octet_at_rupture(tmp_path
         a=[getattr(f,name) for f in full.frames]
         b=[getattr(f,name) for f in split.frames]
         np.testing.assert_allclose(a,b,rtol=0,atol=atol)
+
+
+def test_optional_pinned_native_bpm_axial_force_threshold(tmp_path):
+    """Independent two-body spring reference, not a native restart comparison."""
+    runtime = _optional_native_runtime()
+    graph = StructureGraph(dimension=3, box_size=[100., 100., 100.])
+    left = graph.add_node([0., 0., 0.], merge=False)
+    unused = graph.add_node([0., 20., 0.], merge=False)
+    right = graph.add_node([20., 0., 0.], merge=False)
+    graph.remove_node(unused)
+    unused_edge = graph.add_edge(left, right, n_internal=0)
+    graph.remove_edge(unused_edge)
+    edge = graph.add_edge(left, right, n_internal=0)
+
+    mass, k, limit, dt = 1e-12, .1, 9.7e-9, 2e-8
+    steps = np.arange(41)
+    theta = 2 * math.asin(dt * math.sqrt(2 * k / mass) / 2)
+    # Before rupture, q'' = -2kq/m. The position-Verlet recurrence
+    # starts with q_0=0 and q_1=0.2*dt; velocities below are full-step.
+    intact = .2 * dt * np.sin(theta * steps) / math.sin(theta)
+    split = 25
+    assert (k * intact[:split] < limit).all() and k * intact[split] > limit
+    # No end-of-step kick at rupture: after the last half-kick the
+    # relative velocity is the slope of the final intact drift segment.
+    drift = (intact[split] - intact[split - 1]) / dt
+    stretch = np.where(steps < split, intact, intact[split] + (steps - split) * dt * drift)
+    velocity = np.where(steps < split, .2 * np.cos(theta * steps), drift)
+    force = np.where(steps < split, k * intact, 0.)
+
+    prepared = prepare_rotational_bpm(
+        graph, length_unit='um', maximum_bond_length_m=50e-6,
+        particles={i: BPMParticle(mass, 4e-6) for i in (left, right)},
+        bonds={edge: RotationalBPMBond(k, 0., 0., 0., limit, 1e-3, 1e-9, 1e-9)},
+        run=RunSpec(dt, int(steps[-1]), 1, ((-50e-6, 80e-6),) * 3),
+        velocities_m_s={left: (-.1, 0., 0.), right: (.1, 0., 0.)},
+    )
+    task = LAMMPSTask(prepared, runtime, tmp_path / 'axial', ResourceLimits(
+        cpu_seconds=3, wall_seconds=5., memory_bytes=1024**3,
+        output_bytes=4*1024**2, file_size_bytes=4*1024**2))
+    try:
+        task.start()
+        assert task.wait(timeout=7.) == TaskState.SUCCEEDED, task.error
+    finally:
+        if task.state == TaskState.RUNNING:
+            task.cancel()
+            task.wait(timeout=2.)
+    result = task.result
+    assert result.node_ids == (left, right) and result.edge_ids == (edge,)
+    assert result.breaks == (BPMBreak(split, split*dt, edge, (left, right)),)
+    assert [f.step for f in result.frames] == steps.tolist()
+    assert [f.active_edge_ids for f in result.frames] == [(edge,)]*split + [()]*(len(steps)-split)
+    np.testing.assert_allclose([f.time_s for f in result.frames], dt*steps, rtol=1e-14, atol=0)
+
+    x = np.asarray([f.positions_m for f in result.frames])
+    v = np.asarray([f.velocities_m_s for f in result.frames])
+    f = np.asarray([frame.forces_N for frame in result.frames])
+    np.testing.assert_allclose(x[:, 1, 0] - x[:, 0, 0] - 20e-6, stretch, rtol=0, atol=1e-18)
+    np.testing.assert_allclose(v[:, 1, 0] - v[:, 0, 0], velocity, rtol=0, atol=1e-13)
+    np.testing.assert_allclose(f[:, :, 0], np.column_stack((force, -force)), rtol=0, atol=1e-19)
+    assert f[split - 1, 0, 0] > 0 and f[split - 1, 1, 0] < 0
+    assert not f[split:].any()
