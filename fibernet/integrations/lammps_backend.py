@@ -660,7 +660,7 @@ class RuntimeSpec:
     file_sha256: Tuple[Tuple[str, str], ...] = ()
     environment: Tuple[Tuple[str, str], ...] = ()
 
-    def checked(self):
+    def checked(self, *, _named_digests=False):
         if self.mode == 'cli_serial_static':
             return _check_serial_static_runtime(self)
         if self.mode != 'cli':
@@ -679,16 +679,16 @@ class RuntimeSpec:
         if not self.expected_banner.startswith('LAMMPS (') or '\n' in self.expected_banner:
             raise LAMMPSContractError('exact preflight-verified native log banner required')
         pins = dict(self.file_sha256)
-        required = {str(Path(self.python_executable).resolve()), str(package/'liblammps.so'), str(package/'liblammps.so.0')}
+        python_path = str(Path(self.python_executable).resolve())
+        required = {python_path, str(package/'liblammps.so'), str(package/'liblammps.so.0')}
         required.update(str(p) for p in (package.parent/'lammps.libs').glob('*') if p.is_file())
-        if Path(self.lammps_executable).resolve() != (package/'lmp').resolve():
+        native_path = str(Path(self.lammps_executable).resolve())
+        if native_path != str((package/'lmp').resolve()):
             raise LAMMPSContractError('CLI must use native package lmp, never bin/lmp wrapper')
-        required.add(str(Path(self.lammps_executable).resolve()))
-        environment = dict(self.environment)
-        library_dir = environment.get('LD_LIBRARY_PATH')
+        library_dir = dict(self.environment).get('LD_LIBRARY_PATH')
         if not library_dir or ':' in library_dir:
             raise LAMMPSContractError('single explicit existing MPI library directory required')
-        required.add(str(Path(library_dir)/'libmpi.so.12'))
+        required.update((native_path, str(Path(library_dir)/'libmpi.so.12')))
         if not required <= set(pins) or len(pins) != len(self.file_sha256):
             raise LAMMPSContractError('runtime binary/library/Python source identity pins incomplete')
         for path, expected in pins.items():
@@ -699,7 +699,7 @@ class RuntimeSpec:
                 for chunk in iter(lambda: stream.read(1024*1024), b''): h.update(chunk)
             if h.hexdigest() != expected:
                 raise LAMMPSContractError('runtime identity mismatch: ' + path)
-        return self
+        return (pins[python_path], pins[native_path]) if _named_digests else self
 
 
 class LAMMPSTask:
@@ -740,7 +740,9 @@ class LAMMPSTask:
             setup_bytes = _profiles.string_bytes((prepared.data_text,prepared.input_text,
                 prepared.graph_json,_json(manifest)),self.limits.output_bytes)
             self.output_forecast = _profiles.resource_forecast(len(prepared.node_ids),len(prepared.edge_ids),prepared.steps,contract['output_stride'],size,setup_bytes,profile=prepared.profile)
-            _profiles.json_bytes(_profiles.export_metadata(prepared,runtime),profile['prepared_bytes'],indent=2)
+            metadata = _profiles.export_metadata(prepared, runtime)
+            reserve = _profiles.named_runtime_hash_reserve(metadata)
+            _profiles.json_bytes(metadata, profile['prepared_bytes'] - reserve, indent=2)
             forecast = self.output_forecast
             if (forecast['native_aggregate_forecast_bytes'] > self.limits.output_bytes or
                     forecast['trajectory_bytes'] > self.limits.file_size_bytes or
@@ -768,6 +770,7 @@ class LAMMPSTask:
         self.runtime = runtime.checked()
         self.workdir = Path(workdir).absolute()
         self.state, self.error, self.result = TaskState.CREATED, None, None
+        self._named_runtime_digests = None
         self._process, self._thread, self._stream = None, None, None
         self._lock, self._done = threading.RLock(), threading.Event()
 
@@ -781,7 +784,13 @@ class LAMMPSTask:
             if json.loads(self.prepared.contract_json).get('model') == _BPM_MODEL:
                 from .lammps_bpm import check_runtime
                 check_runtime(self.runtime)
-            self.runtime.checked()
+            pins = dict(self.runtime.file_sha256) if self.runtime.mode == 'cli' else {}
+            if pins and (
+                    self.runtime.python_executable not in pins
+                    or self.runtime.lammps_executable not in pins):
+                self._named_runtime_digests = self.runtime.checked(_named_digests=True)
+            else:
+                self.runtime.checked()
             self.workdir.mkdir(parents=False, exist_ok=False)
             try:
                 for name, data in [('model.data',self.prepared.data_text),('in.model',self.prepared.input_text),

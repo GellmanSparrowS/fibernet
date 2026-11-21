@@ -87,7 +87,9 @@ def forecast_cg_fiber_only(prepared, runtime, limits=ResourceLimits(), *,
         initial_bending_energy_J=c['initial_bending_energy_J'])
     # The final-force scalar is unknown. Add a full finite binary64 token reserve
     # beyond the placeholder, instead of claiming an exact future metadata size.
-    metadata_forecast = bounds.json_bytes(metadata, _PLANNING_TEXT_BYTES, indent=2)+24
+    named_hash_reserve = bounds.named_runtime_hash_reserve(metadata)
+    metadata_forecast = (bounds.json_bytes(metadata, _PLANNING_TEXT_BYTES - named_hash_reserve,
+                                           indent=2) + 24 + named_hash_reserve)
     n, e, frames = len(prepared.node_ids), len(prepared.edge_ids), prepared.steps+1
     table = c['type_pair_cutoff_payload_lower_bound_bytes']
     sizes = payload_counts(n, e, frames, frames, frames, row_bytes=239,

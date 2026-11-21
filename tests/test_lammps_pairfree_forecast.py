@@ -32,6 +32,31 @@ from _lammps_forecast_test_support import (
 )
 
 
+def test_cli_named_hash_budget_is_exact_and_never_resolves_paths():
+    prepared = prepare_cg(*build_branched_case())
+    runtime = RuntimeSpec('cli', '/inert/python', '/inert/lmp', expected_version=20250722,
+        expected_banner='LAMMPS (22 Jul 2025)',
+        file_sha256=(('/real/python', 'a'*64), ('/real/lmp','b'*64)))
+    limit = 16*1024**2
+    planned = []
+    with patch.object(Path, 'resolve', side_effect=AssertionError('planning must not resolve paths')):
+        for n,target in enumerate((runtime, replace(runtime, python_executable='/real/python'),
+                 replace(runtime, python_executable='/real/python', lammps_executable='/real/lmp'))):
+            metadata = harmonic.export_metadata(prepared, target)
+            reserve = harmonic.named_runtime_hash_reserve(metadata)
+            assert reserve == 62*(2-n)
+            actual = harmonic.export_metadata(prepared, target, named_runtime_digests=('a'*64,'b'*64))
+            expected = harmonic.json_bytes(actual, limit, indent=2)
+            assert harmonic.json_bytes(metadata, expected-reserve, indent=2)+reserve == expected
+            with unittest.TestCase().assertRaises(ValueError):
+                harmonic.json_bytes(metadata, expected-reserve-1, indent=2)
+            plan = forecast_cg_fiber_only(prepared, target, export_budget_bytes=limit)
+            assert plan['metadata_forecast_bytes'] - plan['metadata_base_bytes'] >= 24+reserve
+            planned.append((plan['metadata_base_bytes'], plan['metadata_forecast_bytes']))
+    assert [planned[-1][0]-base for base,_ in planned] == [124, 62, 0]
+    assert len({forecast for _,forecast in planned}) == 1
+
+
 FIXTURES = Path(__file__).with_name('fixtures')
 LIMITS = ResourceLimits(5, 10., 512 * 1024**2, 16 * 1024**2, 16 * 1024**2)
 EXPORT = 64 * 1024**2

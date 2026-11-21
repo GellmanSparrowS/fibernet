@@ -250,18 +250,20 @@ def resource_forecast(n, e, steps, stride, prepared_bytes, setup_bytes, *, profi
 
 
 
-def export_metadata(prepared, runtime):
+def export_metadata(prepared, runtime, *, named_runtime_digests=None):
     """One exact metadata builder shared by admission planning and the adapter."""
     import hashlib
     c=json.loads(prepared.contract_json)
     pins=dict(runtime.file_sha256)
+    python_hash, lammps_hash = (named_runtime_digests if named_runtime_digests is not None
+                               else (pins.get(runtime.python_executable), pins.get(runtime.lammps_executable)))
     unit=c['length_unit']
     value={'backend':'lammps','node_ids':list(prepared.node_ids),'edge_ids':list(prepared.edge_ids),
         'source_identity':{'prepared_sha256':prepared.identity,'graph_sha256':hashlib.sha256(prepared.graph_json.encode()).hexdigest()},
         'model_contract':c,
         'runtime_receipt':{'mode':runtime.mode,'expected_version':runtime.expected_version,
-            'expected_banner':runtime.expected_banner,'python_sha256':pins.get(runtime.python_executable),
-            'lammps_sha256':pins.get(runtime.lammps_executable),'inventory_sha256':sorted(pins.values())},
+            'expected_banner':runtime.expected_banner,'python_sha256':python_hash,
+            'lammps_sha256':lammps_hash,'inventory_sha256':sorted(pins.values())},
         'field_units':{'displacements':unit,'deformed_positions':unit,'positions_trajectory':unit,
             'max_displacement':unit,'edge_forces':'N','edge_stretches':'1','energy':'J','time_seconds':'s wall time'},
         'original_graph_length_unit':unit,'original_graph_length_to_m':c['length_to_m'],
@@ -270,3 +272,12 @@ def export_metadata(prepared, runtime):
     profile=contract_profile(c)
     if profile:value['profile']=profile
     return value
+
+
+def named_runtime_hash_reserve(metadata):
+    """Byte allowance for unresolved CLI aliases, with no runtime path lookups."""
+    receipt = metadata['runtime_receipt']
+    if receipt['mode'] != 'cli':
+        return 0
+    # A verified 64-character JSON string replaces the literal null.
+    return sum(66 - 4 for key in ('python_sha256', 'lammps_sha256') if receipt[key] is None)

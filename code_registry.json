@@ -4599,7 +4599,7 @@
    "EdgeLengthHistory",
    "edge_length_history"
   ],
-  "sha256": "64d039e1fa30c1eb4d42bbf12afb67d21836592b143c82650fc9487cf88367f2"
+  "sha256": "83ed3d9424adaabaf502e33ee34696292b1d3359b55d51114522c4f55245d5ff"
  },
  "tests/test_lammps_unprofiled_output_admission.py": {
   "purpose": "No-engine lower-bound admission tests; no native physics claims.",
@@ -6001,5 +6001,91 @@
    "test_graph_edits_and_reordering_require_preparing_again"
   ],
   "sha256": "3ccdc30c73536ba5f9c068b5ac9c2794af13e27c73146cef5b9aec3c0d13ca59"
+ },
+ "fibernet/integrations/_harmonic_profile.py": {
+  "purpose": "Private compilation bounds, never permission to execute native software.",
+  "status": "active",
+  "symbols": [
+   "variable_steps",
+   "sampled",
+   "schedule",
+   "frame_counts",
+   "select",
+   "record",
+   "contract_profile",
+   "counts",
+   "string_bytes",
+   "json_bytes",
+   "pairs",
+   "check_contract",
+   "shape",
+   "result_guard",
+   "resource_forecast",
+   "export_metadata",
+   "named_runtime_hash_reserve"
+  ],
+  "sha256": "440f4b925fa0cf22e6b5aa25ae82560f34e307bbfb19342bb2f40422e097f30a"
+ },
+ "fibernet/integrations/lammps_planning.py": {
+  "purpose": "Pure planning for existing small pair-free CG inputs; never runtime admission.",
+  "status": "active",
+  "symbols": [
+   "_runtime_record",
+   "forecast_cg_fiber_only"
+  ],
+  "sha256": "8d94827f32d07f7677bb42d16f4fbfc50a75b7188326ed6eb6a6d604b37ac396"
+ },
+ "fibernet/sim/_lammps_result.py": {
+  "purpose": "Explicit CLI harmonic/CG adapter; no engine discovery or material inference.",
+  "status": "active",
+  "symbols": [
+   "_network_schedule",
+   "source_capabilities",
+   "_real_array",
+   "_validate_reference",
+   "_mapped_displacements",
+   "displacement_relationship_status",
+   "validate_state",
+   "state_summary",
+   "_state_summary_from_validated",
+   "_plain_json_tree",
+   "_plain_full_history_export",
+   "validate_result",
+   "_validate_geometry_metadata",
+   "validate_persisted_metadata",
+   "_validate_result",
+   "field_units",
+   "_ConvertedFrames",
+   "to_sim_result",
+   "simulate_lammps",
+   "_stable_lammps_metrics",
+   "_stable_graph_trajectory"
+  ],
+  "sha256": "4c04938e74c8aad2fce6dc47e024b3bd94aef73179da85050fe032e5fc844e3e"
+ },
+ "tests/test_lammps_easy_dispatch.py": {
+  "purpose": "Source/mocked adapter checks. No native engine execution or qualification.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "options",
+   "raw_result",
+   "mapped",
+   "test_cli_named_runtime_receipt_with_symlinks_and_recheck",
+   "AdapterTests",
+   "RendererTests",
+   "DispatchTests",
+   "SourceEncodingTests"
+  ],
+  "sha256": "f88c41cd28812d7b60b6b01569b0a9ee7963a6ac428e036e7670cf45b4c775ba"
+ },
+ "tests/test_lammps_pairfree_forecast.py": {
+  "purpose": "Provider-free storage and input-identity regressions for pair-free CG.",
+  "status": "active",
+  "symbols": [
+   "test_cli_named_hash_budget_is_exact_and_never_resolves_paths",
+   "TestPairFreeForecast"
+  ],
+  "sha256": "0a0add4f1f3c3bd6754f5a481f93f8a5e3abd42131432217ee6afe623963fbe3"
  }
 }
