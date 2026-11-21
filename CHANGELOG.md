@@ -1,3 +1,14 @@
+## [4.9.0]
+
+- Prepare Taichi displacement schedules by stable graph node ID instead of
+  internal row number, including fractional integration steps.
+- The welded Tet4 example uses the public traction and budget helpers and
+  reports the fraction of strain energy in the junction. The bundle guide
+  shows how to share and replay matching mesh/material and load files.
+- LAMMPS CLI results retain the verified Python and LAMMPS SHA256 values
+  when admitted executable paths are symlinks.
+- See [4.9.0 release notes](docs/RELEASE_4_9_0.md).
+
 ## [4.8.0]
 
 - Inspect the structural factor budget of a Tet4 mesh and restraint layout
