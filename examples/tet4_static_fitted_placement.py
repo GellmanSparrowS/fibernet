@@ -42,7 +42,16 @@ def _transverse_cap_faces(points, tets, node_ids, axis_index):
     return caps
 
 
-def _prepare(*, load_axis='x', fractions_by_placement=None):
+def _cap_loads(bundle, faces, traction_Pa, total_force_N, axis):
+    traction = tuple(traction_Pa if i == axis else 0. for i in range(3))
+    loads = nodal_forces_from_traction(bundle, faces, traction_Pa=traction)
+    force = np.asarray([loads.get(int(n), (0., 0., 0.)) for n in bundle.node_ids])
+    resultant = [total_force_N if i == axis else 0. for i in range(3)]
+    np.testing.assert_allclose(force.sum(axis=0), resultant, rtol=0, atol=2e-18)
+    return loads, force
+
+
+def _prepare(*, load_axis='x', fractions_by_placement=None, force_bases=None):
     data = _fixture()
     nodes, cells = data['nodes_id_xyz'], data['cells_id_node_ids']
     points = np.asarray([r[1:] for r in nodes], dtype=np.float64)
@@ -103,11 +112,18 @@ def _prepare(*, load_axis='x', fractions_by_placement=None):
     plan = inspect_static_tet4_admission(base, fixed_dofs_by_id=holds)
     if not plan.within_factor_budget:
         raise ValueError('fitted mesh exceeds the Tet4 structural factor-entry budget')
-    traction = tuple(traction_Pa if i == axis_index else 0. for i in range(3))
-    loads = nodal_forces_from_traction(base, loaded_faces, traction_Pa=traction)
-    force = np.asarray([loads.get(int(n), (0., 0., 0.)) for n in node_ids])
-    resultant = [total_force_N if i == axis_index else 0. for i in range(3)]
-    np.testing.assert_allclose(force.sum(axis=0), resultant, rtol=0, atol=2e-18)
+    loads, force = _cap_loads(base, loaded_faces, traction_Pa, total_force_N, axis_index)
+    if force_bases is not None:
+        if load_axis != 'x':
+            raise ValueError('fixed-cap bases require the x end caps')
+        for column, key in enumerate(LOAD_AXES):
+            pairs = (loads, force) if column == 0 else _cap_loads(
+                base, loaded_faces, traction_Pa, total_force_N, column)
+            _, dense = pairs
+            np.testing.assert_array_equal(dense[:, column], force[:, 0])
+            np.testing.assert_array_equal(np.delete(dense, column, axis=1), 0.)
+            dense.setflags(write=False)
+            force_bases[key] = pairs
     output = {'input_sha256': FIXTURE_SHA256, 'tet4_preflight': asdict(plan),
               'fixed_cap_nodes': len(holds), 'loaded_cap_nodes': len(loads),
               'loaded_cap_area_m2': area_m2, 'traction_Pa': traction_Pa,
@@ -119,7 +135,8 @@ def _prepare(*, load_axis='x', fractions_by_placement=None):
     return bundles, holds, loads, force, output
 
 
-def _solve(bundles, holds, loads, force, total_force_N, *, cell_energies=None):
+def _solve(bundles, holds, loads, force, total_force_N, *,
+           cell_energies=None, displacements=None):
     results = {}
     for name, bundle in bundles.items():
         result = solve_static_tet4(bundle, fixed_dofs_by_id=holds, forces_by_id=loads,
@@ -127,6 +144,8 @@ def _solve(bundles, holds, loads, force, total_force_N, *, cell_energies=None):
         fields = result.cell_fields
         np.testing.assert_array_equal(result.node_ids, bundle.node_ids)
         np.testing.assert_array_equal(fields.cell_ids, bundle.cell_ids)
+        if displacements is not None:
+            displacements[name] = result.displacement_m
         work_J = float(np.sum(force * result.displacement_m))
         if not work_J > 0.:
             raise ValueError('expected positive external work in a loaded example')
@@ -177,6 +196,76 @@ def _compliance_sensitivity(fractions, cell_energies, results, final_ratio):
     return report
 
 
+def _fixed_cap_summary(work_matrices, force_N):
+    # Work and compliance have distinct units: W_ij = F_i·u_j [J],
+    # C_ij = W_ij/F0² [m/N]. Check reciprocity before symmetrizing.
+    cases, matrices = {}, {}
+    abs_skew = 0.
+    for name, work in work_matrices.items():
+        raw = work / force_N**2
+        diag = raw.diagonal()
+        if not np.isfinite(raw).all() or not np.all(diag > 0.):
+            raise ValueError(f'{name}: nonfinite compliance or nonpositive basis work')
+        skew = np.abs(raw - raw.T)
+        reciprocal = float(np.max(skew / np.sqrt(np.outer(diag, diag))))
+        if reciprocal > 1e-8:
+            raise ValueError(f'{name}: fixed-cap work violates reciprocity')
+        symmetric = (raw + raw.T) / 2
+        eig = np.linalg.eigvalsh(symmetric)
+        if eig[0] <= 0.:
+            raise ValueError(f'{name}: fixed-cap compliance is not positive definite')
+        abs_skew = max(abs_skew, float(skew.max()))
+        matrices[name] = symmetric
+        cases[name] = {'work_matrix_J': work.tolist(),
+                       'compliance_matrix_m_per_N': symmetric.tolist(),
+                       'max_scaled_reciprocity_error': reciprocal}
+    reference = matrices['uniform']
+    difference = matrices['junction'] - matrices['arm']
+    # Generalized eigenvalues are extrema over all nonzero real directions.
+    L = np.linalg.cholesky(reference)
+    whitened = np.linalg.solve(L, np.linalg.solve(L, difference).T).T
+    values, axes = np.linalg.eigh((whitened + whitened.T) / 2)
+    directions = np.linalg.solve(L.T, axes)
+    directions /= np.linalg.norm(directions, axis=0)
+    quotients = (np.sum(directions * (difference @ directions), axis=0) /
+                 np.sum(directions * (reference @ directions), axis=0))
+    np.testing.assert_allclose(quotients, values, rtol=1e-8, atol=1e-12)
+    residual = difference @ directions - (reference @ directions) * values
+    scale = np.linalg.norm(difference, ord=2) + max(abs(values)) * np.linalg.norm(reference, ord=2)
+    if np.linalg.norm(residual, ord=2) > 1e-8 * scale:
+        raise ValueError('fixed-cap generalized eigenpair residual is too large')
+    # This conservative numerical margin is not a continuum error bound.
+    margin = max(1e-8, 1e3 * abs_skew / np.linalg.eigvalsh(reference)[0])
+    lo, hi = map(float, values[[0, -1]])
+    if lo > margin:
+        verdict = 'offset_lower_for_all_directions'
+    elif hi < -margin:
+        verdict = 'center_lower_for_all_directions'
+    elif lo < -margin and hi > margin:
+        verdict = 'ranking_depends_on_direction'
+    else:
+        verdict = 'inconclusive_at_numerical_margin'
+    return {'basis_order': list(LOAD_AXES), 'basis_force_N': force_N, 'placements': cases,
+            'offset_advantage_extrema_percentage_points': [100 * lo, 100 * hi],
+            'ranking_margin_fraction': float(margin), 'ranking': verdict}
+
+
+def _fixed_cap_compliance(bundles, holds, force_bases, force_N):
+    works = {name: np.zeros((3, 3)) for name in bundles}
+    reference_ids = bundles['uniform'].node_ids
+    for bundle in bundles.values():
+        np.testing.assert_array_equal(bundle.node_ids, reference_ids)
+    for j, key in enumerate(LOAD_AXES):
+        loads, force = force_bases[key]
+        displacements = {}
+        results = _solve(bundles, holds, loads, force, force_N, displacements=displacements)
+        for name, U in displacements.items():
+            works[name][:, j] = [np.sum(force_bases[axis][1] * U) for axis in LOAD_AXES]
+            np.testing.assert_allclose(works[name][j, j], 2 * results[name]['half_external_work_J'],
+                                       rtol=1e-8, atol=0)
+    return _fixed_cap_summary(works, force_N)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -184,15 +273,24 @@ def main(argv=None):
                       help='check input/loads/factor budget, without solving')
     mode.add_argument('--compliance-sensitivity', action='store_true',
                       help='include endpoint and average normalized compliance slopes')
-    parser.add_argument('--load-axis', choices=LOAD_AXES, default='x',
+    mode.add_argument('--fixed-cap-compliance', action='store_true',
+                      help='solve three load bases per placement on the fixed x end caps')
+    parser.add_argument('--load-axis', choices=LOAD_AXES,
                         help='clamp the negative cap and pull the positive cap on this axis (default: x)')
     args = parser.parse_args(argv)
+    if args.fixed_cap_compliance and args.load_axis is not None:
+        parser.error('--fixed-cap-compliance cannot be combined with --load-axis')
     try:
-        prepare_options = {'load_axis': args.load_axis}
+        prepare_options = {'load_axis': args.load_axis or 'x'}
+        if args.fixed_cap_compliance:
+            prepare_options['force_bases'] = {}
         if args.compliance_sensitivity:
             prepare_options['fractions_by_placement'] = {}
         bundles, holds, loads, force, output = _prepare(**prepare_options)
-        if not args.preflight:
+        if args.fixed_cap_compliance:
+            output['fixed_cap_compliance'] = _fixed_cap_compliance(
+                bundles, holds, prepare_options['force_bases'], output['total_force_N'])
+        elif not args.preflight:
             cell_energies = {} if args.compliance_sensitivity else None
             output['results'] = _solve(bundles, holds, loads, force, output['total_force_N'],
                                        cell_energies=cell_energies)

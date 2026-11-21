@@ -72,3 +72,27 @@ At fixed nodal force and Poisson ratio, the element modulus is
 Here `phi_i` is the frozen sphere-volume fraction, `U_i(r)` is that
 element's elastic energy and `U0` is total uniform elastic energy.
 This is not a log derivative or a prediction for another mesh or load.
+
+## Keep both x end caps and change only the force direction
+
+```bash
+python examples/tet4_static_fitted_placement.py --fixed-cap-compliance
+```
+
+The −x cap stays clamped and the +x cap receives the same spatially
+uniform traction pattern for all three 1 mN bases: x normal and y, z
+tangential. This is different from `--load-axis y` or `z`, which move
+the clamp and load to another pair of caps. This mode cannot be
+combined with `--load-axis`, `--preflight`, or `--compliance-sensitivity`.
+
+The example uses nine sequential solves: three bases for each of the
+uniform, center and offset layouts. It reports the work matrix
+`W_ij = F_i^T u_j` in joules and the reciprocal compliance matrix
+`C = W/F0²` in m/N, with `F0 = 1 mN`. For a unit direction vector
+`v = (v_x, v_y, v_z)`, compliance is `v^T C v`.
+Generalized eigenvalues bound the offset layout's extra compliance
+reduction relative to the uniform layout over all directions.
+A near-zero result within the numerical margin is inconclusive.
+This result is for the fixed mesh, material model and uniform
+traction on one cap. It is not an angular sweep, a bound for other
+spatial load patterns, or a mesh-convergence result.
