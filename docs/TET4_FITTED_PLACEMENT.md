@@ -51,3 +51,24 @@ are not centroid labels. The repository copy includes the optional
 4.13.1/OpenCASCADE. Remeshing is not required, may change the mesh with
 different provider builds, and does not reconstruct the stored fractions
 without a separate integration step.
+
+## How sensitive is compliance to the modulus contrast?
+
+```bash
+python examples/tet4_static_fitted_placement.py --load-axis x --compliance-sensitivity
+```
+
+This adds a `compliance_sensitivity` section to the JSON without adding
+solves. It is not available with `--preflight`, which does not solve.
+For each placement, the positive slopes measure how fast compliance
+`C/C0` decreases per unit increase in `r = E_sphere / E_base`. The
+baseline `C0` is the uniform result for the selected load. The report
+gives the slopes at `r = 1` and `r = 3`, and their interval's average
+(compliance reduction divided by 2, not an average of the endpoints).
+
+At fixed nodal force and Poisson ratio, the element modulus is
+`E_i/E_base = 1 + (r - 1) phi_i`. The slope is the sum of
+`[phi_i / (1 + (r - 1) phi_i)] * U_i(r) / U0` over elements.
+Here `phi_i` is the frozen sphere-volume fraction, `U_i(r)` is that
+element's elastic energy and `U0` is total uniform elastic energy.
+This is not a log derivative or a prediction for another mesh or load.
