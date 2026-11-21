@@ -1214,7 +1214,7 @@ class StructureGraph:
                     "node_j": edge.node_j,
                     "radius": edge.radius,
                     "material": material_record(edge.material),
-                    "segments": edge.segments,
+                    "segments": self._json_segment_count(edge.segments),
                     "internal_points": (
                         _serialized_internal_points(
                             edge.internal_points, eid, allow_unmasked=True
@@ -1309,6 +1309,16 @@ class StructureGraph:
         """Load graph from a JSON file."""
         with open(path) as f:
             return cls.from_dict(json.load(f, object_pairs_hook=_unique_json_object_pairs))
+
+    @staticmethod
+    def _json_segment_count(value):
+        """Convert only positive, int64-range NumPy segment counts for JSON."""
+        # timedelta64 is an np.integer in NumPy, but is not a segment count.
+        if isinstance(value, np.integer) and value.dtype.kind in "iu":
+            count = int(value)
+            if 0 < count <= np.iinfo(np.int64).max:
+                return count
+        return value
 
     # ------------------------------------------------------------------
     # Repr

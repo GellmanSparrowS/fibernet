@@ -34,6 +34,63 @@ class SavePreservationTests(unittest.TestCase):
         self.assertFalse(self.path.read_bytes().endswith(b'\n'))
         self.assertEqual(StructureGraph.load_json(self.path).to_dict(), data)
 
+    def test_numpy_segment_counts_match_native_integer_json(self):
+        graph = StructureGraph.from_dict({
+            'dimension': 3,
+            'nodes': [{'id': 4, 'position': [0., 0., 0.]},
+                      {'id': 23, 'position': [1., 0., 0.]}],
+            'edges': [{'id': 11, 'node_i': 4, 'node_j': 23,
+                       'radius': 0.1, 'segments': 3},
+                      {'id': 49, 'node_i': 23, 'node_j': 4,
+                       'radius': 0.2, 'segments': 2**53 + 1}],
+        })
+        unsigned = np.uint64(2**53 + 1)
+        # Use public ingestion with a parallel edge as well as existing IDs.
+        extra = graph.add_edge(4, 23, radius=0.3, segments=np.int64(5),
+                               allow_parallel=True)
+        expected = graph.to_dict()
+        expected['edges'][-1]['segments'] = 5
+        reference = self.root / 'legacy-reference.json'
+        with open(reference, 'w') as stream:
+            json.dump(expected, stream, indent=2)
+        graph.edges[11].segments = np.int64(3)
+        graph.edges[49].segments = unsigned
+
+        graph.save_json(self.path)
+
+        self.assertEqual(self.path.read_bytes(), reference.read_bytes())
+        restored = StructureGraph.load_json(self.path)
+        self.assertEqual(restored.to_dict(), expected)
+        self.assertIs(type(restored.edges[49].segments), int)
+        self.assertIs(type(graph.edges[11].segments), np.int64)
+        self.assertIs(type(graph.edges[extra].segments), np.int64)
+        self.assertIs(graph.edges[49].segments, unsigned)
+        self.assertIs(type(graph.to_dict()['edges'][0]['segments']), int)
+        # Detached records used in graph identity hashes match after reloading.
+        self.assertEqual(json.dumps(graph.to_dict(), sort_keys=True, allow_nan=False),
+                         json.dumps(restored.to_dict(), sort_keys=True, allow_nan=False))
+
+    def test_only_supported_counts_in_the_dedicated_field_are_coerced(self):
+        self.path.write_bytes(b'previous-good-file')
+        edge = self.graph.edges[0]
+        for value in (np.bool_(True), np.timedelta64(7, 'ns'),
+                      np.int64(0), np.int64(-1), np.uint64(2**63)):
+            with self.subTest(value=value):
+                edge.segments = value
+                with self.assertRaisesRegex(TypeError, 'not JSON serializable'):
+                    self.graph.save_json(self.path)
+                self.assertEqual(self.path.read_bytes(), b'previous-good-file')
+                self.assertIs(edge.segments, value)
+        edge.segments = True
+        self.graph.save_json(self.path)
+        self.assertIs(json.loads(self.path.read_text())['edges'][0]['segments'], True)
+        previous = self.path.read_bytes()
+        edge.segments = np.int64(3)
+        edge.metadata['segments'] = np.int64(5)
+        with self.assertRaisesRegex(TypeError, 'not JSON serializable'):
+            self.graph.save_json(self.path)
+        self.assertEqual(self.path.read_bytes(), previous)
+
     def test_existing_good_file_unchanged_on_metadata_serialization_failure(self):
         self.graph.save_json(self.path)
         before = self.path.read_bytes()
