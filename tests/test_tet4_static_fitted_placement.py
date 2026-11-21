@@ -150,3 +150,70 @@ def test_fitted_sensitivity_cannot_run_with_preflight(monkeypatch, capsys):
     with pytest.raises(SystemExit, match='2'):
         example.main(['--preflight', '--compliance-sensitivity'])
     assert 'not allowed with argument --preflight' in capsys.readouterr().err
+
+
+def test_fixed_cap_uses_same_read_only_weights_and_only_x_end_caps():
+    bases = {}
+    bundles, holds, loads, x, _ = example._prepare(force_bases=bases)
+    assert list(bases) == ['x', 'y', 'z']
+    mesh = bundles['uniform']
+    row_by_id = {int(node_id): i for i, node_id in enumerate(mesh.node_ids)}
+    np.testing.assert_array_equal(mesh.points[[row_by_id[i] for i in holds], 0], -1.5)
+    for column, (faces_loads, force) in enumerate(bases.values()):
+        assert set(faces_loads) == set(loads) and not force.flags.writeable
+        np.testing.assert_array_equal(mesh.points[[row_by_id[i] for i in faces_loads], 0], 1.5)
+        np.testing.assert_array_equal(force[:, column], x[:, 0])
+        np.testing.assert_array_equal(np.delete(force, column, axis=1), 0.)
+
+
+def _work_fixture(force_N=2.):
+    uniform = np.array([[4., 1., 0.], [1., 4., 0.], [0., 0., 1.]])
+    difference = np.array([[.6, .2, 0.], [.2, .6, 0.], [0., 0., .02]])
+    center = .9 * uniform
+    return {name: force_N**2 * C for name, C in
+            zip(('uniform', 'junction', 'arm'), (uniform, center, center - difference))}
+
+
+def test_fixed_cap_nonzero_cross_work_and_generalized_extrema(monkeypatch):
+    works = _work_fixture()
+    F0 = 2.
+    bases = {key: (i, F0 * row[None, :])
+             for i, (key, row) in enumerate(zip('xyz', np.eye(3)))}
+    bundles = {name: SimpleNamespace(node_ids=np.array([29])) for name in works}
+    called = []
+
+    def solve(b, holds, j, force, force_N, *, displacements):
+        assert b is bundles and force_N == F0
+        called.append(j)
+        for name, w in works.items():
+            displacements[name] = w[:, j][None, :] / F0
+        return {name: {'half_external_work_J': w[j, j] / 2} for name, w in works.items()}
+
+    monkeypatch.setattr(example, '_solve', solve)
+    report = example._fixed_cap_compliance(bundles, {}, bases, F0)
+    assert called == [0, 1, 2]
+    assert report['ranking'] == 'offset_lower_for_all_directions'
+    # The two coupled xy eigenvector directions and the z axis give the extrema.
+    np.testing.assert_allclose(report['offset_advantage_extrema_percentage_points'], [2., 16.])
+    assert report['placements']['uniform']['work_matrix_J'][0][1] == 4.
+    assert report['placements']['uniform']['compliance_matrix_m_per_N'][0][1] == 1.
+
+
+def test_fixed_cap_bad_reciprocity_and_uncertified_ranking():
+    work = _work_fixture()
+    work['uniform'][0, 1] += .1
+    with pytest.raises(ValueError, match='reciprocity'):
+        example._fixed_cap_summary(work, 2.)
+    work = _work_fixture()
+    work['arm'][2, 2] = work['junction'][2, 2] - 1e-10
+    report = example._fixed_cap_summary(work, 2.)
+    assert 0 < report['offset_advantage_extrema_percentage_points'][0] < .000001
+    assert report['ranking'] == 'inconclusive_at_numerical_margin'
+
+
+@pytest.mark.parametrize('other', [['--preflight'], ['--compliance-sensitivity'], ['--load-axis', 'x']])
+def test_fixed_cap_cli_rejects_other_modes_before_prepare(monkeypatch, capsys, other):
+    monkeypatch.setattr(example, '_prepare', lambda **_: pytest.fail('must reject before prepare'))
+    with pytest.raises(SystemExit, match='2'):
+        example.main(['--fixed-cap-compliance', *other])
+    assert ('cannot be combined' if other[0] == '--load-axis' else 'not allowed') in capsys.readouterr().err
