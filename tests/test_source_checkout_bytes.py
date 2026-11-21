@@ -148,6 +148,25 @@ def _git(repo, env, autocrlf, *args):
         raise
 
 
+def _stage_checkout_inventory(repo, git, names):
+    # This is one disposable fixture, not an atomic staging transaction.
+    # Keep the total byte limit, preflight every batch before writing the
+    # index, then stop on the first Git failure (before deleting any copy).
+    if not 1 <= len(names) <= 2 * BULK_ADD_MAX_FILES:
+        raise ValueError('checkout staging inventory requires one or two bounded batches')
+    batches = [names[i:i + BULK_ADD_MAX_FILES]
+               for i in range(0, len(names), BULK_ADD_MAX_FILES)]
+    total = sum(_staging_size(repo, batch) for batch in batches)
+    if len({name.casefold() for name in names}) != len(names):
+        raise ValueError('duplicate checkout staging path')
+    if total > BULK_ADD_MAX_BYTES:
+        raise ValueError('checkout staging exceeds 5 MiB')
+    for batch in batches:
+        git('add', '--', *batch)
+    # NUL-separated literal names: no omissions or unexpected tracked files.
+    assert sorted(git('ls-files', '-z').split('\0')) == ['', *sorted(names)]
+
+
 def test_checkout_inventory_covers_the_native_core_manifest():
     core = ROOT / 'fibernet'
     assert set(CORE_MANIFEST) == {
@@ -187,7 +206,7 @@ def test_byte_sealed_checkout_preserves_raw_hashes(tmp_path, autocrlf):
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(raw)
         expected[name] = hashlib.sha256(raw).hexdigest()
-    git('add', '--', '.gitattributes', 'unprotected.txt', *expected)
+    _stage_checkout_inventory(repo, git, ('.gitattributes', 'unprotected.txt', *expected))
     # Remove only these disposable working copies, then materialize from index.
     for name in (*expected, 'unprotected.txt'):
         (repo / name).unlink()
@@ -364,17 +383,52 @@ def test_diagnostic_failure_preserves_original_error(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize('autocrlf', ['false', 'true'])
-def test_roundtrip_stops_before_checkout_when_staging_fails(tmp_path, monkeypatch, autocrlf):
+@pytest.mark.parametrize('fail_batch', [1, 2])
+def test_roundtrip_stops_before_checkout_when_staging_fails(tmp_path, monkeypatch,
+                                                           autocrlf, fail_batch):
     error = subprocess.TimeoutExpired(['git'], 60)
     phases = []
+    envs = []
+    real_run = subprocess.run
+
     def run(argv, **kwargs):
         phases.append(argv[7])
-        if argv[7] == 'add':
+        envs.append(kwargs['env'])
+        if argv[7] == 'add' and phases.count('add') == fail_batch:
             raise error
-        return subprocess.CompletedProcess(argv, 0, stdout='')
+        return real_run(argv, **kwargs)
+
+    # Force two batches even if the protected source inventory later shrinks
+    # below the production test helper's per-invocation limit.
+    monkeypatch.setitem(globals(), 'BULK_ADD_MAX_FILES', 200)
     monkeypatch.setattr(subprocess, 'run', run)
     with pytest.raises(subprocess.TimeoutExpired) as caught:
         test_byte_sealed_checkout_preserves_raw_hashes(tmp_path, autocrlf)
     assert caught.value is error
-    assert phases == ['init', 'add']
-    assert (tmp_path / 'repo/unprotected.txt').read_bytes() == b'first line\nsecond line\n'
+    assert phases == ['init'] + ['add'] * fail_batch
+    repo = tmp_path / 'repo'
+    assert (repo / 'unprotected.txt').read_bytes() == b'first line\nsecond line\n'
+    for name in PROTECTED:
+        assert (repo / name).read_bytes() == (ROOT / name).read_bytes()
+    assert (repo / 'fibernet/checkout_probe/nested/raw_crlf.py').read_bytes() == b'first line\r\nsecond line\r\n'
+    tracked = real_run(['git', 'ls-files', '-z'], cwd=repo, env=envs[0], check=True,
+                       capture_output=True, timeout=GIT_TIMEOUT_SECONDS).stdout
+    assert tracked.count(b'\0') == (200 if fail_batch == 2 else 0)
+
+
+def test_checkout_staging_prevalidates_cross_batch_duplicates_and_total_bytes(tmp_path,
+                                                                             monkeypatch):
+    for name in ('first', 'second', 'third', 'FIRST'):
+        (tmp_path / name).write_bytes(b'xx')
+
+    def forbidden(*args):
+        pytest.fail('invalid complete inventory must fail before the first add')
+
+    monkeypatch.setitem(globals(), 'BULK_ADD_MAX_FILES', 2)
+    with pytest.raises(ValueError, match='one or two'):
+        _stage_checkout_inventory(tmp_path, forbidden, ('first',) * 5)
+    with pytest.raises(ValueError, match='duplicate checkout'):
+        _stage_checkout_inventory(tmp_path, forbidden, ('first', 'second', 'FIRST'))
+    monkeypatch.setitem(globals(), 'BULK_ADD_MAX_BYTES', 5)
+    with pytest.raises(ValueError, match='checkout staging exceeds'):
+        _stage_checkout_inventory(tmp_path, forbidden, ('first', 'second', 'third'))

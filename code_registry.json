@@ -5073,6 +5073,7 @@
    "_staging_size",
    "_diagnostic_tail",
    "_git",
+   "_stage_checkout_inventory",
    "test_checkout_inventory_covers_the_native_core_manifest",
    "test_byte_sealed_checkout_preserves_raw_hashes",
    "test_bulk_add_file_count_boundary",
@@ -5084,9 +5085,10 @@
    "test_git_budget_and_options",
    "test_bulk_add_failure_diagnostics_and_no_retry",
    "test_diagnostic_failure_preserves_original_error",
-   "test_roundtrip_stops_before_checkout_when_staging_fails"
+   "test_roundtrip_stops_before_checkout_when_staging_fails",
+   "test_checkout_staging_prevalidates_cross_batch_duplicates_and_total_bytes"
   ],
-  "sha256": "d757eeccbe6222557ed222e0a78fb8782de5cddb0730ed000ad977409b84bc0f"
+  "sha256": "53ac456595f04af563aa8439c3488ba51044c0831d7623228b3f1f170f78d267"
  },
  "fibernet/core/single_junction_import.py": {
   "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
