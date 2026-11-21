@@ -20,7 +20,8 @@ from fibernet.io.tet4_meshio import (
     Tet4Bundle, _binary64_ratio, _float64, _integer, _row_count, _unmasked_field, _validate,
 )
 
-__all__ = ['Tet4CellFields', 'Tet4StaticResult', 'solve_static_tet4']
+__all__ = ['Tet4CellFields', 'Tet4StaticAdmission', 'Tet4StaticResult',
+           'inspect_static_tet4_admission', 'solve_static_tet4']
 
 _LENGTH_TO_M = {'m': 1., 'cm': 1e-2, 'mm': 1e-3, 'um': 1e-6, 'nm': 1e-9}
 _AXIS = {'x': 0, 'y': 1, 'z': 2}
@@ -64,6 +65,25 @@ class Tet4StaticResult:
     cell_fields: Tet4CellFields | None = None
 
 @dataclass(frozen=True)
+class Tet4StaticAdmission:
+    """Structural workload estimate for this mesh and held-axis set.
+
+    Counts are entries, not bytes: factor_entries is the conservative L+U
+    envelope and padded_factor_entries is the LAPACK band buffer's size.
+    Neither is a measurement of actual fill or process memory.
+    """
+
+    points: int
+    tetrahedra: int
+    free_dofs: int
+    topology_half_bandwidth: int
+    factor_entries: int
+    padded_factor_entries: int
+    factor_entry_limit: int
+    within_factor_budget: bool
+
+
+@dataclass(frozen=True)
 class _BandPlan:
     """Pure symbolic plan on the full-to-free DOF map; no stiffness values."""
 
@@ -99,7 +119,6 @@ def _row_lookup(by_id, id_to_row, label):
 def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id):
     rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
     force = np.zeros((len(rows), 3), dtype=np.float64)
-    fixed = np.zeros(force.shape, dtype=bool)
     for row, value in _row_lookup(forces_by_id, rows, 'forces_by_id'):
         if isinstance(value, np.ndarray):
             if value.shape != (3,) or value.dtype.kind not in 'fiu':
@@ -109,6 +128,13 @@ def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id):
         # Check exactness on the original scalar values, before either array
         # promotion of a mixed sequence or assignment to binary64 can round.
         force[row] = [_float64(component, 'nodal force in N') for component in value]
+    fixed = _fixed_axes(rows, fixed_dofs_by_id)
+    _check_normal_or_zero(force, 'nodal force')
+    return force, fixed
+
+
+def _fixed_axes(rows, fixed_dofs_by_id):
+    fixed = np.zeros((len(rows), 3), dtype=bool)
     for row, axes in _row_lookup(fixed_dofs_by_id, rows, 'fixed_dofs_by_id'):
         if not isinstance(axes, (tuple, list)) or not 1 <= len(axes) <= 3:
             raise ValueError('fixed DOF entries must list x, y, or z')
@@ -118,8 +144,7 @@ def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id):
             fixed[row, _AXIS[axis]] = True
     if not fixed.any():
         raise ValueError('underconstrained Tet4 system: no fixed Cartesian DOFs')
-    _check_normal_or_zero(force, 'nodal force')
-    return force, fixed
+    return fixed
 
 
 def _magnitude_bits(values):
@@ -513,6 +538,36 @@ def _fixed_solve(stiffness, force, plan):
                                           2 * fe - ke, 'positive work/energy')
     return u, free, float(energy), float(half_work), backward, relative
 
+def inspect_static_tet4_admission(bundle: Tet4Bundle, *,
+                                  fixed_dofs_by_id: Mapping) -> Tet4StaticAdmission:
+    """Check topology, held axes and factor-entry budget without solving.
+
+    Use the solver's stable-node-ID hold mapping. Returns the same symbolic
+    plan's aggregate size and budget even if that plan exceeds the limit.
+    Invalid mesh, point/cell counts, or unsupported constraints raise as
+    in the solver. No loads are taken, and no stiffness matrix is assembled
+    or factored.
+
+    This verifies the input schema and structural checks, not element
+    conditioning, material stiffness, or numerical solvability. The
+    solver still validates its own inputs when called.
+    """
+    mesh = _validate_static_mesh(bundle)
+    rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
+    fixed = _fixed_axes(rows, fixed_dofs_by_id)
+    admitted = True
+    try:
+        with np.errstate(divide='raise', over='raise', invalid='raise'):
+            plan = _static_topology_plan(mesh, fixed)
+    except _BandBudgetExceeded as exc:
+        plan, admitted = exc.plan, False
+    except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
+        raise ValueError('Tet4 structural admission could not be safely evaluated') from exc
+    return Tet4StaticAdmission(len(mesh.points), len(mesh.tetrahedra), len(plan.free),
+                               plan.topology_half_bandwidth, plan.L_plus_U_capacity,
+                               plan.padded_factor_entries, _MAX_FACTOR_ENTRIES, admitted)
+
+
 def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
                       fixed_dofs_by_id: Mapping,
                       return_cell_fields: bool = False) -> Tet4StaticResult:
@@ -551,12 +606,16 @@ def _validate_static_mesh(bundle):
     return mesh
 
 
+def _static_topology_plan(mesh, fixed):
+    _check_rigid_modes(mesh, fixed)
+    return _plan_band(mesh, fixed)
+
+
 def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields):
     force, fixed = _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id)
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):
-            _check_rigid_modes(mesh, fixed)
-            plan = _plan_band(mesh, fixed)
+            plan = _static_topology_plan(mesh, fixed)
             k = _assemble(mesh)
             u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan)
             internal = k @ u
