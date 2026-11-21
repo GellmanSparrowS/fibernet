@@ -48,6 +48,16 @@ print(result.displacements[rows[tip]])
 Preparation itself works without importing Taichi. Running the dynamics
 does require Taichi.
 
+On Linux, if Taichi's default cache directory is not writable, save the
+example above as `taichi_schedule.py` and give just that Python process a
+writable cache. No package versions or system permissions need to change.
+
+```bash
+TI_OFFLINE_CACHE_FILE_PATH="$(mktemp -d)" python taichi_schedule.py
+```
+
+See the [Taichi runtime notes](NATIVE_AXIAL_MASS_STATE.md) for restricted environments.
+
 ## Tet4: welded junctions and portable inputs
 
 The [welded-junction example](../examples/tet4_static_welded_junction.py)
