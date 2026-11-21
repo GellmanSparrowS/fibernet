@@ -2,6 +2,7 @@
 import argparse
 from dataclasses import asdict
 from hashlib import sha256
+from itertools import combinations
 import json
 from math import pi
 from pathlib import Path
@@ -23,7 +24,23 @@ def _fixture():
     return json.loads(raw)
 
 
-def _prepare():
+def _y_cap_faces(points, tets, node_ids):
+    # A boundary triangle occurs once in the frozen tetrahedral topology.
+    corners = tuple(combinations(range(4), 3))
+    triples = np.sort(tets[:, corners].reshape(-1, 3), axis=1)
+    faces, counts = np.unique(triples, axis=0, return_counts=True)
+    exterior = faces[counts == 1]
+    caps = []
+    for end in (-1.5, 1.5):
+        # Both planar y caps in this fixture have exact ordinates in mm.
+        cap = exterior[np.all(points[exterior, 1] == end, axis=1)]
+        if not len(cap):
+            raise ValueError('the frozen mesh is missing a y end cap')
+        caps.append(node_ids[cap].tolist())
+    return caps
+
+
+def _prepare(*, load_axis='x'):
     data = _fixture()
     nodes, cells = data['nodes_id_xyz'], data['cells_id_node_ids']
     points = np.asarray([r[1:] for r in nodes], dtype=np.float64)
@@ -32,7 +49,10 @@ def _prepare():
     node_rows = {r[0]: i for i, r in enumerate(nodes)}
     cell_rows = {r[0]: i for i, r in enumerate(cells)}
     tets = np.asarray([[node_rows[n] for n in r[1:]] for r in cells], dtype=np.int64)
-    fixed_faces, loaded_faces = data['fixed_minus_x_faces'], data['loaded_plus_x_faces']
+    if load_axis == 'y':
+        fixed_faces, loaded_faces = _y_cap_faces(points, tets, node_ids)
+    else:
+        fixed_faces, loaded_faces = data['fixed_minus_x_faces'], data['loaded_plus_x_faces']
     holds = {n: ('x', 'y', 'z') for face in fixed_faces for n in face}
     cap = points[[[node_rows[n] for n in face] for face in loaded_faces]] * 1e-3
     area_m2 = float(np.linalg.norm(
@@ -78,15 +98,19 @@ def _prepare():
     plan = inspect_static_tet4_admission(base, fixed_dofs_by_id=holds)
     if not plan.within_factor_budget:
         raise ValueError('fitted mesh exceeds the Tet4 structural factor-entry budget')
-    loads = nodal_forces_from_traction(base, loaded_faces, traction_Pa=(traction_Pa, 0., 0.))
+    traction = (0., traction_Pa, 0.) if load_axis == 'y' else (traction_Pa, 0., 0.)
+    loads = nodal_forces_from_traction(base, loaded_faces, traction_Pa=traction)
     force = np.asarray([loads.get(int(n), (0., 0., 0.)) for n in node_ids])
-    np.testing.assert_allclose(force.sum(axis=0), [total_force_N, 0., 0.], rtol=0, atol=2e-18)
+    resultant = [0., total_force_N, 0.] if load_axis == 'y' else [total_force_N, 0., 0.]
+    np.testing.assert_allclose(force.sum(axis=0), resultant, rtol=0, atol=2e-18)
     output = {'input_sha256': FIXTURE_SHA256, 'tet4_preflight': asdict(plan),
               'fixed_cap_nodes': len(holds), 'loaded_cap_nodes': len(loads),
               'loaded_cap_area_m2': area_m2, 'traction_Pa': traction_Pa,
               'total_force_N': total_force_N, 'poisson_ratio': data['poisson_ratio'],
               'base_E_Pa': base_E, 'fully_stiffened_E_Pa': data['limit_E_Pa'],
               'sphere_radius_mm': data['sphere_radius_mm'], 'placements': placement}
+    if load_axis == 'y':
+        output['load_axis'] = 'y'
     return bundles, holds, loads, force, output
 
 
@@ -130,9 +154,11 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--preflight', action='store_true',
                         help='check input/loads/factor budget, without solving')
+    parser.add_argument('--load-axis', choices=('x', 'y'), default='x',
+                        help='clamp the negative cap and pull the positive cap on this axis (default: x)')
     args = parser.parse_args(argv)
     try:
-        bundles, holds, loads, force, output = _prepare()
+        bundles, holds, loads, force, output = _prepare(load_axis=args.load_axis)
         if not args.preflight:
             output['results'] = _solve(bundles, holds, loads, force, output['total_force_N'])
     except (OSError, ValueError) as exc:
