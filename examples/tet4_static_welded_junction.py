@@ -103,8 +103,8 @@ def cap_loading(mesh, held_faces, loaded_faces):
     return loads, area, traction
 
 
-def strain_energy(mesh, displacement_m, modulus_pa):
-    """Independent element integral: no access to solver internals or factorization."""
+def _integrate_strain_energy(mesh, displacement_m, modulus_pa, core_mask=None):
+    """Independent Tet4 quadrature, optionally partitioned by a geometric core mask."""
     x = mesh.points*1e-3
     t = mesh.tetrahedra
     edges = x[t[:,1:]] - x[t[:,:1]]
@@ -116,8 +116,20 @@ def strain_energy(mesh, displacement_m, modulus_pa):
     trace = np.trace(e, axis1=1, axis2=2)
     mu = modulus_pa / (2*(1+POISSON))
     lam = modulus_pa*POISSON / ((1+POISSON)*(1-2*POISSON))
-    energy = .5*np.sum(volume_m3*(lam*trace**2 + 2*mu*np.sum(e**2, axis=(1,2))))
-    return float(energy), volume_m3
+    twice_cell_energy = volume_m3*(lam*trace**2 + 2*mu*np.sum(e**2, axis=(1,2)))
+    energy = float(.5*np.sum(twice_cell_energy))
+    fraction = None
+    if core_mask is not None and energy > 0.:
+        core_energy = np.sum(twice_cell_energy[core_mask])
+        outer_energy = np.sum(twice_cell_energy[~core_mask])
+        fraction = float(core_energy / (core_energy + outer_energy))
+    return energy, volume_m3, fraction
+
+
+def strain_energy(mesh, displacement_m, modulus_pa):
+    """Independent total energy and cell volumes, without solver internals."""
+    energy, volumes, _ = _integrate_strain_energy(mesh, displacement_m, modulus_pa)
+    return energy, volumes
 
 
 def run(tier, write_vtu_dir=None, *, preflight=False):
@@ -171,7 +183,7 @@ def run(tier, write_vtu_dir=None, *, preflight=False):
         np.testing.assert_array_equal(s.node_ids,node_ids)
         np.testing.assert_array_equal(s.displacement_m[fixed],0.)
         np.testing.assert_array_equal(s.reaction_N[~s.fixed_mask],0.)
-        energy, volumes = strain_energy(bundle,s.displacement_m,e)
+        energy, volumes, core_fraction = _integrate_strain_energy(bundle, s.displacement_m, e, core)
         work = float(np.sum(force*s.displacement_m))
         assert work > 0.
         np.testing.assert_allclose([s.strain_energy_J,s.half_external_work_J,.5*work],energy,rtol=3e-11)
@@ -187,6 +199,7 @@ def run(tier, write_vtu_dir=None, *, preflight=False):
                         'net_force_N':force_balance.tolist(), 'net_moment_N_m':moment_balance.tolist(),
                         'strain_energy_J':s.strain_energy_J,'independent_strain_energy_J':energy,
                         'half_external_work_J':s.half_external_work_J,
+                        'core_strain_energy_fraction':core_fraction,
                         'free_residual_inf_N':s.free_residual_inf_N,
                         'normalized_backward_error':s.normalized_backward_error}
     a,b = (cases[name]['compliance_m_per_N'] for name in ('homogeneous','stiffer_core'))
