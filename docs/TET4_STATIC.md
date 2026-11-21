@@ -105,3 +105,47 @@ energy_J = 0.5 * np.einsum("c,cij,cij->", fields.volume_m3, fields.stress_Pa, fi
   cancellation can round nominally zero components; requesting fields is
   not a componentwise accuracy guarantee. Unrepresentable field recovery
   raises `ValueError`; it does not fill fields with zeros or NaNs.
+
+## View a static result in ParaView
+
+To write a **new** visualization file from the same validated solve, install
+the optional Meshio dependency (`python -m pip install meshio==5.3.5`) and
+use the explicit result exporter:
+
+```python
+from fibernet.io.tet4_results import solve_static_tet4_to_vtu
+
+result = solve_static_tet4_to_vtu(
+    "static-result.vtu", bundle,
+    forces_by_id=nodal_forces, fixed_dofs_by_id=held_axes,
+)
+```
+
+The file contains the undeformed mesh with coordinates in metres; it is
+not automatically warped. In ParaView, open the VTU and select a
+**Cell Data** component of `stress_Pa` or `strain` to show per-cell values.
+The optional Warp By Vector filter can display displacement separately.
+The returned `Tet4StaticResult` includes `cell_fields`.
+
+| Association | VTU arrays |
+| --- | --- |
+| Point Data | `node_id` (UInt64), `displacement_m` (three global Cartesian components, m) |
+| Cell Data | `cell_id`, `material_id` (UInt64); `strain`, `stress_Pa` (nine components); `volume_m3` |
+
+Tensor order is **xx, xy, xz, yx, yy, yz, zx, zy, zz**. Strain is dimensionless
+tensor strain, not engineering shear. Cauchy stress is tensile-positive and
+reported in Pa. No stress or strain is interpolated to nodes. Open the
+result as a visualization, not as input: this is a one-way VTU, without
+the versioned input ZIP manifest, and its additional diagnostic arrays are
+not permitted by the strict [v1 Tet4 exchange reader](TET4_VTU_BUNDLE.md).
+Material IDs label the cells but the file does not archive the material
+definitions (Young's modulus or Poisson ratio).
+
+The exporter stages a bounded file (at most 4 MiB after serialization) in
+the destination directory and publishes it without replacing another file.
+Use a trusted, existing parent directory that remains stable during
+export. The exporter resolves the parent once and does not follow an
+existing final pathname. This is not a path confinement mechanism. The
+filesystem must support atomic hard links; if unsupported, the exporter
+fails rather than falling back to an overwrite. This is not a
+crash-durability guarantee.
