@@ -682,15 +682,13 @@ class RuntimeSpec:
         python_path = str(Path(self.python_executable).resolve())
         required = {python_path, str(package/'liblammps.so'), str(package/'liblammps.so.0')}
         required.update(str(p) for p in (package.parent/'lammps.libs').glob('*') if p.is_file())
-        if Path(self.lammps_executable).resolve() != (package/'lmp').resolve():
-            raise LAMMPSContractError('CLI must use native package lmp, never bin/lmp wrapper')
         native_path = str(Path(self.lammps_executable).resolve())
-        required.add(native_path)
-        environment = dict(self.environment)
-        library_dir = environment.get('LD_LIBRARY_PATH')
+        if native_path != str((package/'lmp').resolve()):
+            raise LAMMPSContractError('CLI must use native package lmp, never bin/lmp wrapper')
+        library_dir = dict(self.environment).get('LD_LIBRARY_PATH')
         if not library_dir or ':' in library_dir:
             raise LAMMPSContractError('single explicit existing MPI library directory required')
-        required.add(str(Path(library_dir)/'libmpi.so.12'))
+        required.update((native_path, str(Path(library_dir)/'libmpi.so.12')))
         if not required <= set(pins) or len(pins) != len(self.file_sha256):
             raise LAMMPSContractError('runtime binary/library/Python source identity pins incomplete')
         for path, expected in pins.items():
@@ -701,9 +699,7 @@ class RuntimeSpec:
                 for chunk in iter(lambda: stream.read(1024*1024), b''): h.update(chunk)
             if h.hexdigest() != expected:
                 raise LAMMPSContractError('runtime identity mismatch: ' + path)
-        if _named_digests:
-            return pins[python_path], pins[native_path]
-        return self
+        return (pins[python_path], pins[native_path]) if _named_digests else self
 
 
 class LAMMPSTask:

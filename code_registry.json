@@ -4599,7 +4599,7 @@
    "EdgeLengthHistory",
    "edge_length_history"
   ],
-  "sha256": "720b8bacc5fc160d39856c1487be8c877ab1919f4064c91b6e48ad60d13e9111"
+  "sha256": "83ed3d9424adaabaf502e33ee34696292b1d3359b55d51114522c4f55245d5ff"
  },
  "tests/test_lammps_unprofiled_output_admission.py": {
   "purpose": "No-engine lower-bound admission tests; no native physics claims.",
