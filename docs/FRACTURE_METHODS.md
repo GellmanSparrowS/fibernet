@@ -81,6 +81,23 @@ displacement. It measures energy released by this member-removal model, rather
 than a calibrated material fracture energy. Seeds, geometry, explicit SI
 parameters and source bindings accompany the results for reproduction.
 
+The reported peak uses the **first** observation at the maximum recorded
+reaction force. `peak_observation_index` is its zero-based position in the
+native result's observation list, and `peak_displacement_m` is its recorded
+displacement. `pre_peak_external_work_J` includes the interval ending at the
+peak. `post_peak_external_work_J` sums subsequent recorded intervals only.
+Both use the same force–displacement trapezoids as total external work.
+
+Check `post_peak_observation_status` and `post_peak_displacement_span_m`.
+`no_later_observation` means the peak was terminal and post-peak work is
+null (blank in CSV). `constant_displacement_only` means later observations
+exist but do zero external work, even if elastic energy is released.
+`positive_displacement_span` means the trace includes further loading;
+the reported work ends at the last recorded point. These describe the
+observations separately from path loss, right-censoring or incomplete
+termination. They neither extrapolate to failure nor supply a shared
+integration window or fracture toughness for comparing cases.
+
 The paired mode compares an intact network with its notched counterpart.
 
 ```bash

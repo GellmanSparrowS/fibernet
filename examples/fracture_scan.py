@@ -110,12 +110,27 @@ def summarize_result(result):
         status = 'right_censored_loading_bound'
     else:
         status = 'stopped_without_path_loss'
+    # max returns the first equally high observation, preserving native event order.
+    peak_index, peak = max(enumerate(observations),
+                           key=lambda item: item[1]['loaded_reaction_force_N'])
+    peak_displacement = peak['displacement_m']
+    post_span = observations[-1]['displacement_m'] - peak_displacement
+    if peak_index == len(load_steps):
+        post_status, post_work = 'no_later_observation', None
+    else:
+        post_status = ('positive_displacement_span' if post_span > 0
+                       else 'constant_displacement_only')
+        post_work = math.fsum(load_steps[peak_index:])
     return dict(
         status=status, complete=data['complete'], termination_reason=reason,
         path_loss_observed=path_loss_observed,
         path_loss_displacement_m=loss_displacement,
         final_displacement_m=state['displacement_m'],
-        peak_reaction_N=max(obs['loaded_reaction_force_N'] for obs in observations),
+        peak_reaction_N=peak['loaded_reaction_force_N'],
+        peak_observation_index=peak_index, peak_displacement_m=peak_displacement,
+        pre_peak_external_work_J=math.fsum(load_steps[:peak_index]),
+        post_peak_external_work_J=post_work,
+        post_peak_observation_status=post_status, post_peak_displacement_span_m=post_span,
         failed_edge_count=len(result.events),
         first_failure_displacement_m=result.events[0]['displacement_m'] if result.events else None,
         external_work_J=work, final_strain_energy_J=final_strain,
@@ -204,6 +219,9 @@ def run_scan(out, *, seeds=SEEDS, short_um=SHORT_UM, full_um=FULL_UM, compare_no
     )
     if compare_notch:
         fields += ('pair_id', 'notch_condition', 'source_graph_sha256')
+    fields += ('peak_observation_index', 'peak_displacement_m', 'pre_peak_external_work_J',
+               'post_peak_external_work_J', 'post_peak_observation_status',
+               'post_peak_displacement_span_m')
     with (out / 'scan.csv').open('x', encoding='utf-8', newline='') as stream:
         table = csv.DictWriter(stream, fieldnames=fields)
         table.writeheader()

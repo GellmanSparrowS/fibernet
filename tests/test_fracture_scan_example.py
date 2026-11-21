@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -123,6 +124,13 @@ def test_early_stop_is_distinct_from_censoring_and_ledger_mismatch_errors():
     for complete, status in ((True, 'stopped_without_path_loss'), (False, 'incomplete')):
         row = fracture_scan.summarize_result(_partial_result(complete=complete))
         assert row['status'] == status and row['path_loss_displacement_m'] is None
+    bounded = _partial_result()
+    bounded.data['config']['maximum_displacement_m'] = 1.
+    bounded.data['termination_reason'] = 'loading_bound'
+    row = fracture_scan.summarize_result(bounded)
+    assert row['status'] == 'right_censored_loading_bound'
+    assert row['post_peak_observation_status'] == 'no_later_observation'
+    assert row['post_peak_external_work_J'] is None
     with pytest.raises(RuntimeError, match='energy-drop ledger'):
         fracture_scan.summarize_result(_partial_result(energy=1.))
 
@@ -238,3 +246,72 @@ def test_actual_paused_notched_trace_is_incomplete_not_loading_bound():
     assert row['complete'] is False and row['path_loss_displacement_m'] is None
     assert 0 < row['final_displacement_m'] < config.maximum_displacement_m
     assert row['peak_reaction_N'] > 0 and row['failed_edge_count'] > 0
+
+
+def _ordered_peak_fixture():
+    # Exact equilibria with k=4, 2, 0.5 and then no surviving load path.
+    # The two peaks are tied at distinct displacements and two masks.
+    trace = [(0., 0., 0., [True]*3, True), (1., 4., 2., [True]*3, True),
+             (1., 2., 1., [False, True, True], True),
+             (2., 4., 4., [False, True, True], True),
+             (2., 1., 1., [False, False, True], True),
+             (3., 1.5, 2.25, [False, False, True], True),
+             (3., 0., 0., [False]*3, False)]
+    observations = [dict(displacement_m=d, loaded_reaction_force_N=f, strain_energy_J=u,
+                         mask=mask, path_present=path) for d, f, u, mask, path in trace]
+    last = observations[-1]
+    return FractureResult(dict(
+        observations=observations, events=[], complete=True, termination_reason='material_path_loss',
+        state=dict(displacement_m=last['displacement_m'], strain_energy_J=last['strain_energy_J'],
+                   topology={'path_present': last['path_present']}),
+        config={'maximum_displacement_m': 4., 'output_quota_bytes': 10240},
+        binding={'test': 'untouched'},
+    ))
+
+
+def test_peak_work_splits_earliest_exact_tie_and_zero_displacement_drops():
+    result = _ordered_peak_fixture()
+    row = fracture_scan.summarize_result(result)
+    assert row['status'] == 'path_loss_observed'
+    assert row['peak_observation_index'] == 1 and row['peak_displacement_m'] == 1.
+    assert row['peak_reaction_N'] == 4.
+    assert row['post_peak_observation_status'] == 'positive_displacement_span'
+    assert row['post_peak_displacement_span_m'] == 2.
+    assert row['pre_peak_external_work_J'] == 2.
+    assert row['post_peak_external_work_J'] == 3. + 1.25
+    assert row['external_work_J'] == row['pre_peak_external_work_J'] + row['post_peak_external_work_J']
+    assert row['released_elastic_energy_J'] == 1. + 3. + 2.25
+    result.data['observations'][2]['displacement_m'] = 1.01
+    with pytest.raises(RuntimeError, match='cannot be integrated'):
+        fracture_scan.summarize_result(result)
+
+
+def test_peak_work_terminal_null_and_same_displacement_zero_reach_csv(tmp_path, monkeypatch):
+    terminal = _ordered_peak_fixture()
+    terminal.data.update(observations=terminal.observations[:2], complete=False,
+                         termination_reason='paused')
+    terminal.data['state'] = dict(displacement_m=1., strain_energy_J=2.,
+                                  topology={'path_present': True})
+    plateau = _ordered_peak_fixture()
+    plateau.data.update(observations=plateau.observations[:3], complete=False,
+                        termination_reason='paused')
+    plateau.data['state'] = dict(displacement_m=1., strain_energy_J=1.,
+                                 topology={'path_present': True})
+    results = iter((terminal, plateau))
+    monkeypatch.setattr(fracture_scan, 'FractureSolver',
+                        lambda *a, **k: SimpleNamespace(run=lambda: next(results)))
+    out = tmp_path / 'scan'
+    a, b = fracture_scan.run_scan(out, seeds=(11,))
+    for row in (a, b):
+        assert row['status'] == 'incomplete'
+        assert row['peak_displacement_m'] == 1. and row['pre_peak_external_work_J'] == 2.
+        assert row['post_peak_displacement_span_m'] == 0.
+        assert row['result_binding'] == {'test': 'untouched'}
+    assert a['post_peak_observation_status'] == 'no_later_observation'
+    assert a['post_peak_external_work_J'] is None
+    assert b['post_peak_observation_status'] == 'constant_displacement_only'
+    assert b['post_peak_external_work_J'] == 0. and b['released_elastic_energy_J'] == 1.
+    with (out / 'scan.csv').open(newline='') as handle:
+        before, after = list(csv.DictReader(handle))
+    assert before['post_peak_external_work_J'] == '' and after['post_peak_external_work_J'] == '0.0'
+    assert json.loads((out / 'summary.json').read_bytes())['cases'] == [a, b]
