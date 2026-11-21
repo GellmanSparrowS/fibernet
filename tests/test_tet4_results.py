@@ -250,3 +250,23 @@ def test_welded_example_rejects_cyclic_vtu_output_path(tmp_path):
     assert 'Traceback' not in result.stderr
     assert result.stdout == ''
     assert list(tmp_path.iterdir()) == [link]
+
+
+def test_real_vtu_prescribed_displacement_same_diagnostic_layout(tmp_path):
+    meshio = pytest.importorskip('meshio')
+    bundle, _, _, u, strain, stress = fitted_patch()
+    motion = {int(node_id): dict(zip('xyz', uv)) for node_id, uv in zip(bundle.node_ids, u)}
+    path = tmp_path/'preset.vtu'
+    result = io.solve_static_tet4_to_vtu(path, bundle, forces_by_id={}, fixed_dofs_by_id={},
+                                         prescribed_displacements_m_by_id=motion)
+    reread = meshio.read(path)
+    assert set(reread.point_data)=={'node_id','displacement_m'}
+    assert set(reread.cell_data)=={'cell_id','material_id','strain','stress_Pa','volume_m3'}
+    np.testing.assert_array_equal(reread.point_data['node_id'], bundle.node_ids)
+    np.testing.assert_array_equal(reread.point_data['displacement_m'], u)
+    np.testing.assert_allclose(result.cell_fields.strain, strain, atol=2e-14)
+    np.testing.assert_allclose(result.cell_fields.stress_Pa, stress, atol=4e-5)
+    np.testing.assert_allclose(result.strain_energy_J, .0011875, rtol=2e-11)
+    with pytest.raises(FileExistsError):
+        io.solve_static_tet4_to_vtu(path, bundle, forces_by_id={}, fixed_dofs_by_id={},
+                                   prescribed_displacements_m_by_id=motion)

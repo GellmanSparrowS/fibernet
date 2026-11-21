@@ -5852,6 +5852,7 @@
    "_row_lookup",
    "_loads_and_constraints",
    "_fixed_axes",
+   "_constraint_axes",
    "_magnitude_bits",
    "_check_normal_or_zero",
    "_validate_topology",
@@ -5867,11 +5868,16 @@
    "_exact_field_vector",
    "_field_dot",
    "_tensor_rows",
+   "_engineering_strain",
    "_recover_cell_fields",
    "_assemble",
    "_checked_normal_rescale",
    "_factor_band",
    "_fixed_solve",
+   "_checked_products",
+   "_checked_action",
+   "_prescribed_element_response",
+   "_prescribed_solve",
    "inspect_static_tet4_admission",
    "solve_static_tet4",
    "_owned_static_mesh",
@@ -5879,7 +5885,7 @@
    "_static_topology_plan",
    "_solve_static_validated"
   ],
-  "sha256": "c12c58cc1bfcac160bf1111a44e5d846c6415b9396284b554717bc8bc6823eb1"
+  "sha256": "b6126e89e8a429f639c107843abc937a37d0198ab51d7af3e2860f1cac344fe3"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
@@ -5928,7 +5934,7 @@
   "symbols": [
    "solve_static_tet4_to_vtu"
   ],
-  "sha256": "5de61c8a8d721de145fe5ce7008c23c083152c1f7ccd7a11acc3074ec924b15d"
+  "sha256": "71a1ce412e28bfac3d91f1a54265189d5d2ef3cad2dd0543f778ea23a5a995c4"
  },
  "tests/test_tet4_results.py": {
   "purpose": "One-way Tet4 VTU diagnostics: alignment, analytical recovery, atomic staging.",
@@ -5940,9 +5946,10 @@
    "test_staged_write_no_partial_and_no_clobber",
    "test_import_and_request_without_meshio",
    "test_relative_target_stays_in_resolved_parent_when_cwd_changes",
-   "test_welded_example_rejects_cyclic_vtu_output_path"
+   "test_welded_example_rejects_cyclic_vtu_output_path",
+   "test_real_vtu_prescribed_displacement_same_diagnostic_layout"
   ],
-  "sha256": "754461030b2ef367848a83c767e33e2444340afaa89b2af56134dcdc2699667d"
+  "sha256": "8f19aaae4a80cfc8f07dac8981ed629c0131ef77e07c48c4d29aef8a921defad"
  },
  "fibernet/sim/tet4_loads.py": {
   "purpose": "Convert global constant face traction into bounded Tet4 nodal forces.",
@@ -6108,5 +6115,22 @@
    "read_saved_lammps_run"
   ],
   "sha256": "609b5c1ae93f6855d0fe33ff0656b2bb30d72dd19958b4e1fbef9d62b4eb6538"
+ },
+ "tests/test_tet4_prescribed.py": {
+  "purpose": "Independent analytic controls for signed Tet4 displacement constraints.",
+  "status": "active",
+  "symbols": [
+   "_tet",
+   "test_fully_prescribed_affine_with_external_force_on_actuated_axis",
+   "test_exactly_cancelled_effective_rhs_still_factors_and_does_work",
+   "test_free_mixed_force_and_prescribed_work_without_cancellation",
+   "test_fully_prescribed_rigid_translation_exactly_zero",
+   "test_zero_defaults_and_admission_do_not_assemble",
+   "_DuplicateAxes",
+   "test_reject_malformed_or_insufficient_driven_constraints",
+   "test_refuses_unrepresentable_nonzero_energy",
+   "test_large_coincident_applied_load_does_not_cancel_mechanical_work"
+  ],
+  "sha256": "dd6e28f8cd7ef473af7ad01839ef671d1d9f1d5991b413cb06d2797607c6a055"
  }
 }
