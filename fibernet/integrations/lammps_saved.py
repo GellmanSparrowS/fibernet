@@ -15,15 +15,18 @@ import os
 from pathlib import Path
 import stat
 import time
+from typing import Union
 
 from fibernet.integrations.lammps_backend import (
     LAMMPSContractError, LAMMPSRunResult, PreparedRun,
-    parse_outputs, validate_prepared,
+    _BPM_MODEL, parse_outputs, validate_prepared,
 )
+from fibernet.integrations.lammps_bpm import BPMRunResult, _NATIVE_BANNER, _parse_task_text
 
 
 _FILES = ('manifest.json', 'graph.json', 'model.data', 'in.model',
          'trajectory.dump', 'log.lammps')
+_BPM_OUTPUTS = ('active.dump', 'breaks.dump')
 _MIB = 1024 * 1024
 
 
@@ -67,7 +70,7 @@ class LAMMPSSavedReadLimits:
 @dataclass(frozen=True)
 class SavedLAMMPSRead:
     prepared: PreparedRun
-    result: LAMMPSRunResult
+    result: Union[LAMMPSRunResult, BPMRunResult]
     receipt_json: str
     unverified_metadata_json: str
 
@@ -229,9 +232,9 @@ def read_saved_lammps_run(root, *, expected_manifest_sha256, expected_banner=Non
                    limits=LAMMPSSavedReadLimits()):
     """Validate saved bytes/protocol without runtime admission or engine work.
 
-    Only six named files are opened. Other entries (including scratch/logs) are
-    ignored, not recursively inspected or certified. File and directory symlinks
-    are refused by this route; existing public APIs are unchanged.
+    Only the fixed model-specific files are opened. BPM preparations enabling
+    restart are refused. Other entries are ignored, not recursively inspected
+    or certified. File and directory symlinks are refused by this route.
     Expected manifest digest and optional banner come from the caller, not the
     data. Even a matching external digest does not authenticate the caller's
     source or prove physics. Compiler drift is a hard compatibility failure.
@@ -260,9 +263,10 @@ def read_saved_lammps_run(root, *, expected_manifest_sha256, expected_banner=Non
         directory_fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         before, contents = {}, {}
         total = prepared_size = output_size = 0
-        for name in _FILES:
+        def capture(name):
+            nonlocal total, prepared_size, output_size
             deadline()
-            output = name in ('trajectory.dump', 'log.lammps')
+            output = name in (*_FILES[4:], *_BPM_OUTPUTS)
             budget = min(limits.total_bytes-total,
                          limits.output_bytes-output_size if output else limits.prepared_bytes-prepared_size)
             if name.endswith('.json'):
@@ -296,33 +300,52 @@ def read_saved_lammps_run(root, *, expected_manifest_sha256, expected_banner=Non
                     prepared_size += count
             finally:
                 os.close(fd)
+        def decoded(name):
+            try:
+                return contents[name].decode('utf-8')
+            except UnicodeDecodeError as exc:
+                raise LAMMPSSavedReadError('saved files must be UTF-8') from exc
+
+        capture('manifest.json')
         if _sha(contents['manifest.json']) != expected_manifest_sha256:
             raise LAMMPSSavedReadError('caller manifest digest mismatch')
-        try:
-            texts = {name: data.decode('utf-8') for name, data in contents.items()}
-        except UnicodeDecodeError as exc:
-            raise LAMMPSSavedReadError('saved files must be UTF-8') from exc
-        manifest = _strict_json(texts['manifest.json'], limits, 'manifest')
+        manifest = _strict_json(decoded('manifest.json'), limits, 'manifest')
+        for name in _FILES[1:4]:
+            capture(name)
         deadline()
-        prepared = _restore(manifest, texts, limits)
+        prepared = _restore(manifest, {name: decoded(name) for name in _FILES[1:4]}, limits)
+        contract = manifest['contract']
+        bpm = contract.get('model') == _BPM_MODEL
+        if bpm and contract['checkpoint_step'] is not None:
+            raise LAMMPSSavedReadError('saved BPM readback refuses restart-enabled models')
+
+        output_names = _FILES[4:] + (_BPM_OUTPUTS if bpm else ())
+        for name in output_names:
+            capture(name)
+        texts = {name: decoded(name) for name in output_names}
         deadline()
         if expected_banner is not None and texts['log.lammps'].splitlines()[:1] != [expected_banner]:
             raise LAMMPSSavedReadError('saved log banner differs from caller expectation')
-        # Reuse the public parser on captured immutable bytes, not reopened paths.
-        result = parse_outputs(prepared, texts['trajectory.dump'], texts['log.lammps'],
-                               max_output_bytes=limits.output_bytes)
+        # Both parsers receive captured immutable text, not paths to reopen.
+        if bpm:
+            result = _parse_task_text(prepared, _NATIVE_BANNER, texts.__getitem__)
+            frames, thermo = len(result.frames), 0
+        else:
+            result = parse_outputs(prepared, texts['trajectory.dump'], texts['log.lammps'],
+                                   max_output_bytes=limits.output_bytes)
+            frames, thermo = len(result.trajectory), len(result.thermo)
         deadline()
-        for name in _FILES:
+        for name in contents:
             current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
             if _signature(current) != before[name]:
                 raise LAMMPSSavedReadError(name + ' changed during validation')
         receipt = dict(schema='fibernet.lammps.saved-read/1',
             status='saved_bytes_and_protocol_validated',
             expected_manifest_sha256=expected_manifest_sha256,
-            caller_anchor_authenticated=False, file_sha256={n: _sha(contents[n]) for n in _FILES},
+            caller_anchor_authenticated=False, file_sha256={n: _sha(raw) for n, raw in contents.items()},
             bytes_read=total, prepared_identity=prepared.identity,
             node_ids=list(prepared.node_ids), edge_ids=list(prepared.edge_ids),
-            trajectory_frames=len(result.trajectory), thermo_frames=len(result.thermo),
+            trajectory_frames=frames, thermo_frames=thermo,
             graph_length_unit=manifest['contract']['length_unit'],
             native_state_units='SI', compiler_compatibility='exact_current_regeneration',
             compiler_revision_in_saved_manifest='not_recorded',

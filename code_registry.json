@@ -5709,9 +5709,11 @@
    "_rows",
    "_atom_frame",
    "_close_rows",
-   "parse_task_output"
+   "_same_restart_atoms",
+   "parse_task_output",
+   "_parse_task_text"
   ],
-  "sha256": "51755bdba48c87a20738f3703ee8df23bb3dd6c38fced54b6c103032f023b36b"
+  "sha256": "f964679fa9b6f37d35788502f9ad145230f4c48c41cbae48e2d2aeeafca9444b"
  },
  "tests/test_gmsh_geometry_identity.py": {
   "purpose": "Legacy public MSH export preserves representable geometric distinctions.",
@@ -6087,5 +6089,24 @@
    "TestPairFreeForecast"
   ],
   "sha256": "0a0add4f1f3c3bd6754f5a481f93f8a5e3abd42131432217ee6afe623963fbe3"
+ },
+ "fibernet/integrations/lammps_saved.py": {
+  "purpose": "Bounded offline saved-run reader; no engine, runtime admission, or restart.",
+  "status": "active",
+  "symbols": [
+   "LAMMPSSavedReadError",
+   "LAMMPSCompilerCompatibilityError",
+   "LAMMPSSavedReadLimits",
+   "SavedLAMMPSRead",
+   "_canonical",
+   "_sha",
+   "_hex_digest",
+   "_integer",
+   "_strict_json",
+   "_signature",
+   "_restore",
+   "read_saved_lammps_run"
+  ],
+  "sha256": "609b5c1ae93f6855d0fe33ff0656b2bb30d72dd19958b4e1fbef9d62b4eb6538"
  }
 }

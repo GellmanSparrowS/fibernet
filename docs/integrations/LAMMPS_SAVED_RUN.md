@@ -26,11 +26,19 @@ that LAMMPS ran.
 
 ## Saved files and returned values
 
-The reader opens exactly six fixed names in the caller-selected directory:
+For harmonic and conservative CG results, the reader opens six fixed names
+in the caller-selected directory:
 
 - `manifest.json`: the full existing task manifest, including runtime and limits
 - `graph.json`, `model.data`, `in.model`: exact stored preparation bytes
 - `trajectory.dump`, `log.lammps`: output protocol texts
+
+For a [rotational BPM](LAMMPS_ROTATIONAL_BPM.md) preparation without a
+restart, it also reads `active.dump` and `breaks.dump`, using the same
+aggregate output budget. The BPM log must have the matching protocol banner
+and exactly one standalone completion marker; an echoed command does not
+qualify. A restart-enabled preparation is refused. The reader never opens
+a binary restart or the secondary restart dumps.
 
 Other files, including process logs and scratch entries, are ignored and are not
 validated. The files are never modified. Runtime paths, environment and hash pins
@@ -42,9 +50,14 @@ The immutable `SavedLAMMPSRead` contains:
 - `prepared`: the existing `PreparedRun`, with original StructureGraph geometry,
   stable IDs and explicit model contract
 - `result`: the existing `LAMMPSRunResult`; positions are m, velocities m/s,
-  forces N, energies J, and global pressure Pa. Its `workdir` is empty.
+  forces N, energies J, and global pressure Pa. A BPM task instead returns
+  `BPMRunResult` with `frames`, `breaks`, and the original node and edge IDs.
+  Its orientations, angular velocities and torques retain the managed
+  result's conventions. It does not include a thermo energy history.
+  Both result types have an empty `workdir`.
 - `receipt_json` and detached `receipt`: byte digests, IDs, frame counts, original
-  graph length unit and explicit nonverification flags
+  graph length unit and explicit nonverification flags. BPM reports its
+  frame count as `trajectory_frames` and has zero `thermo_frames`.
 - `unverified_metadata_json`: saved runtime and limits records, with no implied
   runtime readiness or execution authenticity
 
@@ -92,7 +105,7 @@ and bounded. Pre/post file signatures detect ordinary replacement or mutation;
 they are not an atomic snapshot against a privileged or same-user adversary.
 
 `LAMMPSSavedReadLimits()` defaults and maximum supported bounds are: total raw
-input 20 MiB; prepared files together 2 MiB; output pair 16 MiB; each JSON 1 MiB;
+input 20 MiB; prepared files together 2 MiB; combined model output files 16 MiB; each JSON 1 MiB;
 JSON depth 32 and punctuation/container budget 100,000; 256 nodes, 1,024 edges
 and 2,048 steps. Callers may lower these limits. The selected existing compiler
 or parser profile can impose stricter bounds. These reader ceilings do not expand
@@ -106,7 +119,7 @@ filesystems are outside the supported model.
 
 ## Verification and distribution scope
 
-Tests use synthetic harmonic/CG output and existing public retained preparation
+Tests use synthetic harmonic/CG and BPM output and existing public retained preparation
 fixtures. They exercise exact restoration, maps/units, missing and malformed
 files, resealed contradictions, compiler drift, finite budgets and no-execution
 boundaries. They are not new historical-output replay, native physics, performance
