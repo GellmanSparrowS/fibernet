@@ -32,6 +32,36 @@ For a larger reproducible junction, use the
 Its quick and reference tiers are separate discretizations, not a
 mesh-convergence claim.
 
+## Check the factor budget without solving
+
+If you only need to know whether a mesh and restraint layout fit the current
+banded solver's structural budget, inspect them before constructing loads:
+
+```python
+from fibernet.sim.tet4 import inspect_static_tet4_admission
+
+report = inspect_static_tet4_admission(bundle, fixed_dofs_by_id=held_axes)
+print(report.free_dofs, report.factor_entries, report.factor_entry_limit)
+if not report.within_factor_budget:
+    print("This mesh and restraint layout exceed the band budget.")
+```
+
+Pass the same stable-ID restraint mapping you would pass to the solver. The
+function takes no loads and does not assemble or factor the stiffness
+matrix. For example, a welded-junction discretization with 1,512 points
+and 6,150 tetrahedra can still need 3,495,402 factor entries, exceeding the
+3,000,000-entry budget despite being below both mesh-size limits.
+
+An over-budget topology returns its estimated counts and
+`within_factor_budget=False`. Invalid bundle fields, point/cell-count
+violations, unsupported topology, or insufficient restraints still raise a
+validation error. `factor_entries` is the conservative lower-plus-upper
+structural envelope, while `padded_factor_entries` counts slots in the band
+buffer. Neither is measured fill or memory use. Passing this check does not
+validate loads, certify element conditioning or numerical material
+stiffness, guarantee absence of overlap, or promise a successful solve.
+The solver still validates inputs and checks for numerical failure.
+
 ## Contract
 
 - Connectivity uses point row indices within the bundle. Forces and

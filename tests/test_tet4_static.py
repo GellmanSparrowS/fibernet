@@ -302,3 +302,48 @@ def test_cell_fields_zero_supported_only_and_tiny_arithmetic():
         tet4._field_dot(np.array([[2.**-400,0.,0.]]), vector)
     # Recovery can also certify normal results in the presence of tiny products.
     np.testing.assert_array_equal(tet4._field_dot(np.array([[2.**-400,0.,2.]]), vector), [2.])
+
+
+def test_admission_only_once_validates_and_never_assembles_or_factors(monkeypatch):
+    bundle, _, fixed = build_example(1)
+    validate = tet4._validate_static_mesh
+    count = []
+    def witness(candidate):
+        count.append(candidate is bundle)
+        return validate(candidate)
+    def forbidden(*args, **kwargs):
+        pytest.fail('structural admission must not read loads, assemble, or factor')
+    monkeypatch.setattr(tet4, '_validate_static_mesh', witness)
+    monkeypatch.setattr(tet4, '_loads_and_constraints', forbidden)
+    monkeypatch.setattr(tet4, '_assemble', forbidden)
+    monkeypatch.setattr(tet4.linalg, 'cholesky_banded', forbidden)
+    report = tet4.inspect_static_tet4_admission(bundle, fixed_dofs_by_id=fixed)
+    assert isinstance(report, tet4.Tet4StaticAdmission)
+    assert count == [True] and report.within_factor_budget
+    assert (report.points, report.tetrahedra) == (len(bundle.points), len(bundle.tetrahedra))
+    assert report.free_dofs == bundle.points.size - sum(map(len, fixed.values()))
+    n, h = report.free_dofs, report.topology_half_bandwidth
+    assert report.factor_entries == (2*n-h)*(h+1)
+    assert report.padded_factor_entries == n*(h+1)
+    monkeypatch.setattr(tet4, '_MAX_FACTOR_ENTRIES', report.factor_entries - 1)
+    rejected = tet4.inspect_static_tet4_admission(bundle, fixed_dofs_by_id=fixed)
+    assert count == [True, True] and not rejected.within_factor_budget
+    assert rejected.factor_entries == report.factor_entries
+    assert rejected.factor_entry_limit == report.factor_entries - 1
+
+
+def test_admission_budget_fit_does_not_claim_numerical_solvability():
+    # A real nonzero-volume cell that fits the symbolic estimate but is
+    # deliberately outside this solver's element-condition limit.
+    bundle = Tet4Bundle([[0.,0.,0.],[1.,0.,0.],[0.,1.,0.],[.1,.1,1e-12]],
+                        [[0,1,2,3]],[4,5,6,7],[88],[9],
+                        {9:{'young_modulus_pa':1e9,'poisson_ratio':.3}},'m')
+    fixed = {k:('x','y','z') for k in (4,5,6)}
+    report = tet4.inspect_static_tet4_admission(bundle, fixed_dofs_by_id=fixed)
+    assert report.within_factor_budget and report.factor_entries == 12
+    with pytest.raises(ValueError, match='element is too ill-conditioned'):
+        solve(bundle, {}, fixed)
+    with pytest.raises(ValueError, match='do not suppress six rigid modes'):
+        tet4.inspect_static_tet4_admission(bundle, fixed_dofs_by_id={4:('x','y','z')})
+    with pytest.raises(ValueError, match='foreign or duplicate'):
+        tet4.inspect_static_tet4_admission(bundle, fixed_dofs_by_id={42:('x',)})
