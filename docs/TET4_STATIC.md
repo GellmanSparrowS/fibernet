@@ -65,9 +65,10 @@ its rigid modes. Duplicate cells, unused nodes, faces incident to more
 than two cells, and bodies joined only at an edge or vertex are rejected.
 The solver does not certify absence of overlap, independently coincident
 mesh pieces, or general spatial conformity. It does not support nonzero
-prescribed motion, surface tractions as an input format, stress export,
-contact, nonlinear mechanics, or dynamics. No performance or numerical
-guarantee is made across mesh families or platforms.
+prescribed motion, surface tractions as an input format, nodal projection
+of stress, contact, nonlinear mechanics, or dynamics. Element-wise strain
+and stress are available below. No performance or numerical guarantee is
+made across mesh families or platforms.
 
 ## Optional cell strain and stress
 

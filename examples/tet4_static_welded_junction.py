@@ -123,7 +123,12 @@ def run(tier, write_vtu_dir=None):
     n = TIERS[tier]
     outputs = None
     if write_vtu_dir is not None:
-        directory = Path(write_vtu_dir).resolve(strict=True)
+        requested_dir = Path(write_vtu_dir)
+        try:
+            directory = requested_dir.resolve(strict=True)
+        except RuntimeError as exc:
+            # Older Path.resolve versions report a symlink loop as RuntimeError.
+            raise OSError(f'could not resolve output directory {requested_dir}: {exc}') from exc
         if not directory.is_dir():
             raise NotADirectoryError(f'VTU output must be an existing directory: {directory}')
         outputs = {label: directory / f'welded-{tier}-{label}.vtu' for label in CASE_NAMES}
