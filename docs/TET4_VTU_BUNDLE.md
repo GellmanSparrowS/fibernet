@@ -122,6 +122,10 @@ and the two physical **surfaces** `hold_face` and `pull_face`. Edit the
 names, moduli, Poisson ratios, coordinate unit and traction for your
 mesh. Export all the tetrahedra you want to solve; the recipe checks
 coverage of the exported cells, not what was omitted at export.
+Ancillary linear lines or vertices (for example, from physical curves or
+points) are ignored only when their point rows already belong to the
+tetrahedral mesh. Orphan points and unsupported element types are
+rejected; points are not removed or renumbered.
 
 A volume can also belong to an auxiliary group such as `whole_solid`.
 Do not assign materials from the scalar `gmsh:physical` column: Meshio
@@ -150,9 +154,20 @@ with source.open("rb") as f:
     if f.readline(128).strip() != b"$MeshFormat" or f.readline(128).split() != [b"4.1", b"0", b"8"]:
         raise ValueError("Expected an ASCII Gmsh 4.1 mesh")
 mesh = meshio.read(source)
-if any(block.type not in {"tetra", "triangle"} for block in mesh.cells):
-    raise ValueError("Export only linear tetrahedra and boundary triangles for this recipe")
+if any(block.type not in {"tetra", "triangle", "line", "vertex"} for block in mesh.cells):
+    raise ValueError("Export only linear tetrahedra, triangles, lines or vertices")
 tets, triangles = (mesh.get_cells_type(kind) for kind in ("tetra", "triangle"))
+npoints = len(mesh.points)
+if (not len(tets) or tets.dtype.kind not in "iu"
+        or not np.array_equal(np.unique(tets), np.arange(npoints))):
+    raise ValueError("Every point row must belong to the tetrahedral mesh")
+ancillary_widths = {"line": 2, "vertex": 1}
+for block in mesh.cells:
+    if block.type in ancillary_widths:
+        rows = np.asarray(block.data)
+        if (rows.ndim != 2 or rows.shape[1] != ancillary_widths[block.type]
+                or rows.dtype.kind not in "iu" or np.any(rows < 0) or np.any(rows >= npoints)):
+            raise ValueError("Line or vertex connectivity must use valid tetrahedral point rows")
 groups = mesh.cell_sets_dict
 
 def named_group(name, dimension, kind):
