@@ -19,6 +19,16 @@ strain energy and force/moment balance as JSON. Neither command needs
 Gmsh or Meshio. Keep the adjacent `examples/fixtures/fitted_axial_B.json`
 file with the script.
 
+Use `--load-axis y` to clamp the −y cap and pull the +y cap with the same
+1 mN resultant (it also works with `--preflight`). The mesh and both
+material placements stay fixed, including the sphere at x = 0.82 mm.
+The y end caps use fewer triangles and a smaller discrete area, so
+the uniform traction is about 1,361 Pa instead of 1,291 Pa for x.
+On this mesh, the arm placement reduces compliance more than the
+junction placement under x loading; the ordering reverses under y
+loading. This compares two directions on one mesh, not a general
+ranking of locations or a mesh-convergence result.
+
 Each placement is a sphere of radius 0.35 mm, centered at (0,0,0) or
 (0.82,0,0) mm. A cell uses E = (1 + 2φ) GPa and ν = 0.30, where φ is the
 part of its volume inside the sphere. Both assignments have the same
