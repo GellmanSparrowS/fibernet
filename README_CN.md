@@ -11,7 +11,7 @@ FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界�
 
 ### 安装并运行源码入门示例
 
-**开发版源码：4.6.0——本页推荐入口**
+**开发版源码：4.7.0——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
@@ -22,7 +22,7 @@ python -m examples.open_source_workflow --output-dir demo_output
 
 需要 Python 3.9 及以上版本和基础依赖，本例不需要 Torch 或 Taichi。运行成功后，终端会显示 **18 个节点、22 条边**，`demo_output/` 中会生成 `network.png`、`fem_result.json` 和 `summary.json`。流程会保存并重新读取 FEM 结果，再进行招募分析。[示例与输出](examples/open_source_workflow.py)
 
-可选依赖包括 `.[ml]` 和 `.[manufacturing]`。
+可选依赖包括 `.[ml]` 和 `.[manufacturing]`。想比较三圆柱联结的逐单元应力，可运行[四面体算例及 VTU 导出](docs/RELEASE_4_7_0.md#write-both-vtu-results)。
 
 ### Python 示例：生成、模拟、保存
 
