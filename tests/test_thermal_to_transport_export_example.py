@@ -30,6 +30,13 @@ def test_one_way_saved_field_workflow_and_equivalent_units(tmp_path):
         mechanical = mechanical_bundle['mechanical']
         thermal = json.loads((out/'thermal.json').read_text())
         electrical = json.loads((out/'electrical.json').read_text())
+        binding_bytes = (out/'transport_binding.json').read_bytes()
+        binding = json.loads(binding_bytes)
+        assert electrical['provenance']['model_metadata']['deformed_transport_preparation'] == {
+            'schema': binding['schema'],
+            'input_sha256': binding['input_sha256'],
+            'report_file_sha256': hashlib.sha256(binding_bytes).hexdigest(),
+        }
         assert thermal['edge_ids'] != mechanical['edge_ids']  # actual reordered rows
         temperature_by_id = dict(zip(thermal['node_ids'],thermal['temperature_K'][3]))
         np.testing.assert_array_equal(mechanical['temperature_K'],
