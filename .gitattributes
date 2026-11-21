@@ -87,3 +87,6 @@ tests/fixtures/release_input_contract_v1/*.json -text
 
 # Frozen detailed-metric validation source delta.
 tests/fixtures/compute_detailed_validation_v1/accelerated_delta.json -text
+
+# The fitted Tet4 example verifies its frozen fixture by raw SHA-256.
+/examples/fixtures/fitted_axial_B.json -text
