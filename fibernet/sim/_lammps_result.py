@@ -512,7 +512,8 @@ class _ConvertedFrames(list):
         return self._convert(super().__getitem__(index))
 
 
-def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
+def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False, *,
+                  _named_runtime_digests=None):
     """Map completed native output; geometry-facing arrays retain original graph units."""
     from .accelerated import SimResult
     from fibernet.integrations.lammps_backend import validate_prepared
@@ -640,7 +641,8 @@ def to_sim_result(prepared, raw, runtime, wall_seconds, record_state=False):
         edge_forces=forces, edge_stretches=stretches, max_force=metrics[0],
         max_stretch=metrics[1], mean_stretch=metrics[2], std_stretch=metrics[3],
         max_displacement=metrics[4], n_nodes=len(ids), n_edges=len(edges),
-        metadata=_profiles.export_metadata(prepared,runtime),
+        metadata=_profiles.export_metadata(prepared, runtime,
+                                           named_runtime_digests=_named_runtime_digests),
         dynamics_state=state if record_state else None)
     if cg:
         from fibernet.integrations._lammps_cg import FORCE_ROLES
@@ -685,7 +687,8 @@ def simulate_lammps(graph, mode, strain, **kwargs):
         status = task.wait()
         if status != TaskState.SUCCEEDED or task.result is None:
             raise LAMMPSContractError('LAMMPS task '+str(status)+': '+str(task.error))
-        return to_sim_result(prepared, task.result, runtime, time.monotonic()-started, record_state)
+        return to_sim_result(prepared, task.result, runtime, time.monotonic()-started,
+                             record_state, _named_runtime_digests=getattr(task, '_named_runtime_digests', None))
     except BaseException:
         task.cancel()
         task.wait()

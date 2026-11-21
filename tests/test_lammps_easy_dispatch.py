@@ -51,6 +51,57 @@ def mapped(unit='mm', record=True):
     return adapter.to_sim_result(p,raw_result(p),RUNTIME,.125,record)
 
 
+def test_cli_named_runtime_receipt_with_symlinks_and_recheck(tmp_path):
+    """Use real byte admission and the public wrapper with only the child mocked."""
+    import platform
+    import sys
+    import pytest
+    from fibernet import simulate
+    from test_lammps_backend_contract import FakeProcess, fixture, runtime_fixture
+
+    if sys.platform != 'linux' or platform.machine() != 'x86_64':
+        pytest.skip('bounded native admission layout is Linux x86_64')
+    runtime_dir = tmp_path/'runtime'
+    runtime_dir.mkdir()
+    runtime = runtime_fixture(runtime_dir, 'cli')
+    python_alias, native_alias = runtime_dir/'python-alias', runtime_dir/'native-alias'
+    python_alias.symlink_to(runtime.python_executable)
+    native_alias.symlink_to(runtime.lammps_executable)
+    variants = (runtime, replace(runtime, python_executable=str(python_alias)),
+        replace(runtime, python_executable=str(python_alias), lammps_executable=str(native_alias)))
+    g = graph()
+    p = backend.prepare_harmonic_beads(g, **options())
+    dump, log = fixture(p)
+    launches = []
+    def fake_spawn(argv, **kwargs):
+        launches.append((argv[0], json.loads(argv[-1])['executable']))
+        cwd = kwargs['cwd']
+        (cwd/'trajectory.dump').write_text(dump)
+        (cwd/'log.lammps').write_text(runtime.expected_banner+'\n'+log)
+        return FakeProcess()
+    receipts = []
+    with patch('subprocess.Popen', side_effect=fake_spawn), patch('os.killpg'):
+        for i, variant in enumerate(variants):
+            r = simulate(g, mode='dynamics', backend='lammps', runtime=variant,
+                         workdir=tmp_path/str(i), limits=backend.ResourceLimits(), **options())
+            save = tmp_path/f'{i}.json'
+            r.save(save, detailed=True)
+            receipts.append(json.loads(save.read_text())['runtime_receipt'])
+    assert launches == [(r.python_executable,r.lammps_executable) for r in variants]
+    assert receipts[0] == receipts[1] == receipts[2]
+    pins = dict(runtime.file_sha256)
+    assert receipts[0]['python_sha256'] == pins[runtime.python_executable]
+    assert receipts[0]['lammps_sha256'] == pins[runtime.lammps_executable]
+    assert receipts[0]['python_sha256'] != receipts[0]['lammps_sha256']
+
+    task = backend.LAMMPSTask(p, variants[-1], tmp_path/'rejected')
+    Path(runtime.lammps_executable).write_bytes(b'changed after admission')
+    with patch('subprocess.Popen', side_effect=AssertionError('must reject before launch')), \
+         pytest.raises(backend.LAMMPSContractError, match='runtime identity mismatch'):
+        task.start()
+    assert task._named_runtime_digests is None and not task.workdir.exists()
+
+
 class AdapterTests(unittest.TestCase):
     def test_synthetic_initial_velocity_requires_declaration(self):
         args=options();args.pop('velocities_m_s')
