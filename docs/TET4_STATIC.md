@@ -18,6 +18,9 @@ result = solve_static_tet4(
 
 Create a [Tet4Bundle](TET4_VTU_BUNDLE.md) in memory or read it with the
 optional Meshio adapter. Solving itself does not import or need Meshio.
+For a known constant Cartesian traction on selected exterior triangles,
+see [conversion to Tet4 nodal forces](TET4_TRACTION.md). This is an
+explicit helper, not a new load format for the solver.
 See the runnable [two-material example](../examples/tet4_static_two_material.py)
 for a fitted series cube with an analytical displacement and energy check.
 From an installed or editable FiberNet environment:

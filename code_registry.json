@@ -5073,6 +5073,7 @@
    "_staging_size",
    "_diagnostic_tail",
    "_git",
+   "_stage_checkout_inventory",
    "test_checkout_inventory_covers_the_native_core_manifest",
    "test_byte_sealed_checkout_preserves_raw_hashes",
    "test_bulk_add_file_count_boundary",
@@ -5084,9 +5085,10 @@
    "test_git_budget_and_options",
    "test_bulk_add_failure_diagnostics_and_no_retry",
    "test_diagnostic_failure_preserves_original_error",
-   "test_roundtrip_stops_before_checkout_when_staging_fails"
+   "test_roundtrip_stops_before_checkout_when_staging_fails",
+   "test_checkout_staging_prevalidates_cross_batch_duplicates_and_total_bytes"
   ],
-  "sha256": "d757eeccbe6222557ed222e0a78fb8782de5cddb0730ed000ad977409b84bc0f"
+  "sha256": "53ac456595f04af563aa8439c3488ba51044c0831d7623228b3f1f170f78d267"
  },
  "fibernet/core/single_junction_import.py": {
   "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
@@ -5870,11 +5872,12 @@
    "_fixed_solve",
    "inspect_static_tet4_admission",
    "solve_static_tet4",
+   "_owned_static_mesh",
    "_validate_static_mesh",
    "_static_topology_plan",
    "_solve_static_validated"
   ],
-  "sha256": "6e9e6cab9903ffc5336e6799301b64fffe9f2ff06ad720800a0ad0b6279140ca"
+  "sha256": "c12c58cc1bfcac160bf1111a44e5d846c6415b9396284b554717bc8bc6823eb1"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
@@ -5935,5 +5938,34 @@
    "test_welded_example_rejects_cyclic_vtu_output_path"
   ],
   "sha256": "754461030b2ef367848a83c767e33e2444340afaa89b2af56134dcdc2699667d"
+ },
+ "fibernet/sim/tet4_loads.py": {
+  "purpose": "Convert global constant face traction into bounded Tet4 nodal forces.",
+  "status": "active",
+  "symbols": [
+   "_is_triple",
+   "_reject_mask",
+   "nodal_forces_from_traction"
+  ],
+  "sha256": "818f3ed2011eb55dd17c012dd2fe23d2bd0c974f3c580c9c1f3e8d0f865bf622"
+ },
+ "tests/test_tet4_loads.py": {
+  "purpose": "Analytical and integration tests for explicitly selected Tet4 face traction.",
+  "status": "active",
+  "symbols": [
+   "bundle",
+   "test_tilted_exact_resultant_moment_and_reordering",
+   "test_face_rejections",
+   "test_numeric_domain_never_silently_returns_zero_or_infinite",
+   "test_two_adjacent_faces_add_by_area",
+   "test_welded_quick_matches_native_example",
+   "test_exact_cross_detects_skinny_but_represented_triangle",
+   "test_contributing_areas_can_sum_above_float_max_when_force_fits",
+   "test_malformed_selector_refused_before_area",
+   "test_traction_uses_shared_face_scan_exactly_once_without_solving",
+   "test_selector_size_is_checked_before_iteration",
+   "test_normal_range_checked_on_final_area_not_one_cross_component"
+  ],
+  "sha256": "fe13b7d0adddb853089b3fc20be2fda78a5c037a694357c653055f2e382369ec"
  }
 }

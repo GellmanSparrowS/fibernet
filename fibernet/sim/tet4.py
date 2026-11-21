@@ -170,6 +170,7 @@ def _validate_topology(cells):
             faces[face] += 1
             if faces[face] > 2:
                 raise ValueError(f'non-manifold Tet4 face with more than two cells at row {row}')
+    return faces
 
 def _check_rigid_modes(mesh, fixed):
     cells = mesh.tetrahedra.tolist()
@@ -593,15 +594,19 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     return _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields)
 
 
-def _validate_static_mesh(bundle):
+def _owned_static_mesh(bundle):
     # _validate creates an owned snapshot of the geometry, IDs and materials.
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if (_row_count(bundle.points, 'points') > _MAX_POINTS or
             _row_count(bundle.tetrahedra, 'tetrahedra') > _MAX_TETS):
         raise ValueError(f'Tet4 solve is limited to {_MAX_POINTS} nodes and {_MAX_TETS} cells')
-    mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
+    return _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
                      bundle.material_ids, bundle.materials, bundle.length_unit)
+
+
+def _validate_static_mesh(bundle):
+    mesh = _owned_static_mesh(bundle)
     _validate_topology(mesh.tetrahedra)
     return mesh
 
