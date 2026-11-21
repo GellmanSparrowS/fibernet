@@ -5896,13 +5896,14 @@
    "test_shifted_factor_only_checks_positive_floor",
    "test_canonical_mixed_band_plan_is_invariant_to_representable_row_reorder",
    "test_default_does_not_recover_fields_and_legacy_positional_result",
+   "check_series_interface_transfer",
    "test_cell_fields_two_material_fitted_physics_and_owned_ids",
    "test_cell_fields_tilted_mixed_affine_signed_shear",
    "test_cell_fields_zero_supported_only_and_tiny_arithmetic",
    "test_admission_only_once_validates_and_never_assembles_or_factors",
    "test_admission_budget_fit_does_not_claim_numerical_solvability"
   ],
-  "sha256": "e11370eaa80d68a80cf371061de8775d1e42866833f46b4c22aed087c6cc548f"
+  "sha256": "c6b5c40ea5f62425c5535c58f37d6f6220e87b25fcbbf331bab61f1505434221"
  },
  "examples/tet4_static_welded_junction.py": {
   "purpose": "Reproducible Tet4 static example: three orthogonal welded cylinders.",

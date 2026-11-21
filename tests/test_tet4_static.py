@@ -1,5 +1,6 @@
 """Physics, stable IDs, and admission checks for the explicit Tet4 solver."""
 from dataclasses import replace
+from itertools import combinations
 from pathlib import Path
 import runpy
 import subprocess
@@ -211,6 +212,38 @@ def test_default_does_not_recover_fields_and_legacy_positional_result(monkeypatc
                                return_cell_fields=1)
 
 
+def check_series_interface_transfer(bundle, result):
+    # The existing series fixture has a square 1 mm² interface. Its two
+    # triangles share the y=z diagonal, so its end vertices get double weight.
+    points = bundle.points * 1e-3
+    middle = bundle.points[:, 0] == .5
+    assert middle.sum() == 4 and not result.fixed_mask[middle].any()
+    np.testing.assert_allclose(result.displacement_m[middle, 0], .5e-6, rtol=2e-12)
+    resultant_N = 1e-3  # 1000 Pa on 1 mm²
+    expected = np.zeros((4, 3))
+    diagonal = points[middle, 1] == points[middle, 2]
+    expected[:, 0] = resultant_N / 6 * (1 + diagonal.astype(int))
+    side_forces = np.zeros((2, len(points), 3))
+    for tet, stress in zip(bundle.tetrahedra, result.cell_fields.stress_Pa):
+        for face in combinations(tet, 3):
+            face = list(face)
+            if not middle[face].all():
+                continue
+            a, b, c = points[face]
+            normal_area = .5 * np.cross(b - a, c - a)
+            opposite = next(i for i in tet if i not in face)
+            if normal_area @ (points[opposite] - a) > 0.:
+                normal_area = -normal_area
+            side = int(not (points[opposite, 0] < a[0]))
+            side_forces[side, face] += stress @ normal_area / 3
+    # Check each side before summing; a disconnected zero-flux interface
+    # would pass just the cancellation assertion.
+    atol_N = 100 * np.finfo(float).eps * resultant_N
+    np.testing.assert_allclose(side_forces[:, middle], [expected, -expected],
+                               atol=atol_N, rtol=2e-12)
+    np.testing.assert_allclose(side_forces[:, middle].sum(axis=0), 0., atol=2*atol_N)
+
+
 @pytest.mark.parametrize('axis', [0, 1])
 def test_cell_fields_two_material_fitted_physics_and_owned_ids(axis):
     b, loads, held = build_example(axis)
@@ -245,6 +278,8 @@ def test_cell_fields_two_material_fitted_physics_and_owned_ids(axis):
     np.testing.assert_allclose(f.stress_Pa, expected_s, atol=1e-9, rtol=2e-12)
     np.testing.assert_allclose(.5*np.einsum('cij,cij,c->',f.strain,f.stress_Pa,f.volume_m3),
                                result.strain_energy_J, rtol=3e-13)
+    if axis == 0:
+        check_series_interface_transfer(b, result)
     b.cell_ids[0] = b.material_ids[0] = 4
     assert int(f.cell_ids[0]) == 2**64-1 and int(f.material_ids[0]) == 2**64-1
 
