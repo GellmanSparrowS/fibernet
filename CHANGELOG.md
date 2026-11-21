@@ -1,3 +1,13 @@
+## [4.8.0]
+
+- Inspect the structural factor budget of a Tet4 mesh and restraint layout
+  without supplying loads, assembling stiffness, or solving.
+- Convert constant global traction on explicitly selected exterior Tet4
+  triangles into stable-ID nodal forces, without changing the solver inputs.
+- Handle cyclic VTU output-directory symlinks with a CLI path error instead
+  of a traceback on affected Python versions.
+- See [4.8.0 release notes](docs/RELEASE_4_8_0.md).
+
 ## [4.7.0]
 
 - Add opt-in Tet4 cell strain, tensile-positive Cauchy stress and volume
