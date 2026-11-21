@@ -78,21 +78,69 @@ def test_two_adjacent_faces_add_by_area():
         np.testing.assert_allclose(v,np.add(A.get(key,(0.,)*3),B.get(key,(0.,)*3)),rtol=7e-16)
 
 
-def test_welded_quick_matches_native_example():
-    path=Path(__file__).resolve().parents[1]/'examples/tet4_static_welded_junction.py'
-    demo=runpy.run_path(str(path))
-    grid,x,t,_,_,_=demo['make_geometry'](12)
-    left,right,_=demo['boundary'](grid,t,12)
-    force,fixed,_,pressure=demo['load_vectors'](x,left,right)
-    ids=np.arange(len(x),dtype=np.uint64)*19+np.uint64(2**63+23)
-    b=Tet4Bundle(x,t,ids,np.arange(len(t),dtype=np.uint64),np.full(len(t),2**64-1,dtype=np.uint64),MAT,'mm')
-    q=apply(b,[[ids[i] for i in f] for f in right],traction_Pa=(pressure,0.,0.))
-    dense=np.array([q.get(int(i),(0.,0.,0.)) for i in ids])
-    np.testing.assert_allclose(dense,force,rtol=8e-16)
-    np.testing.assert_allclose(dense.sum(0),[1e-3,0.,0.],rtol=1e-15)
-    holds={int(ids[i]):('x','y','z') for i in fixed}
-    r=solve_static_tet4(b,forces_by_id=q,fixed_dofs_by_id=holds)
-    np.testing.assert_allclose(r.strain_energy_J,1.692609584859141e-12,rtol=2e-11)
+def test_welded_quick_matches_analytic_cap_load():
+    path = Path(__file__).resolve().parents[1] / 'examples/tet4_static_welded_junction.py'
+    demo = runpy.run_path(str(path))
+    grid, x, t, _, _, _ = demo['make_geometry'](12)
+    left, right, _ = demo['boundary'](grid, t, 12)
+    ids = np.arange(len(x), dtype=np.uint64)*19 + np.uint64(2**63+23)
+    mesh = Tet4Bundle(x, t, ids, np.arange(len(t), dtype=np.uint64),
+                      np.full(len(t), 2**64-1, dtype=np.uint64), MAT, 'mm')
+    loads, area, traction = demo['cap_loading'](mesh, left, right)
+    # Each cap triangle covers exactly half a square on this regular 0.25 mm grid.
+    assert area == pytest.approx(len(right)*0.5*(0.25e-3)**2)
+    assert traction == pytest.approx(1e-3/area)
+    counts = np.bincount(np.ravel(right), minlength=len(ids))
+    assert set(loads) == set(map(int, ids[counts > 0]))
+    dense = np.array([loads.get(int(i), (0., 0., 0.)) for i in ids])
+    np.testing.assert_allclose(dense[:, 0], counts*(1e-3/(3*len(right))), rtol=1e-15)
+    np.testing.assert_array_equal(dense[:, 1:], 0.)
+    np.testing.assert_allclose(dense.sum(0), [1e-3, 0., 0.], rtol=1e-15)
+    holds = {int(ids[i]): ('x','y','z') for i in np.unique(left)}
+    result = solve_static_tet4(mesh, forces_by_id=loads, fixed_dofs_by_id=holds)
+    np.testing.assert_allclose(result.strain_energy_J, 1.692609584859141e-12, rtol=2e-11)
+
+
+def test_welded_preflight_is_opt_in_and_does_not_replace_solves(monkeypatch, capsys):
+    path = Path(__file__).resolve().parents[1] / 'examples/tet4_static_welded_junction.py'
+    run = runpy.run_path(str(path))['run']
+    scope = run.__globals__
+    inspect = scope['inspect_static_tet4_admission']
+    solve = scope['solve_static_tet4']
+    events = []
+
+    def preflight(mesh, **kw):
+        events.append('preflight')
+        return inspect(mesh, **kw)
+
+    def record_solve(mesh, **kw):
+        events.append('solve')
+        return solve(mesh, **kw)
+
+    monkeypatch.setitem(scope, 'inspect_static_tet4_admission', preflight)
+    monkeypatch.setitem(scope, 'solve_static_tet4', record_solve)
+    ordinary = run('quick')
+    assert events == ['solve', 'solve']
+    assert capsys.readouterr().err == ''
+    events.clear()
+    assert run('quick', preflight=True) == ordinary
+    assert events == ['preflight', 'solve', 'solve']
+    output = capsys.readouterr()
+    assert output.out == ''
+    assert 'structural factor entries' in output.err
+
+    def reject(mesh, **kw):
+        return replace(preflight(mesh, **kw), within_factor_budget=False)
+
+    def reject_loads(*args):
+        pytest.fail('over-budget preflight must stop before building loads')
+
+    events.clear()
+    monkeypatch.setitem(scope, 'inspect_static_tet4_admission', reject)
+    monkeypatch.setitem(scope, 'cap_loading', reject_loads)
+    with pytest.raises(ValueError, match='factor-entry budget'):
+        run('quick', preflight=True)
+    assert events == ['preflight']
 
 
 def test_exact_cross_detects_skinny_but_represented_triangle():
