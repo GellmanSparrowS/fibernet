@@ -398,3 +398,98 @@ def test_no_automatic_simresult_or_runtime_evidence(tmp_path):
 
 pytestmark = pytest.mark.skipif(os.name != 'posix' or not hasattr(os, 'O_NOFOLLOW'),
                                 reason='saved file reader requires POSIX no-follow descriptors')
+
+
+def bpm_bundle(root, *, checkpoint=False):
+    from test_lammps_rotational_bpm import _stationary
+    root.mkdir()
+    p = _stationary(root, checkpoint=checkpoint)
+    runtime = backend.RuntimeSpec('cli_serial_static', '/never/read/python', '/never/read/lmp')
+    for name, text in {'graph.json': p.graph_json, 'model.data': p.data_text, 'in.model': p.input_text,
+                       'manifest.json': canonical(dict(p.manifest(), runtime=asdict(runtime),
+                                                      limits=asdict(backend.ResourceLimits())))}.items():
+        (root/name).write_bytes(text.encode('utf-8'))
+    return p
+
+
+def test_bpm_readback_uses_only_eight_files_and_returns_existing_type(tmp_path, monkeypatch):
+    from fibernet.integrations import BPMRunResult
+    root = tmp_path/'saved-bpm'
+    p = bpm_bundle(root)
+    (root/'checkpoint.restart').write_bytes(b'stale unrelated bytes')
+    (root/'active-after.dump').write_bytes(b'not read')
+    pin = digest(root/'manifest.json')
+    expected = set(reader._FILES) | {'active.dump', 'breaks.dump'}
+    opened = []
+    original = os.open
+
+    def tracked(path, *args, **kwargs):
+        if kwargs.get('dir_fd') is not None:
+            opened.append(path)
+            assert path in expected
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(os, 'open', tracked)
+    receipt = read(root, expected_manifest_sha256=pin)
+    assert set(opened) == expected and len(opened) == 8
+    assert receipt.prepared == p and isinstance(receipt.result, BPMRunResult)
+    assert receipt.result.node_ids == p.node_ids and receipt.result.edge_ids == p.edge_ids
+    assert [f.step for f in receipt.result.frames] == [0, 1, 2]
+    assert receipt.result.frames[2].positions_m[1] == pytest.approx((20e-6, 0., 0.))
+    assert receipt.result.workdir == '' and receipt.result.checkpoint is None
+    assert receipt.receipt['trajectory_frames'] == 3 and receipt.receipt['thermo_frames'] == 0
+    assert set(receipt.receipt['file_sha256']) == expected
+    assert receipt.receipt['runtime_checked'] is False
+    assert receipt.receipt['native_execution_verified'] is False
+
+
+def test_bpm_restart_model_refuses_before_output_files(tmp_path, monkeypatch):
+    root = tmp_path/'saved-bpm'
+    bpm_bundle(root, checkpoint=True)
+    original = os.open
+
+    def tracked(path, *args, **kwargs):
+        if kwargs.get('dir_fd') is not None:
+            assert path in reader._FILES[:4]
+        return original(path, *args, **kwargs)
+    monkeypatch.setattr(os, 'open', tracked)
+    with pytest.raises(reader.LAMMPSSavedReadError, match='restart-enabled'):
+        read(root)
+
+
+def test_bpm_aggregate_output_budget_includes_both_extra_dumps(tmp_path):
+    root = tmp_path/'saved-bpm'
+    bpm_bundle(root)
+    names = ('log.lammps', 'trajectory.dump', 'active.dump', 'breaks.dump')
+    aggregate = sum((root/name).stat().st_size for name in names)
+    assert read(root, limits=reader.LAMMPSSavedReadLimits(output_bytes=aggregate)).result.frames
+    with pytest.raises(reader.LAMMPSSavedReadError, match='byte budget exceeded'):
+        read(root, limits=reader.LAMMPSSavedReadLimits(output_bytes=aggregate-1))
+
+
+@pytest.mark.parametrize('damage,match', [
+    ('missing', 'required saved regular'), ('nonregular', 'regular file'),
+    ('symlink', 'required saved regular'), ('echo_only', 'completion marker'),
+    ('wrong_banner', 'native banner'), ('truncated', 'truncated BPM dump'),
+    ('extra', 'unexpected trailing BPM dump'),
+])
+def test_bpm_incomplete_or_invalid_saved_evidence_refused(tmp_path, damage, match):
+    root = tmp_path/'saved-bpm'
+    p = bpm_bundle(root)
+    active = root/'active.dump'
+    log = root/'log.lammps'
+    if damage in ('missing', 'nonregular', 'symlink'):
+        active.unlink()
+        if damage == 'nonregular':
+            active.mkdir()
+        elif damage == 'symlink':
+            active.symlink_to(root/'breaks.dump')
+    elif damage == 'echo_only':
+        log.write_bytes(f'LAMMPS (30 Sep 2026)\nprint "{p.completion_marker}"\n'.encode())
+    elif damage == 'wrong_banner':
+        log.write_bytes(f'LAMMPS (unqualified)\n{p.completion_marker}\n'.encode())
+    elif damage == 'truncated':
+        (root/'breaks.dump').write_bytes(b'')
+    else:
+        active.write_bytes(active.read_bytes() + b'extra\n')
+    with pytest.raises(backend.LAMMPSContractError, match=match):
+        read(root)

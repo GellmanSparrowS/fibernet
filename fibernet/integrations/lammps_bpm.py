@@ -466,11 +466,32 @@ def _same_restart_atoms(before, after, active, stable_edges):
 
 def parse_task_output(prepared, workdir, runtime, limit):
     """Read the fixed BPM task files after the shared watcher and worker finish."""
+    def checkpoint_artifact(step):
+        path = workdir/_CHECKPOINT
+        info = path.lstat()
+        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= limit:
+            raise LAMMPSContractError('invalid owned BPM checkpoint artifact')
+        with path.open('rb') as file:
+            payload = file.read(limit+1)
+        if len(payload)!=info.st_size:
+            raise LAMMPSContractError('BPM checkpoint artifact changed while reading')
+        return BPMCheckpoint(step,path.name,info.st_size,hashlib.sha256(payload).hexdigest())
+
+    return _parse_task_text(prepared, runtime.expected_banner,
+                            lambda name: _read_text(workdir/name, limit),
+                            workdir=str(workdir), read_checkpoint=checkpoint_artifact)
+
+
+def _parse_task_text(prepared, expected_banner, read_text, *, workdir='', read_checkpoint=None):
+    """One evidence parser for managed output and captured offline text."""
     contract = json.loads(prepared.contract_json)
+    checkpoint = contract['checkpoint_step']
+    if checkpoint is not None and read_checkpoint is None:
+        raise LAMMPSContractError('saved BPM readback does not support a restart')
     graph = json.loads(prepared.graph_json)
     edge_rows = [(e['id'],e['node_i'],e['node_j']) for e in graph['edges']]
-    log = _read_text(workdir/'log.lammps',limit).splitlines()
-    if not log or log[0] != runtime.expected_banner or log.count(prepared.completion_marker) != 1:
+    log = read_text('log.lammps').splitlines()
+    if not log or log[0] != expected_banner or log.count(prepared.completion_marker) != 1:
         raise LAMMPSContractError('BPM native banner or completion marker missing')
     atom_ids = {n:i for i,n in enumerate(prepared.node_ids,1)}
     endpoint_records = {
@@ -478,13 +499,12 @@ def parse_task_output(prepared, workdir, runtime, limit):
         for ordinal,(eid,i,j) in enumerate(edge_rows,1)
     }
     stable_edges = {eid:(atom_ids[i]-1,atom_ids[j]-1) for eid,i,j in edge_rows}
-    checkpoint = contract['checkpoint_step']
     segments = [('',range(prepared.steps+1))] if checkpoint is None else [
         ('',range(checkpoint+1)),('-after',range(checkpoint,prepared.steps+1)),
     ]
     frames, events = [], {}
     for suffix, steps in segments:
-        read = lambda name: _read_text(workdir/f'{name}{suffix}.dump',limit)
+        read = lambda name: read_text(f'{name}{suffix}.dump')
         atoms = _rows(read('trajectory'),steps,_ATOM_COLUMNS,len(atom_ids),contract,atoms=True)
         edges = _rows(read('active'),steps,_EDGE_COLUMNS,len(stable_edges),contract)
         breaks = _rows(read('breaks'),steps,_BREAK_COLUMNS,len(stable_edges),contract)
@@ -536,16 +556,6 @@ def parse_task_output(prepared, workdir, runtime, limit):
         prior = active
     if set(events) != set(prepared.edge_ids)-prior:
         raise LAMMPSContractError('BPM rupture events do not match final topology')
-    owned = None
-    if checkpoint is not None:
-        path = workdir/_CHECKPOINT
-        info = path.lstat()
-        if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= limit:
-            raise LAMMPSContractError('invalid owned BPM checkpoint artifact')
-        with path.open('rb') as file:
-            payload = file.read(limit+1)
-        if len(payload)!=info.st_size:
-            raise LAMMPSContractError('BPM checkpoint artifact changed while reading')
-        owned = BPMCheckpoint(checkpoint,path.name,info.st_size,hashlib.sha256(payload).hexdigest())
+    owned = None if checkpoint is None else read_checkpoint(checkpoint)
     return BPMRunResult(prepared.identity,prepared.node_ids,prepared.edge_ids,tuple(frames),
-                        tuple(sorted(events.values(),key=lambda e:(e.step,e.edge_id))),str(workdir),owned)
+                        tuple(sorted(events.values(),key=lambda e:(e.step,e.edge_id))),workdir,owned)
