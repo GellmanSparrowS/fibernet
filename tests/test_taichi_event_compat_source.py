@@ -322,7 +322,8 @@ def candidate_result_processing_source(reverse=None):
     assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'result processing source changed'
     if reverse is None:
         return source
-    assert reverse == source, 'unreviewed result processing source'
+    if reverse != source:
+        raise AssertionError('unreviewed result processing source')
     for hunk in reversed(delta['hunks']):
         before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
         assert after and reverse.count(after) == 1, 'result processing inverse not uniquely located'
@@ -348,7 +349,8 @@ def candidate_compute_detailed_validation_source(reverse=None):
     assert hashlib.sha256(source).hexdigest() == delta['result_sha256'], 'compute detailed validation source changed'
     if reverse is None:
         return source
-    assert reverse == source, 'unreviewed compute detailed validation source'
+    if reverse != source:
+        raise AssertionError('unreviewed compute detailed validation source')
     for hunk in reversed(delta['hunks']):
         before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
         assert after and reverse.count(after) == 1, 'compute detailed validation inverse not uniquely located'
@@ -379,7 +381,8 @@ def reviewed_compute_detailed_validation_source(reverse=None):
     assert hashlib.sha256(source).hexdigest() == CURRENT_COMPUTE_DETAILED_RESULT_SHA256, 'current detailed validation source changed'
     if reverse is None:
         return source
-    assert reverse == source, 'unreviewed current detailed validation source'
+    if reverse != source:
+        raise AssertionError('unreviewed current detailed validation source')
     for hunk in reversed(delta['hunks']):
         before, after = hunk['before'].encode('utf-8'), hunk['after'].encode('utf-8')
         assert after and reverse.count(after) == 1, 'current detailed validation inverse not uniquely located'
@@ -737,7 +740,8 @@ def reviewed_taichi_controls_source(reverse=None):
     assert hashlib.sha256(current).hexdigest() == '59c8761ccef2840a4437aebbacece9e93c94f3f4f6a051d74c31c114381c4a65', 'reviewed controls source changed'
     if reverse is None:
         return current
-    assert reverse == current, 'unreviewed controls source'
+    if reverse != current:
+        raise AssertionError('unreviewed controls source')
     assert after and reverse.count(after) == 1, 'controls removal is not unique'
     restored = reverse.replace(after, before, 1)
     assert restored == base, 'controls inverse changed prior source'
@@ -775,7 +779,8 @@ def reviewed_lammps_reference_source(reverse=None):
     assert hashlib.sha256(current).hexdigest() == LAMMPS_REFERENCE_RESULT_SHA256, 'reviewed reference source changed'
     if reverse is None:
         return current
-    assert reverse == current, 'unreviewed reference source'
+    if reverse != current:
+        raise AssertionError('unreviewed reference source')
     assert reverse.count(method + anchor) == 1, 'reference removal is not unique'
     restored = reverse.replace(method + anchor, anchor, 1)
     assert restored == prior, 'reference inverse changed prior source'
@@ -1200,7 +1205,11 @@ def require_public_source(relative, raw):
         return
     expected=public_baseline(relative).read_bytes()
     if relative == 'fibernet/sim/accelerated.py':
-        assert raw in (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source(), candidate_result_processing_source(), reviewed_mechanical_json_scalar_source(), reviewed_taichi_import_source(), candidate_compute_detailed_validation_source(), reviewed_compute_detailed_validation_source()), 'public source bytes changed: '+relative
+        # Negative cases compare full source files. Keep exact matching, but do
+        # not ask pytest to render the intentionally rejected byte payloads.
+        allowed = (expected, reviewed_result_identity_source(), reviewed_spring_provenance_source(), reviewed_taichi_geometry_source(relative), reviewed_saved_energy_diagnostics_source(), reviewed_lammps_metadata_source(), reviewed_taichi_controls_source(), reviewed_lammps_reference_source(), candidate_result_processing_source(), reviewed_mechanical_json_scalar_source(), reviewed_taichi_import_source(), candidate_compute_detailed_validation_source(), reviewed_compute_detailed_validation_source())
+        if raw not in allowed:
+            raise AssertionError('public source bytes changed: '+relative)
         return
     if relative in PUBLIC_MODULES[3:] or relative in API_V2_MODULES:
         assert raw==expected, 'public source bytes changed: '+relative

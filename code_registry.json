@@ -4801,7 +4801,7 @@
    "ComputeDetailedValidationSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "47fbcec5b147527f993d6c87b17c2097ce8ab11f6634f32dccd491740b8a185f"
+  "sha256": "9a97ee863f4569ed3feac4cdb3392bd2d5dda88dd5edbac8273c15185c37ab4a"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -5912,7 +5912,7 @@
    "run",
    "main"
   ],
-  "sha256": "5b19b7f097ff8c7be5a8bd6a9005979f61328372fa7640cb9c45e6e49a0c7ae8"
+  "sha256": "ed05ff2fcee764c5b1c0bbe5e347f6b4f9423123b456856f638524d346e1365a"
  },
  "fibernet/io/tet4_results.py": {
   "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",
@@ -5931,8 +5931,9 @@
    "test_existing_target_including_dangling_symlink_not_touched",
    "test_staged_write_no_partial_and_no_clobber",
    "test_import_and_request_without_meshio",
-   "test_relative_target_stays_in_resolved_parent_when_cwd_changes"
+   "test_relative_target_stays_in_resolved_parent_when_cwd_changes",
+   "test_welded_example_rejects_cyclic_vtu_output_path"
   ],
-  "sha256": "b75cb4b7d7220b4e5a83ba4929cb11eb4e6b4490d5962c31024b0d5d2d64ccac"
+  "sha256": "754461030b2ef367848a83c767e33e2444340afaa89b2af56134dcdc2699667d"
  }
 }
