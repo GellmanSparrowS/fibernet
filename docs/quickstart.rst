@@ -1,7 +1,7 @@
 Quick Start Guide
 =================
 
-An installed FiberNet 4.6.0 wheel includes a runnable example. From any
+An installed FiberNet 4.7.0 wheel includes a runnable example. From any
 directory, run:
 
 .. code-block:: bash
@@ -23,7 +23,8 @@ For a PyPI installation, use the example for your installed version on the
 See :doc:`getting_started` for other installation options. The example
 generates a graph, runs a small-extension beam-FEM simulation, and verifies that
 a saved result can be read back. It does not require FiberScope or an optional
-GPU backend.
+GPU backend. For a solid Tet4 example with optional ParaView output,
+see the `4.7.0 welded-junction and VTU recipe <RELEASE_4_7_0.md>`_.
 
 Generate, simulate, and save
 ----------------------------

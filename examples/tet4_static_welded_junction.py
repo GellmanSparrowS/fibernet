@@ -8,6 +8,8 @@ from hashlib import sha256
 from importlib.metadata import version
 from itertools import combinations, permutations, product
 import json
+import os
+from pathlib import Path
 
 import numpy as np
 
@@ -22,6 +24,7 @@ FORCE_N = 1e-3
 E_BASE_PA, E_CORE_PA, POISSON = 1e9, 3e9, .30
 BASE_ID, CORE_ID = 7, 2**64 - 1
 TIERS = {'quick': 12, 'reference': 16}
+CASE_NAMES = ('homogeneous', 'stiffer_core')
 
 
 def make_geometry(intervals):
@@ -116,8 +119,18 @@ def strain_energy(mesh, displacement_m, modulus_pa):
     return float(energy), volume_m3
 
 
-def run(tier):
+def run(tier, write_vtu_dir=None):
     n = TIERS[tier]
+    outputs = None
+    if write_vtu_dir is not None:
+        directory = Path(write_vtu_dir).resolve(strict=True)
+        if not directory.is_dir():
+            raise NotADirectoryError(f'VTU output must be an existing directory: {directory}')
+        outputs = {label: directory / f'welded-{tier}-{label}.vtu' for label in CASE_NAMES}
+        for target in outputs.values():
+            if os.path.lexists(target):
+                raise FileExistsError(f'VTU output already exists: {target}')
+        from fibernet.io.tet4_results import solve_static_tet4_to_vtu
     grid, x, t, core, cubes, digest = make_geometry(n)
     left, right, exterior = boundary(grid, t, n)
     force, fixed, area, pressure = load_vectors(x, left, right)
@@ -132,7 +145,11 @@ def run(tier):
     cases = {}
     for label, bundle, e in (('homogeneous',mesh,np.full(len(t),E_BASE_PA)),
                              ('stiffer_core',hard,np.where(core,E_CORE_PA,E_BASE_PA))):
-        s = solve_static_tet4(bundle, forces_by_id=input_loads, fixed_dofs_by_id=holds)
+        if outputs is None:
+            s = solve_static_tet4(bundle, forces_by_id=input_loads, fixed_dofs_by_id=holds)
+        else:
+            s = solve_static_tet4_to_vtu(outputs[label], bundle,
+                                       forces_by_id=input_loads, fixed_dofs_by_id=holds)
         np.testing.assert_array_equal(s.node_ids,node_ids)
         np.testing.assert_array_equal(s.displacement_m[fixed],0.)
         np.testing.assert_array_equal(s.reaction_N[~s.fixed_mask],0.)
@@ -174,9 +191,15 @@ def run(tier):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tier', choices=TIERS, default='quick')
+    parser.add_argument('--write-vtu-dir', metavar='DIR',
+                        help='write two new diagnostic VTUs to an existing directory (optional Meshio)')
     args = parser.parse_args()
     try:
-        report = run(args.tier)
+        report = run(args.tier, args.write_vtu_dir)
+    except (OSError, ImportError) as exc:
+        if args.write_vtu_dir is not None:
+            parser.exit(2, f'Cannot write welded-junction VTU results: {exc}\n')
+        raise
     except ValueError as exc:
         if args.tier == 'reference' and 'factor-entry budget' in str(exc):
             parser.exit(2, f'Reference tier rejected by bounded solver: {exc}\n'

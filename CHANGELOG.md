@@ -1,3 +1,12 @@
+## [4.7.0]
+
+- Add opt-in Tet4 cell strain, tensile-positive Cauchy stress and volume
+  arrays, with exact stable cell and material IDs.
+- Add one-way static Tet4 result export to VTU using optional Meshio.
+  The welded-junction comparison writes both cases with `--write-vtu-dir`.
+  The default example remains JSON-only and needs no Meshio.
+- See [4.7.0 release notes](docs/RELEASE_4_7_0.md).
+
 ## [4.6.0]
 
 - Add a bounded linear Tet4 static solver for conforming solid meshes with

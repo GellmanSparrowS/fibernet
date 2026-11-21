@@ -28,7 +28,7 @@ python examples/tet4_static_two_material.py
 
 For a larger reproducible junction, use the
 [three-cylinder example](../examples/tet4_static_welded_junction.py) or
-[download the exact 4.6.0 version](RELEASE_4_6_0.md#run-the-welded-junction-example).
+[download the exact 4.7.0 version](RELEASE_4_7_0.md#run-the-welded-junction-example).
 Its quick and reference tiers are separate discretizations, not a
 mesh-convergence claim.
 
@@ -107,6 +107,9 @@ energy_J = 0.5 * np.einsum("c,cij,cij->", fields.volume_m3, fields.stress_Pa, fi
   raises `ValueError`; it does not fill fields with zeros or NaNs.
 
 ## View a static result in ParaView
+
+To compare both welded-junction materials without writing your own script,
+use [the packaged example and `--write-vtu-dir` recipe](RELEASE_4_7_0.md#write-both-vtu-results).
 
 To write a **new** visualization file from the same validated solve, install
 the optional Meshio dependency (`python -m pip install meshio==5.3.5`) and
