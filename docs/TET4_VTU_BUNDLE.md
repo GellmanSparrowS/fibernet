@@ -113,6 +113,116 @@ either file if someone changes both. This recipe is not an official
 FiberNet format. Neither file is a
 [solver result VTU](TET4_STATIC.md#view-a-static-result-in-paraview).
 
+## Import named material and boundary groups from Gmsh
+
+This recipe uses Meshio 5.3.5 to read a trusted, small **ASCII MSH 4.1**
+export with linear tetrahedra and triangular boundary groups. In Gmsh,
+name the two physical **volumes** `material_low` and `material_high`,
+and the two physical **surfaces** `hold_face` and `pull_face`. Edit the
+names, moduli, Poisson ratios, coordinate unit and traction for your
+mesh. Export all the tetrahedra you want to solve; the recipe checks
+coverage of the exported cells, not what was omitted at export.
+
+A volume can also belong to an auxiliary group such as `whole_solid`.
+Do not assign materials from the scalar `gmsh:physical` column: Meshio
+can return that same auxiliary tag on both volumes. Instead select
+the two **named** groups and require exactly one material for each
+tetrahedron. Meshio returns row-based connectivity; this recipe assigns
+new stable IDs for the bundle and does not preserve original Gmsh tags.
+
+Run in a fresh directory with `two-materials.msh` and Meshio installed:
+
+```python
+from collections import Counter
+from hashlib import sha256
+from itertools import combinations
+import json
+from pathlib import Path
+
+import meshio
+import numpy as np
+from fibernet.io.tet4_meshio import Tet4Bundle, write_tet4_vtu_bundle
+from fibernet.sim.tet4 import inspect_static_tet4_admission, solve_static_tet4
+from fibernet.sim.tet4_loads import nodal_forces_from_traction
+
+source = Path("two-materials.msh")
+with source.open("rb") as f:
+    if f.readline(128).strip() != b"$MeshFormat" or f.readline(128).split() != [b"4.1", b"0", b"8"]:
+        raise ValueError("Expected an ASCII Gmsh 4.1 mesh")
+mesh = meshio.read(source)
+if any(block.type not in {"tetra", "triangle"} for block in mesh.cells):
+    raise ValueError("Export only linear tetrahedra and boundary triangles for this recipe")
+tets, triangles = (mesh.get_cells_type(kind) for kind in ("tetra", "triangle"))
+groups = mesh.cell_sets_dict
+
+def named_group(name, dimension, kind):
+    if name not in mesh.field_data or int(mesh.field_data[name][1]) != dimension:
+        raise ValueError(f"Missing or wrong-dimensional physical group: {name}")
+    indices = groups.get(name, {}).get(kind)
+    if indices is None or not len(indices):
+        raise ValueError(f"No {kind} cells in physical group: {name}")
+    return int(mesh.field_data[name][0]), indices
+
+properties, covered = {}, np.zeros(len(tets), dtype=int)
+material_ids = np.zeros(len(tets), dtype=np.uint64)
+for name, young in (("material_low", 1e9), ("material_high", 2e9)):
+    tag, rows = named_group(name, 3, "tetra")
+    if tag in properties:
+        raise ValueError("The two materials must use distinct physical volume tags")
+    np.add.at(covered, rows, 1)
+    material_ids[rows] = tag
+    properties[tag] = {"young_modulus_pa": young, "poisson_ratio": 0.25}
+if len(tets) == 0 or np.any(covered != 1):
+    raise ValueError("Each exported tetrahedron needs exactly one named material")
+
+counts = Counter(face for tet in tets for face in combinations(sorted(map(int, tet)), 3))
+def exterior_faces(name):
+    _, rows = named_group(name, 2, "triangle")
+    faces = [tuple(sorted(map(int, f))) for f in triangles[rows]]
+    if len(faces) != len(set(faces)) or any(counts[f] != 1 for f in faces):
+        raise ValueError(f"{name} must contain distinct exterior triangles")
+    return set(faces)
+
+clamped, pulled = (exterior_faces(name) for name in ("hold_face", "pull_face"))
+if clamped & pulled:
+    raise ValueError("Clamp and traction groups must not share a triangle")
+node_ids = np.arange(len(mesh.points), dtype=np.uint64)
+cell_ids = np.arange(len(tets), dtype=np.uint64)
+bundle = Tet4Bundle(mesh.points, tets, node_ids, cell_ids, material_ids, properties, "mm")
+holds = {int(node_ids[i]): ("x", "y", "z") for face in clamped for i in face}
+faces = [tuple(int(node_ids[i]) for i in face) for face in sorted(pulled)]
+traction = (0., 0., 1000.)  # Pa, global +z, not pressure normal to the surface
+loads = nodal_forces_from_traction(bundle, faces, traction_Pa=traction)
+plan = inspect_static_tet4_admission(bundle, fixed_dofs_by_id=holds)
+if not plan.within_factor_budget:
+    raise ValueError("Tet4 mesh exceeds the structural factor budget")
+print("Tetrahedra:", plan.tetrahedra, "factor entries:", plan.factor_entries)
+
+path = write_tet4_vtu_bundle(
+    "two_materials.zip", points=bundle.points, tetrahedra=bundle.tetrahedra,
+    node_ids=node_ids, cell_ids=cell_ids, material_ids=material_ids,
+    materials=properties, length_unit=bundle.length_unit,
+)
+digest = sha256()
+with path.open("rb") as f:
+    for chunk in iter(lambda: f.read(1024 * 1024), b""):
+        digest.update(chunk)
+recipe = {"bundle_sha256": digest.hexdigest(),
+          "faces": {"upper_slant": [list(map(str, face)) for face in faces]},
+          "traction_Pa": traction, "fixed_dofs": {str(i): axes for i, axes in holds.items()}}
+with Path("two_materials.loads.json").open("x", encoding="utf-8") as f:
+    json.dump(recipe, f, indent=2)
+```
+
+This checks the load faces and budget but does not solve. You can call
+`solve_static_tet4(bundle, forces_by_id=loads, fixed_dofs_by_id=holds)`
+in the same script. To send a repeatable input, use the preceding
+[handoff recipe](#hand-off-a-traction-solve): send both files and run its
+recipient block through the solve, leaving out the two lines that print
+the earlier example's particular tip displacement. This conversion
+does not transfer arbitrary Gmsh fields or turn physical group labels into
+units or material constants.
+
 ## Input and output
 
 - `points` is nonempty `(N, 3)` finite binary64 geometry.

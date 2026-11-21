@@ -46,6 +46,10 @@ because the solver repeats its own validation, and stdout remains the JSON
 report. The flag can be combined with `--tier reference` and
 `--write-vtu-dir DIR`.
 
+For a fitted mesh, see the [equal-volume stiffening example](TET4_FITTED_PLACEMENT.md)
+to compare two material placements under x and y loading. It runs without
+Gmsh or Meshio.
+
 ## Check the factor budget without solving
 
 If you only need to know whether a mesh and restraint layout fit the current
