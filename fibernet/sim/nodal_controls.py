@@ -1,4 +1,4 @@
-"""Explicit stable-ID support/load preparation for existing row-based solvers.
+"""Explicit stable-ID control preparation for existing row-based solvers.
 
 No solver is constructed. Force components retain caller units; this is not a
 universal boundary-condition, material, time-history, or unit-conversion API.
@@ -131,3 +131,94 @@ def prepare_nodal_controls(graph, *, fixed_node_ids=None, forces_by_id=None,
     return PreparedNodalControls(tuple(node_ids), tuple(edge_ids), tuple(fixed),
                                  tuple(tuple(row) for row in forces.tolist()),
                                  int(dimension), _signature(graph))
+
+
+@dataclass(frozen=True)
+class PreparedTaichiSchedule:
+    """Detached displacement schedule, bound to the graph at preparation."""
+    _graph_signature: str
+    _schedule: tuple
+
+    def taichi_kwargs(self, graph):
+        """Return fresh native dynamics kwargs after checking the graph."""
+        if _signature(graph) != self._graph_signature:
+            raise ValueError('graph changed since schedule preparation; prepare again')
+        return {'displacement_schedule': {
+            row: [(step, np.array(vector)) for step, vector in points]
+            for row, points in self._schedule}}
+
+
+def _schedule_scalar(value):
+    if type(value) not in (int, float) and not (
+            isinstance(value, np.generic) and value.dtype.kind in 'iuf'):
+        raise ValueError('schedule values must be real integer or floating scalars, not time or boolean')
+    try:
+        out = float(value)
+    except OverflowError as exc:
+        raise ValueError('schedule values must be finite binary64 numbers') from exc
+    # Check before changing waypoint positions or turning a small move into zero.
+    if not np.isfinite(out) or out != (value.item() if isinstance(value, np.generic) else value):
+        raise ValueError('schedule values must be exactly representable in binary64')
+    return out
+
+
+def _schedule_sequence(value, label, size=None):
+    # Do not infer a component order from a set, mapping, iterator, or
+    # ndarray subclass (for example, an implicitly lossy masked array).
+    if type(value) is np.ndarray:
+        if size is None:
+            valid = value.ndim == 1 or (value.ndim == 2 and value.shape[1] == 2)
+        else:
+            valid = value.shape == (size,)
+    else:
+        valid = type(value) in (list, tuple) and (size is None or len(value) == size)
+    if not valid:
+        raise ValueError(f'{label} must be an ordered list, tuple or ndarray of the required shape')
+    return value
+
+def prepare_taichi_schedule_by_id(graph, schedule_by_id):
+    """Prepare absolute XYZ displacement waypoints for ordinary Taichi dynamics.
+
+    Keys are stable nonnegative integer node IDs. Steps use the engine's
+    integration-step coordinates, including fractions, not seconds. There
+    is no unit conversion. Each schedule, waypoint and XYZ vector must be
+    an ordered list, tuple or ndarray. The engine still validates and sorts
+    the timeline.
+    Call the returned object's `taichi_kwargs(graph)`
+    immediately before solving; graph edits require fresh preparation.
+    """
+    from fibernet.core.structure_graph import StructureGraph
+
+    if not isinstance(graph, StructureGraph):
+        raise TypeError('graph must be a StructureGraph')
+    if not isinstance(schedule_by_id, Mapping):
+        raise ValueError('schedule_by_id must be an ID-to-waypoints mapping')
+    signature = _signature(graph)
+    # Same authoritative insertion order as accelerated._graph_to_arrays;
+    # StructureGraph.to_numpy() is sorted by ID and cannot supply these rows.
+    rows = {node_id: row for row, node_id in enumerate(graph.nodes)}
+    if not rows:
+        raise ValueError('graph must have at least one node')
+    row_schedule, seen = {}, set()
+    for node_id, waypoints in schedule_by_id.items():
+        if type(node_id) is not int and not (
+                isinstance(node_id, np.generic) and node_id.dtype.kind in 'iu'):
+            raise ValueError('schedule_by_id keys must be nonnegative integer node IDs')
+        node_id = int(node_id)
+        if node_id < 0:
+            raise ValueError('schedule_by_id keys must be nonnegative integer node IDs')
+        if node_id not in rows:
+            raise ValueError(f'unknown schedule_by_id key: {node_id}')
+        row = rows[node_id]
+        if row in seen:
+            raise ValueError('schedule_by_id keys must be unique')
+        seen.add(row)
+        points = []
+        for waypoint in _schedule_sequence(waypoints, 'schedule'):
+            step, displacement = _schedule_sequence(waypoint, '(step, displacement) waypoint', 2)
+            vector = tuple(_schedule_scalar(v) for v in
+                           _schedule_sequence(displacement, 'XYZ displacement', 3))
+            points.append((_schedule_scalar(step), vector))
+        if points:
+            row_schedule[row] = tuple(points)
+    return PreparedTaichiSchedule(signature, tuple(row_schedule.items()))

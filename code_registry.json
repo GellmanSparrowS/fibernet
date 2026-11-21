@@ -5969,5 +5969,35 @@
    "test_normal_range_checked_on_final_area_not_one_cross_component"
   ],
   "sha256": "af2dc4e92ef5834985f64f05763e4e1c6e3ba176408c41f2628fad5213092e0f"
+ },
+ "fibernet/sim/nodal_controls.py": {
+  "purpose": "Explicit stable-ID control preparation for existing row-based solvers.",
+  "status": "active",
+  "symbols": [
+   "_signature",
+   "PreparedNodalControls",
+   "prepare_nodal_controls",
+   "PreparedTaichiSchedule",
+   "_schedule_scalar",
+   "_schedule_sequence",
+   "prepare_taichi_schedule_by_id"
+  ],
+  "sha256": "05b6b161e573b7d22131de5f026d68cfe4fac02f7efe41e4f27c93fffc13fe1b"
+ },
+ "tests/test_taichi_schedule_by_id.py": {
+  "purpose": "Stable-ID adapter for the existing row-keyed schedule, without Taichi.",
+  "status": "active",
+  "symbols": [
+   "graph",
+   "test_schedule_uses_native_rows_and_copies",
+   "test_real_wrapper_forwards_schedule_and_fixed_rows_unchanged",
+   "test_bad_schedule_ids_are_not_fallback_rows",
+   "test_rejects_invalid_waypoints",
+   "test_ordered_container_forms_are_equivalent",
+   "test_native_parser_still_owns_timeline_validation",
+   "test_preparation_without_touching_optional_accelerated_module",
+   "test_graph_edits_and_reordering_require_preparing_again"
+  ],
+  "sha256": "3ccdc30c73536ba5f9c068b5ac9c2794af13e27c73146cef5b9aec3c0d13ca59"
  }
 }

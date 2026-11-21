@@ -63,6 +63,35 @@ so these checks do not promise rejection before Taichi runtime initialization.
 For stable-ID supports and loads, use
 `prepare_nodal_controls(...).taichi_kwargs(graph)` rather than passing IDs as rows.
 
+For displacement schedules keyed by stable **node ID**, prepare the
+waypoints before calling ordinary dynamics:
+
+```python
+from fibernet.sim.nodal_controls import prepare_taichi_schedule_by_id
+
+schedule = prepare_taichi_schedule_by_id(
+    graph, {loaded_node_id: [(0., (0., 0., 0.)), (2.5, (0.001, 0., 0.))]},
+)
+result = fibernet.simulate(
+    graph, mode="dynamics", backend="taichi", **schedule.taichi_kwargs(graph),
+)
+```
+
+Steps are integration-step coordinates, not seconds. XYZ displacements
+are relative to the initial positions and keep the graph's length unit.
+The first recorded state is unchanged. At the end of each step a
+scheduled displacement takes precedence over a fixed-node clamp on the
+same node, just as with the row-based input. Empty waypoints impose no
+constraint. State observers and dynamic-material mode do not accept a
+nonempty schedule. Preparation needs no Taichi runtime. It checks IDs
+and numeric XYZ inputs. Use ordered lists, tuples or NumPy ndarrays for
+schedules, waypoint pairs and vectors, not sets, mappings or iterators.
+Step and XYZ values must be finite integer or floating scalars exactly
+representable in float64, not booleans, datetime or timedelta values.
+The engine still validates and sorts the timeline (including rejecting
+negative or duplicate steps). Check the graph immediately before use and
+prepare again after edits or reordering.
+
 The underlying model remains straight endpoint axial dynamics with its existing
 kick/drift, damping and projection conventions. This alias adds no bending,
 contact, prestress, initial velocity, new boundary/load model or material law.
