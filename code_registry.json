@@ -267,7 +267,7 @@
    "SEdge",
    "StructureGraph"
   ],
-  "sha256": "51bd21ad6501b9de235fa729d6d8beda9144e6bf305722da697be0a0557e09e5"
+  "sha256": "824b00c1288e1ab8d9194dd13481f90be06d049247362d9e83ace5ca9e0ff4e0"
  },
  "fibernet/core/tiling.py": {
   "purpose": "Tiling and welding engine for StructureGraph.",
