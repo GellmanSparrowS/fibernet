@@ -17,7 +17,7 @@ path = write_tet4_vtu_bundle(
     "two_materials.zip",
     points=[(0., 0., 0.), (1., 0., 0.), (0., 1., 0.), (0., 0., 1.), (0., 0., -1.)],
     tetrahedra=[(0, 1, 2, 3), (0, 2, 1, 4)],
-    node_ids=[100, 29, 82, 111, 5],
+    node_ids=[100, 29, 82, 2**63 + 3, 5],
     cell_ids=[901, 756],
     material_ids=[21, 2**63 + 1],
     materials={
@@ -31,6 +31,87 @@ assert bundle.cell_ids.tolist() == [901, 756]
 assert bundle.material_ids.tolist() == [21, 2**63 + 1]
 assert bundle.length_unit == "mm"
 ```
+
+## Hand off a traction solve
+
+With FiberNet 4.8.0 and Meshio installed, create the ZIP using the example
+above in a fresh directory. As the sender, save the load recipe beside it:
+
+```python
+import json
+from hashlib import sha256
+from pathlib import Path
+
+def bundle_sha256(path):
+    digest = sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+recipe = {
+    "bundle_sha256": bundle_sha256(Path("two_materials.zip")),
+    "faces": {"upper_slant": [["29", "82", str(2**63 + 3)]]},
+    "traction_Pa": [0., 0., 5000.],
+    "fixed_dofs": {node: ["x", "y", "z"] for node in ("100", "29", "82", "5")},
+}
+with Path("two_materials.loads.json").open("x", encoding="utf-8") as f:
+    json.dump(recipe, f, indent=2)
+```
+
+Send **both** files. The ZIP stores geometry and materials. The companion
+JSON stores the named faces, global traction in Pa, fixed Cartesian axes
+and a checksum of the complete ZIP. Stable IDs are decimal strings so
+tools that read JSON numbers as binary64 cannot round them.
+
+As the recipient, put the two trusted files in the same directory and run
+this block there. It reads both files without writing anything:
+
+```python
+import json
+import re
+from hashlib import sha256
+from pathlib import Path
+from fibernet.io.tet4_meshio import read_tet4_vtu_bundle
+from fibernet.sim.tet4 import solve_static_tet4
+from fibernet.sim.tet4_loads import nodal_forces_from_traction
+
+def bundle_sha256(path):
+    digest = sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+def node_id(value):
+    if type(value) is not str or re.fullmatch(r"0|[1-9][0-9]{0,19}", value) is None:
+        raise ValueError("Node ID must be a canonical ASCII decimal string")
+    number = int(value)
+    if number > 2**64 - 1:
+        raise ValueError("Node ID exceeds uint64")
+    return number
+
+bundle_path = Path("two_materials.zip")
+recipe = json.loads(Path("two_materials.loads.json").read_text(encoding="utf-8"))
+if bundle_sha256(bundle_path) != recipe["bundle_sha256"]:
+    raise ValueError("Bundle ZIP does not match the load recipe checksum")
+bundle = read_tet4_vtu_bundle(bundle_path)
+faces = [tuple(map(node_id, face)) for face in recipe["faces"]["upper_slant"]]
+loads = nodal_forces_from_traction(bundle, faces, traction_Pa=recipe["traction_Pa"])
+holds = {node_id(node): axes for node, axes in recipe["fixed_dofs"].items()}
+result = solve_static_tet4(bundle, forces_by_id=loads, fixed_dofs_by_id=holds)
+tip_row = result.node_ids.tolist().index(2**63 + 3)
+print("Tip displacement z (m):", result.displacement_m[tip_row, 2])
+```
+
+The expected tip displacement is about `7.22e-9 m`. This example uses
+trusted local files that are not modified during replay. The checksum
+pins the exact ZIP bytes, including the material manifest, not just the
+mesh. Use a new recipe if the ZIP changes or is repacked. The checksum
+detects a mismatched ZIP; it is not a signature and cannot authenticate
+either file if someone changes both. This recipe is not an official
+FiberNet format. Neither file is a
+[solver result VTU](TET4_STATIC.md#view-a-static-result-in-paraview).
 
 ## Input and output
 
