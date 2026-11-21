@@ -3,6 +3,7 @@ import errno
 from hashlib import sha256
 from itertools import combinations, permutations, product
 import json
+from pathlib import Path
 import subprocess
 import sys
 from types import SimpleNamespace
@@ -234,3 +235,18 @@ def test_relative_target_stays_in_resolved_parent_when_cwd_changes(tmp_path, mon
     assert (original/'result.vtu').read_bytes() == b'provider finished'
     assert not list(other.iterdir())
     assert len(list(original.iterdir())) == 1
+
+def test_welded_example_rejects_cyclic_vtu_output_path(tmp_path):
+    link = tmp_path / 'loop'
+    try:
+        link.symlink_to(link.name, target_is_directory=True)
+    except (NotImplementedError, OSError) as exc:
+        pytest.skip(f'directory symlinks are unavailable: {exc}')
+    example = Path(__file__).resolve().parents[1] / 'examples' / 'tet4_static_welded_junction.py'
+    result = subprocess.run([sys.executable, str(example), '--write-vtu-dir', str(link)],
+                            capture_output=True, text=True, check=False, timeout=25)
+    assert result.returncode == 2, result.stderr
+    assert 'Cannot write welded-junction VTU results:' in result.stderr
+    assert 'Traceback' not in result.stderr
+    assert result.stdout == ''
+    assert list(tmp_path.iterdir()) == [link]
