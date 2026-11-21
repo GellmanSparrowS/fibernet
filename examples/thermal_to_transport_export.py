@@ -86,9 +86,16 @@ def run(output_dir, *, length_unit='mm'):
     derived, conductance, binding = prepare_deformed_transport(
         restored, translations_m_by_id=translations,
         reference_conductance_S={eid: 1. for eid in restored.edges}, length_unit=length_unit)
-    _write_json(out/'transport_binding.json', binding)
-    electrical = fn.solve_linear_transport(derived, conductance, list(electrodes.items()),
-                                           length_unit=length_unit)
+    binding_path = out/'transport_binding.json'
+    _write_json(binding_path, binding)
+    preparation = {
+        'schema': binding['schema'],
+        'input_sha256': binding['input_sha256'],
+        'report_file_sha256': hashlib.sha256(binding_path.read_bytes()).hexdigest(),
+    }
+    electrical = fn.solve_linear_transport(
+        derived, conductance, list(electrodes.items()), length_unit=length_unit,
+        model_metadata={'deformed_transport_preparation': preparation})
     _write_json(out/'electrical.json', electrical.to_dict())
     derived.save_json(out/'derived.json')
 

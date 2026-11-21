@@ -57,6 +57,13 @@ solution. The library's existing solver models and input contracts are unchanged
 | `network.stl`, `stl_geometry.json` | Cylinder geometry and its external unit declaration |
 | `summary.json` | Key results and output file hashes |
 
+To pair an electrical result with its preparation report, compare the
+SHA-256 of `transport_binding.json` with `report_file_sha256` under
+`electrical.json` → `provenance.model_metadata.deformed_transport_preparation`.
+That record also includes the preparation schema and its input SHA-256.
+These are handoff checks, not authentication. They do not change the
+electrical solver's own input SHA-256 or state.
+
 STL stores geometry only. Its coordinates use the selected input unit; unit and
 identity information are retained in the adjacent JSON files. Cylinders remain
 separate mesh pieces, so this export is a geometric handoff rather than a fused
