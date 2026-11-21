@@ -5910,12 +5910,12 @@
   "symbols": [
    "make_geometry",
    "boundary",
-   "load_vectors",
+   "cap_loading",
    "strain_energy",
    "run",
    "main"
   ],
-  "sha256": "ed05ff2fcee764c5b1c0bbe5e347f6b4f9423123b456856f638524d346e1365a"
+  "sha256": "9a361f5b1b4b4ea3cfff86be9c38b605041e6228f9ba75408aec05d44e542135"
  },
  "fibernet/io/tet4_results.py": {
   "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",
@@ -5958,7 +5958,8 @@
    "test_face_rejections",
    "test_numeric_domain_never_silently_returns_zero_or_infinite",
    "test_two_adjacent_faces_add_by_area",
-   "test_welded_quick_matches_native_example",
+   "test_welded_quick_matches_analytic_cap_load",
+   "test_welded_preflight_is_opt_in_and_does_not_replace_solves",
    "test_exact_cross_detects_skinny_but_represented_triangle",
    "test_contributing_areas_can_sum_above_float_max_when_force_fits",
    "test_malformed_selector_refused_before_area",
@@ -5966,6 +5967,6 @@
    "test_selector_size_is_checked_before_iteration",
    "test_normal_range_checked_on_final_area_not_one_cross_component"
   ],
-  "sha256": "fe13b7d0adddb853089b3fc20be2fda78a5c037a694357c653055f2e382369ec"
+  "sha256": "af2dc4e92ef5834985f64f05763e4e1c6e3ba176408c41f2628fad5213092e0f"
  }
 }

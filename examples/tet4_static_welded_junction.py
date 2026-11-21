@@ -10,11 +10,13 @@ from itertools import combinations, permutations, product
 import json
 import os
 from pathlib import Path
+import sys
 
 import numpy as np
 
 from fibernet.io.tet4_meshio import Tet4Bundle
-from fibernet.sim.tet4 import solve_static_tet4
+from fibernet.sim.tet4 import inspect_static_tet4_admission, solve_static_tet4
+from fibernet.sim.tet4_loads import nodal_forces_from_traction
 
 
 HALF_LENGTH_MM = 1.5
@@ -86,20 +88,19 @@ def boundary(grid, cells, intervals):
     return held, loaded, len(exterior)
 
 
-def load_vectors(points_mm, held_faces, loaded_faces):
+def cap_loading(mesh, held_faces, loaded_faces):
+    # The public helper takes Pa, not a prescribed resultant. Normalize by
+    # the selected cap's actual area so both tiers receive the same 1 mN.
     def areas(faces):
-        p = points_mm[np.array(faces)] * 1e-3
+        p = mesh.points[np.array(faces)] * 1e-3
         return .5*np.linalg.norm(np.cross(p[:,1]-p[:,0], p[:,2]-p[:,0]), axis=1)
     a, b = areas(held_faces), areas(loaded_faces)
-    np.testing.assert_allclose(a.sum(), b.sum(), rtol=1e-14)
-    pressure = FORCE_N / b.sum()
-    force = np.zeros_like(points_mm)
-    for face, area in zip(loaded_faces, b):
-        force[list(face),0] += pressure*area/3
-    fixed = np.unique(held_faces)
-    np.testing.assert_allclose(force.sum(axis=0), [FORCE_N,0.,0.], atol=2e-18)
-    np.testing.assert_allclose(np.cross(points_mm*1e-3,force).sum(axis=0), 0., atol=3e-21)
-    return force, fixed, float(b.sum()), float(pressure)
+    area = float(b.sum())
+    np.testing.assert_allclose(a.sum(), area, rtol=1e-14)
+    traction = FORCE_N / area
+    selected = [tuple(int(mesh.node_ids[i]) for i in face) for face in loaded_faces]
+    loads = nodal_forces_from_traction(mesh, selected, traction_Pa=(traction, 0., 0.))
+    return loads, area, traction
 
 
 def strain_energy(mesh, displacement_m, modulus_pa):
@@ -119,7 +120,7 @@ def strain_energy(mesh, displacement_m, modulus_pa):
     return float(energy), volume_m3
 
 
-def run(tier, write_vtu_dir=None):
+def run(tier, write_vtu_dir=None, *, preflight=False):
     n = TIERS[tier]
     outputs = None
     if write_vtu_dir is not None:
@@ -138,15 +139,27 @@ def run(tier, write_vtu_dir=None):
         from fibernet.io.tet4_results import solve_static_tet4_to_vtu
     grid, x, t, core, cubes, digest = make_geometry(n)
     left, right, exterior = boundary(grid, t, n)
-    force, fixed, area, pressure = load_vectors(x, left, right)
+    fixed = np.unique(left)
     node_ids = np.arange(len(x), dtype=np.uint64)*19 + np.uint64(2**63+23)
     material = {BASE_ID: {'young_modulus_pa': E_BASE_PA, 'poisson_ratio': POISSON}}
     mesh = Tet4Bundle(x, t, node_ids, np.arange(len(t), dtype=np.int64)+100,
                       np.full(len(t), BASE_ID, dtype=np.int64), material, 'mm')
     hard = replace(mesh, material_ids=np.where(core,np.uint64(CORE_ID),np.uint64(BASE_ID)),
                    materials={**material, CORE_ID:{'young_modulus_pa':E_CORE_PA,'poisson_ratio':POISSON}})
-    input_loads = {int(i): f for i,f in zip(node_ids,force) if np.any(f)}
     holds = {int(node_ids[i]): ('x','y','z') for i in fixed}
+    if preflight:
+        # Both cases have the same geometry, topology and held axes.
+        admission = inspect_static_tet4_admission(mesh, fixed_dofs_by_id=holds)
+        print(f'Tet4 preflight: {admission.free_dofs} free DOFs; '
+              f'{admission.factor_entries:,} of {admission.factor_entry_limit:,} '
+              'structural factor entries (not a numerical solvability check).',
+              file=sys.stderr)
+        if not admission.within_factor_budget:
+            raise ValueError('Tet4 preflight exceeds the factor-entry budget')
+    input_loads, area, traction = cap_loading(mesh, left, right)
+    force = np.array([input_loads.get(int(i), (0., 0., 0.)) for i in node_ids])
+    np.testing.assert_allclose(force.sum(axis=0), [FORCE_N,0.,0.], atol=2e-18)
+    np.testing.assert_allclose(np.cross(x*1e-3,force).sum(axis=0), 0., atol=3e-21)
     cases = {}
     for label, bundle, e in (('homogeneous',mesh,np.full(len(t),E_BASE_PA)),
                              ('stiffer_core',hard,np.where(core,E_CORE_PA,E_BASE_PA))):
@@ -188,7 +201,7 @@ def run(tier, write_vtu_dir=None):
             'assigned_core_volume_mm3':float(volumes[core].sum()*1e9),
             'exterior_faces':exterior,'fixed_cap_nodes':len(fixed),
             'loaded_cap_nodes':int(np.count_nonzero(force[:,0])),
-            'cap_area_m2':area,'equivalent_end_traction_Pa':pressure,'applied_resultant_N':FORCE_N,
+            'cap_area_m2':area,'equivalent_end_traction_Pa':traction,'applied_resultant_N':FORCE_N,
             'poisson_ratio':POISSON,'base_modulus_Pa':E_BASE_PA,'core_modulus_Pa':E_CORE_PA,
             'relative_compliance_change':b/a-1.,'materials':cases}
 
@@ -198,9 +211,11 @@ def main():
     parser.add_argument('--tier', choices=TIERS, default='quick')
     parser.add_argument('--write-vtu-dir', metavar='DIR',
                         help='write two new diagnostic VTUs to an existing directory (optional Meshio)')
+    parser.add_argument('--preflight', action='store_true',
+                        help='report the shared structural factor budget before solving (to stderr)')
     args = parser.parse_args()
     try:
-        report = run(args.tier, args.write_vtu_dir)
+        report = run(args.tier, args.write_vtu_dir, preflight=args.preflight)
     except (OSError, ImportError) as exc:
         if args.write_vtu_dir is not None:
             parser.exit(2, f'Cannot write welded-junction VTU results: {exc}\n')
@@ -209,6 +224,8 @@ def main():
         if args.tier == 'reference' and 'factor-entry budget' in str(exc):
             parser.exit(2, f'Reference tier rejected by bounded solver: {exc}\n'
                            'Run --tier quick for the smaller, separately discretized case.\n')
+        if args.preflight and 'factor-entry budget' in str(exc):
+            parser.exit(2, f'Quick tier rejected by bounded solver: {exc}\n')
         raise
     print(json.dumps(report, indent=2, allow_nan=False))
 

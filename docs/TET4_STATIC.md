@@ -33,7 +33,18 @@ For a larger reproducible junction, use the
 [three-cylinder example](../examples/tet4_static_welded_junction.py) or
 [download the exact 4.7.0 version](RELEASE_4_7_0.md#run-the-welded-junction-example).
 Its quick and reference tiers are separate discretizations, not a
-mesh-convergence claim.
+mesh-convergence claim. The current source example requires FiberNet 4.8.0
+or newer. It passes the selected right-cap
+triangles by stable node ID to the traction helper. The script
+first divides 1 mN by the actual cap area to define a global +x traction,
+not a surface-normal pressure. Both materials receive the same nodal loads.
+
+Use `--preflight` with the current example to print one structural budget
+check for the shared mesh and restraints to stderr before assembling
+loads. A passing check still runs both material solves. It is opt-in
+because the solver repeats its own validation, and stdout remains the JSON
+report. The flag can be combined with `--tier reference` and
+`--write-vtu-dir DIR`.
 
 ## Check the factor budget without solving
 
