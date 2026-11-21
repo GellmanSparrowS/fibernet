@@ -187,7 +187,7 @@
    "_downsample",
    "run_stretch"
   ],
-  "sha256": "32419ff8b382d9d776a2fe2bb8375fb6925792f81ee4b6402c4616151bec7615"
+  "sha256": "2ad1b5de565f4d7f80b5889f45871679eab16f5c29169adf0dba0b1a94f43d5a"
  },
  "fslab/solid_process.py": {
   "purpose": "Isolated solid construction with atomic output and interruptible parent polling.",
