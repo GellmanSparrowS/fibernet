@@ -42,7 +42,7 @@ def _transverse_cap_faces(points, tets, node_ids, axis_index):
     return caps
 
 
-def _prepare(*, load_axis='x'):
+def _prepare(*, load_axis='x', fractions_by_placement=None):
     data = _fixture()
     nodes, cells = data['nodes_id_xyz'], data['cells_id_node_ids']
     points = np.asarray([r[1:] for r in nodes], dtype=np.float64)
@@ -85,6 +85,8 @@ def _prepare(*, load_axis='x'):
             if not 0 < fraction <= 1 or phi[row] or touches_cap[row]:
                 raise ValueError('invalid or repeated stiffened fraction, or overlap with an end cap')
             phi[row] = fraction
+        if fractions_by_placement is not None and name != 'uniform':
+            fractions_by_placement[name] = phi
         assigned_mm3 = float(phi @ volume_mm3)
         if name != 'uniform':
             np.testing.assert_allclose(assigned_mm3, target_volume_mm3, rtol=0, atol=1e-8)
@@ -117,7 +119,7 @@ def _prepare(*, load_axis='x'):
     return bundles, holds, loads, force, output
 
 
-def _solve(bundles, holds, loads, force, total_force_N):
+def _solve(bundles, holds, loads, force, total_force_N, *, cell_energies=None):
     results = {}
     for name, bundle in bundles.items():
         result = solve_static_tet4(bundle, fixed_dofs_by_id=holds, forces_by_id=loads,
@@ -128,8 +130,11 @@ def _solve(bundles, holds, loads, force, total_force_N):
         work_J = float(np.sum(force * result.displacement_m))
         if not work_J > 0.:
             raise ValueError('expected positive external work in a loaded example')
-        recovered_J = float(np.sum(0.5 * fields.volume_m3 *
-                                   np.einsum('cij,cij->c', fields.stress_Pa, fields.strain)))
+        energies_J = 0.5 * fields.volume_m3 * np.einsum(
+            'cij,cij->c', fields.stress_Pa, fields.strain)
+        recovered_J = float(np.sum(energies_J))
+        if cell_energies is not None:
+            cell_energies[name] = energies_J
         np.testing.assert_allclose([result.strain_energy_J, result.half_external_work_J, recovered_J],
                                    0.5 * work_J, rtol=1e-8, atol=0)
         net = force + result.reaction_N
@@ -153,17 +158,48 @@ def _solve(bundles, holds, loads, force, total_force_N):
     return results
 
 
+def _compliance_sensitivity(fractions, cell_energies, results, final_ratio):
+    # For fixed force, d(F·u)/dr = -u^T (dK/dr) u. Since E(r) is
+    # affine at fixed Poisson ratio, dK_i/dr = phi_i K_i / (1+(r-1)phi_i).
+    # The reference denominator is always the uniform strain energy at r=1.
+    uniform_J = results['uniform']['recovered_cell_energy_J']
+    report = {'initial_modulus_ratio': 1., 'final_modulus_ratio': final_ratio, 'placements': {}}
+    for name, phi in fractions.items():
+        initial = float(phi @ cell_energies['uniform'] / uniform_J)
+        final = float((phi / (1. + (final_ratio - 1.) * phi)) @ cell_energies[name] / uniform_J)
+        mean = results[name]['relative_compliance_reduction'] / (final_ratio - 1.)
+        tolerance = 1e-8 * max(initial, mean, final)
+        if not 0. <= final <= mean + tolerance or not mean <= initial + tolerance:
+            raise ValueError('average compliance decrease lies outside endpoint slopes')
+        report['placements'][name] = {'initial_normalized_slope_per_r': initial,
+                                      'average_normalized_slope_per_r': mean,
+                                      'final_normalized_slope_per_r': final}
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--preflight', action='store_true',
-                        help='check input/loads/factor budget, without solving')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--preflight', action='store_true',
+                      help='check input/loads/factor budget, without solving')
+    mode.add_argument('--compliance-sensitivity', action='store_true',
+                      help='include endpoint and average normalized compliance slopes')
     parser.add_argument('--load-axis', choices=LOAD_AXES, default='x',
                         help='clamp the negative cap and pull the positive cap on this axis (default: x)')
     args = parser.parse_args(argv)
     try:
-        bundles, holds, loads, force, output = _prepare(load_axis=args.load_axis)
+        prepare_options = {'load_axis': args.load_axis}
+        if args.compliance_sensitivity:
+            prepare_options['fractions_by_placement'] = {}
+        bundles, holds, loads, force, output = _prepare(**prepare_options)
         if not args.preflight:
-            output['results'] = _solve(bundles, holds, loads, force, output['total_force_N'])
+            cell_energies = {} if args.compliance_sensitivity else None
+            output['results'] = _solve(bundles, holds, loads, force, output['total_force_N'],
+                                       cell_energies=cell_energies)
+            if args.compliance_sensitivity:
+                ratio = output['fully_stiffened_E_Pa'] / output['base_E_Pa']
+                output['compliance_sensitivity'] = _compliance_sensitivity(
+                    prepare_options['fractions_by_placement'], cell_energies, output['results'], ratio)
     except (OSError, ValueError) as exc:
         parser.error(str(exc))
     output['solve_performed'] = not args.preflight
