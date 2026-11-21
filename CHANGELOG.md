@@ -1,3 +1,12 @@
+## [4.9.1]
+
+- Preserve valid positive NumPy integer edge segment counts in native
+  StructureGraph JSON, without mutating the graph or changing ordinary
+  Python-integer JSON output.
+- Add source examples for equal-volume Tet4 material placement under x,
+  y, or z loading and for compact topology of already segmented 3D masks.
+- See [4.9.1 release notes](docs/RELEASE_4_9_1.md).
+
 ## [4.9.0]
 
 - Prepare Taichi displacement schedules by stable graph node ID instead of
