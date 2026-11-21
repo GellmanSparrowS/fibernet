@@ -1,3 +1,10 @@
+## [4.9.2]
+
+- Reopen completed rotational BPM task folders saved without restart on
+  supported POSIX systems, using the existing offline LAMMPS reader. LAMMPS
+  is not needed to read the saved files.
+- See [4.9.2 release notes](docs/RELEASE_4_9_2.md).
+
 ## [4.9.1]
 
 - Preserve valid positive NumPy integer edge segment counts in native
