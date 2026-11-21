@@ -43,6 +43,28 @@ def test_two_material_force_control_against_closed_form(axis, delta):
         assert not a.flags.writeable
 
 
+def test_welded_example_partitions_energy_by_same_geometric_core():
+    path = EXAMPLE.with_name('tet4_static_welded_junction.py')
+    example = runpy.run_path(str(path))
+    integrate = example['_integrate_strain_energy']
+    axis = 0
+    mesh, _, _ = build_example(axis)
+    core = mesh.points[mesh.tetrahedra, axis].mean(axis=1) > .5
+    # Equal-volume regions and one affine strain: energy is proportional to E
+    # at fixed strain and Poisson ratio. This tests quadrature, not equilibrium.
+    u = np.zeros_like(mesh.points)
+    u[:, axis] = 1e-6*mesh.points[:, axis]
+    homogeneous = np.full(len(core), 1e9)
+    for modulus, expected in ((homogeneous, .5), (np.where(core, 3e9, 1e9), .75)):
+        energy, volumes, fraction = integrate(mesh, u, modulus, core)
+        legacy_energy, legacy_volumes = example['strain_energy'](mesh, u, modulus)
+        assert energy > 0. and energy == legacy_energy
+        np.testing.assert_array_equal(volumes, legacy_volumes)
+        assert fraction == pytest.approx(expected, rel=2e-15)
+    energy, _, fraction = integrate(mesh, np.zeros_like(u), homogeneous, core)
+    assert energy == 0. and fraction is None
+
+
 def test_mixed_axis_oblique_affine_patch_relabelled_and_reordered():
     x=1e-3*np.vstack([np.zeros(3),np.eye(3)])
     e,nu=17e6,.29

@@ -5885,6 +5885,7 @@
   "symbols": [
    "solve",
    "test_two_material_force_control_against_closed_form",
+   "test_welded_example_partitions_energy_by_same_geometric_core",
    "test_mixed_axis_oblique_affine_patch_relabelled_and_reordered",
    "test_forces_on_supported_axes_are_reactions_without_work",
    "test_rejects_invalid_or_unrepresentable_free_force",
@@ -5903,7 +5904,7 @@
    "test_admission_only_once_validates_and_never_assembles_or_factors",
    "test_admission_budget_fit_does_not_claim_numerical_solvability"
   ],
-  "sha256": "c6b5c40ea5f62425c5535c58f37d6f6220e87b25fcbbf331bab61f1505434221"
+  "sha256": "874fc92f2ebb7c973cba0abed1fed35e8698eecc3f9419fefdc5dd32f9b070ea"
  },
  "examples/tet4_static_welded_junction.py": {
   "purpose": "Reproducible Tet4 static example: three orthogonal welded cylinders.",
@@ -5912,11 +5913,12 @@
    "make_geometry",
    "boundary",
    "cap_loading",
+   "_integrate_strain_energy",
    "strain_energy",
    "run",
    "main"
   ],
-  "sha256": "9a361f5b1b4b4ea3cfff86be9c38b605041e6228f9ba75408aec05d44e542135"
+  "sha256": "0e5d4dbf523fa07e7ed4d3fbd84cb6d48cc04021be8c1f110f18a9d410d49b83"
  },
  "fibernet/io/tet4_results.py": {
   "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",

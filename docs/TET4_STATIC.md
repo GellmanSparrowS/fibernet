@@ -151,6 +151,22 @@ energy_J = 0.5 * np.einsum("c,cij,cij->", fields.volume_m3, fields.stress_Pa, fi
   not a componentwise accuracy guarantee. Unrepresentable field recovery
   raises `ValueError`; it does not fill fields with zeros or NaNs.
 
+## Read the welded-junction energy share
+
+The current [three-cylinder example](../examples/tet4_static_welded_junction.py)
+reports `core_strain_energy_fraction` for each material case. This is the
+core's elastic strain energy divided by the entire solid's, a dimensionless
+fraction from 0 to 1 (`null` if total energy is zero). Both cases use the
+same centroid-based geometric core mask, even when all cells have the same
+modulus. The example still requires positive work for its compliance report.
+
+With the mesh, nodal forces, zero prescribed displacements and Poisson ratio
+held fixed, this fraction is the local **negative log sensitivity** of
+compliance to the core's Young modulus. For example, a fraction of 0.08
+means a small 1% modulus increase lowers compliance by about 0.08% at
+that material state. It is not a prediction for a large modulus change,
+a different load or mesh, or for material strength.
+
 ## View a static result in ParaView
 
 To compare both welded-junction materials without writing your own script,
