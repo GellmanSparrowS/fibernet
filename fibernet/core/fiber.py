@@ -5,6 +5,10 @@ A fiber is defined by a centerline (3D curve), a cross-section profile, and a ma
 Supports straight, curved (Bezier/spline), helical, and arbitrary parametric paths.
 """
 
+from array import array as typed_array
+from collections.abc import Sequence
+from inspect import getattr_static
+
 import numpy as np
 from scipy.interpolate import CubicSpline
 from dataclasses import dataclass, field
@@ -24,6 +28,29 @@ class CrossSection(Enum):
     CUSTOM = "custom"
 
 
+def _centerline_has_mask(value):
+    """Find missing entries before ndarray conversion drops their masks."""
+    if isinstance(value, np.ndarray):
+        if np.ma.isMaskedArray(value) and np.ma.is_masked(value):
+            return True
+        if value.dtype.kind == 'O':
+            return any(_centerline_has_mask(item) for item in value.flat)
+    elif isinstance(value, Sequence) and not isinstance(
+            value, (str, bytes, bytearray, memoryview, range, typed_array)):
+        if type(value) not in (list, tuple):
+            # A Sequence may actually be an array provider. Respect NumPy's
+            # protocol precedence without executing descriptors or probing a
+            # potentially synthesized array protocol ourselves.
+            protocols = ('__array__', '__array_interface__', '__array_struct__', '__buffer__')
+            cls = type(value)
+            if (any(getattr_static(value, name, None) is not None for name in protocols)
+                    or getattr_static(cls, '__getattr__', None) is not None
+                    or getattr_static(cls, '__getattribute__') is not object.__getattribute__):
+                return False
+        return any(_centerline_has_mask(item) for item in value)
+    return False
+
+
 @dataclass
 class Fiber:
     """Represents a single fiber in a fiber network.
@@ -31,7 +58,8 @@ class Fiber:
     Parameters
     ----------
     centerline : np.ndarray
-        Nx3 array of centerline points defining the fiber path.
+        Nx3 array of centerline points defining the fiber path. Actively masked
+        coordinates are refused; fully observed masked arrays are accepted.
     radius : float
         Cross-section radius (for circular) or characteristic dimension.
     material : Material
@@ -54,6 +82,8 @@ class Fiber:
     segments: int = 20
 
     def __post_init__(self):
+        if _centerline_has_mask(self.centerline):
+            raise ValueError("centerline must not contain masked coordinates")
         self.centerline = np.asarray(self.centerline, dtype=np.float64)
         if self.centerline.ndim == 1:
             if len(self.centerline) == 6:

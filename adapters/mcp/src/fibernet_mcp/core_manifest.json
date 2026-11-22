@@ -27,7 +27,7 @@
   "core/_grid_contract.py": "03bdfc3506dcfc98fff05d5c2ebb8dbc3a7c3823cfacebc2df7544533f6620b8",
   "core/copy_utils.py": "4dcc97734fb3b98cb3f53e94200b0ae5fc3134f460787cc7ef83c8d1bf267ef9",
   "core/crosslinks.py": "3ff2aa7cea5b3a88203c62797885baa4284fe5126fdf2f3f55066dffa48a5158",
-  "core/fiber.py": "32382b63db6b71e9c6ff48aee9c3f656f46a0d3b636547d7c61671c6dc9e681c",
+  "core/fiber.py": "45664aa52395d32fb030367d9344e34bce6e48073b2351452794266c8134ba55",
   "core/fiber_network_profile.py": "08fb72065aa9c6a05888a5aa627816d44153387a714fa6a89f61c635699a7b9c",
   "core/material.py": "3129f432cf7728ae604e1d709bc42f1113f5dda5329bda0d898342beb7be9245",
   "core/network.py": "719c045e62179c9faff1a422c8d90f2e9d115f9f3375aed5ba8b57a05e2e3167",
