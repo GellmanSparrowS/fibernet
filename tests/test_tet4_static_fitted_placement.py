@@ -1,5 +1,6 @@
 """Input, no-solve preflight, and refusal tests for the fitted example."""
 import json
+from dataclasses import asdict
 from types import SimpleNamespace
 
 import numpy as np
@@ -242,15 +243,27 @@ def test_negative_stroke_prepares_guided_x_cap_without_any_traction(monkeypatch,
     monkeypatch.setattr(example, '_cap_loads', lambda *_: pytest.fail('must not construct nodal traction'))
     seen = []
     real = example.inspect_static_tet4_admission
+
     def capture(b, *, fixed_dofs_by_id, prescribed_displacements_m_by_id):
-        seen.append(prescribed_displacements_m_by_id)
-        return real(b, fixed_dofs_by_id=fixed_dofs_by_id,
-                    prescribed_displacements_m_by_id=prescribed_displacements_m_by_id)
+        # Independently select the complete planar caps from the fixture
+        # coordinates, not from the mappings handed to admission.
+        left = b.node_ids[b.points[:, 0] == -1.5]
+        right = b.node_ids[b.points[:, 0] == 1.5]
+        expected_holds = {int(n): ('x', 'y', 'z') for n in left}
+        expected_motion = {int(n): {'x': -1e-9} for n in right}
+        assert len(expected_holds) == len(expected_motion) == 62
+        assert fixed_dofs_by_id == expected_holds
+        assert prescribed_displacements_m_by_id == expected_motion
+        plan = real(b, fixed_dofs_by_id=expected_holds,
+                    prescribed_displacements_m_by_id=expected_motion)
+        seen.append((prescribed_displacements_m_by_id, plan))
+        return plan
+
     monkeypatch.setattr(example, 'inspect_static_tet4_admission', capture)
     def verify(bundles, holds, motion, stroke):
         b = bundles['uniform']
         p = dict(zip(map(int, b.node_ids), b.points))
-        assert motion is seen[0] and len(motion) == len(holds) == 62
+        assert motion is seen[0][0] and len(motion) == len(holds) == 62
         assert all(p[n][0] == 1.5 and v == {'x': -1e-9} for n, v in motion.items())
         assert all(p[n][0] == -1.5 and v == ('x','y','z') for n, v in holds.items())
         assert stroke == -1e-9 and list(bundles) == ['uniform', 'junction', 'arm']
@@ -259,5 +272,9 @@ def test_negative_stroke_prepares_guided_x_cap_without_any_traction(monkeypatch,
     example.main(['--fixed-cap-stroke-m=-1e-9'])
     out = json.loads(capsys.readouterr().out)
     assert out['solve_performed'] and out['results']=={'probe': True}
-    assert out['stroke_m']==-1e-9 and out['tet4_preflight']['factor_entries']==1514430
+    assert out['stroke_m'] == -1e-9 and len(seen) == 1
+    plan = seen[0][1]
+    assert out['tet4_preflight'] == asdict(plan)
+    assert plan.free_dofs == 3 * 694 - 4 * 62
+    assert plan.within_factor_budget and 0 < plan.factor_entries <= plan.factor_entry_limit
     assert not {'loaded_cap_nodes','traction_Pa','total_force_N','fixed_cap_compliance'} & out.keys()

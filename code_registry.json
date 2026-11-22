@@ -6170,6 +6170,6 @@
    "test_stroke_requires_finite_nonzero_m",
    "test_negative_stroke_prepares_guided_x_cap_without_any_traction"
   ],
-  "sha256": "ef5d90cbe2af883d18a04aa9c9e0d95e83dc5e527855d63900e739a190ea6162"
+  "sha256": "d932ee09cf340693c05b68a155d896e54b6f1d9c99fc27c78a3921507a70f229"
  }
 }
