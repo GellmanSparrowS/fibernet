@@ -21,9 +21,13 @@ _MAX_RESULT_VTU_BYTES = 4 * 1024**2
 
 
 def solve_static_tet4_to_vtu(path, bundle: Tet4Bundle, *, forces_by_id: Mapping,
-                            fixed_dofs_by_id: Mapping) -> Tet4StaticResult:
+                            fixed_dofs_by_id: Mapping,
+                            prescribed_displacements_m_by_id: Mapping | None = None
+                            ) -> Tet4StaticResult:
     """Solve and write a new .vtu diagnostic; return the result with cell fields.
 
+    The optional prescribed displacement mapping uses the same signed metres
+    and stable IDs as the numerical solver.
     Requires optional Meshio. Points are undeformed coordinates in metres.
     Displacement is PointData and stress/strain are CellData, flattened to
     nine row-major components in global axes. IDs are exact UInt64. This
@@ -48,7 +52,8 @@ def solve_static_tet4_to_vtu(path, bundle: Tet4Bundle, *, forces_by_id: Mapping,
     except ImportError as exc:
         raise ImportError('Tet4 result export requires optional meshio; install meshio==5.3.5') from exc
     mesh = _validate_static_mesh(bundle)
-    result = _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, True)
+    result = _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, True,
+                                     prescribed_displacements_m_by_id)
     fields = result.cell_fields
     vtu_mesh = meshio.Mesh(
         mesh.points * _LENGTH_TO_M[mesh.length_unit], [('tetra', mesh.tetrahedra)],

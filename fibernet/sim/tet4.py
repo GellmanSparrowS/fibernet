@@ -116,7 +116,7 @@ def _row_lookup(by_id, id_to_row, label):
         yield id_to_row[key], value
 
 
-def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id):
+def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id, prescribed_displacements_m_by_id):
     rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
     force = np.zeros((len(rows), 3), dtype=np.float64)
     for row, value in _row_lookup(forces_by_id, rows, 'forces_by_id'):
@@ -128,12 +128,12 @@ def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id):
         # Check exactness on the original scalar values, before either array
         # promotion of a mixed sequence or assignment to binary64 can round.
         force[row] = [_float64(component, 'nodal force in N') for component in value]
-    fixed = _fixed_axes(rows, fixed_dofs_by_id)
+    fixed, prescribed = _constraint_axes(rows, fixed_dofs_by_id, prescribed_displacements_m_by_id)
     _check_normal_or_zero(force, 'nodal force')
-    return force, fixed
+    return force, fixed, prescribed
 
 
-def _fixed_axes(rows, fixed_dofs_by_id):
+def _fixed_axes(rows, fixed_dofs_by_id, *, require_support=True):
     fixed = np.zeros((len(rows), 3), dtype=bool)
     for row, axes in _row_lookup(fixed_dofs_by_id, rows, 'fixed_dofs_by_id'):
         if not isinstance(axes, (tuple, list)) or not 1 <= len(axes) <= 3:
@@ -142,9 +142,32 @@ def _fixed_axes(rows, fixed_dofs_by_id):
             if not isinstance(axis, str) or axis not in _AXIS or fixed[row, _AXIS[axis]]:
                 raise ValueError('fixed DOFs must be distinct Cartesian axes x, y, or z')
             fixed[row, _AXIS[axis]] = True
-    if not fixed.any():
+    if require_support and not fixed.any():
         raise ValueError('underconstrained Tet4 system: no fixed Cartesian DOFs')
     return fixed
+
+
+def _constraint_axes(rows, fixed_dofs_by_id, prescribed_by_id):
+    if prescribed_by_id is None:
+        return _fixed_axes(rows, fixed_dofs_by_id), None
+    fixed = _fixed_axes(rows, fixed_dofs_by_id, require_support=False)
+    values = np.zeros(fixed.size)
+    for row, axes in _row_lookup(prescribed_by_id, rows, 'prescribed_displacements_m_by_id'):
+        if not isinstance(axes, Mapping) or not 1 <= len(axes) <= 3:
+            raise ValueError('prescribed displacement entries must map distinct Cartesian axes to metres')
+        _unmasked_field(axes, 'prescribed displacement axes')
+        for axis, value in axes.items():
+            if not isinstance(axis, str) or axis not in _AXIS:
+                raise ValueError('prescribed displacement axis must be x, y, or z')
+            col = _AXIS[axis]
+            if fixed[row, col]:
+                raise ValueError('overlapping or duplicate Tet4 held Cartesian axis')
+            fixed[row, col] = True
+            values[row*3+col] = _float64(value, 'prescribed displacement in m')
+    if not fixed.any():
+        raise ValueError('underconstrained Tet4 system: no fixed Cartesian DOFs')
+    _check_normal_or_zero(values, 'prescribed displacement')
+    return fixed, values if np.any(_magnitude_bits(values)) else None
 
 
 def _magnitude_bits(values):
@@ -380,24 +403,27 @@ def _tensor_rows(rows):
     return rows[:, [[0, 3, 5], [3, 1, 4], [5, 4, 2]]]
 
 
+def _engineering_strain(b, u):
+    # Local displacement differences improve translation cancellation.
+    with np.errstate(under='ignore', over='ignore'):
+        delta = (u[1:] - u[0]).ravel()
+    mag = _magnitude_bits(delta)
+    lost = ((mag == 0).reshape(3, 3) & (u[1:] != u[0])).any()
+    exact_delta = None
+    if lost or np.any((mag != 0) & (mag < _MIN_NORMAL_BITS)) or not np.isfinite(delta).all():
+        exact_u = _exact_field_vector(u.ravel())
+        exact_delta = [value - exact_u[k % 3]
+                       for k, value in enumerate(exact_u[3:])]
+    return _field_dot(b[:, 3:], delta, exact_delta)
+
+
 def _recover_cell_fields(mesh, displacement_m):
     n = len(mesh.cell_ids)
     strain, stress = np.empty((n, 6)), np.empty((n, 6))
     volume = np.empty(n)
     for i, (tet, b, tensor, cell_volume) in enumerate(_element_kinematics(mesh)):
         volume[i] = cell_volume
-        # Local displacement differences improve translation cancellation.
-        u = displacement_m[tet]
-        with np.errstate(under='ignore', over='ignore'):
-            delta = (u[1:] - u[0]).ravel()
-        mag = _magnitude_bits(delta)
-        lost = ((mag == 0).reshape(3, 3) & (u[1:] != u[0])).any()
-        exact_delta = None
-        if lost or np.any((mag != 0) & (mag < _MIN_NORMAL_BITS)) or not np.isfinite(delta).all():
-            exact_u = _exact_field_vector(u.ravel())
-            exact_delta = [value - exact_u[k % 3]
-                           for k, value in enumerate(exact_u[3:])]
-        engineering = _field_dot(b[:, 3:], delta, exact_delta)
+        engineering = _engineering_strain(b, displacement_m[tet])
         stress[i] = _field_dot(tensor, engineering)
         strain[i] = engineering
     _check_normal_or_zero(volume, 'Tet4 cell volume')
@@ -539,8 +565,119 @@ def _fixed_solve(stiffness, force, plan):
                                           2 * fe - ke, 'positive work/energy')
     return u, free, float(energy), float(half_work), backward, relative
 
-def inspect_static_tet4_admission(bundle: Tet4Bundle, *,
-                                  fixed_dofs_by_id: Mapping) -> Tet4StaticAdmission:
+def _checked_products(a, b, label):
+    products = a * b
+    mag = _magnitude_bits(products)
+    if (not np.isfinite(products).all() or np.any((mag != 0) & (mag < _MIN_NORMAL_BITS))
+            or np.any((_magnitude_bits(a) != 0) & (_magnitude_bits(b) != 0) & (mag == 0))):
+        raise ValueError(f'{label} outside supported normal binary64 range')
+    return products
+
+
+def _checked_action(matrix, vector):
+    # Check represented products before SciPy's CSR reduction, whose BLAS/C++
+    # operations do not necessarily follow NumPy's Python error state.
+    _checked_products(matrix.data, vector[matrix.indices], 'prescribed stiffness action')
+    action = matrix @ vector
+    _check_normal_or_zero(action, 'prescribed stiffness action')
+    if not np.isfinite(action).all():
+        raise ValueError('prescribed stiffness action is outside supported numerical range')
+    return action
+
+
+def _prescribed_element_response(mesh, u):
+    """Integrate physical cell strain/energy and independently recover Ku."""
+    terms = []
+    internal = np.zeros(u.shape)
+    for row, (tet, b, c, volume) in enumerate(_element_kinematics(mesh)):
+        engineering = _engineering_strain(b, u[tet])
+        if not np.any(_magnitude_bits(engineering)):
+            continue
+        stress = _field_dot(c, engineering)
+        force = _checked_products(_field_dot(b.T, stress).reshape(4, 3),
+                                  volume, 'prescribed internal force')
+        internal[tet] += force
+        # Independent of assembled K. Sum volumetric/deviatoric squares,
+        # avoiding cancellation for the supported negative Poisson ratios.
+        mu = float(c[3, 3])
+        material = mesh.materials[int(mesh.material_ids[row])]
+        kappa = material['young_modulus_pa'] / (3.*(1.-2.*material['poisson_ratio']))
+        trace = math.fsum(engineering[:3])
+        dev = engineering[:3] - trace / 3.
+        dev_norm = math.hypot(*dev, *(engineering[3:] / math.sqrt(2.)))
+        # Positive weights and amplitudes checked in normalized form.
+        for modulus, amplitude in ((mu, dev_norm), (kappa, abs(trace)/math.sqrt(2.))):
+            if amplitude:
+                if not modulus > 0.:
+                    raise ValueError('invalid modulus in prescribed strain energy')
+                m1,e1 = math.frexp(modulus)
+                m2,e2 = math.frexp(amplitude)
+                m3,e3 = math.frexp(float(volume))
+                term = float(_checked_normal_rescale(np.array([m1*m2*m2*m3]),
+                                                      1.,e1+2*e2+e3,'prescribed strain energy')[0])
+                terms.append(term)
+    _check_normal_or_zero(internal, 'prescribed internal force')
+    return internal.ravel(), math.fsum(terms)
+
+
+def _prescribed_solve(mesh, k, force, fixed, values, plan):
+    u = values.copy()
+    free = plan.free
+    eps = np.finfo(np.float64).eps
+    tolerance = 64. * eps * max(1,len(free))
+    backward = 0.
+    if len(free):
+        kf = k[free, :].tocsr()
+        reduced = kf[:, free]
+        coupling = _checked_action(kf, values)
+        rhs = force[free] - coupling
+        _check_normal_or_zero(rhs, 'prescribed effective free force')
+        kscale = float(np.max(np.abs(reduced.data), initial=0.))
+        if not np.isfinite(kscale) or kscale <= 0.:
+            raise ValueError('underconstrained Tet4 system: free stiffness has zero scale')
+        _check_normal_or_zero(kscale, 'free stiffness scale')
+        solve = _factor_band(reduced / kscale, tolerance, plan)
+        scale = float(np.max(np.abs(rhs), initial=0.))
+        if scale:
+            fhat = rhs / scale
+            _check_normal_or_zero(fhat, 'normalized prescribed effective free force')
+            if np.any((_magnitude_bits(rhs) != 0) & (_magnitude_bits(fhat) == 0)):
+                raise ValueError('normalized prescribed effective free force outside supported normal binary64 range')
+            fm, fe = math.frexp(scale)
+            km, ke = math.frexp(kscale)
+            u[free] = _checked_normal_rescale(solve(fhat), fm/km, fe-ke, 'displacement')
+        model_free = _checked_action(kf, u)
+        scale = max(float(np.max(np.abs(force[free]), initial=0.)),
+                    float(np.max(_checked_action(abs(kf), abs(u)), initial=0.)))
+        if scale:
+            backward = float(np.max(np.abs(model_free - force[free]), initial=0.) / scale)
+        if not 0. <= backward <= tolerance:
+            raise ValueError('Tet4 prescribed solve did not meet normalized backward residual criterion')
+    internal, energy = _prescribed_element_response(mesh, u.reshape(-1,3))
+    if len(free) and scale:
+        element_backward = float(np.max(np.abs(internal[free] - force[free]), initial=0.) / scale)
+        if not 0. <= element_backward <= tolerance:
+            raise ValueError('Tet4 prescribed cell forces did not meet normalized backward residual criterion')
+        backward = max(backward, element_backward)
+    # On a driven axis F_c and (Ku-F)_c share the same displacement. Combine
+    # them into (Ku)_c * u_c before multiplying; adding independently rounded
+    # reaction and load work can erase the real mechanical work.
+    terms = [*_checked_products(force[free], u[free], 'prescribed free-force work'),
+             *_checked_products(internal[fixed], u[fixed], 'prescribed held-axis work')]
+    # Sum signed contributions first, then halve the combined work.
+    work = math.fsum(terms)
+    half_work = float(_checked_normal_rescale(np.array([work]), 1., -1,
+                                             'prescribed half external work')[0])
+    denominator = max(energy, abs(half_work))
+    relative = abs(energy-half_work)/denominator if denominator else 0.
+    if not (0. <= relative <= 4096. * eps * u.size and half_work >= 0.):
+        raise ValueError('Tet4 prescribed energy and half external work do not agree')
+    return u, internal, energy, half_work, backward, relative
+
+
+def inspect_static_tet4_admission(bundle: Tet4Bundle, *, fixed_dofs_by_id: Mapping,
+                                  prescribed_displacements_m_by_id: Mapping | None = None
+                                  ) -> Tet4StaticAdmission:
     """Check topology, held axes and factor-entry budget without solving.
 
     Use the solver's stable-node-ID hold mapping. Returns the same symbolic
@@ -555,7 +692,7 @@ def inspect_static_tet4_admission(bundle: Tet4Bundle, *,
     """
     mesh = _validate_static_mesh(bundle)
     rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
-    fixed = _fixed_axes(rows, fixed_dofs_by_id)
+    fixed, _ = _constraint_axes(rows, fixed_dofs_by_id, prescribed_displacements_m_by_id)
     admitted = True
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):
@@ -571,12 +708,15 @@ def inspect_static_tet4_admission(bundle: Tet4Bundle, *,
 
 def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
                       fixed_dofs_by_id: Mapping,
-                      return_cell_fields: bool = False) -> Tet4StaticResult:
-    """Solve first-order isotropic static elasticity with zero Cartesian holds.
+                      return_cell_fields: bool = False,
+                      prescribed_displacements_m_by_id: Mapping | None = None) -> Tet4StaticResult:
+    """Solve first-order isotropic static elasticity with Cartesian displacement constraints.
 
     Supply nodal forces in N as three-component vectors keyed by stable node
     ID. Holds map stable node IDs to sequences of distinct 'x', 'y' or 'z'
-    axes. Unlisted forces are zero and unlisted axes are free. Geometry
+    axes. Optionally prescribe signed global xyz components in metres as
+    {node_id: {axis: value}}. The two mappings cannot hold the same axis.
+    Unlisted forces are zero and unlisted axes are free. Geometry
     follows the bundle's length unit; its elastic moduli are in Pa.
 
     Returns SI displacement, reaction, and energy in a detached result, in
@@ -591,7 +731,8 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     if not isinstance(return_cell_fields, bool):
         raise TypeError('return_cell_fields must be a bool')
     mesh = _validate_static_mesh(bundle)
-    return _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields)
+    return _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id,
+                                   return_cell_fields, prescribed_displacements_m_by_id)
 
 
 def _owned_static_mesh(bundle):
@@ -616,14 +757,21 @@ def _static_topology_plan(mesh, fixed):
     return _plan_band(mesh, fixed)
 
 
-def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields):
-    force, fixed = _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id)
+def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fields,
+                            prescribed_displacements_m_by_id=None):
+    force, fixed, prescribed = _loads_and_constraints(
+        mesh, forces_by_id, fixed_dofs_by_id, prescribed_displacements_m_by_id)
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):
             plan = _static_topology_plan(mesh, fixed)
             k = _assemble(mesh)
-            u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan)
-            internal = k @ u
+            if prescribed is None:
+                u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan)
+                internal = k @ u
+            else:
+                u, internal, energy, half_work, backward, relative = _prescribed_solve(
+                    mesh, k, force.ravel(), fixed.ravel(), prescribed, plan)
+                free = plan.free
             if not np.isfinite(internal).all():
                 raise ValueError('internal nodal forces are outside supported numerical range')
             residual = internal.reshape(fixed.shape) - force
