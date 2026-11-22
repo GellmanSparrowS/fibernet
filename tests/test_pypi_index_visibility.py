@@ -114,11 +114,11 @@ class TestPyPIIndexVisibility(unittest.TestCase):
         self.assertEqual(self.clock.now,180); self.assertEqual(len(self.clock.delays),18)
 
     def test_requests_consume_the_same_deadline(self):
-        with self.assertRaisesRegex(RuntimeError,'request failed'):self.wait([snapshot([])],latency=12)
+        with self.assertRaises(subprocess.TimeoutExpired):self.wait([snapshot([])],latency=12)
         self.assertEqual(self.clock.now,180)
 
-    def test_single_blocking_request_is_not_retried_as_missing(self):
-        with self.assertRaisesRegex(RuntimeError,'not a missing-release retry'):self.wait([snapshot()],latency=21)
+    def test_simple_wait_exposes_blocking_request_timeout_without_visibility_retry(self):
+        with self.assertRaises(subprocess.TimeoutExpired):self.wait([snapshot()],latency=21)
         self.assertEqual(self.clock.now,20); self.assertEqual(self.clock.delays,[])
 
     def test_hash_mismatch_fails_without_retry_even_if_other_file_missing(self):
@@ -166,7 +166,7 @@ class TestPyPIIndexVisibility(unittest.TestCase):
             return real_run(argv, **kwargs)
         started = time.perf_counter()
         with patch('subprocess.run', stalled):
-            with self.assertRaisesRegex(RuntimeError, 'not a missing-release retry'):
+            with self.assertRaises(subprocess.TimeoutExpired):
                 self.ns['fetch_simple_snapshot'](.1)
         # Accommodate process startup on busy CI; the 30-second child must not finish.
         self.assertLess(time.perf_counter()-started, 10)
@@ -248,6 +248,10 @@ class TestPyPIIndexVisibility(unittest.TestCase):
             if argv[1:4] == ['-I', '-S', '-c']:
                 calls.append('simple-json')
                 data = next(snapshots) if snapshots is not None else snapshot()
+                if isinstance(data, subprocess.TimeoutExpired):
+                    self.clock.now += kwargs['timeout']
+                if isinstance(data, Exception):
+                    raise data
                 return subprocess.CompletedProcess(argv, 0, json.dumps(data), '')
             self.assert_pip_command(argv, python, report)
             self.assertEqual(kwargs['stdout'], subprocess.PIPE)
@@ -271,6 +275,42 @@ class TestPyPIIndexVisibility(unittest.TestCase):
                     patch('time.sleep', self.clock.sleep), \
                     patch('subprocess.run', side_effect=child), redirect_stdout(io.StringIO()):
                 self.ns['install_from_index'](python, MANIFEST, deadline, report)
+
+    def test_silent_simple_timeout_retries_then_installs_accepted_wheel(self):
+        timeout = subprocess.TimeoutExpired(['python'], 20)
+        self.run_pip([pip_report()], snapshots=[timeout, snapshot()])
+        self.assertEqual(self.pip_calls, ['simple-json', 'simple-json', 'pip'])
+        self.assertEqual(self.clock.now, 20)
+        self.assertEqual(self.clock.delays, [])
+
+    def test_second_timeout_is_terminal_even_after_stale_pip(self):
+        timeout = subprocess.TimeoutExpired(['python'], 20)
+        with self.assertRaisesRegex(RuntimeError, 'timed out; not a missing-release retry'):
+            self.run_pip([stale_pip_output()], snapshots=[timeout, snapshot(), timeout])
+        self.assertEqual(self.pip_calls, ['simple-json', 'simple-json', 'pip', 'simple-json'])
+        self.assertEqual(self.clock.now, 50)
+        self.assertEqual(self.clock.delays, [10])
+
+    def test_simple_timeout_at_deadline_does_not_retry(self):
+        timeout = subprocess.TimeoutExpired(['python'], 5)
+        with self.assertRaisesRegex(RuntimeError, 'exceeded 180 seconds'):
+            self.run_pip([], snapshots=[timeout], deadline=5.)
+        self.assertEqual(self.pip_calls, ['simple-json'])
+        self.assertEqual(self.clock.now, 5)
+
+    def test_simple_timeout_with_diagnostic_does_not_retry(self):
+        timeout = subprocess.TimeoutExpired(['python'], 20, stderr=b'TLS failed')
+        with self.assertRaisesRegex(RuntimeError, 'timed out; not a missing-release retry'):
+            self.run_pip([], snapshots=[timeout])
+        self.assertEqual(self.pip_calls, ['simple-json'])
+
+    def test_wrong_hash_after_timeout_still_blocks_before_pip(self):
+        timeout = subprocess.TimeoutExpired(['python'], 20)
+        bad = snapshot()
+        bad['data']['files'][0]['hashes']['sha256'] = 'c'*64
+        with self.assertRaisesRegex(RuntimeError, 'hash mismatch'):
+            self.run_pip([], snapshots=[timeout, bad])
+        self.assertEqual(self.pip_calls, ['simple-json', 'simple-json'])
 
     def test_stale_pip_rechecks_simple_then_installs_accepted_wheel(self):
         self.run_pip([stale_pip_output(), pip_report()])
