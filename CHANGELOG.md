@@ -1,3 +1,13 @@
+## [4.10.2]
+
+- During batch resume, refuse a recognizable saved result at the historical
+  output path of a removed successful input. Existing source-bound checkpoint
+  rules are unchanged; this does not migrate old checkpoints.
+- Reject actively masked legacy `Fiber` centerline coordinates before NumPy
+  conversion. Fully observed inputs and custom NumPy conversion are preserved;
+  legacy VTP format is unchanged.
+- See [4.10.2 release notes](docs/RELEASE_4_10_2.md).
+
 ## [4.10.1]
 
 - Reject unordered positional inputs to `graph_batch` to prevent inconsistent
