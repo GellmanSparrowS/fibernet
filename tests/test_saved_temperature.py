@@ -1,8 +1,11 @@
-"""Saved-temperature binding contracts; every mechanics call is a test double."""
+"""Saved-temperature binding and CLI publication, including a native retry."""
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -169,18 +172,27 @@ def test_example_import_does_not_load_solver():
     assert callable(module.main)
 
 
-def test_example_inspection_and_explicit_solve(tmp_path, capsys):
+def _example_inputs(tmp_path):
     graph, data = fixture()
-    spec = importlib.util.spec_from_file_location('_saved_temperature_example_run',
-        Path(__file__).resolve().parents[1]/'examples/saved_thermal_mechanics.py')
-    example = importlib.util.module_from_spec(spec); spec.loader.exec_module(example)
     graph.save_json(tmp_path/'graph.json')
     (tmp_path/'thermal.json').write_text(json.dumps(data, allow_nan=False))
     (tmp_path/'mechanics.json').write_text(json.dumps({'profile':'network','length_unit':'m',
         'E_Pa':1e6,'expansion_alpha_per_K':{'11':1e-5,'83':1e-5},
         'stress_free_temperature_K':300.,'constraints':{'7':[0.,0.,0.]}}))
-    args=['--graph',str(tmp_path/'graph.json'),'--thermal',str(tmp_path/'thermal.json'),
-          '--mechanics',str(tmp_path/'mechanics.json'),'--frame','1']
+    return ['--graph',str(tmp_path/'graph.json'),'--thermal',str(tmp_path/'thermal.json'),
+            '--mechanics',str(tmp_path/'mechanics.json'),'--frame','1']
+
+
+def _example_module():
+    spec = importlib.util.spec_from_file_location('_saved_temperature_example_run',
+        Path(__file__).resolve().parents[1]/'examples/saved_thermal_mechanics.py')
+    example = importlib.util.module_from_spec(spec); spec.loader.exec_module(example)
+    return example
+
+
+def test_example_inspection_and_explicit_solve(tmp_path, capsys):
+    args = _example_inputs(tmp_path)
+    example = _example_module()
     with patch('fibernet.sim.saved_temperature.SavedTemperatureSnapshot.solve') as solve:
         assert example.main(args)==0;solve.assert_not_called()
     assert json.loads(capsys.readouterr().out)['temperature_K']==[301.,302.]
@@ -194,3 +206,93 @@ def test_example_inspection_and_explicit_solve(tmp_path, capsys):
         with pytest.raises(SystemExit):example.main(args+['--solve','--output',str(target)])
         solve.assert_not_called()
     assert json.loads(target.read_text())=={'stub':True}
+
+
+def test_example_native_rejection_can_retry_same_output(tmp_path):
+    args = _example_inputs(tmp_path)
+    mechanics = tmp_path/'mechanics.json'
+    model = json.loads(mechanics.read_text())
+    model['expansion_alpha_per_K'] = {'11': 1e-6, '83': 1e-6}
+    model['E_Pa'] = -1.
+    target = tmp_path/'snapshot.json'
+    root = Path(__file__).resolve().parents[1]
+    script = root/'examples/saved_thermal_mechanics.py'
+    env = dict(os.environ, PYTHONPATH=str(root), PYTHONDONTWRITEBYTECODE='1',
+               OPENBLAS_NUM_THREADS='1', OMP_NUM_THREADS='1')
+    command = [sys.executable, '-B', str(script), *args, '--solve', '--output', str(target)]
+    mechanics.write_text(json.dumps(model), encoding='utf-8')
+    invalid = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert invalid.returncode != 0 and 'E_Pa must be finite and positive' in invalid.stderr
+    assert not os.path.lexists(target) and not list(tmp_path.glob('.saved-thermal-*'))
+
+    model['E_Pa'] = 1e6
+    mechanics.write_text(json.dumps(model), encoding='utf-8')
+    good = subprocess.run(command, cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+    assert good.returncode == 0, good.stderr
+    out = json.loads(target.read_text())
+    assert out['schema'] == 'fibernet.saved_temperature_mechanics/1'
+    assert out['execution'] == 'new_mechanical_solve_from_saved_temperature'
+    assert out['temperature_source']['temperature_K'] == [301., 302.]
+    assert out['feedback_to_electrical_or_thermal'] is False
+    result = out['mechanical']
+    assert result['input_sha256'] and result['node_ids'] == [7, 91] and result['edge_ids'] == [11, 83]
+    np.testing.assert_allclose(result['displacement'], [[0.,0.,0.], [1.5e-7,0.,0.]], atol=1e-17)
+    assert not list(tmp_path.glob('.saved-thermal-*'))
+
+
+@pytest.mark.parametrize('non_json', [float('nan'), object()])
+def test_example_serialization_failure_never_publishes(tmp_path, non_json):
+    args = _example_inputs(tmp_path)
+    target = tmp_path/'failed.json'
+    with patch('fibernet.sim.saved_temperature.SavedTemperatureSnapshot.solve',
+               return_value={'first': True, 'non_json': non_json}):
+        with pytest.raises((TypeError, ValueError)):
+            _example_module().main(args+['--solve','--output',str(target)])
+    assert not os.path.lexists(target) and not list(tmp_path.glob('.saved-thermal-*'))
+
+
+def test_example_preserves_output_created_during_solve(tmp_path, capsys):
+    args = _example_inputs(tmp_path)
+    target = tmp_path/'someone-elses.json'
+    def race(*a, **kw):
+        target.write_bytes(b'other result\n')
+        return {'would_overwrite': True}
+    with patch('fibernet.sim.saved_temperature.SavedTemperatureSnapshot.solve', side_effect=race):
+        with pytest.raises(SystemExit, match='2'):
+            _example_module().main(args+['--solve','--output',str(target)])
+    assert 'output exists' in capsys.readouterr().err
+    assert target.read_bytes() == b'other result\n'
+    assert not list(tmp_path.glob('.saved-thermal-*'))
+
+
+def test_example_refuses_dangling_symlink_before_solve(tmp_path, capsys):
+    args = _example_inputs(tmp_path)
+    target = tmp_path/'dangling.json'
+    absent = tmp_path/'absent.json'
+    try:
+        target.symlink_to(absent)
+    except (OSError, NotImplementedError):
+        pytest.skip('creating symlinks is unavailable for this test runner')
+    with patch('fibernet.sim.saved_temperature.SavedTemperatureSnapshot.solve',
+               side_effect=AssertionError('solve must not run')):
+        with pytest.raises(SystemExit, match='2'):
+            _example_module().main(args+['--solve','--output',str(target)])
+    assert 'output exists' in capsys.readouterr().err
+    assert target.is_symlink() and not absent.exists()
+
+
+def test_example_reports_unsupported_publication_and_cleans_staging(tmp_path, monkeypatch, capsys):
+    args = _example_inputs(tmp_path)
+    target = tmp_path/'absent.json'
+    example = _example_module()
+    def unsupported(src, dst):
+        assert Path(src).parent.parent == target.parent.resolve()
+        assert Path(dst) == target.resolve() and Path(src).read_text().endswith('\n')
+        raise OSError('injected hard-link refusal')
+    monkeypatch.setattr(example.os, 'link', unsupported)
+    with patch('fibernet.sim.saved_temperature.SavedTemperatureSnapshot.solve',
+               return_value={'complete': True}):
+        with pytest.raises(SystemExit, match='2'):
+            example.main(args+['--solve','--output',str(target)])
+    assert 'destination filesystem supporting hard links' in capsys.readouterr().err
+    assert not os.path.lexists(target) and not list(tmp_path.glob('.saved-thermal-*'))

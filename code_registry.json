@@ -6195,5 +6195,41 @@
    "test_nested_rejects_budget_before_opted_in_solves"
   ],
   "sha256": "eb5aa262c2e9ce1e6a3d488d57568044e5bf6977eb7bd7794a3ba7ddfedf7a29"
+ },
+ "examples/saved_thermal_mechanics.py": {
+  "purpose": "Inspect a saved temperature frame; solve only with explicit --solve.",
+  "status": "active",
+  "symbols": [
+   "_id_mapping",
+   "main"
+  ],
+  "sha256": "b5057f233f58683d36707a847775d900f9ab41d072b6e3a5dbf9c7184a9ee352"
+ },
+ "tests/test_saved_temperature.py": {
+  "purpose": "Saved-temperature binding and CLI publication, including a native retry.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "prepared",
+   "test_detached_order_and_explicit_delegation",
+   "test_graph_mutation_rejected_before_owner",
+   "test_invalid_transfer_rejected",
+   "test_frame_requires_explicit_existing_row",
+   "test_partial_and_units_remain_explicit",
+   "test_strict_json_reader",
+   "test_bundle_reopen_and_graph_order_independence",
+   "test_owner_error_propagates_without_partial_success",
+   "test_import_is_stdlib_only",
+   "test_example_import_does_not_load_solver",
+   "_example_inputs",
+   "_example_module",
+   "test_example_inspection_and_explicit_solve",
+   "test_example_native_rejection_can_retry_same_output",
+   "test_example_serialization_failure_never_publishes",
+   "test_example_preserves_output_created_during_solve",
+   "test_example_refuses_dangling_symlink_before_solve",
+   "test_example_reports_unsupported_publication_and_cleans_staging"
+  ],
+  "sha256": "1edf7c4b59e95e1735d5cac9c44803530797ca7e64d27363e95620d3ca7d0eac"
  }
 }

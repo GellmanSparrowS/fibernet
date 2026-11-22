@@ -105,7 +105,11 @@ reference. This does not qualify arbitrary networks or spatial/time convergence.
 `examples/saved_thermal_mechanics.py --graph graph.json --thermal fields.json
 --mechanics mechanics.json --frame 20` inspects a selected saved frame without
 solving. Add `--solve --output new_snapshot.json` only when a new mechanics solve
-is intended. Existing outputs are never replaced. The mechanics JSON supplies
+is intended. Existing outputs are never replaced, and a rejected solve or
+failed JSON serialization leaves no result at the requested path. Choose a
+new filename in a stable, existing local directory on a filesystem that
+supports hard links. The CLI reports a publication error if it cannot publish
+the complete file without overwrite. The mechanics JSON supplies
 `profile`, `length_unit`, `E_Pa`, `expansion_alpha_per_K`,
 `stress_free_temperature_K`, `constraints`, and optional `loads`. ID-keyed
 objects use canonical decimal string keys. No coefficient or support is inferred.
