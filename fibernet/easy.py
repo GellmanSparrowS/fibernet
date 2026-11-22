@@ -1397,6 +1397,25 @@ def _batch_graph_from_bytes(raw):
         return StructureGraph.from_dict(json.load(stream, object_pairs_hook=_unique_json_object_pairs))
 
 
+
+def _batch_saved_sim_result(raw):
+    """Recognize the native batch result shape without rejecting explicit graphs."""
+    import io
+    try:
+        with io.TextIOWrapper(io.BytesIO(raw)) as stream:
+            value = json.load(stream, object_pairs_hook=_unique_json_object_pairs)
+    except (ValueError, RecursionError):
+        return False  # ordinary malformed input keeps its existing failure handling
+    if type(value) is not dict or {'version', 'nodes', 'edges'} & value.keys():
+        return False
+    return (value.get('mode') in ('dynamics', 'stretch')
+            and all(type(value.get(k)) is int and value[k] >= 0
+                    for k in ('n_nodes', 'n_edges'))
+            and all(type(value.get(k)) in (int, float)
+                    for k in ('energy', 'time_seconds', 'max_force', 'max_stretch',
+                              'mean_stretch', 'std_stretch', 'max_displacement')))
+
+
 def batch_simulate_from_json(
     json_dir: str,
     output_dir: str = "simulation_results",
@@ -1483,6 +1502,9 @@ def batch_simulate_from_json(
       exact bytes. Concurrent input modification is unsupported.
     - Keep input and output directories separate when a current or resumed
       case's result path aliases an input JSON, including recorded failures.
+    - If a prior successful source was removed, its saved result must not
+      reenter as a new graph. A recognizable result at that prior output path
+      is refused before solving; a valid graph with that name is not filtered.
     - A matching hit reuses the CSV outcome; it does not verify result JSON files
       or make result JSON and CSV publication a single transaction.
     """
@@ -1568,7 +1590,7 @@ def batch_simulate_from_json(
     # Skipped successes and failures can already own a result path. Reserve
     # outputs only for currently present inputs, not deleted historical files.
     outputs = [csv_file] + [output_path / f"{path.stem}_result.json" for path in json_files]
-    for destination in outputs:
+    def alias_input(destination):
         source = input_paths.get(destination.resolve())
         if source is None:
             try:
@@ -1578,12 +1600,43 @@ def batch_simulate_from_json(
             else:
                 if st.st_ino:
                     source = input_ids.get((st.st_dev, st.st_ino))
+        return source
+
+    for destination in outputs:
+        source = alias_input(destination)
         if source is not None:
             raise ValueError(f"Batch output {destination} aliases input {source}; "
                              "keep input and output directories separate")
 
     if not pending:
         return str(csv_file)
+
+    # Only inspect an input with a bound predecessor's result-path identity,
+    # never an arbitrary suffix match. Keep at most one candidate's bytes.
+    import hashlib
+    pending_set = set(pending)
+    examined = set()
+    for row in results:
+        name = row["filename"]
+        if row["success"] != "True" or name in input_hashes:
+            continue
+        destination = output_path / f"{Path(name).stem}_result.json"
+        try:
+            source = alias_input(destination)
+        except (OSError, RuntimeError):
+            # Historical paths not established as active inputs are inert.
+            continue
+        if source not in pending_set or source in examined:
+            continue
+        examined.add(source)
+        raw = source.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != input_hashes[source.name]:
+            raise ValueError(f"Input {source.name!r} changed after batch preflight; "
+                             "inputs must remain unchanged during the call")
+        if _batch_saved_sim_result(raw):
+            raise ValueError(f"Batch input {source} is a saved simulation result, not a StructureGraph; "
+                             "keep input structures and saved results in separate directories")
+        del raw
 
     engine = _taichi_engine_class()()
     output_path.mkdir(parents=True, exist_ok=True)
@@ -1611,7 +1664,6 @@ def batch_simulate_from_json(
         # Abort unreadable/changed inputs outside the per-file failure handler:
         # they cannot become authenticated reusable outcomes. Earlier committed
         # rows remain committed; this is not a concurrent-writer transaction.
-        import hashlib
         raw = json_file.read_bytes()
         if hashlib.sha256(raw).hexdigest() != input_hashes[fname]:
             raise ValueError(f"Input {fname!r} changed after batch preflight; "
