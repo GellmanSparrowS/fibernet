@@ -6432,7 +6432,7 @@
    "_bounded_list",
    "solve_saved_electrothermal_frame_3d"
   ],
-  "sha256": "2f16fe1a1c4a31509c93a8584770d86f3c27de835157ed60df4208cebf9cf784"
+  "sha256": "d247ed82e73dea54fef3531d1ac2f89382dd8169afbf3ff7cad1be97e7a2b492"
  },
  "tests/test_saved_electrothermal_3d.py": {
   "purpose": "Self-contained admission and exact-frame tests for the optional saved 3D bridge.",
@@ -6441,6 +6441,6 @@
    "_canonical",
    "SavedElectrothermal3DTests"
   ],
-  "sha256": "d07c3fc93f48a57a90ba3750bf4a3d72c647400c36b38b2b4bbd211af027006f"
+  "sha256": "dfe12f43b0735f45c13bfbcd9b8ef8c81461ef0c5e0954ee4131b727470a8f4f"
  }
 }

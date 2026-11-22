@@ -14,6 +14,8 @@ and rejects files larger than 4 MiB. It accepts up to 64 saved frames,
 96 nodes and 192 physical edges; the direct mechanical limit of 384 free
 degrees of freedom still applies. Incomplete trajectories are not accepted.
 Use stable local files and graphs; concurrent mutation is unsupported.
+File-change checks compare change time (ctime) only within the same metadata
+provider; use a trusted exact byte digest when the received bytes must be pinned.
 
 For example, with your original graph, archive and direct mechanical controls:
 

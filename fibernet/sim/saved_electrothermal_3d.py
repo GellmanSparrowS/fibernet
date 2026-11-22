@@ -38,9 +38,15 @@ class _Saved3DRun(NamedTuple):
     receipt: _Saved3DReceipt
 
 
+def _path_fd_identity(info):
+    # On Windows, path-based ctime may be birth time while fd-based ctime is
+    # change time. Full mode bits can also depend on the provider. Compare
+    # those only within the same provider; both endpoints must be regular.
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns)
+
+
 def _file_state(info):
-    return (info.st_dev, info.st_ino, info.st_mode, info.st_size,
-            info.st_mtime_ns, info.st_ctime_ns)
+    return (*_path_fd_identity(info), info.st_mode, info.st_ctime_ns)
 
 
 def _read_bounded(path):
@@ -58,12 +64,16 @@ def _read_bounded(path):
     fd = os.open(path, flags)
     try:
         opened = os.fstat(fd)
-        if not stat.S_ISREG(opened.st_mode) or _file_state(stated) != _file_state(opened):
+        if (not stat.S_ISREG(opened.st_mode)
+                or not 1 <= opened.st_size <= _MAX_ARCHIVE_BYTES
+                or _path_fd_identity(stated) != _path_fd_identity(opened)):
             raise ValueError("saved 3-D electrothermal file changed before the bounded read")
         with os.fdopen(fd, "rb", closefd=False) as stream:
             data = stream.read(_MAX_ARCHIVE_BYTES + 1)
         if (not 1 <= len(data) <= _MAX_ARCHIVE_BYTES
-                or len(data) != opened.st_size or _file_state(os.fstat(fd)) != _file_state(opened)):
+                or len(data) != opened.st_size
+                or _file_state(os.fstat(fd)) != _file_state(opened)
+                or _file_state(path.lstat()) != _file_state(stated)):
             raise ValueError("saved 3-D electrothermal file changed during the bounded read")
     finally:
         os.close(fd)

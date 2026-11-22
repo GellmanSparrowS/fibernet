@@ -1,10 +1,12 @@
 """Self-contained admission and exact-frame tests for the optional saved 3D bridge."""
 import hashlib
+import io
 import json
 from pathlib import Path
 import struct
 import tempfile
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from fibernet import Material, StructureGraph
@@ -89,6 +91,42 @@ class SavedElectrothermal3DTests(unittest.TestCase):
         with patch.object(saved_electrothermal, "_decode", side_effect=AssertionError("decoded wrong exact bytes")):
             with self.assertRaisesRegex(ValueError, "expected SHA256"):
                 self.solve(expected_file_sha256="0" * 64)
+
+    def _stat_fields(self):
+        status = self.path.lstat()
+        names = ("st_dev", "st_ino", "st_mode", "st_size", "st_mtime_ns", "st_ctime_ns")
+        return {name: getattr(status, name) for name in names}
+
+    def test_path_and_descriptor_can_report_distinct_ctime_for_the_same_file(self):
+        values = self._stat_fields()
+        by_path = SimpleNamespace(**dict(values, st_ctime_ns=values["st_ctime_ns"] - 1))
+        by_fd = SimpleNamespace(**values)
+        with patch.object(Path, "lstat", return_value=by_path), patch.object(
+            bridge.os, "fstat", return_value=by_fd
+        ):
+            self.assertEqual(bridge._read_bounded(self.path), self.archive_bytes)
+            with self.assertRaisesRegex(ValueError, "expected SHA256"):
+                self.solve(expected_file_sha256="0" * 64)
+
+    def test_bounded_read_still_rejects_fd_or_path_change_and_short_read(self):
+        values = self._stat_fields()
+        initial = SimpleNamespace(**values)
+        changed = SimpleNamespace(**dict(values, st_ctime_ns=values["st_ctime_ns"] + 1))
+        for key, value in (("st_ino", values["st_ino"] + 1), ("st_size", bridge._MAX_ARCHIVE_BYTES + 1)):
+            with self.subTest(before=key), patch.object(
+                bridge.os, "fstat", return_value=SimpleNamespace(**dict(values, **{key: value}))
+            ), self.assertRaisesRegex(ValueError, "changed before"):
+                bridge._read_bounded(self.path)
+        for provider in ("fstat", "lstat"):
+            with self.subTest(during=provider):
+                ctx = patch.object(bridge.os, "fstat", side_effect=(initial, changed)) if provider == "fstat" else (
+                    patch.object(Path, "lstat", side_effect=(initial, changed))
+                )
+                with ctx, self.assertRaisesRegex(ValueError, "changed during"):
+                    bridge._read_bounded(self.path)
+        with patch.object(bridge.os, "fdopen", return_value=io.BytesIO(self.archive_bytes[:-1])), \
+                self.assertRaisesRegex(ValueError, "changed during"):
+            bridge._read_bounded(self.path)
 
     def test_material_only_mutation_and_rehashed_unselected_frame_reject(self):
         changed = self.graph.to_dict()
