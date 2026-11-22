@@ -190,6 +190,67 @@ def test_caller_declarations(kwargs):
         graph_batch([fixture(), fixture()], **args)
 
 
+@pytest.mark.parametrize('field', ['graphs', 'graph_ids', 'edge_features'])
+@pytest.mark.parametrize('container', [set, frozenset, lambda xs: dict.fromkeys(xs).keys()])
+def test_reject_unordered_positional_inputs(field, container):
+    args = dict(graphs=[fixture(), fixture()], graph_ids=['a', 'b'],
+                edge_features=['radius', 'chord_length'],
+                length_unit='m', coordinate_frame='lab')
+    args[field] = container(args[field])
+    with pytest.raises(ValueError, match=field + ' must be an ordered iterable'):
+        graph_batch(**args)
+
+
+def test_ordered_inputs_bind_slots_and_features_across_hash_seeds():
+    script = '''
+from fibernet import StructureGraph
+from fibernet.ml import graph_batch
+import json
+from tempfile import TemporaryDirectory
+from pathlib import Path
+
+def graph(length, radius, tag, edge_id):
+    g = StructureGraph()
+    left, right = (g.add_node(p) for p in ([0., 0., 0.], [length, 0., 0.]))
+    g.add_edge(left, right, radius=radius)
+    g.metadata['tag'] = tag
+    data = g.to_dict()
+    for record in data['nodes']:
+        record['id'] = (29, 7)[record['id']]
+    edge = data['edges'][0]
+    edge.update(id=edge_id, node_i=29, node_j=7)
+    data.pop('next_node_id')
+    data.pop('next_edge_id')
+    return StructureGraph.from_dict(data)
+
+with TemporaryDirectory() as directory:
+    graphs = []
+    for index, source in enumerate([graph(2., .25, 'first', 71),
+                                     graph(3., .5, 'second', 49)]):
+        path = Path(directory) / f'{index}.json'
+        source.save_json(path)
+        graphs.append(StructureGraph.load_json(path))
+    for include_provenance in (False, True):
+        b = graph_batch(iter(graphs), graph_ids=iter(('b', 'a')),
+                        edge_features=iter(('chord_length', 'radius')),
+                        length_unit='m', coordinate_frame='lab',
+                        include_provenance=include_provenance)
+        assert b.schema_version == ('fibernet.graph_batch.v2' if include_provenance
+                                    else 'fibernet.graph_batch.v1')
+        assert b.graph_ids == ('b', 'a')
+        assert [row['tag'] for row in b.graph_metadata] == ['first', 'second']
+        assert b.node_ids.tolist() == [7, 29, 7, 29]
+        assert b.edge_ids.tolist() == [71, 49]
+        assert b.edge_feature_names == ('chord_length', 'radius')
+        assert b.edge_features.tolist() == [[2., .25], [3., .5]]
+        print(json.dumps([b.graph_ids, b.edge_feature_names, b.edge_features.tolist()]))
+'''
+    outputs = [subprocess.check_output([sys.executable, '-B', '-c', script], timeout=30,
+                                       env=dict(os.environ, PYTHONHASHSEED=str(seed)))
+               for seed in (0, 3)]
+    assert outputs[0] == outputs[1]
+
+
 def test_lazy_exports_without_learning_backends():
     script = '''
 import sys

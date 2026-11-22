@@ -22,7 +22,11 @@ view = graph_batch(
 ## Identity and axes
 
 Schema: `fibernet.graph_batch.v1`. Graph IDs are caller-supplied, nonempty and
-unique within the batch. They are names, not verified source provenance or
+unique within the batch. Each ID names the graph at the same input position.
+Use ordered iterables for graphs, graph IDs and feature names (for example,
+matching lists or tuples). Sets, frozensets and set-like views such as
+`dict.keys()` are rejected; the function does not sort them. Graph IDs are names,
+not verified source provenance or
 independence declarations. Node and physical-edge IDs remain local to each graph;
 the same ID may occur in different graphs. IDs must be nonnegative int64-range
 integers, not booleans; dictionary keys must agree with record IDs.
