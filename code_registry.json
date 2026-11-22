@@ -220,9 +220,10 @@
   "status": "active",
   "symbols": [
    "CrossSection",
+   "_centerline_has_mask",
    "Fiber"
   ],
-  "sha256": "5e3ff11fa60cdde6c17a01cd3795f05839e412698483ccba51e03101556118b4"
+  "sha256": "45664aa52395d32fb030367d9344e34bce6e48073b2351452794266c8134ba55"
  },
  "fibernet/core/material.py": {
   "purpose": "Material properties database for fiber network simulations.",
@@ -6271,5 +6272,13 @@
    "BatchSavedResultInputTests"
   ],
   "sha256": "413f15ccf3150287bf874652601438d42e73651ea065c33c252ae0744a907f94"
+ },
+ "tests/test_fiber_centerline_masks.py": {
+  "purpose": "Admission of observed geometry at the legacy public Fiber constructor.",
+  "status": "active",
+  "symbols": [
+   "FiberCenterlineMasks"
+  ],
+  "sha256": "f091e4e5460632fa997ae8100a11ac6b0e629bb92693a149e84e5102c9601a2d"
  }
 }

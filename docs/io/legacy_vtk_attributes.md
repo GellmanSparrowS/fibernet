@@ -28,6 +28,13 @@ masks; existing all-false masked arrays remain accepted.
 
 All attribute checks finish before opening the destination. Invalid attributes
 therefore leave an existing file unchanged and do not create a missing file.
+A legacy `Fiber` constructor rejects missing (actively masked) centerline
+coordinates before conversion in NumPy arrays and ordinary nested sequences.
+It accepts fully observed masked containers as before. Custom array providers
+still use NumPy's conversion protocol; resolve any missing coordinates in
+the provider before passing it to `Fiber`. Do not fill or expose hidden values
+just to export.
+
 This is input admission, not atomic file replacement: geometry errors or I/O
 failures after opening can still leave partial output. Neither the geometry
 contract nor `to_vtk_xml` changes in this fix.
