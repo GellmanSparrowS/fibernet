@@ -107,6 +107,12 @@ and inexactly representable integers are refused. Every nonempty internal-point
 array is refused, including collinear points; missing and explicitly empty records
 remain distinguishable. Curved-edge sampling requires a separate future schema.
 
+For a solve-to-route handoff, [`discretize_edges`](structure_graph_discretization.md) adds geometry samples, not mechanical degrees of freedom.
+Model the curve as welded straight beams with real intermediate nodes, specify each segment's material and radius to the solver, and retain a parent-to-child edge ID map.
+For a detailed `SimResult` from the heterogeneous 3D `BeamFrameFEM` solve, apply `result.deformed_positions` by `result.metadata["node_ids"]` to a copy of that same solve graph, not by row order or to the original curved graph.
+Pass the actual source unit to `manufacturing_trails_from_graph`; `export_mapped_trails` writes CSV coordinates in mm.
+The result is a centerline route for a piecewise-straight welded model; check printability separately.
+
 Metres are converted to millimetres only in CSV coordinates, using binary64
 multiplication by 1000; millimetres use factor 1. No translation, rotation, fitting
 or `PrintSettings` is applied. The reused guards reject nonfinite conversion,
