@@ -1,3 +1,13 @@
+## [4.10.1]
+
+- Reject unordered positional inputs to `graph_batch` to prevent inconsistent
+  graph IDs and feature column order. Ordered input and output schemas are unchanged.
+- Add a source example comparing fitted Tet4 results before and after prescribed
+  local refinement on the same polyhedral geometry.
+- Do not leave an empty result when the saved-temperature mechanics example's
+  solve or JSON serialization fails; never overwrite an existing output.
+- See [4.10.1 release notes](docs/RELEASE_4_10_1.md).
+
 ## [4.10.0]
 
 - Prescribe signed Cartesian displacement in metres by stable node ID in
