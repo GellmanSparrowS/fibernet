@@ -5928,9 +5928,10 @@
    "_integrate_strain_energy",
    "strain_energy",
    "run",
+   "run_axial_phase",
    "main"
   ],
-  "sha256": "0e5d4dbf523fa07e7ed4d3fbd84cb6d48cc04021be8c1f110f18a9d410d49b83"
+  "sha256": "2353b8774f4152f82006081a67feeb973725717445ff10f00361b51dff84d30d"
  },
  "fibernet/io/tet4_results.py": {
   "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",
@@ -6288,5 +6289,13 @@
    "PhysicalDatasetResumeExampleTests"
   ],
   "sha256": "eaca627272bb64022aa5e4a4433a2327dd2761f0e28d121d8142f736d61d6510"
+ },
+ "tests/test_tet4_welded_axial_phase.py": {
+  "purpose": "Contract tests for the opt-in matched-grip Tet4 diagnostic.",
+  "status": "active",
+  "symbols": [
+   "WeldedAxialPhaseTests"
+  ],
+  "sha256": "410f4aa8fa5efd3aad1242c6fa8705c58bff64e946eac227e06e521aa97dcc0a"
  }
 }

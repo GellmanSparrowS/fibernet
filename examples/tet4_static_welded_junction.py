@@ -27,13 +27,15 @@ E_BASE_PA, E_CORE_PA, POISSON = 1e9, 3e9, .30
 BASE_ID, CORE_ID = 7, 2**64 - 1
 TIERS = {'quick': 12, 'reference': 16}
 CASE_NAMES = ('homogeneous', 'stiffer_core')
+AXIAL_STROKE_M = 3.291840836e-9
 
 
-def make_geometry(intervals):
-    """Voxel union of x/y/z cylinders, with one conforming six-tet split per cube."""
+def make_geometry(intervals, *, axial_half_phase=False):
+    """Voxel union of x/y/z cylinders, with one conforming six-tet split per box."""
     origins = []
-    for origin in product(range(intervals), repeat=3):
+    for origin in product(range(intervals + axial_half_phase), range(intervals), range(intervals)):
         a, b, c = (2*i + 1 - intervals for i in origin)
+        a -= axial_half_phase
         # Squared radial distance at cube center <= (0.5 mm)^2.
         if 9*min(a*a+b*b, b*b+c*c, c*c+a*a) <= intervals**2:
             origins.append(origin)
@@ -47,16 +49,24 @@ def make_geometry(intervals):
                       for start in origins for path in paths], dtype=np.int64)
     step = (2*HALF_LENGTH_MM) / intervals
     points = grid.astype(np.float64)*step - HALF_LENGTH_MM
-    center4 = grid[cells].sum(axis=1) - 2*intervals
-    # Integer arithmetic for cell centroid distance <= 0.45 mm.
-    core = 25*np.sum(center4**2, axis=1) <= 9*intervals**2
+    if axial_half_phase:
+        # Keep both physical cap planes, clipping the two terminal boxes to
+        # half width. No translation of the body or of the boundary conditions.
+        edges = np.arange(intervals + 1)*step - HALF_LENGTH_MM
+        axial_edges = np.r_[-HALF_LENGTH_MM, (edges[:-1] + edges[1:])*.5, HALF_LENGTH_MM]
+        points[:, 0] = axial_edges[grid[:, 0]]
+        core = np.zeros(len(cells), dtype=bool)  # phase study is homogeneous only
+    else:
+        center4 = grid[cells].sum(axis=1) - 2*intervals
+        # Integer arithmetic for cell centroid distance <= 0.45 mm.
+        core = 25*np.sum(center4**2, axis=1) <= 9*intervals**2
     digest = sha256()
     for arr, dtype in ((grid,'<i8'), (cells,'<i8'), (core,'?')):
         digest.update(arr.astype(dtype, copy=False).tobytes())
     return grid, points, cells, core, len(origins), digest.hexdigest()
 
 
-def boundary(grid, cells, intervals):
+def boundary(grid, cells, right_x_index):
     owners = defaultdict(list)
     for cell_id, tet in enumerate(cells):
         for face in combinations(tet, 3):
@@ -74,7 +84,7 @@ def boundary(grid, cells, intervals):
         column = grid[list(face), 0]
         if np.all(column == 0):
             held.append(face)
-        if np.all(column == intervals):
+        if np.all(column == right_x_index):
             loaded.append(face)
     # Verify one solid meeting across full triangular faces.
     pending, seen = deque([0]), {0}
@@ -219,16 +229,86 @@ def run(tier, write_vtu_dir=None, *, preflight=False):
             'relative_compliance_change':b/a-1.,'materials':cases}
 
 
+def run_axial_phase(tier, *, preflight=False):
+    """Compare two axial lattice placements at one spacing and identical grips."""
+    n = TIERS[tier]
+    checked = []
+    for shifted in (False, True):
+        grid, x, t, _, _, _ = make_geometry(n, axial_half_phase=shifted)
+        caps = boundary(grid, t, n + shifted)[:2]
+        vol = np.abs(np.linalg.det(x[t[:, 1:]] - x[t[:, :1]])) / 6
+        if not np.isfinite(vol).all() or not np.all(vol > 0) or np.any(np.abs(x) > HALF_LENGTH_MM):
+            raise ValueError('Invalid axial-phase geometry')
+        cap_faces = []
+        for cap, plane in zip(caps, (-HALF_LENGTH_MM, HALF_LENGTH_MM)):
+            p = x[cap]
+            if not len(cap) or not np.all(p[:, :, 0] == plane):
+                raise ValueError('Axial-phase cap moved off its physical plane')
+            cap_faces.append({tuple(sorted(map(tuple, tri))) for tri in p})
+        fix, loaded = (np.unique(cap) for cap in caps)
+        p = x[caps[1]]
+        area = .5*np.linalg.norm(np.cross(p[:, 1]-p[:, 0], p[:, 2]-p[:, 0]), axis=1).sum()
+        mesh = Tet4Bundle(x, t, np.arange(len(x), dtype=np.uint64), np.arange(len(t), dtype=np.uint64),
+                          np.full(len(t), BASE_ID), {BASE_ID: {'young_modulus_pa': E_BASE_PA,
+                                                               'poisson_ratio': POISSON}}, 'mm')
+        holds = {int(i): ('x', 'y', 'z') for i in fix}
+        motion = {int(i): {'x': AXIAL_STROKE_M} for i in loaded}
+        plan = inspect_static_tet4_admission(mesh, fixed_dofs_by_id=holds, prescribed_displacements_m_by_id=motion)
+        if not plan.within_factor_budget:
+            raise ValueError('Axial-phase preflight exceeds the factor-entry budget')
+        row = dict(axial_phase_cells=.5*shifted, points=len(x), tetrahedra=len(t), cap_area_mm2=float(area),
+                   fixed_cap_nodes=len(fix), loaded_cap_nodes=len(loaded), cap_triangles=list(map(len, caps)),
+                   factor_entries=plan.factor_entries, factor_entry_limit=plan.factor_entry_limit)
+        checked.append((cap_faces, row, mesh, holds, motion, fix, loaded))
+    if checked[0][0] != checked[1][0]:
+        raise ValueError('Axial-phase grip triangles are not identical')
+    report = dict(tier=tier, voxel_step_mm=2*HALF_LENGTH_MM/n, stroke_m=AXIAL_STROKE_M,
+                  cap_x_mm=[-HALF_LENGTH_MM, HALF_LENGTH_MM], cases=[item[1] for item in checked])
+    if preflight:
+        return report
+    for _, row, mesh, holds, motion, fix, loaded in checked:
+        r = solve_static_tet4(mesh, forces_by_id={}, fixed_dofs_by_id=holds, prescribed_displacements_m_by_id=motion)
+        mask = np.zeros_like(r.fixed_mask)
+        mask[fix] = True
+        mask[loaded, 0] = True
+        np.testing.assert_array_equal(r.fixed_mask, mask)
+        np.testing.assert_array_equal(r.displacement_m[fix], 0.)
+        np.testing.assert_array_equal(r.displacement_m[loaded, 0], AXIAL_STROKE_M)
+        np.testing.assert_array_equal(r.reaction_N[~mask], 0.)
+        reaction = r.reaction_N[loaded, 0].sum()
+        energy, _ = strain_energy(mesh, r.displacement_m, E_BASE_PA)
+        if not np.isfinite(reaction) or reaction <= 0:
+            raise ValueError('Expected a positive axial actuator reaction')
+        np.testing.assert_allclose([r.strain_energy_J, r.half_external_work_J, energy],
+                                   .5*reaction*AXIAL_STROKE_M, rtol=1e-8)
+        force = r.reaction_N.sum(axis=0)
+        moment = np.cross(mesh.points*1e-3, r.reaction_N).sum(axis=0)
+        np.testing.assert_allclose(force, 0., atol=2e-10*reaction)
+        np.testing.assert_allclose(moment, 0., atol=3e-13*reaction)
+        row.update(actuator_force_x_N=float(reaction), support_force_x_N=float(r.reaction_N[fix, 0].sum()),
+                   stiffness_N_per_m=float(reaction/AXIAL_STROKE_M), strain_energy_J=r.strain_energy_J,
+                   independent_strain_energy_J=energy, half_actuator_work_J=float(.5*reaction*AXIAL_STROKE_M),
+                   net_force_N=force.tolist(), net_moment_Nm=moment.tolist())
+    native, shifted = (row['stiffness_N_per_m'] for row in report['cases'])
+    report['relative_stiffness_change'] = shifted/native - 1
+    return report
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tier', choices=TIERS, default='quick')
     parser.add_argument('--write-vtu-dir', metavar='DIR',
                         help='write two new diagnostic VTUs to an existing directory (optional Meshio)')
     parser.add_argument('--preflight', action='store_true',
-                        help='report the shared structural factor budget before solving (to stderr)')
+                        help='default mode: print the factor budget to stderr, then solve; with --axial-phase: emit preflight JSON to stdout without solving')
+    parser.add_argument('--axial-phase', action='store_true',
+                        help='compare two axial lattice placements at fixed stroke; --preflight only validates')
     args = parser.parse_args()
+    if args.axial_phase and args.write_vtu_dir is not None:
+        parser.error('--axial-phase cannot be combined with --write-vtu-dir')
     try:
-        report = run(args.tier, args.write_vtu_dir, preflight=args.preflight)
+        report = (run_axial_phase(args.tier, preflight=args.preflight) if args.axial_phase
+                  else run(args.tier, args.write_vtu_dir, preflight=args.preflight))
     except (OSError, ImportError) as exc:
         if args.write_vtu_dir is not None:
             parser.exit(2, f'Cannot write welded-junction VTU results: {exc}\n')
