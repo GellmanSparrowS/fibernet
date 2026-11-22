@@ -257,6 +257,31 @@ These thresholds apply only to this symmetric fixture and its three
 specified grids. They are not general accuracy tolerances, a convergence
 guarantee for other networks, or a material validation.
 
+## Runnable 3D cubic network
+
+With the base FiberNet install, run [the spatial example](../examples/electrothermal_3d_cubic.py)
+from a checkout containing it:
+
+```console
+python examples/electrothermal_3d_cubic.py
+```
+
+The generated 12-node, 20-edge cubic network has four identical two-edge
+paths along x. The two property classes explicitly supply `G0`, `alpha` and
+thermal conductance; they are synthetic, not inferred from graph geometry or
+`Material` records. At 2 V, the left plane is held at 300 K thermally while
+the middle and grounded right planes are thermally free. As those planes
+warm, DC power decreases under this particular conductance law.
+
+The script prints JSON without writing files. It checks initial electrical
+power and the final temperature against the independently reduced series
+circuit and two thermal equations for the same backward-Euler steps. The
+energy ledger sums accepted right-endpoint powers: Joule input plus signed
+heat from the reservoir equals stored heat; a negative reservoir term means
+net heat removal. This is fixed-geometry, resistive and lumped thermal
+behavior, not a mechanical solve, calibrated material model, or time-step
+accuracy claim.
+
 ## Reuse a saved trajectory
 
 See [Saved electrothermal fields to explicit mechanics](SAVED_ELECTROTHERMAL_MECHANICS.md)
