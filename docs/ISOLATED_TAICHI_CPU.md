@@ -32,7 +32,20 @@ The transferred object is graph schema 3.1 plus its JSON metadata, not arbitrary
 
 ## Python usage
 
-Install the existing `accel` extra in the worker interpreter. This initial profile uses the Taichi 1.7.4 CPython 3.12 Linux x86-64 wheel; other platforms and native payloads require separate qualification. Configure `WorkerRuntime` with that interpreter, its package directory, and the trusted native-library SHA256 from the runtime provenance. The caller must also be able to import Taichi for the existing public `SimResult` loader; importing the provider does not request initialization.
+Install the existing `accel` extra in the **worker** interpreter. This initial
+profile uses the Taichi 1.7.4 CPython 3.12 Linux x86-64 wheel; other platforms
+and native payloads require separate qualification. With a separate worker
+environment, set `WorkerRuntime` to the absolute path of its qualified Python
+executable, the verified absolute package directory containing that worker's
+`taichi/` package (`provider_site`), and the trusted SHA256 of its native
+library from the runtime provenance.
+
+Reading a result with the public `SimResult` loader does not require Taichi
+in the caller. Importing the module that defines `SimResult` may import an
+installed Taichi, but this result-reading path does not call `taichi.init()`.
+The example below uses the same interpreter for caller and worker. Its
+explicit `import taichi` locates the worker's package; it is not needed for
+reading results.
 
 ```python
 import sys
