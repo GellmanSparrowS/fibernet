@@ -226,7 +226,7 @@
   "sim/fracture/_beam.py": "b37399d580cea864034b227bc9e769d7da9c6e9681619c1ef0d4a9c85497713a",
   "sim/fracture/_engine.py": "49c871e6b3c97e1fe089192199ad76116a39343bf15cd88f687bc82862fd8ef2",
   "sim/fracture/_sparse.py": "a1c51a35df44b1b62892cca53cfb71be9a5d5e8aa4ce86e2bb9f3cfe5a667227",
-  "sim/isolated_taichi.py": "82697636bac9a7386a8019ffcbea84e9f9683f5e0b04b94cff88a4b6216eb28c",
+  "sim/isolated_taichi.py": "246e35b400b5b7e0675f3df5e6ce0554d7d102c4022120190107378f074d9bd0",
   "sim/joule_heating.py": "a0078a18011dac50cf65d0a8509f48f0a4e42be35dc116d755429b2b4d5402ae",
   "sim/l3.py": "ed77d9fe7e8be97ef77e657d90f009e1f10850aa4665019877d8bc15996857b1",
   "sim/l3_result.py": "ba90c63ee5c2e18e625d7c6fcf705df140b715b6585a4cc4b2c823925a5cdc2f",

@@ -6306,5 +6306,14 @@
    "LegacyMetamaterialCompatTests"
   ],
   "sha256": "cc1d44037c3ecfa98b39ae0362b74ea3f3ca9681dbfabc52f1f1f7bf3fbae7ff"
+ },
+ "tests/test_isolated_taichi_boundary_flags.py": {
+  "purpose": "Provider-free exact boolean-face admission for isolated Taichi requests.",
+  "status": "active",
+  "symbols": [
+   "controls",
+   "IsolatedTaichiBoundaryFlagsTests"
+  ],
+  "sha256": "81e672c82b7ed6fadb7d4b635c6946bb249196f2453dfd6b83265f83eb325cf7"
  }
 }

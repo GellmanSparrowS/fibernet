@@ -111,8 +111,11 @@ def prepare_request(graph, *, fixed_nodes, external_force, spring_k, dt,
         if type(node.position) is not np.ndarray or node.position.shape!=(3,) or node.position.dtype != np.dtype('float64') or not np.isfinite(node.position).all():
             raise ValueError('node position must be a finite ordinary float64 ndarray of shape (3,)')
         _json_value(node.metadata)
-        if type(node.boundary) not in (tuple,list) or len(node.boundary)!=6 or any(type(b) is not bool for b in node.boundary):
-            raise ValueError('boundary flags must be six built-in booleans')
+        # Native tiling emits NumPy bool scalars. The graph serializer
+        # already writes these exact boolean values as JSON booleans.
+        if (type(node.boundary) not in (tuple, list) or len(node.boundary) != 6
+                or any(type(b) not in (bool, np.bool_) for b in node.boundary)):
+            raise ValueError('boundary flags must be six booleans (Python bool or NumPy bool_)')
     for i, edge in graph.edges.items():
         if type(edge) is not SEdge or type(edge.edge_id) is not int or edge.edge_id != i or type(edge.material) is not Material:
             raise ValueError('unsupported edge/material type or identity mismatch')
