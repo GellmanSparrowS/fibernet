@@ -2,6 +2,7 @@
 
 Run: python -m examples.physical_dataset_workflow --output-dir demo_labels
 All targets are outputs of a reduced numerical solver, not experiment.
+The sample count is a minimum target when resuming; saved rows are retained.
 """
 import argparse
 import json
@@ -31,7 +32,9 @@ class PhysicalDatasetWorkflow:
             path=self.output_dir / "physical_labels.npz",
             max_nodes=2500, max_edges=3500)
         X, Y = dataset.generate(self.samples)
-        if X.shape != (self.samples, 14) or Y.shape != (self.samples, 3):
+        if X.ndim != 2 or X.shape[1] != 14 or Y.shape != (len(X), 3):
+            raise RuntimeError("dataset returned misaligned feature and label arrays")
+        if len(X) < self.samples:
             raise RuntimeError("dataset did not reach requested sample count")
         summary = {
             "unit": self.unit, "grid": self.grid, "seed0": self.seed,
@@ -58,7 +61,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output-dir", default="demo_labels")
     parser.add_argument("--unit", default="hexagon")
-    parser.add_argument("--samples", type=int, default=10)
+    parser.add_argument("--samples", type=int, default=10,
+                        help="minimum total sample count after resuming (default: 10)")
     parser.add_argument("--seed", type=int, default=23)
     parser.add_argument("--grid", type=int, default=2)
     args = parser.parse_args()
