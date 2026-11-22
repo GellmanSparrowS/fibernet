@@ -1,3 +1,11 @@
+## [4.10.3]
+
+- Restore the default re-entrant honeycomb and all six documented historical
+  factory names in `fibernet.api.create_metamaterial`. These names use their
+  original geometry and the existing tiling and welding workflow. Registered
+  generators still take precedence; the unified factory is unchanged.
+- See [4.10.3 release notes](docs/RELEASE_4_10_3.md).
+
 ## [4.10.2]
 
 - During batch resume, refuse a recognizable saved result at the historical
