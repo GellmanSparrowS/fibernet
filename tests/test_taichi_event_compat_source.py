@@ -1137,6 +1137,12 @@ def reviewed_api_vtp_fields_source(reverse=None):
         'c5d7e9d36ca48f2ff38a30d3430080b796b2fa3af4086f13f6d1f5101c7759bc', reviewed_api_json_source(), reverse=reverse)
 
 
+def reviewed_api_metamaterial_legacy_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/api.py', 'api_metamaterial_legacy_delta.json',
+        'f82108a2c07533d620e86b8458b6071a4936d44a69dd9b76e197aa19d339a074', reviewed_api_vtp_fields_source(), reverse=reverse)
+
+
 def reviewed_easy_batch_input_source(reverse=None):
     return _reviewed_release_input_delta(
         'fibernet/easy.py', 'easy_batch_input_delta.json',
@@ -1205,7 +1211,7 @@ def require_public_source(relative, raw):
         assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source(), reviewed_easy_training_csv_source(), reviewed_easy_training_csv_entry_source(), reviewed_easy_fem_material_source(), reviewed_easy_batch_resume_collision_source(), reviewed_easy_batch_saved_result_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source(), reviewed_api_vtp_fields_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source(), reviewed_api_vtp_fields_source(), reviewed_api_metamaterial_legacy_source()), 'public source bytes changed: '+relative
         return
     if relative in FACADE_PINS:
         prior = prior_sim_facade() if relative == 'fibernet/sim/__init__.py' else public_baseline(relative).read_bytes()
@@ -1299,6 +1305,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
         ('fibernet/easy.py', reviewed_easy_json_source, reviewed_easy_train_policy_source, 'easy_json_delta.json'),
         ('fibernet/api.py', reviewed_api_json_source, reviewed_legacy_analysis_source, 'api_json_delta.json'),
         ('fibernet/api.py', reviewed_api_vtp_fields_source, reviewed_api_json_source, 'api_vtp_fields_delta.json'),
+        ('fibernet/api.py', reviewed_api_metamaterial_legacy_source, reviewed_api_vtp_fields_source, 'api_metamaterial_legacy_delta.json'),
         ('fibernet/easy.py', reviewed_easy_batch_input_source, reviewed_easy_json_source, 'easy_batch_input_delta.json'),
         ('fibernet/easy.py', reviewed_easy_collision_source, reviewed_easy_batch_input_source, 'easy_output_collision_delta.json'),
         ('fibernet/easy.py', reviewed_easy_training_csv_source, reviewed_easy_collision_source, 'easy_training_csv_delta.json'),
@@ -1319,7 +1326,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 with self.assertRaises(AssertionError):
                     build(reverse=prior)
         self.assertEqual(reviewed_easy_batch_saved_result_source(), (ROOT/'fibernet/easy.py').read_bytes())
-        self.assertEqual(reviewed_api_vtp_fields_source(), (ROOT/'fibernet/api.py').read_bytes())
+        self.assertEqual(reviewed_api_metamaterial_legacy_source(), (ROOT/'fibernet/api.py').read_bytes())
         self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
                          reviewed_easy_train_policy_source())
         require_public_source('fibernet/_json.py', reviewed_json_helper_source())
@@ -1338,6 +1345,10 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 mutations.append(raw.replace(
                     b'to_vtk_xml(network, filename, **kwargs)',
                     b'to_vtk_xml(network, filename, **{})', 1))
+            if filename == 'api_metamaterial_legacy_delta.json':
+                before = b'factory = getattr(gen, unit_cell)'
+                self.assertEqual(raw.count(before), 1)
+                mutations.append(raw.replace(before, b'factory = gen.metamaterial_2d', 1))
             if filename == 'easy_batch_input_delta.json':
                 mutations.append(raw.replace(b'configs = _batch_config_inputs(configs)',
                                              b'configs = list(configs)', 1))
@@ -1409,6 +1420,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
             'easy_json_delta.json': ({'_batch_graph_from_bytes'}, set()),
             'api_json_delta.json': ({'load'}, set()),
             'api_vtp_fields_delta.json': ({'export'}, set()),
+            'api_metamaterial_legacy_delta.json': ({'create_metamaterial'}, set()),
             'easy_batch_input_delta.json': ({'batch_simulate'}, {'_batch_config_inputs'}),
             'easy_output_collision_delta.json': ({'batch_simulate_from_json'}, set()),
             'easy_training_csv_delta.json': ({'train_model'}, set()),
@@ -2693,7 +2705,7 @@ class SourceShape(unittest.TestCase):
 
     def test_legacy_analysis_source_is_exact_and_reversible(self):
         raw = reviewed_legacy_analysis_source()
-        self.assertEqual(raw, reviewed_api_json_source(reverse=reviewed_api_vtp_fields_source(reverse=(ROOT/'fibernet/api.py').read_bytes())))
+        self.assertEqual(raw, reviewed_api_json_source(reverse=reviewed_api_vtp_fields_source(reverse=reviewed_api_metamaterial_legacy_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))))
         self.assertEqual(reviewed_legacy_analysis_source(reverse=raw), reviewed_native_io_source())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return analyze_legacy_endpoints(network)', b'return {}', 1)):
@@ -2705,7 +2717,7 @@ class SourceShape(unittest.TestCase):
 
     def test_native_io_source_is_exact_and_reversible(self):
         raw = reviewed_native_io_source()
-        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=reviewed_api_json_source(reverse=reviewed_api_vtp_fields_source(reverse=(ROOT/'fibernet/api.py').read_bytes()))))
+        self.assertEqual(raw, reviewed_legacy_analysis_source(reverse=reviewed_api_json_source(reverse=reviewed_api_vtp_fields_source(reverse=reviewed_api_metamaterial_legacy_source(reverse=(ROOT/'fibernet/api.py').read_bytes())))))
         self.assertEqual(reviewed_native_io_source(reverse=raw), public_baseline('fibernet/api.py').read_bytes())
         for changed in (raw+b'\npass\n', raw.replace(b'\n', b'\r\n'),
                         raw.replace(b'return _StructureGraph.from_dict(data)', b'return FiberNetwork.from_dict(data)', 1),

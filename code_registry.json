@@ -175,7 +175,7 @@
    "create_metamaterial",
    "print_metamaterial_info"
   ],
-  "sha256": "4ca3eaa96933cadda1e21d114ab5565c3d0056b6e0902ef3c29e7d3cbd93ff8a"
+  "sha256": "6a852c9c3c27badc69d985635e6b3799d6f67021edc76ebc9c68e03d8bb09cfd"
  },
  "fibernet/core/__init__.py": {
   "purpose": "Core data structures for FiberNet.",
@@ -4805,7 +4805,7 @@
    "ComputeDetailedValidationSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "c8dc3f760caf55ad550f74ee2a54bb0beb40aaccb4c29a88decda0f7498cb7ec"
+  "sha256": "e89f0c1349df563f72d9c7c486b0a4f7a092b77b22e8b48dd25f9776a84a97d0"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -5092,7 +5092,7 @@
    "test_roundtrip_stops_before_checkout_when_staging_fails",
    "test_checkout_staging_prevalidates_cross_batch_duplicates_and_total_bytes"
   ],
-  "sha256": "53ac456595f04af563aa8439c3488ba51044c0831d7623228b3f1f170f78d267"
+  "sha256": "0f11a006a078f09d83230245b8c35f48dad76394c5487fe9a8e11697f4acab7d"
  },
  "fibernet/core/single_junction_import.py": {
   "purpose": "Strict opt-in exact single and multiple explicit weld geometry/topology bridges.",
@@ -6297,5 +6297,14 @@
    "WeldedAxialPhaseTests"
   ],
   "sha256": "410f4aa8fa5efd3aad1242c6fa8705c58bff64e946eac227e06e521aa97dcc0a"
+ },
+ "tests/test_legacy_metamaterial_compat.py": {
+  "purpose": "Provider-free contracts for the legacy metamaterial factory fallback.",
+  "status": "active",
+  "symbols": [
+   "tiled_reference",
+   "LegacyMetamaterialCompatTests"
+  ],
+  "sha256": "cc1d44037c3ecfa98b39ae0362b74ea3f3ca9681dbfabc52f1f1f7bf3fbae7ff"
  }
 }

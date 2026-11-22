@@ -908,13 +908,14 @@ def create_metamaterial(
     1. Generate a parameterized unit cell
     2. Tile it into an array (Nx × Ny)
     3. Weld intersections with crosslinks
-    4. Return a complete graph ready for simulation
+    4. Return the resulting legacy FiberNetwork
     
     Parameters
     ----------
     unit_cell : str
-        Unit cell type. Available options:
-        - ``"reentrant_honeycomb_2d"`` : Re-entrant honeycomb (auxetic when angle > 90°)
+        Unit cell type. Registered generators take precedence; the documented
+        historical names below otherwise use their original factories:
+        - ``"reentrant_honeycomb_2d"`` : Historical re-entrant honeycomb (default)
         - ``"chiral_honeycomb_2d"`` : Chiral honeycomb with rotating nodes
         - ``"star_honeycomb_2d"`` : Star-shaped honeycomb
         - ``"arrowhead_auxetic_2d"`` : Arrowhead auxetic structure
@@ -925,17 +926,28 @@ def create_metamaterial(
     weld_threshold : float
         Distance threshold for auto-detecting intersections (default 0.5).
     **cell_params
-        Unit cell parameters. Common parameters:
-        - ``reentrant_angle`` : Re-entrant angle in degrees (default 150)
-        - ``cell_height``, ``cell_width`` : Cell dimensions
-        - ``grid_size`` : Internal grid resolution (default (5, 5))
+        Parameters go to the selected factory. For the default re-entrant
+        geometry, use ``reentrant_angle`` (degrees), ``cell_height`` and
+        ``cell_width``. All six historical factories accept:
+        - ``grid_size`` : Internal grid (default (5, 5), or (4, 4) for hierarchical)
         - ``radius`` : Fiber radius
     
     Returns
     -------
     FiberNetwork
-        Complete metamaterial graph with welded crosslinks.
+        Tiled FiberNetwork with auto-detected welded crosslinks. This does
+        not establish periodic seams or certify mechanical validity.
     
+    Notes
+    -----
+    Historical factory names are local to this helper, not new registry
+    entries for ``create``. Their geometry and parameters differ from the
+    unified ``metamaterial_2d`` generator. Each original factory has one
+    unused option (``vertical_thickness``, ``num_node_points``,
+    ``star_inner_angle``, ``arm_angle``, ``base_type`` or ``rib_angle``).
+    This helper rejects nondefault values on its historical fallback paths
+    rather than silently ignoring them. Direct generator calls are unchanged.
+
     See Also
     --------
     create : Low-level generator access.
@@ -943,30 +955,39 @@ def create_metamaterial(
     
     Examples
     --------
-    >>> # Create a 3×3 re-entrant honeycomb array
-    >>> meta = fn.create_metamaterial(
-    ...     unit_cell="reentrant_honeycomb_2d",
-    ...     array_size=(3, 3),
-    ...     reentrant_angle=150,
-    ...     cell_height=10,
-    ...     cell_width=10,
+    >>> import fibernet.api as legacy
+    >>> meta = legacy.create_metamaterial(
+    ...     array_size=(1, 1), grid_size=(1, 1), reentrant_angle=135,
+    ...     cell_height=7, cell_width=9,
     ... )
-    >>> print(f"Fibers: {meta.num_fibers}, Crosslinks: {meta.num_crosslinks}")
-    >>> 
-    >>> # Run dynamics simulation
-    >>> traj = fn.simulate_dynamics(meta, dt=1e-7, steps=5000)
-    >>> 
-    Legacy simulate_mechanics is unsupported; see its migration documentation.
     """
     # Step 1: Generate unit cell
-    if unit_cell not in _registry.generators:
-        raise ValueError(
-            f"Unknown unit cell: '{unit_cell}'.\n"
-            f"Available: {[g for g in _registry.list_generators() if '2d' in g or '3d' in g]}"
-        )
-    
-    cell = _registry.generators[unit_cell](**cell_params)
-    
+    if unit_cell in _registry.generators:
+        factory = _registry.generators[unit_cell]
+    else:
+        # Keep these historical entry points local to this workflow.
+        inactive_options = {
+            "reentrant_honeycomb_2d": ("vertical_thickness", 1.0),
+            "chiral_honeycomb_2d": ("num_node_points", 6),
+            "star_honeycomb_2d": ("star_inner_angle", 30.0),
+            "arrowhead_auxetic_2d": ("arm_angle", None),
+            "hierarchical_lattice_2d": ("base_type", "triangular"),
+            "missing_rib_auxetic_2d": ("rib_angle", 45.0),
+        }
+        if unit_cell not in inactive_options:
+            registered = (g for g in _registry.list_generators() if '2d' in g or '3d' in g)
+            available = sorted(set(inactive_options).union(registered))
+            raise ValueError(f"Unknown unit cell: '{unit_cell}'.\nAvailable: {available}")
+        factory = getattr(gen, unit_cell)
+        option, default = inactive_options[unit_cell]
+        if option in cell_params:
+            matches = cell_params[option] == default
+            if not isinstance(matches, (bool, np.bool_)) or not matches:
+                raise ValueError(f"{unit_cell} does not implement {option}; "
+                                 f"only its historical default {default!r} is supported")
+
+    cell = factory(**cell_params)
+
     # Step 2: Tile into array
     # Determine spacing from bounding box
     bb_min, bb_max = cell.bounding_box()
