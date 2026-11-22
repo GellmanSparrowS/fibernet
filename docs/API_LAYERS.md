@@ -361,3 +361,6 @@ to that owner. There is no new graph class, backend registry entry,
 `simulate(...)` dispatch or task supervisor. Size limits do not guarantee
 factorization memory/time or confer a large-task MCP capability. See
 [THERMOELASTIC_NETWORK.md](THERMOELASTIC_NETWORK.md) for contracts and units.
+
+For a separate direct 3D snapshot, see [experimental 3D thermoelastic beams](THERMOELASTIC_3D.md).
+This opt-in module leaves the planar owner, saved dispatch, and MCP tools unchanged.

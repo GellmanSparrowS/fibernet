@@ -991,7 +991,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "a2f601046de8637c1cbb053f51e703356bf03beafa85159376e3d2c547417b94"
+  "sha256": "8be3aee8ac424d0b68efe9979106775ee6fde79a5ee6b960aaf39b60a49702f5"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -6375,5 +6375,50 @@
    "ElectrothermalCubicExampleTest"
   ],
   "sha256": "ee44922063b46ac61cee27f488fb9b62e0a1836894059f0e306872f4f4941e7a"
+ },
+ "fibernet/sim/_thermoelastic_3d.py": {
+  "purpose": "Private bounded 3D frame experiment: mean member thermal eigenstrain only.",
+  "status": "active",
+  "symbols": [
+   "_scalar",
+   "_items",
+   "_normal_geometry",
+   "_validated_limits",
+   "_admit",
+   "_norm3",
+   "_edge_applicability",
+   "_solve_thermoelastic_3d"
+  ],
+  "sha256": "1aadc9ccc5bb89674aeae449f94b3799f107950943176bcaf16ffada7b8c2df2"
+ },
+ "fibernet/sim/thermoelastic_3d.py": {
+  "purpose": "Experimental direct prescribed-temperature 3D welded beam snapshots.",
+  "status": "active",
+  "symbols": [
+   "_ApplicabilityLimits",
+   "_EdgeApplicability",
+   "_Applicability",
+   "ThermoelasticSnapshot3D",
+   "_id_values",
+   "_applicability",
+   "solve_thermoelastic_network_snapshot_3d"
+  ],
+  "sha256": "f4843e582adc508777dd4c71e3b635e2fbce521b9562ceed716d9fbd2a2104a4"
+ },
+ "tests/test_thermoelastic_3d_direct.py": {
+  "purpose": "Opt-in public import and immutable owned-result contract checks.",
+  "status": "active",
+  "symbols": [
+   "DirectThermoelastic3D"
+  ],
+  "sha256": "f4ce450e9f1b2800297d8b28cbf3cec21b2244d5f3283e9e285035d9c1f3e7a1"
+ },
+ "tests/test_thermoelastic_3d_physics.py": {
+  "purpose": "Analytical and boundary checks for the direct 3D thermal beam snapshot.",
+  "status": "active",
+  "symbols": [
+   "Thermoelastic3DPhysicsTests"
+  ],
+  "sha256": "d7c7eec8b06b85a238cab72c1ba46559154a5c498c91989b4a79c50d8ca87ebb"
  }
 }

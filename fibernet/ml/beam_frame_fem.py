@@ -936,6 +936,63 @@ class BeamFrameFEM:
 
         return result
     
+    def _assemble_3d_physical_stiffness(self, edge_index, node_pos, radii,
+                                        materials, edge_list, n_dof):
+        """Assemble the physical 3-D operator, in the caller's retained edge order."""
+        rows, cols, vals = [], [], []
+
+        for e in edge_list:
+            i, j = int(edge_index[0, e]), int(edge_index[1, e])
+            r = radii[e]
+            dx = node_pos[j] - node_pos[i]
+            L = np.linalg.norm(dx)
+            if not np.isfinite(L):
+                raise ValueError('nonfinite 3-D beam length during stiffness assembly')
+            if L < 1e-12:
+                continue
+            e1 = dx / L
+            ref = np.array([0, 1.0, 0]) if abs(e1[0]) > 0.9 else np.array([1.0, 0, 0])
+            e2 = np.cross(e1, ref); e2 /= np.linalg.norm(e2)
+            e3 = np.cross(e1, e2)
+
+            props = self.section_properties(r)
+            A, I, J = props['A'], props['I'], props['J']
+            E, G = ((self.E, self.G) if materials is None else
+                    (materials[e].youngs_modulus, materials[e].shear_modulus))
+            L2, L3 = L**2, L**3
+
+            k_local = np.zeros((12, 12))
+            k_local[0,0]=k_local[6,6]=E*A/L; k_local[0,6]=k_local[6,0]=-E*A/L
+            k_local[3,3]=k_local[9,9]=G*J/L; k_local[3,9]=k_local[9,3]=-G*J/L
+            k_local[1,1]=k_local[7,7]=12*E*I/L3; k_local[1,7]=k_local[7,1]=-12*E*I/L3
+            k_local[1,5]=k_local[5,1]=6*E*I/L2; k_local[1,11]=k_local[11,1]=6*E*I/L2
+            k_local[7,5]=k_local[5,7]=-6*E*I/L2; k_local[7,11]=k_local[11,7]=-6*E*I/L2
+            k_local[5,5]=k_local[11,11]=4*E*I/L; k_local[5,11]=k_local[11,5]=2*E*I/L
+            k_local[2,2]=k_local[8,8]=12*E*I/L3; k_local[2,8]=k_local[8,2]=-12*E*I/L3
+            k_local[2,4]=k_local[4,2]=-6*E*I/L2; k_local[2,10]=k_local[10,2]=-6*E*I/L2
+            k_local[8,4]=k_local[4,8]=6*E*I/L2; k_local[8,10]=k_local[10,8]=6*E*I/L2
+            k_local[4,4]=k_local[10,10]=4*E*I/L; k_local[4,10]=k_local[10,4]=2*E*I/L
+            if not np.isfinite(k_local).all():
+                raise ValueError('nonfinite 3-D local beam stiffness; check material and geometry scales')
+
+            R_block = np.array([e1, e2, e3])
+            T = np.zeros((12, 12))
+            for k in range(4): T[3*k:3*k+3, 3*k:3*k+3] = R_block
+            k_global = T.T @ k_local @ T
+            if not np.isfinite(k_global).all():
+                raise ValueError('nonfinite 3-D transformed beam stiffness; check material and geometry scales')
+
+            dofs = list(range(6*i, 6*i+6)) + list(range(6*j, 6*j+6))
+            for a in range(12):
+                for b in range(12):
+                    if abs(k_global[a,b]) > 0:
+                        rows.append(dofs[a]); cols.append(dofs[b]); vals.append(k_global[a,b])
+
+        K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
+        if not np.isfinite(K.data).all():
+            raise ValueError('nonfinite assembled 3-D stiffness; check material and geometry scales')
+        return K
+
     def solve_3d(self, edge_index, node_pos, radii,
                  forces=None, fixed_nodes=None,
                  prescribed_disp=None,
@@ -1001,58 +1058,8 @@ class BeamFrameFEM:
         edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
         n_nodes = node_pos.shape[0]
         n_dof = 6 * n_nodes
-        rows, cols, vals = [], [], []
-        
-        for e in edge_list:
-            i, j = int(edge_index[0, e]), int(edge_index[1, e])
-            r = radii[e]
-            dx = node_pos[j] - node_pos[i]
-            L = np.linalg.norm(dx)
-            if not np.isfinite(L):
-                raise ValueError('nonfinite 3-D beam length during stiffness assembly')
-            if L < 1e-12:
-                continue
-            e1 = dx / L
-            ref = np.array([0, 1.0, 0]) if abs(e1[0]) > 0.9 else np.array([1.0, 0, 0])
-            e2 = np.cross(e1, ref); e2 /= np.linalg.norm(e2)
-            e3 = np.cross(e1, e2)
-            
-            props = self.section_properties(r)
-            A, I, J = props['A'], props['I'], props['J']
-            E, G = ((self.E, self.G) if materials is None else
-                    (materials[e].youngs_modulus, materials[e].shear_modulus))
-            L2, L3 = L**2, L**3
-            
-            k_local = np.zeros((12, 12))
-            k_local[0,0]=k_local[6,6]=E*A/L; k_local[0,6]=k_local[6,0]=-E*A/L
-            k_local[3,3]=k_local[9,9]=G*J/L; k_local[3,9]=k_local[9,3]=-G*J/L
-            k_local[1,1]=k_local[7,7]=12*E*I/L3; k_local[1,7]=k_local[7,1]=-12*E*I/L3
-            k_local[1,5]=k_local[5,1]=6*E*I/L2; k_local[1,11]=k_local[11,1]=6*E*I/L2
-            k_local[7,5]=k_local[5,7]=-6*E*I/L2; k_local[7,11]=k_local[11,7]=-6*E*I/L2
-            k_local[5,5]=k_local[11,11]=4*E*I/L; k_local[5,11]=k_local[11,5]=2*E*I/L
-            k_local[2,2]=k_local[8,8]=12*E*I/L3; k_local[2,8]=k_local[8,2]=-12*E*I/L3
-            k_local[2,4]=k_local[4,2]=-6*E*I/L2; k_local[2,10]=k_local[10,2]=-6*E*I/L2
-            k_local[8,4]=k_local[4,8]=6*E*I/L2; k_local[8,10]=k_local[10,8]=6*E*I/L2
-            k_local[4,4]=k_local[10,10]=4*E*I/L; k_local[4,10]=k_local[10,4]=2*E*I/L
-            if not np.isfinite(k_local).all():
-                raise ValueError('nonfinite 3-D local beam stiffness; check material and geometry scales')
-            
-            R_block = np.array([e1, e2, e3])
-            T = np.zeros((12, 12))
-            for k in range(4): T[3*k:3*k+3, 3*k:3*k+3] = R_block
-            k_global = T.T @ k_local @ T
-            if not np.isfinite(k_global).all():
-                raise ValueError('nonfinite 3-D transformed beam stiffness; check material and geometry scales')
-            
-            dofs = list(range(6*i, 6*i+6)) + list(range(6*j, 6*j+6))
-            for a in range(12):
-                for b in range(12):
-                    if abs(k_global[a,b]) > 0:
-                        rows.append(dofs[a]); cols.append(dofs[b]); vals.append(k_global[a,b])
-        
-        K = sparse.coo_matrix((vals, (rows, cols)), shape=(n_dof, n_dof)).tocsr()
-        if not np.isfinite(K.data).all():
-            raise ValueError('nonfinite assembled 3-D stiffness; check material and geometry scales')
+        K = self._assemble_3d_physical_stiffness(
+            edge_index, node_pos, radii, materials, edge_list, n_dof)
         K_damped = K + damping * sparse.eye(n_dof, format='csr')
         
         f_global = np.zeros(n_dof)
