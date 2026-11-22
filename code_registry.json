@@ -370,11 +370,12 @@
    "_batch_binding",
    "_batch_validate_binding",
    "_batch_graph_from_bytes",
+   "_batch_saved_sim_result",
    "batch_simulate_from_json",
    "__getattr__",
    "__dir__"
   ],
-  "sha256": "33775498272a42892036c61abfd4aaf349b4257cef89eb1e78b5a01b62d3be20"
+  "sha256": "6cd386b1f41799e3e37973bf55c4729f82748532ae1bcc49f733375256b50d7f"
  },
  "fibernet/examples/__init__.py": {
   "purpose": "__init__",
@@ -4780,6 +4781,8 @@
    "reviewed_easy_training_csv_source",
    "reviewed_easy_training_csv_entry_source",
    "reviewed_easy_fem_material_source",
+   "reviewed_easy_batch_resume_collision_source",
+   "reviewed_easy_batch_saved_result_source",
    "restore_reviewed_release_easy_source",
    "require_public_source",
    "remove_public_lammps_branch",
@@ -4801,7 +4804,7 @@
    "ComputeDetailedValidationSourceAdmission",
    "SourceShape"
   ],
-  "sha256": "9a97ee863f4569ed3feac4cdb3392bd2d5dda88dd5edbac8273c15185c37ab4a"
+  "sha256": "c8dc3f760caf55ad550f74ee2a54bb0beb40aaccb4c29a88decda0f7498cb7ec"
  },
  "tests/test_fem_heterogeneous_contract.py": {
   "purpose": "Admission, ownership and precedence for opt-in isotropic edge materials.",
@@ -6260,5 +6263,13 @@
    "test_nonzero_source_must_not_underflow_during_float64_conversion"
   ],
   "sha256": "2a8e56d4f5c69cbffafba40bea4ef6e70185d2958c2563c9a4a5ec61551c856e"
+ },
+ "tests/test_batch_saved_result_input.py": {
+  "purpose": "Native result bytes cannot reenter batch resume as a new graph.",
+  "status": "active",
+  "symbols": [
+   "BatchSavedResultInputTests"
+  ],
+  "sha256": "413f15ccf3150287bf874652601438d42e73651ea065c33c252ae0744a907f94"
  }
 }

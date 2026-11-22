@@ -1173,7 +1173,15 @@ def reviewed_easy_batch_resume_collision_source(reverse=None):
         'e0324404630766cf22074a08c2ce41bea2e1f06b412d60f57b44cc6bbde9ff54', reviewed_easy_fem_material_source(), reverse=reverse)
 
 
+def reviewed_easy_batch_saved_result_source(reverse=None):
+    return _reviewed_release_input_delta(
+        'fibernet/easy.py', 'easy_batch_saved_result_delta.json',
+        '6bca57e639419c6855717e9a25a14c6ddb9bf2bb4ade99929376f97a6802ecd3', reviewed_easy_batch_resume_collision_source(), reverse=reverse)
+
+
 def restore_reviewed_release_easy_source(source):
+    if source == reviewed_easy_batch_saved_result_source():
+        source = reviewed_easy_batch_saved_result_source(reverse=source)
     if source == reviewed_easy_batch_resume_collision_source():
         source = reviewed_easy_batch_resume_collision_source(reverse=source)
     source = reviewed_easy_fem_material_source(reverse=source)
@@ -1194,7 +1202,7 @@ def require_public_source(relative, raw):
         assert raw in (prior_sim_facade(), reviewed_facade(relative), reviewed_nodal_controls_facade(), reviewed_thermoelastic_facade(), reviewed_lammps_capability_facade(), reviewed_archived_ge_facade()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/easy.py':
-        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source(), reviewed_easy_training_csv_source(), reviewed_easy_training_csv_entry_source(), reviewed_easy_fem_material_source(), reviewed_easy_batch_resume_collision_source()), 'public source bytes changed: '+relative
+        assert raw in (public_baseline(relative).read_bytes(), reviewed_easy_stretch_ratio_source(), reviewed_easy_rl_failure_source(), reviewed_taichi_geometry_source(relative), reviewed_easy_show_source(), reviewed_easy_batch_report_source(), reviewed_easy_optional_import_source(), reviewed_easy_train_policy_source(), reviewed_easy_json_source(), reviewed_easy_batch_input_source(), reviewed_easy_collision_source(), reviewed_easy_training_csv_source(), reviewed_easy_training_csv_entry_source(), reviewed_easy_fem_material_source(), reviewed_easy_batch_resume_collision_source(), reviewed_easy_batch_saved_result_source()), 'public source bytes changed: '+relative
         return
     if relative == 'fibernet/api.py':
         assert raw in (public_baseline(relative).read_bytes(), reviewed_native_io_source(), reviewed_legacy_analysis_source(), reviewed_api_json_source(), reviewed_api_vtp_fields_source()), 'public source bytes changed: '+relative
@@ -1297,6 +1305,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
         ('fibernet/easy.py', reviewed_easy_training_csv_entry_source, reviewed_easy_training_csv_source, 'easy_training_csv_entry_delta.json'),
         ('fibernet/easy.py', reviewed_easy_fem_material_source, reviewed_easy_training_csv_entry_source, 'easy_fem_material_delta.json'),
         ('fibernet/easy.py', reviewed_easy_batch_resume_collision_source, reviewed_easy_fem_material_source, 'easy_batch_resume_collision_delta.json'),
+        ('fibernet/easy.py', reviewed_easy_batch_saved_result_source, reviewed_easy_batch_resume_collision_source, 'easy_batch_saved_result_delta.json'),
     )
 
     def test_exact_accepted_layers_and_historical_versions(self):
@@ -1309,7 +1318,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                 require_public_source(relative, prior)
                 with self.assertRaises(AssertionError):
                     build(reverse=prior)
-        self.assertEqual(reviewed_easy_batch_resume_collision_source(), (ROOT/'fibernet/easy.py').read_bytes())
+        self.assertEqual(reviewed_easy_batch_saved_result_source(), (ROOT/'fibernet/easy.py').read_bytes())
         self.assertEqual(reviewed_api_vtp_fields_source(), (ROOT/'fibernet/api.py').read_bytes())
         self.assertEqual(restore_reviewed_release_easy_source((ROOT/'fibernet/easy.py').read_bytes()),
                          reviewed_easy_train_policy_source())
@@ -1340,6 +1349,14 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
                      b'    if False:\n        return str(csv_file)\n'),
                     (b'"keep input and output directories separate")',
                      b'"choose a different output directory")'),
+                ):
+                    self.assertEqual(raw.count(before), 1)
+                    mutations.append(raw.replace(before, after, 1))
+            if filename == 'easy_batch_saved_result_delta.json':
+                for before, after in (
+                    (b'if _batch_saved_sim_result(raw):', b'if False:'),
+                    (b'if row["success"] != "True" or name in input_hashes:', b'if False:'),
+                    (b"{'version', 'nodes', 'edges'} & value.keys()", b"False"),
                 ):
                     self.assertEqual(raw.count(before), 1)
                     mutations.append(raw.replace(before, after, 1))
@@ -1398,6 +1415,7 @@ class ReleaseInputSourceAdmission(unittest.TestCase):
             'easy_training_csv_entry_delta.json': ({'train_model'}, {'_model_save_overwrites_csv'}),
             'easy_fem_material_delta.json': ({'simulate'}, set()),
             'easy_batch_resume_collision_delta.json': ({'batch_simulate_from_json'}, set()),
+            'easy_batch_saved_result_delta.json': ({'batch_simulate_from_json'}, {'_batch_saved_sim_result'}),
         }
         for relative, build, previous, filename in self.CASES:
             old, new = ast.parse(previous()), ast.parse(build())
