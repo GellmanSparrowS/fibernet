@@ -6315,5 +6315,23 @@
    "IsolatedTaichiBoundaryFlagsTests"
   ],
   "sha256": "81e672c82b7ed6fadb7d4b635c6946bb249196f2453dfd6b83265f83eb325cf7"
+ },
+ "examples/taichi_isolated_bcc.py": {
+  "purpose": "Generate and run a small 3D BCC spring lattice on an isolated Taichi CPU.",
+  "status": "active",
+  "symbols": [
+   "prepare",
+   "summarize",
+   "main"
+  ],
+  "sha256": "50877959bb09eee7f4bdc4da49dc46408379364c6de07fd9edba3764cde621a0"
+ },
+ "tests/test_taichi_isolated_bcc_example.py": {
+  "purpose": "Provider-free tests of the standalone isolated BCC example.",
+  "status": "active",
+  "symbols": [
+   "IsolatedBCCExampleTests"
+  ],
+  "sha256": "43b56ba5c9fb5788f6400d94a30eff32f7c2616cd5a8e4e4df8b99f23371a462"
  }
 }

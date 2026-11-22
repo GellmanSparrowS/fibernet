@@ -82,6 +82,40 @@ with start_isolated_taichi(
 
 The SHA256 identifies the native `.so` payload, not the wheel file; do not replace it with the digest of an unqualified runtime simply to bypass a mismatch. The wheel includes the four Python backend modules. This usage document is a repository/source-distribution document, not a wheel package resource. Importing `fibernet.sim.isolated_taichi` and preparing supported requests remain usable without the optional provider; execution requires the explicit qualified runtime.
 
+## Run a generated three-dimensional lattice
+
+With FiberNet 4.10.4 or newer installed in the caller, run the
+[standalone BCC example](../examples/taichi_isolated_bcc.py) from a source
+checkout that contains it. This standalone script is not part of the
+4.10.4 wheel or source distribution. The caller need not install Taichi.
+Start by checking the 546 nodes, 2,542 rods, 42 held nodes and request size
+without starting a worker:
+
+```sh
+python examples/taichi_isolated_bcc.py --preflight
+```
+
+To run, provide your own qualified worker paths and trusted native library
+digest. For a separate virtual environment, `venv --copies` keeps the
+resolved Python executable in that environment. With the three shell
+variables set to their verified values:
+
+```sh
+python examples/taichi_isolated_bcc.py \
+  --worker-python "$WORKER_PYTHON" --worker-site "$WORKER_SITE" \
+  --native-sha256 "$TAICHI_NATIVE_SHA256"
+```
+
+The example uses 2 mm cells, native unit mass (1 kg in the example's
+chosen SI convention), 4 N axial spring coefficient (EA), and a force on
+one far corner. It reports the first-step XYZ check, final displacement
+in m, and elastic potential energy in J after 256 steps. The example
+removes its temporary task directory only after a successful result and
+task close. If the result or task close fails or is interrupted, it leaves
+the worker files for diagnosis. This demonstrates a bounded axial spring
+calculation, not a continuum material calibration,
+a recommended timestep for other meshes, or a restart file.
+
 ## Progress snapshots
 
 `task.progress` reads a bounded, detached JSON snapshot without loading the native provider. It is `None` until the worker publishes its first milestone. Schema `isolated-taichi-progress/1` binds each receipt to the request SHA256 and request schema, retaining two ordered events with sequence numbers and worker monotonic nanosecond timestamps:
