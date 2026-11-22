@@ -138,6 +138,53 @@ The same optional keyword is accepted by `inspect_static_tet4_admission`
 and `solve_static_tet4_to_vtu`. The diagnostic VTU fields and geometry/material
 bundle format are unchanged; neither stores a load plan.
 
+### Move a local exterior grip, not the entire cap
+
+Mark the intended contact patch during meshing (for example as a named
+Gmsh physical surface; see [named surface groups](TET4_VTU_BUNDLE.md#import-named-material-and-boundary-groups-from-gmsh)).
+The patch must be a union of **whole exterior Tet4 triangles**. If its outline
+cuts through existing triangles, mesh a boundary that conforms to that
+outline first. Selecting nearby points, or clipping triangles just to
+estimate area, does not create the specified grip. Compare the selected
+footprint to the intended patch, not just its area.
+
+Given the selected triangles as stable node ID triples from the same
+`bundle`, check that each has one incident tetrahedron, measure the area,
+and constrain the union of their vertices. This example assumes coordinates
+in mm, a designed patch of 0.5 mm², and separate stationary `held_axes`:
+
+```python
+from collections import Counter
+from itertools import combinations
+from math import fsum
+import numpy as np
+from fibernet.sim.tet4 import solve_static_tet4
+
+if bundle.length_unit != "mm":
+    raise ValueError("This area check expects millimetre coordinates")
+row = {int(node_id): i for i, node_id in enumerate(bundle.node_ids)}
+owners = Counter(face for tet in bundle.tetrahedra
+                 for face in combinations(sorted(map(int, tet)), 3))
+faces = [tuple(sorted(row[node_id] for node_id in tri)) for tri in grip_faces_by_id]
+if (not faces or len(set(faces)) != len(faces)
+        or any(len(face) != 3 or owners[face] != 1 for face in faces)):
+    raise ValueError("Grip must contain distinct whole exterior triangles")
+a, b, c = np.asarray(bundle.points)[faces].transpose(1, 0, 2)
+area_mm2 = fsum(0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1))
+if not np.isclose(area_mm2, 0.5, rtol=0, atol=1e-8):  # use your area and tolerance
+    raise ValueError(f"Unexpected grip area: {area_mm2:g} mm²")
+grip_ids = {int(bundle.node_ids[i]) for face in faces for i in face}
+result = solve_static_tet4(
+    bundle, forces_by_id={}, fixed_dofs_by_id=held_axes,
+    prescribed_displacements_m_by_id={node_id: {"x": 1.5e-9} for node_id in grip_ids},
+)
+```
+
+This moves the patch +1.5 nm along global x. Its y and z displacements
+remain free unless separately restrained; nodes off the patch do not receive
+this prescribed motion. For a known force per unit area instead, use the
+[traction helper](TET4_TRACTION.md), not the displacement mapping.
+
 ## Limits
 
 Inputs are limited to 1,800 points, 8,000 Tet4 cells, and a structural budget
