@@ -6341,5 +6341,22 @@
    "FEM3DPrescribedWidthTests"
   ],
   "sha256": "01bb3163b79c12a5018fb0701e1d316c97220f9c0da54c53fa157e381a273413"
+ },
+ "examples/heterogeneous_3d_graph_workflow.py": {
+  "purpose": "Generate, solve and save a small 3D beam graph with two material moduli.",
+  "status": "active",
+  "symbols": [
+   "run",
+   "main"
+  ],
+  "sha256": "8f8a3639fd91c6ef814a857f009f9d93308a9a3d1393a560ddb5486e8fd2b195"
+ },
+ "tests/test_heterogeneous_3d_graph_workflow.py": {
+  "purpose": "Check the public spatial graph example and its file handoff.",
+  "status": "active",
+  "symbols": [
+   "HeterogeneousGraphWorkflowTest"
+  ],
+  "sha256": "53ca64c2cb80194087e066ee4a8c43c65a68e65cb1df4d76bd948d9e8fdff21d"
  }
 }
