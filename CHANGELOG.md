@@ -1,3 +1,13 @@
+## [4.11.0]
+
+- Add an opt-in experimental Python snapshot for prescribed-temperature
+  thermoelasticity of small welded 3D beam frames. The direct API takes explicit
+  temperatures, per-member expansion coefficients and supports; it does not
+  enable a 3D saved-electrothermal mechanics route.
+- Add separate source examples for 3D mixed-material linear beam FEM and 3D
+  temperature-dependent DC heating.
+- See [4.11.0 release notes](docs/RELEASE_4_11_0.md).
+
 ## [4.10.5]
 
 - Reject a 3D beam-frame prescribed displacement with more than six components
