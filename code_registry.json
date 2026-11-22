@@ -6358,5 +6358,22 @@
    "HeterogeneousGraphWorkflowTest"
   ],
   "sha256": "53ca64c2cb80194087e066ee4a8c43c65a68e65cb1df4d76bd948d9e8fdff21d"
+ },
+ "examples/electrothermal_3d_cubic.py": {
+  "purpose": "Two-way DC heating on a small cubic network. Print a JSON report to stdout.",
+  "status": "active",
+  "symbols": [
+   "_reference",
+   "run_example"
+  ],
+  "sha256": "76db2df95785b376457813c5943c63b4937e943c29cdec15ea6e43de83633582"
+ },
+ "tests/test_electrothermal_3d_cubic.py": {
+  "purpose": "Run the spatial DC-heating example and check its output contract.",
+  "status": "active",
+  "symbols": [
+   "ElectrothermalCubicExampleTest"
+  ],
+  "sha256": "ee44922063b46ac61cee27f488fb9b62e0a1836894059f0e306872f4f4941e7a"
  }
 }
