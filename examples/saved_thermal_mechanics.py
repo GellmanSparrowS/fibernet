@@ -3,10 +3,13 @@
 The mechanics JSON must supply profile, length_unit, E_Pa,
 expansion_alpha_per_K, stress_free_temperature_K, constraints, optional loads.
 No electrical or thermal solver is called. Existing output files are refused.
+A successful solve publishes one complete JSON file to a new destination.
 """
 import argparse
 import json
+import os
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
 def _id_mapping(value, name):
@@ -31,8 +34,17 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.solve and not args.output:
         parser.error('--solve requires --output')
-    if args.output and Path(args.output).exists():
+    target = Path(args.output) if args.output else None
+    if target is not None and os.path.lexists(target):
         parser.error('output exists; choose a new path')
+    if args.solve:
+        try:
+            parent = target.parent.resolve(strict=True)
+            if not parent.is_dir():
+                parser.error('output parent must be an existing directory')
+        except (OSError, RuntimeError) as exc:
+            parser.error(f'output parent must be an existing directory: {exc}')
+        target = parent / target.name
     from fibernet import StructureGraph
     from fibernet.sim.saved_temperature import read_saved_thermal_json, prepare_saved_temperature
     graph = StructureGraph.load_json(args.graph)
@@ -49,12 +61,21 @@ def main(argv=None):
         return 0
     for name in ('expansion_alpha_per_K', 'constraints', 'loads'):
         if name in mechanical: mechanical[name] = _id_mapping(mechanical[name], name)
-    # Reserve the output before running mechanics so another user's existing
-    # result can never be overwritten after a physical computation.
-    with Path(args.output).open('x', encoding='utf-8') as stream:
-        result = frame.solve(graph, **mechanical)
-        json.dump(result, stream, indent=2, allow_nan=False)
-        stream.write('\n')
+    result = frame.solve(graph, **mechanical)
+    # Link only a completely serialized file. A concurrent winner is not
+    # replaced, and all private staging is cleaned up even on failure.
+    with TemporaryDirectory(prefix='.saved-thermal-', dir=target.parent) as scratch:
+        staged = Path(scratch) / 'snapshot.json'
+        with staged.open('x', encoding='utf-8') as stream:
+            json.dump(result, stream, indent=2, allow_nan=False)
+            stream.write('\n')
+        try:
+            os.link(staged, target)
+        except FileExistsError:
+            parser.error('output exists; choose a new path')
+        except OSError as exc:
+            parser.error(f'cannot publish output without overwrite; '
+                         f'use a destination filesystem supporting hard links: {exc}')
     return 0
 
 
