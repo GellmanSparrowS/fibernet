@@ -991,7 +991,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "29ae839fa6acd7259762ee560aa9e992fd19882d43ba28efa983aeffe1efe245"
+  "sha256": "a2f601046de8637c1cbb053f51e703356bf03beafa85159376e3d2c547417b94"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -6333,5 +6333,13 @@
    "IsolatedBCCExampleTests"
   ],
   "sha256": "43b56ba5c9fb5788f6400d94a30eff32f7c2616cd5a8e4e4df8b99f23371a462"
+ },
+ "tests/test_fem_3d_prescribed_width.py": {
+  "purpose": "Prevent a 3D prescribed displacement from constraining a different node.",
+  "status": "active",
+  "symbols": [
+   "FEM3DPrescribedWidthTests"
+  ],
+  "sha256": "01bb3163b79c12a5018fb0701e1d316c97220f9c0da54c53fa157e381a273413"
  }
 }

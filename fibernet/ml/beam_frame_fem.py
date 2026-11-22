@@ -951,6 +951,9 @@ class BeamFrameFEM:
         beam. Tetrahedral and other volume-element meshes are not supported.
         forces: None (zero loads), or an exact (n_nodes, 3) array [Fx, Fy, Fz].
         Applied nodal moments are unsupported; extra columns raise ValueError.
+        prescribed_disp maps node rows to a prefix of (ux, uy, uz, rx, ry, rz).
+        Omitted components are not prescribed by this entry. More than six
+        components for one node raise ValueError before stiffness assembly.
         edge_materials follows solve_2d's original-row, isotropic and unit
         contract. Derived per-edge G also controls torsional stiffness.
         beam_energy includes axial, bending and torsional strain energy from
@@ -983,7 +986,17 @@ class BeamFrameFEM:
         self._validate_force_shape(forces, node_pos.shape[0], 3)
         
         self._validate_nodes(node_pos.shape[0], fixed_nodes, prescribed_disp)
-        
+
+        from itertools import islice
+        prescribed_rows = []
+        for node, disp in prescribed_disp.items():
+            values = tuple(islice(disp, 7))
+            if len(values) > 6:
+                raise ValueError(
+                    f'3-D FEM prescribed_disp for node row {node} must contain at most six components'
+                )
+            prescribed_rows.append((node, values))
+
         materials = self._snapshot_edge_materials(edge_materials, edge_index.shape[1])
         edge_list = self._deduplicate_edges(edge_index) if deduplicate else np.arange(edge_index.shape[1])
         n_nodes = node_pos.shape[0]
@@ -1052,7 +1065,7 @@ class BeamFrameFEM:
         for node in fixed_nodes:
             for k in range(6):
                 dof = 6*int(node)+k; fixed_dofs.add(dof); prescribed_dof_values[dof] = 0.0
-        for node, disp in prescribed_disp.items():
+        for node, disp in prescribed_rows:
             for k, val in enumerate(disp):
                 dof = 6*int(node)+k; fixed_dofs.add(dof); prescribed_dof_values[dof] = val
         
