@@ -1,27 +1,27 @@
-# FiberNet 4.10.0
+# FiberNet 4.10.1
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.10.0
+## Changes in 4.10.1
 
-- Prescribe a measured grip displacement in a linear Tet4 solve. Specify
-  signed metres for selected axes by stable node ID, alone or with nodal
-  forces. The solver reports signed reactions and checks elastic energy
-  against the combined work of applied forces and moving supports.
-- The source distribution includes a runnable same-stroke comparison of
-  three material layouts on one joined-cylinder mesh. It does not require
-  Gmsh or Meshio; the standalone script is not installed by the wheel.
+- `graph_batch` refuses unordered graph, graph ID, and feature-name inputs
+  instead of accepting a variable graph-to-ID pairing or feature column order.
+  Use corresponding lists, tuples, or ordered iterators.
+- The source distribution adds a bounded local-refinement example for the
+  fitted Tet4 junction and fixes retrying failed saved-temperature mechanics
+  exports. These examples are not installed by the wheel.
 
-See the [release notes and exact example command](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_10_0.md).
+See the [4.10.1 release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_10_1.md)
+and the [prescribed-displacement guide from 4.10.0](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_10_0.md).
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.10.0"
+python -m pip install "fibernet==4.10.1"
 ```
 
 Run the installed example from any directory:
@@ -39,8 +39,8 @@ From an empty directory, download the matching source distribution to get the
 standalone example without cloning the repository:
 
 ```bash
-python -m pip download --no-deps --no-binary=fibernet "fibernet==4.10.0"
-python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.10.0.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.10.0/' + p).read()); t.close()"
+python -m pip download --no-deps --no-binary=fibernet "fibernet==4.10.1"
+python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.10.1.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.10.1/' + p).read()); t.close()"
 python tet4_static_welded_junction.py --tier quick
 python tet4_static_welded_junction.py --tier reference
 ```
@@ -69,10 +69,10 @@ published individually without overwrite; the pair is not transactional.
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.10.0"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.10.0"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.10.0"       # experimental fracture backend
-python -m pip install "fibernet==4.10.0" "meshio==5.3.5" # Tet4 mesh I/O and result export
+python -m pip install "fibernet[ml]==4.10.1"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.10.1"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.10.1"       # experimental fracture backend
+python -m pip install "fibernet==4.10.1" "meshio==5.3.5" # Tet4 mesh I/O and result export
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.
