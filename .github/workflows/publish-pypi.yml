@@ -369,7 +369,7 @@ jobs:
                   result = subprocess.run([sys.executable, '-I', '-S', '-c', code, str(timeout_s)],
                                           capture_output=True, text=True, encoding='utf-8',
                                           timeout=timeout_s, check=True)
-              except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as error:
+              except subprocess.CalledProcessError as error:
                   raise RuntimeError('Simple index request failed; not a missing-release retry') from error
               return json.loads(result.stdout)
 
@@ -436,8 +436,19 @@ jobs:
                      '--no-cache-dir', '--retries', '0', '--no-color', 'install', '--verbose',
                      '--index-url', 'https://pypi.org/simple', '--only-binary=:all:',
                      '--report', str(report), f"fibernet=={manifest['version']}"]
+              retried_simple_timeout = False
               while True:
-                  wait_for_simple_index(manifest, deadline)
+                  try:
+                      wait_for_simple_index(manifest, deadline)
+                  except subprocess.TimeoutExpired as error:
+                      # One retry of a silent stalled read, not a missing-release
+                      # retry. Keep the same overall Simple/pip deadline.
+                      if retried_simple_timeout or error.stdout or error.stderr:
+                          raise RuntimeError('Simple index request timed out; not a missing-release retry') from error
+                      remaining_time(deadline)
+                      retried_simple_timeout = True
+                      print('Official Simple index read timed out; retrying once', flush=True)
+                      continue
                   try:
                       attempt = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                                text=True, encoding='utf-8', errors='replace',
