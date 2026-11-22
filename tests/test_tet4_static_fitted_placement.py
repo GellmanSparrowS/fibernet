@@ -217,3 +217,47 @@ def test_fixed_cap_cli_rejects_other_modes_before_prepare(monkeypatch, capsys, o
     with pytest.raises(SystemExit, match='2'):
         example.main(['--fixed-cap-compliance', *other])
     assert ('cannot be combined' if other[0] == '--load-axis' else 'not allowed') in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('extra', [
+    ['--preflight'], ['--compliance-sensitivity'], ['--fixed-cap-compliance'],
+    ['--load-axis', 'x'], ['--load-axis', 'z'],
+])
+def test_stroke_cli_rejects_other_controls_before_preparing(monkeypatch, capsys, extra):
+    monkeypatch.setattr(example, '_prepare', lambda **_: pytest.fail('must reject before prepare'))
+    with pytest.raises(SystemExit) as e:
+        example.main(['--fixed-cap-stroke-m=1e-9', *extra])
+    assert e.value.code == 2
+
+
+@pytest.mark.parametrize('stroke', ['0', '-0', 'nan', 'inf', '-inf'])
+def test_stroke_requires_finite_nonzero_m(monkeypatch, capsys, stroke):
+    monkeypatch.setattr(example, '_prepare', lambda **_: pytest.fail('must reject before prepare'))
+    with pytest.raises(SystemExit) as e:
+        example.main(['--fixed-cap-stroke-m='+stroke])
+    assert e.value.code == 2 and 'finite nonzero metres' in capsys.readouterr().err
+
+
+def test_negative_stroke_prepares_guided_x_cap_without_any_traction(monkeypatch, capsys):
+    monkeypatch.setattr(example, '_cap_loads', lambda *_: pytest.fail('must not construct nodal traction'))
+    seen = []
+    real = example.inspect_static_tet4_admission
+    def capture(b, *, fixed_dofs_by_id, prescribed_displacements_m_by_id):
+        seen.append(prescribed_displacements_m_by_id)
+        return real(b, fixed_dofs_by_id=fixed_dofs_by_id,
+                    prescribed_displacements_m_by_id=prescribed_displacements_m_by_id)
+    monkeypatch.setattr(example, 'inspect_static_tet4_admission', capture)
+    def verify(bundles, holds, motion, stroke):
+        b = bundles['uniform']
+        p = dict(zip(map(int, b.node_ids), b.points))
+        assert motion is seen[0] and len(motion) == len(holds) == 62
+        assert all(p[n][0] == 1.5 and v == {'x': -1e-9} for n, v in motion.items())
+        assert all(p[n][0] == -1.5 and v == ('x','y','z') for n, v in holds.items())
+        assert stroke == -1e-9 and list(bundles) == ['uniform', 'junction', 'arm']
+        return dict(probe=True)
+    monkeypatch.setattr(example, '_fixed_cap_stroke', verify)
+    example.main(['--fixed-cap-stroke-m=-1e-9'])
+    out = json.loads(capsys.readouterr().out)
+    assert out['solve_performed'] and out['results']=={'probe': True}
+    assert out['stroke_m']==-1e-9 and out['tet4_preflight']['factor_entries']==1514430
+    assert not {'loaded_cap_nodes','traction_Pa','total_force_N','fixed_cap_compliance'} & out.keys()

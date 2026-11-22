@@ -4,7 +4,7 @@ from dataclasses import asdict
 from hashlib import sha256
 from itertools import combinations
 import json
-from math import pi
+from math import isfinite, pi
 from pathlib import Path
 
 import numpy as np
@@ -51,7 +51,7 @@ def _cap_loads(bundle, faces, traction_Pa, total_force_N, axis):
     return loads, force
 
 
-def _prepare(*, load_axis='x', fractions_by_placement=None, force_bases=None):
+def _prepare(*, load_axis='x', fractions_by_placement=None, force_bases=None, stroke_control=None):
     data = _fixture()
     nodes, cells = data['nodes_id_xyz'], data['cells_id_node_ids']
     points = np.asarray([r[1:] for r in nodes], dtype=np.float64)
@@ -69,8 +69,6 @@ def _prepare(*, load_axis='x', fractions_by_placement=None, force_bases=None):
     cap = points[[[node_rows[n] for n in face] for face in loaded_faces]] * 1e-3
     area_m2 = float(np.linalg.norm(
         np.cross(cap[:, 1] - cap[:, 0], cap[:, 2] - cap[:, 0]), axis=1).sum() / 2)
-    total_force_N = data['total_force_N']
-    traction_Pa = total_force_N / area_m2
 
     # Fractions are volume intersections, not centroid labels. Refuse any
     # accidental footprint on tets sharing a node with either end cap.
@@ -109,9 +107,25 @@ def _prepare(*, load_axis='x', fractions_by_placement=None, force_bases=None):
                            'cells_with_nonzero_fraction': int(np.count_nonzero(phi))}
 
     base = bundles['uniform']
-    plan = inspect_static_tet4_admission(base, fixed_dofs_by_id=holds)
+    if stroke_control is None:
+        plan = inspect_static_tet4_admission(base, fixed_dofs_by_id=holds)
+    else:
+        stroke_m, motion = stroke_control
+        motion.update({int(n): {'x': stroke_m} for face in loaded_faces for n in face})
+        plan = inspect_static_tet4_admission(
+            base, fixed_dofs_by_id=holds, prescribed_displacements_m_by_id=motion)
     if not plan.within_factor_budget:
         raise ValueError('fitted mesh exceeds the Tet4 structural factor-entry budget')
+    if stroke_control is not None:
+        output = {'input_sha256': FIXTURE_SHA256, 'tet4_preflight': asdict(plan),
+                  'fixed_cap_nodes': len(holds), 'actuated_cap_nodes': len(motion),
+                  'actuated_cap_area_m2': area_m2, 'stroke_m': stroke_m,
+                  'poisson_ratio': data['poisson_ratio'], 'base_E_Pa': base_E,
+                  'fully_stiffened_E_Pa': data['limit_E_Pa'],
+                  'sphere_radius_mm': data['sphere_radius_mm'], 'placements': placement}
+        return bundles, holds, {}, None, output
+    total_force_N = data['total_force_N']
+    traction_Pa = total_force_N / area_m2
     loads, force = _cap_loads(base, loaded_faces, traction_Pa, total_force_N, axis_index)
     if force_bases is not None:
         if load_axis != 'x':
@@ -266,6 +280,41 @@ def _fixed_cap_compliance(bundles, holds, force_bases, force_N):
     return _fixed_cap_summary(works, force_N)
 
 
+def _fixed_cap_stroke(bundles, holds, motion, stroke_m):
+    results = {}
+    for name, bundle in bundles.items():
+        r = solve_static_tet4(bundle, fixed_dofs_by_id=holds, forces_by_id={},
+                              prescribed_displacements_m_by_id=motion, return_cell_fields=True)
+        np.testing.assert_array_equal(r.node_ids, bundle.node_ids)
+        np.testing.assert_array_equal(r.cell_fields.cell_ids, bundle.cell_ids)
+        actuator = np.isin(r.node_ids, list(motion))
+        support = np.isin(r.node_ids, list(holds))
+        np.testing.assert_array_equal(r.displacement_m[actuator, 0], stroke_m)
+        np.testing.assert_array_equal(r.displacement_m[support], 0.)
+        np.testing.assert_array_equal(r.fixed_mask[actuator], np.tile([True, False, False], (len(motion),1)))
+        actuator_x_N = float(r.reaction_N[actuator, 0].sum())
+        support_x_N = float(r.reaction_N[support, 0].sum())
+        stiffness_N_per_m = actuator_x_N / stroke_m
+        if not isfinite(stiffness_N_per_m) or not stiffness_N_per_m > 0.:
+            raise ValueError('expected positive finite stiffness for this prescribed stroke')
+        half_actuator_work_J = .5 * actuator_x_N * stroke_m
+        fields = r.cell_fields
+        reconstructed_J = .5 * float(np.einsum('i,ijk,ijk->', fields.volume_m3, fields.stress_Pa, fields.strain))
+        np.testing.assert_allclose([r.strain_energy_J, r.half_external_work_J, reconstructed_J],
+                                   half_actuator_work_J, rtol=1e-8, atol=0.)
+        net_force_N = r.reaction_N.sum(axis=0)
+        net_moment_N_m = np.cross(bundle.points*1e-3, r.reaction_N).sum(axis=0)
+        # Scale residual tolerances to the actual force/stroke, not the old 1 mN.
+        np.testing.assert_allclose(net_force_N, 0., atol=2e-10*abs(actuator_x_N), rtol=0.)
+        np.testing.assert_allclose(net_moment_N_m, 0., atol=3e-13*abs(actuator_x_N), rtol=0.)
+        results[name] = {'actuator_force_x_N': actuator_x_N, 'support_force_x_N': support_x_N,
+                         'stiffness_N_per_m': stiffness_N_per_m,
+                         'strain_energy_J': r.strain_energy_J, 'recovered_cell_energy_J': reconstructed_J,
+                         'half_actuator_work_J': half_actuator_work_J, 'net_force_N': net_force_N.tolist(),
+                         'net_moment_N_m': net_moment_N_m.tolist()}
+    return results
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
@@ -275,19 +324,31 @@ def main(argv=None):
                       help='include endpoint and average normalized compliance slopes')
     mode.add_argument('--fixed-cap-compliance', action='store_true',
                       help='solve three load bases per placement on the fixed x end caps')
+    mode.add_argument('--fixed-cap-stroke-m', type=float, metavar='METRES',
+                      help='impose one signed nonzero axial stroke on the positive x cap')
     parser.add_argument('--load-axis', choices=LOAD_AXES,
                         help='clamp the negative cap and pull the positive cap on this axis (default: x)')
     args = parser.parse_args(argv)
     if args.fixed_cap_compliance and args.load_axis is not None:
         parser.error('--fixed-cap-compliance cannot be combined with --load-axis')
+    stroke = args.fixed_cap_stroke_m
+    if stroke is not None and (not isfinite(stroke) or stroke == 0.):
+        parser.error('--fixed-cap-stroke-m requires finite nonzero metres')
+    if stroke is not None and args.load_axis is not None:
+        parser.error('--fixed-cap-stroke-m cannot be combined with --load-axis')
     try:
         prepare_options = {'load_axis': args.load_axis or 'x'}
         if args.fixed_cap_compliance:
             prepare_options['force_bases'] = {}
         if args.compliance_sensitivity:
             prepare_options['fractions_by_placement'] = {}
+        if stroke is not None:
+            motion = {}
+            prepare_options['stroke_control'] = (stroke, motion)
         bundles, holds, loads, force, output = _prepare(**prepare_options)
-        if args.fixed_cap_compliance:
+        if stroke is not None:
+            output['results'] = _fixed_cap_stroke(bundles, holds, motion, stroke)
+        elif args.fixed_cap_compliance:
             output['fixed_cap_compliance'] = _fixed_cap_compliance(
                 bundles, holds, prepare_options['force_bases'], output['total_force_N'])
         elif not args.preflight:
