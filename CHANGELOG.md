@@ -1,3 +1,12 @@
+## [4.10.0]
+
+- Prescribe signed Cartesian displacement in metres by stable node ID in
+  Tet4 static solves, structural preflight and optional result VTU export.
+  Existing force-only calls and mesh formats are unchanged.
+- Compare three material layouts on the same joined-cylinder mesh under
+  the same imposed axial stroke using the fitted source example.
+- See [4.10.0 release notes](docs/RELEASE_4_10_0.md).
+
 ## [4.9.2]
 
 - Reopen completed rotational BPM task folders saved without restart on
