@@ -1,3 +1,9 @@
+## [4.10.5]
+
+- Reject a 3D beam-frame prescribed displacement with more than six components
+  before stiffness assembly, so an extra component cannot constrain a different node.
+- See [4.10.5 release notes](docs/RELEASE_4_10_5.md).
+
 ## [4.10.4]
 
 - Accept the NumPy boolean boundary-face flags emitted by native tiled graphs
