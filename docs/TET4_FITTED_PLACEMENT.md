@@ -96,3 +96,29 @@ A near-zero result within the numerical margin is inconclusive.
 This result is for the fixed mesh, material model and uniform
 traction on one cap. It is not an angular sweep, a bound for other
 spatial load patterns, or a mesh-convergence result.
+
+## Impose the same axial stroke on both material placements
+
+For a FiberNet version that provides prescribed Tet4 displacements
+(not 4.9.2), run from the source checkout:
+
+```bash
+python examples/tet4_static_fitted_placement.py --fixed-cap-stroke-m=3.291840836e-9
+```
+
+This opt-in runs **three** solves (uniform, junction, arm) at the same
+signed stroke in metres. Negative values impose compression; use the
+`--fixed-cap-stroke-m=-3.291840836e-9` form for a negative stroke.
+The −x cap is fixed in x, y and z. Each +x cap node moves by the given
+amount in x, while its y and z components are free. There are no
+separately applied nodal loads. This is not the uniform-traction
+boundary condition used in the other modes. The stroke option cannot
+be combined with `--load-axis` or other mode options.
+
+The JSON reports the signed x forces exerted **on the mesh** by the +x
+actuator and −x support (N), axial stiffness (actuator force divided by
+stroke, N/m), and energy (J). Half actuator work is half the actuator
+force times the stroke, for proportional loading from zero. It is
+checked against integrated elastic energy and force/moment balance.
+The three layouts share the same fitted mesh. The comparison does not
+establish strength, buckling or mesh convergence.

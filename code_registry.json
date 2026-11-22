@@ -6132,5 +6132,44 @@
    "test_large_coincident_applied_load_does_not_cancel_mechanical_work"
   ],
   "sha256": "dd6e28f8cd7ef473af7ad01839ef671d1d9f1d5991b413cb06d2797607c6a055"
+ },
+ "examples/tet4_static_fitted_placement.py": {
+  "purpose": "Compare two equal-volume stiffening placements on one fitted Tet4 mesh.",
+  "status": "active",
+  "symbols": [
+   "_fixture",
+   "_transverse_cap_faces",
+   "_cap_loads",
+   "_prepare",
+   "_solve",
+   "_compliance_sensitivity",
+   "_fixed_cap_summary",
+   "_fixed_cap_compliance",
+   "_fixed_cap_stroke",
+   "main"
+  ],
+  "sha256": "477a56e91a33ba518c7c486193e12a6b5b41bc97e9b863fada0afd4354f3b4ca"
+ },
+ "tests/test_tet4_static_fitted_placement.py": {
+  "purpose": "Input, no-solve preflight, and refusal tests for the fitted example.",
+  "status": "active",
+  "symbols": [
+   "test_fitted_preflight_uses_public_budget_without_solving",
+   "test_fitted_rejects_mismatched_frozen_input",
+   "test_fitted_rejects_failed_budget_before_default_solve",
+   "test_fitted_transverse_preflight_without_solving",
+   "test_fitted_refuses_unknown_load_axis_before_preparing",
+   "test_fitted_sensitivity_reuses_three_solutions_and_normalizes_to_uniform",
+   "test_fitted_sensitivity_cannot_run_with_preflight",
+   "test_fixed_cap_uses_same_read_only_weights_and_only_x_end_caps",
+   "_work_fixture",
+   "test_fixed_cap_nonzero_cross_work_and_generalized_extrema",
+   "test_fixed_cap_bad_reciprocity_and_uncertified_ranking",
+   "test_fixed_cap_cli_rejects_other_modes_before_prepare",
+   "test_stroke_cli_rejects_other_controls_before_preparing",
+   "test_stroke_requires_finite_nonzero_m",
+   "test_negative_stroke_prepares_guided_x_cap_without_any_traction"
+  ],
+  "sha256": "d932ee09cf340693c05b68a155d896e54b6f1d9c99fc27c78a3921507a70f229"
  }
 }
