@@ -4096,7 +4096,7 @@
   "symbols": [
    "PhysicalDatasetWorkflow"
   ],
-  "sha256": "fd9b811f629ce7a5c039f13d8c1ce07e2c429f4f1de51b534d7940e875e91ee9"
+  "sha256": "73111748395d0dfc6f0eb94497158bd21e9da8eaba4f501c9a95928c0a1248e1"
  },
  "manuscript/scripts/build_figures_ppt.py": {
   "purpose": "Build editable working figures for the FiberNet software Methods draft.",
@@ -6280,5 +6280,13 @@
    "FiberCenterlineMasks"
   ],
   "sha256": "f091e4e5460632fa997ae8100a11ac6b0e629bb92693a149e84e5102c9601a2d"
+ },
+ "tests/test_physical_dataset_resume_example.py": {
+  "purpose": "Resume semantics of the public physical-label example (no model or solver).",
+  "status": "active",
+  "symbols": [
+   "PhysicalDatasetResumeExampleTests"
+  ],
+  "sha256": "eaca627272bb64022aa5e4a4433a2327dd2761f0e28d121d8142f736d61d6510"
  }
 }

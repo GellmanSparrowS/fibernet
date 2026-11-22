@@ -118,7 +118,7 @@ Install the optional ML dependencies with `python -m pip install "fibernet[ml]==
 
 ### Generate resumable physical labels
 
-To create the physical-label dataset used for a later regressor, run `python -m examples.physical_dataset_workflow --output-dir demo_labels --samples 8`. The [resumable library-only example](../examples/physical_dataset_workflow.py) saves 14 geometry features and three reduced-solver labels after each case; repeating the command resumes the checkpoint. `from fibernet.ml import PlanarPhysicalDataset` exposes the same stream core as the APP. Its [sampling, target and provenance definition](METHODS_PHYSICAL_DATASET_UNIFIED.md) explains why these values are numerical labels rather than measurements.
+To create the physical-label dataset used for a later regressor, run `python -m examples.physical_dataset_workflow --output-dir demo_labels --samples 8`. The [resumable library-only example](../examples/physical_dataset_workflow.py) saves 14 geometry features and three reduced-solver labels after each case; repeating the command resumes the checkpoint. `--samples` is the minimum total, not a request to truncate: if the checkpoint already has more rows, they are retained and the summary reports the actual count. `from fibernet.ml import PlanarPhysicalDataset` exposes the same stream core as the APP. Its [sampling, target and provenance definition](METHODS_PHYSICAL_DATASET_UNIFIED.md) explains why these values are numerical labels rather than measurements.
 
 ### Search a target stretch curve
 
