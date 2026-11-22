@@ -40,6 +40,61 @@ Mass types group only exactly equal normalized binary64 kg values, without toler
 
 [`pair_style none`](https://docs.lammps.org/pair_none.html) avoids an unused pair-force neighbor list. An explicit `maximum_bond_length_m` supplies communication reach; every saved integration step must remain within it and strictly inside the declared box. This is a one-rank qualification, not a guarantee for arbitrary deformation or MPI. Pair-free execution alone does not imply scalability; type tables, bonds, parsing and every-step trajectory output still consume resources.
 
+### Supply two materials as explicit axial spring coefficients
+
+For a straight, uniform circular rod at small axial strain, the
+linearization about its independently specified stress-free length
+`L0_m` has stiffness `k = E * pi * r_m**2 / L0_m` in N/m. This is an
+explicit modeling choice, not a conversion performed by FiberNet.
+Use Young's modulus in Pa, radius and stress-free length in m, and one
+`HarmonicBond` per stable **edge ID**. Do not substitute the current
+endpoint distance for `L0_m`: that would erase any initial extension
+or compression.
+
+This small three-site example gives two rods different Young's moduli.
+The graph coordinates and radii are in mm. Its current chords are
+1.01 mm and 1.485 mm; the declared stress-free lengths are 1.00 mm
+and 1.50 mm, respectively.
+
+```python
+from math import pi
+from fibernet import StructureGraph
+from fibernet.integrations import HarmonicBond, RunSpec, prepare_harmonic_beads
+
+graph = StructureGraph.from_dict({
+    "version": "3.1", "dimension": 3,
+    "nodes": [{"id": 12, "position": [0., 0., 0.]},
+              {"id": 5, "position": [1.01, 0., 0.]},
+              {"id": 71, "position": [1.01, 0., 1.485]}],
+    "edges": [{"id": 80, "node_i": 12, "node_j": 5, "radius": 0.1,
+               "material": {"youngs_modulus": 2e6}},
+              {"id": 19, "node_i": 5, "node_j": 71, "radius": 0.1,
+               "material": {"youngs_modulus": 6e6}}],
+})
+rest_m = {80: 1.00e-3, 19: 1.50e-3}  # independently declared, not current chords
+bonds = {
+    edge_id: HarmonicBond(
+        stiffness_N_per_m=edge.material.youngs_modulus * pi * (edge.radius * 1e-3)**2 / rest_m[edge_id],
+        equilibrium_length_m=rest_m[edge_id],
+    )
+    for edge_id, edge in graph.edges.items()
+}
+prepared = prepare_harmonic_beads(
+    graph, length_unit="mm", maximum_bond_length_m=0.002,
+    masses_kg={node_id: 1e-9 for node_id in graph.nodes},
+    bonds=bonds, run=RunSpec(1e-7, 0, 1, ((-0.002, 0.003),) * 3),
+)
+print(prepared.manifest()["bond_to_edge_id"])
+```
+
+This prepares an SI deck without starting an engine. Use the manifest's
+`bond_to_edge_id` to join the deck's bond rows to the graph; in this
+harmonic deck each bond has its own type and `bond_coeff` writes
+`K = k / 2` in N/m and `L0_m` in m. A negative signed axial force
+`k * (L - L0)` means compression under this model. The mapping does
+not infer bead masses or model rod bending, buckling, curved members,
+BPM bonds, or chemistry.
+
 ## Explicit runtime and lifecycle
 
 Two explicit CLI profiles are supported: `RuntimeSpec(mode="cli", ...)` for the qualified MPI wheel-style layout, and `RuntimeSpec(mode="cli_serial_static", ...)` for the separately verified static executable described below. Linked Python-engine mode and automatic provider discovery fail closed. Both profiles restrict native execution to Linux x86_64. The `cli` profile requires native `lammps/lmp`, `liblammps.so`, `liblammps.so.0`, bundled `lammps.libs` libraries and an explicit existing MPICH `libmpi.so.12` directory. Neither profile is a generic adapter for every system installation.
