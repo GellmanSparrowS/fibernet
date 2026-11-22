@@ -135,6 +135,27 @@ contact or mesh convergence. The existing explicit uniform viscoelastic
 
    python -m pytest tests/test_fem_heterogeneous_contract.py tests/test_fem_heterogeneous_physics.py -q
 
+Small 3D graph workflow
+-----------------------
+
+For a generated 3D graph, run the repository script (from a checkout or
+extracted source distribution; the base FiberNet install is enough)::
+
+    python examples/heterogeneous_3d_graph_workflow.py --output mixed-3d-results
+
+Choose a new output directory with an existing parent. The script assigns 1
+and 4 GPa material records by stable edge ID on a 12-node welded cubic graph,
+requests a 0.1% linear x stretch, and checks axial forces and full strain energy
+against four identical two-bar series paths. The fraction ``pct=1/3`` selects
+four nodes at each end of this particular graph; do not reuse it as a general
+face selector.
+
+Reload the separate artifacts with ``StructureGraph.load_json(...)`` and
+``SimResult.load(...)``. The graph stores the original geometry and materials,
+not a deformed geometry or a restart checkpoint. Join result rows using
+``metadata["node_ids"]`` or ``metadata["edge_ids"]`` rather than treating a graph
+ID as an array index.
+
 FCC 3D material-layout comparison
 ---------------------------------
 
