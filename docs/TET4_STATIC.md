@@ -212,6 +212,40 @@ means a small 1% modulus increase lowers compliance by about 0.08% at
 that material state. It is not a prediction for a large modulus change,
 a different load or mesh, or for material strength.
 
+## Compare two axial voxel phases at fixed stroke
+
+With FiberNet 4.10.2 installed, run from a checkout containing this example:
+
+```bash
+python examples/tet4_static_welded_junction.py --axial-phase --tier quick --preflight
+python examples/tet4_static_welded_junction.py --axial-phase --tier quick
+python examples/tet4_static_welded_junction.py --axial-phase --tier reference
+```
+
+This opt-in compares the native sampling lattice with a half-cell shift in
+x only. The CAD does not move. Half-width end cells keep the cap planes at
+x = −1.5 and +1.5 mm. Within each tier, both phases must have the same
+physical grip triangles. Both use homogeneous material (E = 1 GPa,
+ν = 0.30), clamp the −x cap in all directions, and move the +x cap by
++3.291840836 nm in x only. The +x cap can move laterally, and there are no
+separately applied forces. This is not the example's default traction test.
+
+In axial-phase mode, `--preflight` emits the mesh and structural budget
+checks for both phases without solving. A solve reports actuator and support
+forces, stiffness, strain energy, independent energy quadrature and the
+force and moment balances. The mode writes no VTU files.
+
+| Tier (cell spacing) | Area per cap | Actuator force, native → shifted | Strain energy, native → shifted | Stiffness change |
+| --- | ---: | ---: | ---: | ---: |
+| Quick (0.25 mm) | 0.75000 mm² | 0.972509 → 0.950075 mN | 1.600672 → 1.563748 pJ | −2.31% |
+| Reference (0.1875 mm) | 0.84375 mm² | 1.090175 → 1.079340 mN | 1.794341 → 1.776508 pJ | −0.99% |
+
+Compare phases **within** one row: the two tiers have different cap
+footprints. This measures the combined change in the voxelized geometry
+and tetrahedral discretization for one axial shift. It is not a mesh
+convergence test, a bound over other phases, or a comparison with a
+body-fitted geometry. Overall volume is not a correction factor for stiffness.
+
 ## View a static result in ParaView
 
 To compare both welded-junction materials without writing your own script,
