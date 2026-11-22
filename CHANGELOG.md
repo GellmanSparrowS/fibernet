@@ -1,3 +1,12 @@
+## [4.10.4]
+
+- Accept the NumPy boolean boundary-face flags emitted by native tiled graphs
+  when preparing isolated Taichi requests. The request still uses exact JSON
+  booleans; malformed flags remain errors, and the solver is unchanged.
+- Clarify that reading the result does not require Taichi in the caller; the
+  worker still requires the qualified runtime.
+- See [4.10.4 release notes](docs/RELEASE_4_10_4.md).
+
 ## [4.10.3]
 
 - Restore the default re-entrant honeycomb and all six documented historical
