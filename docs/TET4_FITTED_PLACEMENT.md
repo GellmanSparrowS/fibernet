@@ -122,3 +122,31 @@ force times the stroke, for proportional loading from zero. It is
 checked against integrated elastic energy and force/moment balance.
 The three layouts share the same fitted mesh. The comparison does not
 establish strength, buckling or mesh convergence.
+
+## Check local refinement without changing the represented geometry
+
+With FiberNet 4.10.0 or later installed, use the standalone diagnostic from
+the source checkout or the unpacked source distribution that contains it:
+
+```bash
+python examples/tet4_static_fitted_nested.py
+python examples/tet4_static_fitted_nested.py --solve
+```
+
+The first command only checks geometry and reports budget admission. The
+second runs four solves if the checks pass: center and arm stiffening, each on the original
+2,241-tetrahedron grid and the locally refined 2,534-tetrahedron grid.
+Both use the same +3.29184 nm axial stroke with transverse motion free at
+the moving cap, the same fixed opposite cap, and no external nodal forces.
+
+The script uses the existing public fixture next to the example. It bisects
+72 fixed interior edge neighborhoods, keeps all exterior triangles and
+original node IDs, and gives every child its parent's material so the
+represented material field does not change. The JSON reports coarse/fine
+reactions, stiffness and strain energy. It checks that the energy drop
+matches the strain energy of the difference between the prolonged coarse
+and fine displacements. Gmsh and Meshio are not needed.
+
+This comparison isolates one local discretization change on the frozen
+polyhedral model. It is not a mesh convergence study and does not assess
+errors in the curved CAD boundary or the spherical material interface.

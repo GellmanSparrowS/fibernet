@@ -6171,5 +6171,29 @@
    "test_negative_stroke_prepares_guided_x_cap_without_any_traction"
   ],
   "sha256": "d932ee09cf340693c05b68a155d896e54b6f1d9c99fc27c78a3921507a70f229"
+ },
+ "examples/tet4_static_fitted_nested.py": {
+  "purpose": "Check a local nested refinement of the frozen same-stroke Tet4 junction.",
+  "status": "active",
+  "symbols": [
+   "_faces",
+   "_volume_mm3",
+   "_nested",
+   "_strain",
+   "_difference_energy",
+   "_measure",
+   "main"
+  ],
+  "sha256": "827978bba5a478141368c469e2005b7372b1fa0abe85858e3ad2b90c8955a43e"
+ },
+ "tests/test_tet4_static_fitted_nested.py": {
+  "purpose": "Check the frozen nested example without running mechanics.",
+  "status": "active",
+  "symbols": [
+   "test_nested_geometry_ids_and_materials",
+   "test_nested_default_reports_budget_without_solve",
+   "test_nested_rejects_budget_before_opted_in_solves"
+  ],
+  "sha256": "eb5aa262c2e9ce1e6a3d488d57568044e5bf6977eb7bd7794a3ba7ddfedf7a29"
  }
 }
