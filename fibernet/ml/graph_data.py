@@ -5,7 +5,7 @@ Read-only flags prevent ordinary accidental writes, not adversarial mutation.
 """
 import math
 import struct
-
+from collections.abc import Set
 from dataclasses import dataclass
 from numbers import Integral, Real
 from types import MappingProxyType
@@ -211,6 +211,7 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
                 edge_features=(), include_provenance=False):
     """Snapshot graphs without changing IDs, geometry, units or source metadata.
 
+    Graphs, graph IDs and feature names must have an explicit order.
     Nodes use sorted local IDs; physical edges retain insertion order and direction.
     Each physical edge produces forward/reverse messages, including parallel edges.
     Supported opt-in edge features: radius, chord_length, polyline_length.
@@ -231,9 +232,13 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
 
     if type(include_provenance) is not bool:
         raise ValueError('include_provenance must be a bool')
+    if isinstance(graphs, Set):
+        raise ValueError('graphs must be an ordered iterable, not a set')
+    if isinstance(graph_ids, (str, Set)):
+        raise ValueError('graph_ids must be an ordered iterable of graph names')
+    if isinstance(edge_features, (str, Set)):
+        raise ValueError('edge_features must be an ordered iterable of names')
     graphs = tuple(graphs)
-    if isinstance(graph_ids, str):
-        raise ValueError('graph_ids must be a sequence of graph names')
     graph_ids = tuple(graph_ids)
     if len(graph_ids) != len(graphs) or any(type(x) is not str or not x.strip()
                                            for x in graph_ids):
@@ -243,8 +248,6 @@ def graph_batch(graphs, *, graph_ids, length_unit, coordinate_frame,
     for name, value in [('length_unit', length_unit), ('coordinate_frame', coordinate_frame)]:
         if type(value) is not str or not value.strip():
             raise ValueError(name + ' must be an explicit nonempty string')
-    if isinstance(edge_features, str):
-        raise ValueError('edge_features must be a sequence of names')
     names = tuple(edge_features)
     allowed = ('radius', 'chord_length', 'polyline_length')
     if any(type(x) is not str or x not in allowed for x in names) or len(set(names)) != len(names):

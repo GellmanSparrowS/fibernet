@@ -4655,7 +4655,7 @@
    "_material_identity",
    "material_features_from_batch"
   ],
-  "sha256": "6e37a06726885c9a77eabeb18cac7a6a58b8ccb64c1accb6d0406c2c090d34ff"
+  "sha256": "c06a15cc2079af76893d6da5ba36d6db85341ebe182cf9ec8a607e9f7ab8c80f"
  },
  "tests/test_graph_data_nested_masks.py": {
   "purpose": "Reject nested masked geometry before building detached learning inputs.",
@@ -6231,5 +6231,34 @@
    "test_example_reports_unsupported_publication_and_cleans_staging"
   ],
   "sha256": "1edf7c4b59e95e1735d5cac9c44803530797ca7e64d27363e95620d3ca7d0eac"
+ },
+ "tests/test_graph_data.py": {
+  "purpose": "Pure-data fixtures, not physical simulations or learning benchmarks.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "batch",
+   "test_xyz_sparse_parallel_orientation_and_lengths",
+   "test_2d_and_insertion_order",
+   "test_multiple_graphs_local_ids_and_empty",
+   "test_detached_and_normal_write_protection",
+   "test_availability_no_material_or_bc_inference",
+   "test_invalid_features",
+   "test_nonfinite",
+   "test_invalid_ids",
+   "test_bad_identity_shapes_and_metadata",
+   "test_caller_declarations",
+   "test_reject_unordered_positional_inputs",
+   "test_ordered_inputs_bind_slots_and_features_across_hash_seeds",
+   "test_lazy_exports_without_learning_backends",
+   "test_masked_geometry_rejected_before_conversion",
+   "test_radius_must_remain_finite_in_float64",
+   "test_distance_preserves_representable_tiny_and_large_lengths",
+   "test_distance_uses_stable_xyz_and_polyline_sum",
+   "test_unrepresentable_endpoint_distance_rejected",
+   "test_polyline_sum_overflow_rejected_when_segments_are_finite",
+   "test_nonzero_source_must_not_underflow_during_float64_conversion"
+  ],
+  "sha256": "2a8e56d4f5c69cbffafba40bea4ef6e70185d2958c2563c9a4a5ec61551c856e"
  }
 }
