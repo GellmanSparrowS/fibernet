@@ -1,3 +1,10 @@
+## [4.17.0]
+
+- Prescribe a uniform inward heat flux on selected exterior Tet4 triangles
+  using stable node IDs. Positive flux heats the solid; negative flux cools it.
+- See the [4.17.0 release notes](docs/RELEASE_4_17_0.md) for a runnable
+  conduction and heat-balance example.
+
 ## [4.16.0]
 
 - Prescribe steady volumetric heating or cooling by stable cell ID on a
