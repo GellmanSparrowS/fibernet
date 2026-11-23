@@ -1,3 +1,10 @@
+## [4.15.0]
+
+- Solve bounded, steady, source-free heat conduction on a Tet4 mesh with
+  prescribed temperatures and isotropic conductivity by material.
+- See the [4.15.0 release notes](docs/RELEASE_4_15_0.md) for a runnable
+  two-material series example.
+
 ## [4.14.0]
 
 - Export one prescribed-temperature Tet4 solve as an optional VTU
