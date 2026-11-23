@@ -1,3 +1,11 @@
+## [4.12.0]
+
+- Add an opt-in Python API to run a small 3D welded-beam thermoelastic snapshot
+  from a selected frame of a complete local electrothermal JSON archive.
+  The original graph and materials must match; the API does not restart or
+  change the archived simulation. The planar and direct 3D routes are unchanged.
+- See [4.12.0 release notes](docs/RELEASE_4_12_0.md).
+
 ## [4.11.0]
 
 - Add an opt-in experimental Python snapshot for prescribed-temperature

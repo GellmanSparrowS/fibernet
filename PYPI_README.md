@@ -1,27 +1,29 @@
-# FiberNet 4.11.0
+# FiberNet 4.12.0
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.11.0
+## Changes in 4.12.0
 
-- Compute a direct static thermoelastic snapshot of a small welded 3D beam
-  frame with prescribed temperatures, per-edge expansion coefficients, and
-  explicit supports. The opt-in entry point is in
-  `fibernet.sim.thermoelastic_3d`; it does not open a 3D saved-result transfer.
-- The source distribution separately includes a mixed-material 3D beam FEM
-  example and a 3D temperature-dependent DC heating example.
+- Use a complete saved electrothermal JSON file to run one static thermoelastic
+  snapshot of the original small 3D welded beam frame. Select an existing frame
+  and supply the mechanical restraints, thermal expansion coefficients and
+  stress-free reference temperature explicitly.
+- The opt-in Python API checks the saved record and original graph, including
+  materials. An optional trusted SHA-256 pins the file bytes; it does not
+  authenticate the file. The workflow does not restart electrothermal simulation
+  or feed deformation back into it.
 
-See the [4.11.0 release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_11_0.md)
-and the [3D thermoelastic API example](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/THERMOELASTIC_3D.md).
+See the [4.12.0 release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_12_0.md)
+and the [saved 3D electrothermal mechanics guide](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/SAVED_ELECTROTHERMAL_MECHANICS_3D.md).
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.11.0"
+python -m pip install "fibernet==4.12.0"
 ```
 
 Run the installed example from any directory:
@@ -39,8 +41,8 @@ From an empty directory, download the matching source distribution to get the
 standalone example without cloning the repository:
 
 ```bash
-python -m pip download --no-deps --no-binary=fibernet "fibernet==4.11.0"
-python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.11.0.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.11.0/' + p).read()); t.close()"
+python -m pip download --no-deps --no-binary=fibernet "fibernet==4.12.0"
+python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.12.0.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.12.0/' + p).read()); t.close()"
 python tet4_static_welded_junction.py --tier quick
 python tet4_static_welded_junction.py --tier reference
 ```
@@ -69,10 +71,10 @@ published individually without overwrite; the pair is not transactional.
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[ml]==4.11.0"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.11.0"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.11.0"       # experimental fracture backend
-python -m pip install "fibernet==4.11.0" "meshio==5.3.5" # Tet4 mesh I/O and result export
+python -m pip install "fibernet[ml]==4.12.0"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.12.0"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.12.0"       # experimental fracture backend
+python -m pip install "fibernet==4.12.0" "meshio==5.3.5" # Tet4 mesh I/O and result export
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.
