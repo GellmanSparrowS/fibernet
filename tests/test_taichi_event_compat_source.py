@@ -127,7 +127,7 @@ class EventCompatibility(unittest.TestCase):
 
     def test_native_imports_absent(self):
         if not getattr(sys, '_fibernet_source_check_child', False):
-            run_source_check(__file__)
+            run_source_check(__file__, test_names=('EventCompatibility.test_native_imports_absent',))
             return
         self.assertNotIn('taichi',sys.modules)
         self.assertFalse(any(n=='fibernet' or n.startswith('fibernet.') for n in sys.modules))

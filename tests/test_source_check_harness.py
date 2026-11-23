@@ -37,6 +37,78 @@ def test_child_refuses_native_import_attempt(tmp_path, module):
         run_source_check(script)
 
 
+def test_selected_unittest_names_run_under_the_same_child_controls(tmp_path):
+    script = tmp_path / 'selected.py'
+    script.write_text('''
+from pathlib import Path
+import sys
+import unittest
+
+class Sample(unittest.TestCase):
+    def test_a(self):
+        self.assertTrue(sys._fibernet_source_check_child)
+        print('selected-a')
+
+    def test_b(self):
+        self.assertTrue(sys._fibernet_source_check_child)
+        print('selected-b')
+
+    def test_locale(self):
+        print(ord(Path(__file__).with_suffix('.txt').read_text()[-1]))
+
+if __name__ == '__main__':
+    unittest.main()
+''', encoding='utf-8')
+    script.with_suffix('.txt').write_bytes(b'caf\xe9')
+    assert run_source_check(script, '--cp1252-default').splitlines() == [
+        'selected-a', 'selected-b', '233',
+    ]
+    assert run_source_check(
+        script, '--cp1252-default', test_names=('Sample.test_locale', 'Sample.test_a'),
+    ).splitlines() == ['233', 'selected-a']
+    with pytest.raises(AssertionError, match='test_missing'):
+        run_source_check(script, test_names=('Sample.test_missing',))
+
+
+@pytest.mark.parametrize('selector', [('--help',), ('Sample..test',), ('Sample/test',),
+                                      ('Sample.test -q',), ('Empty',), ('Sample.unittest_factory',),
+                                      (1,), 'Sample.test'])
+def test_source_check_rejects_invalid_selectors_before_spawn(tmp_path, monkeypatch, selector):
+    def forbidden_spawn(*args, **kwargs):
+        pytest.fail('invalid selectors must be rejected before spawn')
+    monkeypatch.setattr('_source_check_support.subprocess.run', forbidden_spawn)
+    with pytest.raises(ValueError, match=r'ClassName\.test_method'):
+        run_source_check(tmp_path / 'unused.py', test_names=selector)
+
+
+def test_source_check_rejects_reserved_control_before_spawn(tmp_path, monkeypatch):
+    def forbidden_spawn(*args, **kwargs):
+        pytest.fail('reserved selector control must be rejected before spawn')
+    monkeypatch.setattr('_source_check_support.subprocess.run', forbidden_spawn)
+    with pytest.raises(ValueError, match='reserved'):
+        run_source_check(tmp_path / 'unused.py', '--test-names', 'Sample.test_a')
+
+
+@pytest.mark.parametrize('module', ['fibernet', 'taichi'])
+def test_selected_unittest_cannot_import_native_module(tmp_path, module):
+    script = tmp_path / 'selected.py'
+    script.write_text('''
+import unittest
+
+class Sample(unittest.TestCase):
+    def test_unselected(self):
+        raise AssertionError('unselected sibling ran')
+    def test_selected(self):
+        import MODULE
+
+if __name__ == '__main__':
+    unittest.main()
+'''.replace('MODULE', module), encoding='utf-8')
+    with pytest.raises(AssertionError, match='forbidden source-check import: ' + module) as error:
+        run_source_check(script, test_names=('Sample.test_selected',))
+    assert 'unselected sibling ran' not in str(error.value)
+
+
 def test_import_process_audit_is_narrow():
     run_python('''
         import sys
