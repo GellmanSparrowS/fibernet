@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ('provenance_contract.py', 'tool_descriptions.py', 'monitor_checks.py', 'bounded_smoke.py', 'core_binding.py',
            'adversarial.py', 'transport_edges.py', 'cleanup_failures.py', 'test_electrical.py',
            'test_preparation.py', 'test_shared_lifecycle.py', 'test_thermoelastic.py',
-           'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py', 'tet4_stdio.py', 'tet4_lifecycle.py')
+           'test_projection_fixtures.py', 'test_projection.py', 'test_projection_lifecycle.py', 'tet4_stdio.py', 'tet4_lifecycle.py', 'tet4_operator_stdio.py', 'tet4_operator_registration.py')
 DEFAULT_LIMITS = {'cpu_seconds': 180, 'wall_seconds': 300,
                   'rss_bytes': 1024 ** 3, 'disk_bytes': 60 * 1024 ** 2}
 REPORT_RESERVE = 16384
