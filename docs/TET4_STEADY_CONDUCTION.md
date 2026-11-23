@@ -32,3 +32,34 @@ maximum principle on arbitrary meshes.
 Prototype limits include 1024 nodes, 8000 tets, absolute inputs and outputs
 in [1, 2000] K, conductivity in [1e-6, 1e6] W/(m K), plus geometry, residual,
 condition and factor budget checks. It has no reverse thermoelastic feedback.
+
+## Prescribe signed volumetric heating or cooling
+
+Use the separate experimental entry point when the source is already known:
+
+```python
+from fibernet.sim.tet4_conduction import solve_steady_conduction_tet4_with_source
+
+result = solve_steady_conduction_tet4_with_source(
+    bundle,
+    conductivity_W_per_m_K_by_material=conductivity,
+    prescribed_K_by_id=boundary_temperatures,
+    source_W_per_m3_by_cell=source_density,
+)
+```
+
+The source map uses stable **cell IDs**, not material IDs or row indices.
+Supply a value in W/m³ for every cell, including explicit zeros. Positive
+values generate heat; negative values remove it. Every connected component
+still needs a prescribed temperature. The numerical pilot accepts nonzero
+source magnitudes from 1e-8 through 1e8 W/m³ and can reject a load too small
+to remain resolved in the equations or in the returned absolute temperatures.
+
+The result retains the source-free fields and adds signed integrated source
+per cell and per node (W), total source (W), source pairing (W K), and
+`balance_W`, the sum of prescribed-node heat entering the solid and total
+source. They balance to the numerical residual; a zero total source does
+not mean zero local heat transport. The Dirichlet quadratic equals the
+terminal, source and free residual pairings summed using component-centered
+temperatures, not stored energy. This is a prescribed source, not a
+temperature-dependent law, Joule heating calculation, or transient solve.
