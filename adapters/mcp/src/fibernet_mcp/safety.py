@@ -21,7 +21,7 @@ def unique(pairs):
         out[key] = value
     return out
 
-def strict_json(raw, *, electrical_rpc=False):
+def strict_json(raw, *, electrical_rpc=False, tet4_rpc=False):
     if len(raw) > MAX_BYTES:
         raise ContractError('JSON byte budget exceeded')
     try:
@@ -31,6 +31,9 @@ def strict_json(raw, *, electrical_rpc=False):
         raise ContractError('invalid strict JSON') from exc
     if electrical_rpc:
         _normalize_electrical_rpc_values(result)
+    if tet4_rpc:
+        from .tet4_contract import normalize_tet4_rpc
+        normalize_tet4_rpc(result)
     check_tree(result)
     return result
 

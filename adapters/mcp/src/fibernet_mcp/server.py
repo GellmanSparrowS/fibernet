@@ -34,6 +34,10 @@ from .thermoelastic import (PROFILE as SNAPSHOT_PROFILE, SNAPSHOT_LIMITS,
     MAX_SNAPSHOT_SOURCE_BYTES, MAX_SNAPSHOT_REQUEST_BYTES, MAX_SNAPSHOT_ENVELOPE_BYTES,
     SnapshotContractError, snapshot_request, validate_worker_snapshot)
 
+from .tet4_contract import (TET4_TOOL, MAX_SOURCE as MAX_TET4_SOURCE, MAX_REQUEST as MAX_TET4_REQUEST,
+    MAX_ARTIFACT as MAX_TET4_ARTIFACT, FAIL_KIND as TET4_FAIL_KIND, parse_mesh, parse_req,
+    validate_result as validate_tet4_result, check_error as check_tet4_error,
+    enable_tet4_tools, load_fixture, TET4_KIND, TET4_OP)
 from .projection import (MAX_PROJECTION_REQUEST_BYTES, MAX_PROJECTION_WORKER_BYTES,
                          ProjectionContractError, projection_request, checked_report)
 
@@ -132,12 +136,12 @@ class ManagedStore:
             os.close(self.root)
             raise
         self.path = os.path.join(os.path.abspath(output_root), self.session)
-        self.files = set(); self.graphs = {}; self.artifacts = {}; self.total = 0
+        self.files = set(); self.graphs = {}; self.tet4 = {}; self.artifacts = {}; self.total = 0
         self.producer = {'fibernet_version':'4.3.0','source_tree':TREE,'adapter_version':'0.0.0-private',
                          'sdk_version':importlib.metadata.version('mcp')}
         try:
             cfg = strict_json(read_file(manifest))
-            if not isinstance(cfg, dict) or set(cfg) != {'source_tree','graphs'} or cfg['source_tree'] != TREE:
+            if not isinstance(cfg, dict) or set(cfg) not in ({'source_tree','graphs'},{'source_tree','graphs','tet4_fixtures'}) or cfg['source_tree'] != TREE:
                 raise ContractError('invalid operator manifest')
             if not isinstance(cfg['graphs'],list) or not 1 <= len(cfg['graphs']) <= 32: raise ContractError('manifest graph limit')
             for item in cfg['graphs']:
@@ -154,6 +158,16 @@ class ManagedStore:
                     'length_unit':item['length_unit'],'frame_id':item['frame_id'],
                     'unit_provenance':'unknown' if item['length_unit']=='unspecified' else 'operator_asserted',
                     'frame_provenance':'unknown' if item['frame_id']=='unknown' else 'operator_asserted'}
+            fixtures=cfg.get('tet4_fixtures')
+            if 'tet4_fixtures' in cfg:
+                if not isinstance(fixtures,list) or not 1<=len(fixtures)<=2 or not all(type(x) is str for x in fixtures) or len(set(fixtures))!=len(fixtures):
+                    raise ContractError('invalid Tet4 fixture list')
+                for name in fixtures:
+                    raw,digest,mesh=load_fixture(name)
+                    mid=uuid.uuid4().hex
+                    self.put_file(mid,raw)
+                    self.tet4[mid]=dict(mesh_id=mid,source_sha256=digest,fixture=name,
+                                        unit=mesh[-1],nodes=len(mesh[0]),cells=len(mesh[1]))
         except BaseException:
             self.close(); raise
 
@@ -165,22 +179,27 @@ class ManagedStore:
         if self.total + len(raw) > MAX_SESSION: raise ArtifactLimitError('session storage limit')
         write_at(self.fd,name,raw); self.files.add(name); self.total += len(raw)
 
-    def source(self,gid,limit=None):
-        if gid not in self.graphs: raise ContractError('unknown handle')
+    def source(self,gid,limit=None,*,tet4=False):
+        table=self.tet4 if tet4 else self.graphs
+        if gid not in table: raise ContractError('unknown handle')
         raw = read_at(self.fd,gid,limit) if limit is not None else read_at(self.fd,gid)
-        if sha(raw) != self.graphs[gid]['source_sha256']: raise ContractError('source integrity failure')
-        return self.graphs[gid]
+        if sha(raw) != table[gid]['source_sha256']: raise ContractError('source integrity failure')
+        return table[gid]
 
     def stage_artifact(self, gid, metrics, core_provenance, kind='topology_metrics'):
-        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation', 'thermoelastic_network_snapshot', 'fiber_network_projection_report'):
+        if kind not in ('topology_metrics', 'linear_transport_result', 'deformed_transport_preparation', 'thermoelastic_network_snapshot', 'fiber_network_projection_report',TET4_KIND):
             raise ContractError('invalid artifact kind')
-        self.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if kind == 'thermoelastic_network_snapshot' else self.source(gid)
+        if kind==TET4_KIND:
+            digest=self.source(gid,MAX_TET4_SOURCE,tet4=True)['source_sha256']
+        else:
+            digest=(self.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if kind=='thermoelastic_network_snapshot'
+                    else self.source(gid))['source_sha256']
         identity = canonical(self.core_provenance)
         if canonical(core_provenance) != identity:
             raise ContractError('worker core provenance mismatch')
-        raw = canonical(metrics); digest = sha(raw)
+        raw = canonical(metrics); source_digest,digest = digest,sha(raw)
         for aid, a in self.artifacts.items():
-            if (a['kind']==kind and a['sha256']==digest and a['source_sha256']==self.graphs[gid]['source_sha256']
+            if (a['kind']==kind and a['sha256']==digest and a['source_sha256']==source_digest
                     and self._artifact_provenance.get(aid)==identity):
                 if sha(read_at(self.fd, aid)) != digest:
                     raise ContractError('artifact integrity failure')
@@ -189,8 +208,8 @@ class ManagedStore:
         if self.total + len(raw) > MAX_SESSION: raise ArtifactLimitError('session storage limit')
         aid=uuid.uuid4().hex
         a={'artifact_id':aid,'uri':'fibernet://artifacts/'+aid,'mime_type':'application/json',
-           'byte_size':len(raw),'sha256':digest,'source_sha256':self.graphs[gid]['source_sha256'],
-           'producer':self.producer,'kind':kind}
+           'byte_size':len(raw),'sha256':digest,'source_sha256':source_digest,
+           'producer':({**self.producer,'fibernet_version':importlib.metadata.version('fibernet')} if kind==TET4_KIND else self.producer),'kind':kind}
         return ArtifactStage(gid, raw, canonical(a), identity, False)
 
     def commit_artifact(self, stage):
@@ -201,7 +220,7 @@ class ManagedStore:
         """
         a=stage.descriptor(); aid=a['artifact_id']
         if (stage.provenance_bytes != canonical(self.core_provenance) or
-                a['source_sha256'] != self.graphs[stage.graph_id]['source_sha256'] or
+                a['source_sha256'] != (self.tet4 if a['kind']==TET4_KIND else self.graphs)[stage.graph_id]['source_sha256'] or
                 a['sha256'] != sha(stage.raw) or a['byte_size'] != len(stage.raw)):
             raise ContractError('staged artifact identity mismatch')
         if stage.existing:
@@ -246,7 +265,10 @@ class Supervisor:
     async def run(self,operation,gid,request=None):
         if len(self.audit)>=128: return failure('WORKER_LIMIT','resource')
         if self.active is not None: return failure('BUSY','resource',True)
-        self.store.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if operation == 'thermoelastic_snapshot' else self.store.source(gid)
+        if operation==TET4_OP:
+            source=self.store.source(gid,MAX_TET4_SOURCE,tet4=True)
+        else:
+            source=self.store.source(gid,MAX_SNAPSHOT_SOURCE_BYTES) if operation=='thermoelastic_snapshot' else self.store.source(gid)
         out='worker-'+uuid.uuid4().hex
         env={k:os.environ[k] for k in ('PATH','PYTHONPATH','MPLCONFIGDIR','XDG_CACHE_HOME') if k in os.environ}
         env.update(OPENBLAS_NUM_THREADS='1',OMP_NUM_THREADS='1',MKL_NUM_THREADS='1',NUMEXPR_NUM_THREADS='1',PYTHONDONTWRITEBYTECODE='1')
@@ -254,7 +276,7 @@ class Supervisor:
             env['TMPDIR']=os.environ['TMPDIR']
         command=[sys.executable,'-B','-m','fibernet_mcp.worker',operation,
                  os.path.join(self.store.path,gid),os.path.join(self.store.path,out),
-                 self.store.graphs[gid]['source_sha256']]
+                 source['source_sha256']]
         request_name=None; request_owned=False
         try:
             try: os.stat(out,dir_fd=self.store.fd,follow_symlinks=False)
@@ -264,11 +286,13 @@ class Supervisor:
                 raw=canonical(request)
                 cap = (MAX_PREPARATION_REQUEST_BYTES if operation == 'prepare_deformed_transport' else
                        MAX_SNAPSHOT_REQUEST_BYTES if operation == 'thermoelastic_snapshot' else
-                       MAX_PROJECTION_REQUEST_BYTES if operation == 'fiber_projection_report' else MAX_TRANSPORT_REQUEST_BYTES)
+                       MAX_PROJECTION_REQUEST_BYTES if operation == 'fiber_projection_report' else
+                       MAX_TET4_REQUEST if operation==TET4_OP else MAX_TRANSPORT_REQUEST_BYTES)
                 if len(raw)>cap or self.store.total+len(raw)>MAX_SESSION:
                     return failure('PREPARATION_REQUEST_LIMIT' if operation == 'prepare_deformed_transport' else
                                    'SNAPSHOT_REQUEST_LIMIT' if operation == 'thermoelastic_snapshot' else
-                                   'PROJECTION_REQUEST_LIMIT' if operation == 'fiber_projection_report' else 'TRANSPORT_REQUEST_LIMIT','resource')
+                                   'PROJECTION_REQUEST_LIMIT' if operation == 'fiber_projection_report' else
+                                   'SOLID_REQUEST_LIMIT' if operation==TET4_OP else 'TRANSPORT_REQUEST_LIMIT','resource')
                 request_name='request-'+uuid.uuid4().hex
                 write_at(self.store.fd,request_name,raw)
                 request_owned=True
@@ -289,6 +313,7 @@ class Supervisor:
             cap = (MAX_PREPARATION_ENVELOPE_BYTES if operation == 'prepare_deformed_transport' else
                    MAX_SNAPSHOT_ENVELOPE_BYTES if operation == 'thermoelastic_snapshot' else
                    MAX_PROJECTION_WORKER_BYTES if operation == 'fiber_projection_report' else
+                   MAX_TET4_ARTIFACT+4096 if operation==TET4_OP else
                    MAX_TRANSPORT_RESULT_BYTES+4096 if operation == 'linear_transport' else MAX_BYTES)
             if operation == 'fiber_projection_report':
                 try:
@@ -299,6 +324,7 @@ class Supervisor:
             try:
                 if operation != 'fiber_projection_report': raw=read_at(self.store.fd,out,cap)
             except ContractError:
+                if operation==TET4_OP: return failure('SOLID_RESULT_LIMIT','resource')
                 if operation not in ('prepare_deformed_transport', 'thermoelastic_snapshot'): raise
                 reason='failed';return failure('SNAPSHOT_RESULT_LIMIT' if operation == 'thermoelastic_snapshot' else 'PREPARATION_RESULT_LIMIT','resource')
             try:
@@ -325,6 +351,7 @@ class Supervisor:
                 self.active=None
 
 class BoundedInput:
+    def __init__(self,*,tet4=False): self.tet4=tet4
     def __aiter__(self): return self.lines()
     async def lines(self):
         while True:
@@ -332,7 +359,7 @@ class BoundedInput:
             if not raw: return
             if len(raw)>20*1024*1024 or not raw.endswith(b'\n'): raise ContractError('transport line budget')
             # Strict JSON before SDK decoding; JSON RPC string arguments bounded too.
-            message=strict_json(raw,electrical_rpc=True)
+            message=strict_json(raw,electrical_rpc=True,tet4_rpc=self.tet4)
             yield canonical(message).decode('utf-8')+'\n'
 
 class BoundedOutput:
@@ -366,6 +393,7 @@ async def _serve_admitted(args,store):
     import mcp.types as mt
     sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
+    if store.tet4: enable_tet4_tools(definitions)
     # Remove unused local definitions from each advertised schema to fit bounded list output.
     def prune(schema):
         needed=set()
@@ -411,6 +439,38 @@ async def _serve_admitted(args,store):
             jsonschema.Draft202012Validator(indexed[name]['inputSchema']).validate(arguments)
             if name=='fibernet_catalog':
                 data=envelope(graphs=list(store.graphs.values()),limits={'max_nodes':10000,'max_edges':30000,'max_graph_bytes':MAX_BYTES,'max_reply_bytes':65536,'preparation':PREPARATION_LIMITS,'thermoelastic':SNAPSHOT_LIMITS},capabilities=['validate_structure','analyze_topology','read_artifact','solve_linear_transport','prepare_deformed_transport','solve_thermoelastic_network_snapshot','project_fiber_network_report'])
+                if store.tet4:
+                    data['tet4_meshes']=list(store.tet4.values())
+                    data['capabilities'].append('solve_tet4_dc_convection')
+            elif name==TET4_TOOL:
+                mid=arguments['mesh_id']
+                m=store.source(mid,MAX_TET4_SOURCE,tet4=True)
+                mesh=parse_mesh(read_at(store.fd,mid,MAX_TET4_SOURCE),m['source_sha256'])
+                request_sha=sha(canonical(arguments))
+                parse_req(canonical(arguments),mesh,mid)
+                result=await sup.run(TET4_OP,mid,arguments)
+                if 'error' in result: data=result
+                else:
+                    worker_provenance=result.pop('_core_provenance')
+                    try:
+                        if result.get('kind')==TET4_FAIL_KIND:
+                            err=check_tet4_error(result,m['source_sha256'],request_sha,worker_provenance)
+                            data=failure('SOLID_'+err['code'],'domain')
+                        else:
+                            validate_tet4_result(result,mesh,m['source_sha256'],request_sha,worker_provenance)
+                            stage=store.stage_artifact(mid,result,worker_provenance,kind=TET4_KIND)
+                            reply=envelope(mesh_id=mid,source_sha256=m['source_sha256'],controls_sha256=request_sha,
+                                           status='solved',summary=result['summary'],artifact=stage.descriptor())
+                            jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(reply)
+                            prospective=mt.CallToolResult(content=[mt.TextContent(type='text',text='FiberNet result: see structuredContent')],structuredContent=reply,isError=False)
+                            if len(prospective.model_dump_json(by_alias=True,exclude_none=True).encode())>60000:
+                                raise ContractError('Tet4 reply budget')
+                            await anyio.lowlevel.checkpoint()
+                            store.commit_artifact(stage)
+                            data=reply
+                    except ArtifactLimitError: raise
+                    except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError):
+                        data=failure('SOLID_OUTPUT_CONTRACT_FAILURE','internal')
             elif name in ('fibernet_validate','fibernet_analyze_topology'):
                 gid=arguments['graph_id'];g=store.source(gid)
                 result=await sup.run('validate' if name=='fibernet_validate' else 'topology',gid)
@@ -519,12 +579,12 @@ async def _serve_admitted(args,store):
                 data=envelope(artifact_id=aid,offset=offset,next_offset=n,eof=n==len(raw),encoding='base64',data=base64.b64encode(chunk).decode(),sha256=a['sha256'],total_bytes=len(raw))
         except ProjectionContractError as exc: data=failure(exc.code,exc.category)
         except SnapshotContractError as exc: data=failure(exc.code,exc.category)
-        except ArtifactLimitError: data=failure('PROJECTION_RESOURCE_LIMIT' if name=='fibernet_project_fiber_network_report' else 'SNAPSHOT_RESOURCE_LIMIT' if name=='fibernet_solve_thermoelastic_network_snapshot' else 'PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name in ('fibernet_prepare_deformed_transport','fibernet_solve_thermoelastic_network_snapshot','fibernet_project_fiber_network_report') else 'contract')
+        except ArtifactLimitError: data=failure('SOLID_RESOURCE_LIMIT','resource') if name==TET4_TOOL else failure('PROJECTION_RESOURCE_LIMIT' if name=='fibernet_project_fiber_network_report' else 'SNAPSHOT_RESOURCE_LIMIT' if name=='fibernet_solve_thermoelastic_network_snapshot' else 'PREPARATION_RESOURCE_LIMIT' if name=='fibernet_prepare_deformed_transport' else 'INVALID_ARGUMENT_OR_HANDLE','resource' if name in ('fibernet_prepare_deformed_transport','fibernet_solve_thermoelastic_network_snapshot','fibernet_project_fiber_network_report') else 'contract')
         except PreparationContractError as exc: data=failure(exc.code,exc.category)
         except TransportContractError as exc: data=failure(exc.code,exc.category)
-        except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError,OSError): data=failure('INVALID_ARGUMENT_OR_HANDLE')
+        except (ContractError,jsonschema.ValidationError,TypeError,KeyError,ValueError,OSError): data=failure('SOLID_INVALID_ARGUMENT_OR_HANDLE' if name==TET4_TOOL else 'INVALID_ARGUMENT_OR_HANDLE')
         except Exception: data=failure('INTERNAL_FAILURE','internal')
-        if name in indexed and not ((name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared') or (name=='fibernet_solve_thermoelastic_network_snapshot' and data.get('status')=='solved') or (name=='fibernet_project_fiber_network_report' and data.get('status')=='completed')):
+        if name in indexed and not ((name=='fibernet_prepare_deformed_transport' and data.get('status')=='prepared') or (name=='fibernet_solve_thermoelastic_network_snapshot' and data.get('status')=='solved') or (name=='fibernet_project_fiber_network_report' and data.get('status')=='completed') or (name==TET4_TOOL and data.get('status')=='solved')):
             try: jsonschema.Draft202012Validator(indexed[name]['outputSchema']).validate(data)
             except jsonschema.ValidationError: data=failure('OUTPUT_CONTRACT_FAILURE','internal')
         # Avoid duplicating potentially44KiB base64 in textual fallback.
@@ -537,7 +597,7 @@ async def _serve_admitted(args,store):
         return await sdk_call(request)
     server.request_handlers[mt.CallToolRequest] = protocol_call
     try:
-        async with stdio_server(stdin=BoundedInput(),stdout=BoundedOutput()) as streams:
+        async with stdio_server(stdin=BoundedInput(tet4=bool(store.tet4)),stdout=BoundedOutput()) as streams:
             await server.run(*streams,server.create_initialization_options())
     finally:
         # SDK task group cancels in-flight work before this scope ends.
