@@ -147,3 +147,48 @@ nonzero nodal or free-row load unresolved, or contributions lost to rounding,
 is rejected. This check concerns the represented input geometry and forcing,
 not physical model uncertainty. The loads are prescribed; this entry point
 does not model temperature-dependent convection, radiation or transients.
+
+## Exchange heat with an environment
+
+A convection boundary changes its heat flux as the surface temperature
+changes. Use a constant heat-transfer coefficient when the ambient
+temperature is known and the surrounding fluid is not part of the model.
+The same calculation can include internal heat generation or removal:
+
+```python
+from fibernet.sim.tet4_conduction import solve_steady_conduction_tet4_with_convection
+
+result = solve_steady_conduction_tet4_with_convection(
+    bundle,
+    conductivity_W_per_m_K_by_material=conductivity,
+    prescribed_K_by_id=boundary_temperatures,
+    source_W_per_m3_by_cell=source_density,
+    faces_by_node_id=[(node_a, node_b, node_c)],
+    convection_W_per_m2_K=100.0,
+    ambient_K=299.95,
+)
+```
+
+Select exterior triangles by stable node ID and supply one heat density
+per stable cell ID, including explicit zeros. The scalar coefficient
+applies to all selected faces, in W/(m² K); the ambient is absolute K.
+Unselected exterior faces are weakly insulated where no temperature
+is prescribed. At least one node per
+connected component needs a prescribed temperature. A zero coefficient
+keeps the selected faces insulated but still checks the selection.
+
+`convective_heat_into_solid_W_by_node` is integrated against the nodal
+shape functions, not a pointwise face flux. Positive heat enters the
+solid through convection, negative heat leaves. `heat_into_solid_W` is
+the separate prescribed-temperature response. A fully prescribed face
+can exchange heat with the ambient: its temperature stays fixed and
+the prescribed response accounts for that exchange. Source, ambient
+exchange and prescribed response sum to the numerical residual, checked
+per component. `convection_pairing_W_K` pairs the convection heat with
+component-centered temperature; it is signed and is not stored energy.
+
+The coefficient is zero or in [1e-8, 1e8] W/(m² K) in this bounded solver,
+subject to operator and load resolution checks. It uses the consistent
+linear triangle integral. It does not fit the coefficient, simulate fluid
+flow or radiation, or combine convection and a separately prescribed heat
+flux through this entry point.
