@@ -214,8 +214,17 @@ def solve_prescribed_temperature_tet4(
         raise ValueError('physical residual differs from guarded reduced solve')
     pairing=math.fsum(((reaction+ext)*u).ravel())
     U=math.fsum(energies); eigen_work=math.fsum(eig)
-    work_scale=max(abs(pairing),abs(eigen_work),2*U,np.max(abs(th))*np.max(abs(u))*1e-12,1e-30)
-    if not np.isfinite([pairing,U,eigen_work]).all() or U<0 or abs(2*U-pairing+eigen_work)>1e-8*work_scale:
+    # Discrete internal virtual work includes the measured free-DOF solver
+    # residual. The public mechanical pairing excludes it. In compatible
+    # free expansion, omitting this term compares a first-order residual
+    # against elastic energy that is second-order in the strain error.
+    residual_pairing=math.fsum(physical[~fixed]*u[~fixed])
+    if not np.isfinite([pairing,U,eigen_work,residual_pairing]).all() or U<0:
+        raise ValueError('thermal energy identity not resolved')
+    work_scale=max(abs(pairing),abs(eigen_work),abs(residual_pairing),2*U,
+                   np.max(abs(th))*np.max(abs(u))*1e-12,1e-30)
+    balance=math.fsum((2*U,-pairing,eigen_work,-residual_pairing))
+    if abs(balance)>1e-8*work_scale:
         raise ValueError('thermal energy identity not resolved')
     def tensor(rows, strain):
         a=np.array(rows)

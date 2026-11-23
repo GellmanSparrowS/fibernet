@@ -113,5 +113,45 @@ class Tet4ThermoelasticAnalyticTests(unittest.TestCase):
         self.assertEqual(result.physical_free_residual_inf_N, 0.0)
 
 
+    def test_compatible_free_expansion_with_two_material_stiffnesses(self):
+        ids = (70, 11, 320, 94, 56)
+        points_mm = np.array([
+            [0., 0., 0.], [1., 0., 0.], [0., 1., 0.], [0., 0., 1.], [0., 0., -1.],
+        ])
+        mesh = Tet4Bundle(
+            points_mm,
+            np.array([[0, 1, 2, 3], [0, 2, 1, 4]]),
+            np.array(ids, np.uint64),
+            np.array([460, 12], np.uint64),
+            np.array([17, 9], np.uint64),
+            {
+                17: {"young_modulus_pa": 1e8, "poisson_ratio": 0.20},
+                9: {"young_modulus_pa": 3e8, "poisson_ratio": 0.33},
+            },
+            "mm",
+        )
+        # Only remove rigid motion. The same free thermal strain in both
+        # cells is kinematically compatible even though their stiffnesses differ.
+        for dT in (10., -10.):
+            with self.subTest(dT=dT):
+                result = solve_prescribed_temperature_tet4(
+                    mesh, temperature_K_by_id=dict.fromkeys(ids, 300. + dT),
+                    stress_free_temperature_K=300.,
+                    alpha_per_K_by_material={17: 1e-5, 9: 1e-5},
+                    fixed_dofs_by_id={70: ("x", "y", "z"), 11: ("y", "z"), 320: ("z",)},
+                    forces_by_id={},
+                )
+                np.testing.assert_allclose(
+                    result.displacement_m, points_mm * (1e-3 * 1e-5 * dT),
+                    rtol=3e-13, atol=3e-20,
+                )
+                np.testing.assert_allclose(result.mean_stress_Pa, 0., rtol=0., atol=2e-10)
+                np.testing.assert_allclose(result.reaction_N, 0., rtol=0., atol=1e-15)
+                self.assertLess(result.physical_free_residual_inf_N, 1e-15)
+                self.assertGreaterEqual(result.elastic_energy_J, 0.)
+                self.assertLess(result.elastic_energy_J, 1e-32)
+                self.assertEqual(result.terminal_mechanical_pairing_J, 0.)
+
+
 if __name__ == "__main__":
     unittest.main()
