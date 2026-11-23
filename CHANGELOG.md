@@ -1,3 +1,12 @@
+## [4.21.0]
+
+- Solve steady DC, transfer its Joule heat, and include surface convection
+  on the same tetrahedral solid with a single call.
+- Read the electrical and thermal results separately, including the heat
+  source passed between solvers, convection and fixed-temperature exchange.
+- See the [4.21.0 release notes](docs/RELEASE_4_21_0.md) for a runnable
+  electrically heated bar and a heat balance.
+
 ## [4.20.0]
 
 - Exchange steady heat with a specified ambient on selected Tet4 faces
