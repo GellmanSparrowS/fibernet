@@ -6442,5 +6442,28 @@
    "SavedElectrothermal3DTests"
   ],
   "sha256": "dfe12f43b0735f45c13bfbcd9b8ef8c81461ef0c5e0954ee4131b727470a8f4f"
+ },
+ "fibernet/sim/tet4_thermoelastic.py": {
+  "purpose": "Experimental one-way, small-strain bulk Tet4 with prescribed temperature.",
+  "status": "active",
+  "symbols": [
+   "Tet4ThermoelasticResult",
+   "_frozen_array",
+   "_effective_force",
+   "_detach_mapping",
+   "_detach_force",
+   "_detach_hold",
+   "_canonical_controls",
+   "solve_prescribed_temperature_tet4"
+  ],
+  "sha256": "701e5538bf7631cba245ca95609a9f1b8e071231a9bf4fe342ba6dd3384ae078"
+ },
+ "tests/test_tet4_thermoelastic_analytic.py": {
+  "purpose": "Independent analytic tests for prescribed-temperature Tet4 elasticity.",
+  "status": "active",
+  "symbols": [
+   "Tet4ThermoelasticAnalyticTests"
+  ],
+  "sha256": "fc22e3218f8ca4e2126f4f97dc467434d7f96b9155ac7d17c6f9231e564f4f70"
  }
 }
