@@ -1,3 +1,12 @@
+## [4.19.0]
+
+- Solve steady Tet4 conduction with signed volumetric heat and a uniform
+  inward heat flux on selected exterior triangles in one calculation.
+- Inspect volume, surface, effective nodal loads and prescribed-temperature
+  reactions separately, with heat and temperature-pairing checks.
+- See the [4.19.0 release notes](docs/RELEASE_4_19_0.md) for a runnable
+  example with internal heat generation and balancing surface cooling.
+
 ## [4.18.0]
 
 - Solve steady direct-current conduction on Tet4 solids with prescribed
