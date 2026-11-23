@@ -6465,5 +6465,13 @@
    "Tet4ThermoelasticAnalyticTests"
   ],
   "sha256": "2699e258c4dfbbcb4c805ed3e577d72efd2cdbbe7de13e898d7591910d364d58"
+ },
+ "examples/tet4_thermoelastic_welded_junction.py": {
+  "purpose": "Compare thermal expansion by material on a fixed conforming three-cylinder Tet4 junction.",
+  "status": "active",
+  "symbols": [
+   "compare_welded_junction"
+  ],
+  "sha256": "a8d8df3447d3ec7d1c133bdeabdaf3475b5686c731c3a515a89e96885848a538"
  }
 }

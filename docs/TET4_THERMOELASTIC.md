@@ -43,3 +43,28 @@ addition or a near cancellation too small relative to those inputs,
 rather than presenting a fragile remainder as a reliable load. A
 permitted exact zero still undergoes the physical equilibrium and
 energy checks.
+
+## Compare materials on a three-cylinder junction
+
+From a source checkout with FiberNet 4.13.0 or newer installed, run:
+
+```bash
+python -m examples.tet4_thermoelastic_welded_junction
+```
+
+The [example](../examples/tet4_thermoelastic_welded_junction.py) uses a
+single conforming mesh of a voxel approximation to the union of three
+orthogonal cylinders. It clamps the two x-end caps and holds geometry,
+stiffness and a 308–318 K nodal temperature gradient fixed. It compares
+uniform expansion with a larger expansion coefficient near the center,
+reducing the outer coefficient so the volume integral of the free
+linear thermal strain, alpha times temperature rise, stays the same.
+The center contains whole tetrahedra whose centroids lie within 0.45 mm
+of the junction center; it is not a fitted spherical interface. The
+equal integral is not the measured expansion of the clamped structure.
+
+The JSON reports the axial cap reactions, total elastic energy and the
+center's share of that energy. It also checks force and moment balance
+and the energy bound provided by holding every node at zero displacement.
+The numerical values describe this synthetic discrete model, not a
+mesh-convergence study or a fitted material.
