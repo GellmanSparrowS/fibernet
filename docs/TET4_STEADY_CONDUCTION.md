@@ -87,9 +87,8 @@ must belong to exactly one tetrahedron. This is a topological exterior check,
 not a check for spatial conformity or overlap. A positive flux adds heat to
 the solid and a negative flux removes it; no normal orientation is needed.
 This is one scalar in W/m² for all selected faces, not a total in watts, a
-per-face map, or a volumetric source. The surface and volume entry points
-cannot be combined. Other exterior faces without a prescribed temperature
-or applied flux remain insulated in the weak form.
+per-face map, or a volumetric source. Other exterior faces without a prescribed
+temperature or applied flux remain insulated in the weak form.
 
 For a triangle of area A in m², each of its three nodes receives qA/3 in W.
 Zero flux is allowed and still validates the selection. Nonzero magnitudes
@@ -106,3 +105,45 @@ prescribed temperature; its applied and prescribed heat balance to the
 numerical residual. `balance_W` is the signed sum over the mesh. The surface
 pairing uses component-centered temperature in W K, like the terminal
 pairing; neither is stored energy.
+
+## Combine volumetric and surface heat loads
+
+Solve the temperature field once when a solid generates heat internally and
+also gains or loses heat through selected exterior faces:
+
+```python
+from fibernet.sim.tet4_conduction import solve_steady_conduction_tet4_with_mixed_loads
+
+result = solve_steady_conduction_tet4_with_mixed_loads(
+    bundle,
+    conductivity_W_per_m_K_by_material=conductivity,
+    prescribed_K_by_id=boundary_temperatures,
+    source_W_per_m3_by_cell=source_density,
+    faces_by_node_id=[(node_a, node_b, node_c)],
+    inward_flux_W_per_m2=-100.0,
+)
+```
+
+Use the same complete stable-cell-ID map and exterior stable-node-ID triangles
+as above. Positive rates add heat; negative rates remove it. Temperatures and
+conductivity may differ between connected components; each component needs at
+least one prescribed node. The surface load is included on fully prescribed
+faces: it changes the local reaction, not the prescribed temperature.
+
+Use `source_by_node_W`, `surface_by_node_W`, `total_source_W`, and
+`total_surface_W` to inspect the contributions separately, and
+`applied_nodal_heat_W` for the combined physical load before eliminating held
+temperatures. The combined value is rounded only after the represented cell
+and face factors are summed, so it can differ from the sum of the separately
+rounded ledgers. `balance_W` adds both integrated loads and the prescribed-node
+response; a small global balance does not imply small local loads or gradients.
+`applied_pairing_W_K` is the combined load paired with the component-centered
+temperatures; this value, the terminal pairing and the free residual pairing
+close the Dirichlet quadratic. The source and surface pairings are also
+available separately. The pairings are not stored energy.
+
+The same mesh and rate bounds apply. Near-cancellation that would make a
+nonzero nodal or free-row load unresolved, or contributions lost to rounding,
+is rejected. This check concerns the represented input geometry and forcing,
+not physical model uncertainty. The loads are prescribed; this entry point
+does not model temperature-dependent convection, radiation or transients.
