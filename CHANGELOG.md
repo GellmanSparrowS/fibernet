@@ -1,3 +1,12 @@
+## [4.18.0]
+
+- Solve steady direct-current conduction on Tet4 solids with prescribed
+  electrode voltages and isotropic electrical conductivity by material.
+- Use the cellwise Joule power as a one-way source for steady heat conduction
+  on the same mesh, with a separate thermal conductivity map.
+- See the [4.18.0 release notes](docs/RELEASE_4_18_0.md) for a runnable
+  two-material current and heat balance.
+
 ## [4.17.0]
 
 - Prescribe a uniform inward heat flux on selected exterior Tet4 triangles
