@@ -1,3 +1,11 @@
+## [4.14.0]
+
+- Export one prescribed-temperature Tet4 solve as an optional VTU
+  diagnostic with temperatures, displacements, cell-mean stress,
+  integrated cell energy and stable IDs. The writer never overwrites.
+- Find the three-cylinder thermal expansion comparison in the Tet4 guide.
+- See [4.14.0 release notes](docs/RELEASE_4_14_0.md).
+
 ## [4.13.0]
 
 - Add an experimental Python snapshot for small-strain Tet4 thermoelasticity
