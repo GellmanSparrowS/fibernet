@@ -6609,15 +6609,31 @@
   "sha256": "29cc3b0561e55f7692fe9c48614b7c40c8bcc7e8417712e6729ccab74b0b0991"
  },
  "fibernet/sim/tet4_dc_thermal.py": {
-  "purpose": "Private same-call, one-way solid DC to steady volumetric heating.",
+  "purpose": "Same-mesh solid DC to steady heat with verified Joule transfer and optional convection.",
   "status": "active",
   "symbols": [
    "Tet4DCThermalResult",
+   "Tet4DCConvectionResult",
    "_snapshot",
    "_verify_source_transfer",
-   "solve_dc_thermal_tet4"
+   "solve_dc_thermal_tet4",
+   "solve_dc_thermal_tet4_with_convection",
+   "_solve_dc_thermal"
   ],
-  "sha256": "9c0d340d6485742c55d067f7881dec71fdd78d871442b2fa45bd6de264d3df8c"
+  "sha256": "8db1bf6d39d993db035448ad3bb09ac00a670d400104638c53d95f2743a0ec64"
+ },
+ "tests/test_tet4_dc_convection.py": {
+  "purpose": "One-way DC convection coupling and owned-mesh transfer checks.",
+  "status": "active",
+  "symbols": [
+   "fixture",
+   "args",
+   "test_one_owned_mesh_same_exact_composition",
+   "test_h_zero_and_old_path_parity",
+   "test_mesh_snapshot_shared_after_original_mesh_changes",
+   "test_large_joule_source_rejected_before_thermal"
+  ],
+  "sha256": "8f90e6b8f82bcef3b0bba8350f50269d61b178bd4277e5b3a17a229269c4382b"
  },
  "tests/test_tet4_dc.py": {
   "purpose": "Small independent analytic controls for native solid DC and its thermal handoff.",

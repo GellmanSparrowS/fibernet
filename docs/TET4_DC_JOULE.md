@@ -44,3 +44,32 @@ The model excludes electrode contact resistance, current-controlled
 electrodes, and transient heating. A small two-material bar verifies
 integrated electrode and cap balances; it does not validate pointwise
 temperature peaks on coarse or arbitrary meshes.
+
+## Include heat exchange with an ambient
+
+Use the same-mesh DC and thermal entry point with a convective boundary:
+
+```python
+from fibernet.sim.tet4_dc_thermal import solve_dc_thermal_tet4_with_convection
+
+result = solve_dc_thermal_tet4_with_convection(
+    bundle,
+    conductivity_S_per_m_by_material=electrical_conductivity,
+    electrode_voltage_V_by_id=electrodes,
+    conductivity_W_per_m_K_by_material=thermal_conductivity,
+    prescribed_K_by_id=held_temperatures,
+    faces_by_node_id=[(node_a, node_b, node_c)],
+    convection_W_per_m2_K=100.0,
+    ambient_K=299.95,
+)
+```
+
+The DC solve supplies the volume heat, checked against integrated cell
+power and nodal heat by stable ID. The thermal solve computes convection
+from the surface temperature. The convective and prescribed-temperature
+heat exchanges are reported separately, positive into the solid.
+
+The two stages share one copy of the mesh and its material records. Do
+not mutate inputs while the call is reading them; thermal controls are
+read in the thermal stage, not copied with the mesh. The solution is
+steady and one-way: temperature does not change the electrical properties.
