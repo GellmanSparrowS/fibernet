@@ -90,6 +90,54 @@ class Thermoelastic3DPhysicsTests(unittest.TestCase):
             rtol=2e-8, atol=0.0,
         )
 
+    def test_axially_fixed_series_can_move_at_the_joint_without_reaction(self):
+        # Use sparse IDs and reverse the right member orientation: x, not
+        # insertion or edge order, identifies the cold and hot halves.
+        left, joint, right = 71, 11, 48
+        left_edge, right_edge = 309, 201
+        material = Material(youngs_modulus=2e9, poissons_ratio=0.3).to_dict()
+        graph = StructureGraph.from_dict({
+            "dimension": 3,
+            "nodes": [{"id": n, "position": (x, 0.0, 0.0)}
+                      for n, x in ((right, 20.0), (left, 0.0), (joint, 10.0))],
+            "edges": [{"id": e, "node_i": n, "node_j": joint,
+                       "radius": 1.0, "material": material}
+                      for e, n in ((right_edge, right), (left_edge, left))],
+        })
+        area_m2 = math.pi * 1e-6
+        # For the opposite mean strains, their free length changes cancel.
+        # The uniform-hot control instead compresses both members by 2e-5.
+        compression_N = -(2e9 * area_m2) * 2e-5
+        total_energy_J = 0.5 * (2e9 * area_m2) * 0.02 * (2e-5)**2
+        for temperatures, joint_ux_m, member_force_N, energy_J in (
+            ((298.0, 300.0, 302.0), -1e-7, 0.0, 0.0),
+            ((302.0, 300.0, 298.0), +1e-7, 0.0, 0.0),
+            ((302.0, 302.0, 302.0), 0.0, compression_N, total_energy_J),
+        ):
+            with self.subTest(temperatures=temperatures):
+                result = solve_thermoelastic_network_snapshot_3d(
+                    graph, length_unit="mm",
+                    temperature_K_by_node_id=dict(zip((left, joint, right), temperatures)),
+                    stress_free_temperature_K=300.0,
+                    expansion_alpha_per_K_by_edge_id={left_edge: 1e-5, right_edge: 1e-5},
+                    constraints_by_node_id={left: (0.0,) * 6,
+                                            right: (0.0, None, None, None, None, None)},
+                    applicability_limits=_LIMITS,
+                )
+                u = dict(zip(result.node_ids, result.displacement_m_and_rad))
+                reactions = dict(zip(result.node_ids, result.reactions_N_and_Nm))
+                forces = dict(zip(result.edge_ids, result.axial_force_N))
+                for n, ux, rx in ((left, 0.0, -member_force_N),
+                                  (joint, joint_ux_m, 0.0),
+                                  (right, 0.0, member_force_N)):
+                    np.testing.assert_allclose(u[n], (ux, 0.0, 0.0, 0.0, 0.0, 0.0),
+                                               rtol=1e-8, atol=1e-14)
+                    np.testing.assert_allclose(reactions[n], (rx, 0.0, 0.0, 0.0, 0.0, 0.0),
+                                               rtol=1e-8, atol=1e-10)
+                for e in (left_edge, right_edge):
+                    np.testing.assert_allclose(forces[e], member_force_N, rtol=1e-8, atol=1e-10)
+                np.testing.assert_allclose(result.elastic_energy_J, energy_J, rtol=1e-8, atol=1e-20)
+
     def test_opposite_endpoint_thermal_strains_reject_before_assembly(self):
         # Both local strains violate the ceiling, although their mean is zero.
         with patch.object(BeamFrameFEM, "_assemble_3d_physical_stiffness",

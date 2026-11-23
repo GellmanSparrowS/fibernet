@@ -6419,7 +6419,7 @@
   "symbols": [
    "Thermoelastic3DPhysicsTests"
   ],
-  "sha256": "d7c7eec8b06b85a238cab72c1ba46559154a5c498c91989b4a79c50d8ca87ebb"
+  "sha256": "acdf20caaf26c82cc8d9547315fe1ccc2c8efb7040969aff66df7db4e692256e"
  },
  "fibernet/sim/saved_electrothermal_3d.py": {
   "purpose": "Experimental offline 3-D saved-frame to prescribed-temperature mechanics.",
