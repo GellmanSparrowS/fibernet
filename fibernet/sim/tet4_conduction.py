@@ -11,6 +11,7 @@ from fibernet.sim import tet4 as core
 from fibernet.sim.tet4_loads import _prepare_exterior_face_areas, _iter_exterior_face_areas
 
 __all__ = [
+    "Tet4MixedConductionResult", "solve_steady_conduction_tet4_with_mixed_loads",
     "Tet4SurfaceConductionResult", "solve_steady_conduction_tet4_with_surface_flux",
     "Tet4ConductionResult", "Tet4SourceConductionResult",
     "solve_steady_conduction_tet4", "solve_steady_conduction_tet4_with_source",
@@ -73,6 +74,26 @@ class Tet4SurfaceConductionResult(Tet4ConductionResult):
     surface_by_node_W: np.ndarray
     total_surface_W: float
     surface_pairing_W_K: float
+    balance_W: float
+
+
+@dataclass(frozen=True)
+class Tet4MixedConductionResult(Tet4ConductionResult):
+    """Signed volume, surface and prescribed-node heat ledgers.
+
+    `applied_nodal_heat_W` rounds the combined physical load once, without
+    prescribed-temperature elimination. The split ledgers round separately.
+    The quadratic closure uses `applied_pairing_W_K` and centered temperatures.
+    """
+    source_by_node_W: np.ndarray
+    integrated_source_W_by_cell: np.ndarray
+    total_source_W: float
+    source_pairing_W_K: float
+    surface_by_node_W: np.ndarray
+    total_surface_W: float
+    surface_pairing_W_K: float
+    applied_nodal_heat_W: np.ndarray
+    applied_pairing_W_K: float
     balance_W: float
 
 
@@ -157,11 +178,73 @@ def solve_steady_conduction_tet4_with_surface_flux(
 
     All selected face loads, including fully prescribed faces, enter the load
     ledger. The prescribed reaction is the remaining heat; a fully prescribed
-    face adds no free-row forcing. No mixed volume and surface API in this pilot.
+    face adds no free-row forcing. Use the mixed-load entry point for volume heating.
     """
     return _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
                              prescribed_K_by_id, _NO_SOURCE,
                              surface=(faces_by_node_id, inward_flux_W_per_m2))
+
+
+def solve_steady_conduction_tet4_with_mixed_loads(
+    bundle: Tet4Bundle, *, conductivity_W_per_m_K_by_material: Mapping,
+    prescribed_K_by_id: Mapping, source_W_per_m3_by_cell: Mapping,
+    faces_by_node_id, inward_flux_W_per_m2,
+) -> Tet4MixedConductionResult:
+    """Apply both signed cell heat density and uniform signed exterior heat flux.
+
+    One stable cell ID entry per cell, including zero, plus distinct exterior
+    triangles identified by their three stable node IDs. Positive loads enter
+    the solid. Separate heat and temperature-pairing ledgers include loads on
+    fully prescribed faces. Nonzero local cancellation outside the numerical
+    envelope is rejected; net global balance does not imply an isothermal body.
+    Geometry and rates are finite-precision inputs; no transient or feedback.
+    """
+    if source_W_per_m3_by_cell is _NO_SOURCE:
+        raise TypeError('expected a complete source density mapping')
+    return _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
+                             prescribed_K_by_id, source_W_per_m3_by_cell,
+                             surface=(faces_by_node_id, inward_flux_W_per_m2))
+
+
+def _local_mixed_watts(terms):
+    """Round once after exact products of the represented load factors."""
+    acc, shift = 0, 0
+    magnitudes = []
+    for geometry, rate, divisor in terms:
+        if not rate:
+            continue
+        gn, gd = float(geometry).as_integer_ratio()
+        rn, rd = float(rate).as_integer_ratio()
+        n = gn * rn * (12 // divisor)
+        bits = gd.bit_length() + rd.bit_length() - 2
+        if bits > shift:
+            acc <<= bits - shift
+            shift = bits
+        acc += n << (shift - bits)
+        magnitudes.append((n,bits))
+    den = 12 << shift
+    vn,vp=0,0
+    subtotals=[0,0]
+    smallest=[None,None]
+    for n,bits in magnitudes:
+        a=abs(n) << (shift-bits); sign=int(n>0)
+        if n>0: vp=max(vp,a)
+        else: vn=max(vn,a)
+        subtotals[sign]+=a
+        smallest[sign]=a if smallest[sign] is None else min(smallest[sign],a)
+    for subtotal,a in zip(subtotals,smallest):
+        if a is not None and subtotal/den == (subtotal-a)/den:
+            raise ValueError('mixed nodal heat lost a nonzero same-sign load contribution')
+    if not acc:
+        return 0.
+    r = acc / den
+    core._check_normal_or_zero(r,'mixed applied nodal heat in W')
+    if vn and vp and abs(acc)*10**10 <= max(vn,vp):
+        raise ValueError('unresolved near-opposing mixed nodal heat')
+    for sign,a in enumerate(smallest):
+        if a is not None and (acc+(-a if sign else a))/den == r:
+            raise ValueError('mixed nodal heat lost a nonzero load contribution')
+    return r
 
 
 def _resolved_surface_lump(terms):
@@ -181,7 +264,7 @@ def _resolved_surface_lump(terms):
     return total
 
 
-def _surface_terms(mesh, selection, key):
+def _surface_terms(mesh, selection, key, *, factors=None):
     faces, flux = selection
     rate = core._float64(flux, 'inward flux in W/m²')
     core._check_normal_or_zero(rate, 'inward flux in W/m²')
@@ -203,6 +286,8 @@ def _surface_terms(mesh, selection, key):
             face_powers.append(total)
             for node in face:
                 groups[key[node]].append(lump)
+                if factors is not None and rate:
+                    factors[key[node]].append((area,rate,3))
     except OverflowError as exc:
         raise ValueError('surface area or heat outside supported binary64 range') from exc
     return (np.array([_resolved_surface_lump(g) for g in groups]), np.array(face_powers),
@@ -245,6 +330,8 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
     ge=np.array(ge);V=np.array(V);k=np.array(axes)
     aware = source_W_per_m3_by_cell is not _NO_SOURCE
     active = False
+    mixed = aware and surface is not None
+    factors = ([[] for _ in range(n)] if mixed else None)
     if aware:
         table=_mapped(source_W_per_m3_by_cell,set(map(int,mesh.cell_ids)),'source density',-1e8,1e8,True)
         density=np.array([table[int(cid)] for cid in mesh.cell_ids])
@@ -257,9 +344,27 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
         source=np.array([math.fsum(g) for g in groups])
         gross_source=np.array([math.fsum(map(abs,g)) for g in groups])
         active = bool(np.any(density))
+        if mixed:
+            volume_integrated=generated
+            volume_gross=gross_source
+            for row,v,r in zip(t,V,density):
+                if r:
+                    for i in row:
+                        factors[i].append((v,r,4))
     if surface is not None:
-        source, generated, face_rows, active = _surface_terms(mesh, surface, key)
-        gross_source = abs(source)  # one common sign on all face terms
+        surface_source, face_integrated, face_rows, face_active = _surface_terms(
+            mesh, surface, key, factors=factors)
+        if mixed:
+            active=active or face_active
+            source=np.array([_local_mixed_watts(group) for group in factors])
+            volume_source=np.array([_local_mixed_watts(t for t in group if t[2]==4)
+                                    for group in factors])
+            surface_source=np.array([_local_mixed_watts(t for t in group if t[2]==3)
+                                     for group in factors])
+            gross_source=volume_gross+abs(surface_source)
+        else:
+            source,generated,active=surface_source,face_integrated,face_active
+            gross_source=abs(source)
     local=(k*V)[:,None,None]*(ge@ge.transpose(0,2,1))
     rows=np.broadcast_to(t[:,:,None],local.shape); cols=np.broadcast_to(t[:,None,:],local.shape)
     A=sparse.coo_matrix((local.ravel(),(rows.ravel(),cols.ravel())),shape=(n,n)).tocsr()
@@ -277,10 +382,17 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
         entries=(2*len(ids)-h)*(h+1);pad=len(ids)*(h+1)
         mat=A[ids][:,ids]; bound=float(abs(mat).sum(axis=1).max())
         if not np.isfinite(bound) or bound<=0:raise ValueError('unresolved scalar operator scale')
-        if active and np.any(source[ids]):
-            rhs=_combine_rhs(-np.asarray(A[ids][:,cap]@theta[cap]),source[ids])/bound
+        boundary=-np.asarray(A[ids][:,cap]@theta[cap])
+        if mixed and active:
+            rhs=np.array([
+                _local_mixed_watts((*factors[i],(1.,b,1))) if b and source[i]
+                else (b if b else source[i])
+                for i,b in zip(ids,boundary)
+            ])/bound
+        elif active and np.any(source[ids]):
+            rhs=_combine_rhs(boundary,source[ids])/bound
         else:
-            rhs=-np.asarray(A[ids][:,cap]@theta[cap])/bound
+            rhs=boundary/bound
         m=mat/bound
         plan=core._BandPlan(ids,order,h,entries,pad)
         theta[ids]=core._factor_band(m,tol,plan)(rhs)
@@ -332,7 +444,13 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
             # merely the sum of every algebraic row. Free residuals are measured
             # separately here and may account only for their own net signed heat.
             cap_heat=math.fsum(heat[ix])
-            integrated = generated[cells] if surface is None else generated[ix[face_rows]]
+            if mixed:
+                integrated=np.concatenate((volume_integrated[cells],
+                                           face_integrated[ix[face_rows]]))
+            elif surface is None:
+                integrated=generated[cells]
+            else:
+                integrated=generated[ix[face_rows]]
             gen_heat=math.fsum(integrated)
             free_net=math.fsum(residual[free])
             direct=math.fsum((cap_heat,gen_heat))
@@ -344,6 +462,20 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
                 raise ValueError('direct prescribed heat and generation do not balance' if surface is None
                                  else 'direct prescribed heat and applied surface heat do not balance')
             U=math.fsum(qcell[cells]); W=math.fsum(heat[ix]*theta[ix]); F=math.fsum(residual[free]*theta[free]); S=math.fsum(source[ix]*theta[ix])
+            if mixed:
+                for loads,active_integrated in (
+                    (volume_source[ix],volume_integrated[cells]),
+                    (surface_source[ix],face_integrated[ix[face_rows]]),
+                ):
+                    gross=math.fsum(map(abs,active_integrated))
+                    gap=math.fsum((*loads,*(-active_integrated)))
+                    if not math.isfinite(gap) or abs(gap)>128*np.finfo(np.float64).eps*gross:
+                        raise ValueError('mixed nodal and integrated heat ledgers do not match')
+                wv=volume_source[ix]*theta[ix]
+                we=surface_source[ix]*theta[ix]
+                scale=math.fsum(map(abs,wv))+math.fsum(map(abs,we))
+                if abs(math.fsum((math.fsum(wv),math.fsum(we),-S)))>128*np.finfo(np.float64).eps*scale:
+                    raise ValueError('mixed thermal ledger pairings do not match applied heat')
             eps_WK=1e-9*(math.fsum(abs(residual[ix]*theta[ix]))+math.fsum(abs(source[ix]*theta[ix]))+abs(U))+flo*float(np.max(abs(theta[ix])))
             if not np.isfinite([U,W,F,S]).all() or abs(math.fsum((U,-W,-F,-S)))>eps_WK:
                 raise ValueError('conduction Dirichlet quadratic failed')
@@ -371,6 +503,16 @@ def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
     closure=math.fsum((q,-work,-free_work,-source_work)) if active else math.fsum((q,-work,-free_work))
     shared=(*fields,q,work,free_work,closure,max_transfer,
             float(np.max(abs(residual[~fixed]),initial=0)),backward,entries)
+    if mixed:
+        V=math.fsum(volume_integrated)
+        E=math.fsum(face_integrated)
+        Wv=math.fsum(volume_source*theta)
+        We=math.fsum(surface_source*theta)
+        return Tet4MixedConductionResult(
+            *shared,_lock(volume_source),_lock(volume_integrated),V,Wv,
+            _lock(surface_source),E,We,_lock(source),source_work,
+            math.fsum((*heat,*volume_integrated,*face_integrated)),
+        )
     if surface is not None:
         return Tet4SurfaceConductionResult(
             *shared,_lock(source),math.fsum(generated),source_work,
