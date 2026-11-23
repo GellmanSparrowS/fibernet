@@ -1,3 +1,11 @@
+## [4.13.0]
+
+- Add an experimental Python snapshot for small-strain Tet4 thermoelasticity
+  at prescribed nodal temperatures, with signed thermal expansion by material.
+  Read displacement, support reactions, cell-mean stress and elastic energy.
+- Compare two material assignments on the same synthetic shared-face mesh
+  in the [4.13.0 release notes](docs/RELEASE_4_13_0.md).
+
 ## [4.12.0]
 
 - Add an opt-in Python API to run a small 3D welded-beam thermoelastic snapshot
