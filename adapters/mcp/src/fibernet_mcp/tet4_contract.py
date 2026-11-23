@@ -216,7 +216,7 @@ def run_worker(raw,source_digest,request_path,request_digest,mesh_id,provenance)
         return dict(kind=FAIL_KIND,source_sha256=source_digest,controls_sha256=request_digest,
                     provenance=provenance,code=code)
 
-def enable_tet4_tools(tools):
+def enable_tet4_tools(tools,*,operator_sources=False):
     """Augment schemas only in sessions that opted in to a bundled mesh."""
     import copy
     catalog=next(x for x in tools if x['name']=='fibernet_catalog')
@@ -229,6 +229,10 @@ def enable_tet4_tools(tools):
     mesh=schema(dict(mesh_id=idref,source_sha256=href,fixture={'enum':sorted(_FIXTURES)},
                     unit={'enum':['m','cm','mm','um','nm']},nodes={'type':'integer','minimum':4,'maximum':1024},
                     cells={'type':'integer','minimum':1,'maximum':8000}))
+    if operator_sources:
+        operator={k:v for k,v in mesh['properties'].items() if k!='fixture'}
+        operator.update(source_kind={'const':'operator'},name={'type':'string','pattern':'^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'})
+        mesh={'oneOf':[mesh,schema(operator)]}
     props['tet4_meshes']=dict(type='array',items=mesh,minItems=1,maxItems=2)
     catalog_ok['required'].append('tet4_meshes')
     for tool in tools:

@@ -3,3 +3,5 @@ recursive-include tests *.py
 recursive-include tests/fixtures *.json
 recursive-include tests/fixtures *.json.gz
 recursive-include fixtures projection_*.json projection_*.b64
+
+recursive-include examples *.py

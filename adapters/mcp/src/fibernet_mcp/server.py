@@ -34,6 +34,7 @@ from .thermoelastic import (PROFILE as SNAPSHOT_PROFILE, SNAPSHOT_LIMITS,
     MAX_SNAPSHOT_SOURCE_BYTES, MAX_SNAPSHOT_REQUEST_BYTES, MAX_SNAPSHOT_ENVELOPE_BYTES,
     SnapshotContractError, snapshot_request, validate_worker_snapshot)
 
+from .tet4_operator import load_operator_sources
 from .tet4_contract import (TET4_TOOL, MAX_SOURCE as MAX_TET4_SOURCE, MAX_REQUEST as MAX_TET4_REQUEST,
     MAX_ARTIFACT as MAX_TET4_ARTIFACT, FAIL_KIND as TET4_FAIL_KIND, parse_mesh, parse_req,
     validate_result as validate_tet4_result, check_error as check_tet4_error,
@@ -140,9 +141,24 @@ class ManagedStore:
         self.producer = {'fibernet_version':'4.3.0','source_tree':TREE,'adapter_version':'0.0.0-private',
                          'sdk_version':importlib.metadata.version('mcp')}
         try:
-            cfg = strict_json(read_file(manifest))
-            if not isinstance(cfg, dict) or set(cfg) not in ({'source_tree','graphs'},{'source_tree','graphs','tet4_fixtures'}) or cfg['source_tree'] != TREE:
-                raise ContractError('invalid operator manifest')
+            parent,name=os.path.split(os.path.abspath(manifest))
+            operator_fd=open_directory(parent)
+            try:
+                cfg=strict_json(read_at(operator_fd,name))
+                if (not isinstance(cfg,dict) or not {'source_tree','graphs'}<=set(cfg) or
+                        set(cfg)-{'source_tree','graphs','tet4_fixtures','tet4_sources'} or cfg['source_tree']!=TREE):
+                    raise ContractError('invalid operator manifest')
+                fixtures=cfg.get('tet4_fixtures',[])
+                if 'tet4_fixtures' in cfg and (not isinstance(fixtures,list) or not 1<=len(fixtures)<=2 or
+                        not all(type(x) is str for x in fixtures) or len(set(fixtures))!=len(fixtures)):
+                    raise ContractError('invalid Tet4 fixture list')
+                external=[]
+                if 'tet4_sources' in cfg:
+                    entries=cfg['tet4_sources']
+                    if not isinstance(entries,list) or not 1<=len(entries) or len(entries)+len(fixtures)>2:
+                        raise ContractError('combined Tet4 source limit')
+                    external=load_operator_sources(operator_fd,entries,fixtures)
+            finally: os.close(operator_fd)
             if not isinstance(cfg['graphs'],list) or not 1 <= len(cfg['graphs']) <= 32: raise ContractError('manifest graph limit')
             for item in cfg['graphs']:
                 if not isinstance(item,dict) or set(item) != {'path','sha256','length_unit','frame_id'}: raise ContractError('invalid graph manifest')
@@ -158,16 +174,17 @@ class ManagedStore:
                     'length_unit':item['length_unit'],'frame_id':item['frame_id'],
                     'unit_provenance':'unknown' if item['length_unit']=='unspecified' else 'operator_asserted',
                     'frame_provenance':'unknown' if item['frame_id']=='unknown' else 'operator_asserted'}
-            fixtures=cfg.get('tet4_fixtures')
-            if 'tet4_fixtures' in cfg:
-                if not isinstance(fixtures,list) or not 1<=len(fixtures)<=2 or not all(type(x) is str for x in fixtures) or len(set(fixtures))!=len(fixtures):
-                    raise ContractError('invalid Tet4 fixture list')
-                for name in fixtures:
-                    raw,digest,mesh=load_fixture(name)
-                    mid=uuid.uuid4().hex
-                    self.put_file(mid,raw)
-                    self.tet4[mid]=dict(mesh_id=mid,source_sha256=digest,fixture=name,
-                                        unit=mesh[-1],nodes=len(mesh[0]),cells=len(mesh[1]))
+            for name in fixtures:
+                raw,digest,mesh=load_fixture(name)
+                mid=uuid.uuid4().hex
+                self.put_file(mid,raw)
+                self.tet4[mid]=dict(mesh_id=mid,source_sha256=digest,fixture=name,
+                                    unit=mesh[-1],nodes=len(mesh[0]),cells=len(mesh[1]))
+            for name,raw,digest,mesh in external:
+                mid=uuid.uuid4().hex
+                self.put_file(mid,raw)
+                self.tet4[mid]=dict(mesh_id=mid,source_sha256=digest,source_kind='operator',
+                                    name=name,unit=mesh[-1],nodes=len(mesh[0]),cells=len(mesh[1]))
         except BaseException:
             self.close(); raise
 
@@ -393,7 +410,7 @@ async def _serve_admitted(args,store):
     import mcp.types as mt
     sup=Supervisor(store,args.timeout)
     definitions=json.loads(Path(__file__).with_name('tool_schemas.json').read_text())['tools']
-    if store.tet4: enable_tet4_tools(definitions)
+    if store.tet4: enable_tet4_tools(definitions,operator_sources=any('source_kind' in q for q in store.tet4.values()))
     # Remove unused local definitions from each advertised schema to fit bounded list output.
     def prune(schema):
         needed=set()

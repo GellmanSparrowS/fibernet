@@ -187,12 +187,13 @@ def read_file(path, cap=MAX_BYTES):
     try: return read_at(root, name, cap)
     finally: os.close(root)
 
-def read_at(root, name, cap=MAX_BYTES):
+def read_at(root, name, cap=MAX_BYTES, *, single_link=False):
     if '/' in name or name in ('', '.', '..'): raise ContractError('invalid internal name')
     fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=root)
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > cap: raise ContractError('invalid file or byte limit')
+        if not stat.S_ISREG(info.st_mode) or info.st_size > cap or (single_link and info.st_nlink!=1):
+            raise ContractError('invalid file or byte limit')
         with os.fdopen(fd, 'rb', closefd=False) as f: raw = f.read(cap + 1)
         if len(raw) > cap: raise ContractError('byte limit')
         return raw
