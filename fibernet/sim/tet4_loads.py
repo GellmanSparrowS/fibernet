@@ -25,23 +25,11 @@ def _reject_mask(value, label):
         _unmasked_field(value, label)
 
 
-def nodal_forces_from_traction(bundle: Tet4Bundle, faces_by_node_id, *,
-                               traction_Pa) -> dict[int, tuple[float, float, float]]:
-    """Return stable ID -> Fx,Fy,Fz (N) from fixed global traction (Pa).
+def _prepare_exterior_face_areas(mesh, faces_by_node_id):
+    """Validate selectors on an owned Tet4 mesh; prepare exact coordinates.
 
-    The supplied face IDs may be in any order. Each selected face must be
-    a distinct three-node face incident to exactly one tetrahedron. Incidence
-    is topological; this does not certify a spatial conformity/overlap model.
-    No normals, pressure, total-force normalization, supports or solve.
-    Mesh counts follow the bounded Tet4 static solver. Intermediate face
-    areas and force results must be in finite normal binary64 range.
+    One-owner incidence is topological, not a spatial conformity check.
     """
-    mesh = _owned_static_mesh(bundle)
-    _reject_mask(traction_Pa, 'traction_Pa')
-    if not _is_triple(traction_Pa):
-        raise ValueError('traction_Pa must be three finite Cartesian components, not pressure or total force')
-    traction = [_float64(x,'traction in Pa') for x in traction_Pa]
-    _check_normal_or_zero(traction, 'traction in Pa')
     _reject_mask(faces_by_node_id, 'faces')
     if isinstance(faces_by_node_id, np.ndarray) and (
             faces_by_node_id.ndim != 2 or faces_by_node_id.shape[1] != 3):
@@ -74,29 +62,59 @@ def nodal_forces_from_traction(bundle: Tet4Bundle, faces_by_node_id, *,
     for key in set(k for face in selected for k in face):
         raw=mesh.points[node_rows[key]].view(np.uint64).tolist()
         points[key]=tuple(Fraction(*_binary64_ratio(word)) for word in raw)
+    return sorted(selected), points, Fraction(str(_LENGTH_TO_M[mesh.length_unit]))**2/2
+
+
+def _iter_exterior_face_areas(prepared):
+    """Yield canonical stable-ID triples and positive normal areas in m².
+
+    Callers choose how to translate an OverflowError from area arithmetic.
+    """
+    selected, points, half_si = prepared
+    for a,b,c in selected:
+        start=points[a]
+        u=[q-p for q,p in zip(points[b],start)]
+        v=[q-p for q,p in zip(points[c],start)]
+        cross=[u[j]*v[k]-u[k]*v[j] for j,k in ((1,2),(2,0),(0,1))]
+        m=max(map(abs,cross))
+        if not m:
+            raise ValueError('selected exterior face has zero area')
+        area_scale = m * half_si
+        # Extract the exponent before converting. The largest cross
+        # component alone may be subnormal even if the norm is normal.
+        exponent = (area_scale.numerator.bit_length()
+                    - area_scale.denominator.bit_length() + 1)
+        significand = float(area_scale / (Fraction(2) ** exponent))
+        norm = math.hypot(*(float(z/m) for z in cross))
+        area = math.ldexp(significand * norm, exponent)
+        _check_normal_or_zero(area,'selected triangle area in m²')
+        if not (area>0. and math.isfinite(area)):
+            raise ValueError('selected triangle area is outside supported normal binary64 range')
+        yield (a,b,c), area
+
+
+def nodal_forces_from_traction(bundle: Tet4Bundle, faces_by_node_id, *,
+                               traction_Pa) -> dict[int, tuple[float, float, float]]:
+    """Return stable ID -> Fx,Fy,Fz (N) from fixed global traction (Pa).
+
+    The supplied face IDs may be in any order. Each selected face must be
+    a distinct three-node face incident to exactly one tetrahedron. Incidence
+    is topological; this does not certify a spatial conformity/overlap model.
+    No normals, pressure, total-force normalization, supports or solve.
+    Mesh counts follow the bounded Tet4 static solver. Intermediate face
+    areas and force results must be in finite normal binary64 range.
+    """
+    mesh = _owned_static_mesh(bundle)
+    _reject_mask(traction_Pa, 'traction_Pa')
+    if not _is_triple(traction_Pa):
+        raise ValueError('traction_Pa must be three finite Cartesian components, not pressure or total force')
+    traction = [_float64(x,'traction in Pa') for x in traction_Pa]
+    _check_normal_or_zero(traction, 'traction in Pa')
+    prepared = _prepare_exterior_face_areas(mesh, faces_by_node_id)
     area_terms=defaultdict(list)
-    half_si=Fraction(str(_LENGTH_TO_M[mesh.length_unit]))**2/2
     try:
-        for a,b,c in sorted(selected):
-            start=points[a]
-            u=[q-p for q,p in zip(points[b],start)]
-            v=[q-p for q,p in zip(points[c],start)]
-            cross=[u[j]*v[k]-u[k]*v[j] for j,k in ((1,2),(2,0),(0,1))]
-            m=max(map(abs,cross))
-            if not m:
-                raise ValueError('selected exterior face has zero area')
-            area_scale = m * half_si
-            # Extract the exponent before converting. The largest cross
-            # component alone may be subnormal even if the norm is normal.
-            exponent = (area_scale.numerator.bit_length()
-                        - area_scale.denominator.bit_length() + 1)
-            significand = float(area_scale / (Fraction(2) ** exponent))
-            norm = math.hypot(*(float(z/m) for z in cross))
-            area = math.ldexp(significand * norm, exponent)
-            _check_normal_or_zero(area,'selected triangle area in m²')
-            if not (area>0. and math.isfinite(area)):
-                raise ValueError('selected triangle area is outside supported normal binary64 range')
-            for i in (a,b,c):
+        for face, area in _iter_exterior_face_areas(prepared):
+            for i in face:
                 area_terms[i].append(area)
         force={}
         for key,terms in sorted(area_terms.items()):
