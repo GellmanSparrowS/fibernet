@@ -5966,9 +5966,11 @@
   "symbols": [
    "_is_triple",
    "_reject_mask",
+   "_prepare_exterior_face_areas",
+   "_iter_exterior_face_areas",
    "nodal_forces_from_traction"
   ],
-  "sha256": "818f3ed2011eb55dd17c012dd2fe23d2bd0c974f3c580c9c1f3e8d0f865bf622"
+  "sha256": "ca47886ca95267feeed35875b07165c799e126d4676b4c562ebf3fd8acf466fe"
  },
  "tests/test_tet4_loads.py": {
   "purpose": "Analytical and integration tests for explicitly selected Tet4 face traction.",
@@ -6489,19 +6491,23 @@
   "sha256": "a8d8df3447d3ec7d1c133bdeabdaf3475b5686c731c3a515a89e96885848a538"
  },
  "fibernet/sim/tet4_conduction.py": {
-  "purpose": "Experimental bounded scalar P1 Tet4 steady conduction with optional prescribed volumetric sources.",
+  "purpose": "Experimental bounded scalar P1 Tet4 steady conduction with prescribed volumetric sources or surface flux.",
   "status": "active",
   "symbols": [
    "Tet4ConductionResult",
    "Tet4SourceConductionResult",
+   "Tet4SurfaceConductionResult",
    "_lock",
    "_mapped",
    "_combine_rhs",
    "solve_steady_conduction_tet4",
    "solve_steady_conduction_tet4_with_source",
+   "solve_steady_conduction_tet4_with_surface_flux",
+   "_resolved_surface_lump",
+   "_surface_terms",
    "_solve_conduction"
   ],
-  "sha256": "eab2292f6d4c7226bba4563593f0e5a62df1e5af7ca6e95d37bb7cddd6a9c1f2"
+  "sha256": "effea637a0b7bc94eb6bd3108a837c4a63681a09b041486ca6fd34b94168f5a8"
  },
  "tests/test_tet4_conduction.py": {
   "purpose": "test_tet4_conduction",
@@ -6528,5 +6534,18 @@
    "test_unresolved_represented_rhs_operands_are_not_erased"
   ],
   "sha256": "4d6e3b36c319c443680c9c7c8cd3f0664feaf574fb0d539a3b5347e788f7f7e0"
+ },
+ "tests/test_tet4_conduction_surface.py": {
+  "purpose": "Analytical checks for signed, explicitly selected Tet4 surface heat.",
+  "status": "active",
+  "symbols": [
+   "_bundle",
+   "_solve",
+   "test_prism_signed_flux_and_rate_units",
+   "test_mixed_and_all_held_reactions_separate_and_zero_field_parity",
+   "test_reject_interior_and_duplicate_even_with_zero_density",
+   "test_same_sign_lumping_admits_resolved_unequal_areas_and_rejects_loss"
+  ],
+  "sha256": "dd7f10b0d1a6c86b598fa46e1e1da779c9dcb4472c661317ab1f52d9cf84f4e6"
  }
 }
