@@ -20,6 +20,7 @@ include examples/data/lammps_braced_network_si.json
 
 # Source-distribution inputs for the standalone library examples and tests.
 recursive-include examples/fixtures *.json
+include examples/fixtures/fitted_axial_B.geo
 recursive-include tests/fixtures *.json *.txt *.md
 include .gitattributes
 include scripts/deformation_test/run_large_deformation_fem.py

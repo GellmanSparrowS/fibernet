@@ -51,6 +51,9 @@ are not centroid labels. The repository copy includes the optional
 4.13.1/OpenCASCADE. Remeshing is not required, may change the mesh with
 different provider builds, and does not reconstruct the stored fractions
 without a separate integration step.
+The CAD input emits MSH 2.2 without named physical groups; it is not the
+tagged ASCII MSH 4.1 input used by the
+[named-group import recipe](TET4_VTU_BUNDLE.md#import-named-material-and-boundary-groups-from-gmsh).
 
 ## How sensitive is compliance to the modulus contrast?
 
