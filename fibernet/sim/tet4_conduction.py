@@ -1,4 +1,4 @@
-"""Experimental bounded source-free scalar P1 Tet4 steady conduction."""
+"""Experimental bounded scalar P1 Tet4 steady conduction."""
 from collections.abc import Mapping
 from dataclasses import dataclass
 from itertools import combinations
@@ -9,7 +9,10 @@ from scipy.sparse.csgraph import connected_components
 from fibernet.io.tet4_meshio import Tet4Bundle
 from fibernet.sim import tet4 as core
 
-__all__ = ["Tet4ConductionResult", "solve_steady_conduction_tet4"]
+__all__ = [
+    "Tet4ConductionResult", "Tet4SourceConductionResult",
+    "solve_steady_conduction_tet4", "solve_steady_conduction_tet4_with_source",
+]
 
 _MAX_NODES = 1024
 _MAX_CELLS = 8000
@@ -21,6 +24,8 @@ _COORD_MAX_M = 1.
 _VOLUME_MIN_M3 = 1e-24
 _GRAD_MAX_PER_M = 1e12
 _TRANSFER_REL = 2e-10
+_RHS_CANCELLATION_REL = 1e-10
+_NO_SOURCE = object()
 # Centred temperatures can retain variation lost when adding a Kelvin offset.
 # The 2e-10 relative gate explicitly limits that representation loss on the
 # complete physical field. This is a consistency gate, not a PDE error bound.
@@ -48,6 +53,17 @@ class Tet4ConductionResult:
     factor_entries: int
 
 
+@dataclass(frozen=True)
+class Tet4SourceConductionResult(Tet4ConductionResult):
+    """Source-aware ledger; pairings use the per-component centered field."""
+
+    source_by_node_W: np.ndarray
+    integrated_source_W_by_cell: np.ndarray
+    total_source_W: float
+    source_pairing_W_K: float
+    balance_W: float
+
+
 def _lock(a):
     return np.frombuffer(a.tobytes(),dtype=a.dtype).reshape(a.shape)
 
@@ -67,6 +83,25 @@ def _mapped(mapping,keys,label,low,high,complete=False):
     return out
 
 
+def _combine_rhs(boundary, source):
+    """Combine bounded binary64 free-row terms; refuse unresolved small differences."""
+    effective=boundary+source
+    if not np.isfinite(effective).all():
+        raise ValueError('nonfinite combined thermal RHS')
+    both=(boundary!=0.)&(source!=0.)
+    exact=both&(boundary==-source)
+    if np.any(exact&(effective!=0.)):
+        raise ValueError('exact opposing thermal RHS was not zero')
+    if np.any(both&((effective==boundary)|(effective==source))):
+        raise ValueError('thermal RHS lost a nonzero operand')
+    opposed=both&(np.signbit(boundary)!=np.signbit(source))
+    uncertified=abs(effective)<=_RHS_CANCELLATION_REL*np.maximum(abs(boundary),abs(source))
+    if np.any(opposed&~exact&uncertified):
+        raise ValueError('unresolved near-opposing thermal RHS')
+    core._check_normal_or_zero(effective,'combined thermal RHS')
+    return effective
+
+
 def solve_steady_conduction_tet4(
     bundle: Tet4Bundle, *, conductivity_W_per_m_K_by_material: Mapping,
     prescribed_K_by_id: Mapping,
@@ -80,6 +115,30 @@ def solve_steady_conduction_tet4(
     not stored energy. This is not a heat source, transient, or reverse
     thermoelastic coupling API.
     """
+    return _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
+                             prescribed_K_by_id, _NO_SOURCE)
+
+
+def solve_steady_conduction_tet4_with_source(
+    bundle: Tet4Bundle, *, conductivity_W_per_m_K_by_material: Mapping,
+    prescribed_K_by_id: Mapping, source_W_per_m3_by_cell: Mapping,
+) -> Tet4SourceConductionResult:
+    """As source-free conduction, with signed constant source density per cell.
+
+    Supply one value per stable cell ID, including explicit zero where off.
+    Positive values heat and negative values cool. Admitted nonzero
+    magnitudes are 1e-8 to 1e8 W/m³, a numerical pilot envelope. The heat
+    entering on prescribed nodes plus net generation balances to numerical
+    tolerance. Quadratic, terminal, source and residual pairings are W·K
+    using each component's centered temperatures; they are not stored
+    energy. No state-dependent source, transient, or reverse coupling.
+    """
+    return _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
+                             prescribed_K_by_id, source_W_per_m3_by_cell)
+
+
+def _solve_conduction(bundle, conductivity_W_per_m_K_by_material,
+                      prescribed_K_by_id, source_W_per_m3_by_cell):
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if core._row_count(bundle.points,'points')>_MAX_NODES or core._row_count(bundle.tetrahedra,'tetrahedra')>_MAX_CELLS:
@@ -112,6 +171,20 @@ def solve_steady_conduction_tet4(
         ge.append(g); V.append(v)
         axes.append(kk[int(mesh.material_ids[i])])
     ge=np.array(ge);V=np.array(V);k=np.array(axes)
+    aware = source_W_per_m3_by_cell is not _NO_SOURCE
+    active = False
+    if aware:
+        table=_mapped(source_W_per_m3_by_cell,set(map(int,mesh.cell_ids)),'source density',-1e8,1e8,True)
+        density=np.array([table[int(cid)] for cid in mesh.cell_ids])
+        if np.any((density!=0.)&(abs(density)<1e-8)):
+            raise ValueError('nonzero source density below 1e-8 W/m³')
+        generated=V*density
+        groups=[[] for _ in range(n)]
+        for c,cellw in zip(t,generated):
+            for i in c: groups[i].append(cellw*.25)
+        source=np.array([math.fsum(g) for g in groups])
+        gross_source=np.array([math.fsum(map(abs,g)) for g in groups])
+        active = bool(np.any(density))
     local=(k*V)[:,None,None]*(ge@ge.transpose(0,2,1))
     rows=np.broadcast_to(t[:,:,None],local.shape); cols=np.broadcast_to(t[:,None,:],local.shape)
     A=sparse.coo_matrix((local.ravel(),(rows.ravel(),cols.ravel())),shape=(n,n)).tocsr()
@@ -129,7 +202,10 @@ def solve_steady_conduction_tet4(
         entries=(2*len(ids)-h)*(h+1);pad=len(ids)*(h+1)
         mat=A[ids][:,ids]; bound=float(abs(mat).sum(axis=1).max())
         if not np.isfinite(bound) or bound<=0:raise ValueError('unresolved scalar operator scale')
-        rhs=-np.asarray(A[ids][:,cap]@theta[cap])/bound
+        if active and np.any(source[ids]):
+            rhs=_combine_rhs(-np.asarray(A[ids][:,cap]@theta[cap]),source[ids])/bound
+        else:
+            rhs=-np.asarray(A[ids][:,cap]@theta[cap])/bound
         m=mat/bound
         plan=core._BandPlan(ids,order,h,entries,pad)
         theta[ids]=core._factor_band(m,tol,plan)(rhs)
@@ -157,19 +233,49 @@ def solve_steady_conduction_tet4(
     el=-V[:,None]*np.einsum('nki,ni->nk',ge,flux)
     power=np.zeros(n)
     np.add.at(power,t,el)
-    heat=np.where(fixed,power,0.)
+    residual=power-source if active else power
+    heat=np.where(fixed,residual,0.)
     qcell=(k*V)*np.einsum('ni,ni->n',grad,grad)  # K W, not heat flow/power
     if np.any(~np.isfinite(qcell)) or np.any(qcell<0.):
         raise ValueError('invalid conductive quadratic')
     q=math.fsum(qcell)
     work=math.fsum(heat*theta)
-    free_work=math.fsum(power[~fixed]*theta[~fixed])
+    free_work=math.fsum(residual[~fixed]*theta[~fixed])
+    source_work=math.fsum(source*theta) if active else 0.
     audited_A=A@theta
     gross_local=(abs(local)*abs(theta[t])[:,None,:]).sum(axis=(1,2))
     labels=components[t[:,0]]
     for lab in np.unique(components):
         ix=components==lab;cells=labels==lab; free=ix&(~fixed)
         flo=256*np.finfo(np.float64).eps*math.fsum(gross_local[cells])
+        if active:
+            eps_W=1e-9*(math.fsum(abs(el[cells]).ravel())+math.fsum(gross_source[ix]))+flo
+            if max(float(abs(residual[free]).max(initial=0)),abs(math.fsum(power[ix])),
+                   float(abs(power[ix]-audited_A[ix]).max(initial=0)))>eps_W:
+                raise ValueError('conduction flux or free residual rejected')
+            # This is the PUBLIC cap+generation conservation statement, not
+            # merely the sum of every algebraic row. Free residuals are measured
+            # separately here and may account only for their own net signed heat.
+            cap_heat=math.fsum(heat[ix])
+            gen_heat=math.fsum(generated[cells])
+            free_net=math.fsum(residual[free])
+            direct=math.fsum((cap_heat,gen_heat))
+            roundoff_W=flo+256*np.finfo(np.float64).eps*(
+                math.fsum(abs(el[cells]).ravel())+math.fsum(gross_source[ix])+
+                math.fsum(abs(generated[cells]))+math.fsum(abs(residual[ix])))
+            if (abs(math.fsum((direct,free_net)))>roundoff_W or
+                abs(direct)>abs(free_net)+roundoff_W):
+                raise ValueError('direct prescribed heat and generation do not balance')
+            U=math.fsum(qcell[cells]); W=math.fsum(heat[ix]*theta[ix]); F=math.fsum(residual[free]*theta[free]); S=math.fsum(source[ix]*theta[ix])
+            eps_WK=1e-9*(math.fsum(abs(residual[ix]*theta[ix]))+math.fsum(abs(source[ix]*theta[ix]))+abs(U))+flo*float(np.max(abs(theta[ix])))
+            if not np.isfinite([U,W,F,S]).all() or abs(math.fsum((U,-W,-F,-S)))>eps_WK:
+                raise ValueError('conduction Dirichlet quadratic failed')
+            # Independently bound the *direct* terminal pairing against the
+            # geometric scalar quadratic by measured free-row error and roundoff.
+            residual_virtual_bound=math.fsum(abs(residual[free]*theta[free]))
+            if abs(math.fsum((U,-W,-S)))>residual_virtual_bound+eps_WK:
+                raise ValueError('conduction terminal pairing unresolved')
+            continue
         eps_W=1e-9*math.fsum(abs(el[cells]).ravel())+flo
         if max(float(abs(power[free]).max(initial=0)),abs(math.fsum(power[ix])),
                float(abs(power[ix]-audited_A[ix]).max(initial=0)))>eps_W:
@@ -183,5 +289,14 @@ def solve_steady_conduction_tet4(
         residual_virtual_bound=math.fsum(abs(power[free]*theta[free]))
         if abs(math.fsum((U,-W)))>residual_virtual_bound+eps_WK:
             raise ValueError('conduction terminal pairing unresolved')
-    return Tet4ConductionResult(*map(_lock,(mesh.node_ids,mesh.cell_ids,T,theta,ref)),
-        *map(_lock,(fixed,heat,grad,flux)),q,work,free_work,math.fsum((q,-work,-free_work)),max_transfer,float(np.max(abs(power[~fixed]),initial=0)),backward,entries)
+    fields=(*map(_lock,(mesh.node_ids,mesh.cell_ids,T,theta,ref)),
+            *map(_lock,(fixed,heat,grad,flux)))
+    closure=math.fsum((q,-work,-free_work,-source_work)) if active else math.fsum((q,-work,-free_work))
+    shared=(*fields,q,work,free_work,closure,max_transfer,
+            float(np.max(abs(residual[~fixed]),initial=0)),backward,entries)
+    if not aware:
+        return Tet4ConductionResult(*shared)
+    return Tet4SourceConductionResult(
+        *shared,_lock(source),_lock(generated),math.fsum(generated),source_work,
+        math.fsum((*heat,*generated)),
+    )
