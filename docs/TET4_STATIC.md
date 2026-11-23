@@ -16,6 +16,9 @@ result = solve_static_tet4(
 )
 ```
 
+For prescribed nodal temperatures, use the separate experimental
+[Tet4 thermoelastic snapshot](TET4_THERMOELASTIC.md).
+
 Create a [Tet4Bundle](TET4_VTU_BUNDLE.md) in memory or read it with the
 optional Meshio adapter. Solving itself does not import or need Meshio.
 For a known constant Cartesian traction on selected exterior triangles,
