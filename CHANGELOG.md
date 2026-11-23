@@ -1,3 +1,13 @@
+## [4.20.0]
+
+- Exchange steady heat with a specified ambient on selected Tet4 faces
+  using a uniform convection coefficient. The surface heat follows
+  the computed temperature instead of being prescribed as a flux.
+- Combine convection with signed volumetric heat and read its contribution
+  separately from the prescribed-temperature response.
+- See the [4.20.0 release notes](docs/RELEASE_4_20_0.md) for a runnable
+  heated-bar example with an independent heat balance.
+
 ## [4.19.0]
 
 - Solve steady Tet4 conduction with signed volumetric heat and a uniform
