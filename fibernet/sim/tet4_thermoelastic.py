@@ -133,7 +133,23 @@ def solve_prescribed_temperature_tet4(
     the stress–eigenstrain integral, up to numerical tolerance. This
     does not solve heat transfer or estimate interface/peak stresses.
     """
-    mesh=core._validate_static_mesh(bundle)
+    mesh = core._validate_static_mesh(bundle)
+    result, _ = _solve_prescribed_temperature_tet4_on_validated_mesh(
+        mesh, temperature_K_by_id=temperature_K_by_id,
+        stress_free_temperature_K=stress_free_temperature_K,
+        alpha_per_K_by_material=alpha_per_K_by_material,
+        forces_by_id=forces_by_id, fixed_dofs_by_id=fixed_dofs_by_id,
+        prescribed_displacements_m_by_id=prescribed_displacements_m_by_id,
+    )
+    return result
+
+
+def _solve_prescribed_temperature_tet4_on_validated_mesh(
+    mesh, *, temperature_K_by_id, stress_free_temperature_K,
+    alpha_per_K_by_material, forces_by_id, fixed_dofs_by_id,
+    prescribed_displacements_m_by_id,
+):
+    """Return solver fields and the same owned absolute temperatures it used."""
     X_m=mesh.points*core._LENGTH_TO_M[mesh.length_unit]
     if not np.all(np.isfinite(X_m)) or np.max(abs(X_m))>1.:
         raise ValueError('prototype coordinate scale exceeds 1 m')
@@ -153,7 +169,8 @@ def solve_prescribed_temperature_tet4(
         return a
     ref=core._float64(stress_free_temperature_K,'stress-free K')
     if not 1<=ref<=2000:raise ValueError('prototype stress-free K outside [1,2000]')
-    dT=required(temperature_K_by_id,ids,'node K',1.,2000.)-ref
+    temperature_K=required(temperature_K_by_id,ids,'node K',1.,2000.)
+    dT=temperature_K-ref
     al=required(alpha_per_K_by_material,mats,'material alpha /K',-1e-3,1e-3)
     if np.any((al!=0)&(abs(al)<_MIN_NONZERO_ALPHA)):
         raise ValueError('nonzero alpha below prototype numerical floor')
@@ -232,4 +249,8 @@ def solve_prescribed_temperature_tet4(
         return core._tensor_rows(a)
     arr=[mesh.node_ids,mesh.cell_ids,mesh.material_ids,u,fixed,reaction,tensor(totals,True),
          tensor(elastics,True),tensor(stresses,False),np.array(energies)]
-    return Tet4ThermoelasticResult(*map(_frozen_array,arr),U,pairing,eigen_work,float(np.max(abs(physical[~fixed]),initial=0)))
+    result = Tet4ThermoelasticResult(
+        *map(_frozen_array, arr), U, pairing, eigen_work,
+        float(np.max(abs(physical[~fixed]), initial=0)),
+    )
+    return result, temperature_K
