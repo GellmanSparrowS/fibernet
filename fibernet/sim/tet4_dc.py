@@ -1,0 +1,148 @@
+"""Private pilot: bounded isotropic DC conduction on an owned Tet4 mesh."""
+from collections.abc import Mapping
+from dataclasses import dataclass
+import math
+
+import numpy as np
+from scipy import sparse
+from scipy.sparse.csgraph import connected_components
+
+from fibernet.io.tet4_meshio import Tet4Bundle
+from fibernet.sim import tet4 as core
+
+__all__ = ['Tet4DCResult', 'solve_dc_tet4']
+
+
+def _locked(array):
+    return np.frombuffer(array.tobytes(),dtype=array.dtype).reshape(array.shape)
+
+
+def _table(data, keys, low, high, name, complete=False):
+    if not isinstance(data, Mapping) or len(data)>len(keys):
+        raise ValueError(f'expected bounded {name} mapping')
+    out={}
+    for j,(key,value) in enumerate(data.items()):
+        key=core._integer(key,name)
+        value=core._float64(value,name)
+        if j>=len(keys) or key not in keys or key in out or not low<=value<=high:
+            raise ValueError(f'invalid {name} ID or value')
+        out[key]=value
+    if complete and set(out)!=keys:
+        raise ValueError(f'missing {name} IDs')
+    return out
+
+
+@dataclass(frozen=True)
+class Tet4DCResult:
+    """Detached SI fields; currents are positive into the solid at electrodes."""
+    node_ids: np.ndarray
+    cell_ids: np.ndarray
+    voltage_V: np.ndarray
+    centered_voltage_V: np.ndarray
+    reference_voltage_V: np.ndarray
+    electrode_mask: np.ndarray
+    electrode_current_into_solid_A: np.ndarray
+    current_density_A_per_m2: np.ndarray
+    joule_density_W_per_m3: np.ndarray
+    joule_power_W_by_cell: np.ndarray
+    terminal_power_W: float
+    total_joule_power_W: float
+    max_free_residual_A: float
+    net_electrode_current_A: float
+    power_closure_W: float
+    factor_entries: int
+
+
+def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage_V_by_id):
+    """Fixed prescribed voltage; other faces weakly insulating; no thermal feedback."""
+    if not isinstance(bundle,Tet4Bundle): raise TypeError("expected a Tet4Bundle")
+    if core._row_count(bundle.points,'points')>1024 or core._row_count(bundle.tetrahedra,'tetrahedra')>8000:
+        raise ValueError('DC pilot mesh limits')
+    mesh=core._validate_static_mesh(bundle)
+    x=mesh.points*core._LENGTH_TO_M[mesh.length_unit]; cells=mesh.tetrahedra
+    if np.max(abs(x),initial=0)>1.: raise ValueError('DC coordinate limit')
+    s=_table(conductivity_S_per_m_by_material,set(mesh.materials),1e-6,1e6,'DC conductivity',True)
+    rows={int(key):i for i,key in enumerate(mesh.node_ids)}
+    v=_table(electrode_voltage_V_by_id,set(rows),-100.,100.,'electrode voltage')
+    core._check_normal_or_zero(list(v.values()),'electrode V')
+    n=len(x); held=np.zeros(n,dtype=bool); absolute=np.zeros(n)
+    for key,value in v.items(): held[rows[key]]=True; absolute[rows[key]]=value
+    graph=core._free_node_topology(cells,n,np.arange(n))
+    _,labels=connected_components(graph,directed=False)
+    if set(labels[held])!=set(labels):
+        raise ValueError('each DC component needs an electrode node')
+    refs=np.empty(n); psi=np.zeros(n); enabled=np.zeros(n,dtype=bool)
+    for lab in np.unique(labels):
+        ix=labels==lab; ih=ix&held; lo=absolute[ih].min(); hi=absolute[ih].max()
+        if hi!=lo and hi-lo<1e-6: raise ValueError('unresolved active electrode span')
+        refs[ix]=lo; psi[ih]=absolute[ih]-lo; enabled[ix]=hi!=lo
+        # Equal electrodes are allowed; unequal represented levels must stay
+        # strictly ordered when transformed to the component gauge.
+        levels=np.unique(absolute[ih])
+        if (np.any(np.diff(levels-lo)<=0.)
+                or np.any((absolute[ih]!=lo)&(psi[ih]==0.))
+                or np.any((absolute[ih]!=0.)&((lo+psi[ih])==0.))):
+            raise ValueError('electrode contrast lost during centering')
+    grads=[]; vols=[]
+    for i,c in enumerate(cells):
+        g,vol=core._shape_gradients_and_volume_m(x,c,i)
+        if not 1e-24<=vol<=1. or not np.isfinite(g).all() or np.max(abs(g))>1e12:
+            raise ValueError('DC cell outside volume/gradient envelope')
+        grads.append(g); vols.append(vol)
+    g=np.array(grads); vol=np.array(vols)
+    sig=np.array([s[int(mid)] for mid in mesh.material_ids])
+    local=(sig*vol)[:,None,None]*(g@g.transpose(0,2,1))
+    rr=np.broadcast_to(cells[:,:,None],local.shape); cc=np.broadcast_to(cells[:,None,:],local.shape)
+    A=sparse.coo_matrix((local.ravel(),(rr.ravel(),cc.ravel())),shape=(n,n)).tocsr()
+    A=.5*A+.5*A.T; A.eliminate_zeros()
+    if not np.isfinite(A.data).all(): raise ValueError('nonfinite DC matrix')
+    ids=np.flatnonzero(~held&enabled); cap=np.flatnonzero(held)
+    entries=0
+    if len(ids):
+        graph=core._free_node_topology(cells,n,ids)
+        order=core._canonical_node_order(graph,x[ids],mesh.node_ids[ids])
+        ranks=np.empty_like(order); ranks[order]=np.arange(len(order))
+        i,j=graph.nonzero()
+        h=int(np.max(abs(ranks[i]-ranks[j]),initial=0))
+        entries=(2*len(ids)-h)*(h+1)
+        plan=core._BandPlan(ids,order,h,entries,len(ids)*(h+1))
+        a=A[ids][:,ids]; scale=float(abs(a).sum(axis=1).max())
+        if not np.isfinite(scale) or scale<=0: raise ValueError('unresolved DC operator scale')
+        m=a/scale; rhs=-np.asarray(A[ids][:,cap]@psi[cap])/scale
+        tol=64*np.finfo(np.float64).eps*max(1,len(ids))
+        psi[ids]=core._factor_band(m,tol,plan)(rhs)
+        den=float(abs(m).sum(axis=1).max())*float(np.max(abs(psi[ids])))+float(np.max(abs(rhs)))
+        err=float(np.max(abs(m@psi[ids]-rhs)))
+        if not err<=tol*den: raise ValueError('DC backward residual')
+    V=refs+psi; V[held]=absolute[held]
+    if not np.all(np.isfinite(V)&(abs(V)<=100.)): raise ValueError('DC potential outside pilot range')
+    grad=np.einsum('ni,nik->nk',psi[cells[:,1:]]-psi[cells[:,:1]],g[:,1:])
+    J=-sig[:,None]*grad
+    q=sig*np.einsum('ni,ni->n',grad,grad); P=vol*q
+    el=-vol[:,None]*np.einsum('nki,ni->nk',g,J)
+    nodal=np.zeros(n); np.add.at(nodal,cells,el)
+    I=np.where(held,nodal,0.)
+    action=A@psi
+    if not all(np.isfinite(z).all() for z in (psi,nodal,J,P,q,action)):
+        raise ValueError('nonfinite DC recovered fields')
+    if np.any((np.any(grad!=0.,axis=1))&((q<=0.)|(P<=0.))):
+        raise ValueError('nonzero DC gradient lost dissipated power')
+    for z in (J,q,P): core._check_normal_or_zero(z,'recovered DC fields')
+    cell_labels=labels[cells[:,0]]
+    for lab in np.unique(labels):
+        ix=labels==lab; ic=cell_labels==lab; fr=ix&~held
+        span=float(np.ptp(psi[ix]))
+        if np.max(abs((V[ix]-refs[ix])-psi[ix]),initial=0.)>2e-10*span:
+            raise ValueError('unresolved absolute DC voltage reconstruction')
+        gross=math.fsum(abs(el[ic]).ravel())
+        eps=1e-9*gross
+        if max(abs(math.fsum(nodal[ix])),abs(math.fsum(I[ix])),
+               float(abs(nodal[fr]).max(initial=0.)),float(abs(nodal[ix]-action[ix]).max(initial=0.)))>eps:
+            raise ValueError('DC current consistency')
+        energy=math.fsum(P[ic]); term=math.fsum(psi[ix]*I[ix]); virtual=math.fsum(psi[fr]*nodal[fr])
+        if abs(math.fsum((energy,-term,-virtual)))>1e-9*energy or abs(energy-term)>abs(virtual)+1e-9*energy:
+            raise ValueError('DC terminal power consistency')
+    energy=math.fsum(P); term=math.fsum(psi*I); virtual=math.fsum(psi[~held]*nodal[~held])
+    return Tet4DCResult(*map(_locked,(mesh.node_ids,mesh.cell_ids,V,psi,refs,held,I,J,q,P)),
+                       term,energy,float(np.max(abs(nodal[~held]),initial=0.)),
+                       math.fsum(I),math.fsum((energy,-term,-virtual)),entries)

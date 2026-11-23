@@ -240,6 +240,8 @@
   "sim/saved_temperature.py": "c176f4108ed0f7cc5baea2bce9f33c8201c8a25a8263bad5fdb175c2dd42736a",
   "sim/tet4.py": "46107af0a29bc84f48d3e3fc6438d4ff36fe904d0b8bb36f7ec0992c4327b085",
   "sim/tet4_conduction.py": "effea637a0b7bc94eb6bd3108a837c4a63681a09b041486ca6fd34b94168f5a8",
+  "sim/tet4_dc.py": "29cc3b0561e55f7692fe9c48614b7c40c8bcc7e8417712e6729ccab74b0b0991",
+  "sim/tet4_dc_thermal.py": "9c0d340d6485742c55d067f7881dec71fdd78d871442b2fa45bd6de264d3df8c",
   "sim/tet4_loads.py": "ca47886ca95267feeed35875b07165c799e126d4676b4c562ebf3fd8acf466fe",
   "sim/tet4_thermoelastic.py": "ccfa8655ed235675e1a33a96b36f587318aed8f4571f400a36f80c270e63e4f3",
   "sim/thermoelastic.py": "e30d954b0ad20d31431197c467b590ce7a2a4f309a0ebdafe43e3f6386c4fcdb",

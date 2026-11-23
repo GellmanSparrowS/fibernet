@@ -6547,5 +6547,38 @@
    "test_same_sign_lumping_admits_resolved_unequal_areas_and_rejects_loss"
   ],
   "sha256": "dd7f10b0d1a6c86b598fa46e1e1da779c9dcb4472c661317ab1f52d9cf84f4e6"
+ },
+ "fibernet/sim/tet4_dc.py": {
+  "purpose": "Private pilot: bounded isotropic DC conduction on an owned Tet4 mesh.",
+  "status": "active",
+  "symbols": [
+   "_locked",
+   "_table",
+   "Tet4DCResult",
+   "solve_dc_tet4"
+  ],
+  "sha256": "29cc3b0561e55f7692fe9c48614b7c40c8bcc7e8417712e6729ccab74b0b0991"
+ },
+ "fibernet/sim/tet4_dc_thermal.py": {
+  "purpose": "Private same-call, one-way solid DC to steady volumetric heating.",
+  "status": "active",
+  "symbols": [
+   "Tet4DCThermalResult",
+   "_snapshot",
+   "_verify_source_transfer",
+   "solve_dc_thermal_tet4"
+  ],
+  "sha256": "9c0d340d6485742c55d067f7881dec71fdd78d871442b2fa45bd6de264d3df8c"
+ },
+ "tests/test_tet4_dc.py": {
+  "purpose": "Small independent analytic controls for native solid DC and its thermal handoff.",
+  "status": "active",
+  "symbols": [
+   "_tet",
+   "test_signed_electrodes_polarity_and_gauge",
+   "test_disconnected_components_require_anchor_and_passive_is_exact",
+   "test_owned_one_way_joule_handoff_and_out_of_range_refusal"
+  ],
+  "sha256": "61b84dfb17c23a99fe53ea0e2ad8bde94d16c17609fbc8ad6ed5cfc72836b5e8"
  }
 }
