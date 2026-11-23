@@ -174,3 +174,5 @@ the native `StructureGraph.to_fiber_network` admission and loss report. The
 report preserves stable IDs and explicit projection policies and is read through
 the same bounded artifact resources as other results. See [Projection reports](PROJECTION.md)
 for input policies, units, limits and the complete read workflow.
+
+Optional bundled Tet4 DC/convection: see [Tet4 solid pilot](TET4_DC_CONVECTION.md).

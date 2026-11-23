@@ -68,6 +68,16 @@ def public(value):
     if isinstance(value,(list,tuple)): return [public(v) for v in value]
     return value
 
+def tet4_route_names():
+    # Bodies execute outside their module namespace. Supply only literal
+    # dispatch constants from the same source; never import a backend.
+    tree=ast.parse((SOURCE/'tet4_contract.py').read_text())
+    names={'TET4_TOOL','TET4_OP','TET4_KIND'}
+    values={target.id:ast.literal_eval(node.value) for node in tree.body if isinstance(node,ast.Assign)
+            for target in node.targets if isinstance(target,ast.Name) and target.id in names}
+    assert set(values)==names
+    return values
+
 def server_namespace():
     s=NEW
     tree=ast.parse((SOURCE/'server.py').read_text())
@@ -83,6 +93,7 @@ def server_namespace():
               jsonschema=jsonschema,
               mt=SimpleNamespace(**{k:Model for k in ('Resource','Annotations','ResourceTemplate','ErrorData','CallToolResult','TextContent','Tool')}),
               McpError=ProtocolError,ReadResourceContents=Model)
+    ns.update(tet4_route_names())
     ns['_verify_core_result']=NEW._verify_core_result
     ns['TransportContractError']=type('TransportContractError',(NEW.ContractError,),{})
     ns['MAX_TRANSPORT_RESULT_BYTES']=1024*1024
@@ -409,6 +420,7 @@ class ProvenanceContract(unittest.TestCase):
                 def fresh():calls.append(digest);return NEW._CoreVerification('/private',digest,2)
                 ns={k:getattr(NEW,k) for k in ('canonical','strict_json','read_file','write_at','open_directory','sha')}
                 ns.update(os=os,sys=SimpleNamespace(argv=['worker','topology',str(source),str(output),NEW.sha(raw)]),_verify_core_result=fresh)
+                ns.update(tet4_route_names())
                 exec(compile(ast.Module(body=[main],type_ignores=[]),'<extracted-worker-main>','exec'),ns)
                 with patch.dict(sys.modules,modules):ns['main']()
                 value=json.loads(output.read_text())

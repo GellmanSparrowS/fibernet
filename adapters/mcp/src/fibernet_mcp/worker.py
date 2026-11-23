@@ -8,14 +8,18 @@ resource.setrlimit(resource.RLIMIT_FSIZE, (16*1024*1024, 16*1024*1024))
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 from .safety import canonical, strict_json, read_file, write_at, open_directory, _verify_core_result, sha
 
+from .tet4_contract import TET4_OP,run_worker as run_tet4,MAX_SOURCE as MAX_TET4_SOURCE
+
 def main():
     operation, source, output, expected_sha = sys.argv[1:5]
-    if operation not in ('validate','topology','linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report'): raise ValueError('unknown operation')
-    if len(sys.argv) != (7 if operation in ('linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report') else 5):
+    if operation not in ('validate','topology','linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP): raise ValueError('unknown operation')
+    if len(sys.argv) != (7 if operation in ('linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP) else 5):
         raise ValueError('invalid worker arguments')
     # The source was preflighted by the parent; reparse strict bytes here.
     core_verification = _verify_core_result()
-    if operation == 'thermoelastic_snapshot':
+    if operation==TET4_OP:
+        raw=read_file(source,MAX_TET4_SOURCE)
+    elif operation == 'thermoelastic_snapshot':
         from .thermoelastic import MAX_SNAPSHOT_SOURCE_BYTES
         raw=read_file(source,MAX_SNAPSHOT_SOURCE_BYTES)
     elif operation == 'prepare_deformed_transport':
@@ -25,7 +29,9 @@ def main():
         raw=read_file(source)
     if sha(raw)!=expected_sha: raise ValueError('source integrity mismatch')
     data = strict_json(raw)
-    if operation == 'thermoelastic_snapshot':
+    if operation==TET4_OP:
+        result=run_tet4(raw,expected_sha,sys.argv[5],sys.argv[6],os.path.basename(source),core_verification.provenance())
+    elif operation == 'thermoelastic_snapshot':
         from .thermoelastic import MAX_SNAPSHOT_REQUEST_BYTES, solve_snapshot
         request_raw=read_file(sys.argv[5],MAX_SNAPSHOT_REQUEST_BYTES)
         if sha(request_raw)!=sys.argv[6]: raise ValueError('request integrity mismatch')
@@ -74,6 +80,9 @@ def main():
             except ContractError:
                 payload['result']={'error_code':'PREPARATION_RESULT_LIMIT','error_category':'resource'}
                 raw=canonical(payload)
+        if operation==TET4_OP:
+            from .tet4_contract import MAX_ARTIFACT
+            if len(raw)>MAX_ARTIFACT+4096: raise ValueError('Tet4 worker output limit')
         if operation == 'fiber_projection_report' and len(raw) > MAX_PROJECTION_WORKER_BYTES:
             raise ValueError('projection worker output limit')
         write_at(fd, os.path.basename(output), raw)
