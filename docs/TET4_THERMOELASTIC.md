@@ -68,3 +68,35 @@ center's share of that energy. It also checks force and moment balance
 and the energy bound provided by holding every node at zero displacement.
 The numerical values describe this synthetic discrete model, not a
 mesh-convergence study or a fitted material.
+
+## Inspect a snapshot in ParaView
+
+With Meshio 5.3.5 installed, use the optional solve-and-write route to
+export one diagnostic from the same mesh and temperature field:
+
+```python
+from fibernet.io.tet4_results import solve_prescribed_temperature_tet4_to_vtu
+
+result = solve_prescribed_temperature_tet4_to_vtu(
+    "thermal_snapshot.vtu",
+    bundle,
+    temperature_K_by_id=nodal_temperature_K,
+    stress_free_temperature_K=300.0,
+    alpha_per_K_by_material=thermal_expansion,
+    forces_by_id={},
+    fixed_dofs_by_id=held_axes,
+)
+```
+
+The mesh uses undeformed coordinates in metres; display
+`temperature_K` as Point Data, or apply **Warp By Vector** to
+`displacement_m`. Cell Data includes the global row-major
+`mean_stress_Pa` tensor (nine components) and `elastic_energy_J` per
+cell, which is integrated energy, not energy density. Stable node,
+cell and material IDs are stored as UInt64.
+
+Choose a new .vtu name in a stable local directory that supports
+hard links. The writer does not overwrite existing files and limits
+each output to 4 MiB. The diagnostic is for visualization, not a restart
+file, a strict Tet4 interchange bundle, or an export of arbitrary
+previously computed results.

@@ -5934,12 +5934,15 @@
   "sha256": "2353b8774f4152f82006081a67feeb973725717445ff10f00361b51dff84d30d"
  },
  "fibernet/io/tet4_results.py": {
-  "purpose": "Optional one-way VTU visualization of the bounded static Tet4 solve.",
+  "purpose": "Optional VTU diagnostic exports of bounded Tet4 snapshots.",
   "status": "active",
   "symbols": [
-   "solve_static_tet4_to_vtu"
+   "solve_static_tet4_to_vtu",
+   "solve_prescribed_temperature_tet4_to_vtu",
+   "_prepare_tet4_result_export",
+   "_publish_tet4_result"
   ],
-  "sha256": "71a1ce412e28bfac3d91f1a54265189d5d2ef3cad2dd0543f778ea23a5a995c4"
+  "sha256": "2503fc694ba9b019149464b001f48ac62a38562e745a5b2b3c6851ff4e0bd253"
  },
  "tests/test_tet4_results.py": {
   "purpose": "One-way Tet4 VTU diagnostics: alignment, analytical recovery, atomic staging.",
@@ -6454,9 +6457,10 @@
    "_detach_force",
    "_detach_hold",
    "_canonical_controls",
-   "solve_prescribed_temperature_tet4"
+   "solve_prescribed_temperature_tet4",
+   "_solve_prescribed_temperature_tet4_on_validated_mesh"
   ],
-  "sha256": "faf3fdd6f258f8b57d8d1659396eabd1110a38b1cf7bdfb4dac618fb36e5818f"
+  "sha256": "ccfa8655ed235675e1a33a96b36f587318aed8f4571f400a36f80c270e63e4f3"
  },
  "tests/test_tet4_thermoelastic_analytic.py": {
   "purpose": "Independent analytic tests for prescribed-temperature Tet4 elasticity.",
@@ -6465,6 +6469,15 @@
    "Tet4ThermoelasticAnalyticTests"
   ],
   "sha256": "2699e258c4dfbbcb4c805ed3e577d72efd2cdbbe7de13e898d7591910d364d58"
+ },
+ "tests/test_thermal_tet4_result_vtu.py": {
+  "purpose": "Analytic and transaction checks for the prescribed-temperature VTU route.",
+  "status": "active",
+  "symbols": [
+   "OnceReadTemperature",
+   "ThermalTet4Vtu"
+  ],
+  "sha256": "844c393b293f8861e4014bec4618a435dfefb75831a66a8e00a82bd10dc14495"
  },
  "examples/tet4_thermoelastic_welded_junction.py": {
   "purpose": "Compare thermal expansion by material on a fixed conforming three-cylinder Tet4 junction.",
