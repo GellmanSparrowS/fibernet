@@ -76,3 +76,7 @@ when all degrees of freedom are prescribed.
 
 The snapshot is detached from the graph and caller maps. This direct
 interface defines no saved-result or JSON contract.
+
+For one selected frame of a complete local archive, use the separate
+[experimental 3D saved electrothermal route](SAVED_ELECTROTHERMAL_MECHANICS_3D.md).
+It is an explicit one-way call, not a change to the planar saved API.

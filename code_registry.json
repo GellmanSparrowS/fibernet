@@ -6420,5 +6420,27 @@
    "Thermoelastic3DPhysicsTests"
   ],
   "sha256": "d7c7eec8b06b85a238cab72c1ba46559154a5c498c91989b4a79c50d8ca87ebb"
+ },
+ "fibernet/sim/saved_electrothermal_3d.py": {
+  "purpose": "Experimental offline 3-D saved-frame to prescribed-temperature mechanics.",
+  "status": "active",
+  "symbols": [
+   "_Saved3DReceipt",
+   "_Saved3DRun",
+   "_file_state",
+   "_read_bounded",
+   "_bounded_list",
+   "solve_saved_electrothermal_frame_3d"
+  ],
+  "sha256": "d247ed82e73dea54fef3531d1ac2f89382dd8169afbf3ff7cad1be97e7a2b492"
+ },
+ "tests/test_saved_electrothermal_3d.py": {
+  "purpose": "Self-contained admission and exact-frame tests for the optional saved 3D bridge.",
+  "status": "active",
+  "symbols": [
+   "_canonical",
+   "SavedElectrothermal3DTests"
+  ],
+  "sha256": "dfe12f43b0735f45c13bfbcd9b8ef8c81461ef0c5e0954ee4131b727470a8f4f"
  }
 }
