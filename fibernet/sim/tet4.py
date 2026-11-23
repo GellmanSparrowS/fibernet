@@ -344,26 +344,34 @@ def _material_tensor(record):
     return c
 
 
+def _shape_gradients_and_volume_m(x, tet, k):
+    """Scalar Tet4 gradient rows (1/m) and unsigned cell volume (m³).
+
+    Requires owned geometry already converted to finite metres.
+    """
+    d = (x[tet[1:]] - x[tet[0]]).T
+    scale = np.max(np.abs(d))
+    if not np.isfinite(scale) or scale <= 0.:
+        raise ValueError(f'Tet4 row {k}: invalid geometry after conversion to m')
+    d = d / scale
+    if np.linalg.cond(d) > _MAX_ELEMENT_CONDITION:
+        raise ValueError(f'Tet4 row {k}: element is too ill-conditioned for this solver')
+    volume = abs(np.linalg.det(d)) * (scale ** 3) / 6.
+    if not np.isfinite(volume) or volume <= 0.:
+        raise ValueError(f'Tet4 row {k}: volume is outside supported numerical range')
+    corner = np.linalg.inv(d) / scale
+    return np.vstack([-corner.sum(axis=0), corner]), volume
+
+
 def _element_kinematics(mesh):
     x = mesh.points * _LENGTH_TO_M[mesh.length_unit]
     if not np.isfinite(x).all():
         raise ValueError('point coordinates in m are outside supported range')
     tensors = {mid: _material_tensor(record) for mid, record in mesh.materials.items()}
     for k, (tet, mid) in enumerate(zip(mesh.tetrahedra, mesh.material_ids)):
-        d = (x[tet[1:]] - x[tet[0]]).T
-        scale = np.max(np.abs(d))
-        if not np.isfinite(scale) or scale <= 0.:
-            raise ValueError(f'Tet4 row {k}: invalid geometry after conversion to m')
-        d = d / scale
-        if np.linalg.cond(d) > _MAX_ELEMENT_CONDITION:
-            raise ValueError(f'Tet4 row {k}: element is too ill-conditioned for this solver')
-        volume = abs(np.linalg.det(d)) * (scale ** 3) / 6.
-        if not np.isfinite(volume) or volume <= 0.:
-            raise ValueError(f'Tet4 row {k}: volume is outside supported numerical range')
-        corner = np.linalg.inv(d) / scale
-        b = _strain_matrix(np.vstack([-corner.sum(axis=0), corner]))
+        gradients, volume = _shape_gradients_and_volume_m(x, tet, k)
+        b = _strain_matrix(gradients)
         yield tet, b, tensors[int(mid)], volume
-
 
 def _element_blocks(mesh):
     for tet, b, tensor, volume in _element_kinematics(mesh):
