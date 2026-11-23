@@ -113,6 +113,49 @@ either file if someone changes both. This recipe is not an official
 FiberNet format. Neither file is a
 [solver result VTU](TET4_STATIC.md#view-a-static-result-in-paraview).
 
+## Generate a tagged fused-cylinder CAD mesh
+
+From the repository root or the extracted FiberNet source distribution:
+
+```sh
+python -m pip install 'fibernet>=4.21.0' 'gmsh==4.13.1' 'meshio==5.3.5'
+python examples/tet4_fused_cylinder_cad.py --output-dir fused-cad-output
+```
+
+Gmsh is optional; its Python package may also require native libraries on
+your platform (for example `libGLU.so.1` on Linux). The script runs
+headlessly, uses the Gmsh/OpenCASCADE Boolean union of three perpendicular
+cylinders (0.50 mm radius, 3.00 mm full length), and remeshes the entire
+CAD model twice. The target sizes are 0.33 and 0.24 mm; this is not an
+internal subdivision of one fixed exterior. The output directory must not
+already exist; choose a parent directory you control. Only use a result
+directory containing `COMPLETE`. The script creates this marker after
+all six output files are in place. If publication is interrupted and
+`COMPLETE` is absent, ignore any partial files and retry with a new
+output directory.
+
+Each of `coarse` and `fine` gives:
+
+- `.msh`: ASCII MSH 4.1, one homogeneous volume named `solid`, six distinct
+  exterior cap groups (`cap_neg_x`, `cap_pos_x`, and the same for `y` and
+  `z`), and the rest of the exterior as `ambient_side`.
+- `.zip`: native Tet4Bundle, readable with `read_tet4_vtu_bundle`. The
+  coordinate unit is recorded as `mm`; the example material's Young's
+  modulus is in pascals (1 GPa) and Poisson's ratio is dimensionless (0.25).
+- `.json`: volume, mesh counts, structural budget preflight for an
+  illustrative clamp on the negative x cap, bundle SHA-256, and each
+  named exterior group's triangles as decimal-string native node IDs.
+  Use the corresponding ZIP for those IDs; they are not Gmsh tags or
+  shared across remeshes. Boundary names live in the MSH and JSON, not
+  in the native ZIP.
+
+The checks require positive tetrahedra, one material, an exhaustive and
+disjoint named exterior, and genuinely different boundary triangulations.
+Exact element counts can vary with platform or Gmsh build. The linear
+tetrahedra approximate the curved surface; this is a mesh-interchange
+example, not a convergence study or a physical solve. For other trusted
+tagged meshes, use the general import recipe below.
+
 ## Import named material and boundary groups from Gmsh
 
 This recipe uses Meshio 5.3.5 to read a trusted, small **ASCII MSH 4.1**
