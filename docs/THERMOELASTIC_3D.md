@@ -43,6 +43,23 @@ assert abs(tip[0] - 2e-7) < 1e-15
 The expected tip displacement is `α ΔT L = 2e-7 m` for this one rod.
 The six supplied limits illustrate input format, not validated material limits.
 
+### Fixed ends can still allow internal motion
+
+Join two equal 10 mm rods on the x axis at a shared midpoint. Clamp the
+left end and hold only `ux = 0` at the right end. With no applied loads,
+a stress-free reference of 300 K, and expansion of `1e-5 / K`, put
+the three nodes at 298, 300 and 302 K from left to right. Their member
+mean temperatures are 299 and 301 K: the left rod shortens by
+0.100 µm, the right rod lengthens by the same amount, and the midpoint
+moves 0.100 µm toward the left. The axial forces, support reactions, and
+discrete elastic energy are zero in this mean-strain model. Reversing
+the temperatures reverses the motion. Uniform 302 K instead compresses
+both rods while keeping the midpoint at rest.
+
+The near-zero computed energy does not resolve temperature variation
+within a member; it is not a claim about local stress or energy in a
+continuum model with a thermal gradient.
+
 ### Inputs
 
 - Graph coordinates and radii use the stated `m`, `mm` or `um`;
