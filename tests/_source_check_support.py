@@ -9,9 +9,25 @@ import subprocess
 import sys
 
 
-def run_source_check(path, *controls):
+def _validate_test_names(test_names):
+    error = 'source-check test_names must be ClassName.test_method selectors'
+    if not isinstance(test_names, (tuple, list)):
+        raise ValueError(error)
+    for name in test_names:
+        if not isinstance(name, str):
+            raise ValueError(error)
+        cls, _, method = name.partition('.')
+        if not cls.isidentifier() or not method.isidentifier() or not method.startswith('test_'):
+            raise ValueError(error)
+
+
+def run_source_check(path, *controls, test_names=()):
+    if '--test-names' in controls:
+        raise ValueError('--test-names is reserved; use the test_names keyword')
+    _validate_test_names(test_names)
+    selection = ['--test-names', *test_names] if test_names else []
     result = subprocess.run(
-        [sys.executable, '-B', __file__, str(path), *controls],
+        [sys.executable, '-B', __file__, str(path), *controls, *selection],
         cwd=Path(__file__).resolve().parents[1],
         env=dict(os.environ, PYTHONDONTWRITEBYTECODE='1'),
         capture_output=True, text=True, encoding='utf-8', timeout=45,
@@ -109,7 +125,15 @@ def install_import_process_audit():
 
 def _main():
     path = Path(sys.argv[1]).resolve()
-    controls = set(sys.argv[2:])
+    args = sys.argv[2:]
+    if '--test-names' in args:
+        split = args.index('--test-names')
+        controls, test_names = set(args[:split]), args[split + 1:]
+        if not test_names:
+            raise ValueError('--test-names requires at least one unittest name')
+        _validate_test_names(test_names)
+    else:
+        controls, test_names = set(args), []
     class BlockNative(importlib.abc.MetaPathFinder):
         def find_spec(self, fullname, path=None, target=None):
             if fullname.split('.')[0] in {'fibernet', 'taichi'}:
@@ -124,7 +148,7 @@ def _main():
             return original(self, encoding=encoding or 'cp1252', errors=errors)
         Path.read_text = read_text
     sys._fibernet_source_check_child = True
-    sys.argv = [str(path)]
+    sys.argv = [str(path), *test_names]
     runpy.run_path(str(path), run_name='__main__')
 
 
