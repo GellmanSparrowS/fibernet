@@ -192,3 +192,28 @@ subject to operator and load resolution checks. It uses the consistent
 linear triangle integral. It does not fit the coefficient, simulate fluid
 flow or radiation, or combine convection and a separately prescribed heat
 flux through this entry point.
+
+### Example: material contrast in a welded junction
+
+Run from the repository root. PyPI supplies the solver; the example and
+its sibling geometry script both come from the repository checkout.
+
+```sh
+python -m pip install "fibernet==4.20.0"
+python examples/tet4_dc_convection_welded_junction.py
+```
+
+Three welded cylinders share the same 621 nodes and 2,064 tetrahedra in
+both runs. At 0.3 V, lowering only the junction's electrical conductivity
+from 2 to 0.5 S/m changes the heat balance (rounded to 0.01 µW):
+
+| Case | Joule heat | Convection out | Fixed-temperature caps out |
+| --- | ---: | ---: | ---: |
+| Uniform conductivity | 53.46 | 57.42 | −3.96 |
+| Lower conductivity in junction | 50.97 | 56.78 | −5.81 |
+
+All powers are in µW. Negative cap output means the thermostatted ends
+supply heat to the solid. This example uses a shared tetrahedral mesh of a
+voxel approximation of the cylinder union; it is not a mesh-convergence
+study. The solved temperature does not feed back into electrical
+conductivity.
