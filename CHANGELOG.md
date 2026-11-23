@@ -1,3 +1,11 @@
+## [4.16.0]
+
+- Prescribe steady volumetric heating or cooling by stable cell ID on a
+  Tet4 mesh, with prescribed nodal temperatures and isotropic conductivity
+  by material. The existing source-free solver is unchanged.
+- See the [4.16.0 release notes](docs/RELEASE_4_16_0.md) for a runnable
+  internally heated tetrahedron and heat-balance check.
+
 ## [4.15.0]
 
 - Solve bounded, steady, source-free heat conduction on a Tet4 mesh with
