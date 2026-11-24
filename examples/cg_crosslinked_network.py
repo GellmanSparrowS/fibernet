@@ -5,7 +5,8 @@ Run using an existing, pinned RuntimeSpec JSON (no discovery or installation):
 
 The default is 500 steps at 1e-7 s. For the same duration at half the timestep,
 pass --steps 1000 --timestep-s 5e-8. Importing or building never launches LAMMPS;
-run_example/main do. Coefficients are synthetic, not an EI/torsion calibration.
+only native mode does. Use --preflight to compile in memory without an engine.
+Coefficients are synthetic, not an EI/torsion calibration.
 This is a small bounded example, not a large-scale performance demonstration.
 """
 import argparse
@@ -14,7 +15,7 @@ from pathlib import Path
 
 from examples.cg_bent_branched_network import load_runtime
 from fibernet import simulate
-from fibernet.integrations import ResourceLimits, RuntimeSpec
+from fibernet.integrations import ResourceLimits, RuntimeSpec, prepare_cg
 from fibernet.sim.accelerated import SimResult
 
 L = 1e-6
@@ -107,13 +108,47 @@ def run_example(runtime, output_dir, *, steps=500, timestep_s=1e-7):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--runtime-json', required=True, type=Path,
+    parser.add_argument('--preflight', action='store_true',
+                        help='compile and summarize the SI deck without a runtime or output')
+    parser.add_argument('--runtime-json', type=Path,
                         help='existing pinned RuntimeSpec JSON, no runtime discovery')
-    parser.add_argument('--output', required=True, type=Path,
+    parser.add_argument('--output', type=Path,
                         help='new output directory; existing directories are refused')
     parser.add_argument('--steps', type=int, default=500, help='0..1000, every step saved')
     parser.add_argument('--timestep-s', type=float, default=1e-7)
     args = parser.parse_args(argv)
+    if args.preflight:
+        if args.runtime_json is not None or args.output is not None:
+            parser.error('--preflight cannot be combined with --runtime-json or --output')
+        try:
+            _, initial, request = build_case(steps=args.steps, timestep_s=args.timestep_s)
+            prepared = prepare_cg(initial, request)
+        except ValueError as error:
+            parser.error(str(error))
+        manifest = prepared.manifest()
+        contract = manifest['contract']
+        print(json.dumps({
+            'mode': 'preflight',
+            'engine_started': False,
+            'sites': len(prepared.node_ids),
+            'bonds': len(prepared.edge_ids),
+            'angles': len(manifest['angle_to_stable_id']),
+            'fixed_node_ids': list(request.fixed_node_ids),
+            'geometry_length_unit': request.length_unit,
+            'deck_units': 'si',
+            'steps': prepared.steps,
+            'timestep_s': prepared.timestep_s,
+            'sample_every': prepared.sample_every,
+            'profile': prepared.profile,
+            'angle_model': contract['angle_model'],
+            'pair_model': contract['pair_model'],
+            'required_packages': contract['required_packages'],
+            'deck_identity': prepared.identity,
+            'deck_file_sha256': manifest['files'],
+        }, indent=2, allow_nan=False))
+        return
+    if args.runtime_json is None or args.output is None:
+        parser.error('native execution requires --runtime-json and --output')
     result = run_example(load_runtime(args.runtime_json), args.output,
                          steps=args.steps, timestep_s=args.timestep_s)
     print(json.dumps({

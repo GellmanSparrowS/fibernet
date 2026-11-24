@@ -27,6 +27,29 @@ material properties. Graph radii are provenance, not a conversion to bond/angle
 coefficients. Bonds preserve connectivity; angles connect only consecutive
 collinear reference segments, not every pair of incident edges.
 
+## Inspect the prepared network without LAMMPS
+
+Install the published FiberNet 4.21.1 core in your Python environment.
+From the root of a checkout or unpacked source archive **containing this
+example's preflight option**, run:
+
+```sh
+python -B -m examples.cg_crosslinked_network --preflight
+```
+
+The currently published 4.21.1 source archive predates this option.
+To run the newer example against the installed core rather than a
+checkout's copy of FiberNet, copy its complete `examples/` directory
+into a fresh directory and run the same command there. The preflight
+uses the same SI compiler as native mode,
+reports the node/bond/angle counts, stable held node IDs, run controls,
+required LAMMPS packages and deck identity with both payload SHA-256s.
+It writes no deck or simulation output files, requires no runtime JSON,
+and does not start an engine.
+Optional `--steps` and `--timestep-s` apply in either mode.
+Do not combine preflight with `--runtime-json` or `--output`.
+This is input admission, not a native result or runtime qualification.
+
 ## Use the library backend
 
 From the source root, provide an already configured and pinned `RuntimeSpec` JSON
