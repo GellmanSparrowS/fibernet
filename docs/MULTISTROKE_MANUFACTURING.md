@@ -109,9 +109,43 @@ remain distinguishable. Curved-edge sampling requires a separate future schema.
 
 For a solve-to-route handoff, [`discretize_edges`](structure_graph_discretization.md) adds geometry samples, not mechanical degrees of freedom.
 Model the curve as welded straight beams with real intermediate nodes, specify each segment's material and radius to the solver, and retain a parent-to-child edge ID map.
-For a detailed `SimResult` from the heterogeneous 3D `BeamFrameFEM` solve, apply `result.deformed_positions` by `result.metadata["node_ids"]` to a copy of that same solve graph, not by row order or to the original curved graph.
-Pass the actual source unit to `manufacturing_trails_from_graph`; `export_mapped_trails` writes CSV coordinates in mm.
-The result is a centerline route for a piecewise-straight welded model; check printability separately.
+Use the solve graph, not the original curved graph. For a runnable example,
+create a fresh output directory and run the
+[3D mixed-material beam example](../examples/heterogeneous_3d_graph_workflow.py)
+from the same source archive or checkout:
+
+```sh
+python examples/heterogeneous_3d_graph_workflow.py --output solve
+```
+
+Use the graph and detailed result written by that same run. Matching
+node IDs alone do not prove that two files came from the same solve.
+
+```python
+from fibernet import StructureGraph, export_mapped_trails, manufacturing_trails_from_graph
+from fibernet.api import load
+from fibernet.sim import SimResult
+
+graph = load("solve/graph.json")
+result = SimResult.load("solve/result.json")
+ids, positions = result.metadata["node_ids"], result.deformed_positions
+if (positions.shape != (len(ids), 3) or len(ids) != len(set(ids))
+        or set(ids) != set(graph.nodes)):
+    raise ValueError("result node IDs must match the solve graph exactly")
+position_by_id = dict(zip(ids, positions))
+record = graph.to_dict()
+for node in record["nodes"]:
+    node["position"] = position_by_id[node["id"]].tolist()
+deformed = StructureGraph.from_dict(record)
+trails, snapshot = manufacturing_trails_from_graph(
+    deformed, graph_id="stretched-beam", length_unit="m", coordinate_frame="specimen_xyz",
+)
+export_mapped_trails("route.csv", trails, snapshot, sidecar_path="route.mapping.json")
+```
+
+This example writes millimetre coordinates in four strokes. Each physical
+beam is traversed once. Use fresh output filenames. The result is a
+centreline route, not printer-ready instructions.
 
 Metres are converted to millimetres only in CSV coordinates, using binary64
 multiplication by 1000; millimetres use factor 1. No translation, rotation, fitting
