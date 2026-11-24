@@ -241,17 +241,113 @@ def compare(mesh, faces, materials, digest, supports):
     }
 
 
-def main():
+def compare_junction_cte(mesh, faces, materials, digest):
+    """Compare free thermal expansion with and without a junction CTE mismatch."""
+    points = mesh.points * 1e-3
+    ids = list(map(int, mesh.node_ids))
+    cap = np.unique(faces[LEFT])
+    if len(cap) < 3 or not np.all(points[cap, 0] == points[cap[0], 0]):
+        raise ValueError("CTE comparison needs three noncollinear nodes on one exact x plane")
+    low = min(cap, key=lambda i: (points[i, 2], ids[i]))
+    high = min(cap, key=lambda i: (-points[i, 2], ids[i]))
+    a, b = sorted((low, high), key=lambda i: ids[i])
+    yz = points[cap, 1:] - points[a, 1:]
+    dy, dz = points[b, 1:] - points[a, 1:]
+    areas = abs(dy * yz[:, 1] - dz * yz[:, 0])
+    c = cap[min(range(len(cap)), key=lambda i: (-areas[i], ids[cap[i]]))]
+    if dz == 0. or float(areas.max()) == 0.:
+        raise ValueError("CTE comparison needs three noncollinear nodes on one exact x plane")
+
+    # These six Cartesian restraints fix only the rigid-body reference. The
+    # one nonzero gauge value keeps homogeneous free expansion admissible.
+    alpha_bulk, reference_K, delta_K = 10e-6, 300., 10.
+    eps_bulk = alpha_bulk * delta_K
+    held = {ids[a]: ("x", "y", "z"), ids[b]: ("x",), ids[c]: ("x",)}
+    gauge_y_m = float(eps_bulk * dy)
+    prescribed = {ids[b]: {"y": gauge_y_m}}
+    thermal = dict.fromkeys(ids, reference_K + delta_K)
+    cells = points[mesh.tetrahedra]
+    volume = abs(np.linalg.det(cells[:, 1:] - cells[:, :1])) / 6.
+    affine_displacement = eps_bulk * (points - points[a])
+    bulk, junction = materials["bulk"], materials["junction"]
+    cases = {}
+    for label, alpha_junction in (("uniform_cte", alpha_bulk), ("junction_3x_cte", 3 * alpha_bulk)):
+        result = solve_prescribed_temperature_tet4(
+            mesh, temperature_K_by_id=thermal, stress_free_temperature_K=reference_K,
+            alpha_per_K_by_material={bulk: alpha_bulk, junction: alpha_junction},
+            forces_by_id={}, fixed_dofs_by_id=held,
+            prescribed_displacements_m_by_id=prescribed,
+        )
+        np.testing.assert_array_equal(result.node_ids, mesh.node_ids)
+        np.testing.assert_array_equal(result.cell_ids, mesh.cell_ids)
+        np.testing.assert_array_equal(result.material_ids, mesh.material_ids)
+        if np.count_nonzero(result.fixed_mask) != 6:
+            raise ValueError("CTE comparison expected exactly six held Cartesian degrees of freedom")
+        np.testing.assert_allclose(result.reaction_N, 0., rtol=0., atol=2e-9)
+        force = result.reaction_N.sum(axis=0)
+        moment = np.cross(points, result.reaction_N).sum(axis=0)
+        np.testing.assert_allclose(force, 0., rtol=0., atol=2e-9)
+        np.testing.assert_allclose(moment, 0., rtol=0., atol=2e-12)
+        pairing = fsum((result.reaction_N * result.displacement_m).ravel())
+        np.testing.assert_allclose(pairing, 0., rtol=0., atol=2e-18)
+        np.testing.assert_allclose(pairing, result.terminal_mechanical_pairing_J,
+                                   rtol=1e-8, atol=1e-25)
+        energy = result.elastic_energy_J
+        departure = float(np.max(abs(result.displacement_m - affine_displacement)))
+        if label == "uniform_cte":
+            if not (departure <= 2e-15 and energy <= 1e-20):
+                raise ValueError("Equal CTE did not reproduce stress-free affine expansion")
+            np.testing.assert_allclose(result.mean_stress_Pa, 0., rtol=0., atol=1e-3)
+        else:
+            if not energy > 1e-13:
+                raise ValueError("CTE mismatch did not produce the expected nonzero elastic energy")
+            np.testing.assert_allclose(2 * energy, pairing - result.stress_eigenstrain_integral_J,
+                                       rtol=2e-8, atol=1e-20)
+        hydrostatic = np.trace(result.mean_stress_Pa, axis1=1, axis2=2) / 3.
+        cases[label] = {
+            "junction_alpha_per_K": alpha_junction,
+            "elastic_energy_J": energy,
+            "volume_weighted_hydrostatic_mean_Pa": {
+                name: float(np.average(hydrostatic[mesh.material_ids == mid],
+                                       weights=volume[mesh.material_ids == mid]))
+                for name, mid in materials.items()
+            },
+            "max_departure_from_bulk_affine_expansion_m": departure,
+            "max_abs_support_reaction_N": float(np.max(abs(result.reaction_N))),
+            "net_force_N": force.tolist(), "net_moment_N_m": moment.tolist(),
+            "terminal_mechanical_pairing_J": pairing,
+        }
+    return {
+        "bundle_sha256": digest, "nodes": len(ids), "tetrahedra": len(volume),
+        "stress_free_temperature_K": reference_K, "uniform_temperature_K": reference_K + delta_K,
+        "bulk_alpha_per_K": alpha_bulk, "external_mechanical_force": False,
+        "gauge": {"A_xyz": str(ids[a]), "B_x_and_y": str(ids[b]), "C_x": str(ids[c]),
+                  "B_y_prescribed_m": gauge_y_m},
+        **cases,
+    }
+
+
+def main(argv=None):
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("bundle", type=Path)
     cli.add_argument("boundary_manifest", type=Path)
-    cli.add_argument("--supports", choices=("left-clamped", "both-clamped"), default="left-clamped")
-    cli.add_argument("--compare-junction-conductivity", action="store_true")
-    a = cli.parse_args()
+    cli.add_argument("--supports", choices=("left-clamped", "both-clamped"))
+    comparisons = cli.add_mutually_exclusive_group()
+    comparisons.add_argument("--compare-junction-conductivity", action="store_true")
+    comparisons.add_argument("--compare-junction-cte", action="store_true",
+                             help="compare uniform heating with equal and unequal expansion coefficients")
+    a = cli.parse_args(argv)
+    if a.compare_junction_cte and a.supports is not None:
+        cli.error("--compare-junction-cte uses its own free-expansion gauge, not --supports")
     try:
-        load = load_named_mesh(a.bundle, a.boundary_manifest, a.compare_junction_conductivity)
-        runner = compare if a.compare_junction_conductivity else solve
-        print(json.dumps(runner(*load, a.supports), indent=2, allow_nan=False))
+        load = load_named_mesh(a.bundle, a.boundary_manifest,
+                               a.compare_junction_conductivity or a.compare_junction_cte)
+        if a.compare_junction_cte:
+            report = compare_junction_cte(*load)
+        else:
+            runner = compare if a.compare_junction_conductivity else solve
+            report = runner(*load, a.supports or "left-clamped")
+        print(json.dumps(report, indent=2, allow_nan=False))
     except (ValueError, OSError, ImportError, AssertionError) as e:
         cli.exit(1, f"{cli.prog}: {e}\n")
 
