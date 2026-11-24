@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from fractions import Fraction
 from itertools import combinations
+from typing import Union
 import math
 
 import numpy as np
@@ -21,7 +22,7 @@ from fibernet.io.tet4_meshio import (
 )
 
 __all__ = ['Tet4CellFields', 'Tet4StaticAdmission', 'Tet4StaticResult',
-           'inspect_static_tet4_admission', 'solve_static_tet4']
+           'inspect_static_tet4_admission', 'solve_static_tet4', 'solve_static_tet4_load_cases']
 
 _LENGTH_TO_M = {'m': 1., 'cm': 1e-2, 'mm': 1e-3, 'um': 1e-6, 'nm': 1e-9}
 _AXIS = {'x': 0, 'y': 1, 'z': 2}
@@ -116,8 +117,7 @@ def _row_lookup(by_id, id_to_row, label):
         yield id_to_row[key], value
 
 
-def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id, prescribed_displacements_m_by_id):
-    rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
+def _nodal_forces(rows, forces_by_id):
     force = np.zeros((len(rows), 3), dtype=np.float64)
     for row, value in _row_lookup(forces_by_id, rows, 'forces_by_id'):
         if isinstance(value, np.ndarray):
@@ -128,6 +128,12 @@ def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id, prescribed_disp
         # Check exactness on the original scalar values, before either array
         # promotion of a mixed sequence or assignment to binary64 can round.
         force[row] = [_float64(component, 'nodal force in N') for component in value]
+    return force
+
+
+def _loads_and_constraints(mesh, forces_by_id, fixed_dofs_by_id, prescribed_displacements_m_by_id):
+    rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
+    force = _nodal_forces(rows, forces_by_id)
     fixed, prescribed = _constraint_axes(rows, fixed_dofs_by_id, prescribed_displacements_m_by_id)
     _check_normal_or_zero(force, 'nodal force')
     return force, fixed, prescribed
@@ -518,12 +524,10 @@ def _factor_band(a, floor, plan):
 
     return apply
 
-def _fixed_solve(stiffness, force, plan):
+def _prepare_fixed_solve(stiffness, plan):
     free = plan.free
-    u = np.zeros(force.size)
     if not len(free):
-        return u, free, 0., 0., 0., 0.
-    rhs = force.ravel()[free]
+        return None
     reduced = stiffness[free, :][:, free]
     # Scale by a stiffness norm first, then test the spectrum even if all
     # loads are constrained, so a zero RHS cannot conceal a rigid mode.
@@ -536,6 +540,18 @@ def _fixed_solve(stiffness, force, plan):
     eps = np.finfo(np.float64).eps
     tolerance = 64. * eps * len(free)
     solve = _factor_band(khat, tolerance, plan)
+    return kscale, khat, norm_khat, eps, tolerance, solve
+
+
+def _fixed_solve(stiffness, force, plan, prepared=None):
+    free = plan.free
+    u = np.zeros(force.size)
+    if not len(free):
+        return u, free, 0., 0., 0., 0.
+    rhs = force.ravel()[free]
+    if prepared is None:
+        prepared = _prepare_fixed_solve(stiffness, plan)
+    kscale, khat, norm_khat, eps, tolerance, solve = prepared
     fscale = float(np.max(np.abs(rhs)))
     if fscale == 0.:
         return u, free, 0., 0., 0., 0.
@@ -773,8 +789,17 @@ def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fi
         with np.errstate(divide='raise', over='raise', invalid='raise'):
             plan = _static_topology_plan(mesh, fixed)
             k = _assemble(mesh)
+    except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
+        raise ValueError('Tet4 numerical solve could not be safely evaluated') from exc
+    return _solve_assembled_static(mesh, force, fixed, prescribed, return_cell_fields, plan, k)
+
+
+def _solve_assembled_static(mesh, force, fixed, prescribed, return_cell_fields, plan, k,
+                            *, prepared=None, detach_shared=False):
+    try:
+        with np.errstate(divide='raise', over='raise', invalid='raise'):
             if prescribed is None:
-                u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan)
+                u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan, prepared)
                 internal = k @ u
             else:
                 u, internal, energy, half_work, backward, relative = _prescribed_solve(
@@ -798,7 +823,51 @@ def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fi
                 fields = _recover_cell_fields(mesh, u)
         except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
             raise ValueError('Tet4 cell fields could not be safely evaluated') from exc
-    for array in (mesh.node_ids, u, reactions, fixed):
+    node_ids = mesh.node_ids
+    if detach_shared:
+        node_ids = node_ids.copy()
+        fixed = fixed.copy()
+    for array in (node_ids, u, reactions, fixed):
         array.setflags(write=False)
-    return Tet4StaticResult(mesh.node_ids, u, reactions, fixed, energy, half_work,
+    return Tet4StaticResult(node_ids, u, reactions, fixed, energy, half_work,
                             worst_residual, backward, relative, fields)
+
+
+def solve_static_tet4_load_cases(bundle: Tet4Bundle, *, force_cases: Union[list, tuple],
+                                fixed_dofs_by_id: Mapping) -> tuple[Tet4StaticResult, ...]:
+    """Solve 1–8 ordered nodal force cases on one unchanged Tet4 system.
+
+    Each case is a stable-node-ID mapping of Cartesian (Fx, Fy, Fz) in N.
+    All cases share geometry, elastic materials, and zero-displacement held
+    axes. Geometry follows the bundle's length unit; elastic moduli are in Pa.
+    Unlisted loads are zero, and unlisted axes are free.
+
+    Return a tuple of detached results in case order. Validate every force
+    mapping before assembly, and return no partial results on failure. Keep
+    the single-case mesh, band-factor and numerical limits; perform one
+    system setup, with no retained factor or cache. Prescribed motion, cell
+    fields and file export are not supported by this entry point.
+    """
+    if type(force_cases) not in (tuple, list):
+        raise ValueError('force_cases must be an ordered list or tuple of 1 to 8 mappings')
+    cases = tuple(force_cases[:9])
+    if not 1 <= len(cases) <= 8:
+        raise ValueError('force_cases must be an ordered list or tuple of 1 to 8 mappings')
+    mesh = _validate_static_mesh(bundle)
+    rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
+    fixed = _fixed_axes(rows, fixed_dofs_by_id)
+    forces = []
+    for mapping in cases:
+        force = _nodal_forces(rows, mapping)
+        _check_normal_or_zero(force, 'nodal force')
+        forces.append(force)
+    try:
+        with np.errstate(divide='raise', over='raise', invalid='raise'):
+            plan = _static_topology_plan(mesh, fixed)
+            k = _assemble(mesh)
+            prepared = _prepare_fixed_solve(k, plan)
+    except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
+        raise ValueError('Tet4 numerical solve could not be safely evaluated') from exc
+    return tuple(_solve_assembled_static(mesh, force, fixed, None, False, plan, k,
+                                        prepared=prepared, detach_shared=True)
+                 for force in forces)
