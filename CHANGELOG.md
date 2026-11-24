@@ -1,3 +1,13 @@
+## [4.21.5]
+
+- Require ordered inputs when explicit node or edge IDs are supplied to the
+  raw beam FEM result adapter. Sets and frozensets are rejected.
+- Reject incoming nonzero Fraction and NumPy floating conductance values that
+  would round to zero, while preserving real zeros and ordinary rounding.
+- Document junction stiffening under three distinct Tet4 cap loads, with the
+  global compliance trend and mesh-sensitive cross-cap terms reported separately.
+- See the [4.21.5 release notes](docs/RELEASE_4_21_5.md).
+
 ## [4.21.4]
 
 - Reject conflicting prescribed DC voltages before conversion, and reject
