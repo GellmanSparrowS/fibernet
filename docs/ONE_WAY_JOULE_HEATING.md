@@ -81,6 +81,28 @@ and an isolated thermal network, stored heat at 1 s is 16 J. Temperatures use
 backward Euler. These synthetic values demonstrate the workflow, not an
 experimentally calibrated material or general time-accuracy guarantee.
 
+## Four terminals on a 3D network
+
+Run `python -m examples.four_terminal_joule_heating` from the checkout.
+The synthetic network has 10 nodes and 14 circular rods, including two
+material classes and a reverse parallel edge. It uses
+`G = sigma * pi * radius**2 / length` for steady electrical conduction and
+declares thermal conductance and nodal heat capacity separately.
+
+The terminal matrix maps prescribed electrode voltages [V] to currents
+injected into the graph [A], in the reported stable-ID order. It is not
+a material conductivity tensor. At the mixed voltages the graph dissipates
+about 6.9982 W. After 0.5 s with nominal 0.03125 s time steps, an insulated
+network stores 3.4991 J. Holding node 710 at 300 K instead removes
+0.1870 J and leaves 3.3121 J stored. Check both power and energy before
+interpreting the temperature field.
+
+The model uses ideal electrical junctions and an explicitly lumped
+thermal network. The 25/75 endpoint fractions specify how to allocate
+power to nodes, not a prediction of weld temperatures or a calibrated
+source profile. Neither the thermal boundary nor temperature changes
+feed back into the electrical solve.
+
 ## Save and reopen thermal fields without a solve
 
 Use the existing result methods, not a generic dataclass/NumPy conversion:
