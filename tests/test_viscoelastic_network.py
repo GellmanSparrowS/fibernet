@@ -1,10 +1,13 @@
 """Regression tests for 2-D linear viscoelastic frame history."""
 import copy
+import cmath
 import importlib.util
 import json
 import math
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -176,6 +179,61 @@ class NetworkAcceptance(unittest.TestCase):
         with self.assertRaises(ValueError):
             BeamFrameFEM().history(g,constraints={left:[[0.,0.,0.]]*2},loads={right:[[1.,0.,0.]]*2},**args)
         self.assertEqual(g.to_dict(),before)
+
+    def test_frequency_sweep_cli_physical_loop_and_discrete_ledger(self):
+        script = Path(__file__).resolve().parents[1] / 'examples/viscoelastic_frequency_sweep.py'
+        with tempfile.TemporaryDirectory() as directory:
+            command = [sys.executable, str(script), '--quick', '--amplitude-um', '0.001',
+                       '--relaxation-time-s', '1e6']
+            env = dict(os.environ)
+            # Use the same package as this test, whether installed or in-tree.
+            roots = [str(Path(fn.__file__).resolve().parents[1])]
+            if env.get('PYTHONPATH'):
+                roots.append(env['PYTHONPATH'])
+            env['PYTHONPATH'] = os.pathsep.join(roots)
+            run = subprocess.run(command, cwd=directory, env=env, capture_output=True,
+                                 text=True, check=True, timeout=60)
+            self.assertEqual(list(Path(directory).iterdir()), [])
+            for flag, value in [('--amplitude-um', 'nan'), ('--amplitude-um', '1e-200'),
+                                ('--relaxation-time-s', '1e308')]:
+                with self.subTest(flag=flag, value=value):
+                    invalid = subprocess.run(command + [flag, value], cwd=directory,
+                                             env=env, capture_output=True, text=True, timeout=60)
+                    self.assertEqual(invalid.returncode, 2)
+                    self.assertEqual(invalid.stdout, '')
+                    self.assertIn(f'{flag} must be', invalid.stderr)
+                    self.assertNotIn('RuntimeWarning', invalid.stderr)
+        result = json.loads(run.stdout)
+        self.assertEqual((result['nodes'], result['edges'], result['samples_per_cycle']),
+                         (16, 33, 32))
+        self.assertEqual(result['amplitude_m'], 1e-9)
+        self.assertEqual(result['relaxation_time_s'], 1e6)
+        cases = result['cases']
+        self.assertEqual([case['omega_tau'] for case in cases], [0.2, 1.0, 5.0])
+        # The unknown frame geometry factor cancels in these ratios. With
+        # harmonic strain, a single Maxwell branch has BE transfer H.
+        predictions = []
+        phase_step = 2 * math.pi / 32
+        lag = cmath.exp(-1j * phase_step)
+        for case in cases:
+            x = case['omega_tau']
+            self.assertAlmostEqual(case['frequency_Hz'], x / (2 * math.pi * 1e6), places=14)
+            physical, numerical = case['physical_loss_J'], case['numerical_loss_J']
+            self.assertGreater(min(physical, numerical), 0.)
+            self.assertAlmostEqual(case['previous_physical_loss_J'] / physical, 1., places=4)
+            self.assertAlmostEqual((case['stored_energy_change_J'] + physical + numerical)
+                                   / case['endpoint_work_J'], 1., places=10)
+            a = 1 / (1 + phase_step / x)
+            h = a * (1 - lag) / (1 - a * lag)
+            expected_physical_scale = abs(h)**2 / x
+            predictions.append(expected_physical_scale)
+            self.assertAlmostEqual(case['trapezoid_loop_work_J'] / physical,
+                                   h.imag * math.sin(phase_step) /
+                                   (phase_step * expected_physical_scale), places=4)
+        for end in (0, 2):
+            actual = cases[1]['physical_loss_J'] / cases[end]['physical_loss_J']
+            self.assertGreater(actual, 2.2)
+            self.assertAlmostEqual(actual, predictions[1] / predictions[end], places=4)
 
     def test_representative_network_three_protocols(self):
         path=Path(__file__).resolve().parents[1]/'examples/viscoelastic_network.py'
