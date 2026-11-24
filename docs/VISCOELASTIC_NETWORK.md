@@ -62,6 +62,34 @@ Use `--quick` for 32 instead of 128 samples per cycle to see the trend with
 more time-discretization error. This synthetic small-strain example does
 not fit a material or test fracture.
 
+### Change placement without changing the material inventory
+
+From a source checkout or extracted source distribution with FiberNet installed, run [the placement example](../examples/viscoelastic_material_placement.py):
+
+```sh
+python examples/viscoelastic_material_placement.py
+```
+
+The 16-node welded network has 33 members. Both layouts assign the longer
+relaxation time to six horizontal and five vertical 4 mm members of radius
+0.04 mm, so they match in count, length, orientation and cylindrical section
+volume. The rest use the shorter relaxation time. The two synthetic standard
+linear solids share the same moduli (1 MPa equilibrium and 2 MPa branch); the
+relaxation times are 0.20 and 0.035 s. Within each of the two eligible
+orientations, the stable edge IDs are selected from opposite ends of a
+uniform-elastic strain-energy ranking under the same prescribed stroke.
+
+The example continues a state across eight cycles at each frequency, then
+compares the final-cycle material loss. The independent check is a
+steady-state complex-modulus solution for the same linear Euler–Bernoulli
+frame. At the default 256 steps per cycle, the higher-reference-energy placement
+dissipates about 29.18 vs 26.38 pJ at 0.80 Hz, and about 38.47 vs 41.35 pJ at
+4.55 Hz. Compare the final-cycle loss across layouts at each frequency, and keep the
+grip-loop work and backward-Euler numerical loss separate. Use
+`--samples-per-cycle 512` to check refinement or 64 for a shorter run.
+The example demonstrates a reversal for this synthetic fixture and loading;
+the constitutive parameters are not a calibration.
+
 ## Installation and compatibility
 
 The material/history API uses the base NumPy and SciPy dependencies. It does
