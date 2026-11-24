@@ -1,4 +1,8 @@
-"""One-way electrothermal to elastic handoff for the tagged homogeneous CAD example."""
+"""One-way electrothermal to elastic handoff for the tagged CAD example.
+
+Equal-power reports retain the axial cap node mean and add the facet-area
+mean of axial displacement (both in metres), with cap area in square metres.
+"""
 import argparse
 from collections import Counter
 from hashlib import sha256
@@ -112,6 +116,18 @@ def load_named_mesh(bundle_path, manifest_path, compare_junction=False):
     return mesh, faces, material, meta["bundle_sha256"]
 
 
+def cap_area_mean_x(points_m, cap_faces, displacement_m):
+    """Integrate the linear axial displacement over the named terminal faces."""
+    triangles = points_m[cap_faces]
+    area = .5 * np.linalg.norm(
+        np.cross(triangles[:, 1] - triangles[:, 0], triangles[:, 2] - triangles[:, 0]), axis=1)
+    if not len(area) or not np.all(np.isfinite(area) & (area > 0.)):
+        raise ValueError("Terminal cap requires finite positive facet areas")
+    total_area = fsum(area)
+    face_mean = displacement_m[cap_faces, 0].mean(axis=1)
+    return fsum(area * face_mean) / total_area, total_area
+
+
 def solve(mesh, faces, material, digest, supports, *, conductivity=None, voltage=VOLTAGE_V):
     if conductivity is None:
         conductivity = {material: 2.}
@@ -192,6 +208,9 @@ def solve(mesh, faces, material, digest, supports, *, conductivity=None, voltage
     if len(conductivity) > 1:
         result.pop("solid_material_id")
         result["voltage_V"] = voltage
+        cap_mean, cap_area = cap_area_mean_x(p_m, faces[RIGHT], elastic.displacement_m)
+        result["right_cap_area_weighted_mean_x_displacement_m"] = cap_mean
+        result["right_cap_area_m2"] = cap_area
         result["joule_W_by_material_id"] = {
             str(i): fsum(dc.joule_power_W_by_cell[mesh.material_ids == i]) for i in conductivity
         }
