@@ -83,6 +83,45 @@ are retained. The solver does not infer relaxation parameters from graph
 `Material.youngs_modulus`, and does not change those stored static properties.
 The instance's static FEM E is also superseded by this explicit law.
 
+### Experimental: explicit laws for different members
+
+For an in-memory FEM history, `material` can instead be a complete dictionary
+from stable **edge IDs** to `LinearViscoelasticMaterial` instances. Each graph
+edge, including each parallel member, needs an entry. Key order does not matter.
+Use the same graph and assignment when continuing. This is a Python workflow,
+not a saved format or an extension of other backends.
+
+```python
+import fibernet as fn
+
+g = fn.StructureGraph(dimension=2)
+left, joint, right = [g.add_node([x, 0]) for x in (0, 8, 20)]  # mm
+a = g.add_edge(left, joint, radius=0.1)
+b = g.add_edge(joint, right, radius=0.12)
+laws = {
+    a: fn.LinearViscoelasticMaterial.standard_linear_solid(1e6, 4e6, 0.08),
+    b: fn.LinearViscoelasticMaterial.kelvin_voigt(2e6, 1e4),
+}
+
+def run(times, stroke, **kwargs):
+    controls = {left: [[0, 0, 0]] * len(times),
+                right: [[x, None, None] for x in stroke]}  # displacement in m
+    return fn.simulate(g, backend="fem", mode="history", material=laws,
+                       times=times, constraints=controls, length_unit="mm", **kwargs)
+
+ramp = run([0, 0.1], [0, 2e-6])
+hold = run([0.1, 0.25, 0.8], [2e-6] * 3, initial_state=ramp.final_state)
+print(hold.displacements[:, hold.node_ids.index(joint), 0])
+```
+
+The joint can move during the hold even though the end displacement stays
+fixed. The initial samples of the continuation repeat the final committed
+time and controls. Mapped runs do not support `result.save`, `save_path` or
+`ViscoelasticResult.load` as a way to save or continue that state. The existing
+single-law save/load workflow is unchanged. Each mapped call accepts up to
+256 edges, 513 time samples, 20,000 edge–sample combinations, and eight
+Maxwell branches per law. These are experimental limits, not physical ones.
+
 This is material memory, not numerical regularization, global drag, contact
 dashpots, adhesion or fluid viscosity. A Kelvin-Voigt material does not have
 Maxwell stress relaxation: after a finite ramp its dashpot contribution drops
@@ -160,7 +199,7 @@ material/geometry/topology identity. Incompatible units, material, support mask
 or graph are refused. Checkpoints are integrity-checked, not authenticated.
 
 `final_state` and result attribute accesses return detached data. Failed solves
-do not mutate the graph, input histories or supplied restart state. Result
+do not mutate the graph, input histories or supplied restart state. For a single law, result
 `save` uses atomic replacement; `load` checks the result schema and numerical
 shapes. JSON preserves float64 roundtrips without deliberate rounding.
 

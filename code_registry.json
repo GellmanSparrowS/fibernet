@@ -376,7 +376,7 @@
    "__getattr__",
    "__dir__"
   ],
-  "sha256": "6cd386b1f41799e3e37973bf55c4729f82748532ae1bcc49f733375256b50d7f"
+  "sha256": "4653d7f1f6549dc4e740ce11d6ac546f13ba50519f80aa9dab146b480f0b0160"
  },
  "fibernet/examples/__init__.py": {
   "purpose": "__init__",
@@ -991,7 +991,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "101f16cec35f48fa5896a5fcb969fd66c8d035687e087d1804250a51095305e3"
+  "sha256": "3915d1e5c5923d5495ad8c434f3a069a813e39d0054acb25c0d4d36397d954ec"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
@@ -5383,9 +5383,18 @@
    "_section",
    "_residual",
    "_stored",
+   "_history_shapes",
+   "_mapped_numbers",
+   "_mapped_material_records",
+   "_admit_mapped_state",
+   "_admit_mapped_result",
+   "_admit_mapped_size",
+   "_law_groups",
+   "_decode_group_state",
+   "_MappedLaws",
    "solve_history"
   ],
-  "sha256": "8a111509d2a8bb588ad3a1b1c24a31e77934a7178c29d0418336170955316814"
+  "sha256": "06c7cd1929e50481f917a8a3465a24b6b5a49a1abd2153e9864cdb63dfd1c622"
  },
  "tests/test_linear_transport.py": {
   "purpose": "Analytical/software checks; explicit conductance is not inferred physics.",

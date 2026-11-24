@@ -169,17 +169,17 @@ class BeamFrameFEM:
                 length_unit, initial_state=None):
         """Quasistatic 2-D viscoelastic response through the existing frame.
 
-        Explicit uniform LinearViscoelasticMaterial overrides this instance's
-        static E and the graph's static material moduli. times[0] is the
-        unloaded initial state, or the supplied committed checkpoint time.
+        Use one LinearViscoelasticMaterial or a complete stable edge ID
+        dictionary. Neither uses static moduli. times[0] is the unloaded
+        initial time, or the supplied committed state time.
         Histories map stable node IDs to (len(times),3) endpoint samples.
         Loads are Fx/Fy/Mz in N/N/N m. Constraint samples are ux/uy/rz in
         m/m/rad; None means free and zero means constrained to zero. The mask
         is constant in time. Graph positions and radii use length_unit.
 
-        Returns ViscoelasticResult with separate physical/numerical loss and
-        a detached JSON-restartable final_state. No input is mutated. Curved
-        members, 3-D, mechanisms and nonfinite results are refused.
+        Returns separate losses and a detached final_state. Mapped laws
+        continue in memory only; single-law JSON is unchanged. No inputs are
+        mutated. Curved members, 3-D, mechanisms and nonfinite results fail.
         """
         from fibernet.sim._viscoelastic_fem import solve_history
         return solve_history(self, graph, material=material, times=times,
