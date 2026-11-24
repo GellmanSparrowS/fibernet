@@ -156,6 +156,30 @@ tetrahedra approximate the curved surface; this is a mesh-interchange
 example, not a convergence study or a physical solve. For other trusted
 tagged meshes, use the general import recipe below.
 
+### Optional conformal junction material
+
+```sh
+python examples/tet4_fused_cylinder_cad.py --junction-sphere --output-dir fused-cad-sphere
+```
+
+This opt-in route fragments the same fused solid with a centred, fully
+embedded 0.30 mm sphere. The native bundle has two material regions named
+`bulk` and `junction` in the MSH, linked to native decimal-string IDs
+by the JSON's `material_id_by_name` map. Both have the same illustrative
+elastic properties; adjust properties by region in a consuming workflow.
+The coarse and fine targets are 0.33 and 0.26 mm, respectively, with
+local targets of 0.165 and 0.13 mm around the sphere. Actual element
+counts depend on the Gmsh build. The linear interface triangles facet the
+analytic sphere rather than representing it exactly.
+
+The two regions share tetrahedral faces that form a closed interface.
+The six caps and `ambient_side` still partition only the exterior.
+Do not use the internal material interface as a convection boundary.
+Use generated files only after `COMPLETE` appears. The default route
+remains homogeneous, and the homogeneous thermomechanics example does
+not accept the two-region bundle. These are mesh and material-label
+checks, not a solve or a convergence study.
+
 ## Import named material and boundary groups from Gmsh
 
 This recipe uses Meshio 5.3.5 to read a trusted, small **ASCII MSH 4.1**
