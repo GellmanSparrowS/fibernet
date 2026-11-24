@@ -1,3 +1,13 @@
+## [4.21.3]
+
+- Report area-weighted axial end-face displacement alongside the original
+  node mean in the fused-cylinder matched-power comparison.
+- Check closed, oriented Tet4 material boundaries against the summed
+  cell volumes. Cavity shells retain their negative contribution.
+- Document VTU material inspection and a fixed-temperature comparison
+  that changes only the junction Young's modulus.
+- See the [4.21.3 release notes](docs/RELEASE_4_21_3.md) for the commands.
+
 ## [4.21.2]
 
 - Compare junction conductivity on two-region Tet4 solids at matched total
