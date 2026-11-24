@@ -2,6 +2,7 @@
 import base64
 from collections import Counter
 from hashlib import sha256
+from importlib.metadata import version
 from itertools import combinations
 import json,os,sys,tempfile
 from pathlib import Path
@@ -10,6 +11,7 @@ from mcp import ClientSession,StdioServerParameters
 from mcp.client.stdio import stdio_client
 from fibernet.io.tet4_meshio import Tet4Bundle
 from fibernet.sim.tet4_dc_thermal import solve_dc_thermal_tet4_with_convection
+from fibernet.version import __version__ as core_version
 from fibernet_mcp.server import TREE
 from fibernet_mcp.tet4_contract import canonical,load_fixture,parse_req,TET4_TOOL
 ADAPTER=Path(__file__).resolve().parents[1]
@@ -48,6 +50,8 @@ def proc(root,conf):
 async def run(root,enabled):
     p=proc(root,cfg(enabled))
     result={'enabled':enabled}
+    installed_core_version=version('fibernet')
+    assert installed_core_version==core_version
     async with stdio_client(p) as (r,w), ClientSession(r,w) as s:
         await s.initialize()
         tools=await s.list_tools(); ns={t.name for t in tools.tools}
@@ -68,7 +72,7 @@ async def run(root,enabled):
             assert not r.isError,r
             ok=r.structuredContent
             assert ok['source_sha256']==digest and ok['controls_sha256']==sha256(canonical(a)).hexdigest()
-            art=ok['artifact'];id_=art['artifact_id']; assert art['kind']=='tet4_dc_convection_result' and art['producer']['fibernet_version']=='4.21.0'
+            art=ok['artifact'];id_=art['artifact_id']; assert art['kind']=='tet4_dc_convection_result' and art['producer']['fibernet_version']==installed_core_version
             inf=await s.call_tool('fibernet_artifact_info',{'artifact_id':id_});assert inf.structuredContent['artifact']==art
             rr=await s.read_resource(art['uri']);assert json.loads(rr.contents[0].text)==art
             b=b'';offset=0

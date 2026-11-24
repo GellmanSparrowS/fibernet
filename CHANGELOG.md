@@ -1,3 +1,12 @@
+## [4.21.1]
+
+- Generate two independent tagged meshes of one fused-cylinder CAD solid
+  and import both as native Tet4 bundles.
+- Include the original fitted-junction `.geo` beside its existing JSON
+  fixture in the source distribution.
+- See the [4.21.1 release notes](docs/RELEASE_4_21_1.md) for the optional
+  Gmsh and Meshio workflow.
+
 ## [4.21.0]
 
 - Solve steady DC, transfer its Joule heat, and include surface convection
