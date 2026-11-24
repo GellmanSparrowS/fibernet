@@ -131,6 +131,47 @@ def test_invalid_input_maps(axis, bad):
         solver.to_sim_result(raw, graph, **maps)
 
 
+def test_3d_mixed_material_row_maps_require_order():
+    from fibernet import Material
+
+    graph = graph_fixture(dim=3)
+    graph.edges[11].material = Material(youngs_modulus=1000.)
+    graph.edges[19].material = Material(youngs_modulus=4000.)
+    pos, elements, radii = graph.to_numpy()
+    nodes = sorted(graph.nodes)
+    edges = [19, 11]  # Deliberately different from graph insertion order.
+    solver = BeamFrameFEM()
+    raw = solver.solve_3d(
+        elements[::-1].T, pos, radii[::-1], fixed_nodes=[0],
+        prescribed_disp={1: (.001,), 2: (.005,)},
+        edge_materials=[graph.edges[eid].material for eid in edges],
+    )
+    expected_forces = [
+        4000. * np.pi * .1**2 * .004 / 2.,
+        1000. * np.pi * .05**2 * .001,
+    ]
+    for node_map, edge_map in (
+        (nodes, edges),
+        (np.asarray(nodes), tuple(edges)),
+        (dict.fromkeys(nodes), dict.fromkeys(edges).keys()),
+        (iter(nodes), iter(edges)),
+    ):
+        result = solver.to_sim_result(raw, graph, node_ids=node_map, edge_ids=edge_map)
+        assert result.metadata['node_ids'] == nodes
+        np.testing.assert_array_equal(result.displacements[:, 0], [0., .001, .005])
+        material = result.metadata['material_contract']
+        assert material['edge_ids'] == result.metadata['edge_ids'] == edges
+        assert material['youngs_modulus'] == [4000., 1000.]
+        np.testing.assert_allclose(result.edge_forces, expected_forces, rtol=1e-12, atol=0.)
+        assert result.energy == pytest.approx(.5 * np.dot(expected_forces, [.004, .001]))
+
+    for unordered in (set, frozenset):
+        with pytest.raises(ValueError, match='node_ids must follow raw input row order'):
+            solver.to_sim_result(raw, graph, node_ids=unordered(nodes), edge_ids=edges)
+        with pytest.raises(ValueError, match='edge_ids must follow raw input row order'):
+            solver.to_sim_result(raw, graph, node_ids=nodes, edge_ids=unordered(edges))
+
+
 @pytest.mark.parametrize('maps', [dict(node_ids=[7, 42, 91]), dict(edge_ids=[11, 19])])
 def test_both_maps_required(maps):
     graph = graph_fixture(); solver, raw, _, _ = solve(graph)

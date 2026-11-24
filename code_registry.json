@@ -991,7 +991,7 @@
    "_beam_resultant_contract",
    "BeamFrameFEM"
   ],
-  "sha256": "8be3aee8ac424d0b68efe9979106775ee6fde79a5ee6b960aaf39b60a49702f5"
+  "sha256": "101f16cec35f48fa5896a5fcb969fd66c8d035687e087d1804250a51095305e3"
  },
  "fibernet/ml/beam_frame_fem_sparse.py": {
   "purpose": "Sparse Beam Frame FEM for large-scale fiber networks",
