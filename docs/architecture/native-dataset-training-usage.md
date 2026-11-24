@@ -136,6 +136,25 @@ Explicit groups do not prevent every form of leakage: target-derived features,
 repeated tuning on the same holdout, or incorrectly declared origins remain the
 caller's responsibility. Keep the original Dataset and its generation lineage.
 
+### Run a three-role grouped beam example
+
+From a checkout containing the
+[grouped beam example](../../examples/heterogeneous_3d_grouped_dataset.py),
+use a fresh output directory:
+
+```sh
+python -m pip install scikit-learn
+python examples/heterogeneous_3d_grouped_dataset.py --output beam-groups
+```
+
+The example solves five synthetic cubic networks from three rest-geometry
+groups. Each material variant stays with its geometry group. It checks
+the axial force and strain energy against a series-spring calculation,
+then calls `FiberNetDataset.split(method="group")` and checks that every
+row appears once and no source group appears in two roles. The original
+graphs and detailed results are saved beside the split datasets. This is
+a split and data-lineage check, not a fit or a test of generalization.
+
 ## Standardize on training groups
 
 When features have different scales, fit the scaler only on the training rows.
