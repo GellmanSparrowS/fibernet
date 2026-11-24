@@ -102,6 +102,33 @@ The solver still validates inputs and checks for numerical failure.
   `relative_energy_work_error`. A small normwise backward residual is not
   a per-component or forward-error guarantee.
 
+## Solve several load cases on the same solid
+
+`solve_static_tet4_load_cases` shares mesh validation, assembly, and the
+checked factorization for 1 to 8 cases on one mesh with unchanged materials
+and zero-displacement restraints. Supply an ordered list or tuple of the
+same stable-node-ID force mappings used by `solve_static_tet4`. From the
+source checkout or extracted source distribution:
+
+```python
+from examples.tet4_static_two_material import build_example
+from fibernet.sim.tet4 import solve_static_tet4_load_cases
+
+bundle, pull_N, held_axes = build_example()
+push_N = {node_id: tuple(-f for f in load) for node_id, load in pull_N.items()}
+pull, push = solve_static_tet4_load_cases(
+    bundle, force_cases=[pull_N, push_N], fixed_dofs_by_id=held_axes,
+)
+print(pull.reaction_N.sum(axis=0), push.reaction_N.sum(axis=0))  # N
+```
+
+The tuple preserves case order, and each detached result keeps its own
+reaction, energy, and residual checks. If any case fails, no partial result
+is returned. The usual mesh, band-factor, and numerical limits still apply.
+No shared factor is kept after the call. Use separate calls for different
+material assignments and the single-case API for prescribed motion,
+cell fields, or VTU export.
+
 ## Prescribe a measured displacement
 
 For prescribed Cartesian motion, give the desired **signed displacement in

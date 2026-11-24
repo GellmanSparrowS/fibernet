@@ -5864,6 +5864,7 @@
    "_BandPlan",
    "_BandBudgetExceeded",
    "_row_lookup",
+   "_nodal_forces",
    "_loads_and_constraints",
    "_fixed_axes",
    "_constraint_axes",
@@ -5888,6 +5889,7 @@
    "_assemble",
    "_checked_normal_rescale",
    "_factor_band",
+   "_prepare_fixed_solve",
    "_fixed_solve",
    "_checked_products",
    "_checked_action",
@@ -5898,9 +5900,27 @@
    "_owned_static_mesh",
    "_validate_static_mesh",
    "_static_topology_plan",
-   "_solve_static_validated"
+   "_solve_static_validated",
+   "_solve_assembled_static",
+   "solve_static_tet4_load_cases"
   ],
-  "sha256": "46107af0a29bc84f48d3e3fc6438d4ff36fe904d0b8bb36f7ec0992c4327b085"
+  "sha256": "7cf771f7728309b936927075a7e8c791318e8196da9764ef2290f5a1bff82ca0"
+ },
+ "tests/test_tet4_load_cases.py": {
+  "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
+  "status": "active",
+  "symbols": [
+   "test_batch_signature_resolves_runtime_type_hints",
+   "assert_result",
+   "test_fixed_controls_exact_parity_shared_preparation_distinct_result_ownership",
+   "test_shared_factor_does_not_mask_tiny_free_load_or_hide_zero_rhs_rank_check",
+   "test_count_and_late_invalid_case_fail_before_assembly",
+   "face_joined_mesh",
+   "test_physical_unrestrained_rotation_rejects_zero_first_rhs_same_as_scalar_without_mocks",
+   "test_all_held_same_mesh_gives_exact_reactions_without_mocks",
+   "test_maximum_eight_signed_cases_stable_uint64_order_no_alias_and_same_physics"
+  ],
+  "sha256": "cf47eba78852b115a311d143c88a37a32da769ca9fef9f7fc9ab81834d44f52f"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
