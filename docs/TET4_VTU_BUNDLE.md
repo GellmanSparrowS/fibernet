@@ -180,6 +180,23 @@ remains homogeneous, and the homogeneous thermomechanics example does
 not accept the two-region bundle. These are mesh and material-label
 checks, not a solve or a convergence study.
 
+### View the two material regions in ParaView
+
+Open `mesh.vtu` extracted from the ZIP and select **Color By → material_id**
+(cell data). This interchange mesh is in millimetres; the ZIP's
+`manifest.json` records the unit and material properties. Use the matching
+generator JSON (for example, `coarse.json`) to map IDs to `bulk` and
+`junction` and recover the named exterior groups. If you open a
+[thermoelastic result VTU](TET4_THERMOELASTIC.md#inspect-a-snapshot-in-paraview)
+instead, its undeformed coordinates and displacement are in metres;
+it preserves the IDs, but not the material table or named groups.
+
+An exterior-only STL does not carry material IDs, the internal interface,
+or units. FiberNet's graph STL export builds cylinders from a fiber
+network rather than exporting this fused Tet4 solid. Reading the VTUs
+with Meshio can verify the IDs and geometry; it is not a fused
+multimaterial manufacturing export.
+
 ## Import named material and boundary groups from Gmsh
 
 This recipe uses Meshio 5.3.5 to read a trusted, small **ASCII MSH 4.1**
