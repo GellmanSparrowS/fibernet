@@ -154,6 +154,41 @@ class CrosslinkedExampleTests(unittest.TestCase):
         self.assertLess(record['matched']['max_position_over_L'], record['scientific_tolerances']['matched_position_over_L_max'])
         self.assertLess(record['matched']['max_velocity_over_V'], record['scientific_tolerances']['matched_velocity_over_V_max'])
 
+    def test_cli_preflight_compiles_real_deck_without_process_or_files(self):
+        args = ['--steps', '1000', '--timestep-s', '5e-8']
+        _, graph, request = example.build_case(steps=1000, timestep_s=5e-8)
+        prepared = prepare_cg(graph, request)
+        with patch('subprocess.Popen', side_effect=AssertionError('native forbidden')), \
+             patch.object(example, 'load_runtime', side_effect=AssertionError('no runtime')), \
+             patch.object(example, 'run_example', side_effect=AssertionError('no execution')), \
+             patch.object(Path, 'mkdir', side_effect=AssertionError('no directories')), \
+             patch('sys.stdout', new_callable=io.StringIO) as output:
+            example.main(['--preflight', *args])
+        info = json.loads(output.getvalue())
+        self.assertEqual(info['mode'], 'preflight')
+        self.assertIs(info['engine_started'], False)
+        self.assertEqual(tuple(info[k] for k in ('sites', 'bonds', 'angles')), (48, 104, 64))
+        self.assertEqual(info['fixed_node_ids'], list(request.fixed_node_ids))
+        self.assertEqual(tuple(info[k] for k in ('geometry_length_unit', 'deck_units')), ('m', 'si'))
+        self.assertEqual(tuple(info[k] for k in ('steps', 'timestep_s', 'sample_every')), (1000, 5e-8, 1))
+        self.assertEqual(info['required_packages'], ['MOLECULE'])
+        self.assertEqual(info['deck_identity'], prepared.identity)
+        self.assertEqual(info['deck_file_sha256'], {
+            'model.data': hashlib.sha256(prepared.data_text.encode()).hexdigest(),
+            'in.model': hashlib.sha256(prepared.input_text.encode()).hexdigest(),
+        })
+
+    def test_cli_preflight_rejects_native_flags_before_work(self):
+        for extra in (['--runtime-json', 'missing.json'], ['--output', 'unused'],
+                      ['--runtime-json', 'missing.json', '--output', 'unused']):
+            with self.subTest(extra=extra), \
+                 patch.object(example, 'build_case', side_effect=AssertionError('no preparation')), \
+                 patch.object(example, 'run_example', side_effect=AssertionError('no native run')), \
+                 patch('sys.stderr', new_callable=io.StringIO) as error, self.assertRaises(SystemExit) as stop:
+                example.main(['--preflight', *extra])
+            self.assertEqual(stop.exception.code, 2)
+            self.assertIn('--preflight cannot be combined', error.getvalue())
+
     def test_cli_requires_runtime_and_forwards_fine_grid(self):
         result = MagicMock()
         result.n_nodes, result.n_edges = 48, 104
