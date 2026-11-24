@@ -21,6 +21,21 @@ example = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(example)
 
 
+def test_area_weighted_cap_integrates_affine_values_on_nonuniform_triangles():
+    points = np.array([[0., 0., 0.], [0., 1., 0.],
+                       [0., 0., 1.], [0., 0., -4.]])
+    triangles = np.array([[0, 1, 2], [0, 1, 3]])
+    # P1 u_x=z: triangle areas 1/2 and 2, means 1/3 and -4/3.
+    displacement = np.zeros_like(points)
+    displacement[:, 0] = points[:, 2]
+    mean, area = example.cap_area_mean_x(points, triangles, displacement)
+    assert (mean, area) == pytest.approx((-1., 2.5))
+    assert mean != pytest.approx(displacement[:, 0].mean())
+    assert example.cap_area_mean_x(points, triangles[::-1, ::-1], displacement) == pytest.approx((mean, area))
+    with pytest.raises(ValueError, match="positive facet areas"):
+        example.cap_area_mean_x(points, np.array([[0, 1, 1]]), displacement)
+
+
 @pytest.fixture
 def tagged_pair(tmp_path):
     # Toy conforming 3x3x3 brick partition. The middle brick is a cube
@@ -105,6 +120,50 @@ def test_matching_pair_reaches_comparison_once(tagged_pair, monkeypatch, capsys)
     out = capsys.readouterr()
     assert calls == [payload["bundle_sha256"]]
     assert out.err == "" and json.loads(out.out) == {"accepted_pair": calls[0]}
+
+
+def test_cap_both_clamped_comparison_report_and_default_shape(tagged_pair, monkeypatch, capsys):
+    archive, manifest, payload, mesh, raw = tagged_pair
+    decoded = mesh
+
+    def read_snapshot(path):
+        assert path != archive and path.read_bytes() == raw
+        return decoded
+
+    monkeypatch.setattr(example, "read_tet4_vtu_bundle", read_snapshot)
+    argv = [str(SPEC.origin), str(archive), str(manifest)]
+    monkeypatch.setattr(sys, "argv", [*argv, "--compare-junction-conductivity",
+                                     "--supports", "both-clamped"])
+    example.main()
+    output = json.loads(capsys.readouterr().out)
+    mean_key = "right_cap_area_weighted_mean_x_displacement_m"
+    area_key = "right_cap_area_m2"
+    legacy_key = "right_cap_mean_x_displacement_m"
+    rows = {str(n): i for i, n in enumerate(mesh.node_ids)}
+    expected = 0.
+    for face in payload["boundary_node_ids"]["cap_pos_x"]:
+        a, b, c = mesh.points[[rows[n] for n in face], 1:] * 1e-3
+        ab, ac = b - a, c - a
+        expected += abs(ab[0] * ac[1] - ab[1] * ac[0]) / 2
+    assert expected > 0.
+    base, changed = (output[k] for k in ("uniform_conductivity", "lower_junction_equal_power"))
+    assert base[area_key] == changed[area_key] == pytest.approx(expected)
+    assert base["joule_W"] == pytest.approx(changed["joule_W"], rel=1e-12, abs=0.)
+    for state in (base, changed):
+        assert state["supports"] == "both-clamped"
+        assert state[mean_key] == state[legacy_key] == 0.
+
+    decoded = Tet4Bundle(mesh.points, mesh.tetrahedra, mesh.node_ids, mesh.cell_ids,
+                         np.ones_like(mesh.material_ids), {1: mesh.materials[1]}, "mm")
+    monkeypatch.setattr(sys, "argv", argv)
+    example.main()
+    default = json.loads(capsys.readouterr().out)
+    assert {mean_key, area_key, "voltage_V", "joule_W_by_material_id"}.isdisjoint(default)
+    assert set(default) - {"solid_material_id"} == set(base) - {
+        mean_key, area_key, "voltage_V", "joule_W_by_material_id",
+    }
+    assert default["solid_material_id"] == "1"
+    assert default["supports"] == "left-clamped" and default["right_cap_x_reaction_N"] == 0.
 
 
 @pytest.mark.parametrize("mismatch", ["archive", "labels"])
