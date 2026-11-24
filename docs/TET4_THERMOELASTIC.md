@@ -191,6 +191,21 @@ compression in the junction and balancing tension in the surrounding arms.
 These are global and regional results for an illustrative welded solid,
 not peak interface stress, strength, or a convergence claim.
 
+To inspect the 30 ppm/K junction case in ParaView, add
+`--write-cte-vtu mismatch.vtu` to the comparison command. This writes only
+the mismatch case and still solves each case once. Use a new filename in
+an existing trusted directory that supports atomic hard links. Check the
+command exits successfully to confirm publication; the stdout JSON reports
+only the comparison, not whether the file was published.
+
+The VTU contains undeformed points in metres; view `temperature_K` or warp
+by the nodal `displacement_m`. The cell field `mean_stress_Pa` contains nine
+row-major components in global axes. For hydrostatic stress in pascals,
+take one third of the sum of its xx, yy, and zz components (indices 0, 4,
+8); this is a cell mean, not an interface peak. Stable UInt64 IDs and
+integrated cell energies are also retained. This is a diagnostic, not a
+restart file or Tet4 exchange bundle.
+
 ### Change junction stiffness with the temperature held fixed
 
 Use the same two-region CAD mesh to isolate Young's modulus instead of

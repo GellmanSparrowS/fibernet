@@ -285,3 +285,128 @@ else:
     assert result.stdout.strip() == (
         "CTE comparison expected exactly six held Cartesian degrees of freedom"
     )
+
+
+@pytest.fixture
+def cte_export_probe(tagged_pair, monkeypatch):
+    from dataclasses import replace
+    from fibernet.io import tet4_results
+
+    archive, manifest, _, mesh, raw = tagged_pair
+    solver = example.solve_prescribed_temperature_tet4
+    trace = []
+    state = {}
+
+    def read(path):
+        assert path.read_bytes() == raw
+        return mesh
+
+    def scalar(bundle, **controls):
+        trace.append(("scalar", controls["alpha_per_K_by_material"]))
+        return solver(bundle, **controls)
+
+    def exporter(stage, bundle, **controls):
+        trace.append(("vtu", controls["alpha_per_K_by_material"]))
+        assert stage.parent.parent == archive.parent and stage.parent.name.startswith(".fused-cte-")
+        result = solver(bundle, **controls)
+        stage.write_bytes(b"test-double staged VTU")
+        if state.get("bad_result"):
+            return replace(result, fixed_mask=np.zeros_like(result.fixed_mask))
+        return result
+
+    monkeypatch.setattr(example, "read_tet4_vtu_bundle", read)
+    monkeypatch.setattr(example, "solve_prescribed_temperature_tet4", scalar)
+    monkeypatch.setattr(tet4_results, "solve_prescribed_temperature_tet4_to_vtu", exporter)
+    target = archive.parent / "junction.vtu"
+    return [str(archive), str(manifest), "--compare-junction-cte",
+            "--write-cte-vtu", str(target)], target, trace, state
+
+
+def test_optional_cte_vtu_replaces_only_mismatch_solve(cte_export_probe, capsys):
+    args, target, trace, _ = cte_export_probe
+    example.main(args)
+    captured = capsys.readouterr()
+    assert target.read_bytes() == b"test-double staged VTU"
+    assert [mode for mode, _ in trace] == ["scalar", "vtu"]
+    assert [laws[2] for _, laws in trace] == pytest.approx([1e-5, 3e-5])
+    assert not captured.err and str(target) not in captured.out
+    assert json.loads(captured.out)["junction_3x_cte"]["elastic_energy_J"] > 0.
+    assert not list(target.parent.glob(".fused-cte-*"))
+
+
+@pytest.mark.parametrize("failure", ["validation", "json", "stdout"])
+def test_optional_cte_vtu_leaves_no_artifact_on_failed_acceptance(
+    cte_export_probe, failure, monkeypatch, capsys,
+):
+    args, target, trace, state = cte_export_probe
+    if failure == "validation":
+        state["bad_result"] = True
+    if failure == "json":
+        compare = example.compare_junction_cte
+
+        def bad_json(*a, **kw):
+            report = compare(*a, **kw)
+            report["broken_number"] = float("nan")
+            return report
+
+        monkeypatch.setattr(example, "compare_junction_cte", bad_json)
+    if failure == "stdout":
+        def broken_pipe(*a, **kw):
+            assert kw["flush"]
+            raise BrokenPipeError("no receiver")
+
+        monkeypatch.setattr(example, "print", broken_pipe, raising=False)
+    with pytest.raises(SystemExit) as rejected:
+        example.main(args)
+    report = capsys.readouterr()
+    assert rejected.value.code == 1 and not report.out
+    assert [mode for mode, _ in trace] == ["scalar", "vtu"]
+    assert not target.exists() and not list(target.parent.glob(".fused-cte-*"))
+    assert {"validation": "exactly six held", "json": "JSON", "stdout": "no receiver"}[failure] in report.err
+
+
+@pytest.mark.parametrize("kind", ["wrong-mode", "wrong-suffix", "missing-parent", "exists", "dangling"])
+def test_cte_vtu_destination_checked_before_any_input(tmp_path, kind, monkeypatch, capsys):
+    def forbidden(*a, **kw):
+        pytest.fail("bad output option reached bundle intake")
+    monkeypatch.setattr(example, "load_named_mesh", forbidden)
+    mode = [] if kind == "wrong-mode" else ["--compare-junction-cte"]
+    target = tmp_path / ("junction.json" if kind == "wrong-suffix" else "junction.vtu")
+    if kind == "missing-parent":
+        target = tmp_path / "missing" / target.name
+    if kind == "exists":
+        target.write_bytes(b"untouched")
+    if kind == "dangling":
+        try:
+            target.symlink_to(tmp_path / "missing.vtu")
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+    with pytest.raises(SystemExit) as rejected:
+        example.main(["unused.zip", "unused.json", *mode, "--write-cte-vtu", str(target)])
+    out = capsys.readouterr()
+    assert rejected.value.code == (2 if kind == "wrong-mode" else 1) and not out.out
+    diagnostics = {"wrong-mode": "requires --compare-junction-cte", "wrong-suffix": ".vtu destination",
+                   "missing-parent": "missing", "exists": "already exists", "dangling": "already exists"}
+    assert diagnostics[kind] in out.err
+    if kind == "exists":
+        assert target.read_bytes() == b"untouched"
+    if kind == "dangling":
+        assert target.is_symlink() and not target.exists()
+
+
+def test_cte_vtu_late_race_preserves_winner(cte_export_probe, monkeypatch, capsys):
+    args, target, _, _ = cte_export_probe
+    hardlink = example.os.link
+
+    def race(src, dest):
+        assert dest == target and not target.exists()
+        target.write_bytes(b"late writer")
+        return hardlink(src, dest)
+
+    monkeypatch.setattr(example.os, "link", race)
+    with pytest.raises(SystemExit) as rejected:
+        example.main(args)
+    result = capsys.readouterr()
+    assert rejected.value.code == 1 and json.loads(result.out)["junction_3x_cte"]
+    assert str(target) not in result.out and target.read_bytes() == b"late writer"
+    assert not list(target.parent.glob(".fused-cte-*"))

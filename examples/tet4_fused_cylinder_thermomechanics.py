@@ -9,6 +9,7 @@ from hashlib import sha256
 from itertools import combinations
 import json
 from math import fsum, sqrt
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -241,7 +242,7 @@ def compare(mesh, faces, materials, digest, supports):
     }
 
 
-def compare_junction_cte(mesh, faces, materials, digest):
+def compare_junction_cte(mesh, faces, materials, digest, *, staged_vtu=None):
     """Compare free thermal expansion with and without a junction CTE mismatch."""
     points = mesh.points * 1e-3
     ids = list(map(int, mesh.node_ids))
@@ -272,12 +273,18 @@ def compare_junction_cte(mesh, faces, materials, digest):
     bulk, junction = materials["bulk"], materials["junction"]
     cases = {}
     for label, alpha_junction in (("uniform_cte", alpha_bulk), ("junction_3x_cte", 3 * alpha_bulk)):
-        result = solve_prescribed_temperature_tet4(
-            mesh, temperature_K_by_id=thermal, stress_free_temperature_K=reference_K,
+        controls = dict(
+            temperature_K_by_id=thermal, stress_free_temperature_K=reference_K,
             alpha_per_K_by_material={bulk: alpha_bulk, junction: alpha_junction},
             forces_by_id={}, fixed_dofs_by_id=held,
             prescribed_displacements_m_by_id=prescribed,
         )
+        if label == "junction_3x_cte" and staged_vtu is not None:
+            from fibernet.io.tet4_results import solve_prescribed_temperature_tet4_to_vtu
+
+            result = solve_prescribed_temperature_tet4_to_vtu(staged_vtu, mesh, **controls)
+        else:
+            result = solve_prescribed_temperature_tet4(mesh, **controls)
         np.testing.assert_array_equal(result.node_ids, mesh.node_ids)
         np.testing.assert_array_equal(result.cell_ids, mesh.cell_ids)
         np.testing.assert_array_equal(result.material_ids, mesh.material_ids)
@@ -327,6 +334,29 @@ def compare_junction_cte(mesh, faces, materials, digest):
     }
 
 
+def _cte_vtu_target(path):
+    if path.suffix.lower() != ".vtu":
+        raise ValueError("--write-cte-vtu requires a .vtu destination")
+    parent = path.parent.resolve(strict=True)
+    if not parent.is_dir():
+        raise NotADirectoryError(f"CTE VTU parent is not a directory: {parent}")
+    target = parent / path.name
+    if os.path.lexists(target):
+        raise FileExistsError(f"CTE VTU destination already exists: {target}")
+    return target
+
+
+def _write_cte_vtu(load, target):
+    # The library exporter bounds and atomically writes this staged file.
+    # Publish it only after the example's additional checks and successful JSON.
+    with TemporaryDirectory(prefix=".fused-cte-", dir=target.parent) as directory:
+        staged = Path(directory) / "junction_3x_cte.vtu"
+        report = compare_junction_cte(*load, staged_vtu=staged)
+        print(json.dumps(report, indent=2, allow_nan=False), flush=True)
+        # Same-parent hard link is atomic and cannot overwrite a race winner.
+        os.link(staged, target)
+
+
 def main(argv=None):
     cli = argparse.ArgumentParser(description=__doc__)
     cli.add_argument("bundle", type=Path)
@@ -336,12 +366,20 @@ def main(argv=None):
     comparisons.add_argument("--compare-junction-conductivity", action="store_true")
     comparisons.add_argument("--compare-junction-cte", action="store_true",
                              help="compare uniform heating with equal and unequal expansion coefficients")
+    cli.add_argument("--write-cte-vtu", type=Path, metavar="PATH",
+                     help="write only the 3x junction CTE diagnostic to a new .vtu; check exit status")
     a = cli.parse_args(argv)
+    if a.write_cte_vtu is not None and not a.compare_junction_cte:
+        cli.error("--write-cte-vtu requires --compare-junction-cte")
     if a.compare_junction_cte and a.supports is not None:
         cli.error("--compare-junction-cte uses its own free-expansion gauge, not --supports")
     try:
+        target = _cte_vtu_target(a.write_cte_vtu) if a.write_cte_vtu is not None else None
         load = load_named_mesh(a.bundle, a.boundary_manifest,
                                a.compare_junction_conductivity or a.compare_junction_cte)
+        if target is not None:
+            _write_cte_vtu(load, target)
+            return
         if a.compare_junction_cte:
             report = compare_junction_cte(*load)
         else:
