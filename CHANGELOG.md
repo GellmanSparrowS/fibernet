@@ -1,3 +1,12 @@
+## [4.23.0]
+
+- Add experimental per-member linear viscoelastic laws to planar, quasistatic
+  FEM histories using stable edge IDs. Mapped cases can continue in process
+  without changing existing uniform-material result files.
+- Add examples for frequency sweeps, stable solid material retagging, and
+  viewing three-cylinder fusion-zone thermoelastic fields.
+- See the [4.23.0 release notes](docs/RELEASE_4_23_0.md).
+
 ## [4.22.0]
 
 - Add `fibernet.sim.tet4.solve_static_tet4_load_cases` for 1 to 8 ordered
