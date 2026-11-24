@@ -100,3 +100,41 @@ hard links. The writer does not overwrite existing files and limits
 each output to 4 MiB. The diagnostic is for visualization, not a restart
 file, a strict Tet4 interchange bundle, or an export of arbitrary
 previously computed results.
+
+## Hand off a solved electrothermal field on the tagged CAD solid
+
+Run the [tagged fused-cylinder CAD example](TET4_VTU_BUNDLE.md#generate-a-tagged-fused-cylinder-cad-mesh)
+first. Only use a generator output directory containing `COMPLETE`.
+Then run this example with either matching ZIP and JSON pair; the consumer
+checks the pair, not the entire directory. It requires FiberNet 4.21.1
+and Meshio; the consumer itself does not use Gmsh.
+
+```sh
+python examples/tet4_fused_cylinder_thermomechanics.py fused-cad-output/coarse.zip fused-cad-output/coarse.json
+python examples/tet4_fused_cylinder_thermomechanics.py fused-cad-output/coarse.zip fused-cad-output/coarse.json --supports both-clamped
+```
+
+Use locally trusted files. The manifest SHA-256 must match the exact
+bundle bytes read, and named faces must cover the exterior without
+overlap. Both files declare millimetre geometry. This example uses the
+single homogeneous solid material from the bundle; its conductivity
+inputs (2 S/m and 0.25 W/(m K)) and expansion coefficient (10⁻⁴/K) are
+illustrative, not measured.
+
+The two x caps are electrical terminals at 0 and 0.3 V and thermal
+boundaries held at 300 K. The remaining exterior exchanges heat with
+299.95 K ambient at 100 W/(m² K). The native DC/Joule/Robin call returns
+absolute node temperatures. The example passes these temperatures by
+stable node ID to the static thermoelastic solve, with 300 K as the
+stress-free reference. Temperature and deformation do not feed back
+upstream.
+
+For mechanics the default clamps the negative-x cap and leaves the
+positive-x cap free; `--supports both-clamped` clamps both. The JSON
+reports free-end displacement (the arithmetic mean over positive-x cap
+nodes, not an area-weighted mean) or clamp reaction, force and moment
+balance, elastic energy, and signed outward heat flow. Negative heat-out
+means heat enters the solid. The terminal mechanical pairing is zero here
+because no loads or moving supports do mechanical work; stored elastic
+energy need not be zero. No mesh convergence or material contrast is
+implied.
