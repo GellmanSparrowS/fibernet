@@ -1,3 +1,11 @@
+## [4.22.0]
+
+- Add `fibernet.sim.tet4.solve_static_tet4_load_cases` for 1 to 8 ordered
+  nodal force cases sharing a Tet4 mesh, materials, and zero-displacement
+  restraints. Reuse system setup and keep per-case numerical checks.
+- See the [4.22.0 release notes](docs/RELEASE_4_22_0.md) and the
+  [Tet4 guide](docs/TET4_STATIC.md#solve-several-load-cases-on-the-same-solid).
+
 ## [4.21.5]
 
 - Require ordered inputs when explicit node or edge IDs are supplied to the
