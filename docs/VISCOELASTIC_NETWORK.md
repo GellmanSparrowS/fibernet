@@ -32,6 +32,36 @@ material. `examples/viscoelastic_network.py` provides relaxation, force-driven
 creep/release and cyclic mixed-control workflows on the existing triangular
 network generator, including non-contiguous IDs.
 
+### Sweep cyclic dissipation on one network
+
+From a source checkout or extracted source distribution, with FiberNet
+installed, run [the frequency sweep](../examples/viscoelastic_frequency_sweep.py):
+
+```sh
+python examples/viscoelastic_frequency_sweep.py
+```
+
+The same welded triangular network runs ten zero-start cycles at each of
+`omega_tau = 0.2, 1, 5` (`frequency_Hz = omega_tau / (2*pi*tau)`), with no
+applied nodal forces. Left grips are clamped. Right grips move sinusoidally
+in x, and the top right grip also moves in y at one fifth of the x
+amplitude. The synthetic standard linear solid uses a 1 MPa equilibrium
+spring and a 2 MPa branch. Use `--relaxation-time-s` to set the branch time
+(default 0.2 s; accepted range 10⁻⁶ to 10⁶ s) and `--amplitude-um` for the x
+amplitude (default 3 µm; accepted range 0.001 to 10 µm). On this millimetre
+fixture, this spans nanometre to micrometre grip motion while avoiding
+amplitudes whose work can underflow. These are example limits, not model limits.
+
+The JSON report separates final-cycle `physical_loss_J` from numerical
+loss. Check that `previous_physical_loss_J` is close before interpreting
+the final cycle. Compare physical loss to `trapezoid_loop_work_J` from the
+actual grip reactions. The solver's endpoint work includes the change in
+stored energy and both losses. For this proportional drive, the single
+relaxation time gives the largest loss of the three cases at `omega_tau = 1`.
+Use `--quick` for 32 instead of 128 samples per cycle to see the trend with
+more time-discretization error. This synthetic small-strain example does
+not fit a material or test fracture.
+
 ## Installation and compatibility
 
 The material/history API uses the base NumPy and SciPy dependencies. It does
