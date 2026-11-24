@@ -164,6 +164,8 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
 
     ``conductance_S`` maps every stable edge ID to a finite nonnegative value.
     Zero means inactive, and still has an output row with exactly zero current.
+    A nonzero NumPy floating or Fraction conductance must not round to zero
+    on binary64 conversion. Conductance is otherwise rounded as usual.
     ``dirichlet_voltage_V`` is an iterable of ``(stable node ID, voltage)``
     pairs (or a mapping). Conflicting duplicate pairs raise; identical pairs
     coalesce. Voltages must be Python or NumPy integers or floats, or
@@ -192,8 +194,17 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     rows = {nid: i for i, nid in enumerate(node_ids)}
     if not isinstance(conductance_S, Mapping):
         raise ValueError('conductance_S must map every stable edge ID to its conductance')
-    supplied = {_identifier(k, 'conductance edge ID'): _number(v, 'conductance', True)
-                for k, v in conductance_S.items()}
+    supplied = {}
+    for key, value in conductance_S.items():
+        eid = _identifier(key, 'conductance edge ID')
+        narrowed = _number(value, 'conductance', True)
+        # Only an actual zero may remove an active edge. Keep the usual
+        # binary64 rounding for nonzero values and the ordinary float fast path.
+        if narrowed == 0.0 and (
+                (isinstance(value, Fraction) and value.numerator != 0) or
+                (isinstance(value, np.floating) and value.as_integer_ratio()[0] != 0)):
+            raise ValueError(f'conductance for edge {eid}: nonzero input rounds to zero in binary64')
+        supplied[eid] = narrowed
     if set(supplied) != set(edge_ids):
         raise ValueError('conductance keys must match graph edge IDs exactly (no missing or unknown IDs)')
     g = np.asarray([supplied[i] for i in edge_ids], dtype=np.float64)
