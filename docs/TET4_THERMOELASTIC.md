@@ -163,6 +163,34 @@ curved exterior are faceted; each comparison holds its own mesh fixed.
 Small differences in displacement or reaction are not evidence of
 convergence or validated material behaviour.
 
+### Change junction thermal expansion under uniform heating
+
+Generate one [two-region fused bundle](TET4_VTU_BUNDLE.md#optional-conformal-junction-material)
+with Gmsh and Meshio, then run the new comparison on the matching pair
+from that completed output. The comparison reads the bundle with Meshio
+but does not run Gmsh, electrical transport, or heat transfer.
+
+```sh
+python examples/tet4_fused_cylinder_cad.py --junction-sphere --output-dir fused-cad-sphere
+python examples/tet4_fused_cylinder_thermomechanics.py fused-cad-sphere/coarse.zip fused-cad-sphere/coarse.json --compare-junction-cte
+```
+
+Both cases start stress-free at 300 K and use a prescribed uniform 310 K,
+unchanged geometry and elastic properties, and no external mechanical loads.
+The arms stay at 10 ppm/K while the junction goes from 10 to 30 ppm/K.
+Instead of clamping a whole cap, the script fixes the rigid-body reference:
+three degrees at A, two at B and one at C. B's y component follows the
+free affine expansion (specified in metres) so equal expansion remains
+stress-free. The script checks the resulting support forces and work are
+negligible; do not combine this mode with `--supports`.
+
+Compare elastic energy in joules and volume-weighted hydrostatic mean stress
+in pascals (positive in tension). Equal expansion gives near-zero stress and
+energy. In this example the larger junction coefficient produces mean
+compression in the junction and balancing tension in the surrounding arms.
+These are global and regional results for an illustrative welded solid,
+not peak interface stress, strength, or a convergence claim.
+
 ### Change junction stiffness with the temperature held fixed
 
 Use the same two-region CAD mesh to isolate Young's modulus instead of
