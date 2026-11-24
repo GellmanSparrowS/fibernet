@@ -84,24 +84,33 @@ The SHA256 identifies the native `.so` payload, not the wheel file; do not repla
 
 ## Run a generated three-dimensional lattice
 
-With FiberNet 4.10.4 or newer installed in the caller, run the
-[standalone BCC example](../examples/taichi_isolated_bcc.py) from a source
-checkout that contains it. This standalone script is not part of the
-4.10.4 wheel or source distribution. The caller need not install Taichi.
-Start by checking the 546 nodes, 2,542 rods, 42 held nodes and request size
-without starting a worker:
+The [standalone BCC example](../examples/taichi_isolated_bcc.py) is in the
+FiberNet 4.21.1 source distribution, not the wheel. With FiberNet 4.21.1
+installed in the caller, download `fibernet-4.21.1.tar.gz` from
+[PyPI's release files](https://pypi.org/project/fibernet/4.21.1/#files)
+into a fresh directory. From that directory, run:
 
 ```sh
-python examples/taichi_isolated_bcc.py --preflight
+python -m tarfile -e fibernet-4.21.1.tar.gz
+python fibernet-4.21.1/examples/taichi_isolated_bcc.py --preflight
 ```
 
-To run, provide your own qualified worker paths and trusted native library
-digest. For a separate virtual environment, `venv --copies` keeps the
-resolved Python executable in that environment. With the three shell
+From a source checkout, run `python examples/taichi_isolated_bcc.py --preflight`
+instead. The preflight checks 546 nodes, 2,542 rods, 42 held nodes and
+request size without starting a worker. It does not require or qualify Taichi.
+
+Native execution additionally requires the separate, vetted Linux x86-64
+CPython 3.12 worker described in [Python usage](#python-usage) and
+[Qualification scope](#qualification-scope). Use `venv --copies` for a
+separate worker environment so the resolved executable stays in that
+environment. The optional `accel` extra pins `taichi==1.7.4`; installing
+that version does not by itself qualify a binary. Follow the linked
+guidance for the trusted native-library SHA256; do not substitute a
+locally computed digest of an unqualified binary. With the three shell
 variables set to their verified values:
 
 ```sh
-python examples/taichi_isolated_bcc.py \
+python fibernet-4.21.1/examples/taichi_isolated_bcc.py \
   --worker-python "$WORKER_PYTHON" --worker-site "$WORKER_SITE" \
   --native-sha256 "$TAICHI_NATIVE_SHA256"
 ```
