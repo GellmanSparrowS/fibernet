@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from fractions import Fraction
 import hashlib
 import json
 import math
@@ -53,6 +54,40 @@ def _number(value, label, nonnegative=False):
     if nonnegative and value < 0:
         raise ValueError(f'{label} must be finite' + (' and nonnegative' if nonnegative else ''))
     return value
+
+
+def _voltage_identity(value):
+    # NumPy mixed scalar equality can first round an integer to a float.
+    # Exact ratios also compare different scalar representations of one value.
+    unsupported = (
+        'prescribed voltage must be a Python or NumPy integer or float, or a Fraction'
+    )
+    if isinstance(value, (bool, np.bool_, np.timedelta64)):
+        raise ValueError(unsupported)
+    if isinstance(value, (int, np.integer)):
+        return int(value), 1
+    if isinstance(value, Fraction):
+        return value.numerator, value.denominator
+    if isinstance(value, (float, np.floating)):
+        try:
+            return value.as_integer_ratio()
+        except (OverflowError, ValueError) as exc:
+            raise ValueError('prescribed voltage must be finite') from exc
+    raise ValueError(unsupported)
+
+
+def _voltage_as_binary64(value, identity, nid):
+    loss_message = (
+        f'prescribed voltage for node {nid} cannot be represented exactly as binary64; '
+        'shift the voltage reference before conversion or pass an intentionally rounded float'
+    )
+    try:
+        narrowed = float(value)
+    except OverflowError as exc:
+        raise ValueError(loss_message) from exc
+    if not math.isfinite(narrowed) or identity != narrowed.as_integer_ratio():
+        raise ValueError(loss_message)
+    return _number(narrowed, 'prescribed voltage')
 
 
 def _metadata(value):
@@ -131,8 +166,13 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
     Zero means inactive, and still has an output row with exactly zero current.
     ``dirichlet_voltage_V`` is an iterable of ``(stable node ID, voltage)``
     pairs (or a mapping). Conflicting duplicate pairs raise; identical pairs
-    coalesce. Every positive-conductance component, including singleton nodes,
-    must have a prescribed voltage. Floating components raise explicitly.
+    coalesce. Voltages must be Python or NumPy integers or floats, or
+    `fractions.Fraction` values, exactly representable in binary64.
+    If two voltages differ below that
+    precision at their absolute level, shift the reference in the original
+    precision before passing them. Every positive-conductance component,
+    including singleton nodes, must have a prescribed voltage; unanchored
+    components raise explicitly.
 
     Node rows are sorted by ID; edge rows follow graph insertion order. Values
     and geometry are copied, never rescaled. ``length_unit`` declares geometric
@@ -158,7 +198,7 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
         raise ValueError('conductance keys must match graph edge IDs exactly (no missing or unknown IDs)')
     g = np.asarray([supplied[i] for i in edge_ids], dtype=np.float64)
     conn = np.array([(rows[a], rows[b]) for a, b in endpoints], dtype=np.int64).reshape(-1, 2)
-    prescribed = {}
+    supplied_voltages = {}
     pairs = dirichlet_voltage_V.items() if isinstance(dirichlet_voltage_V, Mapping) else dirichlet_voltage_V
     try:
         for pair in pairs:
@@ -166,14 +206,16 @@ def solve_linear_transport(graph, conductance_S, dirichlet_voltage_V, *,
                 raise ValueError('Dirichlet entries must be (node ID, voltage) pairs')
             nid, value = pair
             nid = _identifier(nid, 'Dirichlet node ID')
-            value = _number(value, 'prescribed voltage')
+            identity = _voltage_identity(value)
             if nid not in rows:
                 raise ValueError('Dirichlet node ID does not exist')
-            if nid in prescribed and prescribed[nid] != value:
+            if nid in supplied_voltages and identity != supplied_voltages[nid][1]:
                 raise ValueError(f'conflicting prescribed voltages for node {nid}')
-            prescribed[nid] = value
+            supplied_voltages[nid] = (value, identity)
     except TypeError as exc:
         raise ValueError('Dirichlet input must contain (node ID, voltage) pairs') from exc
+    prescribed = {nid: _voltage_as_binary64(value, identity, nid)
+                  for nid, (value, identity) in supplied_voltages.items()}
     n, e = len(node_ids), len(edge_ids)
     active = conn[g > 0]
     adjacency = coo_matrix((np.ones(len(active)),
