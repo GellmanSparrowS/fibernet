@@ -77,7 +77,11 @@ def reassign_cells(bundle, *, expected_mesh_identity, cell_ids, material_id, mat
             or not 1 <= len(cell_ids) <= len(c)):
         raise ValueError('provide a nonempty bounded explicit cell ID sequence')
     selected = _ids(cell_ids, len(cell_ids))
-    mask = np.isin(c, selected)
+    # Signed and unsigned NumPy membership can promote IDs to float64.
+    # Compare exact Python integers instead, including above 2**53.
+    selected_ids = set(map(int, selected))
+    mask = np.fromiter((int(cell_id) in selected_ids for cell_id in c),
+                       dtype=bool, count=len(c))
     if int(mask.sum()) != len(selected):
         raise ValueError('selection contains cell IDs absent from this mesh')
     mid = _id(material_id)
