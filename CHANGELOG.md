@@ -1,3 +1,13 @@
+## [4.21.2]
+
+- Compare junction conductivity on two-region Tet4 solids at matched total
+  Joule power, with one-way transfer to thermoelasticity.
+- Preview the crosslinked LAMMPS example's SI input deck before choosing
+  a native runtime.
+- Document provider-free Taichi BCC preflight from a source archive, and
+  test Tet4 comparison input checks.
+- See the [4.21.2 release notes](docs/RELEASE_4_21_2.md) for the commands.
+
 ## [4.21.1]
 
 - Generate two independent tagged meshes of one fused-cylinder CAD solid
