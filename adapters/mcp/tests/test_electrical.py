@@ -379,6 +379,22 @@ def test_real_sdk_integer_and_exponent_physical_values_share_session(tmp_path):
                     if len(evidence)%2:assert artifact==evidence[-1]['artifact']
                     evidence.append({'conductance':conductance,'voltage':voltage,'artifact':artifact})
                     first_artifact=first_artifact or artifact
+                # A JSON integer is exact at parse time even if binary64 cannot carry it.
+                # Both ports share a large reference; rounding would silently return 0 W.
+                request={'graph_id':gid,'conductance_S':[{'edge_id':205,'value_S':1}],
+                    'dirichlet_voltage_V':[{'node_id':10,'value_V':2**53+1},
+                                           {'node_id':90,'value_V':2**53}]}
+                failed=await session.call_tool('fibernet_solve_linear_transport',request)
+                assert failed.isError and failed.structuredContent['error']['code']=='INVALID_ARGUMENT_OR_HANDLE'
+                assert not (await session.call_tool('fibernet_catalog',{})).isError
+                await read_artifact(session,first_artifact)
+                for drive,reference,current,power in ((2**53+2,2**53,2.,4.),(1,0,1.,1.)):
+                    request['dirichlet_voltage_V'][0]['value_V']=drive
+                    request['dirichlet_voltage_V'][1]['value_V']=reference
+                    response=await session.call_tool('fibernet_solve_linear_transport',request)
+                    assert not response.isError,response
+                    actual,_=await read_artifact(session,response.structuredContent['artifact'])
+                    assert actual['current_A']==[current] and actual['dissipated_power_W']==power
                 for field,scalar in [('conductance_S','value_S'),('dirichlet_voltage_V','value_V')]:
                     request={'graph_id':gid,'conductance_S':[{'edge_id':205,'value_S':1}],
                         'dirichlet_voltage_V':[{'node_id':10,'value_V':1},{'node_id':90,'value_V':0}]}

@@ -4913,12 +4913,14 @@
    "TransportSolveError",
    "_identifier",
    "_number",
+   "_voltage_identity",
+   "_voltage_as_binary64",
    "_metadata",
    "_readonly",
    "LinearTransportResult",
    "solve_linear_transport"
   ],
-  "sha256": "c3b843167aa86a1d6d8d2d7305f0b6204efa22517ae77beb6a560c47d34f4a49"
+  "sha256": "8c78f0139f23e12eb963011d4103c2c4c45e6b036e38896a45e223c699d193a2"
  },
  "fibernet/sim/transient_thermal.py": {
   "purpose": "Explicit lumped thermal network; constant inputs and backward Euler only.",

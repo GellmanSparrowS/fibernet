@@ -1,5 +1,7 @@
 """Analytical/software checks; explicit conductance is not inferred physics."""
 import json
+import numbers
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -161,7 +163,7 @@ def test_conductance_keys(values):
     with pytest.raises(ValueError): solve(network([(0, 1)]), values, [(0, 1)])
 
 
-@pytest.mark.parametrize('bc', [[(0, 1), (0, 2)], [(0, np.inf)], [(0, True)],
+@pytest.mark.parametrize('bc', [[(0, 1), (0, 2)], [(0, np.inf)], [(0, True)], [(0, np.timedelta64(1, "s"))],
                                [(True, 1)], [(0.0, 1)], [(99, 0)], None, [2]])
 def test_invalid_dirichlet(bc):
     with pytest.raises(ValueError): solve(network([(0, 1)]), {0: 1}, bc)
@@ -171,6 +173,68 @@ def test_identical_boundary_duplicates_coalesce():
     r = solve(network([(0, 1)]), {0: 1}, [(0, 1), (0, 1)])
     assert r.prescribed_voltage_V == {0: 1.}
     np.testing.assert_array_equal(r.voltage_V, [1, 1])
+
+
+def test_voltage_rejects_unverifiable_generic_real():
+    class FloatConvertible:
+        def __float__(self):
+            return 1.0
+
+    numbers.Real.register(FloatConvertible)
+    g = network([(0, 1)])
+    with pytest.raises(ValueError, match='prescribed voltage must be a Python or NumPy'):
+        solve(g, {0: 1.0}, {0: FloatConvertible(), 1: 0.0})
+
+
+def test_voltage_duplicates_compare_before_binary64_narrowing():
+    g = network([(0, 1)])
+    # These are distinct original values even though NumPy mixed equality
+    # and coercion to binary64 can both report that they are the same.
+    for a, b in ((2**53 + 1, 2**53), (np.int64(2**53 + 1), float(2**53))):
+        for x, y in ((a, b), (b, a)):
+            with pytest.raises(ValueError, match='conflicting prescribed voltages for node 0'):
+                solve(g, {0: 1.0}, [(0, x), (0, y), (1, 0.0)])
+
+
+@pytest.mark.parametrize('voltage', [2**53 + 1, -(2**53 + 1), np.uint64(2**63 + 1),
+                                     10**400, Fraction(1, 10)])
+def test_prescribed_voltage_rejects_lossy_binary64_conversion(voltage):
+    g = network([(0, 1)])
+    with pytest.raises(ValueError, match='node 0 cannot be represented exactly as binary64'):
+        solve(g, {0: 1.0}, {0: voltage, 1: 2**53})
+
+
+def test_lossless_voltage_scalars_and_explicit_reference_shift():
+    g = network([(0, 1)])
+    # Compare actual physical 1-S responses, not just original value admission.
+    r = solve(g, {0: 1.0}, [(0, np.int64(2**53 + 2)), (0, float(2**53 + 2)),
+                             (1, np.uint64(2**53))])
+    np.testing.assert_array_equal(r.current_A, [2.0])
+    np.testing.assert_array_equal(r.edge_power_W, [4.0])
+    r = solve(g, {0: 1.0}, [(0, Fraction(1, 8)), (0, np.float32(0.125)), (1, -0.0)])
+    np.testing.assert_array_equal(r.current_A, [0.125])
+    assert np.signbit(r.prescribed_voltage_V[1])
+    ordinary = solve(g, {0: 1.0}, {0: 0.2, 1: 0.0})
+    np.testing.assert_array_equal(ordinary.current_A, [0.2])
+    shifted = solve(g, {0: 1.0}, {0: (2**53 + 1) - 2**53, 1: 0})
+    np.testing.assert_array_equal(shifted.current_A, [1.0])
+    np.testing.assert_array_equal(shifted.edge_power_W, [1.0])
+
+
+def test_extended_float_voltage_is_not_silently_narrowed():
+    g = network([(0, 1)])
+    exact = solve(g, {0: 1.0}, {0: np.longdouble('1.25'), 1: 0.0})
+    np.testing.assert_array_equal(exact.current_A, [1.25])
+    # Windows typically provides no extra precision in longdouble.
+    if np.finfo(np.longdouble).nmant > np.finfo(np.float64).nmant:
+        base = np.longdouble(1)
+        distinct = np.nextafter(base, np.longdouble(2))
+        with pytest.raises(ValueError, match='exactly as binary64'):
+            solve(g, {0: 1.0}, {0: distinct, 1: base})
+        with pytest.raises(ValueError, match='conflicting prescribed voltages'):
+            solve(g, {0: 1.0}, [(0, base), (0, distinct), (1, 0.0)])
+        shifted = solve(g, {0: 1.0}, {0: distinct - base, 1: 0.0})
+        np.testing.assert_array_equal(shifted.current_A, [float(distinct - base)])
 
 
 def test_permutation_reruns_voltage_scaling_and_nonmutation():

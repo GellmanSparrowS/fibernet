@@ -40,10 +40,11 @@ def strict_json(raw, *, electrical_rpc=False, tet4_rpc=False):
 def _normalize_electrical_rpc_values(message):
     """Only S/V fields use native float semantics; ID/frame guards stay exact.
 
-    The native solver converts physical real values to float64. JSON integer
-    and exponent encodings therefore share that conversion. An unrepresentable
-    S/V value becomes an invalid schema value, giving a structured refusal
-    rather than terminating a valid session. Strict JSON syntax, all other
+    The native solver uses binary64. Voltage integers must be exactly
+    representable before conversion; an already-decoded JSON float uses its
+    binary64 value. Unrepresentable inputs become invalid schema values,
+    giving a structured refusal rather than terminating a valid session.
+    Strict JSON syntax, all other
     integer fields, strings, depth and byte bounds retain their existing checks.
     """
     if not isinstance(message, dict) or message.get('method') != 'tools/call':
@@ -61,9 +62,13 @@ def _normalize_electrical_rpc_values(message):
         for record in records:
             if not isinstance(record, dict) or type(record.get(scalar)) not in (int, float):
                 continue
+            original = record[scalar]
             try:
-                value = float(record[scalar])
+                value = float(original)
             except OverflowError:
+                value = None
+            # Python int/float equality compares the original integer exactly.
+            if scalar == 'value_V' and type(original) is int and value != original:
                 value = None
             record[scalar] = value if value is not None and math.isfinite(value) else None
 
