@@ -1,3 +1,14 @@
+## [4.21.4]
+
+- Reject conflicting prescribed DC voltages before conversion, and reject
+  prescribed values that cannot be represented exactly as binary64.
+- Keep exact integer-encoded MCP voltage checks consistent with the native
+  solver.
+- Add a four-terminal Joule heating example with a transient heat ledger.
+- Add an example that groups 3D mixed-material beam data by parent
+  geometry and document stable-ID transfer to manufacturing centerlines.
+- See the [4.21.4 release notes](docs/RELEASE_4_21_4.md) for the commands.
+
 ## [4.21.3]
 
 - Report area-weighted axial end-face displacement alongside the original
