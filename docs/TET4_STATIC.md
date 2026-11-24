@@ -460,3 +460,47 @@ existing final pathname. This is not a path confinement mechanism. The
 filesystem must support atomic hard links; if unsupported, the exporter
 fails rather than falling back to an overwrite. This is not a
 crash-durability guarantee.
+
+## Assign a different material on the same mesh
+
+Use stable cell IDs, not a saved row mask, to change the material of selected
+cells. The example helper works with a validated bundle or a small explicit
+fixture like the one below. Run from the source checkout root with FiberNet,
+NumPy and SciPy installed; this snippet does not need Meshio, a file, or a mesher.
+
+```python
+from fibernet.io.tet4_meshio import Tet4Bundle
+from fibernet.sim.tet4 import inspect_static_tet4_admission, solve_static_tet4
+from examples.tet4_stable_material_retag import mesh_identity, reassign_cells
+
+bundle = Tet4Bundle(
+    points=[[0., 0., 0.], [1., 0., 0.], [0., 1., 0.],
+            [0., 0., 1.], [0., 0., -1.]],
+    tetrahedra=[[0, 1, 2, 3], [0, 2, 1, 4]],
+    node_ids=[0, 10, 20, 30, 40], cell_ids=[0, 2**64 - 1],
+    material_ids=[1, 2], length_unit="mm",
+    materials={1: {"young_modulus_pa": 1e9, "poisson_ratio": 0.25},
+               2: {"young_modulus_pa": 2e9, "poisson_ratio": 0.25}},
+)
+signature = mesh_identity(bundle)  # record with the selected IDs
+variant = reassign_cells(
+    bundle, expected_mesh_identity=signature, cell_ids=[2**64 - 1],
+    material_id=7, material={"young_modulus_pa": 3e9, "poisson_ratio": 0.25},
+)
+print(variant.material_ids.tolist())  # [1, 7]
+holds = {key: ("x", "y", "z") for key in (0, 10, 20)}
+for case in (bundle, variant):
+    assert inspect_static_tet4_admission(case, fixed_dofs_by_id=holds).within_factor_budget
+    result = solve_static_tet4(case, fixed_dofs_by_id=holds,
+                              forces_by_id={40: (0., 0., -0.001)})
+    print(f"Node 40 axial displacement: {result.displacement_m[4, 2]:.3g} m")
+```
+
+The helper leaves points, connectivity and stable node/cell IDs unchanged.
+It preserves an existing target's properties and removes only material
+records no longer referenced by any cell. Keep the original selection
+signature: it tolerates reordered rows with correctly remapped connectivity,
+not a remesh, changed coordinates, units, or local vertex order. It binds the
+mesh, not the original phase assignment: record the original materials
+separately if the study depends on them. This is an example, not a new solver
+entry point. Native preflight and solve checks still apply.
