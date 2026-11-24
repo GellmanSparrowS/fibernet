@@ -41,6 +41,65 @@ Declared feature/target lists must contain unique nonempty string names. Sample
 IDs must be nonempty strings at this training boundary; duplicate IDs are kept
 with their distinct original row indices. Dataset persistence is unchanged.
 
+## Save one sample from a detailed 3D beam solve
+
+Run the [mixed-material example](../../examples/heterogeneous_3d_graph_workflow.py)
+from the source archive or checkout:
+
+```sh
+python examples/heterogeneous_3d_graph_workflow.py --output solve
+```
+
+Use the unmodified graph and detailed result saved by this same run.
+The feature rows come from the undeformed graph, not the solved shape.
+The four x-aligned beams leaving the fixed end carry signed axial
+forces; summing those values gives this example's tensile cut force.
+This is not a general reaction or cut-resultant calculation for oblique
+or bending-dominated beams.
+
+```python
+from hashlib import sha256
+from math import fsum
+from pathlib import Path
+
+from fibernet.api import load
+from fibernet.ml import graph_batch
+from fibernet.ml.dataset import DatasetSample, FiberNetDataset
+from fibernet.sim import SimResult
+
+g = load("solve/graph.json")
+r = SimResult.load("solve/result.json")
+b = graph_batch([g], graph_ids=["four-path"], length_unit="m",
+                coordinate_frame="specimen_xyz", edge_features=("radius", "chord_length"))
+ids, force = r.metadata["edge_ids"], r.edge_forces
+if (len(ids) != len(force) or len(ids) != len(set(ids))
+        or set(ids) != set(b.edge_ids) or not b.edge_feature_available.all()):
+    raise ValueError("expected a complete detailed result for the solve graph")
+by_id = dict(zip(ids, force))
+cut = [e for e, beam in g.edges.items()
+       if (g.nodes[beam.node_i].position[0] == 0) != (g.nodes[beam.node_j].position[0] == 0)]
+energy = r.metadata["beam_energy"]
+if len(cut) != 4 or energy["status"] != "available" or energy["unit_system"] != "SI":
+    raise ValueError("expected four cut beams and available SI beam energy")
+features = {"total_chord_m": fsum(b.edge_features[:, 1]),
+            "mean_radius_m": float(b.edge_features[:, 0].mean())}
+labels = {"cut_force_N": fsum(by_id[e] for e in cut), "strain_energy_J": energy["strain_energy"]}
+lineage = {name + "_sha256": sha256(Path(f"solve/{name}.json").read_bytes()).hexdigest()
+           for name in ("graph", "result")}
+sample = DatasetSample("four-path", "cubic", (2, 1),
+                       {"grid_xyz": [2, 1, 1], "length_unit": "m", "x_stretch_ratio": 1.001},
+                       features, labels, lineage)
+data = FiberNetDataset([sample], feature_names=list(features), target_names=list(labels))
+data.save("four-path-dataset")
+```
+
+Use a new output path. The digests record which files were used; they
+do not prove both files came from one solve. Reloading with
+`FiberNetDataset.load("four-path-dataset")` should preserve both feature
+and target names. Saving a missing declared target raises an error
+rather than assigning zero. This single row checks the data handoff; it
+is not a training or holdout set.
+
 ## Choose the dependency unit deliberately
 
 Native calls require `split="row"` or `split="group"`. There is no implicit
