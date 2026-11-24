@@ -4,13 +4,14 @@ from collections import Counter
 from hashlib import sha256
 from itertools import combinations
 import json
-from math import fsum
+from math import fsum, sqrt
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
 
 from fibernet.io.tet4_meshio import read_tet4_vtu_bundle
+from fibernet.sim.tet4_dc import solve_dc_tet4
 from fibernet.sim.tet4_dc_thermal import solve_dc_thermal_tet4_with_convection
 from fibernet.sim.tet4_thermoelastic import solve_prescribed_temperature_tet4
 
@@ -29,7 +30,7 @@ def snapshot(path, limit):
     return data
 
 
-def load_named_mesh(bundle_path, manifest_path):
+def load_named_mesh(bundle_path, manifest_path, compare_junction=False):
     def unique_object(items):
         obj = dict(items)
         if len(obj) != len(items):
@@ -49,10 +50,25 @@ def load_named_mesh(bundle_path, manifest_path):
         raise ValueError("The bundle and manifest must declare coordinates in mm")
     ids = [int(i) for i in mesh.node_ids]
     lookup = {str(i): row for row, i in enumerate(ids)}
-    material = next(iter(mesh.materials)) if len(mesh.materials) == 1 else None
-    if not (0 < len(ids) < 1024 and 0 < len(mesh.tetrahedra) < 8000
-            and material is not None and set(map(int, mesh.material_ids)) == {material}):
-        raise ValueError("Expected one homogeneous solid in the CAD example's mesh budget")
+    if not (0 < len(ids) < 1024 and 0 < len(mesh.tetrahedra) < 8000):
+        raise ValueError("Input exceeds the CAD example's mesh budget")
+    if compare_junction:
+        named = meta.get("material_id_by_name")
+        if (not isinstance(named, dict) or set(named) != {"bulk", "junction"}
+                or any(type(v) is not str for v in named.values())):
+            raise ValueError("Comparison requires a generated bulk/junction material map")
+        by_id = {str(i): i for i in mesh.materials}
+        if (len(by_id) != 2 or set(named.values()) != set(by_id)
+                or set(map(int, mesh.material_ids)) != set(mesh.materials)
+                or meta.get("junction_radius_mm") != .30):
+            raise ValueError("Expected two distinct used material IDs and a 0.30 mm junction sphere")
+        material = {name: by_id[value] for name, value in named.items()}
+        if mesh.materials[material["bulk"]] != mesh.materials[material["junction"]]:
+            raise ValueError("This comparison holds elastic properties equal in both regions")
+    else:
+        material = next(iter(mesh.materials)) if len(mesh.materials) == 1 else None
+        if material is None or set(map(int, mesh.material_ids)) != {material}:
+            raise ValueError("Expected one homogeneous solid unless comparison is requested")
     groups = meta.get("boundary_node_ids")
     if not isinstance(groups, dict) or set(groups) != {*CAPS, "ambient_side"}:
         raise ValueError("Expected all six named cap groups and ambient_side")
@@ -83,22 +99,34 @@ def load_named_mesh(bundle_path, manifest_path):
                 raise ValueError(f"Missing or misplaced triangles in cap {name}")
     if set(counts.values()) != {1, 2} or set(found) != exterior or set(found.values()) != {1}:
         raise ValueError("Named boundary faces must partition the exterior exactly once")
+    if compare_junction:
+        shell = Counter(face for tet in mesh.tetrahedra[mesh.material_ids == material["junction"]]
+                        for face in combinations(sorted(map(int, tet)), 3))
+        interface = {f for f, n in shell.items() if n == 1}
+        edges = Counter(edge for face in interface for edge in combinations(face, 2))
+        vertices = sorted({v for face in interface for v in face})
+        if (not interface or interface & exterior or set(edges.values()) != {2}
+                or len(vertices) - len(edges) + len(interface) != 2
+                or not np.allclose(np.linalg.norm(mesh.points[vertices], axis=1), .30, rtol=0., atol=1e-10)):
+            raise ValueError("Named junction is not the expected closed interior sphere")
     return mesh, faces, material, meta["bundle_sha256"]
 
 
-def solve(mesh, faces, material, digest, supports):
+def solve(mesh, faces, material, digest, supports, *, conductivity=None, voltage=VOLTAGE_V):
+    if conductivity is None:
+        conductivity = {material: 2.}
     left, right = (np.unique(faces[k]) for k in (LEFT, RIGHT))
     cap_rows = np.r_[left, right]
     if len(np.unique(cap_rows)) != len(cap_rows):
         raise ValueError("Electrical caps must not share nodes")
     nid = mesh.node_ids
     potentials = {**dict.fromkeys(map(int, nid[left]), 0.),
-                  **dict.fromkeys(map(int, nid[right]), VOLTAGE_V)}
+                  **dict.fromkeys(map(int, nid[right]), voltage)}
     robin = np.concatenate([faces[k] for k in sorted(faces) if k not in (LEFT, RIGHT)])
     coupled = solve_dc_thermal_tet4_with_convection(
-        mesh, conductivity_S_per_m_by_material={material: 2.},
+        mesh, conductivity_S_per_m_by_material=conductivity,
         electrode_voltage_V_by_id=potentials,
-        conductivity_W_per_m_K_by_material={material: .25},
+        conductivity_W_per_m_K_by_material=dict.fromkeys(conductivity, .25),
         prescribed_K_by_id=dict.fromkeys(potentials, CAP_K),
         faces_by_node_id=nid[robin], convection_W_per_m2_K=FILM, ambient_K=AMBIENT_K,
     )
@@ -111,7 +139,7 @@ def solve(mesh, faces, material, digest, supports):
     holds = left if supports == "left-clamped" else cap_rows
     elastic = solve_prescribed_temperature_tet4(
         mesh, temperature_K_by_id=dict(zip(map(int, thermal.node_ids), map(float, thermal.temperature_K))),
-        stress_free_temperature_K=CAP_K, alpha_per_K_by_material={material: 1e-4},
+        stress_free_temperature_K=CAP_K, alpha_per_K_by_material=dict.fromkeys(conductivity, 1e-4),
         forces_by_id={}, fixed_dofs_by_id=dict.fromkeys(map(int, nid[holds]), ("x", "y", "z")),
     )
     np.testing.assert_array_equal(elastic.node_ids, nid)
@@ -122,7 +150,7 @@ def solve(mesh, faces, material, digest, supports):
     area = .5 * np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1)
     film_out = FILM * fsum(area * np.mean(thermal.temperature_K[robin] - AMBIENT_K, axis=1))
     joule = fsum(dc.joule_power_W_by_cell)
-    electrode = VOLTAGE_V * fsum(dc.electrode_current_into_solid_A[right])
+    electrode = voltage * fsum(dc.electrode_current_into_solid_A[right])
     cap_out = -fsum(thermal.heat_into_solid_W[cap_rows])
     thermal_closure = joule - film_out - cap_out
     np.testing.assert_allclose(electrode, joule, rtol=1e-9, atol=1e-17)
@@ -149,7 +177,7 @@ def solve(mesh, faces, material, digest, supports):
         np.testing.assert_array_equal(elastic.reaction_N[right], 0.)
     else:
         np.testing.assert_array_equal(elastic.displacement_m[right], 0.)
-    return {
+    result = {
         "bundle_sha256": digest, "solid_material_id": str(material),
         "supports": supports, "nodes": len(nid), "tetrahedra": len(mesh.cell_ids),
         "electrode_power_W": electrode, "joule_W": joule, "robin_heat_out_W": film_out,
@@ -161,6 +189,37 @@ def solve(mesh, faces, material, digest, supports):
         "elastic_energy_J": elastic.elastic_energy_J, "zero_motion_trial_energy_J": upper,
         "terminal_mechanical_pairing_J": elastic.terminal_mechanical_pairing_J,
     }
+    if len(conductivity) > 1:
+        result.pop("solid_material_id")
+        result["voltage_V"] = voltage
+        result["joule_W_by_material_id"] = {
+            str(i): fsum(dc.joule_power_W_by_cell[mesh.material_ids == i]) for i in conductivity
+        }
+    return result
+
+
+def compare(mesh, faces, materials, digest, supports):
+    bulk, junction = (materials[name] for name in ("bulk", "junction"))
+    baseline = solve(mesh, faces, bulk, digest, supports, conductivity={bulk: 2., junction: 2.})
+    changed = {bulk: 2., junction: .5}
+    left, right = (mesh.node_ids[np.unique(faces[k])] for k in (LEFT, RIGHT))
+    potentials = {**dict.fromkeys(map(int, left), 0.),
+                  **dict.fromkeys(map(int, right), VOLTAGE_V)}
+    pilot = solve_dc_tet4(mesh, conductivity_S_per_m_by_material=changed,
+                        electrode_voltage_V_by_id=potentials)
+    power_at_fixed_voltage = fsum(pilot.joule_power_W_by_cell)
+    if not 0. < power_at_fixed_voltage < baseline["joule_W"]:
+        raise ValueError("Expected reduced total Joule power at fixed voltage in this example")
+    # Fixed conductivities make electrical power quadratic in applied voltage.
+    voltage = VOLTAGE_V * sqrt(baseline["joule_W"] / power_at_fixed_voltage)
+    matched = solve(mesh, faces, bulk, digest, supports, conductivity=changed, voltage=voltage)
+    np.testing.assert_allclose(matched["joule_W"], baseline["joule_W"], rtol=1e-12, atol=0.)
+    return {
+        "material_id_by_name": {name: str(i) for name, i in materials.items()},
+        "lower_junction_joule_at_0_3_V_W": power_at_fixed_voltage,
+        "uniform_conductivity": baseline,
+        "lower_junction_equal_power": matched,
+    }
 
 
 def main():
@@ -168,10 +227,12 @@ def main():
     cli.add_argument("bundle", type=Path)
     cli.add_argument("boundary_manifest", type=Path)
     cli.add_argument("--supports", choices=("left-clamped", "both-clamped"), default="left-clamped")
+    cli.add_argument("--compare-junction-conductivity", action="store_true")
     a = cli.parse_args()
     try:
-        print(json.dumps(solve(*load_named_mesh(a.bundle, a.boundary_manifest), a.supports),
-                         indent=2, allow_nan=False))
+        load = load_named_mesh(a.bundle, a.boundary_manifest, a.compare_junction_conductivity)
+        runner = compare if a.compare_junction_conductivity else solve
+        print(json.dumps(runner(*load, a.supports), indent=2, allow_nan=False))
     except (ValueError, OSError, ImportError, AssertionError) as e:
         cli.exit(1, f"{cli.prog}: {e}\n")
 

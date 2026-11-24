@@ -138,3 +138,27 @@ means heat enters the solid. The terminal mechanical pairing is zero here
 because no loads or moving supports do mechanical work; stored elastic
 energy need not be zero. No mesh convergence or material contrast is
 implied.
+
+### Compare junction conductivity at equal total Joule power
+
+First generate the conformal two-region mesh with the
+[optional junction sphere](TET4_VTU_BUNDLE.md#optional-conformal-junction-material).
+Use a matching bundle and manifest from a directory containing `COMPLETE`:
+
+```sh
+python examples/tet4_fused_cylinder_thermomechanics.py fused-cad-sphere/coarse.zip fused-cad-sphere/coarse.json --compare-junction-conductivity
+```
+
+With this explicit flag, the example compares uniform electrical
+conductivity (2 S/m) to a lower value (0.5 S/m) in the junction.
+The mesh, its two regions, the exterior faces, and the thermal and
+elastic properties stay fixed. The example first checks the lower
+conductivity at 0.3 V, then runs a second full electrothermal solve with
+adjusted voltage and checks that its total Joule power matches baseline.
+Both solved temperature fields feed the same mechanical support mode.
+The internal material interface is not a convection boundary.
+
+The comparison uses illustrative parameters. The sphere interface and
+curved exterior are faceted; each comparison holds its own mesh fixed.
+Small differences in displacement or reaction are not evidence of
+convergence or validated material behaviour.
