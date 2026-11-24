@@ -158,6 +158,42 @@ def test_invalid_conductance(value):
     with pytest.raises(ValueError): solve(network([(0, 1)]), {0: value}, [(0, 1)])
 
 
+@pytest.mark.parametrize('sign', [-1, 1])
+def test_nonzero_fraction_conductance_cannot_become_an_inactive_edge(sign):
+    g = network([(0, 1)])
+    tiny = Fraction(sign, 10**350)
+    assert tiny != 0 and float(tiny) == 0.0
+    # With both ports anchored, the old path certifies zero current and power.
+    # Leaving the far port free used to give the wrong floating-component error.
+    for ports in ({0: 1e100, 1: 0.0}, {0: 1.0}):
+        with pytest.raises(ValueError, match='conductance for edge 0: nonzero input rounds to zero'):
+            solve(g, {0: tiny}, ports)
+
+
+def test_binary64_conductance_preserves_ordinary_rounding_and_signed_zeros():
+    g = network([(0, 1)])
+    ordinary = solve(g, {0: Fraction(1, 10)}, {0: 1.0, 1: 0.0})
+    np.testing.assert_array_equal(ordinary.current_A, [0.1])
+    np.testing.assert_array_equal(ordinary.edge_power_W, [0.1])
+    for zero in (0.0, -0.0, np.float32(-0.0), Fraction(0)):
+        result = solve(g, {0: zero}, {0: 1.0, 1: 0.0})
+        np.testing.assert_array_equal(result.current_A, [0.0])
+        assert result.dissipated_power_W == 0.0
+        assert np.signbit(result.conductance_S[0]) == np.signbit(float(zero))
+        with pytest.raises(FloatingComponentError):
+            solve(g, {0: zero}, {0: 1.0})
+
+
+@pytest.mark.skipif(np.finfo(np.longdouble).minexp >= np.finfo(float).minexp,
+                    reason='longdouble has no wider exponent range than binary64')
+def test_wide_numpy_conductance_cannot_become_an_inactive_edge():
+    g = network([(0, 1)])
+    for value in (np.longdouble('1e-350'), np.longdouble('-1e-350')):
+        assert value != 0 and float(value) == 0.0
+        with pytest.raises(ValueError, match='conductance for edge 0: nonzero input rounds to zero'):
+            solve(g, {0: value}, {0: 1.0, 1: 0.0})
+
+
 @pytest.mark.parametrize('values', [{}, {0: 1, 7: 1}, {True: 1}, {0.0: 1}])
 def test_conductance_keys(values):
     with pytest.raises(ValueError): solve(network([(0, 1)]), values, [(0, 1)])

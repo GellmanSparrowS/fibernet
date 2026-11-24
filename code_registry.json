@@ -4920,7 +4920,7 @@
    "LinearTransportResult",
    "solve_linear_transport"
   ],
-  "sha256": "8c78f0139f23e12eb963011d4103c2c4c45e6b036e38896a45e223c699d193a2"
+  "sha256": "39ca9ea331230f0df471612be6d82f91fd90d3c043616b93987192f975daf0ab"
  },
  "fibernet/sim/transient_thermal.py": {
   "purpose": "Explicit lumped thermal network; constant inputs and backward Euler only.",
@@ -5404,9 +5404,17 @@
    "test_separate_anchored_components_and_isolated_node",
    "test_singleton_without_edges",
    "test_invalid_conductance",
+   "test_nonzero_fraction_conductance_cannot_become_an_inactive_edge",
+   "test_binary64_conductance_preserves_ordinary_rounding_and_signed_zeros",
+   "test_wide_numpy_conductance_cannot_become_an_inactive_edge",
    "test_conductance_keys",
    "test_invalid_dirichlet",
    "test_identical_boundary_duplicates_coalesce",
+   "test_voltage_rejects_unverifiable_generic_real",
+   "test_voltage_duplicates_compare_before_binary64_narrowing",
+   "test_prescribed_voltage_rejects_lossy_binary64_conversion",
+   "test_lossless_voltage_scalars_and_explicit_reference_shift",
+   "test_extended_float_voltage_is_not_silently_narrowed",
    "test_permutation_reruns_voltage_scaling_and_nonmutation",
    "test_solver_nonfinite_and_conservation_failures",
    "test_canonical_square_network_e2e",
@@ -5422,7 +5430,7 @@
    "test_heterogeneous_equipotential_is_exact",
    "test_boundary_power_uses_stable_gauge_shift"
   ],
-  "sha256": "d1c235f869ced898a0a7af9b23c7aea10ca83f2d53563201f4768e3024a77d78"
+  "sha256": "d22797da05d4fc42b2b269b02b76651317a9dcbe518db4aed6811289b2d2a463"
  },
  "tests/test_transport_roundoff.py": {
   "purpose": "Local representation contracts, not representative-network substitutes.",
