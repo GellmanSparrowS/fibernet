@@ -162,3 +162,83 @@ The comparison uses illustrative parameters. The sphere interface and
 curved exterior are faceted; each comparison holds its own mesh fixed.
 Small differences in displacement or reaction are not evidence of
 convergence or validated material behaviour.
+
+### Change junction stiffness with the temperature held fixed
+
+Use the same two-region CAD mesh to isolate Young's modulus instead of
+conductivity. Use a repository checkout that includes the cap-area helper
+from PR #363 or newer. The installed FiberNet 4.21.2 core works, but its
+source archive's example does not include this helper. Save the Python
+block below as `examples/tet4_compare_junction_stiffness.py` in the
+checkout, then run this command from the repository root:
+
+```sh
+python examples/tet4_compare_junction_stiffness.py
+```
+
+Use a completed local CAD output directory and change both paths
+together to use a different mesh.
+
+```python
+from dataclasses import replace
+from pathlib import Path
+
+import numpy as np
+
+from fibernet.sim.tet4_dc_thermal import solve_dc_thermal_tet4_with_convection
+from fibernet.sim.tet4_thermoelastic import solve_prescribed_temperature_tet4
+from tet4_fused_cylinder_thermomechanics import (
+    LEFT, RIGHT, cap_area_mean_x, load_named_mesh,
+)
+
+directory = Path("fused-cad-sphere")
+mesh, faces, materials, _ = load_named_mesh(
+    directory / "coarse.zip", directory / "coarse.json", compare_junction=True,
+)
+ids = mesh.node_ids
+left, right = (np.unique(faces[name]) for name in (LEFT, RIGHT))
+electrodes = {**dict.fromkeys(map(int, ids[left]), 0.0),
+              **dict.fromkeys(map(int, ids[right]), 0.3)}
+exterior = np.concatenate([faces[name] for name in sorted(faces)
+                           if name not in (LEFT, RIGHT)])
+thermal = solve_dc_thermal_tet4_with_convection(
+    mesh, conductivity_S_per_m_by_material=dict.fromkeys(materials.values(), 2.0),
+    electrode_voltage_V_by_id=electrodes,
+    conductivity_W_per_m_K_by_material=dict.fromkeys(materials.values(), 0.25),
+    prescribed_K_by_id=dict.fromkeys(electrodes, 300.0),
+    faces_by_node_id=ids[exterior], convection_W_per_m2_K=100.0, ambient_K=299.95,
+).thermal
+np.testing.assert_array_equal(thermal.node_ids, ids)
+temperature = {int(i): float(t) for i, t in zip(thermal.node_ids, thermal.temperature_K)}
+junction = materials["junction"]
+for factor in (1.0, 2.0):
+    properties = {key: dict(value) for key, value in mesh.materials.items()}
+    properties[junction]["young_modulus_pa"] *= factor
+    elastic_mesh = replace(mesh, materials=properties)
+    for mode, held in (("left-clamped", left), ("both-clamped", np.r_[left, right])):
+        result = solve_prescribed_temperature_tet4(
+            elastic_mesh, temperature_K_by_id=temperature,
+            stress_free_temperature_K=300.0,
+            alpha_per_K_by_material=dict.fromkeys(materials.values(), 1e-4),
+            forces_by_id={}, fixed_dofs_by_id=dict.fromkeys(map(int, ids[held]), ("x", "y", "z")),
+        )
+        np.testing.assert_array_equal(result.node_ids, ids)
+        np.testing.assert_array_equal(result.displacement_m[held], 0.0)
+        if mode == "left-clamped":
+            np.testing.assert_array_equal(result.reaction_N[right], 0.0)
+            displacement_m, _ = cap_area_mean_x(
+                mesh.points * 1e-3, faces[RIGHT], result.displacement_m,
+            )
+            print(f"E_junction x{factor:g}: free-end mean u_x = {displacement_m:.6g} m")
+        else:
+            reaction_N = result.reaction_N[right, 0].sum()
+            print(f"E_junction x{factor:g}: positive-x clamp reaction = {reaction_N:.6g} N")
+```
+
+The single temperature solution is reused unchanged for both stiffnesses.
+Geometry, Young's modulus in the bulk region, Poisson ratios, thermal
+expansion coefficients and external forces also stay fixed; compare like support modes. Clamp
+reaction measures the force needed to hold the cap, not a free-end force.
+In this synthetic example the reaction change is clearer than the small
+free-end displacement difference, which is sensitive to the discrete mesh.
+Neither is a material calibration or convergence result.
