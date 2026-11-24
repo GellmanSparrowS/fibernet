@@ -197,6 +197,17 @@ network rather than exporting this fused Tet4 solid. Reading the VTUs
 with Meshio can verify the IDs and geometry; it is not a fused
 multimaterial manufacturing export.
 
+From a checkout containing the [shell check](../examples/tet4_material_shell_check.py),
+run this on a trusted local bundle with Meshio installed:
+
+```sh
+python examples/tet4_material_shell_check.py fused-cad-sphere/coarse.zip
+```
+
+It compares each region's signed closed-shell volume (subtracting cavity
+components) with its Tet4 volume. It does not check self-intersections
+or slicer compatibility.
+
 ## Import named material and boundary groups from Gmsh
 
 This recipe uses Meshio 5.3.5 to read a trusted, small **ASCII MSH 4.1**
