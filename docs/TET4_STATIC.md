@@ -296,6 +296,97 @@ and tetrahedral discretization for one axial shift. It is not a mesh
 convergence test, a bound over other phases, or a comparison with a
 body-fitted geometry. Overall volume is not a correction factor for stiffness.
 
+## Compare three end-cap loads on one fused solid
+
+Use the [CAD sphere procedure](RELEASE_4_21_3.md#compare-the-response-of-a-two-material-fused-junction)
+to generate matching coarse and fine bundle/manifest pairs. Install the
+optional Meshio reader as described there. Save the block below as
+`examples/three_caps.py` beside `tet4_fused_cylinder_thermomechanics.py`.
+From the checkout, run:
+
+```sh
+python examples/three_caps.py fused-cad-sphere/coarse.zip fused-cad-sphere/coarse.json
+python examples/three_caps.py fused-cad-sphere/fine.zip fused-cad-sphere/fine.json
+```
+
+Clamp the negative-x cap in all three directions. For each of the three
+solves, apply a total of 1 mN outward on just one of the +x, +y and +z caps.
+Every other face is free. The surface force uses uniform traction in Pa;
+its equivalent nodal forces use stable node IDs. The compliance entry
+`C[i, j] = f_i · u_j / F²` gives the area-weighted displacement of cap
+`i` along its load direction per unit force on cap `j` (m/N). The symmetric
+part compares the same force combinations with the original mesh and with
+only the junction modulus tripled.
+
+```python
+from dataclasses import replace
+from pathlib import Path
+import sys
+
+import numpy as np
+from scipy.linalg import eigh
+
+from fibernet.sim.tet4 import solve_static_tet4
+from fibernet.sim.tet4_loads import nodal_forces_from_traction
+from tet4_fused_cylinder_thermomechanics import load_named_mesh
+
+bundle, manifest = map(Path, sys.argv[1:])
+mesh, caps, names, _ = load_named_mesh(bundle, manifest, compare_junction=True)
+ids = list(map(int, mesh.node_ids))
+held = {ids[i]: ("x", "y", "z") for i in np.unique(caps["cap_neg_x"])}
+force_N = 0.001
+loads = []
+for axis, direction in enumerate("xyz"):
+    faces = caps["cap_pos_" + direction]
+    a, b, c = (mesh.points[faces] * 1e-3).transpose(1, 0, 2)
+    area_m2 = 0.5 * np.linalg.norm(np.cross(b - a, c - a), axis=1).sum()
+    traction = np.eye(3)[axis] * (force_N / area_m2)
+    loads.append(nodal_forces_from_traction(
+        mesh, [[ids[i] for i in f] for f in faces], traction_Pa=tuple(traction),
+    ))
+
+materials = {mid: dict(values) for mid, values in mesh.materials.items()}
+materials[names["junction"]]["young_modulus_pa"] *= 3.0
+
+def compliance(model):
+    matrix = np.empty((3, 3))
+    for j, load in enumerate(loads):
+        result = solve_static_tet4(model, forces_by_id=load, fixed_dofs_by_id=held)
+        displacement = dict(zip(map(int, result.node_ids), result.displacement_m))
+        for i, probe in enumerate(loads):
+            matrix[i, j] = sum(np.dot(f, displacement[n]) for n, f in probe.items()) / force_N**2
+        np.testing.assert_allclose(
+            0.5 * force_N**2 * matrix[j, j], result.strain_energy_J, rtol=2e-8,
+        )
+    np.testing.assert_allclose(matrix, matrix.T, rtol=0, atol=2e-8 * abs(matrix).max())
+    return (matrix + matrix.T) * 0.5
+
+reference = compliance(mesh)
+reinforced = compliance(replace(mesh, materials=materials))
+percent = 100 * eigh(reference - reinforced, reference, eigvals_only=True)
+mix = np.array([0.7, -0.4, 0.5])
+print("Reference compliance [m/N]:", reference.tolist())
+print("Reinforced compliance [m/N]:", reinforced.tolist())
+print("Min/max compliance reduction [%]:", percent[[0, -1]].tolist())
+print("Mixed-load energy [pJ]:", (0.5e12 * force_N**2 * np.array(
+    [mix @ reference @ mix, mix @ reinforced @ mix],
+)).tolist())
+```
+
+With the synthetic 1 GPa starting material, the compliance reduction over
+these combinations is about 0.54–2.95% on the coarse mesh and 0.48–2.92%
+on the fine mesh. The selected signed combination stores about 0.99% and
+0.94% less energy at the same forces, respectively. The energy in the
+snippet follows from the compliance matrix and linear superposition.
+In follow-up solves of the signed load, it agreed with the directly solved
+strain energy on both meshes.
+
+The individual cross-cap responses are small: their signs agree, but some
+magnitudes differ by up to 75% between the two meshes. Use the global
+compliance comparison to interpret this result. Do not use an individual
+cross term as a precise sensitivity, or infer local stress, strength,
+or mesh convergence from two grids.
+
 ## View a static result in ParaView
 
 To compare both welded-junction materials without writing your own script,
