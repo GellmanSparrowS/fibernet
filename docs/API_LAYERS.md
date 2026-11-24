@@ -302,7 +302,9 @@ SI. `record_state=False` does not retain its native trajectory.
 `SimResult` this is a **summary**, not complete geometry/trajectory export;
 use `result.save(path, detailed=True)` for detailed arrays. Some specialized
 records, including material dynamics metadata, are retained even in summaries.
-`ViscoelasticResult.save` instead writes its own full history schema. Use the
+`ViscoelasticResult.save` instead writes its own full single-law history schema.
+[Experimental mapped FEM histories](VISCOELASTIC_NETWORK.md#experimental-explicit-laws-for-different-members)
+are in-memory only and reject `save_path`. Use the
 matching loader; `SimResult.load` is not a universal loader for electrical,
 thermal or viscoelastic results. Neither summary nor detailed export is a
 general restart checkpoint or a certificate that material dynamics can resume.

@@ -151,18 +151,17 @@ def simulate(
         LAMMPS accepts cg_request=CGRequest(...) for 3-D harmonic-bond/cosine-angle
         networks; projectile_node_id=None and projectile_pairs={} select pure fibers.
         Runtime, workdir and limits remain explicit. See docs/integrations/LAMMPS_CG_FIBER_ONLY.md.
-        FEM mode="history" accepts material, times, constraints, loads,
-        length_unit and optional initial_state, returning ViscoelasticResult.
-        Its SI 2-D small-strain history includes axial and bending response;
-        it uses explicit controls, not the strain shortcut or graph moduli.
-        See docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.
+        FEM "history" accepts material, times, constraints, length_unit, and
+        optional loads and initial_state. It uses explicit SI controls for 2-D
+        axial and bending response, not strain or graph moduli. See
+        docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.
         Its dim defaults to graph.dimension; an explicit dim=2 or dim=3
         overrides this selection. 3-D FEM stretch is linear-only and rejects
         nonlinear=True; nonlinear=None preserves its legacy linear solve.
     save_path : str, optional
         JSON export path. SimResult saves a summary by default, not a full-state
         checkpoint. For detailed arrays call result.save(path, detailed=True);
-        restart support is specific to each result/backend contract.
+        restart is result-specific. Mapped FEM history has no file export.
     stretch_ratio : float or None, keyword-only
         Explicit target ratio lambda (1.01 = 1% extension), only for stretch.
         Must be finite and positive; booleans are rejected. Prefer this name
@@ -267,6 +266,8 @@ def simulate(
             raise ValueError("The FEM backend supports mode='stretch' or 'history'")
         from fibernet.ml.beam_frame_fem import BeamFrameFEM
         if mode == "history":
+            if save_path and isinstance(kwargs.get("material"), dict):
+                raise ValueError("mapped history persistence is unsupported; use in-memory continuation")
             signature(BeamFrameFEM.history).bind(None, graph, **kwargs)
             result = BeamFrameFEM().history(graph, **kwargs)
         elif mode == "stretch":
@@ -285,7 +286,6 @@ def simulate(
     if save_path:
         result.save(save_path)
         print(f"Saved to {save_path}")
-
     return result
 
 

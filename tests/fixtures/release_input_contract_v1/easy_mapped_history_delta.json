@@ -1,0 +1,25 @@
+{
+  "schema": "reviewed_release_input_source_delta/1",
+  "source": "fibernet/easy.py",
+  "accepted_stage": "Validate the in-memory mapped FEM history save option before dispatch",
+  "base_sha256": "6cd386b1f41799e3e37973bf55c4729f82748532ae1bcc49f733375256b50d7f",
+  "result_sha256": "4653d7f1f6549dc4e740ce11d6ac546f13ba50519f80aa9dab146b480f0b0160",
+  "hunks": [
+    {
+      "before": "        networks; projectile_node_id=None and projectile_pairs={} select pure fibers.\n        Runtime, workdir and limits remain explicit. See docs/integrations/LAMMPS_CG_FIBER_ONLY.md.\n        FEM mode=\"history\" accepts material, times, constraints, loads,\n        length_unit and optional initial_state, returning ViscoelasticResult.\n        Its SI 2-D small-strain history includes axial and bending response;\n        it uses explicit controls, not the strain shortcut or graph moduli.\n        See docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.\n        Its dim defaults to graph.dimension; an explicit dim=2 or dim=3\n        overrides this selection. 3-D FEM stretch is linear-only and rejects\n",
+      "after": "        networks; projectile_node_id=None and projectile_pairs={} select pure fibers.\n        Runtime, workdir and limits remain explicit. See docs/integrations/LAMMPS_CG_FIBER_ONLY.md.\n        FEM \"history\" accepts material, times, constraints, length_unit, and\n        optional loads and initial_state. It uses explicit SI controls for 2-D\n        axial and bending response, not strain or graph moduli. See\n        docs/VISCOELASTIC_NETWORK.md. FEM stretch accepts E, nu, pct, nonlinear.\n        Its dim defaults to graph.dimension; an explicit dim=2 or dim=3\n        overrides this selection. 3-D FEM stretch is linear-only and rejects\n"
+    },
+    {
+      "before": "        JSON export path. SimResult saves a summary by default, not a full-state\n        checkpoint. For detailed arrays call result.save(path, detailed=True);\n        restart support is specific to each result/backend contract.\n    stretch_ratio : float or None, keyword-only\n        Explicit target ratio lambda (1.01 = 1% extension), only for stretch.\n",
+      "after": "        JSON export path. SimResult saves a summary by default, not a full-state\n        checkpoint. For detailed arrays call result.save(path, detailed=True);\n        restart is result-specific. Mapped FEM history has no file export.\n    stretch_ratio : float or None, keyword-only\n        Explicit target ratio lambda (1.01 = 1% extension), only for stretch.\n"
+    },
+    {
+      "before": "        from fibernet.ml.beam_frame_fem import BeamFrameFEM\n        if mode == \"history\":\n            signature(BeamFrameFEM.history).bind(None, graph, **kwargs)\n            result = BeamFrameFEM().history(graph, **kwargs)\n",
+      "after": "        from fibernet.ml.beam_frame_fem import BeamFrameFEM\n        if mode == \"history\":\n            if save_path and isinstance(kwargs.get(\"material\"), dict):\n                raise ValueError(\"mapped history persistence is unsupported; use in-memory continuation\")\n            signature(BeamFrameFEM.history).bind(None, graph, **kwargs)\n            result = BeamFrameFEM().history(graph, **kwargs)\n"
+    },
+    {
+      "before": "        result.save(save_path)\n        print(f\"Saved to {save_path}\")\n\n    return result\n\n",
+      "after": "        result.save(save_path)\n        print(f\"Saved to {save_path}\")\n    return result\n\n"
+    }
+  ]
+}

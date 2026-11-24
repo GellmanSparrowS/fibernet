@@ -1,5 +1,6 @@
 """Regression tests for 2-D linear viscoelastic frame history."""
 import copy
+import hashlib
 import cmath
 import importlib.util
 import json
@@ -179,6 +180,112 @@ class NetworkAcceptance(unittest.TestCase):
         with self.assertRaises(ValueError):
             BeamFrameFEM().history(g,constraints={left:[[0.,0.,0.]]*2},loads={right:[[1.,0.,0.]]*2},**args)
         self.assertEqual(g.to_dict(),before)
+
+    def test_mapped_history_serial_continuity_and_in_memory_resume(self):
+        graph = fn.StructureGraph(dimension=2)
+        left, joint, right = [graph.add_node([x, 0.0]) for x in (0, 8, 20)]
+        left_edge = graph.add_edge(left, joint, radius=0.1)
+        right_edge = graph.add_edge(right, joint, radius=0.12)
+        # Heterogeneous Maxwell counts, nonuniform dt, and reverse insertion.
+        sls = fn.LinearViscoelasticMaterial.standard_linear_solid(1e6, 4e6, 0.08)
+        kv = fn.LinearViscoelasticMaterial.kelvin_voigt(2e6, 1e4)
+        assignment = {right_edge: kv, left_edge: sls}
+        times = np.array([0., 0.1, 0.25, 0.8])
+        stroke = np.array([0., 2e-6, 2e-6, 2e-6])
+        before = graph.to_dict()
+
+        def run(time, dx, material=assignment, **kw):
+            constraints = {left: [[0., 0., 0.]]*len(time),
+                           right: [[x, None, None] for x in dx]}
+            return fn.simulate(graph, backend='fem', mode='history', material=material,
+                               times=time, constraints=constraints, length_unit='mm', **kw)
+
+        result = run(times, stroke)
+        row = result.node_ids.index(joint)
+        # Independent serial compliance using the first-step implicit tangents:
+        # memory is zero at t0, displacements add, common axial force.
+        stiffness = math.pi * np.array([1e-4, 1.2e-4])**2 * np.array([
+            1e6 + 4e6 * 0.08/(0.08+0.1), 2e6 + 1e4/0.1
+        ]) / np.array([0.008, 0.012])
+        force = stroke[1] / np.sum(1/stiffness)
+        np.testing.assert_allclose(result.axial_force[1], [force, force], rtol=1e-12, atol=0)
+        self.assertAlmostEqual(result.displacements[1, row, 0] / (force/stiffness[0]), 1.)
+        self.assertGreater(abs(result.displacements[-1,row,0]-result.displacements[1,row,0]),
+                           5e-8)
+        ledger = result.energies
+        np.testing.assert_allclose(ledger['work'][1:], ledger['work'][1], rtol=1e-12, atol=0)
+        head = run(times[:3], stroke[:3])
+        self.assertIn([], head.final_state['viscous_strain'])  # Zero Maxwell branches.
+        tail = run(times[2:], stroke[2:], dict(reversed(list(assignment.items()))),
+                   initial_state=head.final_state)
+        np.testing.assert_array_equal(tail.displacements, result.displacements[2:])
+        np.testing.assert_array_equal(tail.axial_force, result.axial_force[2:])
+        self.assertEqual(tail.final_state, result.final_state)
+        with self.assertRaisesRegex(ValueError, 'material/geometry'):
+            run(times[2:], stroke[2:], {left_edge: kv, right_edge: sls},
+                initial_state=head.final_state)
+        self.assertEqual(graph.to_dict(), before)
+
+        def rechecksum(state):
+            record = {key: value for key, value in state.items() if key != 'checksum'}
+            state['checksum'] = hashlib.sha256(json.dumps(
+                record, sort_keys=True, separators=(',', ':'), allow_nan=False
+            ).encode('utf-8')).hexdigest()
+
+        for key, message in [('metadata', 'mapped result metadata'),
+                             ('energies', 'mapped result energy fields')]:
+            malformed = result.to_dict()
+            malformed[key] = None
+            with patch('fibernet.sim._viscoelastic_fem._json',
+                       side_effect=AssertionError('must reject before JSON clone')):
+                with self.assertRaisesRegex(ValueError, message):
+                    fn.ViscoelasticResult(malformed)
+
+        for timestamp in (10**330, float('inf'), float('nan'), True):
+            with self.subTest(timestamp=timestamp):
+                malformed = result.to_dict()
+                malformed['times'][1] = timestamp
+                with self.assertRaisesRegex(ValueError, 'mapped result times requires finite'):
+                    fn.ViscoelasticResult(malformed)
+                for initial, previous, displacements in (
+                    (None, 0., [0., stroke[1]]),
+                    (head.final_state, times[2], stroke[2:]),
+                ):
+                    with patch('fibernet.sim._viscoelastic_fem._geometry',
+                               side_effect=AssertionError('must reject malformed time before geometry')):
+                        with self.assertRaisesRegex(ValueError, 'mapped history times require finite'):
+                            run([previous, timestamp], displacements, initial_state=initial)
+        typed_times = [np.int64(0), np.float64(times[1]), np.float64(times[2]), np.float64(times[3])]
+        self.assertEqual(run(typed_times, stroke).to_dict(), result.to_dict())
+
+        malformed = result.to_dict()
+        state = malformed['final_state']
+        malformed['metadata']['material'][0][1]['branches'] = [[5e5, 0.1]]*9
+        state['material_by_edge'] = copy.deepcopy(malformed['metadata']['material'])
+        state['viscous_strain'][0] = [[[0., 0., 0.]] for _ in range(9)]
+        rechecksum(state)
+        with patch.object(fn.LinearViscoelasticMaterial, 'from_dict',
+                          side_effect=AssertionError('must bound branches before material construction')):
+            with self.assertRaisesRegex(ValueError, 'at most eight branches'):
+                fn.ViscoelasticResult(malformed)
+
+        bad_state = head.final_state
+        bad_state['stored_energy'] = str(bad_state['stored_energy'])
+        rechecksum(bad_state)
+        with self.assertRaisesRegex(ValueError, 'mapped restart stored_energy requires finite'):
+            run(times[2:], stroke[2:], initial_state=bad_state)
+        with tempfile.TemporaryDirectory() as work:
+            path = Path(work) / 'new-parent' / 'mapped.json'
+            with self.assertRaisesRegex(ValueError, 'persistence is unsupported'):
+                result.save(path)
+            with patch.object(BeamFrameFEM, 'history', side_effect=AssertionError('must not start')):
+                with self.assertRaisesRegex(ValueError, 'persistence is unsupported'):
+                    run(times, stroke, save_path=path)
+            self.assertFalse(path.parent.exists())
+        with patch('fibernet.sim._viscoelastic_fem._geometry',
+                   side_effect=AssertionError('must not allocate geometry')):
+            with self.assertRaisesRegex(ValueError, 'sample budget'):
+                run(np.linspace(0., 1., 514), np.zeros(514))
 
     def test_frequency_sweep_cli_physical_loop_and_discrete_ledger(self):
         script = Path(__file__).resolve().parents[1] / 'examples/viscoelastic_frequency_sweep.py'
