@@ -1429,10 +1429,10 @@ class BeamFrameFEM:
             Original graph for geometry and metadata. Without explicit maps,
             raw rows retain the legacy graph_to_fem_input / _graph_to_arrays
             insertion-order assumption. Without graph, ID maps are omitted.
-        node_ids, edge_ids : sequence of int, optional, keyword-only
-            IDs of the INPUT node and element rows supplied to the raw solve,
-            before deduplication. Supply both maps and graph together; each
-            map must cover its graph entities exactly. Output edge IDs are
+        node_ids, edge_ids : ordered iterable of int, optional, keyword-only
+            IDs in exact input row order, before deduplication. Sets and
+            frozensets are not accepted. Supply both maps and graph together;
+            each map must cover its graph entities exactly. Output edge IDs are
             edge_ids[fem_result['edge_list']]. For graph.to_numpy() inputs use
             sorted(graph.nodes) and list(graph.edges), respectively (and apply
             any input-row permutations to the maps too).
@@ -1452,6 +1452,8 @@ class BeamFrameFEM:
             raise ValueError("Explicit node_ids and edge_ids require both maps and graph")
 
         def validate_ids(values, expected, name):
+            if isinstance(values, (set, frozenset)):
+                raise ValueError(f"{name} must follow raw input row order, not a set")
             try:
                 values = list(values)
             except TypeError as exc:
