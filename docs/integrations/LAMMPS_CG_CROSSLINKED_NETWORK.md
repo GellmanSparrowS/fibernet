@@ -29,15 +29,15 @@ collinear reference segments, not every pair of incident edges.
 
 ## Inspect the prepared network without LAMMPS
 
-Install the published FiberNet 4.21.1 core in your Python environment.
-From the root of a checkout or unpacked source archive **containing this
-example's preflight option**, run:
+Install FiberNet 4.21.2 or newer in your Python environment.
+From the root of a checkout or an unpacked source archive containing
+this example's preflight option, run:
 
 ```sh
 python -B -m examples.cg_crosslinked_network --preflight
 ```
 
-The currently published 4.21.1 source archive predates this option.
+The FiberNet 4.21.1 source archive does not include this option.
 To run the newer example against the installed core rather than a
 checkout's copy of FiberNet, copy its complete `examples/` directory
 into a fresh directory and run the same command there. The preflight
@@ -52,9 +52,14 @@ This is input admission, not a native result or runtime qualification.
 
 ## Use the library backend
 
-From the source root, provide an already configured and pinned `RuntimeSpec` JSON
-for the official LAMMPS runtime. This example does not discover or install it.
-Importing the module or calling `build_case()` does not launch native code.
+From the source root, provide a `RuntimeSpec` JSON for a compatible pinned
+runtime. Check the supported [CLI profiles](LAMMPS_HARMONIC_CLI.md#explicit-runtime-and-lifecycle)
+before selecting a binary. The documented MPI wheel is a third-party PyPI
+distribution, not an official upstream release binary. The
+[serial-static profile](LAMMPS_HARMONIC_CLI.md#explicit-serial-static-cli-profile)
+has narrower admission rules than ordinary static Linux builds; a static
+build is not automatically compatible. This example does not discover or
+install LAMMPS. Importing it or calling `build_case()` does not launch native code.
 
 ```python
 from examples.cg_crosslinked_network import run_example
