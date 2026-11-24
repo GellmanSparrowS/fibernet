@@ -289,6 +289,34 @@ means a small 1% modulus increase lowers compliance by about 0.08% at
 that material state. It is not a prediction for a large modulus change,
 a different load or mesh, or for material strength.
 
+### Check the sign under displacement control
+
+Run [the control comparison](../examples/tet4_junction_load_control.py) on the [conformal two-region CAD fixture](TET4_VTU_BUNDLE.md#optional-conformal-junction-material).
+The generator requires Gmsh and Meshio; the comparison reads the resulting
+bundle with Meshio and does not run Gmsh.
+
+```sh
+python examples/tet4_fused_cylinder_cad.py --junction-sphere --output-dir fused-cad-sphere
+python examples/tet4_junction_load_control.py fused-cad-sphere/coarse.zip fused-cad-sphere/coarse.json
+python examples/tet4_junction_load_control.py fused-cad-sphere/fine.zip fused-cad-sphere/fine.json
+```
+
+Clamp the negative-x cap and apply a total force of (1, 0.27, −0.41) mN
+at the positive-x cap. First solve with a 3 GPa junction and 1 GPa rods.
+Then remove the applied force and prescribe the complete nodal displacement
+profile from that solve at the loaded cap. The initial displacement field
+and stored elastic energy are the same for both controls.
+
+Perturb just the junction Young modulus, keeping Poisson ratio, the mesh and
+each control fixed. For the uniform junction modulus used here,
+`d ln(U)/d ln(E_j)` equals the junction energy share with a negative sign
+under force control and a positive sign under displacement control. Here
+`U` is total elastic strain energy and `E_j` the junction Young modulus.
+The example reports a central finite difference beside each prediction.
+The shares are about 0.77% and 0.66% on the two grids, so a small 1% modulus
+increase changes total energy by only about 0.007% in this case.
+This comparison does not establish a converged peak stress or predict strength.
+
 ## Compare two axial voxel phases at fixed stroke
 
 With FiberNet 4.10.2 installed, run from a checkout containing this example:
