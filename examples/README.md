@@ -40,6 +40,25 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 See the [beam FEM guide](../docs/METHODS_BEAM_FEM_CONTRACT.md) for model choices
 and input units.
 
+## Inferring mixed normal strains from a 3D network
+
+From a source checkout:
+
+```bash
+python -m examples.mechanoelectric_mixed_strain_3d
+```
+
+Use three sequential DC resistance measurements to recover the signed x, y and z
+normal strains applied to the same 360-rod specimen. The JSON includes the 3×3
+calibration matrix and compares full-matrix recovery with independent per-axis
+readouts on four held-out tension/compression combinations.
+
+Calibration and prediction both prescribe translations on the same boundary nodes;
+interior nodes and rotations remain free. Rod areas and conductivities are fixed,
+so resistance changes come from the computed changes in rod lengths. This is a
+noiseless simulation of prescribed normal strains, not shear recovery or an
+experimental resolution estimate.
+
 ## 3D porosity before and after loading
 
 From the source checkout:
