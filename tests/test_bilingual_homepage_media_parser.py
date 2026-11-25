@@ -163,18 +163,29 @@ class NativeDisclosureParserTests(unittest.TestCase):
 
 
 class RestoredGalleryTests(unittest.TestCase):
-    def test_all_originals_are_visible_without_an_extra_gallery_fold(self):
+    def test_default_view_is_short_and_original_animations_remain_in_gallery(self):
         selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
         originals = {record['path'] for record in selection['original_gifs']}
         self.assertEqual(len(originals), 19)
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
-            # Only API documentation is nested; every GIF precedes that fold.
-            visible = body.split('<details>', 1)[0]
+            # Keep the research hero discoverable while preserving every video in
+            # the language block. The gallery is not part of the default view.
+            disclosures = CHECK.top_level_disclosures(body)
+            attrs, summary, gallery = disclosures[0]
             with self.subTest(language=language):
-                self.assertTrue(originals <= set(CHECK.inline_gifs(visible)))
-                self.assertEqual(len(CHECK.inline_gifs(visible)), 22)
+                self.assertEqual(attrs.strip(), "")
+                self.assertIn(summary.strip(), {
+                    "Animation gallery and advanced examples", "动图画廊与进阶算例",
+                })
+                visible = body.split("<details>", 1)[0]
+                self.assertEqual(CHECK.inline_gifs(visible), [
+                    "docs/media/network_workflow_hero.gif",
+                ])
+                self.assertTrue(originals <= set(CHECK.inline_gifs(body)))
+                self.assertEqual(len(CHECK.inline_gifs(body)), 22)
+                self.assertGreaterEqual(len(CHECK.inline_gifs(gallery)), 19)
                 quick_start = '## Quick start details' if language == 'en' else '## 快速开始'
                 self.assertLess(body.index(quick_start), body.index('<!-- api-navigation:'))
 

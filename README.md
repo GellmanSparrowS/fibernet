@@ -5,13 +5,10 @@
 </td></tr>
 </table>
 
-[Feature availability and checked dataset selections](docs/FEATURE_AVAILABILITY.md)
+**Generate fiber networks, simulate their response, and export structures for fabrication.**  
+生成纤维网络，模拟结构响应，并导出制造几何。
 
-Click a language heading to expand or collapse it on this page. English is open by default; the two sections toggle independently, without scripts.
-
-点击语言标题可在本页展开或收起。英文默认展开，两种语言独立折叠，不使用脚本式互斥切换。
-
-[Static views and media sources / 静态图与媒体来源](docs/MEDIA_GALLERY.md)
+[PyPI package](https://pypi.org/project/fibernet/) · [Runnable examples](examples/README.md) · [Release notes](CHANGELOG.md) · [中文](#fibernet-zh)
 
 ## Quick start
 
@@ -24,16 +21,19 @@ python -m pip install -e .
 python -m examples.open_source_workflow --output-dir demo_output
 ```
 
-This entry stays visible when either language is collapsed. Expand a language below for the full examples and module gallery.
-此入口不受语言折叠影响。展开下方语言标题，可查看完整示例与模块动图。
+Use the source checkout to run the repository examples. For the published package, use [PyPI](https://pypi.org/project/fibernet/).
+
+<a id="fibernet-zh"></a>
 
 <details>
 <summary>中文</summary>
 
 <!-- locale:zh:start -->
-[快速开始](#快速开始) · [生成](#1-生成网络) → [模拟](#2-模拟响应) → [分析与学习](#3-分析与学习) → [设计与导出](#4-设计与导出) · [功能索引](#选择研究流程)
+[快速开始](#快速开始) · [研究流程](#选择研究流程) · [动图画廊](#gallery-zh) · [FiberScope](#桌面应用)
 
-FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界面。
+用 FiberNet 生成二维或三维纤维网络、模拟结构响应，并沿用同一结构做分析、机器学习或制造导出。FiberScope 是配套桌面应用。
+
+**按问题开始：** [三维力学](docs/TET4_STATIC.md) · [电热到力学算例](docs/TET4_THERMOELASTIC.md) · [制造路径](docs/MANUFACTURING_GRAPH_MAPPING.md) · [功能和适用范围](docs/FEATURE_AVAILABILITY.md)
 
 ## 快速开始
 
@@ -93,6 +93,11 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 ![固定三维网络的相机旋转与已保存的 kagome 加载帧](docs/media/network_workflow_hero.gif)
 
 左侧是固定网络的视角旋转，右侧回放已有 kagome 加载帧。两者是独立示例，不是三维到二维的耦合动力学。[来源与帧映射](docs/MEDIA_GALLERY.md#geometry-and-response-hero)
+
+<a id="gallery-zh"></a>
+
+<details>
+<summary>动图画廊与进阶算例</summary>
 
 ![相机环绕固定的 octet、diamond 和 gyroid 网络](docs/media/three_dimensional_topologies.gif)
 
@@ -204,6 +209,8 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 
 **已保存的界面导览。** 展示存档截图中的曲面控制、制造几何与导出控件。[曲面与导出来源](docs/MEDIA_GALLERY.md#surface-mapping-and-export-workspaces)
 
+</details>
+
 ## 选择研究流程
 
 | 研究目标 | Python 入口 | 指南或可执行示例 |
@@ -224,7 +231,7 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 
 ![FiberScope 学习、逆向设计、曲面映射与导出的已保存界面](docs/media/homepage_overview/fiberscope_overview.gif)
 
-[桌面使用指南](FiberScope/README.md) · [界面与图表来源](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [中英文截图](FiberScope/docs/screenshots/README.md) · [可选训练配置](docs/INTEGRATION_REPO_MAP.md)
+[桌面使用指南](FiberScope/README.md) · [界面与图表来源](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [中英文截图](FiberScope/docs/screenshots/README.md)
 
 <details>
 <summary>API 关系导航 · 49 个接口</summary>
@@ -1592,7 +1599,7 @@ graph = fn.pattern_2d(
 
 ## 方法与复现
 
-[模型范围](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [完整动图、源数据与渲染器](docs/MEDIA_GALLERY.md) · [示例参数](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [Taichi 1.7.4 生命周期](docs/architecture/taichi-lifecycle-audit.md) · [示例索引](examples/README.md) · [版本记录](CHANGELOG.md)
+[模型范围](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [完整动图、源数据与渲染器](docs/MEDIA_GALLERY.md) · [示例参数](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [示例索引](examples/README.md) · [版本记录](CHANGELOG.md)
 
 ## 许可与引用
 
@@ -1605,9 +1612,11 @@ graph = fn.pattern_2d(
 <summary>English</summary>
 
 <!-- locale:en:start -->
-[Quick start](#quick-start-details) · [Generate](#1-generate-networks) → [Simulate](#2-simulate-response) → [Analyze / Learn](#3-analyze-and-learn) → [Design / Export](#4-design-and-export) · [API index](#choose-a-workflow)
+[Quick start](#quick-start-details) · [Research workflows](#choose-a-workflow) · [Animation gallery](#gallery-en) · [FiberScope](#desktop-application)
 
-FiberNet is a Python library for fiber-network modeling. FiberScope provides a desktop interface.
+Use FiberNet to build 2D or 3D fiber networks, model their response, and carry the same structure into analysis, learning, or fabrication. FiberScope is the desktop companion.
+
+**Start with a problem:** [3D mechanical response](docs/TET4_STATIC.md) · [Electrothermal-to-mechanical example](docs/TET4_THERMOELASTIC.md) · [Manufacturing paths](docs/MANUFACTURING_GRAPH_MAPPING.md) · [Feature availability](docs/FEATURE_AVAILABILITY.md)
 
 ## Quick start details
 
@@ -1667,6 +1676,11 @@ Use the [quick start on PyPI](https://pypi.org/project/fibernet/). For reproduci
 ![Camera orbit around a fixed 3D graph beside saved kagome loading frames](docs/media/network_workflow_hero.gif)
 
 The left panel rotates the camera around a fixed graph; the right replays recorded kagome loading. These are separate examples, not coupled 3D-to-2D dynamics. [Sources and frame mapping](docs/MEDIA_GALLERY.md#geometry-and-response-hero)
+
+<a id="gallery-en"></a>
+
+<details>
+<summary>Animation gallery and advanced examples</summary>
 
 ![Camera orbit around fixed octet, diamond and gyroid graphs](docs/media/three_dimensional_topologies.gif)
 
@@ -1782,6 +1796,8 @@ environments. See [RL entry points and compatibility](docs/RL_COMPATIBILITY.md).
 
 **Saved interface tour.** Surface controls, fabrication geometry and export controls from archived screenshots. [Surface and export sources](docs/MEDIA_GALLERY.md#surface-mapping-and-export-workspaces)
 
+</details>
+
 ## Choose a workflow
 
 | Your goal | Python entry point | Guide or runnable example |
@@ -1802,7 +1818,7 @@ Download [FiberScope 3.1.0 for Windows x64](https://github.com/GellmanSparrowS/f
 
 ![Saved FiberScope learning, inverse design, surface mapping and export views](docs/media/homepage_overview/fiberscope_overview.gif)
 
-[Desktop guide](FiberScope/README.md) · [Interface and figure sources](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [English / Chinese screenshots](FiberScope/docs/screenshots/README.md) · [Optional training setup](docs/INTEGRATION_REPO_MAP.md)
+[Desktop guide](FiberScope/README.md) · [Interface and figure sources](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [English / Chinese screenshots](FiberScope/docs/screenshots/README.md)
 
 <details>
 <summary>API relationship map · 49 interfaces</summary>
@@ -3170,7 +3186,7 @@ Branches represent workflows, not inheritance. Relationship links target entries
 
 ## Methods and reproducibility
 
-[Model scopes](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [All animations, source data and renderers](docs/MEDIA_GALLERY.md) · [Example parameters](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [Taichi 1.7.4 lifecycle](docs/architecture/taichi-lifecycle-audit.md) · [Examples index](examples/README.md) · [Release history](CHANGELOG.md)
+[Model scopes](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [All animations, source data and renderers](docs/MEDIA_GALLERY.md) · [Example parameters](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [Examples index](examples/README.md) · [Release history](CHANGELOG.md)
 
 ## License and attribution
 
