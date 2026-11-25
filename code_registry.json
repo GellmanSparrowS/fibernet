@@ -5869,6 +5869,7 @@
   "symbols": [
    "Tet4CellFields",
    "Tet4StaticResult",
+   "static_tet4_strain_energy_by_material",
    "Tet4StaticAdmission",
    "_BandPlan",
    "_BandBudgetExceeded",
@@ -5913,7 +5914,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "7cf771f7728309b936927075a7e8c791318e8196da9764ef2290f5a1bff82ca0"
+  "sha256": "df43b9efe809578cdea197fb903bc5db1107f7399d63711ad1da92f1cd2f39c0"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",

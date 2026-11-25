@@ -22,7 +22,8 @@ from fibernet.io.tet4_meshio import (
 )
 
 __all__ = ['Tet4CellFields', 'Tet4StaticAdmission', 'Tet4StaticResult',
-           'inspect_static_tet4_admission', 'solve_static_tet4', 'solve_static_tet4_load_cases']
+           'inspect_static_tet4_admission', 'solve_static_tet4', 'solve_static_tet4_load_cases',
+           'static_tet4_strain_energy_by_material']
 
 _LENGTH_TO_M = {'m': 1., 'cm': 1e-2, 'mm': 1e-3, 'um': 1e-6, 'nm': 1e-9}
 _AXIS = {'x': 0, 'y': 1, 'z': 2}
@@ -64,6 +65,63 @@ class Tet4StaticResult:
     normalized_backward_error: float
     relative_energy_work_error: float
     cell_fields: Tet4CellFields | None = None
+
+def static_tet4_strain_energy_by_material(result: Tet4StaticResult) -> dict[int, float]:
+    """Return elastic Joules keyed by exact material IDs, in ascending ID order.
+
+    Use a mechanical solve with return_cell_fields=True. The tensors are
+    actual strain and Cauchy stress, so both off-diagonal entries contribute.
+    Neither thermoelastic total strain nor viscoelastic loss is accepted.
+    All material groups are retained, even with zero energy. Reject fields
+    whose integrated energy disagrees with the solve instead of normalizing.
+    """
+    if not isinstance(result, Tet4StaticResult):
+        raise TypeError("expected a static mechanical Tet4 result")
+    f = result.cell_fields
+    if not isinstance(f, Tet4CellFields):
+        raise ValueError("solve with return_cell_fields=True")
+    ids = f.cell_ids
+    mids = f.material_ids
+    if not isinstance(ids, np.ndarray) or ids.ndim != 1 or not 0 < len(ids) <= _MAX_TETS:
+        raise ValueError("expected bounded one-dimensional cell IDs")
+    n = len(ids)
+    for a in (ids, mids):
+        if (not isinstance(a, np.ndarray) or np.ma.isMaskedArray(a)
+                or a.shape != (n,) or a.dtype.kind not in "iu" or np.any(a < 0)):
+            raise ValueError("expected aligned exact nonnegative integer IDs")
+    if np.unique(ids).size != n:
+        raise ValueError("cell IDs must be unique")
+    for a, shape in zip((f.volume_m3, f.strain, f.stress_Pa), ((n,), (n, 3, 3), (n, 3, 3))):
+        if (not isinstance(a, np.ndarray) or np.ma.isMaskedArray(a) or a.shape != shape
+                or a.dtype.kind != "f" or a.dtype.itemsize != 8 or not np.isfinite(a).all()):
+            raise ValueError("invalid aligned binary64 cell fields")
+    if np.any(f.volume_m3 <= 0):
+        raise ValueError("cell volumes must be strictly positive")
+    if not all(np.array_equal(a, a.swapaxes(1, 2)) for a in (f.strain, f.stress_Pa)):
+        raise ValueError("cell stress and strain tensors must be symmetric")
+    total = result.strain_energy_J
+    if isinstance(total, (bool, np.bool_)) or not isinstance(total, (float, np.floating)) or not math.isfinite(total) or total < 0:
+        raise ValueError("invalid total mechanical strain energy")
+
+    groups = {}
+    try:
+        for mid, vol, e, s in zip(mids, f.volume_m3, f.strain, f.stress_Pa):
+            # Exact binary64 products avoid spurious under/overflow and
+            # preserve the full tensor terms before rounding to Joules.
+            energy = Fraction(float(vol)) * sum(
+                Fraction(float(a)) * Fraction(float(b))
+                for a, b in zip(e.ravel(), s.ravel())) / 2
+            if energy < 0 or 0 < energy < _MIN_NORMAL_EXACT:
+                raise ValueError("nonphysical or nonnormal cell strain energy")
+            groups.setdefault(int(mid), []).append(float(energy))
+        out = {k: math.fsum(groups[k]) for k in sorted(groups)}
+        summed = math.fsum(out.values())
+    except OverflowError as exc:
+        raise ValueError("cell energy outside binary64 range") from exc
+    if not math.isclose(summed, total, rel_tol=2e-8, abs_tol=0.0):
+        raise ValueError("integrated cell energy disagrees with reported strain energy")
+    return out
+
 
 @dataclass(frozen=True)
 class Tet4StaticAdmission:
