@@ -163,3 +163,39 @@ See [saved temperature through geometry export](THERMAL_TO_TRANSPORT_EXPORT.md)
 for a complete example using existing APIs. It extracts SI translations by node
 ID from saved-temperature mechanics, prepares conductance, solves the circuit,
 and writes identity-preserving VTU and geometry-only STL.
+
+## Run a complete 3D beam-network comparison
+
+From a repository checkout with FiberNet installed, run:
+
+```bash
+python examples/mechanoelectric_network_3d.py --strain 0.005
+```
+
+The example stretches a 6 mm network of 91 nodes and 360 welded members
+in the x direction using the linear 3D beam solver. Its interior nodes
+are perturbed deterministically. Individual rods have one of two radii,
+moduli and electrical conductivities. Each x, y and z measurement places
+a separate 1 V difference across a pair of originally opposite faces.
+Electrode membership follows the original stable node IDs during deformation.
+
+The example maps the solver's deformed Cartesian positions
+by stable node ID, then calls the existing resistor-network solver on a
+separate, deformed graph. For each rod, the original conductance is
+`G0 = sigma * pi * radius**2 / L0`. The two geometric assumptions give:
+
+- Fixed cross-sectional area: `G = G0 * L0 / L`.
+- Fixed member volume: `G = G0 * (L0 / L)**2`.
+
+At 0.5% tensile strain, fixed area gives approximate resistance increases of
+0.2652%, 0.0300% and 0.0325% on the x, y and z axes. The volume-preserving
+rule gives 0.5306%, 0.0598% and 0.0649%. Thus both assumptions give a stronger
+axial response in this example, while the assumed area evolution changes its
+magnitude substantially.
+
+The sample parameters are illustrative. This is one-way, small-deformation
+beam mechanics with straight rods and fixed electrical topology, not a solid
+model of the welded joints. The area laws are imposed hypotheses, not
+inferred transverse strain; the electrical resistivity of each rod is fixed,
+with no contact evolution, Joule heating, or electrical feedback on the
+mechanics. The planar preparation API above is unchanged.
