@@ -83,6 +83,7 @@ From a source checkout:
 
 ```bash
 python -m examples.tet4_mechanoelectric_looped_network
+python -m examples.tet4_mechanoelectric_looped_network --matched-force
 ```
 
 Three axial paths share four crosslinks in a 3D, square-section lattice.
@@ -91,6 +92,12 @@ at twice the stiffness, all at fixed conductivity. The same electrode
 node IDs follow the deformed solid, so the measured resistance change
 comes from geometry. The output includes the tensile grip reaction,
 unstrained resistance, and the normalized resistance slope near zero strain.
+
+With `--matched-force`, linear elasticity sets a different grip displacement
+for each material layout. The example re-solves both signs and checks that
+the computed grip reactions match −0.5 N and +0.5 N. The normalized resistance
+slope is then reported per newton rather than per unit strain. The grip is
+still rigid; this mode is not a prescribed uniform traction on a free cap.
 
 This example uses the bounded Tet4 solvers, a 387-node synthetic lattice,
 and a small prescribed grip displacement. It does not model intrinsic
