@@ -115,7 +115,7 @@ def test_public_route_warns_once_and_preserves_availability(tmp_path, nonlinear,
 
 
 @pytest.mark.parametrize('name', [
-    'README.md', 'PYPI_README.md', 'docs/quickstart.rst',
+    'examples/README.md', 'PYPI_README.md', 'docs/quickstart.rst',
     'docs/API_LAYERS.md', 'docs/METHODS_BEAM_FEM_CONTRACT.md',
 ])
 def test_introductory_fem_calls_are_explicit_and_parse(name):
