@@ -289,6 +289,22 @@ means a small 1% modulus increase lowers compliance by about 0.08% at
 that material state. It is not a prediction for a large modulus change,
 a different load or mesh, or for material strength.
 
+To collect elastic energy for every material ID after a mechanical solve,
+request cell fields and use the static energy helper:
+
+```python
+from fibernet.sim.tet4 import solve_static_tet4, static_tet4_strain_energy_by_material
+
+result = solve_static_tet4(mesh, forces_by_id=loads, fixed_dofs_by_id=holds,
+                           return_cell_fields=True)
+joules_by_material_id = static_tet4_strain_energy_by_material(result)
+```
+
+The returned dictionary uses integer material IDs, includes zero-energy
+groups, and checks that cell energies sum to the solver's total. It only
+consumes static mechanical results, not thermal total strain or
+viscoelastic dissipated energy. The solver is not run again.
+
 ### Check the sign under displacement control
 
 Run [the control comparison](../examples/tet4_junction_load_control.py) on the [conformal two-region CAD fixture](TET4_VTU_BUNDLE.md#optional-conformal-junction-material).
