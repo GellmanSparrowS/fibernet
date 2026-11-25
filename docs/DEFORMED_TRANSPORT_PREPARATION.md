@@ -199,3 +199,27 @@ model of the welded joints. The area laws are imposed hypotheses, not
 inferred transverse strain; the electrical resistivity of each rod is fixed,
 with no contact evolution, Joule heating, or electrical feedback on the
 mechanics. The planar preparation API above is unchanged.
+
+### Inspect signed rod contributions at fixed area
+
+Run the same example with `--compare-affine` to add the
+`fixed_area_attribution` section to its JSON output. The default output
+is unchanged. The extra section compares the beam solution with a control
+that moves each x coordinate in proportion to its distance from the fixed
+grip, leaving y and z unchanged. Both states keep the same grip
+displacements, cross-sections, conductivities, and electrode IDs.
+
+For each measurement direction, normalize the two signed rod currents to
+unit total terminal current. The contribution of a rod is its change in
+resistance multiplied by the product of its two normalized currents,
+with the same endpoint orientation in both solves. The sum is checked
+against the direct terminal resistance difference and against bounds from
+the two fixed current fields. The arrays follow the corresponding stable
+`edge_ids` list; each comparison reports its positive and negative sums
+separately.
+
+For the example at 0.5% axial strain, the y-direction resistance increases
+by about 0.0932% for the control and 0.0300% for the beam solution. In the
+beam solution, contributions of about +2.094 and −0.995 Ω leave a net
++1.099 Ω. This cancellation describes this geometry and loading, not an
+intrinsic piezoresistive law.

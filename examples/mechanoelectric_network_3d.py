@@ -47,7 +47,7 @@ def _length(points, endpoints):
     return np.linalg.norm(points[endpoints[:, 1]] - points[endpoints[:, 0]], axis=1)
 
 
-def _resistance(graph, edge_ids, conductance, electrodes):
+def _dc_state(graph, edge_ids, conductance, electrodes):
     from fibernet.sim.linear_transport import solve_linear_transport
 
     e = solve_linear_transport(graph, dict(zip(edge_ids, conductance)), electrodes, length_unit="m")
@@ -55,10 +55,48 @@ def _resistance(graph, edge_ids, conductance, electrodes):
                     if electrodes.get(int(n)) == 1.)
     if injected <= 0 or not np.isclose(injected, e.dissipated_power_W, rtol=1e-10, atol=0.):
         raise RuntimeError("One-volt contact current does not reconcile with Joule work")
-    return 1. / injected
+    return 1. / injected, e
 
 
-def run_example(strain=.005):
+def _resistance(graph, edge_ids, conductance, electrodes):
+    return _dc_state(graph, edge_ids, conductance, electrodes)[0]
+
+
+def _attribution(reference, changed, edge_ids):
+    """Pair signed unit-terminal currents on the same oriented edges."""
+    def aligned(state):
+        resistance, result = state
+        rows = {int(e): i for i, e in enumerate(result.edge_ids)}
+        order = [rows[int(e)] for e in edge_ids]
+        return (resistance, result.endpoints_by_id[order],
+                result.current_A[order]*resistance,
+                1./result.conductance_S[order])
+
+    r0, ends0, j0, edge0 = aligned(reference)
+    r1, ends1, j1, edge1 = aligned(changed)
+    if not np.array_equal(ends0, ends1):
+        raise ValueError("oriented edge identity changed between electrical solves")
+    delta = edge1 - edge0
+    contribution = delta*j0*j1
+    net = fsum(map(float, contribution))
+    difference = r1-r0
+    lower = fsum(map(float, delta*j1**2))
+    upper = fsum(map(float, delta*j0**2))
+    absolute = fsum(map(float, np.abs(contribution)))
+    bound_slack = 2e-11*max(r0,r1,absolute)
+    if abs(net-difference)>bound_slack or not lower-bound_slack<=difference<=upper+bound_slack:
+        raise RuntimeError("rod resistance changes do not reconcile with terminal resistance")
+    return {
+        "direct_delta_ohm": difference,
+        "sum_positive_ohm": fsum(float(v) for v in contribution if v>0.),
+        "sum_negative_ohm": fsum(float(v) for v in contribution if v<0.),
+        "signed_sum_ohm": net,
+        "bounds_ohm": [lower, upper],
+        "contributions_ohm": contribution.tolist(),
+    }
+
+
+def run_example(strain=.005, *, compare_affine=False):
     import fibernet as fn
 
     if not np.isfinite(strain) or not -.01 <= strain <= .01:
@@ -67,7 +105,7 @@ def run_example(strain=.005):
     a0 = np.pi * radius**2
     l0 = _length(x, ends)
     reference = sigma * a0 / l0
-    base = [_resistance(graph, eids, reference, el) for el in electrodes]
+    baseline = [_dc_state(graph, eids, reference, el) for el in electrodes]
     s = fn.simulate(graph, backend="fem", nonlinear=False, material_mode="graph",
                     length_unit="m", stretch_ratio=1.+strain, pct=16.5/len(nids))
     positions = dict(zip(s.metadata["node_ids"], s.deformed_positions))
@@ -83,27 +121,50 @@ def run_example(strain=.005):
     ratio = l0 / l1
     area_laws = {"fixed_area": ratio, "fixed_member_volume": ratio**2}
     directions = {}
+    if compare_affine:
+        # The same grip displacement, with no non-affine relaxation in the interior.
+        affine = x.copy()
+        affine[:, 0] += strain * (x[:, 0] - x[:, 0].min())
+        affine_graph = graph.copy()
+        affine_graph.set_node_positions(dict(zip(nids, affine)))
+        affine_g = reference * (l0 / _length(affine, ends))
+        diagnostic = {}
     for j, label in enumerate("xyz"):
         cases = {}
         frozen_R = _resistance(derived, eids, reference, electrodes[j])
-        np.testing.assert_allclose(frozen_R, base[j], rtol=1e-12)
+        baseline_R = baseline[j][0]
+        np.testing.assert_allclose(frozen_R, baseline_R, rtol=1e-12)
         for law, factor in area_laws.items():
-            dc_R = _resistance(derived, eids, reference * factor, electrodes[j])
-            cases[law] = {"ohm": dc_R, "change_percent": 100.*(dc_R/base[j]-1.)}
-        directions[label] = {"baseline_ohm": base[j], **cases}
-    return {
+            dc_state = _dc_state(derived, eids, reference * factor, electrodes[j])
+            dc_R = dc_state[0]
+            cases[law] = {"ohm": dc_R, "change_percent": 100.*(dc_R/baseline_R-1.)}
+            if compare_affine and law == "fixed_area":
+                affine_dc = _dc_state(affine_graph, eids, affine_g, electrodes[j])
+                diagnostic[label] = {
+                    "affine_resistance_ohm": affine_dc[0],
+                    "affine_change_percent": 100.*(affine_dc[0]/baseline_R-1.),
+                    "mechanical_vs_baseline": _attribution(baseline[j], dc_state, eids),
+                    "mechanical_vs_affine": _attribution(affine_dc, dc_state, eids),
+                }
+        directions[label] = {"baseline_ohm": baseline_R, **cases}
+    result = {
         "model": "linear welded beam mechanics; DC geometric conductance update; fixed topology",
         "node_count": len(nids), "member_count": len(eids), "axial_strain": strain,
         "mechanical_energy_J": float(s.energy), "directions": directions,
     }
+    if compare_affine:
+        result["fixed_area_attribution"] = {"edge_ids": list(eids), "directions": diagnostic}
+    return result
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strain", type=float, default=.005)
+    parser.add_argument("--compare-affine", action="store_true",
+                        help="include signed rod contributions and an affine control at fixed area")
     args = parser.parse_args()
     # Keep stdout as one JSON document even when an optional dependency emits
     # an import banner. Do not hide diagnostics or change library-wide logging.
     with redirect_stdout(sys.stderr):
-        result = run_example(args.strain)
+        result = run_example(args.strain, compare_affine=args.compare_affine)
     print(json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2))

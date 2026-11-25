@@ -14,8 +14,8 @@ if not _example.exists():
 
 
 class MechanoelectricNetworkExample(unittest.TestCase):
-    def run_example(self, strain, noisy_import=False):
-        command = [sys.executable, str(_example), "--strain", str(strain)]
+    def run_example(self, strain, noisy_import=False, flags=()):
+        command = [sys.executable, str(_example), "--strain", str(strain), *flags]
         if noisy_import:
             # This reproduces an optional import banner without requiring the
             # optional dependency on every test runner.
@@ -74,6 +74,62 @@ runpy.run_path(sys.argv[0], run_name="__main__")
             for law in ("fixed_area","fixed_member_volume"):
                 self.assertAlmostEqual(baseline[law]["change_percent"],0.,places=10)
                 self.assertLess(altered[law]["change_percent"],0.)
+
+    def test_opt_in_affine_report_and_default_are_compatible(self):
+        import math
+        default = self.run_example(.005)
+        audited = self.run_example(.005, flags=("--compare-affine",))
+        breakdown = audited.pop("fixed_area_attribution")
+        self.assertEqual(audited, default)
+        ids = breakdown["edge_ids"]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(len(ids), 360)
+        for axis, group in breakdown["directions"].items():
+            self.assertGreater(group["affine_change_percent"],
+                               audited["directions"][axis]["fixed_area"]["change_percent"])
+            for key in ("mechanical_vs_baseline", "mechanical_vs_affine"):
+                c = group[key]
+                v = c["contributions_ohm"]
+                self.assertEqual(len(v), len(ids))
+                self.assertAlmostEqual(math.fsum(v), c["direct_delta_ohm"], places=8)
+                self.assertAlmostEqual(c["sum_positive_ohm"] + c["sum_negative_ohm"],
+                                       c["direct_delta_ohm"], places=8)
+                lo, hi = c["bounds_ohm"]
+                self.assertLessEqual(lo - 1e-8, c["direct_delta_ohm"])
+                self.assertLessEqual(c["direct_delta_ohm"], hi + 1e-8)
+        y = breakdown["directions"]["y"]
+        self.assertAlmostEqual(y["affine_change_percent"], .0932367631, places=8)
+        self.assertAlmostEqual(y["mechanical_vs_baseline"]["sum_negative_ohm"], -.9949959452, places=7)
+
+    def test_reversed_edge_current_keeps_negative_signed_contribution(self):
+        import runpy
+        from types import SimpleNamespace
+        import numpy as np
+
+        attribute = runpy.run_path(str(_example))["_attribution"]
+        # Independently solve two simple resistive bridges, with terminals
+        # indexed 0 (high) and 3 (low). Stable edge 301 reverses current.
+        ends = np.array([(0, 1), (1, 3), (0, 2), (2, 3), (1, 2)])
+        ids = np.array([10, 11, 20, 21, 301])
+        incidence = np.eye(4)[ends[:, 0]] - np.eye(4)[ends[:, 1]]
+
+        def state(resistance, order):
+            conductance = 1. / np.asarray(resistance)
+            K = incidence.T @ (conductance[:, None] * incidence)
+            v = np.r_[1., np.linalg.solve(K[1:3, 1:3], -K[1:3, 0]), 0.]
+            current = conductance * (incidence @ v)
+            r = 1. / (K @ v)[0]
+            return r, SimpleNamespace(edge_ids=ids[order], endpoints_by_id=ends[order],
+                                      current_A=current[order], conductance_S=conductance[order])
+
+        before = state([1., 3., 3., 1., 2.], np.arange(5))
+        after = state([3., 1., 1., 3., 2.6], np.array([4, 1, 3, 2, 0]))
+        split = attribute(before, after, ids)
+        self.assertAlmostEqual(split["contributions_ohm"][-1], -.03260869565217, places=12)
+        self.assertAlmostEqual(split["signed_sum_ohm"], after[0] - before[0], places=12)
+        after[1].endpoints_by_id[0] = after[1].endpoints_by_id[0][::-1]
+        with self.assertRaisesRegex(ValueError, "oriented edge identity"):
+            attribute(before, after, ids)
 
 
 if __name__ == "__main__":
