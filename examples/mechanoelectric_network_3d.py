@@ -1,15 +1,16 @@
 """Stretch a complete 3D beam network and recalculate its DC resistance."""
 import argparse
 import json
+import sys
+from contextlib import redirect_stdout
 from math import fsum
 
 import numpy as np
 
-import fibernet as fn
-from fibernet.sim.linear_transport import solve_linear_transport
-
 
 def build_sample():
+    import fibernet as fn
+
     graph = fn.pattern_3d(unit="bcc", box=(.002,) * 3, grid=(3, 3, 3), radius=.0001)
     node_ids = tuple(graph.nodes)
     edge_ids = tuple(graph.edges)
@@ -47,6 +48,8 @@ def _length(points, endpoints):
 
 
 def _resistance(graph, edge_ids, conductance, electrodes):
+    from fibernet.sim.linear_transport import solve_linear_transport
+
     e = solve_linear_transport(graph, dict(zip(edge_ids, conductance)), electrodes, length_unit="m")
     injected = fsum(float(j) for n, j in zip(e.node_ids, e.node_injection_A)
                     if electrodes.get(int(n)) == 1.)
@@ -56,6 +59,8 @@ def _resistance(graph, edge_ids, conductance, electrodes):
 
 
 def run_example(strain=.005):
+    import fibernet as fn
+
     if not np.isfinite(strain) or not -.01 <= strain <= .01:
         raise ValueError("the illustrative linear axial strain must be in [-0.01, 0.01]")
     graph, nids, eids, x, ends, electrodes, sigma, radius = build_sample()
@@ -97,4 +102,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--strain", type=float, default=.005)
     args = parser.parse_args()
-    print(json.dumps(run_example(args.strain), ensure_ascii=False, allow_nan=False, indent=2))
+    # Keep stdout as one JSON document even when an optional dependency emits
+    # an import banner. Do not hide diagnostics or change library-wide logging.
+    with redirect_stdout(sys.stderr):
+        result = run_example(args.strain)
+    print(json.dumps(result, ensure_ascii=False, allow_nan=False, indent=2))

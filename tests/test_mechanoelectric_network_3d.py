@@ -14,14 +14,42 @@ if not _example.exists():
 
 
 class MechanoelectricNetworkExample(unittest.TestCase):
-    def run_example(self, strain):
+    def run_example(self, strain, noisy_import=False):
+        command = [sys.executable, str(_example), "--strain", str(strain)]
+        if noisy_import:
+            # This reproduces an optional import banner without requiring the
+            # optional dependency on every test runner.
+            shim = """
+import builtins
+import runpy
+import sys
+old_import = builtins.__import__
+def noisy_import(name, *args, **kwargs):
+    if name == "fibernet":
+        print("[example test] optional dependency import")
+    return old_import(name, *args, **kwargs)
+builtins.__import__ = noisy_import
+sys.argv = sys.argv[1:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+"""
+            command[1:1] = ["-c", shim]
         with tempfile.TemporaryDirectory() as cwd:
-            env=dict(os.environ, OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1")
-            trial=subprocess.run([sys.executable, str(_example),"--strain",str(strain)],
-                                 cwd=cwd, env=env, capture_output=True, text=True, timeout=60)
-            self.assertEqual(trial.returncode,0,trial.stderr)
+            env = dict(os.environ, OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1")
+            trial = subprocess.run(command, cwd=cwd, env=env, capture_output=True,
+                                   text=True, timeout=60)
+            self.assertEqual(trial.returncode, 0, trial.stderr)
             self.assertFalse(list(Path(cwd).iterdir()))
-        return json.loads(trial.stdout)
+        try:
+            result = json.loads(trial.stdout)
+        except json.JSONDecodeError as exc:
+            self.fail(f"example stdout is not JSON: {exc}; first line: {trial.stdout[:150]!r}")
+        if noisy_import:
+            self.assertIn("[example test] optional dependency import", trial.stderr)
+        return result
+
+    def test_import_banner_does_not_pollute_json(self):
+        actual = self.run_example(.005, noisy_import=True)
+        self.assertEqual(actual["member_count"], 360)
 
     def test_full_3d_geometric_sensitivity(self):
         actual=self.run_example(.005)
