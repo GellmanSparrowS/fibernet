@@ -63,6 +63,7 @@ Features Overview
    :caption: Contents:
 
    getting_started
+   tet4_periodic_pore
    quickstart
    graph_scaling
    graph_betweenness
