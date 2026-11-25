@@ -4098,14 +4098,6 @@
   ],
   "sha256": "73111748395d0dfc6f0eb94497158bd21e9da8eaba4f501c9a95928c0a1248e1"
  },
- "manuscript/scripts/build_figures_ppt.py": {
-  "purpose": "Build editable working figures for the FiberNet software Methods draft.",
-  "status": "active",
-  "symbols": [
-   "FigureDeckBuilder"
-  ],
-  "sha256": "b4dd6b6831a31b8af554538095fc805af1c72a3f407d221fe217012b85a1774f"
- },
  "tests/test_constrained_cycle_intervention.py": {
   "purpose": "Matched cycle deletions preserve a complete route and checkpoint identity.",
   "status": "active",
@@ -4278,14 +4270,6 @@
    "CustomCellWorkflow"
   ],
   "sha256": "093d9c5e143a11db382ee1b1f9acb3e33bc39f36849aff77d4b82268ef8f9dc3"
- },
- "scripts/build_work_bundle.py": {
-  "purpose": "Make one bounded, reproducible Work-mode handoff ZIP from committed source.",
-  "status": "active",
-  "symbols": [
-   "WorkBundleBuilder"
-  ],
-  "sha256": "f21e969a430e9cc078ab5d4ce96f01c9d962477ab1e10aa5e8b6de084c3d61e9"
  },
  "scripts/preflight_publish.py": {
   "purpose": "Check source file boundaries, common credential formats and homepage links.",

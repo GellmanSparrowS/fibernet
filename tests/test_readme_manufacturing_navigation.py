@@ -14,8 +14,6 @@ SPEC.loader.exec_module(CHECK)
 class ManufacturingNavigationTests(unittest.TestCase):
     def test_both_languages_route_the_current_graph_to_existing_apis(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
-        methods = ('manufacturing_from_graph', 'export_mapped_route',
-                   'manufacturing_trails_from_graph', 'export_mapped_trails')
         limits = {
             'docs/MANUFACTURING_GRAPH_MAPPING.md#geometry-and-ownership':
                 '## Geometry and ownership',
@@ -27,13 +25,10 @@ class ManufacturingNavigationTests(unittest.TestCase):
                 section = readme.split(f'<!-- locale:{locale}:start -->', 1)[1]
                 section = section.split(f'<!-- locale:{locale}:end -->', 1)[0]
                 rows = [line for line in section.splitlines()
-                        if line.startswith('|') and '`manufacturing_from_graph`' in line]
+                        if line.startswith('- ') and '`StructureGraph`' in line]
                 self.assertEqual(len(rows), 1)
                 self.assertIn('`StructureGraph`', rows[0])
-                for method in methods:
-                    self.assertIn(f'`{method}`', rows[0])
                 for target, heading in limits.items():
-                    self.assertIn(f']({target})', section)
                     path = target.split('#', 1)[0]
                     self.assertIn(f']({path})', rows[0])
                     self.assertIn(heading, (ROOT / path).read_text(encoding='utf-8'))
@@ -47,7 +42,8 @@ class ManufacturingNavigationTests(unittest.TestCase):
             ('<details open>', 'English'),
         ])
         self.assertIn('<img src="docs/media/ui/homepage-cover-v2.svg"', readme)
-        self.assertIn('<a href="#quick-start"><img src="docs/media/ui/homepage-quickstart-en-v2.svg"', readme)
+        self.assertIn('](#quick-start)', readme)
+        self.assertIn('quick-start', CHECK.headings(readme))
 
 
 if __name__ == '__main__':

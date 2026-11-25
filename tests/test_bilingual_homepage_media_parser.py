@@ -77,7 +77,7 @@ class InlineGifParserTests(unittest.TestCase):
             bad = english.replace(target, text.replace('x.gif', src), 1)
             # A fence can hide nested API controls before a later code fence
             # closes it, so either unbalanced-control direction may be found.
-            message = ('Unclosed details control|Unmatched details close' if name == 'unclosed_fence'
+            message = ('Unclosed details control|Unmatched details close|Missing/duplicate en locale markers' if name == 'unclosed_fence'
                        else 'inline animations must match the homepage selection')
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
@@ -162,88 +162,44 @@ class NativeDisclosureParserTests(unittest.TestCase):
             CHECK.check_locale_structure(readme, altered)
 
 
-class RestoredGalleryTests(unittest.TestCase):
-    def test_default_view_is_short_and_original_animations_remain_in_gallery(self):
+class PublicHomepageTests(unittest.TestCase):
+    def test_each_language_has_one_animation_and_links_to_detailed_docs(self):
         selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
         originals = {record['path'] for record in selection['original_gifs']}
         self.assertEqual(len(originals), 19)
+        self.assertTrue(all((ROOT / path).is_file() for path in originals))
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
         for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
-            # Keep the research hero discoverable while preserving every video in
-            # the language block. The gallery is not part of the default view.
-            disclosures = CHECK.top_level_disclosures(body)
-            attrs, summary, gallery = disclosures[0]
             with self.subTest(language=language):
-                self.assertEqual(attrs.strip(), "")
-                self.assertIn(summary.strip(), {
-                    "Animation gallery and advanced examples", "动图画廊与进阶算例",
-                })
-                visible = body.split("<details>", 1)[0]
-                self.assertEqual(CHECK.inline_gifs(visible), [
-                    "docs/media/network_workflow_hero.gif",
-                ])
-                self.assertTrue(originals <= set(CHECK.inline_gifs(body)))
-                self.assertEqual(len(CHECK.inline_gifs(body)), 22)
-                self.assertGreaterEqual(len(CHECK.inline_gifs(gallery)), 19)
-                quick_start = '## Quick start details' if language == 'en' else '## 快速开始'
-                self.assertLess(body.index(quick_start), body.index('<!-- api-navigation:'))
+                self.assertLess(len(body.splitlines()), 60)
+                self.assertEqual(CHECK.inline_gifs(body), ['docs/media/three_dimensional_topologies.gif'])
+                self.assertIn('docs/MEDIA_GALLERY.md', CHECK.destinations(body))
+                self.assertIn('docs/api/WORKFLOW_MAP.md', CHECK.destinations(body))
+                self.assertIn('docs/DEFORMED_TRANSPORT_PREPARATION.md', CHECK.destinations(body))
+                self.assertNotIn('api-navigation:', body)
+        self.assertEqual(selection['displayed_gifs'], list(CHECK.HOMEPAGE_GIFS))
 
-    def test_brand_quick_start_is_outside_both_language_folds(self):
+    def test_fast_path_uses_installed_package_before_folding_source_commands(self):
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
-        prefix = homepage.split('<details>', 1)[0]
-        self.assertIn('<a href="#quick-start">', prefix)
-        self.assertEqual(homepage.count('\n## Quick start\n'), 1)
-        self.assertIn('\n## Quick start\n', prefix)
-        self.assertIn('python -m pip install -e .', prefix)
-        self.assertIn('python -m examples.open_source_workflow', prefix)
-
-    def test_rl_compatibility_is_localized_and_not_an_english_footer(self):
-        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
-        for language, heading in (('en', '### RL compatibility'), ('zh', '### RL 兼容性')):
+        self.assertIn('](#quick-start)', homepage.split('<details>', 1)[0])
+        self.assertIn('quick-start', CHECK.headings(homepage))
+        for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
-            with self.subTest(language=language):
-                self.assertIn(heading, body)
-                self.assertIn('`fibernet.train_rl`', body)
-                self.assertIn('`fibernet.rl.train_rl`', body)
-        suffix = homepage.split('<!-- locale:en:end -->', 1)[1].strip()
-        self.assertEqual(suffix, '</details>')
+            visible, source = body.split('<details>', 1)
+            self.assertIn('python -m pip install fibernet', visible)
+            self.assertIn('python -m fibernet.examples.basic_usage', visible)
+            self.assertNotIn('git clone', visible)
+            self.assertIn('python -m pip install -e .', source)
+            self.assertIn('python -m examples.open_source_workflow', source)
 
-    def test_scope_labels_preserve_scientific_distinctions(self):
-        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
-        required = {
-            'en': ('undeformed geometry', 'fixed geometry', 'displacement ×1,000',
-                   '×3,000', 'Prescribed actions, no trained policy',
-                   'current `train_gnn` does not accept `GINERegressor`',
-                   'That trajectory is absent from this media bundle',
-                   '1.0042%', '2.2234%', 'Saved interface tour', 'rotating camera'),
-            'zh': ('未变形几何', '固定几何', '1,000 倍', '3,000 倍',
-                   '给定动作，未训练策略', '当前 `train_gnn` 不接受 `GINERegressor`',
-                   '当前媒体包缺少该轨迹', '1.0042%', '2.2234%',
-                   '已保存的界面导览', '相机旋转'),
-        }
-        for language, labels in required.items():
-            body = CHECK.locale_block(homepage, language)
-            for label in labels:
-                with self.subTest(language=language, label=label):
-                    self.assertIn(label, body)
-
-    def test_viscoelastic_caption_describes_saved_free_dynamics(self):
-        homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
-        expected = {
-            'en': ('### Viscoelastic dynamics', '### Viscoelastic relaxation',
-                   'Initial velocities excite free motion, with zero constant external load and zero numerical drag.'),
-            'zh': ('### 黏弹性动力学', '### 黏弹松弛',
-                   '初始速度激发自由运动，恒定外载荷和数值阻力均为零。'),
-        }
-        for language, (heading, incorrect_heading, excitation) in expected.items():
-            body = CHECK.locale_block(homepage, language)
-            with self.subTest(language=language):
-                self.assertIn(heading, body)
-                self.assertNotIn(incorrect_heading, body)
-                section = body.split(heading, 1)[1].split('\n### ', 1)[0]
-                self.assertIn(excitation, section)
-                self.assertIn('docs/media/new/viscoelastic/README.md', section)
+    def test_public_entrypoints_do_not_link_working_material(self):
+        docs = ('README.md', 'README_CN.md', 'docs/README_VNEXT.md', 'docs/RELEASE_4_2_0.md')
+        for doc in docs:
+            content = (ROOT / doc).read_text(encoding='utf-8')
+            with self.subTest(path=doc):
+                for name in ('manuscript/', 'handoff/', 'PAPER_POSITIONING_2026-09-24.md'):
+                    self.assertNotIn(name, content)
 
     def test_named_github_anchors_are_checked_but_literals_are_not(self):
         source = ('<a name="api-en-graph"></a>\n<a id="sample"></a>\n'

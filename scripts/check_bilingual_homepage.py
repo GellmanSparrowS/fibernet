@@ -19,30 +19,7 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
-HOMEPAGE_GIFS = (
-    "docs/media/network_workflow_hero.gif",
-    "docs/media/three_dimensional_topologies.gif",
-    "docs/media/spectrum_four_topologies.gif",
-    "docs/media/homepage_overview/tensile_recruitment_labeled.gif",
-    "docs/media/tensile_recruitment_kagome.gif",
-    "docs/media/new/backends/lammps_saved_dynamics.gif",
-    "docs/media/new/backends/taichi_saved_dynamics.gif",
-    "docs/media/new/viscoelastic/viscoelastic_network_dynamics.gif",
-    "docs/media/new/fracture/fracture_sequence.gif",
-    "docs/media/electrical_torus_field.gif",
-    "docs/media/new/thermal/transient_thermal_network.gif",
-    "docs/media/directional_recruitment_hexagon.gif",
-    "docs/media/tensile_threshold_sensitivity.gif",
-    "docs/media/homepage_overview/gine_overview.gif",
-    "docs/media/new/learning/media/gine_training_history.gif",
-    "docs/media/new/learning/media/rl_environment_fixed_actions.gif",
-    "docs/media/learning_inverse_workflow.gif",
-    "docs/media/continuous_route_kagome.gif",
-    "docs/media/route_preserving_intervention_kagome.gif",
-    "docs/media/route_preserving_intervention_ring.gif",
-    "docs/media/surface_export_workflow.gif",
-    "docs/media/homepage_overview/fiberscope_overview.gif",
-)
+HOMEPAGE_GIFS = ("docs/media/three_dimensional_topologies.gif",)
 
 
 def digest(path: Path) -> str:
@@ -355,7 +332,8 @@ def main() -> None:
     require("pip install fibernet==4.2.0" not in english + chinese,
             "Stale published-package command advertised")
     document_checks = [check_links(ROOT / name) for name in
-                       ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md", "docs/HOMEPAGE_EXAMPLE_SCOPE.md")]
+                       ("README.md", "README_CN.md", "docs/MEDIA_GALLERY.md", "docs/HOMEPAGE_EXAMPLE_SCOPE.md",
+                        "docs/api/WORKFLOW_MAP.md", "docs/api/WORKFLOW_MAP_CN.md")]
     for path in sorted((MEDIA / "ui").glob("*.svg")):
         svg = ET.fromstring(path.read_bytes())
         require(svg.attrib.get("role") == "img", f"Accessible role missing: {path.name}")
@@ -369,13 +347,12 @@ def main() -> None:
     originals = selection["original_gifs"]
     require(len(originals) == len({r["path"] for r in originals}) == 19,
             "Expected 19 preserved original GIFs")
-    require({r["path"] for r in originals} <= set(HOMEPAGE_GIFS),
-            "Every preserved original GIF must be displayed on the homepage")
     for record in originals + selection["derivatives"] + selection["renderers"]:
         require(digest(ROOT / record["path"]) == record["sha256"],
                 f"Homepage source/media hash differs: {record['path']}")
-    for relative in HOMEPAGE_GIFS:
-        decode_gif(ROOT / relative)
+    for relative in sorted({r["path"] for r in originals + selection["derivatives"]} | set(HOMEPAGE_GIFS)):
+        if relative.lower().endswith(".gif"):
+            decode_gif(ROOT / relative)
     check_links(ROOT / "docs/HOMEPAGE_OVERVIEW_MEDIA.md")
 
     historical = []

@@ -32,7 +32,7 @@ class APINavigationTests(unittest.TestCase):
                             if e['type'] == 'dataflow'))
 
     def test_generated_files_are_current(self):
-        self.assertEqual(set(self.outputs), {'README.md', 'README_CN.md', *NAV.ASSETS})
+        self.assertEqual(set(self.outputs), {NAV.GUIDE, NAV.GUIDE_ZH, *NAV.ASSETS})
         for name, text in self.outputs.items():
             with self.subTest(path=name):
                 self.assertEqual((ROOT / name).read_bytes(), text.encode('utf-8'))
@@ -62,20 +62,20 @@ class APINavigationTests(unittest.TestCase):
                 ast.parse(node['example'])  # Syntax only; never execute an example.
 
     def test_surrounding_readme_is_preserved(self):
-        current = (ROOT / 'README.md').read_bytes().decode('utf-8')
+        current = (ROOT / NAV.GUIDE).read_bytes().decode('utf-8')
         self.assertEqual(NAV.strip_navigation(current),
-                         NAV.strip_navigation(self.outputs['README.md']))
+                         NAV.strip_navigation(self.outputs[NAV.GUIDE]))
         for language in ('en', 'zh'):
             self.assertEqual(current.count('<!-- api-navigation:' + language + ':start -->'), 1)
             self.assertEqual(current.count('<!-- api-navigation:' + language + ':end -->'), 1)
         self.assertEqual(NAV.build_outputs(ROOT), self.outputs)
 
     def test_standalone_chinese_parity_and_preservation(self):
-        standalone = (ROOT / 'README_CN.md').read_bytes().decode('utf-8')
+        standalone = (ROOT / NAV.GUIDE_ZH).read_bytes().decode('utf-8')
         self.assertEqual(NAV.strip_navigation(standalone),
-                         NAV.strip_navigation(self.outputs['README_CN.md']))
+                         NAV.strip_navigation(self.outputs[NAV.GUIDE_ZH]))
         start, end = '<!-- locale:zh:start -->', '<!-- locale:zh:end -->'
-        inline = self.outputs['README.md'].split(start, 1)[1].split(end, 1)[0].strip()
+        inline = self.outputs[NAV.GUIDE].split(start, 1)[1].split(end, 1)[0].strip()
         separate = standalone.split(start, 1)[1].split(end, 1)[0].strip()
         self.assertEqual(inline, separate)
 
@@ -218,11 +218,11 @@ class APINavigationTests(unittest.TestCase):
                     self.assertIn(suffix, entry)
                 actual_links = re.findall(r'\[`([^`]+)`\]\((#user-content-api-[^)]+)\)', entry)
                 self.assertCountEqual(actual_links, expected_links)
-        for path, count in (('README.md', 98), ('README_CN.md', 49)):
+        for path, count in ((NAV.GUIDE, 98), (NAV.GUIDE_ZH, 49)):
             anchors = re.findall(pattern, self.outputs[path])
             self.assertEqual(len(anchors), count)
             self.assertEqual(len(set(anchors)), count)
-        self.assertNotIn('name="api-en-', self.outputs['README_CN.md'])
+        self.assertNotIn('name="api-en-', self.outputs[NAV.GUIDE_ZH])
 
     def test_anchor_validation_and_static_wording(self):
         self.assertEqual(NAV.entry_anchor('curve_inverse', 'en'), 'api-en-curve_inverse')
@@ -319,7 +319,7 @@ class APINavigationTests(unittest.TestCase):
 
     def test_chord_payload_and_no_external_svg_resources(self):
         # Growth allowance relative to the accepted 1353 baseline; not whole-repo size.
-        baselines = {'README.md': 157596, 'README_CN.md': 77775}
+        baselines = {NAV.GUIDE: 157596, NAV.GUIDE_ZH: 77775}
         for name, baseline in baselines.items():
             self.assertLessEqual(len(self.outputs[name].encode('utf-8')), baseline + 64 * 1024)
         for name in NAV.ASSETS:
@@ -332,7 +332,7 @@ class APINavigationTests(unittest.TestCase):
                                  for e in root.iter()))
 
     def test_native_markup_and_svg(self):
-        readme = self.outputs['README.md']
+        readme = self.outputs[NAV.GUIDE]
         self.assertEqual(readme.count('<details'), readme.count('</details>'))
         self.assertNotRegex(readme.lower(), r'<(?:script|iframe|style)\b')
         for name in NAV.ASSETS:

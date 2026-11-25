@@ -7,7 +7,7 @@ This release brings the existing Python package and Windows desktop APP closer t
 - **Windows desktop:** download `FiberScope-3.1.0-Windows-x64.zip`, extract the entire folder, and run `FiberScope.exe`. Check the archive against `SHA256SUMS.txt` if needed. Python is not required for this executable. SAC, TD3 and DDPG training require a separately configured Python runtime and are not included in the frozen APP.
 - **Python:** install `fibernet==4.2.0` from [PyPI](https://pypi.org/project/fibernet/4.2.0/). The `ml`, `rl`, and `manufacturing` extras install optional dependencies for those tasks.
 
-The [README](https://github.com/GellmanSparrowS/fibernet#readme) contains executable API examples, a reproducible 3D gallery, eight source-backed animations, and the capability matrix. The [Work-mode brief](https://github.com/GellmanSparrowS/fibernet/blob/main/handoff/WORK_MODE_BRIEF_ZH.md) records the separate software-methods paper direction.
+The [repository homepage](../README.md) links to the current installation guide and runnable examples.
 
 ## Validation and interpretation
 
