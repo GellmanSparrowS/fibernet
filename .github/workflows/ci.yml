@@ -97,6 +97,16 @@ jobs:
         PY
         done
 
+    - name: Verify opt-in periodic pore flow with the real provider
+      if: runner.os == 'Linux' && matrix.python-version == '3.12'
+      env:
+        OPENBLAS_NUM_THREADS: "1"
+        OMP_NUM_THREADS: "1"
+      run: |
+        python -m pip install -e ".[pore-flow]"
+        python -c "import importlib.metadata; import skfem; assert importlib.metadata.version('scikit-fem') == '12.0.2'"
+        timeout --kill-after=10s 90s python -m pytest -q --tb=short -o addopts= tests/test_tet4_periodic_pore.py
+
   training-cpu-contracts:
     name: CPU training contracts (Python 3.12)
     runs-on: ubuntu-latest
