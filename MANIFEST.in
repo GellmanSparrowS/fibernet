@@ -8,6 +8,7 @@ include requirements-dev.txt
 recursive-include fibernet *.py
 recursive-include tests *.py
 recursive-include examples *.py
+include examples/README.md
 recursive-include docs *.rst *.py *.md *.png
 exclude docs/PAPER_POSITIONING_2026-09-24.md
 global-exclude __pycache__
