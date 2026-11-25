@@ -59,6 +59,24 @@ so resistance changes come from the computed changes in rod lengths. This is a
 noiseless simulation of prescribed normal strains, not shear recovery or an
 experimental resolution estimate.
 
+## Recovering normal and shear strains with diagonal electrodes
+
+```bash
+python -m examples.mechanoelectric_tensor_readout_3d
+```
+
+Three axial electrical readouts cannot distinguish six independent strain
+components. This example uses six additional diagonal electrode pairs, tagged by
+node ID on the same 360-rod specimen, then reconstructs held-out mixtures using
+only the six diagonal circuits. The output lists each electrode's node IDs, the
+calibration matrix, and the errors relative to the axial-only control.
+
+All load cases use the same boundary fixture. The three shear inputs use the
+engineering convention, for example `gamma_xy = 2 epsilon_xy`. Circuits are driven
+one at a time. Rod area and conductivity are fixed. The recovered quantities
+are prescribed small boundary strains, not local strains or measured sensor
+resolution.
+
 ## 3D porosity before and after loading
 
 From the source checkout:
