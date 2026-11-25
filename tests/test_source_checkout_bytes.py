@@ -69,6 +69,7 @@ PROTECTED = tuple(dict.fromkeys(
 GIT_TIMEOUT_SECONDS = 15
 BULK_ADD_TIMEOUT_SECONDS = 60
 BULK_ADD_MAX_FILES = 300
+CHECKOUT_STAGE_TARGET_FILES = 96
 BULK_ADD_MAX_BYTES = 5 * 1024 * 1024
 DIAGNOSTIC_TAIL_CHARS = 4096
 
@@ -154,9 +155,11 @@ def _stage_checkout_inventory(repo, git, names):
     # Keep the total byte limit, preflight every batch before writing the
     # index, then stop on the first Git failure (before deleting any copy).
     if not 1 <= len(names) <= 2 * BULK_ADD_MAX_FILES:
-        raise ValueError('checkout staging inventory requires one or two bounded batches')
-    batches = [names[i:i + BULK_ADD_MAX_FILES]
-               for i in range(0, len(names), BULK_ADD_MAX_FILES)]
+        raise ValueError('checkout staging inventory exceeds the bounded file count')
+    # Keep each I/O operation short on slower Windows runners without expanding
+    # the allowance for a process or reducing the exact inventory checked.
+    step = min(CHECKOUT_STAGE_TARGET_FILES, BULK_ADD_MAX_FILES)
+    batches = [names[i:i + step] for i in range(0, len(names), step)]
     total = sum(_staging_size(repo, batch) for batch in batches)
     if len({name.casefold() for name in names}) != len(names):
         raise ValueError('duplicate checkout staging path')
@@ -402,6 +405,7 @@ def test_roundtrip_stops_before_checkout_when_staging_fails(tmp_path, monkeypatc
     # Force two batches even if the protected source inventory later shrinks
     # below the production test helper's per-invocation limit.
     monkeypatch.setitem(globals(), 'BULK_ADD_MAX_FILES', 200)
+    monkeypatch.setitem(globals(), 'CHECKOUT_STAGE_TARGET_FILES', 200)
     monkeypatch.setattr(subprocess, 'run', run)
     with pytest.raises(subprocess.TimeoutExpired) as caught:
         test_byte_sealed_checkout_preserves_raw_hashes(tmp_path, autocrlf)
@@ -426,10 +430,29 @@ def test_checkout_staging_prevalidates_cross_batch_duplicates_and_total_bytes(tm
         pytest.fail('invalid complete inventory must fail before the first add')
 
     monkeypatch.setitem(globals(), 'BULK_ADD_MAX_FILES', 2)
-    with pytest.raises(ValueError, match='one or two'):
+    with pytest.raises(ValueError, match='bounded file count'):
         _stage_checkout_inventory(tmp_path, forbidden, ('first',) * 5)
     with pytest.raises(ValueError, match='duplicate checkout'):
         _stage_checkout_inventory(tmp_path, forbidden, ('first', 'second', 'FIRST'))
     monkeypatch.setitem(globals(), 'BULK_ADD_MAX_BYTES', 5)
     with pytest.raises(ValueError, match='checkout staging exceeds'):
         _stage_checkout_inventory(tmp_path, forbidden, ('first', 'second', 'third'))
+
+
+
+def test_checkout_staging_keeps_exact_inventory_in_small_batches(tmp_path):
+    names = tuple('item_{:03d}.txt'.format(i) for i in range(225))
+    for name in names:
+        (tmp_path / name).write_bytes(b'x')
+    commands = []
+
+    def git(*args):
+        commands.append(args)
+        if args == ('ls-files', '-z'):
+            return '\0'.join((*sorted(names), ''))
+        return ''
+
+    _stage_checkout_inventory(tmp_path, git, names)
+    assert [len(cmd) - 2 for cmd in commands[:-1]] == [96, 96, 33]
+    assert tuple(name for cmd in commands[:-1] for name in cmd[2:]) == names
+    assert commands[-1] == ('ls-files', '-z')
