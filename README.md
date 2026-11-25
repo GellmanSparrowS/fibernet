@@ -39,7 +39,7 @@ Use the source checkout to run the repository examples. For the published packag
 
 ### 安装并运行源码入门示例
 
-**开发版源码：4.23.0——本页推荐入口**
+**开发版源码：4.24.0——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
@@ -1622,7 +1622,7 @@ Use FiberNet to build 2D or 3D fiber networks, model their response, and carry t
 
 ### Install and run the source quick start
 
-**Development checkout: 4.23.0 — recommended for this page**
+**Development checkout: 4.24.0 — recommended for this page**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
