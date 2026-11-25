@@ -11,7 +11,7 @@
 
 ### 安装并运行源码入门示例
 
-**开发版源码：4.23.0——本页推荐入口**
+**开发版源码：4.24.0——本页推荐入口**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git

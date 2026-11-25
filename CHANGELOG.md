@@ -1,3 +1,12 @@
+## [4.24.0]
+
+- Add a complete 3D load-to-resistance example that compares three measurement
+  axes and two cross-section assumptions on the same mechanical state.
+- Add `fibernet.sim.tet4.static_tet4_strain_energy_by_material` and a fused
+  solid example comparing force and displacement control.
+- Compare viscoelastic material placements at equal inventory.
+- See the [4.24.0 release notes](docs/RELEASE_4_24_0.md).
+
 ## [4.23.0]
 
 - Add experimental per-member linear viscoelastic laws to planar, quasistatic
