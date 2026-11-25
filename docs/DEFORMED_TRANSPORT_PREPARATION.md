@@ -223,3 +223,30 @@ by about 0.0932% for the control and 0.0300% for the beam solution. In the
 beam solution, contributions of about +2.094 and −0.995 Ω leave a net
 +1.099 Ω. This cancellation describes this geometry and loading, not an
 intrinsic piezoresistive law.
+
+### Keep the network and change material scale or load control
+
+```bash
+python examples/mechanoelectric_material_controls_3d.py
+```
+
+On the same 360-member network, double every member's Young's modulus at
+unchanged Poisson ratio and electrical conductivity. First prescribe the
+same right-grip displacement with the left grip clamped. In this linear
+beam model, the displacements and geometry-derived resistance do not
+change under that uniform stiffness rescaling; reactions double.
+
+Then remove the right displacement constraints and apply the three
+components of their original mechanical reactions as force loads, with
+the left grip still clamped. The original material reproduces the
+prescribed-displacement solution. Doubling the moduli at the same force
+halves those displacements. The reading along x changes by about 0.2652%
+at the original moduli and 0.1326% at doubled moduli under this force
+control.
+
+The example uses zero numerical regularization for the uniform scaling
+identity on this particular restrained network and checks the physical
+free-equation residual. At fixed geometry, an independent electrical
+control doubles all conductivities and halves all three electrical
+resistances. These controls separate stiffness and conductivity changes;
+they do not model strain-dependent intrinsic conductivity.
