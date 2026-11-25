@@ -250,3 +250,28 @@ free-equation residual. At fixed geometry, an independent electrical
 control doubles all conductivities and halves all three electrical
 resistances. These controls separate stiffness and conductivity changes;
 they do not model strain-dependent intrinsic conductivity.
+
+## Place electrical conductivity at fixed mechanical deformation
+
+From the source checkout, run a matched two-conductivity comparison:
+
+```bash
+python examples/mechanoelectric_conductivity_placement_3d.py --phase 0
+```
+
+The same solved 91-node, 360-member geometry is used for all electrical cases in
+each phase. The comparison keeps the amount of 1 and 2 S/m material fixed
+within groups of equal undeformed rod vector (ignoring sign) and radius.
+The two ranked placements use the change in normalized per-rod electrical
+power share between the reference and deformed states. These rankings guide
+the discrete comparison; they do not guarantee a global optimum. A third
+placement based on stable member IDs provides a control.
+
+In the JSON, check `unloaded_ohm` separately from `change_percent`. At 0.5%
+prescribed extension, phase 0 gives about +0.020%, +0.034%, and +0.048% in
+transverse resistance under the fixed-area rule. The ordering is unchanged
+when the electrical law instead conserves each member's nominal volume.
+`--phase 1`, `--phase 2`, and `--phase 3` repeat the comparison with three
+related predetermined distortions. All cases deliberately keep the same
+mechanics within a phase; no intrinsic piezoresistivity, contact switching,
+or joint conductivity–stiffness material model is assumed.
