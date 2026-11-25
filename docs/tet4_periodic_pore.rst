@@ -1,5 +1,5 @@
 Periodic pore flow with Tet4 geometry
-====================================
+=====================================
 
 The optional pore-flow solver computes steady, incompressible Newtonian
 Stokes flow through a bounded, connected pore. Supply the **fluid domain** as
