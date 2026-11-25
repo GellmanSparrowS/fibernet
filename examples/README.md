@@ -40,6 +40,25 @@ print(graph.num_nodes, graph.num_edges, result.max_displacement)
 See the [beam FEM guide](../docs/METHODS_BEAM_FEM_CONTRACT.md) for model choices
 and input units.
 
+## 3D porosity before and after loading
+
+From the source checkout:
+
+```bash
+python -m examples.mechano_porosity_3d --strain 0.005 --samples 768 --axis x
+```
+
+Compress and stretch the same 360-rod, mixed-stiffness 3D specimen using the
+linear beam solver. Then measure the void inside a fixed box, in mm³. Finite
+straight rods have fixed radii; overlaps at fused junctions count only once.
+Both sampling offsets typically show about +0.006% void volume under 0.5%
+compression and −0.006% under 0.5% tension for this specimen.
+
+The ray integrals are analytic along each ray and sampled in the two transverse
+coordinates. Increase `--samples` or change `--axis` to check numerical sensitivity;
+the spread between the two offsets is not an error bound. No CAD tools or fluid
+solver are required. Void volume does not give connected porosity or permeability.
+
 ## Notched-network fracture scan
 
 From a source checkout with `.[fracture]` installed:
