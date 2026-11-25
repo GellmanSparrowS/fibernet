@@ -77,6 +77,25 @@ one at a time. Rod area and conductivity are fixed. The recovered quantities
 are prescribed small boundary strains, not local strains or measured sensor
 resolution.
 
+## Predicting strain-induced resistance in a fused solid lattice
+
+From a source checkout:
+
+```bash
+python -m examples.tet4_mechanoelectric_looped_network
+```
+
+Three axial paths share four crosslinks in a 3D, square-section lattice.
+Compare uniform stiffness, uniformly doubled stiffness, and one axial half
+at twice the stiffness, all at fixed conductivity. The same electrode
+node IDs follow the deformed solid, so the measured resistance change
+comes from geometry. The output includes the tensile grip reaction,
+unstrained resistance, and the normalized resistance slope near zero strain.
+
+This example uses the bounded Tet4 solvers, a 387-node synthetic lattice,
+and a small prescribed grip displacement. It does not model intrinsic
+piezoresistivity, contact resistance, or electrical feedback into mechanics.
+
 ## 3D porosity before and after loading
 
 From the source checkout:
