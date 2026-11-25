@@ -1,11 +1,11 @@
 [English / 中文 · 仓库首页](README.md)
 
-[Feature availability and checked dataset selections](docs/FEATURE_AVAILABILITY.md)
-
 <!-- locale:zh:start -->
-[快速开始](#快速开始) · [生成](#1-生成网络) → [模拟](#2-模拟响应) → [分析与学习](#3-分析与学习) → [设计与导出](#4-设计与导出) · [功能索引](#选择研究流程)
+[快速开始](#快速开始) · [研究流程](#选择研究流程) · [动图画廊](#gallery-zh) · [FiberScope](#桌面应用)
 
-FiberNet 提供纤维网络建模的 Python 工具，FiberScope 提供桌面界面。
+用 FiberNet 生成二维或三维纤维网络、模拟结构响应，并沿用同一结构做分析、机器学习或制造导出。FiberScope 是配套桌面应用。
+
+**按问题开始：** [三维力学](docs/TET4_STATIC.md) · [电热到力学算例](docs/TET4_THERMOELASTIC.md) · [制造路径](docs/MANUFACTURING_GRAPH_MAPPING.md) · [功能和适用范围](docs/FEATURE_AVAILABILITY.md)
 
 ## 快速开始
 
@@ -65,6 +65,11 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 ![固定三维网络的相机旋转与已保存的 kagome 加载帧](docs/media/network_workflow_hero.gif)
 
 左侧是固定网络的视角旋转，右侧回放已有 kagome 加载帧。两者是独立示例，不是三维到二维的耦合动力学。[来源与帧映射](docs/MEDIA_GALLERY.md#geometry-and-response-hero)
+
+<a id="gallery-zh"></a>
+
+<details>
+<summary>动图画廊与进阶算例</summary>
 
 ![相机环绕固定的 octet、diamond 和 gyroid 网络](docs/media/three_dimensional_topologies.gif)
 
@@ -176,6 +181,8 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 
 **已保存的界面导览。** 展示存档截图中的曲面控制、制造几何与导出控件。[曲面与导出来源](docs/MEDIA_GALLERY.md#surface-mapping-and-export-workspaces)
 
+</details>
+
 ## 选择研究流程
 
 | 研究目标 | Python 入口 | 指南或可执行示例 |
@@ -196,7 +203,7 @@ python -c "import fibernet; print(fibernet.__version__, fibernet.__file__)"
 
 ![FiberScope 学习、逆向设计、曲面映射与导出的已保存界面](docs/media/homepage_overview/fiberscope_overview.gif)
 
-[桌面使用指南](FiberScope/README.md) · [界面与图表来源](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [中英文截图](FiberScope/docs/screenshots/README.md) · [可选训练配置](docs/INTEGRATION_REPO_MAP.md)
+[桌面使用指南](FiberScope/README.md) · [界面与图表来源](docs/HOMEPAGE_OVERVIEW_MEDIA.md) · [中英文截图](FiberScope/docs/screenshots/README.md)
 
 <details>
 <summary>API 关系导航 · 49 个接口</summary>
@@ -1564,7 +1571,7 @@ graph = fn.pattern_2d(
 
 ## 方法与复现
 
-[模型范围](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [完整动图、源数据与渲染器](docs/MEDIA_GALLERY.md) · [示例参数](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [Taichi 1.7.4 生命周期](docs/architecture/taichi-lifecycle-audit.md) · [示例索引](examples/README.md) · [版本记录](CHANGELOG.md)
+[模型范围](docs/HOMEPAGE_EXAMPLE_SCOPE.md) · [完整动图、源数据与渲染器](docs/MEDIA_GALLERY.md) · [示例参数](docs/HOMEPAGE_EXAMPLE_NOTES.md) · [示例索引](examples/README.md) · [版本记录](CHANGELOG.md)
 
 ## 许可与引用
 
