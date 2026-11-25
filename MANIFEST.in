@@ -9,6 +9,7 @@ recursive-include fibernet *.py
 recursive-include tests *.py
 recursive-include examples *.py
 recursive-include docs *.rst *.py *.md *.png
+exclude docs/PAPER_POSITIONING_2026-09-24.md
 global-exclude __pycache__
 global-exclude *.py[cod]
 global-exclude .DS_Store
