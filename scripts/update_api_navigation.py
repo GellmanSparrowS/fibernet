@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Maintain the selective README API guide using the existing module registry.
+"""Maintain the selective API workflow map using the existing module registry.
 
 Standard-library AST inspection only; never imports fibernet or optional runtimes.
 Use --check to verify generated content, or --write after updating the overlay.
@@ -15,6 +15,8 @@ import re
 from pathlib import Path
 
 OVERLAY = "docs/api/navigation-overlay.json"
+GUIDE = "docs/api/WORKFLOW_MAP.md"
+GUIDE_ZH = "docs/api/WORKFLOW_MAP_CN.md"
 ASSETS = ("docs/media/ui/api-relationship-map-en.svg", "docs/media/ui/api-relationship-map-zh.svg")
 
 def declaration(tree, spec):
@@ -232,8 +234,8 @@ def handoff_list(data, l):
 def section(data, l):
     zh=l=='zh';s=[]
     s += ['## '+('API 关系导航' if zh else 'API relationship map'),'']
-    s += [('按 7 类工作流程浏览 49 个代表性接口。展开条目可查看准确命名空间、输入输出及数据传递关系；模块清单见 [`code_registry.json`](code_registry.json)。' if zh else 'Browse 49 representative interfaces across 7 workflows. Expand an entry for its exact namespace, inputs, outputs and documented handoffs; see [`code_registry.json`](code_registry.json) for the module inventory.'),'']
-    s += [f'![{"静态有向弦图：49 个代表性接口、50 条文档关系；36 条跨组、14 条组内，完整文字表见下方。" if zh else "Static directed chord summary: 49 selected APIs, 50 documented handoffs; 36 cross-workflow and 14 within-workflow. Full text list below."}](docs/media/ui/api-relationship-map-{l}.svg)','']
+    s += [('按 7 类工作流程浏览 49 个代表性接口。展开条目可查看准确命名空间、输入输出及数据传递关系；模块清单见 [`code_registry.json`](../../code_registry.json)。' if zh else 'Browse 49 representative interfaces across 7 workflows. Expand an entry for its exact namespace, inputs, outputs and documented handoffs; see [`code_registry.json`](../../code_registry.json) for the module inventory.'),'']
+    s += [f'![{"静态有向弦图：49 个代表性接口、50 条文档关系；36 条跨组、14 条组内，完整文字表见下方。" if zh else "Static directed chord summary: 49 selected APIs, 50 documented handoffs; 36 cross-workflow and 14 within-workflow. Full text list below."}](../media/ui/api-relationship-map-{l}.svg)','']
     s += [('上图是静态有向弦图，不提供图内点击，也不是运行时调用图。下方原生折叠条目提供接口说明和关系链接。' if zh else 'The image is a static directed chord summary, not clickable navigation or a runtime call graph. Native disclosures below provide interface details and relationship links.'),'']
     s += [handoff_list(data, l), '']
     for g in data['groups']:
@@ -302,12 +304,12 @@ def build_outputs(repo_root):
     if not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("sourceCommit must be a full lowercase Git commit")
     data = derive(repo_root, overlay_path, commit)
-    readme = strip_navigation((repo_root / "README.md").read_bytes().decode("utf-8"))
+    readme = strip_navigation((repo_root / GUIDE).read_bytes().decode("utf-8"))
     for language in ("en", "zh"):
         readme = insert_section(readme, language, section(data, language))
-    chinese = strip_navigation((repo_root / "README_CN.md").read_bytes().decode("utf-8"))
+    chinese = strip_navigation((repo_root / GUIDE_ZH).read_bytes().decode("utf-8"))
     chinese = insert_section(chinese, "zh", section(data, "zh"))
-    return {"README.md": readme, "README_CN.md": chinese,
+    return {GUIDE: readme, GUIDE_ZH: chinese,
             ASSETS[0]: overview(data, "en"), ASSETS[1]: overview(data, "zh")}
 
 

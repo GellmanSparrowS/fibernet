@@ -18,6 +18,28 @@ is needed. Reuse saved data without another solve with
 `python -m examples.linear_fem_quickstart --output-dir EXISTINGDIR --plot-only`.
 The PNG/SVG layout is A4 portrait. This does not validate the historical scripts below.
 
+## Short Python API example
+
+Use an explicit linear beam model for 1% grip extension. FiberNet does not
+automatically convert geometry or material units.
+
+```python
+import fibernet as fn
+
+# SI units: coordinates and radius in m; E in Pa; forces in N.
+graph = fn.pattern_2d(
+    unit="honeycomb", box=(10, 10), grid=(2, 2), radius=0.05, seed=23
+)
+result = fn.simulate(
+    graph, backend="fem", mode="stretch", stretch_ratio=1.01,
+    nonlinear=False, E=1e9, nu=0.3,
+)
+print(graph.num_nodes, graph.num_edges, result.max_displacement)
+```
+
+See the [beam FEM guide](../docs/METHODS_BEAM_FEM_CONTRACT.md) for model choices
+and input units.
+
 ## Notched-network fracture scan
 
 From a source checkout with `.[fracture]` installed:
