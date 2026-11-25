@@ -1,3 +1,11 @@
+## [4.25.0]
+
+- Add an opt-in, bounded Stokes solver for periodically driven Tet4 pores.
+  Include a square-duct reference and a synthetic three-path obstacle example.
+- Compare how stiffness placement changes reaction force and resistance
+  sensitivity at the same axial strain in a fused 3D Tet4 network.
+- See the [4.25.0 release notes](docs/RELEASE_4_25_0.md).
+
 ## [4.24.0]
 
 - Add a complete 3D load-to-resistance example that compares three measurement
