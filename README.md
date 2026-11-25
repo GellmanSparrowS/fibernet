@@ -30,7 +30,7 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 <details>
 <summary>从源码运行仓库里的算例</summary>
 
-**开发版源码：4.24.0**
+**开发版源码：4.25.0**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
@@ -86,7 +86,7 @@ The example generates a network, solves its small-deformation response, and save
 <details>
 <summary>Run examples from a source checkout</summary>
 
-**Development checkout: 4.24.0**
+**Development checkout: 4.25.0**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
