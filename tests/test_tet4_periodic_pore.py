@@ -55,6 +55,17 @@ def test_real_provider_signed_flow_and_covariance():
 
     np.testing.assert_allclose(pair.relative_bulk_flow_change, 1.025**4-1, rtol=1e-9)
     np.testing.assert_allclose(pair.relative_cap_flow_change, 1.025**4-1, rtol=1e-9)
+    # Fixed drop (0.8 Pa) requires a smaller driving gradient on the longer mesh.
+    scaled = replace(b, points=b.points*1.025)
+    length_m = np.ptp(scaled.points[:, 0]) * 1e-3
+    fixed_drop = solve_x_periodic_stokes(
+        scaled, viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=.8/length_m,
+    )
+    np.testing.assert_allclose(fixed_drop.axial_flow_m3_s/pair.baseline.axial_flow_m3_s,
+                               1.025**3, rtol=1e-9)
+    np.testing.assert_allclose(np.divide(fixed_drop.cap_flow_m3_s, pair.baseline.cap_flow_m3_s),
+                               1.025**3, rtol=1e-9)
+    np.testing.assert_allclose(fixed_drop.power_W/pair.baseline.power_W, 1.025**3, rtol=1e-9)
     a = solve_x_periodic_stokes(
         replace(b, points=b.points*.001,length_unit='m'),
         viscosity_Pa_s=.002,

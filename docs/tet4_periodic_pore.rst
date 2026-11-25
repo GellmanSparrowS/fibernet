@@ -31,9 +31,13 @@ bulk and cap values are separate finite-element readouts, not interchangeable
 when assessing mesh convergence. The result includes a power check, pressure
 residual, end balance and relative cap/bulk difference.
 
-``solve_matched_pore_geometry`` applies the same viscosity and pressure
-driver to two supplied geometries, checking stable node and ordered cell IDs
-and small positive volume ratios. It neither computes the wall displacement
+``solve_matched_pore_geometry`` applies the same viscosity and axial pressure
+gradient to two supplied geometries, checking stable node and ordered cell IDs
+and small positive volume ratios. If the axial period changes, fixed gradient
+does not mean fixed end-to-end pressure drop. For a fixed drop, call
+``solve_x_periodic_stokes`` separately for each geometry with
+``pressure_gradient_Pa_per_m`` equal to the drop in Pa divided by that mesh's
+axial period in m. The matched solve neither computes the wall displacement
 nor moves the solid under the fluid forces. The example's uniform scale
 change is an analytical covariance check, not a mechanical material law.
 
