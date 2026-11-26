@@ -373,6 +373,13 @@ The example calls standalone `solve_static_tet4(..., solver="amg-cg")`.
 The small-mesh traction, band inspection, and VTU result wrappers retain
 their existing limits.
 
+To inspect the displacement directly, pass `--write-vtu` in the same run.
+Open the resulting `deformation.vtu` in ParaView and select **Warp By Vector**
+with `displacement_m`. Use scale factor 1 for the physical deformation;
+the reference coordinates and displacement are both in metres. The file
+also contains `reaction_N`, material IDs, and stable node/cell IDs. It is a
+display result, separate from the unchanged interchange ZIP.
+
 ## Input and output
 
 - `points` is nonempty `(N, 3)` finite binary64 geometry.
