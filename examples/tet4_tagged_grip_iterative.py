@@ -21,6 +21,10 @@ from fibernet.io.tet4_meshio import read_tet4_vtu_bundle, write_tet4_vtu_bundle
 from fibernet.sim.tet4 import solve_static_tet4
 
 
+_MATERIAL_GROUPS = ('material_low', 'material_high')
+_GRIP_GROUPS = ('hold_face', 'pull_face')
+
+
 def make_fixture(path, *, refinement=3):
     p, t = _lattice(refinement=refinement)
     faces = Counter(face for cell in t for face in combinations(sorted(map(int, cell)), 3))
@@ -36,7 +40,13 @@ def make_fixture(path, *, refinement=3):
     meshio.write(path, m, file_format="gmsh22", binary=False)
 
 
-def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), poisson_ratio=.3):
+def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), poisson_ratio=.3,
+            material_groups=_MATERIAL_GROUPS, grip_groups=_GRIP_GROUPS):
+    for group in material_groups, grip_groups:
+        if (not isinstance(group, (tuple, list)) or len(group) != 2 or
+                any(not isinstance(name, str) or not name.strip()
+                                  for name in group) or group[0] == group[1]):
+            raise ValueError("Expected two distinct names for each physical group pair")
     if any(isinstance(e,bool) or not math.isfinite(e) or not 1e3 <= e <= 1e13 for e in moduli_Pa):
         raise ValueError("Expected both Young moduli within 1 kPa to 10 TPa")
     if isinstance(poisson_ratio,bool) or not -.95 <= poisson_ratio <= .495:
@@ -77,10 +87,10 @@ def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), p
                 raise ValueError(f'Conflicting or overlapping physical membership: {name}')
         return selected
 
-    for name in ('material_low','material_high'):
+    for name in material_groups:
         checked_group('tetra',name,3,labels)
     materials = {tag(name,3):dict(young_modulus_pa=E,poisson_ratio=poisson_ratio)
-                 for name,E in zip(("material_low","material_high"),moduli_Pa)}
+                 for name,E in zip(material_groups,moduli_Pa)}
     if len(materials) != 2 or set(labels) != set(materials):
         raise ValueError("Every tetrahedron must have exactly one of the two named material tags")
     faces = Counter(face for tet in t for face in combinations(sorted(map(int, tet)),3))
@@ -91,7 +101,7 @@ def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), p
             raise ValueError(f"{name} must contain distinct exterior faces")
         return sorted({v for f in chosen for v in f})
 
-    left,right = nodes_for("hold_face"),nodes_for("pull_face")
+    left, right = (nodes_for(name) for name in grip_groups)
     if set(left).intersection(right):
         raise ValueError("Grip node sets must be disjoint")
     n = np.arange(len(raw.points),dtype=np.uint64) + 2**53 + 1
@@ -169,7 +179,13 @@ def main():
     args.add_argument("--material-low-gpa",type=float,default=1.0)
     args.add_argument("--material-high-gpa",type=float,default=2.0)
     args.add_argument("--poisson-ratio",type=float,default=.3)
+    args.add_argument("--material-groups", nargs=2, metavar=("LOW", "HIGH"),
+                      help="names of the two physical volumes, in modulus order")
+    args.add_argument("--grip-groups", nargs=2, metavar=("HOLD", "PULL"),
+                      help="names of the two physical surfaces, fixed then driven")
     a=args.parse_args()
+    if a.input is None and (a.material_groups or a.grip_groups):
+        args.error("--material-groups and --grip-groups require --input")
     if a.input is not None and a.length_unit is None:
         args.error("--length-unit is required for a supplied mesh")
     if a.input is None and a.length_unit not in (None, "mm"):
@@ -182,7 +198,8 @@ def main():
         source=a.output/"tagged.msh"
         make_fixture(source)
     b, grip_hash=prepare(source,a.output,length_unit=a.length_unit or "mm",axis=a.axis,stroke_m=a.stroke_um*1e-6,
-              moduli_Pa=(a.material_low_gpa*1e9,a.material_high_gpa*1e9),poisson_ratio=a.poisson_ratio)
+              moduli_Pa=(a.material_low_gpa*1e9,a.material_high_gpa*1e9),poisson_ratio=a.poisson_ratio,
+              material_groups=a.material_groups or _MATERIAL_GROUPS, grip_groups=a.grip_groups or _GRIP_GROUPS)
     print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash),indent=2))
 
 

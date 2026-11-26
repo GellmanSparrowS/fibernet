@@ -126,6 +126,18 @@ The example does one elastic solve and reuses its displacement shape under
 proportional strokes, with a separate DC solve on all five geometries.
 Use this shortcut only for the same linear material, fixed grips and no preload.
 
+If you only need the initial slope, run:
+
+~~~sh
+python -m examples.tet4_iterative_mechanoelectric_sweep --initial-slope
+~~~
+
+This variant uses one undeformed DC solve to get the slope of relative
+resistance per micrometre of grip travel. It also reports the signed
+current-aligned stretch and transverse contraction contributions at fixed
+conductivity and electrode voltages. Use the five-point sweep for
+resistance values at finite displacements.
+
 ## 3D porosity before and after loading
 
 From the source checkout:
