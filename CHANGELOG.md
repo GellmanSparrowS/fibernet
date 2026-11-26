@@ -1,3 +1,8 @@
+## [4.31.0]
+- Run the installed 3D force–resistance and matched-force pore-flow examples from any directory without a source archive.
+- Reuse a scalar velocity factor in the periodic Stokes solver, retaining both full-system LU fallbacks and the same input and physics checks.
+- See the [4.31.0 release notes](docs/RELEASE_4_31_0.md).
+
 ## [4.30.0]
 - Reduce sparse LU fill for periodic Stokes, retaining the original solver settings as fallback after rejection.
 - Use inverse-residual certification for well-conditioned iterative Tet4 DC geometry.
