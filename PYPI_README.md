@@ -72,7 +72,7 @@ The example below needs no Torch, Taichi, GPU, or desktop application. Install o
 
 ```bash
 python -m pip install "fibernet[solid-iterative]==4.29.0"  # AMG-CG for larger solids
-python -m pip install "fibernet[pore-flow]==4.29.0"      # periodic Tet4 pore flow
+python -m pip install "fibernet[pore-flow]==4.29.0"      # periodic Tet4 pore flow (Python 3.10+)
 python -m pip install "fibernet[ml]==4.29.0"             # scikit-learn, pandas, tqdm
 python -m pip install "fibernet[manufacturing]==4.29.0"  # solid geometry tools
 python -m pip install "fibernet[fracture]==4.29.0"       # experimental fracture backend
