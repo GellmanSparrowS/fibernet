@@ -86,7 +86,7 @@ def test_proportional_sweep_matches_independently_solved_endpoints():
 ])
 def test_mechanoelectric_sweep_cli_selects_refinement(monkeypatch, capsys, options, mode, refinement):
     import json
-    from examples import tet4_iterative_mechanoelectric_sweep as example
+    from fibernet.examples import tet4_iterative_mechanoelectric_sweep as example
 
     monkeypatch.setattr(example, "run", lambda *, refinement: {"finite": refinement})
     monkeypatch.setattr(example, "run_initial_slope", lambda *, refinement: {"tangent": refinement})
@@ -95,7 +95,7 @@ def test_mechanoelectric_sweep_cli_selects_refinement(monkeypatch, capsys, optio
 
 
 def test_mechanoelectric_sweep_rejects_mesh_above_demo_budget(monkeypatch, capsys):
-    from examples import tet4_iterative_mechanoelectric_sweep as example
+    from fibernet.examples import tet4_iterative_mechanoelectric_sweep as example
 
     def no_solve(**kwargs):
         pytest.fail("invalid refinement reached a solver")
@@ -224,7 +224,7 @@ def test_packed_face_forest_keeps_high_point_bits():
 
 def test_initial_geometric_slope_requires_only_reference_dc(monkeypatch):
     pytest.importorskip('pyamg')
-    from examples import tet4_iterative_mechanoelectric_sweep as example
+    from fibernet.examples import tet4_iterative_mechanoelectric_sweep as example
     curve=example.run(refinement=1)["states"]
     states=[]
     solve=example.solve_dc_tet4

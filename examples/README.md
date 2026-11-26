@@ -1,9 +1,26 @@
 # FiberNet Examples
 
 Start with the installed [PyPI demo](../README.md#quick-start) for a complete
-network-generation and small-deformation run. The workflows below use a
-**source checkout**. Install its matching dependencies with the linked
-instructions before running an example.
+network-generation and small-deformation run. Most workflows below use a
+**source checkout**. The two commands in the next section also run from an
+installation of this checkout, with no separate example archive.
+
+### Run the one-way 3D examples from any directory
+
+Install this checkout into a Python 3.10+ environment, then run either example
+from outside the repository:
+
+```sh
+python -m pip install ".[solid-iterative,pore-flow]"
+python -m fibernet.examples.tet4_iterative_mechanoelectric_sweep
+python -m fibernet.examples.tet4_solid_to_pore_flow --matched-force
+```
+
+The first returns the electrical resistance at five grip displacements on a
+28,512-tetrahedron network; add `--refinement 5` for 132,000 tetrahedra. The
+second compares pore flow through a single scaffold at matched grip forces
+with two different elastic moduli. Both print JSON to standard output. Install
+only `solid-iterative` for the first or `pore-flow` for the second.
 
 ## Choose a 3D simulation
 
