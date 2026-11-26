@@ -148,3 +148,44 @@ def test_batched_assembly_keeps_original_invalid_row_number():
     mesh = tet4._validate_static_mesh(b)
     with pytest.raises(ValueError, match='Tet4 row 1: element is too ill-conditioned'):
         _tet4_amg.chunked_assembly(mesh)
+
+
+@pytest.mark.parametrize('order',[slice(None),slice(None,None,-1)])
+def test_packed_face_forest_matches_reference_rigid_check(monkeypatch,order):
+    from fibernet.sim import _tet4_amg, tet4
+    points,cells=_lattice()
+    cells=cells[order,order]
+    b=_bundle(points,cells,'uniform')
+    right,ids,fixed,_,_=_fixture(b)
+    # Regular meshes must not visit the slower validation even for mixed
+    # element orientation. Compare against the unchanged reference check.
+    def unexpected(_):
+        pytest.fail("valid packed topology visited reference validation")
+    monkeypatch.setattr(tet4,'_validate_topology',unexpected)
+    _,constraints,_=tet4._loads_and_constraints(b,{},fixed,{n:{'x':1.5e-6} for n in ids})
+    parents=_tet4_amg.topology_parents(cells)
+    assert tet4._check_rigid_modes(b,constraints,parent=parents) == tet4._check_rigid_modes(b,constraints) == 1
+
+
+@pytest.mark.parametrize('rows,error', [
+    ([[0,1,2,3],[3,2,1,4],[1,2,3,0]],'duplicate Tet4 connectivity at row 2'),
+    ([[0,1,2,3],[0,1,2,4],[0,1,2,5],[3,2,1,0]],'non-manifold Tet4 face with more than two cells at row 2'),
+    ([[59998,59997,59996,59995],[59995,59998,59997,59996]],'duplicate Tet4 connectivity at row 1'),
+])
+def test_packed_face_validation_keeps_first_reference_error(rows,error):
+    from fibernet.sim import _tet4_amg, tet4
+    cells=np.asarray(rows,dtype=np.int64)
+    with pytest.raises(ValueError) as expected:
+        tet4._validate_topology(cells)
+    with pytest.raises(ValueError) as actual:
+        _tet4_amg.topology_parents(cells)
+    assert str(expected.value) == str(actual.value) == error
+
+
+def test_packed_face_forest_keeps_high_point_bits():
+    from fibernet.sim import _tet4_amg
+    # Low and high uint16 halves have identical low 15 bits, yet the
+    # two families cannot share a face or a tetrahedron.
+    cells=np.array([[1,2,3,4],[3,2,1,5],[32769,32770,32771,32772],
+                    [32773,32771,32770,32769]],dtype=np.int64)
+    assert _tet4_amg.topology_parents(cells) == [0,0,2,2]

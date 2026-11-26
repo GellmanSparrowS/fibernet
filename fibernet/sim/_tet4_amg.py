@@ -64,6 +64,46 @@ def batched_response(mesh,u):
     return force.ravel(),math.fsum(energies)
 
 
+def topology_parents(cells):
+    """Validate face incidence and return the reference union order's forest.
+
+    The caller has already bounded and validated the mesh: all point row
+    numbers are in [0, 60000). Four unsigned 16-bit values form an injective
+    tetrahedron key; three form a face key. Connectivity order is irrelevant
+    to equality, but the stable face sort and replay preserve row diagnostics.
+    """
+    corners = np.sort(cells.astype(np.uint64), axis=1)
+    a, b, c, d = corners.T
+    keys = (a << 48) | (b << 32) | (c << 16) | d
+    keys.sort()
+    if np.any(keys[:-1] == keys[1:]):
+        # Also catches an earlier non-manifold face, if there is one.
+        core._validate_topology(cells)
+    face_keys = np.column_stack(((a << 32) | (b << 16) | c,
+                                 (a << 32) | (b << 16) | d,
+                                 (a << 32) | (c << 16) | d,
+                                 (b << 32) | (c << 16) | d)).ravel()
+    order = np.argsort(face_keys, kind='stable')
+    sorted_faces = face_keys[order]
+    shared = sorted_faces[:-1] == sorted_faces[1:]
+    if np.any(shared[:-1] & shared[1:]):
+        core._validate_topology(cells)
+    first, second = order[:-1][shared], order[1:][shared]
+    replay = np.argsort(second)
+    parent = list(range(len(cells)))
+
+    def find(i):
+        while i != parent[i]:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+
+    for current, previous in zip((second[replay] // 4).tolist(),
+                                 (first[replay] // 4).tolist()):
+        parent[find(current)] = find(previous)
+    return parent
+
+
 @dataclass(frozen=True)
 class IterativePlan:
     free: np.ndarray
