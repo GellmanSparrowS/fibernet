@@ -1,16 +1,23 @@
-"""Private pilot: bounded isotropic DC conduction on an owned Tet4 mesh."""
+"""Bounded isotropic DC conduction on an owned Tet4 mesh."""
 from collections.abc import Mapping
 from dataclasses import dataclass
 import math
+from inspect import signature
 
 import numpy as np
 from scipy import sparse
 from scipy.sparse.csgraph import connected_components
+from scipy.sparse.linalg import cg
+from scipy.sparse import diags
 
-from fibernet.io.tet4_meshio import Tet4Bundle
+from fibernet.io.tet4_meshio import Tet4Bundle, _validate
 from fibernet.sim import tet4 as core
 
 __all__ = ['Tet4DCResult', 'solve_dc_tet4']
+
+_CG_RTOL_NAME = 'rtol' if 'rtol' in signature(cg).parameters else 'tol'
+_CG_RELATIVE_TOLERANCE = 1e-11
+_CG_MAX_ITERATIONS = 2500
 
 
 def _locked(array):
@@ -51,14 +58,63 @@ class Tet4DCResult:
     net_electrode_current_A: float
     power_closure_W: float
     factor_entries: int
+    solver: str = "banded"
+    iterations: int = 0  # Sum over independently solved active components.
 
 
-def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage_V_by_id):
-    """Fixed prescribed voltage; other faces weakly insulating; no thermal feedback."""
+def _check_backward(matrix, rhs, solution, tolerance):
+    den = float(abs(matrix).sum(axis=1).max())*float(np.max(np.abs(solution)))
+    den += float(np.max(np.abs(rhs)))
+    err = float(np.max(np.abs(matrix@solution-rhs)))
+    if not np.isfinite(den) or not err <= tolerance*den:
+        raise ValueError('DC backward residual')
+
+
+def _iterative_dc(m, rhs):
+    """Diagonal equilibration and bounded CG for the symmetric Dirichlet operator."""
+    diagonal = m.diagonal()
+    if not np.isfinite(diagonal).all() or np.any(diagonal <= 0.):
+        raise ValueError('invalid DC Dirichlet diagonal')
+    d = 1. / np.sqrt(diagonal)
+    D = diags(d)
+    eq = (D @ m @ D).tocsr()
+    eq_rhs = d * rhs
+    if not np.isfinite(eq.data).all() or not np.isfinite(eq_rhs).all():
+        raise ValueError('nonfinite equilibrated DC system')
+    it = 0
+
+    def tick(_):
+        nonlocal it
+        it += 1
+
+    x, status = cg(eq, eq_rhs, atol=0., maxiter=_CG_MAX_ITERATIONS, callback=tick,
+                   **{_CG_RTOL_NAME: _CG_RELATIVE_TOLERANCE})
+    if status or not np.isfinite(x).all():
+        raise ValueError('bounded DC conjugate-gradient solve did not converge')
+    return d*x, it
+
+
+def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage_V_by_id,
+                  solver="banded"):
+    """Solve fixed-voltage DC conduction with an insulating exterior.
+
+    solver="banded" retains the original direct solver and limits.
+    solver="cg" uses bounded, diagonally equilibrated conjugate
+    gradients on each active component and does not form a band factor.
+    Both paths check recovered current and power before returning SI fields.
+    """
     if not isinstance(bundle,Tet4Bundle): raise TypeError("expected a Tet4Bundle")
-    if core._row_count(bundle.points,'points')>1024 or core._row_count(bundle.tetrahedra,'tetrahedra')>8000:
-        raise ValueError('DC pilot mesh limits')
-    mesh=core._validate_static_mesh(bundle)
+    if not isinstance(solver,str) or solver not in ('banded','cg'):
+        raise ValueError('DC solver must be banded or cg')
+    n, e = core._row_count(bundle.points,'points'), core._row_count(bundle.tetrahedra,'tetrahedra')
+    if solver == 'banded':
+        if n>1024 or e>8000: raise ValueError('DC pilot mesh limits')
+        mesh=core._validate_static_mesh(bundle)
+    else:
+        if n>60_000 or e>200_000: raise ValueError('DC CG mesh limits')
+        mesh=_validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
+                       bundle.material_ids, bundle.materials, bundle.length_unit)
+        core._validate_topology(mesh.tetrahedra)
     x=mesh.points*core._LENGTH_TO_M[mesh.length_unit]; cells=mesh.tetrahedra
     if np.max(abs(x),initial=0)>1.: raise ValueError('DC coordinate limit')
     s=_table(conductivity_S_per_m_by_material,set(mesh.materials),1e-6,1e6,'DC conductivity',True)
@@ -68,7 +124,9 @@ def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage
     n=len(x); held=np.zeros(n,dtype=bool); absolute=np.zeros(n)
     for key,value in v.items(): held[rows[key]]=True; absolute[rows[key]]=value
     graph=core._free_node_topology(cells,n,np.arange(n))
-    _,labels=connected_components(graph,directed=False)
+    component_count,labels=connected_components(graph,directed=False)
+    if solver == "cg" and component_count>64:
+        raise ValueError("DC CG component limit")
     if set(labels[held])!=set(labels):
         raise ValueError('each DC component needs an electrode node')
     refs=np.empty(n); psi=np.zeros(n); enabled=np.zeros(n,dtype=bool)
@@ -97,23 +155,35 @@ def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage
     A=.5*A+.5*A.T; A.eliminate_zeros()
     if not np.isfinite(A.data).all(): raise ValueError('nonfinite DC matrix')
     ids=np.flatnonzero(~held&enabled); cap=np.flatnonzero(held)
-    entries=0
+    entries = iterations = 0
     if len(ids):
-        graph=core._free_node_topology(cells,n,ids)
-        order=core._canonical_node_order(graph,x[ids],mesh.node_ids[ids])
-        ranks=np.empty_like(order); ranks[order]=np.arange(len(order))
-        i,j=graph.nonzero()
-        h=int(np.max(abs(ranks[i]-ranks[j]),initial=0))
-        entries=(2*len(ids)-h)*(h+1)
-        plan=core._BandPlan(ids,order,h,entries,len(ids)*(h+1))
-        a=A[ids][:,ids]; scale=float(abs(a).sum(axis=1).max())
-        if not np.isfinite(scale) or scale<=0: raise ValueError('unresolved DC operator scale')
-        m=a/scale; rhs=-np.asarray(A[ids][:,cap]@psi[cap])/scale
-        tol=64*np.finfo(np.float64).eps*max(1,len(ids))
-        psi[ids]=core._factor_band(m,tol,plan)(rhs)
-        den=float(abs(m).sum(axis=1).max())*float(np.max(abs(psi[ids])))+float(np.max(abs(rhs)))
-        err=float(np.max(abs(m@psi[ids]-rhs)))
-        if not err<=tol*den: raise ValueError('DC backward residual')
+        if solver == 'banded':
+            graph=core._free_node_topology(cells,n,ids)
+            order=core._canonical_node_order(graph,x[ids],mesh.node_ids[ids])
+            ranks=np.empty_like(order); ranks[order]=np.arange(len(order))
+            i,j=graph.nonzero()
+            h=int(np.max(abs(ranks[i]-ranks[j]),initial=0))
+            entries=(2*len(ids)-h)*(h+1)
+            plan=core._BandPlan(ids,order,h,entries,len(ids)*(h+1))
+            a=A[ids][:,ids]; scale=float(abs(a).sum(axis=1).max())
+            if not np.isfinite(scale) or scale<=0: raise ValueError('unresolved DC operator scale')
+            m=a/scale; rhs=-np.asarray(A[ids][:,cap]@psi[cap])/scale
+            tol=64*np.finfo(np.float64).eps*max(1,len(ids))
+            psi[ids]=core._factor_band(m,tol,plan)(rhs)
+            _check_backward(m, rhs, psi[ids], tol)
+        else:
+            for lab in np.unique(labels[ids]):
+                block=ids[labels[ids]==lab]
+                terminals=cap[labels[cap]==lab]
+                a=A[block][:,block]
+                scale=float(abs(a).sum(axis=1).max())
+                if not np.isfinite(scale) or scale<=0:
+                    raise ValueError('unresolved DC operator scale')
+                m=a/scale
+                rhs=-np.asarray(A[block][:,terminals]@psi[terminals])/scale
+                psi[block],count=_iterative_dc(m,rhs)
+                iterations += count
+                _check_backward(m,rhs,psi[block],_CG_RELATIVE_TOLERANCE)
     V=refs+psi; V[held]=absolute[held]
     if not np.all(np.isfinite(V)&(abs(V)<=100.)): raise ValueError('DC potential outside pilot range')
     grad=np.einsum('ni,nik->nk',psi[cells[:,1:]]-psi[cells[:,:1]],g[:,1:])
@@ -145,4 +215,4 @@ def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage
     energy=math.fsum(P); term=math.fsum(psi*I); virtual=math.fsum(psi[~held]*nodal[~held])
     return Tet4DCResult(*map(_locked,(mesh.node_ids,mesh.cell_ids,V,psi,refs,held,I,J,q,P)),
                        term,energy,float(np.max(abs(nodal[~held]),initial=0.)),
-                       math.fsum(I),math.fsum((energy,-term,-virtual)),entries)
+                       math.fsum(I),math.fsum((energy,-term,-virtual)),entries,solver,iterations)

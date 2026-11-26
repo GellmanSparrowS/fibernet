@@ -45,6 +45,37 @@ electrodes, and transient heating. A small two-material bar verifies
 integrated electrode and cap balances; it does not validate pointwise
 temperature peaks on coarse or arbitrary meshes.
 
+## Solve DC on a larger solid
+
+Choose the iterative solver for standalone DC conduction on a larger
+tetrahedral mesh. It accepts the same bundle and physical inputs as the
+default solver.
+
+~~~python
+from fibernet.sim.tet4_dc import solve_dc_tet4
+
+result = solve_dc_tet4(
+    bundle,
+    conductivity_S_per_m_by_material=electrical_conductivity,
+    electrode_voltage_V_by_id=electrodes,
+    solver="cg",
+)
+~~~
+
+The default remains `solver="banded"` (up to 1,024 nodes and 8,000 cells).
+`solver="cg"` admits up to 60,000 nodes, 200,000 tetrahedra and 64 connected
+components. It independently equilibrates and solves each component with
+a nonconstant boundary voltage. It allows up to 2,500 iterations per
+active component with free nodes, and raises `ValueError` if convergence,
+current balance, or power closure cannot be verified. Aim for a
+well-shaped mesh and check the quantity of interest under refinement.
+
+Stable IDs, field units and sign conventions are the same for both solvers.
+`result.solver` names the selected method; `result.iterations` sums the
+CG iterations across components, and `result.factor_entries` is zero for
+CG because it uses no band factorization. This option applies to the
+standalone electrical solve, not the coupled Joule or MCP interfaces.
+
 ## Include heat exchange with an ambient
 
 Use the same-mesh DC and thermal entry point with a convective boundary:
