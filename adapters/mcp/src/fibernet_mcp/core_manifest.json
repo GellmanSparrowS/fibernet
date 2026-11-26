@@ -242,7 +242,7 @@
   "sim/saved_temperature.py": "c176f4108ed0f7cc5baea2bce9f33c8201c8a25a8263bad5fdb175c2dd42736a",
   "sim/tet4.py": "a4fd1d6c484e0bc5968f68b58c324930f57b72f0ee2a33c4e4afef1699f0f9e5",
   "sim/tet4_conduction.py": "267d38d9e7e46bf8b84ce1f9e60b4e24e344ce68e256e847b8704fd272d81d91",
-  "sim/tet4_dc.py": "5412f8da8f47e722734bef68f858ccab3e55d1f987a2317e29f567d81cef4852",
+  "sim/tet4_dc.py": "097d1080922f45d6373eeafd705de82b05ad930ce236102a9f43bcd7dbc5fe84",
   "sim/tet4_dc_thermal.py": "8db1bf6d39d993db035448ad3bb09ac00a670d400104638c53d95f2743a0ec64",
   "sim/tet4_loads.py": "ca47886ca95267feeed35875b07165c799e126d4676b4c562ebf3fd8acf466fe",
   "sim/tet4_pore.py": "c635f21d982c2d6cf72d371732faeff58dc2135d284351decc81ea0405489c9a",

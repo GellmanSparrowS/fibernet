@@ -164,3 +164,37 @@ def test_geometry_near_volume_cutoff_uses_reference(monkeypatch):
     p = np.vstack([np.zeros(3), np.eye(3) * d])
     _, v = candidate._batched_geometry(p, np.array([[0, 1, 2, 3]]))
     assert calls == [0] and v[0] >= 1e-24
+
+
+def test_condition_bound_only_routes_well_conditioned_rows_away_from_svd(monkeypatch):
+    original = np.linalg.cond
+    checked = []
+
+    def mark(values):
+        checked.append(values.copy())
+        return original(values)
+
+    monkeypatch.setattr(np.linalg, "cond", mark)
+    p = np.vstack([
+        np.zeros(3), np.eye(3) * 1e-3,
+        np.zeros(3), np.diag((1e-3, 1e-3, 1e-6)),
+    ])
+    t = np.arange(8).reshape(2, 4)
+    g, v = candidate._batched_geometry(p, t)
+    assert len(checked) == 1
+    np.testing.assert_array_equal(checked[0], [np.diag((1., 1., 1e-3))])
+    ref_g, ref_v = zip(*(candidate._checked_geometry_row(p, cell, row)
+                         for row, cell in enumerate(t)))
+    np.testing.assert_allclose(g, ref_g, rtol=2e-14, atol=1e-11)
+    np.testing.assert_allclose(v, ref_v, rtol=2e-14)
+
+
+def test_singular_batch_falls_back_to_first_scalar_geometry_error():
+    p = np.vstack([
+        np.zeros(3), np.eye(3) * 1e-3,
+        np.zeros(3), np.diag((1e-3, 1e-3, 1e-14)),
+        np.zeros(3), np.diag((1e-3, 1e-3, 0.)),
+    ])
+    t = np.arange(12).reshape(3, 4)
+    with pytest.raises(ValueError, match=r"Tet4 row 1: element is too ill-conditioned"):
+        candidate._batched_geometry(p, t)
