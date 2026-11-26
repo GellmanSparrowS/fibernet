@@ -6793,5 +6793,27 @@
    "test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids"
   ],
   "sha256": "dbb3586d11d7f363ac993032eadbfa361e881c8ab41143024b5092d0614a8382"
+ },
+ "examples/tet4_mechanoelectric_patch_screen.py": {
+  "purpose": "Rank equal-area load patches by the initial resistance response.",
+  "status": "active",
+  "symbols": [
+   "_geometric_objective_gradient",
+   "_adjoint",
+   "_equal_patches",
+   "_forward_check",
+   "run",
+   "main"
+  ],
+  "sha256": "a6ecdbc90023c113c42467004fa7eb52c8452c573993b268ba476fba56e93fd6"
+ },
+ "tests/test_tet4_mechanoelectric_patch_screen.py": {
+  "purpose": "Application checks for the synthetic equal-area sensitivity example.",
+  "status": "active",
+  "symbols": [
+   "test_patch_sensitivity_uses_one_electrical_and_one_adjoint",
+   "test_three_synthetic_patches_agree_with_independent_finite_checks"
+  ],
+  "sha256": "148b439bae64f8a5fec82eadefc8a84d0952d37a78aa7fea3e7ae9a68f982aad"
  }
 }

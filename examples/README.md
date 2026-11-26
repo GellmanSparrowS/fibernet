@@ -138,6 +138,29 @@ current-aligned stretch and transverse contraction contributions at fixed
 conductivity and electrode voltages. Use the five-point sweep for
 resistance values at finite displacements.
 
+## Compare where a small force changes resistance
+
+From a checkout with the `solid-iterative` dependencies:
+
+~~~sh
+python -m examples.tet4_mechanoelectric_patch_screen --verify
+~~~
+
+The example ranks twelve equal-area exterior patches of a synthetic
+three-dimensional lattice. Each candidate uses the same total force
+direction with uniform Cartesian traction over its own patch. Geometry,
+elasticity, electrode voltages and conductivity stay fixed. The output is
+the initial relative resistance slope per newton. Patch locations change
+the moment about the held face, which is reported along with the
+centroid and area.
+
+One electrical reference solve and one mechanical adjoint give all the
+initial scalar slopes. The optional check replays three patches with
+independent mechanical solutions and two deformed electrical states each.
+For full displacement fields or finite resistance curves use forward
+solves. This example does not model contact or a material conductivity
+change.
+
 ## 3D porosity before and after loading
 
 From the source checkout:
