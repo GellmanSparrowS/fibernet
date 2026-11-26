@@ -6710,9 +6710,10 @@
    "test_batched_geometry_keeps_scalar_invalid_cell_contract",
    "test_geometry_near_volume_cutoff_uses_reference",
    "test_condition_bound_only_routes_well_conditioned_rows_away_from_svd",
-   "test_singular_batch_falls_back_to_first_scalar_geometry_error"
+   "test_singular_batch_falls_back_to_first_scalar_geometry_error",
+   "test_looped_solid_physical_dc_dilation_and_unit_conversion"
   ],
-  "sha256": "32508f2e06c141ce63600e4c2c1d21944431a28fdeabb890517524e61479b7b4"
+  "sha256": "1d2eda6e816c9b1a0ae0c791efcb948cff0c007890ee9ecd790c7796bc9adb51"
  },
  "fibernet/sim/_tet4_amg.py": {
   "purpose": "Internal bounded mechanics iteration and independent cell recovery.",
