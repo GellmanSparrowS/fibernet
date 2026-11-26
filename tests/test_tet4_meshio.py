@@ -256,3 +256,44 @@ def test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates(monkeypatc
     tet4._nondegenerate(data['points'], good)
     with pytest.raises(ValueError, match='row 2 has zero volume'):
         tet4._nondegenerate(data['points'], np.vstack([good, [0, 1, 2, 2]]))
+
+
+def test_outward_filter_keeps_exact_branch_for_subnormal_and_ambiguous_cells():
+    from fractions import Fraction
+    unit = np.vstack([np.zeros(3), np.eye(3)])
+    assert tet4._nonzero_interval_certificate(unit[None]).tolist() == [True]
+    subnormal_axes = unit.view(np.uint64).copy()
+    subnormal_axes[subnormal_axes != 0] = 1
+    small = subnormal_axes.view(np.float64)
+    assert tet4._nonzero_interval_certificate(small[None]).tolist() == [False]
+    tet4._nondegenerate(small, np.array([[0, 1, 2, 3]]))
+
+    # Exactly integer coordinates with a translated plane and one changed
+    # coordinate at its next represented value. All volumes below are
+    # independently classified from the original binary64 coordinates.
+    for shift in (1, 5, 13, 31, 45, 51):
+        b = float(2**shift)
+        planar = np.array([[b,b,b],[b+2,b+4,b+6],[b+3,b+6,b+3],[b+5,b+10,b+9]])
+        changed = planar.copy()
+        changed[-1,1] = np.nextafter(changed[-1,1], np.inf)
+        rows = np.stack([planar,changed])
+        assert not tet4._nonzero_interval_certificate(rows)[0]
+        for i,points in enumerate(rows):
+            p,q,r,s = [tuple(map(Fraction, y)) for y in points]
+            u,v,w = [tuple(a-b for a,b in zip(k,p)) for k in (q,r,s)]
+            cross = (v[1]*w[2]-v[2]*w[1], v[2]*w[0]-v[0]*w[2], v[0]*w[1]-v[1]*w[0])
+            result = sum(a*b for a,b in zip(u,cross))
+            assert bool(result)==bool(i)
+            if result:
+                tet4._nondegenerate(points, np.array([[0,1,2,3]]))
+            else:
+                with pytest.raises(ValueError, match='row 0 has zero volume'):
+                    tet4._nondegenerate(points, np.array([[0,1,2,3]]))
+
+
+def test_outward_filter_fallback_reports_original_row_across_two_batches():
+    p=np.vstack([np.zeros(3),np.eye(3)])
+    good=np.tile([0,1,2,3],(8200,1))
+    combined=np.vstack([good, [0,1,2,2]])
+    with pytest.raises(ValueError, match='row 8200 has zero volume'):
+        tet4._nondegenerate(p, combined)
