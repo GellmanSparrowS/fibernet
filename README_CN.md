@@ -25,7 +25,7 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 <details>
 <summary>从源码运行仓库算例</summary>
 
-**开发版源码：4.29.0**
+**开发版源码：4.30.0**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git

@@ -1,3 +1,9 @@
+## [4.30.0]
+- Reduce sparse LU fill for periodic Stokes, retaining the original solver settings as fallback after rejection.
+- Use inverse-residual certification for well-conditioned iterative Tet4 DC geometry.
+- Add a fixed-voltage physical scaling and unit-conversion regression.
+- See the [4.30.0 release notes](docs/RELEASE_4_30_0.md).
+
 ## [4.29.0]
 - Add three mesh resolutions and a load-position sensitivity example for 3D force–resistance.
 - Reuse packed connectivity checks in the iterative Tet4 DC solver.
