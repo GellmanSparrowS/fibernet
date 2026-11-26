@@ -128,6 +128,21 @@ coordinates. Increase `--samples` or change `--axis` to check numerical sensitiv
 the spread between the two offsets is not an error bound. No CAD tools or fluid
 solver are required. Void volume does not give connected porosity or permeability.
 
+## Steady periodic flow through a 3D pore
+
+From a source checkout, using Python 3.10 or newer:
+
+```bash
+python -m pip install "fibernet[pore-flow]"
+python -m examples.tet4_periodic_pore
+```
+
+Compare a square duct with and without a solid obstacle using the same
+imposed pressure gradient. The solver computes steady Stokes flow on a
+tetrahedral fluid mesh, separately from the geometric porosity example.
+For a matching package and checkout, see the
+[4.25.0 release guide](../docs/RELEASE_4_25_0.md#solve-a-small-periodic-pore-flow-problem).
+
 ## Notched-network fracture scan
 
 From a source checkout with `.[fracture]` installed:
