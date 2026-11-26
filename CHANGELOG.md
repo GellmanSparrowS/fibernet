@@ -1,3 +1,10 @@
+## [4.29.0]
+- Add three mesh resolutions and a load-position sensitivity example for 3D force–resistance.
+- Reuse packed connectivity checks in the iterative Tet4 DC solver.
+- Reuse the undeformed Stokes reference across matched deformed pore geometries.
+- Support single-material Gmsh input and nodal result VTU export.
+- See the [4.29.0 release notes](docs/RELEASE_4_29_0.md).
+
 ## [4.28.0]
 - Reuse the AMG system across up to eight fixed-restraint static Tet4 force cases, with independent result checks.
 - Batch stiffness assembly and reuse face connectivity in the optional iterative Tet4 mechanics solver.
