@@ -64,3 +64,16 @@ def test_centered_readout_converges_at_halved_strain_increment():
     np.testing.assert_allclose((small_plus - small_minus) / (h * rest),
                                (large_plus - large_minus) / (2 * h * rest),
                                rtol=2e-6)
+
+
+def test_same_rigid_grip_at_matched_signed_resultant():
+    cases = demo.run_matched_force()
+    soft, stiff, half = (cases[key] for key in demo.MODES)
+    for result in cases.values():
+        np.testing.assert_allclose([result.compressive_reaction_N, result.tensile_reaction_N],
+                                   [-demo.MATCHED_FORCE_N, demo.MATCHED_FORCE_N], rtol=1e-9)
+        np.testing.assert_allclose(result.rest_resistance_ohm, soft.rest_resistance_ohm, rtol=1e-10)
+    np.testing.assert_allclose(stiff.axial_strain, 0.5 * soft.axial_strain, rtol=1e-9)
+    np.testing.assert_allclose(stiff.resistance_slope_per_N,
+                               0.5 * soft.resistance_slope_per_N, rtol=2e-6)
+    assert 0.72 < half.resistance_slope_per_N / soft.resistance_slope_per_N < 0.78

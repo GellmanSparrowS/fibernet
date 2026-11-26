@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: MIT
 """Predict how small axial strain changes DC resistance in a fused 3D lattice.
 
-Run: python -m examples.tet4_mechanoelectric_looped_network
+Run: python -m examples.tet4_mechanoelectric_looped_network [--matched-force]
 Three axial paths at different transverse positions share four crosslinks.
 They are idealized square-section bars, meshed as one bonded solid. Electrical
 conductivity is fixed: changes come from deformation, not piezoresistivity.
 """
+import argparse
 from dataclasses import dataclass, replace
 from itertools import permutations, product
-from math import fsum
+from math import fsum, isclose
 
 import numpy as np
 
@@ -19,6 +20,7 @@ from fibernet.sim.tet4_dc import solve_dc_tet4
 
 VOLTAGE_V = 1.0
 STRAIN = 0.001
+MATCHED_FORCE_N = 0.5
 BASE_ID, STIFF_ID = 7, 19
 MODES = ("uniform", "uniform_stiff", "stiff_half")
 
@@ -28,6 +30,15 @@ class Result:
     load_reaction_N: float
     rest_resistance_ohm: float
     resistance_slope_per_strain: float
+
+
+@dataclass(frozen=True)
+class MatchedForceResult:
+    axial_strain: float
+    compressive_reaction_N: float
+    tensile_reaction_N: float
+    rest_resistance_ohm: float
+    resistance_slope_per_N: float
 
 
 def _lattice():
@@ -118,8 +129,50 @@ def run():
     return results
 
 
-if __name__ == "__main__":
+def run_matched_force():
+    """Compare equal total cap reactions under unchanged rigid-grip kinematics.
+
+    In linear elasticity, first calibrate the axial stiffness using a
+    prescribed cap motion, then re-solve both signed motions with that same
+    grip. This is not uniform traction on an axially free cap.
+    """
+    points, tetrahedra = _lattice()
+    results = {}
+    for mode in MODES:
+        mesh = _bundle(points, tetrahedra, mode)
+        rest, _ = _scan(mesh, 0.)
+        _, reference_force = _scan(mesh, STRAIN)
+        if not reference_force >= MATCHED_FORCE_N:
+            raise RuntimeError("Matched force lies outside the calibrated strain range")
+        strain = STRAIN * (MATCHED_FORCE_N / reference_force)
+        compress, force_minus = _scan(mesh, -strain)
+        stretch, force_plus = _scan(mesh, strain)
+        if not (isclose(-force_minus, MATCHED_FORCE_N, rel_tol=1e-9)
+                and isclose(force_plus, MATCHED_FORCE_N, rel_tol=1e-9)):
+            raise RuntimeError("Computed cap reaction did not match the target")
+        slope = (stretch - compress) / ((force_plus - force_minus) * rest)
+        results[mode] = MatchedForceResult(strain, force_minus, force_plus, rest, slope)
+    return results
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--matched-force", action="store_true",
+                        help="compare the materials at the same signed total axial reaction")
+    args = parser.parse_args()
+    if args.matched_force:
+        for name, sample in run_matched_force().items():
+            print(f"{name}: forces {sample.compressive_reaction_N:.6g}, "
+                  f"{sample.tensile_reaction_N:.6g} N; "
+                  f"axial strain amplitude {sample.axial_strain:.4%}; "
+                  f"R0 {sample.rest_resistance_ohm:.6g} ohm; "
+                  f"(dR/R0)/dF {sample.resistance_slope_per_N:.6g} 1/N")
+        return
     for name, sample in run().items():
         print(f"{name}: force {sample.load_reaction_N:.6g} N at {STRAIN:.2%} strain; "
               f"R0 {sample.rest_resistance_ohm:.6g} ohm; "
               f"(dR/R0)/dstrain {sample.resistance_slope_per_strain:.6g}")
+
+
+if __name__ == "__main__":
+    main()
