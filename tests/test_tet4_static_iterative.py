@@ -114,3 +114,37 @@ def test_two_face_disconnected_solids_and_lower_material_limit():
     with pytest.raises(ValueError,match='material is outside'):
         solve_static_tet4(low,solver='amg-cg',forces_by_id={},
                          fixed_dofs_by_id={k:fixed[k] for k in range(4)})
+
+
+def test_mixed_scale_assembly_keeps_scalar_row_fallback(monkeypatch):
+    from fibernet.io.tet4_meshio import Tet4Bundle
+    from fibernet.sim import _tet4_amg, tet4
+    pts = np.vstack([np.zeros(3), np.diag([.001, .002, .0025]), [0, 0, -1e-12]])
+    cells = np.array([[0, 1, 2, 3], [0, 2, 1, 4]])
+    b = Tet4Bundle(pts, cells, np.arange(5), np.arange(2), [5, 7], {
+        5: dict(young_modulus_pa=3e9, poisson_ratio=-.9),
+        7: dict(young_modulus_pa=1e9, poisson_ratio=.49)}, 'm')
+    mesh = tet4._validate_static_mesh(b)
+    old = tet4._assemble(mesh).toarray()
+    scalar = tet4._shape_gradients_and_volume_m
+    rows = []
+    def count(x, t, row):
+        rows.append(row)
+        return scalar(x, t, row)
+    monkeypatch.setattr(tet4, '_shape_gradients_and_volume_m', count)
+    new = _tet4_amg.chunked_assembly(mesh).toarray()
+    assert rows == [1]
+    np.testing.assert_allclose(new, old, rtol=1e-12, atol=1e-12)
+    np.testing.assert_array_equal(new, new.T)
+
+
+def test_batched_assembly_keeps_original_invalid_row_number():
+    from fibernet.io.tet4_meshio import Tet4Bundle
+    from fibernet.sim import _tet4_amg, tet4
+    pts = np.vstack([np.zeros(3), np.diag([.001, .002, .0025]), [0, 0, -1e-16]])
+    cells = np.array([[0, 1, 2, 3], [0, 2, 1, 4]])
+    b = Tet4Bundle(pts, cells, np.arange(5), np.arange(2), [1, 1],
+                   {1: dict(young_modulus_pa=1e9, poisson_ratio=.3)}, 'm')
+    mesh = tet4._validate_static_mesh(b)
+    with pytest.raises(ValueError, match='Tet4 row 1: element is too ill-conditioned'):
+        _tet4_amg.chunked_assembly(mesh)

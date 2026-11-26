@@ -5,10 +5,9 @@ from inspect import signature
 import numpy as np
 from scipy import sparse
 from scipy.sparse.linalg import cg
-from itertools import islice
 from fibernet.sim import tet4 as core
 
-# Bounded conventional engineering range for the vectorized experiment.
+# Bounded engineering range for batched cell recovery.
 # Outside it, the reference path preserves exact safeguards.
 def batched_response(mesh,u):
     if np.max(np.abs(u),initial=0.) > .05 or np.any((u!=0.) & (np.abs(u)<1e-18)):
@@ -70,13 +69,61 @@ class IterativePlan:
     free: np.ndarray
 
 
+_ASSEMBLY_BATCH = 4096
+
+
+def _element_stiffness_batch(x, tetrahedra, materials, start, allow_fast):
+    """Apply the same engineering strain operator to an owned cell block."""
+    count = len(tetrahedra)
+    local = np.empty((count, 12, 12), dtype=np.float64)
+    regular = np.empty(0, dtype=np.intp)
+    if allow_fast:
+        d = (x[tetrahedra[:, 1:]] - x[tetrahedra[:, :1]]).transpose(0, 2, 1)
+        scale = np.max(np.abs(d), axis=(1, 2))
+        regular = np.flatnonzero(np.isfinite(scale) & (scale >= 1e-12))
+        normalized = d[regular] / scale[regular, None, None]
+        standard = np.linalg.cond(normalized) <= 1e8
+        regular = regular[standard]
+        normalized = normalized[standard]
+        volume = np.abs(np.linalg.det(normalized)) * scale[regular]**3 / 6.
+        standard = np.isfinite(volume) & (volume > 0.)
+        regular = regular[standard]
+        normalized, volume = normalized[standard], volume[standard]
+        corner = np.linalg.inv(normalized) / scale[regular, None, None]
+        grad = np.concatenate((-corner.sum(axis=1, keepdims=True), corner), axis=1)
+        strain = np.zeros((len(regular), 6, 12), dtype=np.float64)
+        gx, gy, gz = grad.transpose(2, 0, 1)
+        strain[:, 0, 0::3], strain[:, 1, 1::3], strain[:, 2, 2::3] = gx, gy, gz
+        strain[:, 3, 0::3], strain[:, 3, 1::3] = gy, gx
+        strain[:, 4, 1::3], strain[:, 4, 2::3] = gz, gy
+        strain[:, 5, 2::3], strain[:, 5, 0::3] = gx, gz
+        local[regular] = volume[:, None, None] * (
+            strain.transpose(0, 2, 1) @ materials[regular] @ strain)
+    scalar = np.ones(count, dtype=bool)
+    scalar[regular] = False
+    for j in np.flatnonzero(scalar):
+        # Preserve the original scalar validation, including its row errors
+        # near shape/scale limits, without making other rows take this path.
+        grad, volume = core._shape_gradients_and_volume_m(x, tetrahedra[j], start + int(j))
+        strain = core._strain_matrix(grad)
+        local[j] = volume * (strain.T @ materials[j] @ strain)
+    return 0.5 * local + 0.5 * local.transpose(0, 2, 1)
+
+
 def chunked_assembly(mesh):
     n = mesh.points.size
-    stream = core._element_blocks(mesh)
+    x = mesh.points * core._LENGTH_TO_M[mesh.length_unit]
+    if not np.isfinite(x).all():
+        raise ValueError('point coordinates in m are outside supported range')
+    allow_fast = np.max(np.abs(x), initial=0.) <= 10.
+    ids, material = np.unique(mesh.material_ids, return_inverse=True)
+    tensors = np.stack([core._material_tensor(mesh.materials[int(k)]) for k in ids])
     stiffness = sparse.csr_matrix((n, n), dtype=np.float64)
-    while batch := list(islice(stream, 8192)):
-        dofs = np.array([ids for ids, _ in batch], dtype=np.int32)
-        coeff = np.array([block for _, block in batch])
+    for start in range(0, len(mesh.tetrahedra), _ASSEMBLY_BATCH):
+        window = slice(start, start + _ASSEMBLY_BATCH)
+        cell = mesh.tetrahedra[window]
+        dofs = (3 * cell[:, :, None] + np.arange(3)).reshape(-1, 12).astype(np.int32)
+        coeff = _element_stiffness_batch(x, cell, tensors[material[window]], start, allow_fast)
         ix, jx = np.broadcast_arrays(dofs[:, :, None], dofs[:, None, :])
         stiffness += sparse.coo_matrix((coeff.ravel(), (ix.ravel(), jx.ravel())),
                                        shape=(n, n)).tocsr()

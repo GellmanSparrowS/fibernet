@@ -113,9 +113,9 @@ jobs:
         OPENBLAS_NUM_THREADS: "1"
         OMP_NUM_THREADS: "1"
       run: |
-        python -m pip install -e ".[solid-iterative]"
+        python -m pip install -e ".[solid-iterative]" "meshio==5.3.5"
         python -c "import importlib.metadata; import pyamg; assert importlib.metadata.version('pyamg') == '5.3.0'"
-        timeout --kill-after=10s 90s python -m pytest -q --tb=short -o addopts= tests/test_tet4_static_iterative.py
+        timeout --kill-after=10s 90s python -m pytest -q --tb=short -o addopts= tests/test_tet4_static_iterative.py tests/test_tet4_tagged_grips_example.py
 
   training-cpu-contracts:
     name: CPU training contracts (Python 3.12)

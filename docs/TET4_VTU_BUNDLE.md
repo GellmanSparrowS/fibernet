@@ -333,6 +333,41 @@ the earlier example's particular tip displacement. This conversion
 does not transfer arbitrary Gmsh fields or turn physical group labels into
 units or material constants.
 
+## Run a tagged mesh above the banded solver limits
+
+For a single larger bonded solid, use prescribed grip motion and the
+optional iterative solver. Use a trusted local mesh file. The example
+reads ASCII Gmsh 2.2 or 4.1 and
+requires these named physical groups:
+
+- Volumes: `material_low` and `material_high`, with exactly one group per cell.
+- Surface triangles: `hold_face` and `pull_face`, with distinct exterior
+  triangles and no shared grip nodes.
+
+Install the optional providers from the source checkout:
+
+~~~sh
+python -m pip install -e ".[solid-iterative]" "meshio==5.3.5"
+python -m examples.tet4_tagged_grip_iterative --input my-mesh.msh --output grip-run \
+  --length-unit mm --axis x --stroke-um 1.5 --material-low-gpa 1 --material-high-gpa 2
+~~~
+
+Choose the input unit, axis, stroke, and material values for your sample.
+The held faces are fixed and the pull face is driven as a rigid grip
+along the selected axis. Omit `--input` and `--length-unit` to build a
+28,512-tetrahedron fixture. The output directory must be new.
+
+Outputs are `tagged-solid.zip` (Tet4 geometry and material bundle),
+`grips.json` (grip IDs, stroke in metres and bundle hash),
+`summary.json` (force, energy and residual), and `nodal-fields.npz`
+(stable `node_ids`, `displacement_m` and `reaction_N`). IDs are assigned
+from the imported rows; they are not original Gmsh tag numbers. Change
+grip settings through command-line options and rerun in a new output
+directory rather than editing the recorded sidecar.
+The example calls standalone `solve_static_tet4(..., solver="amg-cg")`.
+The small-mesh traction, band inspection, and VTU result wrappers retain
+their existing limits.
+
 ## Input and output
 
 - `points` is nonempty `(N, 3)` finite binary64 geometry.

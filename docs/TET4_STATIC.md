@@ -557,7 +557,9 @@ Pass `solver="amg-cg"` to `solve_static_tet4`. Mesh units, stable IDs, load
 arguments and output fields are unchanged. Use the default `solver="banded"`
 for a direct small-mesh reference.
 
-The iterative method is for one face-connected solid, at most 60,000 nodes
+The iterative method assembles conventional cells in bounded batches and
+uses the scalar element routine near cell shape or scale limits. It is for
+one face-connected solid, at most 60,000 nodes
 and 200,000 tetrahedra. It uses isotropic elasticity with Young's modulus
 between 1 kPa and 10 TPa and Poisson ratio from −0.95 to 0.495. Matrices
 with excessive connectivity, over-budget preconditioners, failed

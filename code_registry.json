@@ -6708,10 +6708,11 @@
   "symbols": [
    "batched_response",
    "IterativePlan",
+   "_element_stiffness_batch",
    "chunked_assembly",
    "factor_constructor"
   ],
-  "sha256": "263832c000cc54777ec143abfcec9933e556a0c30b647f4c9cd1536099a11590"
+  "sha256": "a15c74b3ff081b767596806e8ff1167e0bf488119b8901ecbf997a17260ad708"
  },
  "examples/tet4_mechanoelectric_looped_network.py": {
   "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
@@ -6748,8 +6749,31 @@
    "test_optional_dependency_error_does_not_break_banded",
    "test_proportional_sweep_matches_independently_solved_endpoints",
    "test_iterative_convergence_flag_is_not_enough",
-   "test_two_face_disconnected_solids_and_lower_material_limit"
+   "test_two_face_disconnected_solids_and_lower_material_limit",
+   "test_mixed_scale_assembly_keeps_scalar_row_fallback",
+   "test_batched_assembly_keeps_original_invalid_row_number"
   ],
-  "sha256": "6ca5641182d5ad6c6c916892a783a1a24a3ea2213f521f6542809e4624264f8a"
+  "sha256": "c666e43899f9282ddde10f682557935011a74254f67045ce9ecb6a482342201e"
+ },
+ "examples/tet4_tagged_grip_iterative.py": {
+  "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
+  "status": "active",
+  "symbols": [
+   "make_fixture",
+   "prepare",
+   "solve",
+   "main"
+  ],
+  "sha256": "3c068c2465c291ab9fb1ec64ee20680a720866da5acfcfad672e5e3fdb7399ab"
+ },
+ "tests/test_tet4_tagged_grips_example.py": {
+  "purpose": "Executable smoke tests for imported named grips above the banded limits.",
+  "status": "active",
+  "symbols": [
+   "test_prepared_mesh_above_banded_cap_can_solve_and_save",
+   "test_edited_grip_setting_is_refused_without_emitting_results",
+   "test_sidecar_from_another_bundle_is_refused"
+  ],
+  "sha256": "28f32595ef25507bb59c563d7d9016fe8e633a926d583d95dd9e281b23ea6c88"
  }
 }
