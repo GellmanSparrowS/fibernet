@@ -2,7 +2,7 @@
 """Compute the resistance of a fused lattice over a small proportional stroke sweep.
 
 Install the optional solid-iterative extra. Run from the source root:
-python -m examples.tet4_iterative_mechanoelectric_sweep [--initial-slope]
+python -m examples.tet4_iterative_mechanoelectric_sweep [--refinement {3,4,5}] [--initial-slope]
 """
 from dataclasses import replace
 from math import fsum, isclose
@@ -121,12 +121,16 @@ def run_initial_slope(*, refinement=3):
                 relative_resistance_slope_per_um=(along + cross) / scale)
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--initial-slope", action="store_true",
                         help="compute only d(R/R0)/d(stroke) at zero stroke")
-    args = parser.parse_args()
-    result = run_initial_slope() if args.initial_slope else run()
+    parser.add_argument("--refinement", type=int, choices=(3, 4, 5), default=3,
+                        help="subdivisions per voxel axis: 28,512 (default), "
+                             "67,584, or 132,000 tetrahedra")
+    args = parser.parse_args(argv)
+    solve = run_initial_slope if args.initial_slope else run
+    result = solve(refinement=args.refinement)
     print(json.dumps(result, indent=2))
 
 

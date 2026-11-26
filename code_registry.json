@@ -6736,7 +6736,7 @@
    "run_geometry_breakdown",
    "main"
   ],
-  "sha256": "00b87c6cfd20a66a46259116da317808023f46dcf7e5855a71aeef208b4c1784"
+  "sha256": "31f7842ef195ed11d8eeabcbef6cf6c9aa4985587032eca16c32df152d76f824"
  },
  "examples/tet4_iterative_mechanoelectric_sweep.py": {
   "purpose": "Compute the resistance of a fused lattice over a small proportional stroke sweep.",
@@ -6748,7 +6748,7 @@
    "run_initial_slope",
    "main"
   ],
-  "sha256": "b716bdd597e76bb16762a74829ac10d5ec5fbb16cb93a95fbfa0d64a08ae1af3"
+  "sha256": "a638208dfc66481529abba56acf51eab82e513f2bbbe4488095afc33ed244afa"
  },
  "tests/test_tet4_static_iterative.py": {
   "purpose": "Numerical parity and admission for iterative solid mechanics.",
@@ -6758,6 +6758,8 @@
    "test_insufficient_constraints_and_no_silent_bad_solver",
    "test_optional_dependency_error_does_not_break_banded",
    "test_proportional_sweep_matches_independently_solved_endpoints",
+   "test_mechanoelectric_sweep_cli_selects_refinement",
+   "test_mechanoelectric_sweep_rejects_mesh_above_demo_budget",
    "test_iterative_convergence_flag_is_not_enough",
    "test_two_face_disconnected_solids_and_lower_material_limit",
    "test_mixed_scale_assembly_keeps_scalar_row_fallback",
@@ -6768,7 +6770,7 @@
    "test_initial_geometric_slope_requires_only_reference_dc",
    "test_current_direction_uses_scaled_norm_with_signed_analytic_strain"
   ],
-  "sha256": "899c4a3ef074e8b31ae19b9283adad010e0b7444783fe18220b45d6607e89554"
+  "sha256": "dc5e7f1e0ff84b5b520a47bdaaf1795b2126fa4253c207ea830f71e3b8a081fa"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",

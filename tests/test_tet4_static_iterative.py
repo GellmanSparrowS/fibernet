@@ -79,6 +79,37 @@ def test_proportional_sweep_matches_independently_solved_endpoints():
     assert np.all(np.diff(resistances)>0)
 
 
+@pytest.mark.parametrize(("options", "mode", "refinement"), [
+    ([], "finite", 3),
+    (["--refinement", "4"], "finite", 4),
+    (["--initial-slope", "--refinement", "5"], "tangent", 5),
+])
+def test_mechanoelectric_sweep_cli_selects_refinement(monkeypatch, capsys, options, mode, refinement):
+    import json
+    from examples import tet4_iterative_mechanoelectric_sweep as example
+
+    monkeypatch.setattr(example, "run", lambda *, refinement: {"finite": refinement})
+    monkeypatch.setattr(example, "run_initial_slope", lambda *, refinement: {"tangent": refinement})
+    example.main(options)
+    assert json.loads(capsys.readouterr().out) == {mode: refinement}
+
+
+def test_mechanoelectric_sweep_rejects_mesh_above_demo_budget(monkeypatch, capsys):
+    from examples import tet4_iterative_mechanoelectric_sweep as example
+
+    def no_solve(**kwargs):
+        pytest.fail("invalid refinement reached a solver")
+
+    monkeypatch.setattr(example, "run", no_solve)
+    with pytest.raises(SystemExit) as exc:
+        example.main(["--refinement", "6"])
+    assert exc.value.code == 2
+    out = capsys.readouterr()
+    assert not out.out and "invalid choice" in out.err
+    with pytest.raises(ValueError, match="between 1 and 5"):
+        _lattice(refinement=6)
+
+
 @pytest.mark.parametrize('reported_status,message', [
     (17,'did not converge'),
     (0,'backward residual'),

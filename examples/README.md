@@ -1,6 +1,23 @@
 # FiberNet Examples
 
-Examples have different support status. Historical scripts may depend on unavailable APIs; the index is not a blanket claim that every example runs.
+Start with the installed [PyPI demo](../README.md#quick-start) for a complete
+network-generation and small-deformation run. The workflows below use a
+**source checkout**. Install its matching dependencies with the linked
+instructions before running an example.
+
+## Choose a 3D simulation
+
+| What you want to calculate | Start here | What you get |
+| --- | --- | --- |
+| Load an existing Gmsh solid and inspect its deformation | [Tagged mesh with rigid grips](#solve-a-tagged-gmsh-mesh-with-rigid-grips) | Grip reaction, nodal fields and optional ParaView output |
+| Compare stiffness changes at a given force on the same network | [Resistance in a fused solid lattice](#predicting-strain-induced-resistance-in-a-fused-solid-lattice) | Computed grip reaction and geometric resistance response for each material layout |
+| Compare many loading locations without solving for every full field | [Small-force resistance by load location](#compare-where-a-small-force-changes-resistance) | Ranked initial resistance slope for each patch |
+| Measure how loading changes flow through a pore | [Solid deformation and pore flow](#how-solid-deformation-changes-pore-flow) | Steady reference and deformed flow at the same pressure gradient |
+
+For a finite electrical response at specific grip strokes, use the
+[five-point sweep](#predicting-strain-induced-resistance-in-a-fused-solid-lattice).
+For steady flow without a mechanical solve, start with the
+[periodic-pore example](#steady-periodic-flow-through-a-3d-pore).
 
 ## Start here: explicit linear mechanics
 
@@ -80,8 +97,9 @@ resolution.
 ## Solve a tagged Gmsh mesh with rigid grips
 
 Use [the named-grip example](../docs/TET4_VTU_BUNDLE.md#run-a-tagged-mesh-above-the-banded-solver-limits)
-to import a two-material solid, prescribe a grip stroke and write nodal
-results with stable IDs. It can also generate a 28,512-cell fixture.
+to import a one- or two-material solid, prescribe a grip stroke and write nodal
+results with stable IDs. Add `--write-vtu` to open the deformation in ParaView,
+or omit the mesh input to run on a generated 28,512-cell fixture.
 
 ## Predicting strain-induced resistance in a fused solid lattice
 
@@ -126,6 +144,13 @@ The example does one elastic solve and reuses its displacement shape under
 proportional strokes, with a separate DC solve on all five geometries.
 Use this shortcut only for the same linear material, fixed grips and no preload.
 
+The default uses 28,512 tetrahedra. Pass `--refinement 4` or
+`--refinement 5` to run the same geometry, grip strokes, materials, and
+electrodes on 67,584 or 132,000 tetrahedra. The meshes are generated locally;
+no mesh download is needed. Use the default for a smoke test and the larger
+tiers to measure runtime or check sensitivity to mesh resolution. All tiers
+report node and tetrahedron counts in the JSON.
+
 If you only need the initial slope, run:
 
 ~~~sh
@@ -135,8 +160,9 @@ python -m examples.tet4_iterative_mechanoelectric_sweep --initial-slope
 This variant uses one undeformed DC solve to get the slope of relative
 resistance per micrometre of grip travel. It also reports the signed
 current-aligned stretch and transverse contraction contributions at fixed
-conductivity and electrode voltages. Use the five-point sweep for
-resistance values at finite displacements.
+conductivity and electrode voltages. The same refinement option works for
+the initial slope. Use the five-point sweep for resistance values at finite
+displacements.
 
 ## Compare where a small force changes resistance
 
