@@ -582,7 +582,7 @@ def _factor_band(a, floor, plan):
 
     return apply
 
-def _prepare_fixed_solve(stiffness, plan):
+def _prepare_fixed_solve(stiffness, plan, *, iterative_factor=None):
     free = plan.free
     if not len(free):
         return None
@@ -597,18 +597,20 @@ def _prepare_fixed_solve(stiffness, plan):
     norm_khat = float(np.asarray(abs(khat).sum(axis=1)).max(initial=0.))
     eps = np.finfo(np.float64).eps
     tolerance = 64. * eps * len(free)
-    solve = _factor_band(khat, tolerance, plan)
+    factor = _factor_band if iterative_factor is None else iterative_factor
+    solve = factor(khat, tolerance, plan)
     return kscale, khat, norm_khat, eps, tolerance, solve
 
 
-def _fixed_solve(stiffness, force, plan, prepared=None):
+def _fixed_solve(stiffness, force, plan, prepared=None, *, iterative_factor=None):
     free = plan.free
     u = np.zeros(force.size)
     if not len(free):
         return u, free, 0., 0., 0., 0.
     rhs = force.ravel()[free]
     if prepared is None:
-        prepared = _prepare_fixed_solve(stiffness, plan)
+        factor_kwargs = {} if iterative_factor is None else {"iterative_factor": iterative_factor}
+        prepared = _prepare_fixed_solve(stiffness, plan, **factor_kwargs)
     kscale, khat, norm_khat, eps, tolerance, solve = prepared
     fscale = float(np.max(np.abs(rhs)))
     if fscale == 0.:
@@ -702,7 +704,7 @@ def _prescribed_element_response(mesh, u):
     return internal.ravel(), math.fsum(terms)
 
 
-def _prescribed_solve(mesh, k, force, fixed, values, plan):
+def _prescribed_solve(mesh, k, force, fixed, values, plan, *, iterative_factor=None, recovery=None):
     u = values.copy()
     free = plan.free
     eps = np.finfo(np.float64).eps
@@ -718,7 +720,8 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan):
         if not np.isfinite(kscale) or kscale <= 0.:
             raise ValueError('underconstrained Tet4 system: free stiffness has zero scale')
         _check_normal_or_zero(kscale, 'free stiffness scale')
-        solve = _factor_band(reduced / kscale, tolerance, plan)
+        factor = _factor_band if iterative_factor is None else iterative_factor
+        solve = factor(reduced / kscale, tolerance, plan)
         scale = float(np.max(np.abs(rhs), initial=0.))
         if scale:
             fhat = rhs / scale
@@ -735,7 +738,8 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan):
             backward = float(np.max(np.abs(model_free - force[free]), initial=0.) / scale)
         if not 0. <= backward <= tolerance:
             raise ValueError('Tet4 prescribed solve did not meet normalized backward residual criterion')
-    internal, energy = _prescribed_element_response(mesh, u.reshape(-1,3))
+    recover = _prescribed_element_response if recovery is None else recovery
+    internal, energy = recover(mesh, u.reshape(-1,3))
     if len(free) and scale:
         element_backward = float(np.max(np.abs(internal[free] - force[free]), initial=0.) / scale)
         if not 0. <= element_backward <= tolerance:
@@ -791,7 +795,8 @@ def inspect_static_tet4_admission(bundle: Tet4Bundle, *, fixed_dofs_by_id: Mappi
 def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
                       fixed_dofs_by_id: Mapping,
                       return_cell_fields: bool = False,
-                      prescribed_displacements_m_by_id: Mapping | None = None) -> Tet4StaticResult:
+                      prescribed_displacements_m_by_id: Mapping | None = None,
+                      solver: str = "banded") -> Tet4StaticResult:
     """Solve first-order isotropic static elasticity with Cartesian displacement constraints.
 
     Supply nodal forces in N as three-component vectors keyed by stable node
@@ -806,15 +811,56 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
     poorly conditioned equations, or an exceeded resource limit raise
     ValueError. Does not solve beam, nonlinear, or time-dependent mechanics.
 
+    The default solver="banded" preserves the direct solver and its limits.
+    Choose solver="amg-cg" for one larger face-connected solid with the
+    optional solid-iterative extra. This path checks the restraints,
+    residual and work/energy, including independent cell-force recovery
+    for prescribed motion. It does not use the direct solver's
+    shifted-band conditioning test.
+
     With return_cell_fields=True, also recover one constant strain tensor,
     tensile-positive Cauchy stress tensor (Pa) and volume (m³) per validated
     cell. This is an element-wise diagnostic, not a peak stress estimate.
     """
     if not isinstance(return_cell_fields, bool):
         raise TypeError('return_cell_fields must be a bool')
+    if not isinstance(solver, str) or solver not in ('banded','amg-cg'):
+        raise ValueError('Tet4 static solver must be banded or amg-cg')
+    if solver == 'amg-cg':
+        return _solve_static_amg(bundle, forces_by_id, fixed_dofs_by_id,
+                                 return_cell_fields, prescribed_displacements_m_by_id)
     mesh = _validate_static_mesh(bundle)
     return _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id,
                                    return_cell_fields, prescribed_displacements_m_by_id)
+
+
+def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed):
+    from fibernet.sim._tet4_amg import (IterativePlan, batched_response,
+                                      chunked_assembly, factor_constructor)
+    if not isinstance(bundle, Tet4Bundle):
+        raise TypeError('expected a Tet4Bundle')
+    if (_row_count(bundle.points, 'points') > 60_000 or
+            _row_count(bundle.tetrahedra, 'tetrahedra') > 200_000):
+        raise ValueError('iterative Tet4 mechanics mesh limits')
+    mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
+                     bundle.material_ids, bundle.materials, bundle.length_unit)
+    _validate_topology(mesh.tetrahedra)
+    force, fixed, imposed = _loads_and_constraints(mesh, forces, fixed_axes, prescribed)
+    if _check_rigid_modes(mesh, fixed) != 1:
+        raise ValueError('iterative Tet4 mechanics requires one face-connected solid')
+    if any(not (1e3 <= m['young_modulus_pa'] <= 1e13 and -.95 <= m['poisson_ratio'] <= .495)
+           for m in mesh.materials.values()):
+        raise ValueError('material is outside the iterative Tet4 mechanics range')
+    plan = IterativePlan(np.flatnonzero(~fixed.ravel()))
+    try:
+        with np.errstate(divide='raise', over='raise', invalid='raise'):
+            factor = factor_constructor(mesh.points, plan.free)
+            stiffness = chunked_assembly(mesh)
+    except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
+        raise ValueError('could not safely prepare iterative Tet4 mechanics') from exc
+    return _solve_assembled_static(
+        mesh, force, fixed, imposed, return_cell_fields, plan, stiffness,
+        iteration_options={'iterative_factor': factor, 'recovery': batched_response})
 
 
 def _owned_static_mesh(bundle):
@@ -853,15 +899,18 @@ def _solve_static_validated(mesh, forces_by_id, fixed_dofs_by_id, return_cell_fi
 
 
 def _solve_assembled_static(mesh, force, fixed, prescribed, return_cell_fields, plan, k,
-                            *, prepared=None, detach_shared=False):
+                            *, prepared=None, detach_shared=False, iteration_options=None):
+    iteration_options = {} if iteration_options is None else iteration_options
+    factor_kwargs = ({'iterative_factor': iteration_options['iterative_factor']}
+                     if iteration_options else {})
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):
             if prescribed is None:
-                u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan, prepared)
+                u, free, energy, half_work, backward, relative = _fixed_solve(k, force, plan, prepared, **factor_kwargs)
                 internal = k @ u
             else:
                 u, internal, energy, half_work, backward, relative = _prescribed_solve(
-                    mesh, k, force.ravel(), fixed.ravel(), prescribed, plan)
+                    mesh, k, force.ravel(), fixed.ravel(), prescribed, plan, **iteration_options)
                 free = plan.free
             if not np.isfinite(internal).all():
                 raise ValueError('internal nodal forces are outside supported numerical range')

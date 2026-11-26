@@ -51,8 +51,10 @@ class GeometryBreakdown:
         return self.stretch_along_current_per_N + self.transverse_contraction_per_N
 
 
-def _lattice():
+def _lattice(*, refinement=1):
     """Generate a quarter-mm voxel scaffold with shared nodes at intersections."""
+    if type(refinement) is not int or not 1 <= refinement <= 4:
+        raise ValueError("refinement must be an integer between 1 and 4")
     boxes = set()
 
     def fill(x, y, z):
@@ -64,6 +66,9 @@ def _lattice():
         fill(range(x, x + 2), range(1, 7), range(1, 3))
         fill(range(x, x + 2), range(1, 3), range(1, 7))
 
+    if refinement > 1:
+        boxes = {tuple(refinement*i+d for i,d in zip(box,shift))
+                 for box in boxes for shift in product(range(refinement), repeat=3)}
     shifts = list(product(range(2), repeat=3))
     vertices = sorted({tuple(i + j for i, j in zip(box, step))
                        for box in boxes for step in shifts})
@@ -74,7 +79,7 @@ def _lattice():
                 for order in permutations(range(3))]
     connectivity = np.asarray([[rows[tuple(box + v)] for v in pattern]
                                 for box in sorted(boxes) for pattern in patterns])
-    return np.asarray(vertices, dtype=float) * .25, connectivity
+    return np.asarray(vertices, dtype=float) * (.25/refinement), connectivity
 
 
 def _bundle(points_mm, tetrahedra, mode):

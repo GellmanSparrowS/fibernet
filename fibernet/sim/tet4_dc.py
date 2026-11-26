@@ -94,6 +94,59 @@ def _iterative_dc(m, rhs):
     return d*x, it
 
 
+_DC_CELL_BATCH = 8192
+_DC_MIN_CELL_VOLUME_M3 = 1e-24
+_DC_MAX_CELL_VOLUME_M3 = 1.0
+_DC_MAX_GRADIENT_PER_M = 1e12
+
+
+def _checked_geometry_row(x, cell, row):
+    g, volume = core._shape_gradients_and_volume_m(x, cell, row)
+    if (not _DC_MIN_CELL_VOLUME_M3 <= volume <= _DC_MAX_CELL_VOLUME_M3
+            or not np.isfinite(g).all() or np.max(abs(g)) > _DC_MAX_GRADIENT_PER_M):
+        raise ValueError('DC cell outside volume/gradient envelope')
+    return g, volume
+
+
+def _batched_geometry(x, cells):
+    """Compute gradients and volumes in blocks; keep scalar cutoffs at the margins."""
+    gradients = np.empty((len(cells), 4, 3))
+    volume = np.empty(len(cells))
+    approach = 1e-10
+    for start in range(0, len(cells), _DC_CELL_BATCH):
+        sl = slice(start, start + _DC_CELL_BATCH)
+        tet = cells[sl]
+        d = (x[tet[:, 1:]] - x[tet[:, :1]]).transpose(0, 2, 1)
+        scale = np.abs(d).max(axis=(1, 2))
+        if not np.all(np.isfinite(scale) & (scale > 0.)):
+            row = start + int(np.flatnonzero(~(np.isfinite(scale) & (scale > 0.)))[0])
+            raise ValueError(f'Tet4 row {row}: invalid geometry after conversion to m')
+        with np.errstate(over='ignore', divide='ignore', invalid='ignore', under='ignore'):
+            normalized = d / scale[:, None, None]
+            conditions = np.linalg.cond(normalized)
+            ordinary = np.isfinite(conditions) & (conditions <= 1e8)
+            regular = np.flatnonzero(ordinary)
+            grads = gradients[sl]
+            vols = volume[sl]
+            verts = normalized[regular]
+            inverse = np.linalg.inv(verts) / scale[regular, None, None]
+            grads[regular, 1:] = inverse
+            grads[regular, 0] = -inverse.sum(axis=1)
+            vols[regular] = np.abs(np.linalg.det(verts)) * scale[regular]**3 / 6.
+            abs_g = np.abs(grads[regular]).max(axis=(1, 2))
+            # At or outside a numerical boundary, defer to the original
+            # scalar evaluation. That preserves its exact admission rule.
+            near_boundary = (
+                ~np.isfinite(vols[regular]) | ~np.isfinite(abs_g)
+                | (vols[regular] <= _DC_MIN_CELL_VOLUME_M3 * (1. + approach))
+                | (vols[regular] >= _DC_MAX_CELL_VOLUME_M3 * (1. - approach))
+                | (abs_g >= _DC_MAX_GRADIENT_PER_M * (1. - approach)))
+            ordinary[regular[near_boundary]] = False
+        for i in np.flatnonzero(~ordinary):
+            grads[i], vols[i] = _checked_geometry_row(x, tet[i], start + int(i))
+    return gradients, volume
+
+
 def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage_V_by_id,
                   solver="banded"):
     """Solve fixed-voltage DC conduction with an insulating exterior.
@@ -141,13 +194,11 @@ def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage
                 or np.any((absolute[ih]!=lo)&(psi[ih]==0.))
                 or np.any((absolute[ih]!=0.)&((lo+psi[ih])==0.))):
             raise ValueError('electrode contrast lost during centering')
-    grads=[]; vols=[]
-    for i,c in enumerate(cells):
-        g,vol=core._shape_gradients_and_volume_m(x,c,i)
-        if not 1e-24<=vol<=1. or not np.isfinite(g).all() or np.max(abs(g))>1e12:
-            raise ValueError('DC cell outside volume/gradient envelope')
-        grads.append(g); vols.append(vol)
-    g=np.array(grads); vol=np.array(vols)
+    if solver == 'cg':
+        g, vol = _batched_geometry(x, cells)
+    else:
+        values = [_checked_geometry_row(x, cell, i) for i, cell in enumerate(cells)]
+        g, vol = map(np.asarray, zip(*values))
     sig=np.array([s[int(mid)] for mid in mesh.material_ids])
     local=(sig*vol)[:,None,None]*(g@g.transpose(0,2,1))
     rr=np.broadcast_to(cells[:,:,None],local.shape); cc=np.broadcast_to(cells[:,None,:],local.shape)

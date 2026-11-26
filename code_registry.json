@@ -5891,6 +5891,7 @@
    "_prescribed_solve",
    "inspect_static_tet4_admission",
    "solve_static_tet4",
+   "_solve_static_amg",
    "_owned_static_mesh",
    "_validate_static_mesh",
    "_static_topology_plan",
@@ -5898,7 +5899,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "df43b9efe809578cdea197fb903bc5db1107f7399d63711ad1da92f1cd2f39c0"
+  "sha256": "526c07f08eb44236960fe1d272b2663049199fa2432d97196ceef6f9f06bc79d"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -6630,9 +6631,11 @@
    "Tet4DCResult",
    "_check_backward",
    "_iterative_dc",
+   "_checked_geometry_row",
+   "_batched_geometry",
    "solve_dc_tet4"
   ],
-  "sha256": "c8a176c95e4d907994b2ee261f052b6ac81307d45c8a8ce29ae222a980068601"
+  "sha256": "155b038d8988c21b5c3f9527fecdf546f9531c95674abcdbf0521b1ea299d02a"
  },
  "fibernet/sim/tet4_dc_thermal.py": {
   "purpose": "Same-mesh solid DC to steady heat with verified Joule transfer and optional convection.",
@@ -6684,8 +6687,61 @@
    "test_fail_closed_on_iteration_limit_and_on_false_success",
    "test_admission_and_strict_topology",
    "test_electrically_weak_disconnected_body_independent",
-   "test_legacy_scipy_tolerance_compatibility_path"
+   "test_legacy_scipy_tolerance_compatibility_path",
+   "test_batched_geometry_matches_scalar_across_batches_and_orientation",
+   "test_batched_geometry_keeps_scalar_invalid_cell_contract",
+   "test_geometry_near_volume_cutoff_uses_reference"
   ],
-  "sha256": "fc71a7a2183ab402a97af3fa2db8da26ec410c4d67ae61e92357dd2b70764e4f"
+  "sha256": "d33406eecc60c307b991546f70f67a7f8a238b3e686890908017634ce37b1570"
+ },
+ "fibernet/sim/_tet4_amg.py": {
+  "purpose": "Internal bounded mechanics iteration and independent cell recovery.",
+  "status": "active",
+  "symbols": [
+   "batched_response",
+   "IterativePlan",
+   "chunked_assembly",
+   "factor_constructor"
+  ],
+  "sha256": "263832c000cc54777ec143abfcec9933e556a0c30b647f4c9cd1536099a11590"
+ },
+ "examples/tet4_mechanoelectric_looped_network.py": {
+  "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
+  "status": "active",
+  "symbols": [
+   "Result",
+   "MatchedForceResult",
+   "GeometryBreakdown",
+   "_lattice",
+   "_bundle",
+   "_fixture",
+   "_scan",
+   "run",
+   "run_matched_force",
+   "run_geometry_breakdown",
+   "main"
+  ],
+  "sha256": "00b87c6cfd20a66a46259116da317808023f46dcf7e5855a71aeef208b4c1784"
+ },
+ "examples/tet4_iterative_mechanoelectric_sweep.py": {
+  "purpose": "Compute the resistance of a fused lattice over a small proportional stroke sweep.",
+  "status": "active",
+  "symbols": [
+   "run"
+  ],
+  "sha256": "cb77c47607d13183a80742a0e661b1f6d77569e58cd01f325fbdf90931fe9c21"
+ },
+ "tests/test_tet4_static_iterative.py": {
+  "purpose": "Numerical parity and admission for iterative solid mechanics.",
+  "status": "active",
+  "symbols": [
+   "test_direct_iterative_parity",
+   "test_insufficient_constraints_and_no_silent_bad_solver",
+   "test_optional_dependency_error_does_not_break_banded",
+   "test_proportional_sweep_matches_independently_solved_endpoints",
+   "test_iterative_convergence_flag_is_not_enough",
+   "test_two_face_disconnected_solids_and_lower_material_limit"
+  ],
+  "sha256": "6ca5641182d5ad6c6c916892a783a1a24a3ea2213f521f6542809e4624264f8a"
  }
 }
