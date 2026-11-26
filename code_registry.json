@@ -6731,32 +6731,14 @@
  "examples/tet4_mechanoelectric_looped_network.py": {
   "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
   "status": "active",
-  "symbols": [
-   "Result",
-   "MatchedForceResult",
-   "GeometryBreakdown",
-   "_lattice",
-   "_bundle",
-   "_fixture",
-   "_scan",
-   "run",
-   "run_matched_force",
-   "run_geometry_breakdown",
-   "main"
-  ],
-  "sha256": "31f7842ef195ed11d8eeabcbef6cf6c9aa4985587032eca16c32df152d76f824"
+  "symbols": [],
+  "sha256": "f5bb786ba1d5675112b3e78f7e6f53307476ad7e581404d5208490aabc55b7ff"
  },
  "examples/tet4_iterative_mechanoelectric_sweep.py": {
   "purpose": "Compute the resistance of a fused lattice over a small proportional stroke sweep.",
   "status": "active",
-  "symbols": [
-   "_reference_mechanics",
-   "run",
-   "_power_weighted_strain",
-   "run_initial_slope",
-   "main"
-  ],
-  "sha256": "a638208dfc66481529abba56acf51eab82e513f2bbbe4488095afc33ed244afa"
+  "symbols": [],
+  "sha256": "4e24157d8496e0df5f11656d8cb2492863f21f07a4c453f916c3b9efb14417b7"
  },
  "tests/test_tet4_static_iterative.py": {
   "purpose": "Numerical parity and admission for iterative solid mechanics.",
@@ -6778,7 +6760,7 @@
    "test_initial_geometric_slope_requires_only_reference_dc",
    "test_current_direction_uses_scaled_norm_with_signed_analytic_strain"
   ],
-  "sha256": "dc5e7f1e0ff84b5b520a47bdaaf1795b2126fa4253c207ea830f71e3b8a081fa"
+  "sha256": "a30960ba6f7cf1af9b37a38b2da8e49c41afaf2fb05ba7511ea9b95de35124da"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
@@ -6849,16 +6831,8 @@
  "examples/tet4_solid_to_pore_flow.py": {
   "purpose": "Compare one-way pore flow after small solid deformation at matched grip loads.",
   "status": "active",
-  "symbols": [
-   "_boundary_faces",
-   "_extend_interface",
-   "_mechanics",
-   "_reshaped_pore",
-   "_flow",
-   "demo",
-   "compare_materials"
-  ],
-  "sha256": "b73098055158d2c2edb42417cd0e8fc0bb9de9101ba7736822e51816dcd9e47d"
+  "symbols": [],
+  "sha256": "64fa8b366afe91ea51dd77a1974b5a54ea23409957bd3cd4c21758e63e2f3850"
  },
  "tests/test_tet4_periodic_pore.py": {
   "purpose": "Check analytical and numerical invariants of periodic Tet4 pore flow and matched cases.",
@@ -6875,5 +6849,67 @@
    "test_symmetric_mode_recovers_with_original_lu_settings"
   ],
   "sha256": "e2a8f2eb0fe91346a47a4fc25c6eb3df452379d59c8019aad2abfbed94f7a61d"
+ },
+ "examples/tet4_periodic_pore.py": {
+  "purpose": "Source-tree entry point for :mod:`fibernet.examples.tet4_periodic_pore`.",
+  "status": "active",
+  "symbols": [],
+  "sha256": "df82a68ce7a8feb93cb61f51252434302c5370e8c55a3e6b496f9b21189f544e"
+ },
+ "fibernet/examples/tet4_iterative_mechanoelectric_sweep.py": {
+  "purpose": "Compute the resistance of a fused lattice over a small proportional stroke sweep.",
+  "status": "active",
+  "symbols": [
+   "_reference_mechanics",
+   "run",
+   "_power_weighted_strain",
+   "run_initial_slope",
+   "main"
+  ],
+  "sha256": "a889db5f278115189ff4563e2ce1c84f2c23243115db040431f9954e8f07cf9b"
+ },
+ "fibernet/examples/tet4_mechanoelectric_looped_network.py": {
+  "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
+  "status": "active",
+  "symbols": [
+   "Result",
+   "MatchedForceResult",
+   "GeometryBreakdown",
+   "_lattice",
+   "_bundle",
+   "_fixture",
+   "_scan",
+   "run",
+   "run_matched_force",
+   "run_geometry_breakdown",
+   "main"
+  ],
+  "sha256": "d051311e2681d4abd17bc06d23e54ab39c369dcb37192fa7029f372633ec0c94"
+ },
+ "fibernet/examples/tet4_periodic_pore.py": {
+  "purpose": "Compare a periodic duct with and without a synthetic three-path scaffold.",
+  "status": "active",
+  "symbols": [
+   "_scaffold_voxels",
+   "bundle",
+   "_voxel_bundle",
+   "demo"
+  ],
+  "sha256": "92ee7d478be0239c02870d2a8d68dd48f9ff5a59e9a2f36e11a6dfc29eb37828"
+ },
+ "fibernet/examples/tet4_solid_to_pore_flow.py": {
+  "purpose": "Small one-way solid-to-pore calculation on a bonded three-path scaffold.",
+  "status": "active",
+  "symbols": [
+   "_boundary_faces",
+   "_extend_interface",
+   "_mechanics",
+   "_reshaped_pore",
+   "_flow",
+   "demo",
+   "compare_materials",
+   "main"
+  ],
+  "sha256": "83eddcc0d584d0327a07555f511c85fce0970b3efd0cf2080ba4f287d2ced843"
  }
 }
