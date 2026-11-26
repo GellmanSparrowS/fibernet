@@ -200,9 +200,83 @@ def test_symmetric_mode_recovers_with_original_lu_settings(monkeypatch, reject):
             return ZeroFlowFactor()
         return real_splu(matrix, **options)
 
+    def force_direct(*args):
+        raise ValueError("synthetic block rejection")
+
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", force_direct)
     monkeypatch.setattr(tet4_pore, "splu", force_rejection)
     fallback = solve_x_periodic_stokes(mesh, **settings)
     assert calls == [True, False]
     np.testing.assert_allclose(fallback.axial_flow_m3_s, expected.axial_flow_m3_s, rtol=1e-9)
     np.testing.assert_allclose(fallback.cap_flow_m3_s, expected.cap_flow_m3_s, rtol=1e-9)
     np.testing.assert_allclose(fallback.power_W, expected.power_W, rtol=1e-9)
+
+
+@pytest.mark.parametrize("reject", (None, "iteration", "physical_validation"))
+def test_stokes_block_solution_preserves_physics_and_falls_back(monkeypatch, reject):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+
+    b = bundle()
+    solve_block, factor = tet4_pore._solve_stokes_block, tet4_pore.splu
+    calls = []
+
+    def try_block(matrix, rhs, count):
+        calls.append(("block", matrix.shape[0]))
+        if reject == "iteration":
+            raise ValueError("synthetic iteration limit")
+        if reject == "physical_validation":
+            return np.zeros_like(rhs)
+        return solve_block(matrix, rhs, count)
+
+    def count_factor(matrix, **kw):
+        calls.append(("LU", matrix.shape[0]))
+        return factor(matrix, **kw)
+
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", try_block)
+    monkeypatch.setattr(tet4_pore, "splu", count_factor)
+    actual = solve_x_periodic_stokes(b, **settings)
+    assert [x[0] for x in calls] == ["block", "LU"]
+    if reject is None:
+        assert 3 * calls[1][1] < calls[0][1]  # Factor one velocity component, not the saddle matrix.
+    else:
+        assert calls[0][1] == calls[1][1]  # Full saddle matrix used as fallback.
+    assert actual.original_relative_residual < 2e-8
+    assert actual.continuity_relative_error < 2e-8
+    assert abs(actual.power_relative_error) < 2e-8
+
+    def direct_only(*args):
+        raise ValueError("measure the identical assembled problem with direct LU")
+
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", direct_only)
+    expected = solve_x_periodic_stokes(b, **settings)
+    for field in ("axial_flow_m3_s", "cap_flow_m3_s", "power_W"):
+        np.testing.assert_allclose(getattr(actual, field), getattr(expected, field), rtol=1e-9)
+
+
+def test_stokes_block_handles_input_with_first_node_on_high_cap(monkeypatch):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+
+    original = bundle()
+    expected = solve_x_periodic_stokes(original, **settings)
+    order = np.arange(len(original.points))
+    high = int(np.argmax(original.points[:, 0]))
+    order[0], order[high] = high, 0
+    inverse = np.argsort(order)
+    permuted = replace(original, points=original.points[order],
+                       node_ids=original.node_ids[order],
+                       tetrahedra=inverse[original.tetrahedra])
+    factor = tet4_pore.splu
+    sizes = []
+
+    def count_factor(matrix, **kw):
+        sizes.append(matrix.shape[0])
+        return factor(matrix, **kw)
+
+    monkeypatch.setattr(tet4_pore, "splu", count_factor)
+    actual = solve_x_periodic_stokes(permuted, **settings)
+    # The scalar velocity factor stays usable under reordering.
+    assert len(sizes) == 1 and sizes[0] < 3000
+    np.testing.assert_allclose(actual.axial_flow_m3_s, expected.axial_flow_m3_s, rtol=1e-9)
+    np.testing.assert_allclose(actual.power_W, expected.power_W, rtol=1e-9)

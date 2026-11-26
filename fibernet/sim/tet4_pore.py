@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from inspect import signature
 
 import numpy as np
 from scipy.sparse import bmat, coo_matrix, eye, hstack, kron
-from scipy.sparse.linalg import splu
+from scipy.sparse.linalg import LinearOperator, minres, splu
 from scipy.spatial import cKDTree
 
 from ..io.tet4_meshio import Tet4Bundle
@@ -78,6 +79,45 @@ def _stokes_admission(bundle,cap_bytes):
     if plan>cap_bytes:
         raise ValueError('periodic Stokes planned work buffers exceed requested limit')
     return n,t,plan
+
+def _solve_stokes_block(system, rhs, velocity_dofs):
+    """Try MINRES with one direct scalar velocity solve and a pressure diagonal."""
+    n = system.shape[0]
+    if not 3 <= velocity_dofs < n or velocity_dofs % 3:
+        raise ValueError("periodic Stokes block layout is not supported")
+    diag = system.diagonal()
+    vel_diag = diag[:velocity_dofs]
+    if np.any(~np.isfinite(vel_diag)) or np.any(vel_diag <= 0.) or np.any(diag[velocity_dofs:]):
+        raise ValueError("periodic Stokes block diagonal is not supported")
+    velocity = system[:velocity_dofs, :velocity_dofs]
+    velocity.eliminate_zeros()
+    scalar = velocity[::3, ::3].tocsc()
+    if (velocity.nnz != 3 * scalar.nnz
+            or (velocity[1::3, 1::3] - scalar).nnz
+            or (velocity[2::3, 2::3] - scalar).nnz):
+        raise ValueError("periodic Stokes velocity components are not identical")
+    # -B A^{-1} B^T is the pressure Schur block; use a positive diagonal
+    # approximation to its magnitude so the MINRES preconditioner is SPD.
+    coupling = system[velocity_dofs:, :velocity_dofs].tocsr()
+    pressure_diag = coupling.power(2) @ (1. / vel_diag)
+    if np.any(~np.isfinite(pressure_diag)) or np.any(pressure_diag <= 0.):
+        raise ValueError("periodic Stokes pressure diagonal is not supported")
+    scalar_factor = splu(scalar, permc_spec="MMD_AT_PLUS_A", options={"SymmetricMode": True})
+
+    def apply(x):
+        v = scalar_factor.solve(x[:velocity_dofs].reshape((-1, 3))).ravel()
+        return np.r_[v, x[velocity_dofs:] / pressure_diag]
+
+    preconditioner = LinearOperator(system.shape, matvec=apply, dtype=np.float64)
+    # SciPy 1.12 uses tol; newer supported releases use rtol.
+    tolerance = "rtol" if "rtol" in signature(minres).parameters else "tol"
+    x, info = minres(system, rhs, M=preconditioner, maxiter=300, check=True, **{tolerance: 2e-13})
+    error = np.linalg.norm(system @ x - rhs, np.inf)
+    scale = np.linalg.norm(rhs, np.inf)
+    if info != 0 or not np.isfinite(error) or not error <= 1e-9 * scale:
+        raise ValueError("periodic Stokes block iteration did not reach the algebraic tolerance")
+    return x
+
 
 def solve_x_periodic_stokes(
     bundle: Tet4Bundle,
@@ -170,11 +210,18 @@ def solve_x_periodic_stokes(
     if not len(free):
         raise ValueError('periodic Stokes has no free degrees of freedom')
 
-    def solve_and_check(symmetric_ordering):
+    # Mesh rows need not put pressure node zero on the low cap. Find the
+    # end of the entire reduced velocity block, not the pressure gauge index.
+    velocity_dofs = int(np.searchsorted(free, inverse[:nv].max() + 1))
+
+    def solve_and_check(mode):
         u=np.zeros(len(reduced))
         try:
-            kwargs={'options': {'SymmetricMode': True}} if symmetric_ordering else {}
-            u[free]=splu(system,permc_spec='MMD_AT_PLUS_A',**kwargs).solve(reduced[free])
+            if mode == 'block':
+                u[free] = _solve_stokes_block(system, reduced[free], velocity_dofs)
+            else:
+                kwargs = {'options': {'SymmetricMode': True}} if mode == 'structured-lu' else {}
+                u[free] = splu(system, permc_spec='MMD_AT_PLUS_A', **kwargs).solve(reduced[free])
         except RuntimeError as e:
             raise ValueError('periodic Stokes operator cannot be factorized') from e
         reconstructed=P@u
@@ -202,15 +249,14 @@ def solve_x_periodic_stokes(
         return PeriodicStokesResult(flux*flux_scale,tuple(map(float,caps*flux_scale)),E*power_scale,cost,
                                     float(res),float(cont),capbalance,capdelta,int(npair),int(nv),plan)
 
-    # The assembled saddle operator is structurally symmetric, but it is not
-    # positive definite. Use general LU with the default pivot threshold.
-    # Retain the original LU settings as fallback if factorization or physical
-    # validation rejects the symmetric-ordering result.
-    try:
-        return solve_and_check(True)
-    except ValueError:
-        pass
-    return solve_and_check(False)
+    # The saddle operator is symmetric but indefinite. Test each candidate
+    # against the same physical gates, and keep both direct LU paths.
+    for mode in ('block', 'structured-lu'):
+        try:
+            return solve_and_check(mode)
+        except ValueError:
+            pass
+    return solve_and_check('original-lu')
 
 
 @dataclass(frozen=True)
