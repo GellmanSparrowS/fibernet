@@ -173,3 +173,36 @@ def test_matched_cases_prevalidate_all_geometries_before_solving(monkeypatch):
     for cases in ([], [first]*9, iter([first])):
         with pytest.raises(ValueError, match="ordered list or tuple"):
             solve_matched_pore_geometry_cases(b, cases, **settings)
+
+
+@pytest.mark.parametrize("reject", ("factorization", "physical_validation"))
+def test_symmetric_mode_recovers_with_original_lu_settings(monkeypatch, reject):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+
+    real_splu = tet4_pore.splu
+    mesh = bundle(False)
+    expected = solve_x_periodic_stokes(mesh, **settings)
+    calls = []
+
+    class ZeroFlowFactor:
+        def solve(self, rhs):
+            return np.zeros_like(rhs)
+
+    def force_rejection(matrix, **options):
+        fast = options.get("options", {}).get("SymmetricMode", False)
+        calls.append(fast)
+        assert options["permc_spec"] == "MMD_AT_PLUS_A"
+        assert "diag_pivot_thresh" not in options
+        if fast and reject == "factorization":
+            raise RuntimeError("synthetic fast factorization rejection")
+        if fast:
+            return ZeroFlowFactor()
+        return real_splu(matrix, **options)
+
+    monkeypatch.setattr(tet4_pore, "splu", force_rejection)
+    fallback = solve_x_periodic_stokes(mesh, **settings)
+    assert calls == [True, False]
+    np.testing.assert_allclose(fallback.axial_flow_m3_s, expected.axial_flow_m3_s, rtol=1e-9)
+    np.testing.assert_allclose(fallback.cap_flow_m3_s, expected.cap_flow_m3_s, rtol=1e-9)
+    np.testing.assert_allclose(fallback.power_W, expected.power_W, rtol=1e-9)
