@@ -189,3 +189,47 @@ def test_packed_face_forest_keeps_high_point_bits():
     cells=np.array([[1,2,3,4],[3,2,1,5],[32769,32770,32771,32772],
                     [32773,32771,32770,32769]],dtype=np.int64)
     assert _tet4_amg.topology_parents(cells) == [0,0,2,2]
+
+
+def test_initial_geometric_slope_requires_only_reference_dc(monkeypatch):
+    pytest.importorskip('pyamg')
+    from examples import tet4_iterative_mechanoelectric_sweep as example
+    curve=example.run(refinement=1)["states"]
+    states=[]
+    solve=example.solve_dc_tet4
+    def counted(mesh, **kwargs):
+        states.append(mesh.points.copy())
+        return solve(mesh, **kwargs)
+    monkeypatch.setattr(example,"solve_dc_tet4",counted)
+    initial=example.run_initial_slope(refinement=1)
+    assert len(states)==1
+    np.testing.assert_array_equal(states[0],_lattice(refinement=1)[0])
+    r0=curve[2]["resistance_ohm"]
+    np.testing.assert_allclose(initial["resistance_at_zero_ohm"],r0,rtol=1e-10)
+    slope=initial["relative_resistance_slope_per_um"]
+    assert slope>0
+    for minus, plus in [(1,3),(0,4)]:
+        hi,lo=curve[plus],curve[minus]
+        secant=((hi["resistance_ohm"]-lo["resistance_ohm"]) /
+                (r0*(hi["stroke_m"]-lo["stroke_m"])*1e6))
+        np.testing.assert_allclose(slope,secant,rtol=5e-5)
+    terms=(initial["current_aligned_stretch_per_um"],initial["transverse_contraction_per_um"])
+    np.testing.assert_allclose(sum(terms),slope,rtol=1e-13)
+
+
+def test_current_direction_uses_scaled_norm_with_signed_analytic_strain():
+    from examples.tet4_iterative_mechanoelectric_sweep import _power_weighted_strain
+    from itertools import permutations
+    x=1e-3*np.vstack([np.zeros(3),np.eye(3)])
+    rows=np.asarray(list(permutations(range(4))))
+    n=np.array([1.,3.,-2.])/np.sqrt(14.)
+    j=np.tile([1e-220,1e220,1.,0.],6)[:,None]*n[None,:]
+    w=np.where(np.any(j!=0.,axis=1),1.,0.)
+    G=1e-3*np.array([[7.,1.,-5.],[2.,-2.,.5],[4.,-1.1,-.8]])
+    u=x@G+np.array([1.,-4.,8.])*1e-5
+    across=n@G@n-np.trace(G)
+    terms=(w.sum()*(n@G@n),w.sum()*across)
+    np.testing.assert_allclose(_power_weighted_strain(x,rows,u,j,w),terms,atol=1e-15)
+    w[-1]=1
+    with pytest.raises(ValueError,match="Zero-current"):
+        _power_weighted_strain(x,rows,u,j,w)

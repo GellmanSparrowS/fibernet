@@ -6742,9 +6742,13 @@
   "purpose": "Compute the resistance of a fused lattice over a small proportional stroke sweep.",
   "status": "active",
   "symbols": [
-   "run"
+   "_reference_mechanics",
+   "run",
+   "_power_weighted_strain",
+   "run_initial_slope",
+   "main"
   ],
-  "sha256": "cb77c47607d13183a80742a0e661b1f6d77569e58cd01f325fbdf90931fe9c21"
+  "sha256": "b716bdd597e76bb16762a74829ac10d5ec5fbb16cb93a95fbfa0d64a08ae1af3"
  },
  "tests/test_tet4_static_iterative.py": {
   "purpose": "Numerical parity and admission for iterative solid mechanics.",
@@ -6760,9 +6764,11 @@
    "test_batched_assembly_keeps_original_invalid_row_number",
    "test_packed_face_forest_matches_reference_rigid_check",
    "test_packed_face_validation_keeps_first_reference_error",
-   "test_packed_face_forest_keeps_high_point_bits"
+   "test_packed_face_forest_keeps_high_point_bits",
+   "test_initial_geometric_slope_requires_only_reference_dc",
+   "test_current_direction_uses_scaled_norm_with_signed_analytic_strain"
   ],
-  "sha256": "dc3d20be080c6864283458776bf5c4a1c635035b7c3cb6dca526c65e609a0254"
+  "sha256": "899c4a3ef074e8b31ae19b9283adad010e0b7444783fe18220b45d6607e89554"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
@@ -6773,7 +6779,7 @@
    "solve",
    "main"
   ],
-  "sha256": "3c068c2465c291ab9fb1ec64ee20680a720866da5acfcfad672e5e3fdb7399ab"
+  "sha256": "c82a616033812e734a11f0204320193b7b1c0c2c93c622f1b9e277fc808b648e"
  },
  "tests/test_tet4_tagged_grips_example.py": {
   "purpose": "Executable smoke tests for imported named grips above the banded limits.",
@@ -6781,8 +6787,9 @@
   "symbols": [
    "test_prepared_mesh_above_banded_cap_can_solve_and_save",
    "test_edited_grip_setting_is_refused_without_emitting_results",
-   "test_sidecar_from_another_bundle_is_refused"
+   "test_sidecar_from_another_bundle_is_refused",
+   "test_custom_external_gmsh_group_names_reproduce_same_inputs"
   ],
-  "sha256": "28f32595ef25507bb59c563d7d9016fe8e633a926d583d95dd9e281b23ea6c88"
+  "sha256": "4d3f283d7bb5dc1b3d2e620c5f6d6020c6a7eddcb66c81f433daa592982facb6"
  }
 }

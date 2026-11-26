@@ -344,6 +344,11 @@ requires these named physical groups:
 - Surface triangles: `hold_face` and `pull_face`, with distinct exterior
   triangles and no shared grip nodes.
 
+The names above are defaults. For an existing mesh, supply its real names
+without editing the mesh file: `--material-groups "Soft phase" "Stiff phase"`
+sets the order for the low and high modulus inputs, and
+`--grip-groups "Fixed end" "Driven end"` selects the two exterior grips.
+
 Install the optional providers from the source checkout:
 
 ~~~sh
