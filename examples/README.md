@@ -77,6 +77,12 @@ one at a time. Rod area and conductivity are fixed. The recovered quantities
 are prescribed small boundary strains, not local strains or measured sensor
 resolution.
 
+## Solve a tagged Gmsh mesh with rigid grips
+
+Use [the named-grip example](../docs/TET4_VTU_BUNDLE.md#run-a-tagged-mesh-above-the-banded-solver-limits)
+to import a two-material solid, prescribe a grip stroke and write nodal
+results with stable IDs. It can also generate a 28,512-cell fixture.
+
 ## Predicting strain-induced resistance in a fused solid lattice
 
 From a source checkout:

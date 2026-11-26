@@ -212,7 +212,7 @@
   "sim/_roundoff.py": "f74489a7378a9952da0f31cb6ce8769f68bab16635c2021a4773e8ef90e791f7",
   "sim/_taichi_geometry.py": "bb0b6de139a54159de60556102be80c729534210117b31c985ef485c6abdb25b",
   "sim/_taichi_viscoelastic.py": "ee2ac5462cc6861ca7784a67f80125006b4d30b06317c3cae743ca3a64040e32",
-  "sim/_tet4_amg.py": "263832c000cc54777ec143abfcec9933e556a0c30b647f4c9cd1536099a11590",
+  "sim/_tet4_amg.py": "a15c74b3ff081b767596806e8ff1167e0bf488119b8901ecbf997a17260ad708",
   "sim/_tet4_robin.py": "2d6c591de61646ffe5b5c89d8c7a07e4d7d433214693d86463cd083213bcbf98",
   "sim/_thermal_step.py": "b34d0a8ca1c41ee179a9b2ef29f9c3ce62cdc68c1cf3bf3ccfe0afb79934f4ba",
   "sim/_thermoelastic.py": "f592fe105fd7e42c3291f371383ba6923186a99c351ca47770d669351fd86f0c",
