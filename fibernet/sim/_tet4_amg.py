@@ -72,22 +72,9 @@ def topology_parents(cells):
     tetrahedron key; three form a face key. Connectivity order is irrelevant
     to equality, but the stable face sort and replay preserve row diagnostics.
     """
-    corners = np.sort(cells.astype(np.uint64), axis=1)
-    a, b, c, d = corners.T
-    keys = (a << 48) | (b << 32) | (c << 16) | d
-    keys.sort()
-    if np.any(keys[:-1] == keys[1:]):
-        # Also catches an earlier non-manifold face, if there is one.
-        core._validate_topology(cells)
-    face_keys = np.column_stack(((a << 32) | (b << 16) | c,
-                                 (a << 32) | (b << 16) | d,
-                                 (a << 32) | (c << 16) | d,
-                                 (b << 32) | (c << 16) | d)).ravel()
+    face_keys = core._packed_topology_face_keys(cells)
     order = np.argsort(face_keys, kind='stable')
-    sorted_faces = face_keys[order]
-    shared = sorted_faces[:-1] == sorted_faces[1:]
-    if np.any(shared[:-1] & shared[1:]):
-        core._validate_topology(cells)
+    shared = core._packed_topology_shared_faces(face_keys[order], cells)
     first, second = order[:-1][shared], order[1:][shared]
     replay = np.argsort(second)
     parent = list(range(len(cells)))
