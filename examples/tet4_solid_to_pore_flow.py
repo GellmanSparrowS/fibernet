@@ -14,7 +14,7 @@ from scipy.sparse import coo_matrix, diags
 from scipy.sparse.linalg import spsolve
 
 from fibernet.sim.tet4 import solve_static_tet4
-from fibernet.sim.tet4_pore import solve_matched_pore_geometry
+from fibernet.sim.tet4_pore import solve_matched_pore_geometry, solve_matched_pore_geometry_cases
 from .tet4_periodic_pore import _scaffold_voxels, _voxel_bundle, bundle
 
 
@@ -86,9 +86,13 @@ def _mechanics(solid, stroke_m):
     return motion, force_r
 
 
-def _flow(solid, fluid, motion):
+def _reshaped_pore(solid, fluid, motion):
     offsets_mm = _extend_interface(solid, fluid, motion.displacement_m * 1e3)
-    return solve_matched_pore_geometry(fluid, replace(fluid, points=fluid.points + offsets_mm),
+    return replace(fluid, points=fluid.points + offsets_mm)
+
+
+def _flow(solid, fluid, motion):
+    return solve_matched_pore_geometry(fluid, _reshaped_pore(solid, fluid, motion),
                                        viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=500.)
 
 
@@ -116,21 +120,29 @@ def compare_materials():
     fluid = bundle()
     calibration_m = 2e-6
     force_N = .15
-    results = []
+    preparations = []
     for solid in (soft, stiff):
         _, calibration_N = _mechanics(solid, calibration_m)
-        cases = []
         for sign in (-1, 1):
             target_N = sign * force_N
             stroke_m = calibration_m * target_N / calibration_N
             motion, reaction_N = _mechanics(solid, stroke_m)
             if not np.isclose(reaction_N, target_N, rtol=2e-10, atol=0.):
                 raise ValueError("actual grip reaction does not match the target")
-            result = _flow(solid, fluid, motion)
-            cases.append(dict(stroke_m=stroke_m, reaction_N=reaction_N,
-                              bulk_flow_m3_s=result.deformed.axial_flow_m3_s,
-                              relative_bulk_change=result.relative_bulk_flow_change,
-                              relative_end_change=list(result.relative_cap_flow_change)))
+            preparations.append((stroke_m, reaction_N, _reshaped_pore(solid, fluid, motion)))
+    flow = solve_matched_pore_geometry_cases(
+        fluid, [item[2] for item in preparations],
+        viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=500.,
+    )
+    loaded = [
+        dict(stroke_m=stroke_m, reaction_N=reaction_N, bulk_flow_m3_s=q.deformed.axial_flow_m3_s,
+             relative_bulk_change=q.relative_bulk_flow_change,
+             relative_end_change=list(q.relative_cap_flow_change))
+        for (stroke_m, reaction_N, _), q in zip(preparations, flow)
+    ]
+    results = []
+    for index, solid in enumerate((soft, stiff)):
+        cases = loaded[2*index:2*index+2]
         minus, plus = cases
         slope = (plus["relative_bulk_change"] - minus["relative_bulk_change"]) / (2 * force_N)
         results.append(dict(young_modulus_Pa=solid.materials[1]["young_modulus_pa"],
