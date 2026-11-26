@@ -123,13 +123,34 @@ def _batched_geometry(x, cells):
             raise ValueError(f'Tet4 row {row}: invalid geometry after conversion to m')
         with np.errstate(over='ignore', divide='ignore', invalid='ignore', under='ignore'):
             normalized = d / scale[:, None, None]
-            conditions = np.linalg.cond(normalized)
-            ordinary = np.isfinite(conditions) & (conditions <= 1e8)
+            try:
+                trial = np.linalg.inv(normalized)
+            except np.linalg.LinAlgError:
+                trial = None
+            if trial is not None:
+                # If R = AB - I and ||R||_F < 1, then
+                # cond_2(A) <= ||A||_F ||B||_F / (1 - ||R||_F).
+                # Accept only a bound far below the condition cutoff and
+                # with a small residual, leaving ample room for rounding.
+                # Uncertified cells use the original SVD and scalar checks.
+                correction = normalized @ trial - np.eye(3)
+                residual_sq = np.einsum('nij,nij->n', correction, correction)
+                matrix_sq = np.einsum('nij,nij->n', normalized, normalized)
+                inverse_sq = np.einsum('nij,nij->n', trial, trial)
+                certified = (residual_sq < 1e-20) & (matrix_sq * inverse_sq < 64.0**2)
+            else:
+                certified = np.zeros(len(normalized), dtype=bool)
+            ordinary = certified.copy()
+            uncertified = np.flatnonzero(~certified)
+            if len(uncertified):
+                conditions = np.linalg.cond(normalized[uncertified])
+                ordinary[uncertified] = np.isfinite(conditions) & (conditions <= 1e8)
             regular = np.flatnonzero(ordinary)
             grads = gradients[sl]
             vols = volume[sl]
             verts = normalized[regular]
-            inverse = np.linalg.inv(verts) / scale[regular, None, None]
+            batch_inverse = np.linalg.inv(verts) if trial is None else trial[regular]
+            inverse = batch_inverse / scale[regular, None, None]
             grads[regular, 1:] = inverse
             grads[regular, 0] = -inverse.sum(axis=1)
             vols[regular] = np.abs(np.linalg.det(verts)) * scale[regular]**3 / 6.

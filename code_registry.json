@@ -6651,7 +6651,7 @@
    "_batched_geometry",
    "solve_dc_tet4"
   ],
-  "sha256": "5412f8da8f47e722734bef68f858ccab3e55d1f987a2317e29f567d81cef4852"
+  "sha256": "097d1080922f45d6373eeafd705de82b05ad930ce236102a9f43bcd7dbc5fe84"
  },
  "fibernet/sim/tet4_dc_thermal.py": {
   "purpose": "Same-mesh solid DC to steady heat with verified Joule transfer and optional convection.",
@@ -6708,9 +6708,11 @@
    "test_legacy_scipy_tolerance_compatibility_path",
    "test_batched_geometry_matches_scalar_across_batches_and_orientation",
    "test_batched_geometry_keeps_scalar_invalid_cell_contract",
-   "test_geometry_near_volume_cutoff_uses_reference"
+   "test_geometry_near_volume_cutoff_uses_reference",
+   "test_condition_bound_only_routes_well_conditioned_rows_away_from_svd",
+   "test_singular_batch_falls_back_to_first_scalar_geometry_error"
   ],
-  "sha256": "1044405c095c93da4a3387e4b6d25b1c8acc9e086fca37f816ca06399bf655cb"
+  "sha256": "32508f2e06c141ce63600e4c2c1d21944431a28fdeabb890517524e61479b7b4"
  },
  "fibernet/sim/_tet4_amg.py": {
   "purpose": "Internal bounded mechanics iteration and independent cell recovery.",
