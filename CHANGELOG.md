@@ -1,3 +1,8 @@
+## [4.26.0]
+- Add opt-in iterative standalone DC conduction for larger fused Tet4 solids with the same input and output contracts.
+- Add a conforming solid-deformation to periodic pore-flow example with matched displacement or grip force.
+- See the [4.26.0 release notes](docs/RELEASE_4_26_0.md).
+
 ## [4.25.0]
 
 - Add an opt-in, bounded Stokes solver for periodically driven Tet4 pores.
