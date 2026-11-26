@@ -259,9 +259,11 @@ def _validate_topology(cells):
                 raise ValueError(f'non-manifold Tet4 face with more than two cells at row {row}')
     return faces
 
-def _check_rigid_modes(mesh, fixed):
+def _check_rigid_modes(mesh, fixed, *, parent=None):
     cells = mesh.tetrahedra.tolist()
-    parent = list(range(len(cells)))
+    build_parents = parent is None
+    if build_parents:
+        parent = list(range(len(cells)))
 
     def find(i):
         while i != parent[i]:
@@ -269,13 +271,14 @@ def _check_rigid_modes(mesh, fixed):
             i = parent[i]
         return i
 
-    faces = {}
-    for i, tet in enumerate(cells):
-        for face in combinations(sorted(tet), 3):
-            if face in faces:
-                parent[find(i)] = find(faces[face])
-            else:
-                faces[face] = i
+    if build_parents:
+        faces = {}
+        for i, tet in enumerate(cells):
+            for face in combinations(sorted(tet), 3):
+                if face in faces:
+                    parent[find(i)] = find(faces[face])
+                else:
+                    faces[face] = i
     node_components = {}
     rows = defaultdict(list)
     for i, tet in enumerate(cells):
@@ -836,7 +839,8 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
 
 def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed):
     from fibernet.sim._tet4_amg import (IterativePlan, batched_response,
-                                      chunked_assembly, factor_constructor)
+                                      chunked_assembly, factor_constructor,
+                                      topology_parents)
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if (_row_count(bundle.points, 'points') > 60_000 or
@@ -844,9 +848,9 @@ def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed
         raise ValueError('iterative Tet4 mechanics mesh limits')
     mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
                      bundle.material_ids, bundle.materials, bundle.length_unit)
-    _validate_topology(mesh.tetrahedra)
+    parent = topology_parents(mesh.tetrahedra)
     force, fixed, imposed = _loads_and_constraints(mesh, forces, fixed_axes, prescribed)
-    if _check_rigid_modes(mesh, fixed) != 1:
+    if _check_rigid_modes(mesh, fixed, parent=parent) != 1:
         raise ValueError('iterative Tet4 mechanics requires one face-connected solid')
     if any(not (1e3 <= m['young_modulus_pa'] <= 1e13 and -.95 <= m['poisson_ratio'] <= .495)
            for m in mesh.materials.values()):

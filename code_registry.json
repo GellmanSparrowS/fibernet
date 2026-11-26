@@ -5907,7 +5907,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "526c07f08eb44236960fe1d272b2663049199fa2432d97196ceef6f9f06bc79d"
+  "sha256": "e429d15c60578cfe501a8c84d8b1db7597484cd5d8b24265945084d4279e4bc6"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -6707,12 +6707,13 @@
   "status": "active",
   "symbols": [
    "batched_response",
+   "topology_parents",
    "IterativePlan",
    "_element_stiffness_batch",
    "chunked_assembly",
    "factor_constructor"
   ],
-  "sha256": "a15c74b3ff081b767596806e8ff1167e0bf488119b8901ecbf997a17260ad708"
+  "sha256": "2f37334e00d0df93962f48eea080bd0066ad40a21a0f5bdd6aef06cd9b3e04ce"
  },
  "examples/tet4_mechanoelectric_looped_network.py": {
   "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
@@ -6751,9 +6752,12 @@
    "test_iterative_convergence_flag_is_not_enough",
    "test_two_face_disconnected_solids_and_lower_material_limit",
    "test_mixed_scale_assembly_keeps_scalar_row_fallback",
-   "test_batched_assembly_keeps_original_invalid_row_number"
+   "test_batched_assembly_keeps_original_invalid_row_number",
+   "test_packed_face_forest_matches_reference_rigid_check",
+   "test_packed_face_validation_keeps_first_reference_error",
+   "test_packed_face_forest_keeps_high_point_bits"
   ],
-  "sha256": "c666e43899f9282ddde10f682557935011a74254f67045ce9ecb6a482342201e"
+  "sha256": "dc3d20be080c6864283458776bf5c4a1c635035b7c3cb6dca526c65e609a0254"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
