@@ -84,6 +84,7 @@ From a source checkout:
 ```bash
 python -m examples.tet4_mechanoelectric_looped_network
 python -m examples.tet4_mechanoelectric_looped_network --matched-force
+python -m examples.tet4_mechanoelectric_looped_network --geometry-breakdown
 ```
 
 Three axial paths share four crosslinks in a 3D, square-section lattice.
@@ -98,6 +99,11 @@ for each material layout. The example re-solves both signs and checks that
 the computed grip reactions match −0.5 N and +0.5 N. The normalized resistance
 slope is then reported per newton rather than per unit strain. The grip is
 still rigid; this mode is not a prescribed uniform traction on a free cap.
+
+The `--geometry-breakdown` mode separates stretch along the local current
+from transverse contraction using undeformed Joule-power weights. Their sum
+matches the small-force resistance slope. These are signed geometric
+contributions, not an intrinsic change in conductivity.
 
 This example uses the bounded Tet4 solvers, a 387-node synthetic lattice,
 and a small prescribed grip displacement. It does not model intrinsic
