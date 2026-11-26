@@ -353,6 +353,11 @@ units or material constants.
   booleans, negative and out-of-range integers are rejected. Supply the source
   Python sequence or a correctly typed ndarray: the writer cannot recover an
   ID rounded by an earlier external float cast.
+- Zero-volume cells are rejected for the represented coordinates. An
+  outward-rounded determinant interval can establish that a cell is
+  nonzero; if the interval cannot exclude zero or the coordinate scale is
+  extreme, the exact binary64 determinant is used. This is not a mesh
+  quality test and does not change the solver's conditioning limits.
 - The material mapping must cover **exactly** the material IDs used by cells.
   It carries only `young_modulus_pa` (positive, in Pa) and `poisson_ratio`
   (dimensionless, strictly between `-1` and `0.5`) as finite binary64 values.

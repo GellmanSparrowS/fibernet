@@ -28,6 +28,7 @@ _SCHEMA = 'fibernet-tet4-vtu-1'
 _LIMITS = {'mesh.vtu': 40 * 1024**2, 'manifest.json': 1024**2}
 _MAX_POINTS = _MAX_TETS = 250_000
 _DYADIC_BATCH = 4_096
+_INTERVAL_BATCH = 8_192
 _MAX_ARCHIVE = sum(_LIMITS.values()) + 1024
 _MAX_ZIP_DIRECTORY = 512
 _I64_MAX, _U64_MAX = 2**63 - 1, 2**64 - 1
@@ -142,7 +143,74 @@ def _binary64_ratio(word):
     return (mantissa << shift, 1) if shift >= 0 else (mantissa, 1 << -shift)
 
 
+def _outward(v, direction):
+    return np.nextafter(v, direction)
+
+
+def _interval_add(a, b):
+    return _outward(a[0] + b[0], -np.inf), _outward(a[1] + b[1], np.inf)
+
+
+def _interval_subtract(a, b):
+    return _outward(a[0] - b[1], -np.inf), _outward(a[1] - b[0], np.inf)
+
+
+def _interval_multiply(a, b):
+    u=a[0]*b[0]
+    v=a[0]*b[1]
+    w=a[1]*b[0]
+    x=a[1]*b[1]
+    return (_outward(np.minimum(np.minimum(u,v),np.minimum(w,x)),-np.inf),
+            _outward(np.maximum(np.maximum(u,v),np.maximum(w,x)),np.inf))
+
+
+def _nonzero_interval_certificate(rows):
+    # The interval filter does not classify extreme coordinates. The exact
+    # dyadic predicate remains the authority for those and near-zero bounds.
+    magnitude = np.abs(rows)
+    eligible = np.all((magnitude == 0.) | ((magnitude >= 1e-70) & (magnitude <= 1e50)),
+                      axis=(1, 2))
+    # Exclude represented subnormal values even on a flush-to-zero build.
+    bits=rows.view(np.uint64)&np.uint64((1<<63)-1)
+    eligible &= ~np.any((bits!=0)&(bits<np.uint64(1<<52)),axis=(1,2))
+    if not np.any(eligible):
+        return eligible
+    y=rows[eligible]
+    with np.errstate(over='ignore',under='ignore',invalid='ignore',divide='ignore'):
+        dif=y[:,1:]-y[:,:1]
+        out=np.zeros(len(rows),dtype=bool)
+        # Enclose each rounded operation by stepping to the adjacent float
+        # in both directions. Equal operands subtract to exactly zero.
+        lo,hi=_outward(dif,-np.inf),_outward(dif,np.inf)
+        identical=y[:,1:]==y[:,:1]
+        lo[identical]=hi[identical]=0.
+        dm=np.abs(dif)
+        normal_differences=identical | (dm>=1e-80)
+        def entry(i,j):return lo[:,i,j],hi[:,i,j]
+        a,b,c=[entry(0,i) for i in range(3)]
+        d,e,f=[entry(1,i) for i in range(3)]
+        g,h,i=[entry(2,i) for i in range(3)]
+        p=_interval_multiply(a,_interval_subtract(_interval_multiply(e,i),_interval_multiply(f,h)))
+        q=_interval_multiply(b,_interval_subtract(_interval_multiply(d,i),_interval_multiply(f,g)))
+        r=_interval_multiply(c,_interval_subtract(_interval_multiply(d,h),_interval_multiply(e,g)))
+        l,u=_interval_add(_interval_subtract(p,q),r)
+        # Excluding zero (with a conservative margin from the subnormal
+        # range) certifies nondegeneracy, never a new geometric cutoff.
+        out[eligible] = (np.isfinite(l) & np.isfinite(u)
+                         & np.all(normal_differences, axis=(1, 2))
+                         & ((l > 1e-200) | (u < -1e-200)))
+    return out
+
+
 def _nondegenerate(points, cells):
+    for start in range(0, len(cells), _INTERVAL_BATCH):
+        batch = cells[start:start + _INTERVAL_BATCH]
+        uncertain = np.flatnonzero(~_nonzero_interval_certificate(points[batch]))
+        if uncertain.size:
+            _nondegenerate_exact(points, batch[uncertain], start + uncertain)
+
+
+def _nondegenerate_exact(points, cells, original_rows):
     # Every binary64 value is a dyadic rational. Integer arithmetic evaluates
     # the zero/nonzero determinant exactly, with no length or volume cutoff.
     # Convert only vertices referenced by this batch, not the whole mesh.
@@ -167,7 +235,7 @@ def _nondegenerate(points, cells):
                 differences.append((b - a, c - a, d - a))
             (a, b, c), (d, e, f), (g, h, j) = differences
             if a * (e * j - f * h) - b * (d * j - f * g) + c * (d * h - e * g) == 0:
-                raise ValueError(f'tetrahedra row {i} has zero volume')
+                raise ValueError(f'tetrahedra row {original_rows[i]} has zero volume')
 
 
 def _validate(points, tetrahedra, node_ids, cell_ids, material_ids, materials, length_unit):

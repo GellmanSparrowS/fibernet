@@ -5804,7 +5804,13 @@
    "_float64",
    "_points",
    "_binary64_ratio",
+   "_outward",
+   "_interval_add",
+   "_interval_subtract",
+   "_interval_multiply",
+   "_nonzero_interval_certificate",
    "_nondegenerate",
+   "_nondegenerate_exact",
    "_validate",
    "_hash",
    "write_tet4_vtu_bundle",
@@ -5818,7 +5824,7 @@
    "_read_mesh",
    "read_tet4_vtu_bundle"
   ],
-  "sha256": "3b3cb18d531e5534a7d520592b69d9f0aa7e4107b2fa847e7abb592daf4dd91d"
+  "sha256": "2d25f28f62d02c831be3d97e8b20494dbb5599f087e985559a5b0e7ed3a89c4d"
  },
  "tests/test_tet4_meshio.py": {
   "purpose": "Optional v1 Tet4 bundles: synthetic geometry and actual Meshio 5.x.",
@@ -5834,9 +5840,11 @@
    "test_lazy_import_even_where_meshio_is_installed",
    "test_writer_checks_row_limits_before_iterating_or_staging",
    "test_reader_checks_header_row_limits_before_meshio",
-   "test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates"
+   "test_batched_dyadic_check_keeps_absolute_row_and_tiny_coordinates",
+   "test_outward_filter_keeps_exact_branch_for_subnormal_and_ambiguous_cells",
+   "test_outward_filter_fallback_reports_original_row_across_two_batches"
   ],
-  "sha256": "053f1ac4147a984673ca336063f82eae1effa826ad26ae0499786fd29c65fd93"
+  "sha256": "8c334c03c55d9554ec0cf7be3d21c0d690c36ae22bd0f7d82bb5265ed3c3526f"
  },
  "examples/tet4_static_two_material.py": {
   "purpose": "Force-controlled two-material Tet4 cube with an analytical reference.",
