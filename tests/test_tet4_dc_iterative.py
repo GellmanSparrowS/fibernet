@@ -198,3 +198,52 @@ def test_singular_batch_falls_back_to_first_scalar_geometry_error():
     t = np.arange(12).reshape(3, 4)
     with pytest.raises(ValueError, match=r"Tet4 row 1: element is too ill-conditioned"):
         candidate._batched_geometry(p, t)
+
+
+def test_looped_solid_physical_dc_dilation_and_unit_conversion():
+    from math import fsum
+
+    from examples.tet4_mechanoelectric_looped_network import _bundle, _fixture, _lattice
+
+    points, cells = _lattice()
+    mesh = _bundle(points, cells, "stiff_half")
+    high, _, _, electrodes, _ = _fixture(mesh)
+    conductivity = dict(zip(sorted(mesh.materials), (0.7, 3.1)))
+
+    def solve(bundle, multiplier=1.0):
+        return solve_dc_tet4(bundle, solver="cg", electrode_voltage_V_by_id=electrodes,
+                             conductivity_S_per_m_by_material={
+                                 k: multiplier * v for k, v in conductivity.items()
+                             })
+
+    base = solve(mesh)
+    for other, dilation, multiplier in (
+        (solve(replace(mesh, points=points * 2)), 2, 1),
+        (solve(replace(mesh, points=points * 1e-3, length_unit="m")), 1, 1),
+        (solve(replace(mesh, points=points * 2), 3), 2, 3),
+    ):
+        for field in ("node_ids", "cell_ids", "electrode_mask"):
+            np.testing.assert_array_equal(getattr(other, field), getattr(base, field))
+        # K scales with conductivity times length at fixed electrode voltages.
+        for field, scale in (
+            ("voltage_V", 1),
+            ("electrode_current_into_solid_A", multiplier * dilation),
+            ("current_density_A_per_m2", multiplier / dilation),
+            ("joule_density_W_per_m3", multiplier / dilation**2),
+            ("joule_power_W_by_cell", multiplier * dilation),
+            ("terminal_power_W", multiplier * dilation),
+            ("total_joule_power_W", multiplier * dilation),
+        ):
+            expected = np.asarray(getattr(base, field)) * scale
+            np.testing.assert_allclose(
+                getattr(other, field), expected, rtol=2e-8,
+                atol=2e-10 * np.max(np.abs(expected)),
+            )
+        current = fsum(other.electrode_current_into_solid_A[high])
+        current_ref = fsum(base.electrode_current_into_solid_A[high])
+        assert current > 0 and current_ref > 0
+        span = max(electrodes.values()) - min(electrodes.values())
+        np.testing.assert_allclose(span / current, span / (current_ref * multiplier * dilation),
+                                   rtol=2e-8)
+        assert abs(other.net_electrode_current_A) < 2e-8 * current
+        assert abs(other.power_closure_W) < 2e-8 * other.total_joule_power_W
