@@ -6775,12 +6775,13 @@
   "status": "active",
   "symbols": [
    "make_fixture",
+   "_volume_entity_tags",
    "prepare",
    "_write_display_vtu",
    "solve",
    "main"
   ],
-  "sha256": "865b1e460201be58cde49b811632ecf0b6f393e9df8918605b0d5ff09c023a97"
+  "sha256": "ab49086d27fa7c16ba83620a7afe7a767e10860afb8ad9aa007875843d1d0127"
  },
  "tests/test_tet4_tagged_grips_example.py": {
   "purpose": "Executable smoke tests for imported named grips above the banded limits.",
@@ -6790,9 +6791,12 @@
    "test_edited_grip_setting_is_refused_without_emitting_results",
    "test_sidecar_from_another_bundle_is_refused",
    "test_custom_external_gmsh_group_names_reproduce_same_inputs",
-   "test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids"
+   "test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids",
+   "test_single_physical_volume_matches_two_equal_moduli",
+   "test_single_material_flags_fail_before_creating_output",
+   "test_single_material_gmsh41_refuses_secondary_volume_tag"
   ],
-  "sha256": "dbb3586d11d7f363ac993032eadbfa361e881c8ab41143024b5092d0614a8382"
+  "sha256": "e8190919a9631d947c93dbbbcfa9cf2fb747163243f106a5160f2539e2bacdbd"
  },
  "examples/tet4_mechanoelectric_patch_screen.py": {
   "purpose": "Rank equal-area load patches by the initial resistance response.",
@@ -6815,5 +6819,50 @@
    "test_three_synthetic_patches_agree_with_independent_finite_checks"
   ],
   "sha256": "148b439bae64f8a5fec82eadefc8a84d0952d37a78aa7fea3e7ae9a68f982aad"
+ },
+ "fibernet/sim/tet4_pore.py": {
+  "purpose": "Solve bounded periodic Stokes flow in Tet4 pores and compare matched geometries.",
+  "status": "active",
+  "symbols": [
+   "PeriodicStokesResult",
+   "_validate_pair",
+   "_stokes_admission",
+   "solve_x_periodic_stokes",
+   "MatchedPoreFlow",
+   "_validated_matched_mesh",
+   "_matched_volume_range",
+   "solve_matched_pore_geometry",
+   "solve_matched_pore_geometry_cases"
+  ],
+  "sha256": "c635f21d982c2d6cf72d371732faeff58dc2135d284351decc81ea0405489c9a"
+ },
+ "examples/tet4_solid_to_pore_flow.py": {
+  "purpose": "Compare one-way pore flow after small solid deformation at matched grip loads.",
+  "status": "active",
+  "symbols": [
+   "_boundary_faces",
+   "_extend_interface",
+   "_mechanics",
+   "_reshaped_pore",
+   "_flow",
+   "demo",
+   "compare_materials"
+  ],
+  "sha256": "b73098055158d2c2edb42417cd0e8fc0bb9de9101ba7736822e51816dcd9e47d"
+ },
+ "tests/test_tet4_periodic_pore.py": {
+  "purpose": "Check analytical and numerical invariants of periodic Tet4 pore flow and matched cases.",
+  "status": "active",
+  "symbols": [
+   "test_budget_and_stable_ids_are_rejected_before_flow_assembly",
+   "test_missing_optional_dependency_can_be_reported",
+   "test_real_provider_signed_flow_and_covariance",
+   "test_cap_bijection_is_not_only_a_vertex_count",
+   "test_conforming_interface_transfers_exactly_and_leaves_box_fixed",
+   "test_small_loading_changes_flow_with_consistent_cap_readout",
+   "test_elastic_modulus_comparison_uses_matched_signed_grip_reactions",
+   "test_matched_cases_prevalidate_all_geometries_before_solving"
+  ],
+  "sha256": "0b798058d724315b4b1d755363d82ff4627510770d0373e094d511abd5b5ce5b"
  }
 }

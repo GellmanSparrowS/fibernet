@@ -197,6 +197,14 @@ For a matching package and checkout, see the
 
 ## How solid deformation changes pore flow
 
+For up to eight deformed meshes compared with the same pore, call
+`fibernet.sim.tet4_pore.solve_matched_pore_geometry_cases` with an ordered
+list or tuple of `Tet4Bundle` instances. Use the same stable IDs, ordered
+tetrahedra, material labels, viscosity and pressure-gradient driver.
+The routine solves the reference geometry once and solves each deformed
+geometry independently. Each still needs the supported periodic caps
+and a cell volume ratio between 0.75 and 1.25 relative to the reference.
+
 Using the same Python 3.10+ source checkout and `pore-flow` extra:
 
 ```bash

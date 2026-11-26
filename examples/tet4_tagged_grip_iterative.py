@@ -42,24 +42,85 @@ def make_fixture(path, *, refinement=3):
     meshio.write(path, m, file_format="gmsh22", binary=False)
 
 
+def _volume_entity_tags(path, used_entities):
+    # Gmsh 4.1 attaches all physical tags to each entity. Meshio's primary
+    # cell labels carry only the first tag, and its sets omit unnamed tags.
+    found_section = False
+    matches = {}
+    with path.open("rb") as stream:
+        for line in stream:
+            if line.strip() != b"$Entities":
+                continue
+            if found_section:
+                raise ValueError("Duplicate Gmsh 4.1 Entities section")
+            found_section = True
+            try:
+                counts = [int(v) for v in stream.readline().split()]
+                if len(counts) != 4 or any(n < 0 for n in counts):
+                    raise ValueError
+                for _ in range(sum(counts[:3])):
+                    row = stream.readline().strip()
+                    if not row or row.startswith(b"$"):
+                        raise ValueError
+                for _ in range(counts[3]):
+                    row = stream.readline().split()
+                    ent = int(row[0])
+                    n = int(row[7])
+                    if n < 0 or len(row) < 9+n:
+                        raise ValueError
+                    if ent in used_entities:
+                        if ent in matches:
+                            raise ValueError
+                        matches[ent] = tuple(map(int, row[8:8+n]))
+                if stream.readline().strip() != b"$EndEntities":
+                    raise ValueError
+            except (IndexError, ValueError) as exc:
+                raise ValueError("Invalid Gmsh 4.1 volume entity records") from exc
+    if not found_section or matches.keys() != used_entities:
+        raise ValueError("Missing Gmsh 4.1 entity records for tetrahedra")
+    return matches
+
+
 def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), poisson_ratio=.3,
             material_groups=_MATERIAL_GROUPS, grip_groups=_GRIP_GROUPS):
-    for group in material_groups, grip_groups:
-        if (not isinstance(group, (tuple, list)) or len(group) != 2 or
-                any(not isinstance(name, str) or not name.strip()
-                                  for name in group) or group[0] == group[1]):
-            raise ValueError("Expected two distinct names for each physical group pair")
-    if any(isinstance(e,bool) or not math.isfinite(e) or not 1e3 <= e <= 1e13 for e in moduli_Pa):
-        raise ValueError("Expected both Young moduli within 1 kPa to 10 TPa")
+    def valid_names(group, lengths):
+        return (isinstance(group, (tuple, list)) and len(group) in lengths
+                and all(isinstance(name, str) and name.strip() for name in group)
+                and len(set(group)) == len(group))
+
+    if not valid_names(material_groups, (1, 2)) or not valid_names(grip_groups, (2,)):
+        raise ValueError("Expected distinct names: one or two volume groups and two grip groups")
+    if (not isinstance(moduli_Pa, (tuple, list)) or len(moduli_Pa) != len(material_groups)
+            or any(isinstance(e, bool) or not math.isfinite(e) or not 1e3 <= e <= 1e13 for e in moduli_Pa)):
+        raise ValueError("Expected one Young modulus within 1 kPa to 10 TPa for each volume group")
     if isinstance(poisson_ratio,bool) or not -.95 <= poisson_ratio <= .495:
         raise ValueError("Poisson ratio must be between −0.95 and 0.495")
-    if not source.is_file() or source.stat().st_size > 24 * 1024**2:
+    limit = 24 * 1024**2
+    if not source.is_file() or source.stat().st_size > limit:
         raise ValueError("Expected a Gmsh mesh file not exceeding 24 MiB")
+    complete_volume_tags = None
     with source.open('rb') as stream:
-        if (stream.readline(128).strip() != b'$MeshFormat'
-                or stream.readline(128).split() not in ([b'2.2',b'0',b'8'],[b'4.1',b'0',b'8'])):
+        marker = stream.readline(128).strip()
+        format_fields = stream.readline(128).split()
+        if marker != b'$MeshFormat' or format_fields not in ([b'2.2',b'0',b'8'],[b'4.1',b'0',b'8']):
             raise ValueError('Expected ASCII Gmsh 2.2 or 4.1')
-    raw = meshio.read(source)
+        inspect_all_tags = format_fields[0] == b'4.1' and len(material_groups) == 1
+        if inspect_all_tags:
+            stream.seek(0)
+            data = stream.read(limit+1)
+            if len(data) > limit:
+                raise ValueError("Expected a Gmsh mesh file not exceeding 24 MiB")
+    if inspect_all_tags:
+        # Both readers must see the same bounded source, not two separately
+        # opened copies. Meshio 5.3.5's Gmsh reader requires a pathname.
+        with TemporaryDirectory(prefix=".single-volume-", dir=out) as stage:
+            snapshot = Path(stage) / "source.msh"
+            snapshot.write_bytes(data)
+            raw = meshio.read(snapshot)
+            entities = raw.get_cell_data("gmsh:geometrical", "tetra")
+            complete_volume_tags = _volume_entity_tags(snapshot, set(map(int, entities)))
+    else:
+        raw = meshio.read(source)
     if any(block.type not in {"tetra","triangle","line","vertex"} for block in raw.cells):
         raise ValueError("Expected linear tetrahedra and exterior physical tags")
     t = raw.get_cells_type("tetra")
@@ -89,12 +150,16 @@ def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), p
                 raise ValueError(f'Conflicting or overlapping physical membership: {name}')
         return selected
 
+    if complete_volume_tags is not None:
+        selected = tag(material_groups[0], 3)
+        if any(tags != (selected,) for tags in complete_volume_tags.values()):
+            raise ValueError("Single-material Gmsh 4.1 needs exactly one declared physical tag per tetrahedral volume")
     for name in material_groups:
         checked_group('tetra',name,3,labels)
     materials = {tag(name,3):dict(young_modulus_pa=E,poisson_ratio=poisson_ratio)
                  for name,E in zip(material_groups,moduli_Pa)}
-    if len(materials) != 2 or set(labels) != set(materials):
-        raise ValueError("Every tetrahedron must have exactly one of the two named material tags")
+    if len(materials) != len(material_groups) or set(labels) != set(materials):
+        raise ValueError("Every tetrahedron must have exactly one of the declared material tags")
     faces = Counter(face for tet in t for face in combinations(sorted(map(int, tet)),3))
 
     def nodes_for(name):
@@ -207,8 +272,8 @@ def main():
     args.add_argument("--length-unit",choices=("m","cm","mm","um","nm"))
     args.add_argument("--axis",choices=("x","y","z"),default="x")
     args.add_argument("--stroke-um",type=float,default=1.5)
-    args.add_argument("--material-low-gpa",type=float,default=1.0)
-    args.add_argument("--material-high-gpa",type=float,default=2.0)
+    args.add_argument("--material-low-gpa", type=float, help="first volume modulus (default 1 GPa)")
+    args.add_argument("--material-high-gpa", type=float, help="second volume modulus (default 2 GPa)")
     args.add_argument("--poisson-ratio",type=float,default=.3)
     args.add_argument("--material-groups", nargs=2, metavar=("LOW", "HIGH"),
                       help="names of the two physical volumes, in modulus order")
@@ -216,7 +281,24 @@ def main():
                       help="names of the two physical surfaces, fixed then driven")
     args.add_argument("--write-vtu", action="store_true",
                       help="also write a ParaView-ready VTU from this solve")
+    args.add_argument("--material-group", metavar="NAME", help="single physical volume of a homogeneous solid")
+    args.add_argument("--young-modulus-gpa", type=float, help="modulus for the single physical volume")
     a=args.parse_args()
+    single = a.material_group is not None or a.young_modulus_gpa is not None
+    if single:
+        if (a.input is None or a.material_group is None or not a.material_group.strip()
+                or a.young_modulus_gpa is None):
+            args.error("single-material mode requires --input, --material-group and --young-modulus-gpa")
+        if a.material_groups is not None or a.material_low_gpa is not None or a.material_high_gpa is not None:
+            args.error("do not mix single-material and two-material flags")
+        materials = (a.material_group,)
+        moduli = (a.young_modulus_gpa * 1e9,)
+    else:
+        materials = a.material_groups or _MATERIAL_GROUPS
+        moduli = tuple((v if v is not None else fallback) * 1e9
+                       for v, fallback in ((a.material_low_gpa, 1.), (a.material_high_gpa, 2.)))
+    if any(not 1e3 <= e <= 1e13 for e in moduli):
+        args.error("each Young modulus must be finite and within 1 kPa to 10 TPa")
     if a.input is None and (a.material_groups or a.grip_groups):
         args.error("--material-groups and --grip-groups require --input")
     if a.input is not None and a.length_unit is None:
@@ -231,8 +313,8 @@ def main():
         source=a.output/"tagged.msh"
         make_fixture(source)
     b, grip_hash=prepare(source,a.output,length_unit=a.length_unit or "mm",axis=a.axis,stroke_m=a.stroke_um*1e-6,
-              moduli_Pa=(a.material_low_gpa*1e9,a.material_high_gpa*1e9),poisson_ratio=a.poisson_ratio,
-              material_groups=a.material_groups or _MATERIAL_GROUPS, grip_groups=a.grip_groups or _GRIP_GROUPS)
+              moduli_Pa=moduli, poisson_ratio=a.poisson_ratio,
+              material_groups=materials, grip_groups=a.grip_groups or _GRIP_GROUPS)
     print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash,write_vtu=a.write_vtu),indent=2))
 
 

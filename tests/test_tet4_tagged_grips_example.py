@@ -127,3 +127,104 @@ def test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids(tmp_path,monkeypatc
     with pytest.raises(FileExistsError,match="already exists"):
         example._write_display_vtu(tmp_path/out["deformation_vtu"],b,result)
     assert calls==[1]
+
+
+def test_single_physical_volume_matches_two_equal_moduli(tmp_path):
+    import meshio
+    source=tmp_path/"matched.msh"
+    make_fixture(source,refinement=1)
+    raw=meshio.read(source)
+    raw.field_data.pop("material_low")
+    raw.field_data.pop("material_high")
+    raw.field_data["Solid bulk"]=np.array([55,3])
+    for i,block in enumerate(raw.cells):
+        if block.type=="tetra":
+            raw.cell_data["gmsh:physical"][i]=np.full(len(block.data),55,dtype=int)
+    one=tmp_path/"homogeneous.msh"
+    meshio.write(one,raw,file_format="gmsh22",binary=False)
+    x,y=tmp_path/"single",tmp_path/"double"
+    x.mkdir(); y.mkdir()
+    common=dict(length_unit="mm",axis="x",stroke_m=1.5e-6)
+    with pytest.raises(ValueError,match="declared material tags"):
+        prepare(source,x,material_groups=("material_low",),moduli_Pa=(2.e9,),**common)
+    with pytest.raises(ValueError,match="Missing named physical group"):
+        prepare(one,x,material_groups=("hold_face",),moduli_Pa=(2.e9,),**common)
+    a,s1=prepare(one,x,material_groups=("Solid bulk",),moduli_Pa=(2.e9,),**common)
+    b,s2=prepare(source,y,moduli_Pa=(2.e9,2.e9),**common)
+    am=read_tet4_vtu_bundle(a); bm=read_tet4_vtu_bundle(b)
+    assert set(am.material_ids)=={55} and set(bm.material_ids)=={7,19}
+    for k in ("points","tetrahedra"):
+        np.testing.assert_array_equal(getattr(am,k),getattr(bm,k))
+    u=solve(a,x/"grips.json",x,prepared_grip_sha256=s1,write_vtu=True)
+    v=solve(b,y/"grips.json",y,prepared_grip_sha256=s2)
+    for k in ("reaction_N","strain_energy_J"):
+        np.testing.assert_allclose(u[k],v[k],rtol=2e-10)
+    with np.load(x/"nodal-fields.npz",allow_pickle=False) as a,np.load(y/"nodal-fields.npz",allow_pickle=False) as b:
+        np.testing.assert_allclose(a["displacement_m"],b["displacement_m"],rtol=2e-10,atol=2e-17)
+        np.testing.assert_allclose(a["reaction_N"],b["reaction_N"],rtol=2e-10,atol=2e-13)
+    display=meshio.read(x/"deformation.vtu")
+    assert set(display.get_cell_data("material_id","tetra"))=={55}
+
+
+@pytest.mark.parametrize("flags",[
+    ["--material-group","Solid"],
+    ["--young-modulus-gpa","2"],
+    ["--material-group","Solid","--young-modulus-gpa","2","--material-low-gpa","1"],
+])
+def test_single_material_flags_fail_before_creating_output(tmp_path,monkeypatch,flags):
+    import sys
+    from examples import tet4_tagged_grip_iterative as example
+    output=tmp_path/"must-not-exist"
+    monkeypatch.setattr(sys,"argv",["tagged","--input","not-read.msh","--length-unit","mm",
+                                  "--output",str(output),*flags])
+    with pytest.raises(SystemExit,match="2"):
+        example.main()
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("tags,named_secondary",[
+    ("55 56", True), ("56 55", True), ("55 56", False),
+])
+def test_single_material_gmsh41_refuses_secondary_volume_tag(tmp_path,tags,named_secondary):
+    physical='4\n' if named_secondary else '3\n'
+    physical+='2 31 "hold_face"\n2 37 "pull_face"\n3 55 "Solid bulk"\n'
+    if named_secondary:
+        physical+='3 56 "Other volume"\n'
+    source=tmp_path/"overlap.msh"
+    source.write_text(f"""$MeshFormat
+4.1 0 8
+$EndMeshFormat
+$PhysicalNames
+{physical}$EndPhysicalNames
+$Entities
+0 0 2 1
+31 0 0 0 1 1 0 1 31 0
+37 0 0 0 1 0 1 1 37 0
+1 0 0 0 1 1 1 2 {tags} 0
+$EndEntities
+$Nodes
+1 4 1 4
+3 1 0 4
+1
+2
+3
+4
+0 0 0
+1 0 0
+0 1 0
+0 0 1
+$EndNodes
+$Elements
+3 3 1 3
+2 31 2 1
+1 1 2 3
+2 37 2 1
+2 1 2 4
+3 1 4 1
+3 1 2 3 4
+$EndElements
+""")
+    with pytest.raises(ValueError,match="exactly one declared physical tag"):
+        prepare(source,tmp_path,length_unit="mm",axis="x",stroke_m=1.5e-6,
+                material_groups=("Solid bulk",),moduli_Pa=(2e9,))
+    assert not (tmp_path/"tagged-solid.zip").exists()

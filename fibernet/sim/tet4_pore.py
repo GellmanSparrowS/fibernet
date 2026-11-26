@@ -17,6 +17,7 @@ __all__ = [
     "MatchedPoreFlow",
     "solve_x_periodic_stokes",
     "solve_matched_pore_geometry",
+    "solve_matched_pore_geometry_cases",
 ]
 
 @dataclass(frozen=True)
@@ -207,16 +208,14 @@ class MatchedPoreFlow:
     min_cell_volume_ratio: float
     max_cell_volume_ratio: float
 
-def solve_matched_pore_geometry(reference, reshaped, *, viscosity_Pa_s,
-                                pressure_gradient_Pa_per_m,
-                                workspace_limit_bytes=512*_MIB):
-    """Re-evaluate fixed geometry pairs, not ALE or solid/fluid feedback."""
-    items=[]
-    for b in (reference,reshaped):
-        _stokes_admission(b,workspace_limit_bytes)
-        items.append(core._validate(b.points,b.tetrahedra,b.node_ids,b.cell_ids,
-                   b.material_ids,b.materials,b.length_unit))
-    a,b=items
+def _validated_matched_mesh(bundle, budget):
+    _stokes_admission(bundle, budget)
+    return core._validate(bundle.points, bundle.tetrahedra, bundle.node_ids,
+                          bundle.cell_ids, bundle.material_ids, bundle.materials,
+                          bundle.length_unit)
+
+
+def _matched_volume_range(a, b):
     def aligned_rows(old,new):
         k=np.argsort(new); new_sorted=new[k]
         if not np.array_equal(np.sort(old),new_sorted):
@@ -241,10 +240,51 @@ def solve_matched_pore_geometry(reference, reshaped, *, viscosity_Pa_s,
     lo=float(ratio.min());hi=float(ratio.max())
     if lo<.75 or hi>1.25:
         raise ValueError('matched geometry reverses a cell or exceeds the pilot volume-ratio envelope')
-    settings=dict(viscosity_Pa_s=viscosity_Pa_s,
-                  pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
-                  workspace_limit_bytes=workspace_limit_bytes)
-    q0=solve_x_periodic_stokes(reference,**settings)
-    q1=solve_x_periodic_stokes(reshaped,**settings)
-    delta=tuple(p/q-1. for p,q in zip(q1.cap_flow_m3_s,q0.cap_flow_m3_s))
-    return MatchedPoreFlow(q0,q1,q1.axial_flow_m3_s/q0.axial_flow_m3_s-1.,delta,lo,hi)
+    return lo, hi
+
+
+def solve_matched_pore_geometry(reference, reshaped, *, viscosity_Pa_s,
+                                pressure_gradient_Pa_per_m,
+                                workspace_limit_bytes=512*_MIB):
+    """Re-evaluate a fixed geometry pair, not ALE or solid/fluid feedback."""
+    return solve_matched_pore_geometry_cases(
+        reference, (reshaped,), viscosity_Pa_s=viscosity_Pa_s,
+        pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
+        workspace_limit_bytes=workspace_limit_bytes,
+    )[0]
+
+
+def solve_matched_pore_geometry_cases(reference, reshaped_cases, *, viscosity_Pa_s,
+                                      pressure_gradient_Pa_per_m,
+                                      workspace_limit_bytes=512*_MIB):
+    """Reuse reference Stokes flow for 1–8 ordered fixed-geometry cases.
+
+    Each case uses the same stable mesh IDs, ordered tetrahedra and pore
+    labels, with a shared signed driving pressure gradient (Pa/m) and
+    dynamic viscosity (Pa s). The usual cell, workspace and volume-ratio
+    bounds apply to every state. Periodicity and the flow residual/closure
+    criteria are checked independently on each solved geometry.
+
+    Return a tuple in input order, or raise without returning a partial
+    result. The immutable reference flow is shared within the tuple and
+    is not kept as a cache. This is not transient ALE or two-way coupling.
+    """
+    if type(reshaped_cases) not in (list, tuple) or not 1 <= len(reshaped_cases) <= 8:
+        raise ValueError("reshaped_cases must be an ordered list or tuple of 1 to 8 geometries")
+    a = _validated_matched_mesh(reference, workspace_limit_bytes)
+    candidates = []
+    for geom in tuple(reshaped_cases):
+        b = _validated_matched_mesh(geom, workspace_limit_bytes)
+        bounds = _matched_volume_range(a, b)
+        candidates.append((b, bounds))
+
+    settings = dict(viscosity_Pa_s=viscosity_Pa_s,
+                    pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
+                    workspace_limit_bytes=workspace_limit_bytes)
+    q0 = solve_x_periodic_stokes(a, **settings)
+    output = []
+    for mesh, (lo, hi) in candidates:
+        q1 = solve_x_periodic_stokes(mesh, **settings)
+        delta = tuple(p/q-1. for p, q in zip(q1.cap_flow_m3_s, q0.cap_flow_m3_s))
+        output.append(MatchedPoreFlow(q0, q1, q1.axial_flow_m3_s/q0.axial_flow_m3_s-1., delta, lo, hi))
+    return tuple(output)

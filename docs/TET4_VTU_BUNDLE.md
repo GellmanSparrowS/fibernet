@@ -337,8 +337,8 @@ units or material constants.
 
 For a single larger bonded solid, use prescribed grip motion and the
 optional iterative solver. Use a trusted local mesh file. The example
-reads ASCII Gmsh 2.2 or 4.1 and
-requires these named physical groups:
+reads ASCII Gmsh 2.2 or 4.1. The default two-material mode uses
+these named physical groups:
 
 - Volumes: `material_low` and `material_high`, with exactly one group per cell.
 - Surface triangles: `hold_face` and `pull_face`, with distinct exterior
@@ -372,6 +372,14 @@ directory rather than editing the recorded sidecar.
 The example calls standalone `solve_static_tet4(..., solver="amg-cg")`.
 The small-mesh traction, band inspection, and VTU result wrappers retain
 their existing limits.
+
+For a homogeneous solid, provide one physical volume name and its
+modulus with `--material-group "Solid" --young-modulus-gpa 2` instead of
+the two-material flags. In Gmsh, assign the volume group to the whole
+solid you intend to export, even when it spans several geometric volumes.
+In Gmsh 4.1 each tetrahedral volume must have just that one physical tag
+for single-material mode. The two exterior grip groups and coordinate units are still
+required.
 
 To inspect the displacement directly, pass `--write-vtu` in the same run.
 Open the resulting `deformation.vtu` in ParaView and select **Warp By Vector**
