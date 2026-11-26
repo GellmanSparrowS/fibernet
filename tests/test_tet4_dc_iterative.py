@@ -101,3 +101,40 @@ def test_legacy_scipy_tolerance_compatibility_path(monkeypatch):
     monkeypatch.setattr(candidate,'_CG_RTOL_NAME','tol')
     monkeypatch.setattr(candidate,'cg',legacy)
     check(b,solve_dc_tet4(b,solver='cg',**kw(b)),(4,3,3))
+
+
+def test_batched_geometry_matches_scalar_across_batches_and_orientation(monkeypatch):
+    monkeypatch.setattr(candidate, "_DC_CELL_BATCH", 2)
+    x = np.array([[.001, .002, .003], [.003, .002, .003],
+                  [.0015, .004, .0032], [.002, .0025, .005]])
+    t = np.array([[0, 1, 2, 3], [0, 2, 1, 3], [2, 3, 0, 1]])
+    g, v = candidate._batched_geometry(x, t)
+    ref_g, ref_v = zip(*(candidate._checked_geometry_row(x, c, i)
+                         for i, c in enumerate(t)))
+    np.testing.assert_allclose(g, ref_g, rtol=2e-14, atol=1e-11)
+    np.testing.assert_allclose(v, ref_v, rtol=2e-14)
+
+
+@pytest.mark.parametrize("lengths,message", [
+    ((1e-8, 1e-8, 1e-8), "volume"),
+    ((1e-3, 1e-3, 1e-14), "ill-conditioned"),
+    ((1e-3, 1e-3, 5e-13), "gradient"),
+])
+def test_batched_geometry_keeps_scalar_invalid_cell_contract(lengths, message):
+    x = np.vstack([np.zeros(3), np.diag(lengths)])
+    t = np.array([[0, 1, 2, 3]])
+    with pytest.raises(ValueError, match=message):
+        candidate._batched_geometry(x, t)
+
+
+def test_geometry_near_volume_cutoff_uses_reference(monkeypatch):
+    original = candidate._checked_geometry_row
+    calls = []
+    def mark(x, cell, row):
+        calls.append(row)
+        return original(x, cell, row)
+    monkeypatch.setattr(candidate, "_checked_geometry_row", mark)
+    d = np.cbrt(6e-24) * (1. + 1e-12)
+    p = np.vstack([np.zeros(3), np.eye(3) * d])
+    _, v = candidate._batched_geometry(p, np.array([[0, 1, 2, 3]]))
+    assert calls == [0] and v[0] >= 1e-24

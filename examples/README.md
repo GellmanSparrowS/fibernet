@@ -109,6 +109,17 @@ This example uses the bounded Tet4 solvers, a 387-node synthetic lattice,
 and a small prescribed grip displacement. It does not model intrinsic
 piezoresistivity, contact resistance, or electrical feedback into mechanics.
 
+For a finer connected lattice and a five-point clamped stroke sweep,
+install `fibernet[solid-iterative]` from a checkout and run:
+
+~~~sh
+python -m examples.tet4_iterative_mechanoelectric_sweep
+~~~
+
+The example does one elastic solve and reuses its displacement shape under
+proportional strokes, with a separate DC solve on all five geometries.
+Use this shortcut only for the same linear material, fixed grips and no preload.
+
 ## 3D porosity before and after loading
 
 From the source checkout:

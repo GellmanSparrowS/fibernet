@@ -548,3 +548,22 @@ not a remesh, changed coordinates, units, or local vertex order. It binds the
 mesh, not the original phase assignment: record the original materials
 separately if the study depends on them. This is an example, not a new solver
 entry point. Native preflight and solve checks still apply.
+
+
+## Iterative option for larger solids
+
+Install the optional CPU solver with `pip install "fibernet[solid-iterative]"`.
+Pass `solver="amg-cg"` to `solve_static_tet4`. Mesh units, stable IDs, load
+arguments and output fields are unchanged. Use the default `solver="banded"`
+for a direct small-mesh reference.
+
+The iterative method is for one face-connected solid, at most 60,000 nodes
+and 200,000 tetrahedra. It uses isotropic elasticity with Young's modulus
+between 1 kPa and 10 TPa and Poisson ratio from −0.95 to 0.495. Matrices
+with excessive connectivity, over-budget preconditioners, failed
+convergence, or unverifiable residuals and energies are rejected. This
+method does not inherit the direct solver's shifted-band conditioning
+test. Prefer well-shaped cells and verify the quantities you care about
+under mesh refinement. The batch-load and coupled solvers keep their
+existing method and limits. The separate material-energy summary still
+uses its original 8,000-cell limit.

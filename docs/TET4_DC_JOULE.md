@@ -64,8 +64,8 @@ result = solve_dc_tet4(
 
 The default remains `solver="banded"` (up to 1,024 nodes and 8,000 cells).
 `solver="cg"` admits up to 60,000 nodes, 200,000 tetrahedra and 64 connected
-components. It independently equilibrates and solves each component with
-a nonconstant boundary voltage. It allows up to 2,500 iterations per
+components. It evaluates cell geometry in bounded batches, then independently
+equilibrates and solves each component with a nonconstant boundary voltage. It allows up to 2,500 iterations per
 active component with free nodes, and raises `ValueError` if convergence,
 current balance, or power closure cannot be verified. Aim for a
 well-shaped mesh and check the quantity of interest under refinement.
