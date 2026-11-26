@@ -1,5 +1,23 @@
 # FiberNet 4.29.0
 
+## Run the released examples
+
+Use a fresh Python 3.12 environment for the complete setup below. The
+base package supports Python 3.9+, but the pore-flow example needs
+Python 3.10+ for the Stokes provider.
+
+```sh
+python -m pip install "fibernet[solid-iterative,pore-flow]==4.29.0" "meshio==5.3.5"
+python -m pip download --no-deps --no-binary=fibernet "fibernet==4.29.0"
+python -m tarfile -e fibernet-4.29.0.tar.gz
+cd fibernet-4.29.0
+```
+
+Run the example commands below from that directory. If you only need
+force–resistance, install the `solid-iterative` extra alone. The
+tagged-grip example needs Meshio for its Gmsh mesh, including the
+built-in example mesh, and for optional VTU export.
+
 ## Choose a resolution for the 3D force–resistance example
 
 From the matching source archive, with the optional `solid-iterative`
@@ -15,7 +33,7 @@ tetrahedra to study resolution or runtime on the same generated specimen.
 The finite sweep reports five separate resistance solutions; the
 initial-slope mode uses the undeformed electrical solution to measure the
 small-stroke geometric sensitivity at fixed conductivity. To compare load
-locations at fixed electrical readout, run
+locations with unchanged electrode voltages and conductivity, run
 `python -m examples.tet4_mechanoelectric_patch_screen --verify`.
 
 ## Faster topology validation in iterative DC
