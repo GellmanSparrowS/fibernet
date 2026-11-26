@@ -5899,6 +5899,8 @@
    "_prescribed_solve",
    "inspect_static_tet4_admission",
    "solve_static_tet4",
+   "_owned_amg_mesh",
+   "_assemble_amg_system",
    "_solve_static_amg",
    "_owned_static_mesh",
    "_validate_static_mesh",
@@ -5907,7 +5909,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "e429d15c60578cfe501a8c84d8b1db7597484cd5d8b24265945084d4279e4bc6"
+  "sha256": "5f47ff8d8e13bbb878e0ef644baac7874d0bea8baf31f71e1a223996b0a42577"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -5921,9 +5923,12 @@
    "face_joined_mesh",
    "test_physical_unrestrained_rotation_rejects_zero_first_rhs_same_as_scalar_without_mocks",
    "test_all_held_same_mesh_gives_exact_reactions_without_mocks",
-   "test_maximum_eight_signed_cases_stable_uint64_order_no_alias_and_same_physics"
+   "test_maximum_eight_signed_cases_stable_uint64_order_no_alias_and_same_physics",
+   "test_amg_batch_reuses_one_hierarchy_on_nonproportional_cases",
+   "test_amg_batch_validates_every_case_before_installing_hierarchy",
+   "test_amg_batch_no_free_cases_and_underrestrained_zero_load"
   ],
-  "sha256": "cf47eba78852b115a311d143c88a37a32da769ca9fef9f7fc9ab81834d44f52f"
+  "sha256": "0c8d4b0200e0c1de83fc85dd23b896b734b949de31dba4607305d5f3d3f5d946"
  },
  "tests/test_tet4_static.py": {
   "purpose": "Physics, stable IDs, and admission checks for the explicit Tet4 solver.",
