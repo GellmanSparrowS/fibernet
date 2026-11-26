@@ -53,8 +53,8 @@ class GeometryBreakdown:
 
 def _lattice(*, refinement=1):
     """Generate a quarter-mm voxel scaffold with shared nodes at intersections."""
-    if type(refinement) is not int or not 1 <= refinement <= 4:
-        raise ValueError("refinement must be an integer between 1 and 4")
+    if type(refinement) is not int or not 1 <= refinement <= 5:
+        raise ValueError("refinement must be an integer between 1 and 5")
     boxes = set()
 
     def fill(x, y, z):
