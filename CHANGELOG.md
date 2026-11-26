@@ -1,3 +1,9 @@
+## [4.28.0]
+- Reuse the AMG system across up to eight fixed-restraint static Tet4 force cases, with independent result checks.
+- Batch stiffness assembly and reuse face connectivity in the optional iterative Tet4 mechanics solver.
+- Add a tagged Gmsh grip example with optional custom physical group names and an initial geometric resistance slope option for the fused-lattice sweep.
+- See the [4.28.0 release notes](docs/RELEASE_4_28_0.md).
+
 ## [4.27.0]
 - Add optional AMG-CG for larger standalone static Tet4 elastic solids, keeping the direct solver as the default.
 - Batch cell geometry evaluation in iterative DC solves; add a five-point proportional-stroke mechanics-to-DC example.
