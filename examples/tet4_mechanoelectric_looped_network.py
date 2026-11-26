@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Predict how small axial strain changes DC resistance in a fused 3D lattice.
 
-Run: python -m examples.tet4_mechanoelectric_looped_network [--matched-force]
+Run: python -m examples.tet4_mechanoelectric_looped_network [--matched-force | --geometry-breakdown]
 Three axial paths at different transverse positions share four crosslinks.
 They are idealized square-section bars, meshed as one bonded solid. Electrical
 conductivity is fixed: changes come from deformation, not piezoresistivity.
@@ -39,6 +39,16 @@ class MatchedForceResult:
     tensile_reaction_N: float
     rest_resistance_ohm: float
     resistance_slope_per_N: float
+
+
+@dataclass(frozen=True)
+class GeometryBreakdown:
+    stretch_along_current_per_N: float
+    transverse_contraction_per_N: float
+
+    @property
+    def resistance_slope_per_N(self):
+        return self.stretch_along_current_per_N + self.transverse_contraction_per_N
 
 
 def _lattice():
@@ -82,20 +92,25 @@ def _bundle(points_mm, tetrahedra, mode):
                       labels, materials, "mm")
 
 
-def _scan(bundle, strain):
-    points_mm = bundle.points
-    connectivity = bundle.tetrahedra
-    x = points_mm[:, 0]
+def _fixture(bundle):
+    x = bundle.points[:, 0]
     left, right = x == x.min(), x == x.max()
     left_ids, right_ids = [list(map(int, bundle.node_ids[mask])) for mask in (left, right)]
     fixed = {**dict.fromkeys(left_ids, ("x", "y", "z")),
              **dict.fromkeys(right_ids, ("y", "z"))}
     electrodes = {**dict.fromkeys(left_ids, 0.), **dict.fromkeys(right_ids, VOLTAGE_V)}
+    return right, right_ids, fixed, electrodes, np.ptp(x) * 1e-3
+
+
+def _scan(bundle, strain):
+    points_mm = bundle.points
+    connectivity = bundle.tetrahedra
+    right, right_ids, fixed, electrodes, length_m = _fixture(bundle)
     conductivity = dict.fromkeys(bundle.materials, 1.)
     reaction = 0.
     deformed_mm = points_mm
     if strain:
-        grip_motion_m = strain * np.ptp(x) * 1e-3
+        grip_motion_m = strain * length_m
         imposed = {nid: {"x": grip_motion_m} for nid in right_ids}
         mechanics = solve_static_tet4(bundle, forces_by_id={}, fixed_dofs_by_id=fixed,
                                      prescribed_displacements_m_by_id=imposed)
@@ -155,11 +170,61 @@ def run_matched_force():
     return results
 
 
+def run_geometry_breakdown():
+    """Split the small-force response using the undeformed DC field.
+
+    Unit directions refer to each cell's local current, not the loading
+    axis. The reference-voltage energy weights sum to total Joule power.
+    With fixed conductivity and electrode voltages, first-order resistance
+    responds to stretch along the current minus the transverse area strain.
+    """
+    points, tetrahedra = _lattice()
+    results = {}
+    for mode in MODES:
+        b = _bundle(points, tetrahedra, mode)
+        right, right_ids, held, electrodes, length_m = _fixture(b)
+        mechanical = solve_static_tet4(
+            b, forces_by_id={}, fixed_dofs_by_id=held,
+            prescribed_displacements_m_by_id={n: {"x": STRAIN * length_m} for n in right_ids},
+            return_cell_fields=True,
+        )
+        electric = solve_dc_tet4(b, electrode_voltage_V_by_id=electrodes,
+                                conductivity_S_per_m_by_material=dict.fromkeys(b.materials, 1.))
+        cells = mechanical.cell_fields
+        if not np.array_equal(cells.cell_ids, electric.cell_ids):
+            raise RuntimeError("Mechanical and electrical cell IDs differ")
+        force = fsum(mechanical.reaction_N[right, 0])
+        power = electric.joule_power_W_by_cell
+        total = fsum(power)
+        if force <= 0. or total <= 0.:
+            raise RuntimeError("Expected positive tensile reaction and reference power")
+
+        J = electric.current_density_A_per_m2
+        den = np.einsum("ij,ij->i", J, J)
+        along = np.einsum("ei,eij,ej->e", J, cells.strain, J)
+        along = np.divide(along, den, out=np.zeros_like(along), where=den > 0.)
+        transverse = np.trace(cells.strain, axis1=1, axis2=2) - along
+        results[mode] = GeometryBreakdown(
+            fsum(power * along) / (total * force),
+            -fsum(power * transverse) / (total * force),
+        )
+    return results
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--matched-force", action="store_true",
+    output = parser.add_mutually_exclusive_group()
+    output.add_argument("--matched-force", action="store_true",
                         help="compare the materials at the same signed total axial reaction")
+    output.add_argument("--geometry-breakdown", action="store_true",
+                        help="split the geometric force response along and across local current")
     args = parser.parse_args()
+    if args.geometry_breakdown:
+        for name, sample in run_geometry_breakdown().items():
+            print(f"{name}: current-aligned stretch {sample.stretch_along_current_per_N:.6g} 1/N; "
+                  f"transverse contraction {sample.transverse_contraction_per_N:.6g} 1/N; "
+                  f"total {sample.resistance_slope_per_N:.6g} 1/N")
+        return
     if args.matched_force:
         for name, sample in run_matched_force().items():
             print(f"{name}: forces {sample.compressive_reaction_N:.6g}, "

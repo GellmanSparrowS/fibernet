@@ -77,3 +77,12 @@ def test_same_rigid_grip_at_matched_signed_resultant():
     np.testing.assert_allclose(stiff.resistance_slope_per_N,
                                0.5 * soft.resistance_slope_per_N, rtol=2e-6)
     assert 0.72 < half.resistance_slope_per_N / soft.resistance_slope_per_N < 0.78
+
+
+def test_geometric_breakdown_matches_two_signed_resolves():
+    measured = demo.run_matched_force()
+    split = demo.run_geometry_breakdown()
+    for mode, item in split.items():
+        assert item.stretch_along_current_per_N > item.transverse_contraction_per_N > 0.
+        np.testing.assert_allclose(item.resistance_slope_per_N,
+                                   measured[mode].resistance_slope_per_N, rtol=2e-6)
