@@ -1,3 +1,9 @@
+## [4.27.0]
+- Add optional AMG-CG for larger standalone static Tet4 elastic solids, keeping the direct solver as the default.
+- Batch cell geometry evaluation in iterative DC solves; add a five-point proportional-stroke mechanics-to-DC example.
+- Accelerate exact nonzero-volume admission through bounded intervals, keeping the exact fallback for ambiguous cells.
+- See the [4.27.0 release notes](docs/RELEASE_4_27_0.md).
+
 ## [4.26.0]
 - Add opt-in iterative standalone DC conduction for larger fused Tet4 solids with the same input and output contracts.
 - Add a conforming solid-deformation to periodic pore-flow example with matched displacement or grip force.
