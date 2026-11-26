@@ -25,6 +25,8 @@ python -m pip install fibernet
 python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 ```
 
+不想在本机安装？[在 Colab 运行三维力电入门](https://colab.research.google.com/github/GellmanSparrowS/fibernet/blob/main/tutorials/FiberNet_3D_quickstart.ipynb)。
+
 <img src="docs/media/three_dimensional_topologies.gif" alt="从不同角度观察固定的 octet、diamond 和 gyroid 三维纤维网络" width="750">
 
 *三种固定拓扑的旋转预览。[打开动图画廊](docs/MEDIA_GALLERY.md)*
@@ -68,6 +70,8 @@ Install from [PyPI](https://pypi.org/project/fibernet/) with Python 3.9 or newer
 python -m pip install fibernet
 python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 ```
+
+Prefer the browser? [Run the 3D mechanoelectric quickstart in Colab](https://colab.research.google.com/github/GellmanSparrowS/fibernet/blob/main/tutorials/FiberNet_3D_quickstart.ipynb).
 
 <img src="docs/media/three_dimensional_topologies.gif" alt="Rotating views of fixed octet, diamond, and gyroid fiber networks" width="750">
 
