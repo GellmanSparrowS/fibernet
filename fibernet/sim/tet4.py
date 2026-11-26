@@ -837,10 +837,8 @@ def solve_static_tet4(bundle: Tet4Bundle, *, forces_by_id: Mapping,
                                    return_cell_fields, prescribed_displacements_m_by_id)
 
 
-def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed):
-    from fibernet.sim._tet4_amg import (IterativePlan, batched_response,
-                                      chunked_assembly, factor_constructor,
-                                      topology_parents)
+def _owned_amg_mesh(bundle):
+    from fibernet.sim._tet4_amg import topology_parents
     if not isinstance(bundle, Tet4Bundle):
         raise TypeError('expected a Tet4Bundle')
     if (_row_count(bundle.points, 'points') > 60_000 or
@@ -848,8 +846,11 @@ def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed
         raise ValueError('iterative Tet4 mechanics mesh limits')
     mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
                      bundle.material_ids, bundle.materials, bundle.length_unit)
-    parent = topology_parents(mesh.tetrahedra)
-    force, fixed, imposed = _loads_and_constraints(mesh, forces, fixed_axes, prescribed)
+    return mesh, topology_parents(mesh.tetrahedra)
+
+
+def _assemble_amg_system(mesh, fixed, parent):
+    from fibernet.sim._tet4_amg import IterativePlan, chunked_assembly, factor_constructor
     if _check_rigid_modes(mesh, fixed, parent=parent) != 1:
         raise ValueError('iterative Tet4 mechanics requires one face-connected solid')
     if any(not (1e3 <= m['young_modulus_pa'] <= 1e13 and -.95 <= m['poisson_ratio'] <= .495)
@@ -862,6 +863,14 @@ def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed
             stiffness = chunked_assembly(mesh)
     except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
         raise ValueError('could not safely prepare iterative Tet4 mechanics') from exc
+    return plan, stiffness, factor
+
+
+def _solve_static_amg(bundle, forces, fixed_axes, return_cell_fields, prescribed):
+    from fibernet.sim._tet4_amg import batched_response
+    mesh, parent = _owned_amg_mesh(bundle)
+    force, fixed, imposed = _loads_and_constraints(mesh, forces, fixed_axes, prescribed)
+    plan, stiffness, factor = _assemble_amg_system(mesh, fixed, parent)
     return _solve_assembled_static(
         mesh, force, fixed, imposed, return_cell_fields, plan, stiffness,
         iteration_options={'iterative_factor': factor, 'recovery': batched_response})
@@ -945,7 +954,8 @@ def _solve_assembled_static(mesh, force, fixed, prescribed, return_cell_fields, 
 
 
 def solve_static_tet4_load_cases(bundle: Tet4Bundle, *, force_cases: Union[list, tuple],
-                                fixed_dofs_by_id: Mapping) -> tuple[Tet4StaticResult, ...]:
+                                fixed_dofs_by_id: Mapping,
+                                solver: str = 'banded') -> tuple[Tet4StaticResult, ...]:
     """Solve 1–8 ordered nodal force cases on one unchanged Tet4 system.
 
     Each case is a stable-node-ID mapping of Cartesian (Fx, Fy, Fz) in N.
@@ -954,17 +964,25 @@ def solve_static_tet4_load_cases(bundle: Tet4Bundle, *, force_cases: Union[list,
     Unlisted loads are zero, and unlisted axes are free.
 
     Return a tuple of detached results in case order. Validate every force
-    mapping before assembly, and return no partial results on failure. Keep
-    the single-case mesh, band-factor and numerical limits; perform one
-    system setup, with no retained factor or cache. Prescribed motion, cell
-    fields and file export are not supported by this entry point.
+    mapping before assembly, and return no partial results on failure.
+    Perform one system setup, with no retained factor or cache. The default
+    banded solver keeps its single-case limits. Opt in to solver="amg-cg"
+    for larger solids with the solid-iterative extra; all nonzero free-load
+    cases have individual CG and numerical checks with one shared hierarchy.
+    Prescribed motion, cell fields and file export are not supported here.
     """
+    if not isinstance(solver, str) or solver not in ('banded','amg-cg'):
+        raise ValueError('Tet4 static solver must be banded or amg-cg')
     if type(force_cases) not in (tuple, list):
         raise ValueError('force_cases must be an ordered list or tuple of 1 to 8 mappings')
     cases = tuple(force_cases[:9])
     if not 1 <= len(cases) <= 8:
         raise ValueError('force_cases must be an ordered list or tuple of 1 to 8 mappings')
-    mesh = _validate_static_mesh(bundle)
+    iterative = solver == 'amg-cg'
+    if iterative:
+        mesh, parent = _owned_amg_mesh(bundle)
+    else:
+        mesh = _validate_static_mesh(bundle)
     rows = {int(key): row for row, key in enumerate(mesh.node_ids)}
     fixed = _fixed_axes(rows, fixed_dofs_by_id)
     forces = []
@@ -972,11 +990,16 @@ def solve_static_tet4_load_cases(bundle: Tet4Bundle, *, force_cases: Union[list,
         force = _nodal_forces(rows, mapping)
         _check_normal_or_zero(force, 'nodal force')
         forces.append(force)
+    if iterative:
+        plan, k, factor = _assemble_amg_system(mesh, fixed, parent)
     try:
         with np.errstate(divide='raise', over='raise', invalid='raise'):
-            plan = _static_topology_plan(mesh, fixed)
-            k = _assemble(mesh)
-            prepared = _prepare_fixed_solve(k, plan)
+            if iterative:
+                prepared = _prepare_fixed_solve(k, plan, iterative_factor=factor)
+            else:
+                plan = _static_topology_plan(mesh, fixed)
+                k = _assemble(mesh)
+                prepared = _prepare_fixed_solve(k, plan)
     except (FloatingPointError, OverflowError, np.linalg.LinAlgError) as exc:
         raise ValueError('Tet4 numerical solve could not be safely evaluated') from exc
     return tuple(_solve_assembled_static(mesh, force, fixed, None, False, plan, k,

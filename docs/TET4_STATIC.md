@@ -124,10 +124,14 @@ print(pull.reaction_N.sum(axis=0), push.reaction_N.sum(axis=0))  # N
 
 The tuple preserves case order, and each detached result keeps its own
 reaction, energy, and residual checks. If any case fails, no partial result
-is returned. The usual mesh, band-factor, and numerical limits still apply.
-No shared factor is kept after the call. Use separate calls for different
-material assignments and the single-case API for prescribed motion,
-cell fields, or VTU export.
+is returned. The usual mesh, band-factor, and numerical limits still apply
+to the default solver. For a larger connected solid, install the
+`solid-iterative` extra and add `solver="amg-cg"` to the same call. It
+builds one AMG preconditioner and checks each nonzero free load separately,
+including nonproportional loads. The factor is not kept after the call.
+
+Use separate calls for different material assignments or held axes. Use the
+single-case API for prescribed motion, cell fields, or VTU export.
 
 ## Prescribe a measured displacement
 
@@ -566,6 +570,7 @@ with excessive connectivity, over-budget preconditioners, failed
 convergence, or unverifiable residuals and energies are rejected. This
 method does not inherit the direct solver's shifted-band conditioning
 test. Prefer well-shaped cells and verify the quantities you care about
-under mesh refinement. The batch-load and coupled solvers keep their
+under mesh refinement. The fixed-support force-case API uses these same
+iterative limits when explicitly selected. The coupled solvers keep their
 existing method and limits. The separate material-energy summary still
 uses its original 8,000-cell limit.

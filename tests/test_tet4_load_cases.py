@@ -144,3 +144,66 @@ def test_maximum_eight_signed_cases_stable_uint64_order_no_alias_and_same_physic
         assert all(not a.flags.writeable for a in arrays)
         assert all(not np.shares_memory(a,b) for i,a in enumerate(arrays) for b in arrays[i+1:])
     assert not np.shares_memory(results[0].node_ids,mesh.node_ids)
+
+
+def test_amg_batch_reuses_one_hierarchy_on_nonproportional_cases(monkeypatch):
+    pyamg=pytest.importorskip('pyamg')
+    from examples.tet4_mechanoelectric_looped_network import _lattice, _bundle
+    p,c=_lattice(refinement=1)
+    mesh=_bundle(p,c,'stiff_half')
+    left=p[:,0]==p[:,0].min()
+    right=p[:,0]==p[:,0].max()
+    base=dict.fromkeys(map(int,mesh.node_ids[left]),('x','y','z'))
+    tips=list(map(int,mesh.node_ids[right]))
+    cases=[{}, {tips[-1]:(.002,0.,0.)}, {tips[0]:(0.,-.003,.001)},
+           {next(iter(base)):(0.,0.,.01)}, {tips[-1]:(-.002,.003,.001)}]
+    kwargs=dict(fixed_dofs_by_id=base,solver='amg-cg')
+    separately=[tet4.solve_static_tet4(mesh,forces_by_id=forces,**kwargs) for forces in cases]
+    counts=[]
+    hierarchy=pyamg.smoothed_aggregation_solver
+    def counted(*a,**k):
+        counts.append(1)
+        return hierarchy(*a,**k)
+    monkeypatch.setattr(pyamg,'smoothed_aggregation_solver',counted)
+    output=solve_static_tet4_load_cases(mesh,force_cases=cases,**kwargs)
+    assert len(counts)==1
+    assert len(output)==len(cases)
+    for out,want,forces in zip(output,separately,cases):
+        np.testing.assert_array_equal(out.node_ids,want.node_ids)
+        np.testing.assert_array_equal(out.fixed_mask,want.fixed_mask)
+        np.testing.assert_allclose(out.displacement_m,want.displacement_m,rtol=2e-10,atol=2e-17)
+        np.testing.assert_allclose(out.reaction_N,want.reaction_N,rtol=2e-10,atol=2e-13)
+        np.testing.assert_allclose(out.reaction_N.sum(0),-np.sum(list(forces.values()),axis=0),atol=2e-11)
+        np.testing.assert_allclose(out.strain_energy_J,want.strain_energy_J,rtol=1e-9)
+    for field in ('node_ids','fixed_mask','displacement_m','reaction_N'):
+        a,b=getattr(output[0],field),getattr(output[1],field)
+        assert not a.flags.writeable and not b.flags.writeable and not np.shares_memory(a,b)
+
+
+def test_amg_batch_validates_every_case_before_installing_hierarchy(monkeypatch):
+    mesh, ids, one_held, transverse=face_joined_mesh()
+    def forbidden(*a,**k):
+        pytest.fail('should reject late invalid case before preparing AMG')
+    monkeypatch.setattr(tet4,'_assemble_amg_system',forbidden)
+    with pytest.raises(ValueError,match='foreign'):
+        solve_static_tet4_load_cases(mesh,force_cases=[transverse,{0:(0.,1.,0.)}],
+                                     fixed_dofs_by_id=one_held,solver='amg-cg')
+    for value in ('auto',None,True):
+        with pytest.raises(ValueError,match='banded or amg-cg'):
+            solve_static_tet4_load_cases(mesh,force_cases=[{}],
+                                         fixed_dofs_by_id=one_held,solver=value)
+
+
+def test_amg_batch_no_free_cases_and_underrestrained_zero_load():
+    pytest.importorskip('pyamg')
+    mesh,ids,one_held,transverse=face_joined_mesh()
+    with pytest.raises(ValueError,match='restraints do not suppress six rigid modes'):
+        solve_static_tet4_load_cases(mesh,force_cases=[{},transverse],
+                                     fixed_dofs_by_id=one_held,solver='amg-cg')
+    held=dict.fromkeys(map(int,ids),tuple('xyz'))
+    actual=solve_static_tet4_load_cases(mesh,force_cases=[{},transverse],
+                                       fixed_dofs_by_id=held,solver='amg-cg')
+    for got,forces in zip(actual,({},transverse)):
+        expected=tet4.solve_static_tet4(mesh,forces_by_id=forces,fixed_dofs_by_id=held,
+                                       solver='amg-cg')
+        assert_result(got,expected)

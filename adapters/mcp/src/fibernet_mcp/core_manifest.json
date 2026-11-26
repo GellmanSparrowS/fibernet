@@ -240,7 +240,7 @@
   "sim/saved_electrothermal.py": "113afa9374e9f63d6376055f139e0ffef14a82f071446790705bbd5924375386",
   "sim/saved_electrothermal_3d.py": "d247ed82e73dea54fef3531d1ac2f89382dd8169afbf3ff7cad1be97e7a2b492",
   "sim/saved_temperature.py": "c176f4108ed0f7cc5baea2bce9f33c8201c8a25a8263bad5fdb175c2dd42736a",
-  "sim/tet4.py": "e429d15c60578cfe501a8c84d8b1db7597484cd5d8b24265945084d4279e4bc6",
+  "sim/tet4.py": "5f47ff8d8e13bbb878e0ef644baac7874d0bea8baf31f71e1a223996b0a42577",
   "sim/tet4_conduction.py": "267d38d9e7e46bf8b84ce1f9e60b4e24e344ce68e256e847b8704fd272d81d91",
   "sim/tet4_dc.py": "155b038d8988c21b5c3f9527fecdf546f9531c95674abcdbf0521b1ea299d02a",
   "sim/tet4_dc_thermal.py": "8db1bf6d39d993db035448ad3bb09ac00a670d400104638c53d95f2743a0ec64",
