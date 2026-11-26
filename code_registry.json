@@ -6622,15 +6622,17 @@
   "sha256": "dd7f10b0d1a6c86b598fa46e1e1da779c9dcb4472c661317ab1f52d9cf84f4e6"
  },
  "fibernet/sim/tet4_dc.py": {
-  "purpose": "Private pilot: bounded isotropic DC conduction on an owned Tet4 mesh.",
+  "purpose": "Bounded isotropic DC conduction on an owned Tet4 mesh.",
   "status": "active",
   "symbols": [
    "_locked",
    "_table",
    "Tet4DCResult",
+   "_check_backward",
+   "_iterative_dc",
    "solve_dc_tet4"
   ],
-  "sha256": "29cc3b0561e55f7692fe9c48614b7c40c8bcc7e8417712e6729ccab74b0b0991"
+  "sha256": "c8a176c95e4d907994b2ee261f052b6ac81307d45c8a8ce29ae222a980068601"
  },
  "fibernet/sim/tet4_dc_thermal.py": {
   "purpose": "Same-mesh solid DC to steady heat with verified Joule transfer and optional convection.",
@@ -6669,5 +6671,21 @@
    "test_owned_one_way_joule_handoff_and_out_of_range_refusal"
   ],
   "sha256": "61b84dfb17c23a99fe53ea0e2ad8bde94d16c17609fbc8ad6ed5cfc72836b5e8"
+ },
+ "tests/test_tet4_dc_iterative.py": {
+  "purpose": "Analytic controls and fail-closed checks for opt-in iterative solid DC.",
+  "status": "active",
+  "symbols": [
+   "cuboid",
+   "kw",
+   "check",
+   "test_analytical_cuboid_exceeds_default_point_limit",
+   "test_cell_node_reversal_does_not_change_result",
+   "test_fail_closed_on_iteration_limit_and_on_false_success",
+   "test_admission_and_strict_topology",
+   "test_electrically_weak_disconnected_body_independent",
+   "test_legacy_scipy_tolerance_compatibility_path"
+  ],
+  "sha256": "fc71a7a2183ab402a97af3fa2db8da26ec410c4d67ae61e92357dd2b70764e4f"
  }
 }
