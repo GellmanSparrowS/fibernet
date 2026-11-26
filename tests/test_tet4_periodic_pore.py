@@ -117,3 +117,20 @@ def test_small_loading_changes_flow_with_consistent_cap_readout():
     assert -.00070 < d["relative_bulk_flow_change"] < -.00050
     np.testing.assert_allclose(d["relative_end_flow_change"], [-.00063, -.00063], rtol=.08)
     assert .99 < d["minimum_cell_volume_ratio"] < 1 < d["maximum_cell_volume_ratio"] < 1.01
+
+
+def test_elastic_modulus_comparison_uses_matched_signed_grip_reactions():
+    pytest.importorskip("skfem")
+    from examples.tet4_solid_to_pore_flow import compare_materials
+
+    report = compare_materials()
+    soft, stiff = report["materials"]
+    assert soft["young_modulus_Pa"] == 1e9 and stiff["young_modulus_Pa"] == 2e9
+    for result in (soft, stiff):
+        np.testing.assert_allclose([x["reaction_N"] for x in result["cases"]], [-.15, .15],
+                                   rtol=2e-10, atol=0.)
+    np.testing.assert_allclose([x["stroke_m"] for x in stiff["cases"]],
+                               np.array([x["stroke_m"] for x in soft["cases"]]) / 2, rtol=2e-10)
+    assert soft["relative_bulk_slope_per_N"] < 0
+    np.testing.assert_allclose(stiff["relative_bulk_slope_per_N"],
+                               .5 * soft["relative_bulk_slope_per_N"], rtol=1e-5)
