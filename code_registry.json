@@ -6844,7 +6844,7 @@
    "solve_matched_pore_geometry",
    "solve_matched_pore_geometry_cases"
   ],
-  "sha256": "c635f21d982c2d6cf72d371732faeff58dc2135d284351decc81ea0405489c9a"
+  "sha256": "9866e4b8f7f4344d1bb03ab449c9fe5d25a32b4edb2a217d4b3deed7c6da983d"
  },
  "examples/tet4_solid_to_pore_flow.py": {
   "purpose": "Compare one-way pore flow after small solid deformation at matched grip loads.",
@@ -6871,8 +6871,9 @@
    "test_conforming_interface_transfers_exactly_and_leaves_box_fixed",
    "test_small_loading_changes_flow_with_consistent_cap_readout",
    "test_elastic_modulus_comparison_uses_matched_signed_grip_reactions",
-   "test_matched_cases_prevalidate_all_geometries_before_solving"
+   "test_matched_cases_prevalidate_all_geometries_before_solving",
+   "test_symmetric_mode_recovers_with_original_lu_settings"
   ],
-  "sha256": "0b798058d724315b4b1d755363d82ff4627510770d0373e094d511abd5b5ce5b"
+  "sha256": "e2a8f2eb0fe91346a47a4fc25c6eb3df452379d59c8019aad2abfbed94f7a61d"
  }
 }

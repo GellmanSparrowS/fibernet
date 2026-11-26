@@ -167,37 +167,51 @@ def solve_x_periodic_stokes(
     held=np.unique(np.r_[inverse[(3*sv.get_dofs(facets=walls).all()[:,None]+np.arange(3)).ravel()],inverse[nv]])
     free=np.setdiff1d(np.arange(matrix.shape[0]),held)
     system=matrix[free][:,free].tocsc()
-    u=np.zeros(len(reduced))
     if not len(free):
         raise ValueError('periodic Stokes has no free degrees of freedom')
+
+    def solve_and_check(symmetric_ordering):
+        u=np.zeros(len(reduced))
+        try:
+            kwargs={'options': {'SymmetricMode': True}} if symmetric_ordering else {}
+            u[free]=splu(system,permc_spec='MMD_AT_PLUS_A',**kwargs).solve(reduced[free])
+        except RuntimeError as e:
+            raise ValueError('periodic Stokes operator cannot be factorized') from e
+        reconstructed=P@u
+        vel=reconstructed[:nv]
+        res=np.max(np.abs((matrix@u-reduced)[free]))/np.max(np.abs(reduced))
+        flux=float(f0@vel)
+        E=float(vel@(A@vel))
+        cont=float(np.max(np.abs((P.T@np.r_[np.zeros(nv),B@vel]))))/np.max(np.abs(reduced))
+        caps=np.array([float(asm(body,FacetBasis(mesh,ElementTetP2(),
+                                                  facets=cap,intorder=4))@vel[::3]) for cap in (left,right)])
+        if not np.isfinite(u).all() or not np.isfinite([res,flux,E,cont,*caps]).all() or flux<=0:
+            raise ValueError('periodic Stokes nonfinite or nonpositive normalized flow')
+        cost=E/flux-1.
+        capbalance=float(abs(caps[1]-caps[0])/flux)
+        # In discrete weak incompressibility, x is not a periodic pressure
+        # test function. Matching cap fluxes and equality of bulk/cap flux
+        # are distinct; the latter is a mesh diagnostic, not a linear residual.
+        capdelta=float(np.max(np.abs(caps/flux-1.)))
+        # Velocity scale = g L^2 / mu, flux adds L^2; signed g is restored once.
+        flux_scale=pg*width**4/visc
+        power_scale=pg**2*width**5/visc
+        if (res>2e-8 or cont>2e-8 or abs(cost)>2e-8 or capbalance>1e-9 or capdelta>1e-2 or
+            np.any(~np.isfinite([flux_scale,power_scale]))):
+            raise ValueError(f'periodic Stokes failed residual, flow or work closure: {res=}, {cont=}, {cost=}, {capdelta=}')
+        return PeriodicStokesResult(flux*flux_scale,tuple(map(float,caps*flux_scale)),E*power_scale,cost,
+                                    float(res),float(cont),capbalance,capdelta,int(npair),int(nv),plan)
+
+    # The assembled saddle operator is structurally symmetric, but it is not
+    # positive definite. Use general LU with the default pivot threshold.
+    # Retain the original LU settings as fallback if factorization or physical
+    # validation rejects the symmetric-ordering result.
     try:
-        u[free]=splu(system,permc_spec='MMD_AT_PLUS_A').solve(reduced[free])
-    except RuntimeError as e:
-        raise ValueError('periodic Stokes operator cannot be factorized') from e
-    reconstructed=P@u
-    vel=reconstructed[:nv]
-    res=np.max(np.abs((matrix@u-reduced)[free]))/np.max(np.abs(reduced))
-    flux=float(f0@vel)
-    E=float(vel@(A@vel))
-    cont=float(np.max(np.abs((P.T@np.r_[np.zeros(nv),B@vel]))))/np.max(np.abs(reduced))
-    caps=np.array([float(asm(body,FacetBasis(mesh,ElementTetP2(),
-                                              facets=cap,intorder=4))@vel[::3]) for cap in (left,right)])
-    if not np.isfinite(u).all() or not np.isfinite([res,flux,E,cont,*caps]).all() or flux<=0:
-        raise ValueError('periodic Stokes nonfinite or nonpositive normalized flow')
-    cost=E/flux-1.
-    capbalance=float(abs(caps[1]-caps[0])/flux)
-    # In discrete weak incompressibility, x is not a periodic pressure
-    # test function. Matching cap fluxes and equality of bulk/cap flux
-    # are distinct; the latter is a mesh diagnostic, not a linear residual.
-    capdelta=float(np.max(np.abs(caps/flux-1.)))
-    # Velocity scale = g L^2 / mu, flux adds L^2; signed g is restored once.
-    flux_scale=pg*width**4/visc
-    power_scale=pg**2*width**5/visc
-    if (res>2e-8 or cont>2e-8 or abs(cost)>2e-8 or capbalance>1e-9 or capdelta>1e-2 or
-        np.any(~np.isfinite([flux_scale,power_scale]))):
-        raise ValueError(f'periodic Stokes failed residual, flow or work closure: {res=}, {cont=}, {cost=}, {capdelta=}')
-    return PeriodicStokesResult(flux*flux_scale,tuple(map(float,caps*flux_scale)),E*power_scale,cost,
-                                float(res),float(cont),capbalance,capdelta,int(npair),int(nv),plan)
+        return solve_and_check(True)
+    except ValueError:
+        pass
+    return solve_and_check(False)
+
 
 @dataclass(frozen=True)
 class MatchedPoreFlow:
