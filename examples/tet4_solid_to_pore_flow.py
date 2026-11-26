@@ -4,6 +4,7 @@
 Run from the source checkout with Python 3.10+ and the pore-flow extra:
     python -m examples.tet4_solid_to_pore_flow
 """
+import argparse
 import json
 from dataclasses import replace
 from itertools import combinations
@@ -68,16 +69,11 @@ def _extend_interface(solid, fluid, displacements_mm):
     return offset
 
 
-def demo():
-    # Scope: linear elasticity drives a stationary periodic fluid problem.
-    # The fluid does not feed forces back into the solid.
-    solid = _voxel_bundle(_scaffold_voxels(), elastic_modulus=2e9)
-    fluid = bundle()
+def _mechanics(solid, stroke_m):
     p = solid.points[:, 0]
     left, right = p == p.min(), p == p.max()
     fixed = {int(k): ("x", "y", "z") for k in solid.node_ids[left]}
     fixed.update({int(k): ("y", "z") for k in solid.node_ids[right]})
-    stroke_m = 2e-6
     imposed = {int(k): {"x": stroke_m} for k in solid.node_ids[right]}
     motion = solve_static_tet4(solid, forces_by_id={}, fixed_dofs_by_id=fixed,
                                prescribed_displacements_m_by_id=imposed)
@@ -85,11 +81,23 @@ def demo():
         raise ValueError("solid result node IDs must match the source bundle")
     force_l = float(motion.reaction_N[left, 0].sum())
     force_r = float(motion.reaction_N[right, 0].sum())
-    if not force_r > 0 or abs(force_l + force_r) > 1e-8 * force_r:
+    if not force_r * stroke_m > 0 or abs(force_l + force_r) > 1e-8 * abs(force_r):
         raise ValueError("solid grip reaction is unbalanced")
+    return motion, force_r
+
+
+def _flow(solid, fluid, motion):
     offsets_mm = _extend_interface(solid, fluid, motion.displacement_m * 1e3)
-    out = solve_matched_pore_geometry(fluid, replace(fluid, points=fluid.points + offsets_mm),
-                                     viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=500.)
+    return solve_matched_pore_geometry(fluid, replace(fluid, points=fluid.points + offsets_mm),
+                                       viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=500.)
+
+
+def demo():
+    solid = _voxel_bundle(_scaffold_voxels(), elastic_modulus=2e9)
+    fluid = bundle()
+    stroke_m = 2e-6
+    motion, force_r = _mechanics(solid, stroke_m)
+    out = _flow(solid, fluid, motion)
     return dict(solid_tetrahedra=len(solid.cell_ids), pore_tetrahedra=len(fluid.cell_ids),
                 grip_stroke_m=stroke_m, grip_reaction_N=force_r,
                 scope="small-strain solid to fixed-geometry stationary Stokes",
@@ -101,5 +109,40 @@ def demo():
                 maximum_cell_volume_ratio=out.max_cell_volume_ratio)
 
 
+def compare_materials():
+    """Compare the same scaffold and fluid at equal signed grip reaction."""
+    soft = _voxel_bundle(_scaffold_voxels(), elastic_modulus=1e9)
+    stiff = replace(soft, materials={1: dict(young_modulus_pa=2e9, poisson_ratio=.3)})
+    fluid = bundle()
+    calibration_m = 2e-6
+    force_N = .15
+    results = []
+    for solid in (soft, stiff):
+        _, calibration_N = _mechanics(solid, calibration_m)
+        cases = []
+        for sign in (-1, 1):
+            target_N = sign * force_N
+            stroke_m = calibration_m * target_N / calibration_N
+            motion, reaction_N = _mechanics(solid, stroke_m)
+            if not np.isclose(reaction_N, target_N, rtol=2e-10, atol=0.):
+                raise ValueError("actual grip reaction does not match the target")
+            result = _flow(solid, fluid, motion)
+            cases.append(dict(stroke_m=stroke_m, reaction_N=reaction_N,
+                              bulk_flow_m3_s=result.deformed.axial_flow_m3_s,
+                              relative_bulk_change=result.relative_bulk_flow_change,
+                              relative_end_change=list(result.relative_cap_flow_change)))
+        minus, plus = cases
+        slope = (plus["relative_bulk_change"] - minus["relative_bulk_change"]) / (2 * force_N)
+        results.append(dict(young_modulus_Pa=solid.materials[1]["young_modulus_pa"],
+                            cases=cases, relative_bulk_slope_per_N=slope))
+    return dict(target_force_magnitude_N=force_N,
+                scope="same scaffold, equal signed grip reaction, one-way stationary Stokes",
+                materials=results)
+
+
 if __name__ == "__main__":
-    print(json.dumps(demo(), allow_nan=False))
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--matched-force", action="store_true",
+                        help="compare two elastic moduli at the same signed grip forces")
+    args = parser.parse_args()
+    print(json.dumps(compare_materials() if args.matched_force else demo(), allow_nan=False))

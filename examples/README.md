@@ -159,6 +159,14 @@ bulk and end-face flow changes, and the pore cell-volume ratio range. It is a
 synthetic voxel scaffold and a one-way reference/deformed-geometry calculation;
 the fluid does not load the solid.
 
+Add `--matched-force` to run the same network at 1 and 2 GPa, with
+unchanged Poisson ratio, viscosity, and pressure gradient. A calibration solve
+determines which grip displacement produces the requested force; the example
+then verifies the actual reactions at ±0.15 N and reports the centered
+fractional bulk-flow change per newton. The stiffer case deforms roughly
+half as much at equal force, so its small-load fractional response is
+approximately halved in this fixture.
+
 ## Notched-network fracture scan
 
 From a source checkout with `.[fracture]` installed:
