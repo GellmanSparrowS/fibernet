@@ -8,9 +8,11 @@ from collections import Counter
 from hashlib import sha256
 from itertools import combinations
 from pathlib import Path
+from tempfile import TemporaryDirectory
 import argparse
 import json
 import math
+import os
 import re
 
 import meshio
@@ -18,7 +20,7 @@ import numpy as np
 
 from .tet4_mechanoelectric_looped_network import _lattice
 from fibernet.io.tet4_meshio import read_tet4_vtu_bundle, write_tet4_vtu_bundle
-from fibernet.sim.tet4 import solve_static_tet4
+from fibernet.sim.tet4 import _LENGTH_TO_M, solve_static_tet4
 
 
 _MATERIAL_GROUPS = ('material_low', 'material_high')
@@ -115,7 +117,32 @@ def prepare(source, out, *, length_unit, axis, stroke_m, moduli_Pa=(1e9, 2e9), p
     return result, sha256(grip_bytes).hexdigest()
 
 
-def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256):
+def _write_display_vtu(target, bundle, result):
+    """Write same-run undeformed SI coordinates and two solved nodal fields."""
+    if (not np.array_equal(result.node_ids, bundle.node_ids) or
+            result.displacement_m.shape != bundle.points.shape or
+            result.reaction_N.shape != bundle.points.shape):
+        raise ValueError("Result rows do not match their originating mesh")
+    if os.path.lexists(target):
+        raise FileExistsError(f"Display VTU destination already exists: {target}")
+    points = bundle.points * _LENGTH_TO_M[bundle.length_unit]
+    if not np.isfinite(points).all():
+        raise ValueError("Display VTU coordinates could not be converted to metres")
+    point_data = {"node_id": bundle.node_ids.astype(np.uint64, copy=False),
+                  "displacement_m": result.displacement_m,
+                  "reaction_N": result.reaction_N}
+    cell_data = {"cell_id": [bundle.cell_ids.astype(np.uint64, copy=False)],
+                 "material_id": [bundle.material_ids.astype(np.uint64, copy=False)]}
+    view = meshio.Mesh(points, [("tetra", bundle.tetrahedra)], point_data, cell_data)
+    with TemporaryDirectory(prefix=".display-vtu-", dir=target.parent) as stage:
+        staged = Path(stage) / "deformation.vtu"
+        meshio.vtu.write(staged, view, binary=True, compression=None)
+        if not 0 < staged.stat().st_size <= 32 * 1024**2:
+            raise ValueError("Display VTU exceeds its 32 MiB file bound")
+        os.link(staged, target)
+
+
+def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256, write_vtu=False):
     if not sidecar_path.is_file() or sidecar_path.stat().st_size > 4 * 1024**2:
         raise ValueError('Expected a small grip sidecar')
     grip_bytes = sidecar_path.read_bytes()
@@ -165,6 +192,10 @@ def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256):
     summary = dict(nodes=len(b.points),cells=len(b.tetrahedra),hold=len(left),pull=len(right),
                    axis=axis,stroke_m=stroke,reaction_N=f,strain_energy_J=result.strain_energy_J,
                    free_residual_inf_N=result.free_residual_inf_N)
+    if write_vtu:
+        display = out/"deformation.vtu"
+        _write_display_vtu(display, b, result)
+        summary["deformation_vtu"] = display.name
     (out/"summary.json").write_text(json.dumps(summary,indent=2)+"\n",encoding="utf-8")
     return summary
 
@@ -183,6 +214,8 @@ def main():
                       help="names of the two physical volumes, in modulus order")
     args.add_argument("--grip-groups", nargs=2, metavar=("HOLD", "PULL"),
                       help="names of the two physical surfaces, fixed then driven")
+    args.add_argument("--write-vtu", action="store_true",
+                      help="also write a ParaView-ready VTU from this solve")
     a=args.parse_args()
     if a.input is None and (a.material_groups or a.grip_groups):
         args.error("--material-groups and --grip-groups require --input")
@@ -200,7 +233,7 @@ def main():
     b, grip_hash=prepare(source,a.output,length_unit=a.length_unit or "mm",axis=a.axis,stroke_m=a.stroke_um*1e-6,
               moduli_Pa=(a.material_low_gpa*1e9,a.material_high_gpa*1e9),poisson_ratio=a.poisson_ratio,
               material_groups=a.material_groups or _MATERIAL_GROUPS, grip_groups=a.grip_groups or _GRIP_GROUPS)
-    print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash),indent=2))
+    print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash,write_vtu=a.write_vtu),indent=2))
 
 
 if __name__=="__main__":

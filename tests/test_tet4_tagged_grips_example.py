@@ -84,3 +84,46 @@ def test_custom_external_gmsh_group_names_reproduce_same_inputs(tmp_path):
     got=solve(actual,custom_out/"grips.json",custom_out,prepared_grip_sha256=y)
     for key in ("reaction_N","strain_energy_J"):
         np.testing.assert_allclose(wanted[key],got[key],rtol=2e-10)
+
+
+def test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids(tmp_path,monkeypatch):
+    from types import SimpleNamespace
+    import meshio
+    from examples import tet4_tagged_grip_iterative as example
+    source=tmp_path/"mesh.msh"
+    make_fixture(source,refinement=2)
+    path,h=prepare(source,tmp_path,length_unit="mm",axis="x",stroke_m=-1.5e-6)
+    original=example.solve_static_tet4
+    calls=[]
+    def record(*a,**k):
+        calls.append(1)
+        return original(*a,**k)
+    monkeypatch.setattr(example,"solve_static_tet4",record)
+    out=solve(path,tmp_path/"grips.json",tmp_path,prepared_grip_sha256=h,write_vtu=True)
+    assert calls==[1] and out["deformation_vtu"]=="deformation.vtu"
+    v=meshio.read(tmp_path/out["deformation_vtu"])
+    b=read_tet4_vtu_bundle(path)
+    np.testing.assert_array_equal(v.points,b.points*1e-3)
+    np.testing.assert_array_equal(v.get_cells_type("tetra"),b.tetrahedra)
+    keys=((v.point_data["node_id"],b.node_ids),
+          (v.get_cell_data("cell_id","tetra"),b.cell_ids),
+          (v.get_cell_data("material_id","tetra"),b.material_ids))
+    for lhs,rhs in keys:
+        assert lhs.dtype==np.uint64
+        np.testing.assert_array_equal(lhs,rhs)
+    assert min(v.point_data["node_id"])>2**53
+    assert min(v.get_cell_data("cell_id","tetra"))>2**53
+    with np.load(tmp_path/"nodal-fields.npz",allow_pickle=False) as fields:
+        for k in ("displacement_m","reaction_N"):
+            np.testing.assert_array_equal(v.point_data[k],fields[k])
+        moved=np.flatnonzero(fields["displacement_m"][:,0] == -1.5e-6)
+        assert len(moved)>0
+        xyz=v.points[moved]
+        warped=xyz+v.point_data["displacement_m"][moved]
+        np.testing.assert_allclose(warped[:,0]-xyz[:,0],-1.5e-6,rtol=1e-12)
+    result=SimpleNamespace(node_ids=v.point_data["node_id"],
+                           displacement_m=v.point_data["displacement_m"],
+                           reaction_N=v.point_data["reaction_N"])
+    with pytest.raises(FileExistsError,match="already exists"):
+        example._write_display_vtu(tmp_path/out["deformation_vtu"],b,result)
+    assert calls==[1]

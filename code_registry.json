@@ -6776,10 +6776,11 @@
   "symbols": [
    "make_fixture",
    "prepare",
+   "_write_display_vtu",
    "solve",
    "main"
   ],
-  "sha256": "c82a616033812e734a11f0204320193b7b1c0c2c93c622f1b9e277fc808b648e"
+  "sha256": "865b1e460201be58cde49b811632ecf0b6f393e9df8918605b0d5ff09c023a97"
  },
  "tests/test_tet4_tagged_grips_example.py": {
   "purpose": "Executable smoke tests for imported named grips above the banded limits.",
@@ -6788,8 +6789,9 @@
    "test_prepared_mesh_above_banded_cap_can_solve_and_save",
    "test_edited_grip_setting_is_refused_without_emitting_results",
    "test_sidecar_from_another_bundle_is_refused",
-   "test_custom_external_gmsh_group_names_reproduce_same_inputs"
+   "test_custom_external_gmsh_group_names_reproduce_same_inputs",
+   "test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids"
   ],
-  "sha256": "4d3f283d7bb5dc1b3d2e620c5f6d6020c6a7eddcb66c81f433daa592982facb6"
+  "sha256": "dbb3586d11d7f363ac993032eadbfa361e881c8ab41143024b5092d0614a8382"
  }
 }
