@@ -259,6 +259,35 @@ def _validate_topology(cells):
                 raise ValueError(f'non-manifold Tet4 face with more than two cells at row {row}')
     return faces
 
+
+def _packed_topology_face_keys(cells):
+    """Pack faces for a validated mesh whose point rows are below 60000."""
+    a, b, c, d = np.sort(cells.astype(np.uint64), axis=1).T
+    keys = (a << 48) | (b << 32) | (c << 16) | d
+    keys.sort()
+    if np.any(keys[:-1] == keys[1:]):
+        # Preserve the reference error and first invalid input row.
+        _validate_topology(cells)
+    return np.column_stack(((a << 32) | (b << 16) | c,
+                            (a << 32) | (b << 16) | d,
+                            (a << 32) | (c << 16) | d,
+                            (b << 32) | (c << 16) | d)).ravel()
+
+
+def _packed_topology_shared_faces(sorted_faces, cells):
+    shared = sorted_faces[:-1] == sorted_faces[1:]
+    if np.any(shared[:-1] & shared[1:]):
+        _validate_topology(cells)
+    return shared
+
+
+def _validate_packed_topology(cells):
+    # A count-only caller does not need face owners or a union forest.
+    faces = _packed_topology_face_keys(cells)
+    faces.sort()
+    _packed_topology_shared_faces(faces, cells)
+
+
 def _check_rigid_modes(mesh, fixed, *, parent=None):
     cells = mesh.tetrahedra.tolist()
     build_parents = parent is None

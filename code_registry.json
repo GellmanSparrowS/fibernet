@@ -5873,6 +5873,9 @@
    "_magnitude_bits",
    "_check_normal_or_zero",
    "_validate_topology",
+   "_packed_topology_face_keys",
+   "_packed_topology_shared_faces",
+   "_validate_packed_topology",
    "_check_rigid_modes",
    "_free_node_topology",
    "_canonical_node_order",
@@ -5909,7 +5912,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "5f47ff8d8e13bbb878e0ef644baac7874d0bea8baf31f71e1a223996b0a42577"
+  "sha256": "a4fd1d6c484e0bc5968f68b58c324930f57b72f0ee2a33c4e4afef1699f0f9e5"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -6648,7 +6651,7 @@
    "_batched_geometry",
    "solve_dc_tet4"
   ],
-  "sha256": "155b038d8988c21b5c3f9527fecdf546f9531c95674abcdbf0521b1ea299d02a"
+  "sha256": "5412f8da8f47e722734bef68f858ccab3e55d1f987a2317e29f567d81cef4852"
  },
  "fibernet/sim/tet4_dc_thermal.py": {
   "purpose": "Same-mesh solid DC to steady heat with verified Joule transfer and optional convection.",
@@ -6699,13 +6702,15 @@
    "test_cell_node_reversal_does_not_change_result",
    "test_fail_closed_on_iteration_limit_and_on_false_success",
    "test_admission_and_strict_topology",
+   "test_packed_topology_replays_the_first_scalar_diagnostic",
+   "test_packed_topology_preserves_high_row_bits_without_scalar_fallback",
    "test_electrically_weak_disconnected_body_independent",
    "test_legacy_scipy_tolerance_compatibility_path",
    "test_batched_geometry_matches_scalar_across_batches_and_orientation",
    "test_batched_geometry_keeps_scalar_invalid_cell_contract",
    "test_geometry_near_volume_cutoff_uses_reference"
   ],
-  "sha256": "d33406eecc60c307b991546f70f67a7f8a238b3e686890908017634ce37b1570"
+  "sha256": "1044405c095c93da4a3387e4b6d25b1c8acc9e086fca37f816ca06399bf655cb"
  },
  "fibernet/sim/_tet4_amg.py": {
   "purpose": "Internal bounded mechanics iteration and independent cell recovery.",
@@ -6718,7 +6723,7 @@
    "chunked_assembly",
    "factor_constructor"
   ],
-  "sha256": "2f37334e00d0df93962f48eea080bd0066ad40a21a0f5bdd6aef06cd9b3e04ce"
+  "sha256": "7c5f045dab0d6a2ac4689ff00a1d5fac092cead1c115990326c4eb75bdd3a760"
  },
  "examples/tet4_mechanoelectric_looped_network.py": {
   "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",

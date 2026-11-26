@@ -167,7 +167,7 @@ def solve_dc_tet4(bundle, *, conductivity_S_per_m_by_material, electrode_voltage
         if n>60_000 or e>200_000: raise ValueError('DC CG mesh limits')
         mesh=_validate(bundle.points, bundle.tetrahedra, bundle.node_ids, bundle.cell_ids,
                        bundle.material_ids, bundle.materials, bundle.length_unit)
-        core._validate_topology(mesh.tetrahedra)
+        core._validate_packed_topology(mesh.tetrahedra)
     x=mesh.points*core._LENGTH_TO_M[mesh.length_unit]; cells=mesh.tetrahedra
     if np.max(abs(x),initial=0)>1.: raise ValueError('DC coordinate limit')
     s=_table(conductivity_S_per_m_by_material,set(mesh.materials),1e-6,1e6,'DC conductivity',True)

@@ -71,6 +71,32 @@ def test_admission_and_strict_topology():
         with pytest.raises(ValueError,match='banded or cg'):
             solve_dc_tet4(b,solver=bad,**kw(b))
 
+@pytest.mark.parametrize(("cells", "message"), [
+    ([[0, 1, 2, 3], [3, 1, 0, 2], [0, 1, 2, 4]],
+     "duplicate Tet4 connectivity at row 1"),
+    ([[0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 2, 5], [3, 0, 1, 2]],
+     "non-manifold Tet4 face with more than two cells at row 2"),
+    ([[0, 1, 2, 3], [0, 1, 2, 4], [0, 1, 2, 5]],
+     "non-manifold Tet4 face with more than two cells at row 2"),
+])
+def test_packed_topology_replays_the_first_scalar_diagnostic(cells, message):
+    with pytest.raises(ValueError, match=f"^{message}$"):
+        candidate.core._validate_packed_topology(np.array(cells))
+
+
+def test_packed_topology_preserves_high_row_bits_without_scalar_fallback(monkeypatch):
+    cells = np.array([[1, 2, 3, 4], [3, 2, 1, 5],
+                      [32769, 32770, 32771, 32772], [32773, 32771, 32770, 32769]])
+
+    def unexpected(_):
+        pytest.fail("valid packed connectivity reached scalar validation")
+
+    monkeypatch.setattr(candidate.core, "_validate_topology", unexpected)
+    candidate.core._validate_packed_topology(cells)
+    b = cuboid((4, 3, 3))
+    check(b, solve_dc_tet4(b, solver="cg", **kw(b)), (4, 3, 3))
+
+
 def test_electrically_weak_disconnected_body_independent():
     a = cuboid((8,4,4))
     b = cuboid((5,3,3))
