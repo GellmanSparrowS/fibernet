@@ -143,6 +143,22 @@ tetrahedral fluid mesh, separately from the geometric porosity example.
 For a matching package and checkout, see the
 [4.25.0 release guide](../docs/RELEASE_4_25_0.md#solve-a-small-periodic-pore-flow-problem).
 
+## How solid deformation changes pore flow
+
+Using the same Python 3.10+ source checkout and `pore-flow` extra:
+
+```bash
+python -m examples.tet4_solid_to_pore_flow
+```
+
+Solve small-strain elasticity in all three bonded paths under a prescribed
+grip displacement. Transfer the solid boundary displacements to matching pore
+mesh nodes, keep the duct exterior fixed, and recompute steady Stokes flow at
+the same pressure gradient. The example prints the computed grip reaction,
+bulk and end-face flow changes, and the pore cell-volume ratio range. It is a
+synthetic voxel scaffold and a one-way reference/deformed-geometry calculation;
+the fluid does not load the solid.
+
 ## Notched-network fracture scan
 
 From a source checkout with `.[fracture]` installed:

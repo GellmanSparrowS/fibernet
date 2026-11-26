@@ -83,3 +83,37 @@ def test_cap_bijection_is_not_only_a_vertex_count():
     x[far, 2] += 1e-3
     with pytest.raises(ValueError, match="periodic cap vertices do not pair"):
         solve_x_periodic_stokes(replace(b, points=x), **settings)
+
+
+def test_conforming_interface_transfers_exactly_and_leaves_box_fixed():
+    from examples.tet4_periodic_pore import _scaffold_voxels, _voxel_bundle
+    from examples.tet4_solid_to_pore_flow import _boundary_faces, _extend_interface
+
+    solid = _voxel_bundle(_scaffold_voxels(), elastic_modulus=2.e9)
+    fluid = bundle()
+    d = np.column_stack([solid.points[:, 0] * .002, solid.points[:, 1] * -.001,
+                         solid.points[:, 2] * -.001])
+    u = _extend_interface(solid, fluid, d)
+    surface_ids = np.unique(_boundary_faces(solid.tetrahedra))
+    locator = {tuple(row): j for j, row in enumerate(fluid.points)}
+    where = [locator[tuple(solid.points[j])] for j in surface_ids]
+    np.testing.assert_array_equal(u[where], d[surface_ids])
+    outer = np.any((fluid.points == fluid.points.min(axis=0)) |
+                   (fluid.points == fluid.points.max(axis=0)), axis=1)
+    np.testing.assert_array_equal(u[outer], 0.)
+    assert np.count_nonzero(np.linalg.norm(u, axis=1) > 0.) > len(surface_ids)
+    with pytest.raises(ValueError, match="no matching pore point"):
+        _extend_interface(replace(solid, points=solid.points + .013), fluid, d)
+
+
+def test_small_loading_changes_flow_with_consistent_cap_readout():
+    pytest.importorskip("skfem")
+    from examples.tet4_solid_to_pore_flow import demo
+
+    d = demo()
+    assert d["solid_tetrahedra"] == 84 and d["pore_tetrahedra"] == 2268
+    assert .70 < d["grip_reaction_N"] < .75
+    assert 0 < d["loaded_flow_m3_s"] < d["baseline_flow_m3_s"]
+    assert -.00070 < d["relative_bulk_flow_change"] < -.00050
+    np.testing.assert_allclose(d["relative_end_flow_change"], [-.00063, -.00063], rtol=.08)
+    assert .99 < d["minimum_cell_volume_ratio"] < 1 < d["maximum_cell_volume_ratio"] < 1.01
