@@ -1,3 +1,9 @@
+## [4.38.0]
+
+- Report signed flow separately for each connected opening in a saved quadratic Stokes field.
+- Optionally seed streamlines on each opening of the inlet cap in the native browser, including smaller, offset openings.
+- See the [4.38.0 release notes](docs/RELEASE_4_38_0.md).
+
 ## [4.37.0]
 - Export an optional complete quadratic pressure-flow velocity field to VTK tetra10 with original mesh IDs.
 - Add a local viewer and an installed example to generate, solve, and view a fixed-pressure three-dimensional pore.
