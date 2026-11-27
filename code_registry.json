@@ -6975,7 +6975,7 @@
    "_restrict_to_local_origin",
    "main"
   ],
-  "sha256": "f50c353018532265f82df75d5959fb9945fa33078cd787dd0a5522949d498bb0"
+  "sha256": "ed3291e132a893048ac995fa976b71c80c94a25aec13eefa81f272ebe7760d76"
  },
  "scripts/smoke_tet4_browser.py": {
   "purpose": "Open the installed local Tet4 viewer and verify provenance with a native browser.",
@@ -6984,10 +6984,12 @@
    "_port",
    "_ready",
    "_check_local_boundary",
-   "_native_tags",
+   "_native_reference",
+   "_check_physical_pick",
+   "_render_field",
    "_render",
    "main"
   ],
-  "sha256": "740a32800e343ba5f9bf863436275334f8223e3c707ce7a683b09c8ab009908c"
+  "sha256": "10e27672fa7265d1746688724fce15f0cb189d3d4134d685a552a28e3b799c4e"
  }
 }
