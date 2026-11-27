@@ -272,6 +272,7 @@
   "version.py": "f58ac002b218957cdbab27f18d78720be24e7c1e284add389065f2e487647d0d",
   "visualization.py": "0a42323486f655f7288e856d3a17d8f7006d0beed6328eb396b98eec3cb8bdcd",
   "viz/__init__.py": "c64befa58239e6a8f9e90da2751c9879721d9d56f04e2816d4a86e6be4dc9098",
+  "viz/_stokes_velocity_vtu.py": "1a5b1577e7d8aa0350c1ebe486d319027831408f5e79fe871e63292cd23e3d65",
   "viz/advanced.py": "dc33f2098860639ec60ba5b0f1c7e8dd5c06cb2280a5c29a2ac9c9ed759b23d8",
   "viz/animate.py": "22de274d12d08c828a32205810c6067fade09f8e7abcad933b4923b3dc2f3726",
   "viz/graph_plot.py": "1139e1ac87d1072c947fc58d194245f11be14023feb17c26cec6320fe8cc6c49",
@@ -282,6 +283,7 @@
   "viz/renderer.py": "1f07093ebf1e73ecdccd43a27bb12297f302de03729a67ce92b6e2d15a9be34f",
   "viz/showcase.py": "86d861c861f49bc640873bbdd6effc6e37d098e294089ca11ea0aa0477b4962a",
   "viz/showcase_renderer.py": "de06a378026c3f3fce6b4f5d87b578225ce438166f5e7d2e1c456fce3b4d58d4",
+  "viz/stokes_browser.py": "ee40cb7636414d3642a0b866e4d295ccf140c997a52692b80c0c8369afacdc40",
   "viz/tet4_browser.py": "ed3291e132a893048ac995fa976b71c80c94a25aec13eefa81f272ebe7760d76",
   "viz/visualization.py": "54c98ad80c16ffce9ac520aecb523f30637786537b5e1a78a32bad6d64f740e9"
 }

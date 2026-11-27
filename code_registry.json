@@ -7031,5 +7031,40 @@
    "main"
   ],
   "sha256": "a626d48c6d415104268b5e671557eaad1d2da7aa6f87c478cae9f472f7d2bfdb"
+ },
+ "fibernet/viz/_stokes_velocity_vtu.py": {
+  "purpose": "Preflight the specific inline Meshio VTU schema before constructing a VTK grid.",
+  "status": "active",
+  "symbols": [
+   "_blocks",
+   "read_own_quadratic_vtu"
+  ],
+  "sha256": "1a5b1577e7d8aa0350c1ebe486d319027831408f5e79fe871e63292cd23e3d65"
+ },
+ "fibernet/viz/stokes_browser.py": {
+  "purpose": "Loopback VTK/Trame preview of a FiberNet quadratic velocity VTU.",
+  "status": "active",
+  "symbols": [
+   "vertices",
+   "grid",
+   "attach",
+   "compact",
+   "grid2",
+   "tracer",
+   "tracks",
+   "_scenes",
+   "_serve",
+   "main"
+  ],
+  "sha256": "ee40cb7636414d3642a0b866e4d295ccf140c997a52692b80c0c8369afacdc40"
+ },
+ "scripts/smoke_stokes_browser.py": {
+  "purpose": "Exercise installed native pressure solve, VTU writer and local browser.",
+  "status": "active",
+  "symbols": [
+   "_check_browser",
+   "main"
+  ],
+  "sha256": "4d8caeb70cc81b695b91fd4f342e6499df6a245884175d1aa18d267260557f8e"
  }
 }
