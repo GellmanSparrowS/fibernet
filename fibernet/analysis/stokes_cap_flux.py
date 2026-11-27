@@ -30,15 +30,20 @@ def _checked_affine_xyz(points, tet):
     return q
 
 
-def _side(p,t,u,high):
-    plane=float(p[:,0].max() if high else p[:,0].min())
-    exterior=(p[:,0]==plane)[t[:,:4]]
-    owning,local=np.where(exterior[:,_FACE].all(axis=2))
+def _cap_faces(p, t, high):
+    plane = float(p[:, 0].max() if high else p[:, 0].min())
+    exterior = (p[:, 0] == plane)[t[:, :4]]
+    owning, local = np.where(exterior[:, _FACE].all(axis=2))
     if not len(owning):
         raise ValueError("Expected nonempty planar extreme-x caps")
-    faces=t[owning[:,None],_FACE[local]]
-    if len(np.unique(np.sort(faces,axis=1),axis=0))!=len(faces):
+    faces = t[owning[:, None], _FACE[local]]
+    if len(np.unique(np.sort(faces, axis=1), axis=0)) != len(faces):
         raise ValueError("Repeated extreme-x cap faces are unsupported")
+    return plane, owning, local, faces
+
+
+def _side(p,t,u,high):
+    plane, owning, local, faces = _cap_faces(p, t, high)
     edge_mid=t[owning[:,None],_MID[local]]
     a,b,c=p[faces].transpose(1,0,2)
     d,e=b-a,c-a
