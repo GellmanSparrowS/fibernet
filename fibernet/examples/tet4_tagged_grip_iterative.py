@@ -257,7 +257,51 @@ def _write_display_vtu(target, bundle, result):
         os.link(staged, target)
 
 
-def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256, write_vtu=False):
+def _grip_material_sensitivities(bundle, result, stroke, reaction):
+    """Derivatives of the signed grip reaction for this displacement-only solve."""
+    ids = np.asarray(sorted(bundle.materials), dtype=np.uint64)
+    names = ("young_modulus_pa", "poisson_ratio")
+    modulus, poisson = np.asarray([
+        [bundle.materials[int(mid)][k] for k in names] for mid in ids
+    ]).T
+    bulk = modulus / (3 * (1 - 2 * poisson))
+    shear = modulus / (2 * (1 + poisson))
+    volume_strain = np.zeros(len(ids))
+    distortion = np.zeros(len(ids))
+    points_si = bundle.points * _LENGTH_TO_M[bundle.length_unit]
+    identity = np.eye(3)
+    # Bound the temporary arrays independently of the imported mesh size.
+    for start in range(0, len(bundle.tetrahedra), 4096):
+        end = start + 4096
+        cells = bundle.tetrahedra[start:end]
+        positions = points_si[cells]
+        disp = result.displacement_m[cells]
+        edges = positions[:, 1:] - positions[:, :1]
+        dv = disp[:, 1:] - disp[:, :1]
+        grad = np.linalg.solve(edges, dv)
+        strain = (grad + grad.swapaxes(1, 2)) / 2
+        vol = abs(np.linalg.det(edges)) / 6
+        trace = strain.trace(axis1=1, axis2=2)
+        dev = strain - (trace / 3)[:, None, None] * identity
+        which = np.searchsorted(ids, bundle.material_ids[start:end])
+        volume_strain += np.bincount(which, vol * trace**2, minlength=len(ids))
+        distortion += np.bincount(which, vol * np.einsum("tij,tij->t", dev, dev),
+                                  minlength=len(ids))
+    d_reaction_d_logE = (bulk * volume_strain + 2 * shear * distortion) / stroke
+    d_reaction_d_nu = (2 * modulus * volume_strain / (3 * (1 - 2 * poisson)**2)
+                       - modulus * distortion / (1 + poisson)**2) / stroke
+    if not np.isfinite([d_reaction_d_logE, d_reaction_d_nu]).all():
+        raise ValueError("Material sensitivity calculation returned a non-finite value")
+    if not math.isclose(math.fsum(d_reaction_d_logE), reaction, rel_tol=5e-9):
+        raise ValueError("Material sensitivities did not reproduce total reaction under uniform stiffness scaling")
+    return {
+        str(mid): {"d_reaction_d_ln_young_modulus_N": float(dlog),
+                   "d_reaction_d_poisson_ratio_N": float(dnu)}
+        for mid, dlog, dnu in zip(ids, d_reaction_d_logE, d_reaction_d_nu)
+    }
+
+
+def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256, write_vtu=False, material_sensitivities=False):
     if not sidecar_path.is_file() or sidecar_path.stat().st_size > 4 * 1024**2:
         raise ValueError('Expected a small grip sidecar')
     grip_bytes = sidecar_path.read_bytes()
@@ -300,6 +344,7 @@ def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256, write_vtu=Fal
     if np.linalg.norm(result.reaction_N.sum(0)) > 2e-8*gross_force:
         raise ValueError("Prescribed-grip reactions are not in force balance")
     np.testing.assert_allclose(result.strain_energy_J,.5*f*stroke,rtol=1e-9)
+    sensitivities = _grip_material_sensitivities(b, result, stroke, f) if material_sensitivities else None
     np.savez_compressed(out/"nodal-fields.npz",node_ids=result.node_ids,
                         displacement_m=result.displacement_m,reaction_N=result.reaction_N)
     with np.load(out/"nodal-fields.npz",allow_pickle=False) as stored:
@@ -307,6 +352,8 @@ def solve(bundle_path, sidecar_path, out, *, prepared_grip_sha256, write_vtu=Fal
     summary = dict(nodes=len(b.points),cells=len(b.tetrahedra),hold=len(left),pull=len(right),
                    axis=axis,stroke_m=stroke,reaction_N=f,strain_energy_J=result.strain_energy_J,
                    free_residual_inf_N=result.free_residual_inf_N)
+    if sensitivities is not None:
+        summary["material_sensitivities"] = sensitivities
     if write_vtu:
         display = out/"deformation.vtu"
         _write_display_vtu(display, b, result)
@@ -331,6 +378,8 @@ def main():
                       help="names of the two physical volumes, in modulus order")
     args.add_argument("--grip-groups", nargs=2, metavar=("HOLD", "PULL"),
                       help="names of the two physical surfaces, fixed then driven")
+    args.add_argument("--material-sensitivities", action="store_true",
+                      help="report local grip-reaction derivatives by material tag")
     args.add_argument("--write-vtu", action="store_true",
                       help="also write a ParaView-ready VTU from this solve")
     args.add_argument("--material-group", metavar="NAME", help="single physical volume of a homogeneous solid")
@@ -380,7 +429,8 @@ def main():
               moduli_Pa=moduli, poisson_ratio=.3 if a.poisson_ratio is None else a.poisson_ratio,
               material_groups=materials, grip_groups=a.grip_groups or _GRIP_GROUPS,
               material_properties=material_properties)
-    print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash,write_vtu=a.write_vtu),indent=2))
+    print(json.dumps(solve(b,a.output/"grips.json",a.output,prepared_grip_sha256=grip_hash, write_vtu=a.write_vtu,
+                          material_sensitivities=a.material_sensitivities), indent=2))
 
 
 if __name__=="__main__":
