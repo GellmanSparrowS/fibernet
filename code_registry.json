@@ -5442,9 +5442,10 @@
    "test_thermal_deadend_components_and_bad_solver",
    "test_thermal_all_fixed_component_and_zero_scale",
    "test_thermal_scale_ids_orientation",
-   "test_thermal_unresolved_precision_cap_stays_closed"
+   "test_thermal_unresolved_precision_cap_stays_closed",
+   "test_normal_budget_fast_path_preserves_subnormal_gate"
   ],
-  "sha256": "b54eae346d43125d3ef91b4a827f4f27421e2a67204da77074c2d33a21f3c0b1"
+  "sha256": "7821d3b1a3b96126a1507d8bb09c3dc45e1a6148c196b56b6fda97f4d9811c16"
  },
  "tests/test_history_masked_controls.py": {
   "purpose": "Missing history samples must not be silently replaced by masked payloads.",
