@@ -14,6 +14,7 @@ _CEILINGS = {'max_nodes': 4096, 'max_edges': 16384,
              'max_report_bytes': 16 * 1024 * 1024}
 _UNITS = {'m': 1.0, 'mm': 1e-3, 'um': 1e-6}
 _SCHEMA = 'fibernet.deformed_transport_preparation/1'
+_SCHEMA_3D = 'fibernet.deformed_transport_preparation_3d/1'
 _POLICIES = {'geometry_policy': 'endpoint_chord',
              'area_policy': 'fixed_effective_area',
              'conductivity_policy': 'frozen_reference_sigma_A'}
@@ -120,7 +121,7 @@ def _index_gate(graph, max_nodes):
             raise ValueError('edge lookup has an invalid representative')
 
 
-def _preflight(graph, length_unit, limits):
+def _preflight(graph, length_unit, limits, dimension):
     import numpy as np
     from fibernet.core.structure_graph import StructureGraph, SNode, SEdge
     from fibernet.core.material import Material
@@ -132,8 +133,8 @@ def _preflight(graph, length_unit, limits):
         raise ValueError('graph node/edge containers must be ordinary dictionaries')
     if not 0 < len(graph.nodes) <= limits['max_nodes'] or not 0 < len(graph.edges) <= limits['max_edges']:
         raise MemoryError('graph exceeds nonempty node/edge admission bounds')
-    if type(graph.dimension) is not int or graph.dimension != 2:
-        raise ValueError('preparation requires dimension=2')
+    if type(graph.dimension) is not int or graph.dimension != dimension:
+        raise ValueError(f'preparation requires dimension={dimension}')
     if set(vars(graph)) != {'_dimension', '_tolerance', '_box_size', '_nodes', '_edges',
                            '_next_node_id', '_next_edge_id', '_metadata', '_spatial_hash', '_edge_set'}:
         raise ValueError('preparation requires ordinary StructureGraph fields only')
@@ -161,18 +162,22 @@ def _preflight(graph, length_unit, limits):
         _units(value, SimpleNamespace(length_unit=length_unit, coordinate_frame=frame[0]))
     metadata(graph.metadata)
     plane_z = None
+    # Existing 3D generators compute flags using NumPy comparisons. Their
+    # ordinary bool_ scalars already serialize as booleans through SNode.
+    boundary_types = (bool,) if dimension == 2 else (bool, np.bool_)
     for nid, node in graph.nodes.items():
         if type(node) is not SNode or set(vars(node)) != set(SNode.__dataclass_fields__):
             raise ValueError('nodes must be ordinary SNode records')
         if _identifier(node.node_id, 'node record ID') != nid:
             raise ValueError('node key and record ID disagree')
         _array(node.position, (3,), 'node position')
-        if plane_z is None:
-            plane_z = float(node.position[2])
-        elif float(node.position[2]) != plane_z:
-            raise ValueError('dimension=2 positions must share one exact plane z')
+        if dimension == 2:
+            if plane_z is None:
+                plane_z = float(node.position[2])
+            elif float(node.position[2]) != plane_z:
+                raise ValueError('dimension=2 positions must share one exact plane z')
         if (type(node.boundary) not in (tuple, list) or len(node.boundary) != 6 or
-                any(type(value) is not bool for value in node.boundary)):
+                any(type(value) not in boundary_types for value in node.boundary)):
             raise ValueError('boundary flags must be six booleans')
         metadata(node.metadata)
     for eid, edge in graph.edges.items():
@@ -257,6 +262,44 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
     not an automatically revalidated plan. Call existing linear_transport
     separately with explicit electrical boundary conditions if a solve is wanted.
     """
+    return _prepare_deformed_transport(
+        graph, dimension=2, translations_m_by_id=translations_m_by_id,
+        reference_conductance_S=reference_conductance_S, length_unit=length_unit,
+        max_nodes=max_nodes, max_edges=max_edges,
+        max_metadata_bytes=max_metadata_bytes, max_report_bytes=max_report_bytes,
+    )
+
+
+def prepare_deformed_transport_3d(graph, *, translations_m_by_id, reference_conductance_S,
+                                  length_unit,
+                                  max_nodes=4096, max_edges=16384,
+                                  max_metadata_bytes=4 * 1024 * 1024,
+                                  max_report_bytes=16 * 1024 * 1024):
+    """Prepare a 3D straight-member graph for a separate DC solve.
+
+    Accept an ordinary dimension-3 StructureGraph with explicitly declared
+    m/mm/um coordinates and complete stable-ID maps of Cartesian translations
+    [ux_m, uy_m, uz_m] and positive reference conductance in siemens. Return a
+    detached graph, fixed-area chord conductance and a dedicated XYZ report.
+    Reference sigma*A is frozen; radii/materials are preserved, not interpreted.
+    No solver, mechanical result, changing contacts, or physical feedback is
+    admitted. The same ownership, frame, size and straight-edge bounds apply
+    as for prepare_deformed_transport; that API remains planar. The XYZ entry
+    accepts native boolean and NumPy boolean boundary flags stored by 3D
+    generators. It retains the source flags without reclassification.
+    """
+    return _prepare_deformed_transport(
+        graph, dimension=3, translations_m_by_id=translations_m_by_id,
+        reference_conductance_S=reference_conductance_S, length_unit=length_unit,
+        max_nodes=max_nodes, max_edges=max_edges,
+        max_metadata_bytes=max_metadata_bytes, max_report_bytes=max_report_bytes,
+    )
+
+
+def _prepare_deformed_transport(graph, *, dimension, translations_m_by_id,
+                                reference_conductance_S, length_unit,
+                                max_nodes, max_edges, max_metadata_bytes,
+                                max_report_bytes):
     import numpy as np
     from fibernet.core.fiber_network_profile import _JsonBudget
 
@@ -267,7 +310,7 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
             raise ValueError(name + ' must be a positive Python int no greater than its fixed ceiling')
     if type(length_unit) is not str or length_unit not in _UNITS:
         raise ValueError('length_unit must explicitly be m, mm or um')
-    metadata_bytes, coordinate_frame = _preflight(graph, length_unit, limits)
+    metadata_bytes, coordinate_frame = _preflight(graph, length_unit, limits, dimension)
     node_order, edge_order = list(graph.nodes), list(graph.edges)
     node_ids, edge_ids = sorted(node_order), sorted(edge_order)
     _complete_map(translations_m_by_id, node_ids, 'translations_m_by_id')
@@ -276,9 +319,10 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
     for nid in node_ids:
         row = translations_m_by_id[nid]
         if type(row) is np.ndarray:
-            _array(row, (2,), 'translation')
-        elif type(row) not in (list, tuple) or len(row) != 2:
-            raise ValueError('translation must contain exactly ux_m, uy_m')
+            _array(row, (dimension,), 'translation')
+        elif type(row) not in (list, tuple) or len(row) != dimension:
+            components = 'ux_m, uy_m' if dimension == 2 else 'ux_m, uy_m, uz_m'
+            raise ValueError('translation must contain exactly ' + components)
         translations[nid] = [_number(value, 'translation') for value in row]
     reference_g = {eid: _number(reference_conductance_S[eid], 'reference conductance', positive=True)
                    for eid in edge_ids}
@@ -286,8 +330,8 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
     old_positions, positions, new_positions = {}, {}, {}
     for nid in node_ids:
         old = [float(value) for value in graph.nodes[nid].position]
-        positions[nid] = [old[0] + translations[nid][0] / scale,
-                          old[1] + translations[nid][1] / scale, old[2]]
+        positions[nid] = [old[i] + translations[nid][i] / scale
+                          if i < dimension else old[i] for i in range(3)]
         old_positions[nid] = [_number(value * scale, 'source SI position') for value in old]
         new_positions[nid] = [_number(value * scale, 'derived SI position') for value in positions[nid]]
         for value in positions[nid]:
@@ -302,12 +346,14 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
         value = reference_g[eid] if old_lengths[eid] == new_lengths[eid] else products[eid] / new_lengths[eid]
         new_g[eid] = _number(value, 'derived conductance', positive=True)
     box = None if graph._box_size is None else [_number(float(v) * scale, 'reference SI box') for v in graph._box_size]
-    report = dict(_POLICIES, schema=_SCHEMA, scope='preparation_time_correspondence_only',
+    schema = _SCHEMA if dimension == 2 else _SCHEMA_3D
+    frame = 'source_graph_xy_axes' if dimension == 2 else 'source_graph_xyz_axes'
+    report = dict(_POLICIES, schema=schema, scope='preparation_time_correspondence_only',
                   input_kind='caller_prescribed_translations', length_unit=length_unit,
                   translation_unit='m', conductance_unit='S', coordinate_frame=coordinate_frame,
-                  translation_frame='source_graph_xy_axes', declaration_origin={'length_unit': 'caller_asserted_not_certified',
+                  translation_frame=frame, declaration_origin={'length_unit': 'caller_asserted_not_certified',
                                       'coordinate_frame': 'stored_label_not_authenticated' if coordinate_frame else 'undeclared',
-                                      'translations': 'caller_prescribed_in_source_graph_xy_axes'},
+                                      'translations': 'caller_prescribed_in_' + frame},
                   frame_transform='none', displacement_scale=1,
                   mechanical_result_admitted=False, solver_executed=False, feedback=False,
                   source_full_graph_sha256='0' * 64, derived_full_graph_sha256='0' * 64,
@@ -330,6 +376,8 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
                                       max_spatial_buckets=4 * max_nodes,
                                       metadata_material_bytes_charged=metadata_bytes,
                                       scope='payload_bounds_not_peak_memory_or_physical_qualification'))
+    if dimension == 3:
+        report['geometry_dimension'] = 3
     _JsonBudget(max_report_bytes, 'report').charge(report)
     # All source-sized and nested inputs are bounded before graph serialization/copy.
     source_record = json.loads(_json(graph.to_dict()))
@@ -337,7 +385,7 @@ def prepare_deformed_transport(graph, *, translations_m_by_id, reference_conduct
                        'edge_insertion_order': edge_order}
     report['source_full_graph_sha256'] = _hash(source_record)
     report['source_graph_order_envelope_sha256'] = _hash(source_envelope)
-    report['input_sha256'] = _hash({'schema': _SCHEMA, 'source_graph_order_envelope_sha256': report['source_graph_order_envelope_sha256'],
+    report['input_sha256'] = _hash({'schema': schema, 'source_graph_order_envelope_sha256': report['source_graph_order_envelope_sha256'],
                                     'node_ids': node_ids, 'edge_ids': edge_ids,
                                     'translations_m': report['translations_m'],
                                     'reference_conductance_S': report['reference_conductance_S'],
