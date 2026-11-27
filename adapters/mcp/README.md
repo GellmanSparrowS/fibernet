@@ -1,6 +1,6 @@
 # FiberNet MCP adapter
 
-A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. The adapter is not published to PyPI; install it from the matching source checkout as shown below. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
+A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. The adapter is not published to PyPI; install it from the matching source checkout as shown below. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. The default tool set exposes no coupled electrothermal execution or generation. This adapter does not execute arbitrary code, fetch URLs, or serve remote HTTP.
 
 ## Install with the matching native core
 
@@ -50,6 +50,8 @@ This command speaks MCP over stdin/stdout; configure it as a local stdio server 
 Exact schemas: src/fibernet_mcp/tool_schemas.json. tools/list uses the same schemas with unreachable local definitions removed to fit the reply limit.
 
 The seventh tool, `fibernet_prepare_deformed_transport`, returns one immutable native geometry/conductance/binding bundle without running a solver. Its exact ID, unit, source-round-trip, limit and cancellation contract is documented in [Deformed transport preparation](DEFORMED_TRANSPORT.md). Existing electrical limits are unchanged.
+
+For a 3D catalog graph, an operator can opt into the [translated 3D electrical solve](TRANSLATED_TRANSPORT_3D.md). It consumes explicit XYZ displacements and returns the prepared geometry binding and steady current in one result. It does not replace the planar or standalone electrical tool.
 
 The eighth tool, `fibernet_solve_thermoelastic_network_snapshot`, calls the existing native prescribed-temperature planar welded-network owner once. It admits only the default 192-node/256-edge profile and returns the complete native snapshot as a bounded artifact; it is not a heat solver or a stability certificate. Explicit SI load/constraint and temperature/alpha records, unit/frame assertions, errors and lifecycle are documented in [Thermoelastic snapshot](THERMOELASTIC.md). This is a real mechanical capability addition, not a rename of topology or preparation.
 
