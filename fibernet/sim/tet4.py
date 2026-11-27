@@ -753,7 +753,12 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan, *, iterative_factor=N
             raise ValueError('underconstrained Tet4 system: free stiffness has zero scale')
         _check_normal_or_zero(kscale, 'free stiffness scale')
         factor = _factor_band if iterative_factor is None else iterative_factor
-        solve = factor(reduced / kscale, tolerance, plan)
+        # The normalized free block replaces the unscaled copy. Keep the
+        # sparse factor or AMG hierarchy only for the solve that uses it.
+        scaled = reduced / kscale
+        del reduced
+        solve = factor(scaled, tolerance, plan)
+        del scaled
         scale = float(np.max(np.abs(rhs), initial=0.))
         if scale:
             fhat = rhs / scale
@@ -763,6 +768,7 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan, *, iterative_factor=N
             fm, fe = math.frexp(scale)
             km, ke = math.frexp(kscale)
             u[free] = _checked_normal_rescale(solve(fhat), fm/km, fe-ke, 'displacement')
+        del solve
         model_free = _checked_action(kf, u)
         scale = max(float(np.max(np.abs(force[free]), initial=0.)),
                     float(np.max(_checked_action(abs(kf), abs(u)), initial=0.)))
@@ -770,6 +776,8 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan, *, iterative_factor=N
             backward = float(np.max(np.abs(model_free - force[free]), initial=0.) / scale)
         if not 0. <= backward <= tolerance:
             raise ValueError('Tet4 prescribed solve did not meet normalized backward residual criterion')
+        # Recovery uses element matrices, not the residual's sparse slice.
+        del kf
     recover = _prescribed_element_response if recovery is None else recovery
     internal, energy = recover(mesh, u.reshape(-1,3))
     if len(free) and scale:

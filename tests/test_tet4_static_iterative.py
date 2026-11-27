@@ -264,3 +264,52 @@ def test_current_direction_uses_scaled_norm_with_signed_analytic_strain():
     w[-1]=1
     with pytest.raises(ValueError,match="Zero-current"):
         _power_weighted_strain(x,rows,u,j,w)
+
+
+@pytest.mark.parametrize("solver", ("banded", "amg-cg"))
+def test_prescribed_releases_the_factor_before_element_recovery(monkeypatch, solver):
+    from gc import collect
+    from weakref import ref
+    from fibernet.sim import tet4
+
+    def observe_factor(prepare):
+        def factor(*args):
+            result = prepare(*args)
+            factors.append(ref(result))
+            return result
+        return factor
+
+    if solver == "amg-cg":
+        pytest.importorskip("pyamg")
+        from fibernet.sim import _tet4_amg
+        module = _tet4_amg
+        native_factory = module.factor_constructor
+
+        def provider_factory(*args):
+            return observe_factor(native_factory(*args))
+
+        monkeypatch.setattr(module, "factor_constructor", provider_factory)
+        recovery_name = "batched_response"
+    else:
+        module = tet4
+        monkeypatch.setattr(module, "_factor_band", observe_factor(module._factor_band))
+        recovery_name = "_prescribed_element_response"
+
+    native_recover = getattr(module, recovery_name)
+
+    def observe_recovery(*args):
+        collect()
+        assert len(factors) == 1 and factors[0]() is None
+        touched.append(True)
+        return native_recover(*args)
+
+    factors = []
+    touched = []
+    monkeypatch.setattr(module, recovery_name, observe_recovery)
+    points, cells = _lattice()
+    bundle = _bundle(points, cells, "stiff_half")
+    right, grip, fixed, _, _ = _fixture(bundle)
+    r = solve_static_tet4(bundle, forces_by_id={}, fixed_dofs_by_id=fixed, solver=solver,
+                          prescribed_displacements_m_by_id={n: {"x": 1.5e-6} for n in grip})
+    assert touched == [True] and r.reaction_N[right, 0].sum() > 0
+    np.testing.assert_allclose(r.strain_energy_J, r.half_external_work_J, rtol=1e-9)
