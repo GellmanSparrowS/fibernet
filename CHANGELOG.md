@@ -1,3 +1,9 @@
+## [4.32.0]
+- Run the tagged three-dimensional material example from the installed package, including imported Gmsh meshes and ParaView export.
+- Set Young modulus and Poisson ratio by named physical volume without remeshing.
+- Report local signed grip-reaction sensitivities by material region from one fixed-stroke solve.
+- See the [4.32.0 release notes](docs/RELEASE_4_32_0.md).
+
 ## [4.31.0]
 - Run the installed 3D force–resistance and matched-force pore-flow examples from any directory without a source archive.
 - Reuse a scalar velocity factor in the periodic Stokes solver, retaining both full-system LU fallbacks and the same input and physics checks.

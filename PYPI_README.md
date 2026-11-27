@@ -1,25 +1,24 @@
-# FiberNet 4.31.0
+# FiberNet 4.32.0
 
 **Generate fiber-network graphs, measure their structure, and run reproducible small-deformation simulations in Python.**
 
 FiberNet connects native graph generation, topology and planar snapshot analysis, beam-FEM simulation, and JSON persistence. FiberScope is the separate desktop application in the same [repository](https://github.com/GellmanSparrowS/fibernet).
 
-## Changes in 4.31.0
+## Changes in 4.32.0
 
-- Run the 3D force–resistance sweep and loaded pore-flow examples from
-  the installed package. No separate checkout or download is needed.
-- Speed up periodic pore flow by reusing one scalar velocity factor for the
-  three velocity components. Both previous direct LU paths and the same
-  residual, continuity, flux and power checks remain in place.
+- Run the tagged Tet4 grip example from the installed package with a
+  generated fixture or your own Gmsh mesh; export the solved fields to ParaView.
+- Change Young modulus and Poisson ratio by physical volume on the same mesh.
+- Report local grip-reaction sensitivities from one fixed-stroke solve.
 
-See the [4.31.0 release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_31_0.md).
+See the [4.32.0 release notes](https://github.com/GellmanSparrowS/fibernet/blob/main/docs/RELEASE_4_32_0.md).
 
 ## Install
 
 Python 3.9 or newer is required. The core dependencies are NumPy, SciPy, NetworkX, and Matplotlib.
 
 ```bash
-python -m pip install "fibernet==4.31.0"
+python -m pip install "fibernet==4.32.0"
 ```
 
 Run the installed example from any directory:
@@ -31,12 +30,24 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 It generates its own network and writes `network.json`, `network.png`,
 `fem_result.json`, and `summary.json`. No source checkout or input data is needed.
 
+### Compare materials on one 3D solid mesh
+
+Try the generated two-material case first:
+
+```bash
+python -m pip install "fibernet[solid-iterative]==4.32.0" "meshio==5.3.5"
+python -m fibernet.examples.tet4_tagged_grip_iterative --output solid-demo --write-vtu --material-sensitivities
+```
+
+Then use an existing ASCII Gmsh mesh and a JSON file that maps its named physical
+volumes to material properties. The release notes contain the input format and commands.
+
 ### Run the installed 3D force–resistance and pore-flow examples
 
 Use Python 3.10 or newer:
 
 ```bash
-python -m pip install "fibernet[solid-iterative,pore-flow]==4.31.0"
+python -m pip install "fibernet[solid-iterative,pore-flow]==4.32.0"
 python -m fibernet.examples.tet4_iterative_mechanoelectric_sweep
 python -m fibernet.examples.tet4_solid_to_pore_flow --matched-force
 ```
@@ -53,8 +64,8 @@ From an empty directory, download the matching source distribution to get the
 standalone example without cloning the repository:
 
 ```bash
-python -m pip download --no-deps --no-binary=fibernet "fibernet==4.31.0"
-python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.31.0.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.31.0/' + p).read()); t.close()"
+python -m pip download --no-deps --no-binary=fibernet "fibernet==4.32.0"
+python -c "import pathlib, tarfile; p='examples/tet4_static_welded_junction.py'; t=tarfile.open('fibernet-4.32.0.tar.gz'); pathlib.Path(p.rsplit('/', 1)[-1]).write_bytes(t.extractfile('fibernet-4.32.0/' + p).read()); t.close()"
 python tet4_static_welded_junction.py --tier quick
 python tet4_static_welded_junction.py --tier reference
 ```
@@ -83,12 +94,12 @@ published individually without overwrite; the pair is not transactional.
 The example below needs no Torch, Taichi, GPU, or desktop application. Install optional dependencies for the workflow you choose:
 
 ```bash
-python -m pip install "fibernet[solid-iterative]==4.31.0"  # AMG-CG for larger solids
-python -m pip install "fibernet[pore-flow]==4.31.0"      # periodic Tet4 pore flow (Python 3.10+)
-python -m pip install "fibernet[ml]==4.31.0"             # scikit-learn, pandas, tqdm
-python -m pip install "fibernet[manufacturing]==4.31.0"  # solid geometry tools
-python -m pip install "fibernet[fracture]==4.31.0"       # experimental fracture backend
-python -m pip install "fibernet==4.31.0" "meshio==5.3.5" # Tet4 mesh I/O and result export
+python -m pip install "fibernet[solid-iterative]==4.32.0"  # AMG-CG for larger solids
+python -m pip install "fibernet[pore-flow]==4.32.0"      # periodic Tet4 pore flow (Python 3.10+)
+python -m pip install "fibernet[ml]==4.32.0"             # scikit-learn, pandas, tqdm
+python -m pip install "fibernet[manufacturing]==4.32.0"  # solid geometry tools
+python -m pip install "fibernet[fracture]==4.32.0"       # experimental fracture backend
+python -m pip install "fibernet==4.32.0" "meshio==5.3.5" # Tet4 mesh I/O and result export
 ```
 
 Installing an extra supplies dependencies; model definitions and input requirements are in the corresponding methods documentation.

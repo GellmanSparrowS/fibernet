@@ -349,10 +349,10 @@ without editing the mesh file: `--material-groups "Soft phase" "Stiff phase"`
 sets the order for the low and high modulus inputs, and
 `--grip-groups "Fixed end" "Driven end"` selects the two exterior grips.
 
-Install from a matching FiberNet checkout with the iterative back end and Meshio:
+Install FiberNet 4.32.0 with the iterative back end and Meshio:
 
 ~~~sh
-python -m pip install ".[solid-iterative]" "meshio==5.3.5"
+python -m pip install "fibernet[solid-iterative]==4.32.0" "meshio==5.3.5"
 python -m fibernet.examples.tet4_tagged_grip_iterative --input my-mesh.msh --output grip-run \
   --length-unit mm --axis x --stroke-um 1.5 --material-low-gpa 1 --material-high-gpa 2
 ~~~
