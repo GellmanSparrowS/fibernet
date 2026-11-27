@@ -13,7 +13,7 @@ are fixed at 1 and 2 GPa (ν=0.3). Compare uniform (1,1), contrast (1,0.4), and
 flipped contrast (0.4,1) S/m for the same structural solution. No intrinsic
 piezoresistivity or feedback is included.
 
-## Run from a matching FiberNet development checkout
+## Run from an installed FiberNet package
 
 Use Python 3.12 and install the existing iterative mechanics extra plus the
 standalone optional mesher. On Linux the Gmsh wheel also needs a system libGLU
@@ -21,7 +21,7 @@ runtime (for example, the Ubuntu package `libglu1-mesa`). The output folder must
 not already exist.
 
 ```sh
-python -m pip install ".[solid-iterative]" "gmsh==4.13.1" "meshio==5.3.5"
+python -m pip install "fibernet[solid-iterative]==4.35.0" "gmsh==4.13.1" "meshio==5.3.5"
 python -m fibernet.examples.tet4_round_multipath --output round-demo --tier reference --write-vtu
 ```
 
@@ -29,7 +29,7 @@ To inspect this result in a browser, install the optional viewer and open a
 reference cut at 0.2605 mm:
 
 ```sh
-python -m pip install ".[browser-viz]"
+python -m pip install "fibernet[browser-viz]==4.35.0"
 python -m fibernet.viz.tet4_browser round-demo/deformation.vtu --section-z-mm 0.2605 --scale 20
 ```
 

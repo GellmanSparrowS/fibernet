@@ -1,3 +1,8 @@
+## [4.35.0]
+- Color the Tet4 browser viewer by signed physical displacement and inspect its vector at the selected point.
+- Generate and solve the two-material round-fiber network from an installed FiberNet package.
+- See the [4.35.0 release notes](docs/RELEASE_4_35_0.md).
+
 ## [4.34.0]
 - Inspect material regions in a solved three-dimensional Tet4 mesh using a local browser.
 - See the [4.34.0 release notes](docs/RELEASE_4_34_0.md).

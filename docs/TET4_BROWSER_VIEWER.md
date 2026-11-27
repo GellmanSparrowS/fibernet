@@ -3,7 +3,7 @@
 Use the optional browser viewer to check the exterior and a cut through an existing FiberNet Tet4 calculation. Click a face to trace it back to the original tetrahedron and material tag. The viewer reads a file; it does not run the solver or change your results.
 
 ```sh
-python -m pip install "fibernet[browser-viz]==4.34.0"
+python -m pip install "fibernet[browser-viz]==4.35.0"
 python -m fibernet.viz.tet4_browser result/deformation.vtu --section-z-mm 0.087
 ```
 
