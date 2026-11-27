@@ -157,6 +157,38 @@ geometry, reciprocal coupling, stability, material calibration, physical
 accuracy, or production-scale performance. A later saved-mechanics reader or
 broader domain needs its own explicit contract and independent review.
 
+## Prepare a 3D straight-member network
+
+Use the explicit `prepare_deformed_transport_3d` entry point when the source
+`StructureGraph` declares dimension 3. Supply three translations in metres per
+stable node ID in the graph's x/y/z axes, even if one component is zero. The
+planar function and its report remain unchanged.
+
+```python
+from fibernet.sim.deformed_transport import prepare_deformed_transport_3d
+from fibernet.sim.linear_transport import solve_linear_transport
+
+deformed_graph, conductance_S, binding = prepare_deformed_transport_3d(
+    graph_3d,
+    translations_m_by_id=translations_xyz_m_by_id,
+    reference_conductance_S=reference_G_by_edge_id,
+    length_unit="m",
+)
+electrical = solve_linear_transport(
+    deformed_graph, conductance_S, electrode_voltages_by_id,
+    length_unit="m", model_metadata=binding,
+)
+```
+
+The XYZ report records the actual new three-dimensional chord lengths, the
+preserved reference area–conductivity product, and the matching graph and ID
+bindings. Nodes, rods, material data and electrode IDs are not rebuilt. The
+preparation function does not read or authenticate mechanical results: extract
+translations by matching the recorded stable node IDs and convert their units
+to metres before the call. This path uses straight members and fixed effective
+area; it does not model changing contacts, conductivity, or electrical feedback
+onto the mechanical solution.
+
 ## Runnable sequential workflow
 
 See [saved temperature through geometry export](THERMAL_TO_TRANSPORT_EXPORT.md)
