@@ -1,3 +1,8 @@
+## [4.33.0]
+- Add an optional Rustworkx topology backend with the same FiberNet result schema.
+- Lower peak memory of prescribed-displacement Tet4 solves without changing physical outputs.
+- See the [4.33.0 release notes](docs/RELEASE_4_33_0.md).
+
 ## [4.32.0]
 - Run the tagged three-dimensional material example from the installed package, including imported Gmsh meshes and ParaView export.
 - Set Young modulus and Poisson ratio by named physical volume without remeshing.
