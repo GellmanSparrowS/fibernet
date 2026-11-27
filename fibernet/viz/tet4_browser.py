@@ -14,6 +14,7 @@ _COLOR_CYCLE = (
 _IDS = ("source_cell_id_hi", "source_cell_id_lo")
 _TAG = "source_material_tag"
 _RGB = "material_rgb"
+_UX = "normalized_x_displacement"
 _LIMIT_CELLS = 250_000
 _LIMIT_FILE = 64 * 1024 * 1024
 
@@ -90,7 +91,15 @@ def _scenes(path, section_z_mm, scale):
         raise ValueError("Invalid deformed coordinates")
     # Use only fields understood by the viewer. Integer categorical data is attached
     # to cells, never passed through a point-field interpolator.
-    core_u = np.array(u, copy=True)
+    # The cut interpolates nodal fields. Use binary64 displacement even
+    # when a trusted input chooses integer or single-precision VTK storage.
+    core_u = np.array(u, dtype=np.float64, copy=True)
+    max_u = max(float(core_u.max()), -float(core_u.min()))
+    if max_u >= np.finfo(np.float64).max / 1.e6:
+        raise ValueError("Displacement cannot be displayed in micrometres")
+    ux_m = core_u[:, 0]
+    ux_scale_m = max(float(ux_m.max()), -float(ux_m.min()))
+    ux_limit = ux_scale_m * 1.e6
     ids = ids.astype(np.uint64)
     tags = tags.astype(np.uint32)
     points.Initialize()
@@ -127,11 +136,18 @@ def _scenes(path, section_z_mm, scale):
         attrs = mesh.GetCellData()
         material = vtk_to_numpy(attrs.GetArray(_TAG))
         attach(attrs, _RGB, palette[np.searchsorted(unique_tags, material)])
+        point_attrs = mesh.GetPointData()
+        physical_ux = vtk_to_numpy(point_attrs.GetArray("displacement_m"))[:, 0]
+        # Use normalized float32 only for coloring in WebGL. Preserve the
+        # interpolated binary64 field for source picks and the physical legend.
+        mapped = (np.clip(physical_ux / ux_scale_m, -1., 1.).astype(np.float32)
+                  if ux_scale_m else np.zeros(len(physical_ux), dtype=np.float32))
+        attach(point_attrs, _UX, mapped)
         locator = vtkStaticCellLocator()
         locator.SetDataSet(mesh)
         locator.BuildLocator()
         result[mode] = _Scene(mesh, locator, diagonal)
-    return result, colors
+    return result, colors, ux_limit
 
 
 def _ray_hit(scene, payload):
@@ -150,8 +166,9 @@ def _ray_hit(scene, payload):
         return None
     hit, coords = [0.] * 3, [0.] * 3
     t, sub, idx = reference(0.), reference(0), reference(0)
+    cell = vtkGenericCell()
     if not scene.locator.IntersectWithLine(
-        *ray, scene.diagonal_m * 1e-9, t, hit, coords, sub, idx, vtkGenericCell()
+        *ray, scene.diagonal_m * 1e-9, t, hit, coords, sub, idx, cell
     ):
         return None
     if (math.dist(hit, est) > scene.diagonal_m * 1.5e-5 or
@@ -160,26 +177,36 @@ def _ray_hit(scene, payload):
     attrs = scene.mesh.GetCellData()
     hi, lo = (int(attrs.GetArray(name).GetValue(int(idx))) for name in _IDS)
     tag = int(attrs.GetArray(_TAG).GetValue(int(idx)))
-    return str((hi << 32) | lo), str(tag), ", ".join(f"{v*1000:.4f}" for v in hit) + " mm"
+    ids = cell.GetPointIds()
+    if ids.GetNumberOfIds() != 3:
+        return None
+    u = scene.mesh.GetPointData().GetArray("displacement_m")
+    bary = (1. - coords[0] - coords[1], coords[0], coords[1])
+    sampled = tuple(math.fsum(bary[j]*u.GetTuple(ids.GetId(j))[i] for j in range(3))*1.e6
+                    for i in range(3))
+    return (str((hi << 32) | lo), str(tag),
+            ", ".join(f"{v*1000:.4f}" for v in hit) + " mm",
+            ", ".join(f"{v:.6f}" for v in sampled) + " µm")
 
 
-def _app(scenes, colors, z_mm, scale):
+def _app(scenes, colors, z_mm, scale, ux_limit):
     from trame.app import get_server
     from trame.ui.html import DivLayout
     from trame.widgets import html, vtk
 
     server = get_server("fibernet-" + uuid4().hex, client_type="vue3")
     state = server.state
-    state.update(dict(mode="surface", pickData=None, details="", material="", world_point=""))
+    state.update(dict(mode="surface", field_mode="material", ux_limits=[-1., 1.],
+                      pickData=None, details="", material="", world_point="", sampled_u=""))
 
     @state.change("mode")
     def reset_panel(**_):
-        state.details = state.material = state.world_point = ""
+        state.details = state.material = state.world_point = state.sampled_u = ""
         state.pickData = None
 
     @state.change("pickData")
     def select_cell(pickData, **_):
-        state.details = state.material = state.world_point = ""
+        state.details = state.material = state.world_point = state.sampled_u = ""
         if not isinstance(pickData, dict) or pickData.get("representationId") != state.mode:
             return
         scene = scenes.get(state.mode) if isinstance(state.mode, str) else None
@@ -189,7 +216,7 @@ def _app(scenes, colors, z_mm, scale):
         if hit is None:
             state.details = "Pick inside a visible mesh face"
             return
-        state.details, state.material, state.world_point = hit
+        state.details, state.material, state.world_point, state.sampled_u = hit
 
     with DivLayout(server):
         with html.Div(style="font-family:system-ui;color:#fff;background:#111e2c;position:fixed;inset:0;display:flex;flex-direction:column;"):
@@ -198,6 +225,8 @@ def _app(scenes, colors, z_mm, scale):
                 html.Button("Exterior", id="select-surface", click="mode = 'surface'")
                 html.Button("Material section", id="select-slice", click="mode = 'slice'")
                 html.Span("{{ mode }}", id="visible-mode", style="margin-left:8px")
+                html.Button("Material",id="field-material",click="field_mode = 'material'")
+                html.Button("x displacement",id="field-ux",click="field_mode = 'ux'")
                 html.Span(f"z = {z_mm:g} mm in reference geometry · displacement ×{scale:g}",
                           style="margin-left:12px;color:#a9bac9")
             with html.Div(style="position:relative;flex:1;min-height:0"):
@@ -209,18 +238,32 @@ def _app(scenes, colors, z_mm, scale):
                         click="pickData = $event.worldPosition ? $event : pickData",
                     ):
                         with vtk.VtkGeometryRepresentation(
-                            id=mode, mapper=(mode+"Mapper", {"scalarVisibility": True,
-                            "scalarMode": 4, "colorMode": 2, "colorByArrayName": _RGB}),
+                            id=mode,
+                            color_map_preset="Cool to Warm",
+                            color_data_range=("ux_limits",),
+                            mapper=("{scalarVisibility: true, scalarMode: field_mode === 'material' ? 4 : 3, "
+                                    "colorMode: field_mode === 'material' ? 2 : 1, "
+                                    "colorByArrayName: field_mode === 'material' ? 'material_rgb' : 'normalized_x_displacement', "
+                                    "interpolateScalarsBeforeMapping: field_mode === 'ux'}",),
                         ):
-                            vtk.VtkMesh(mode+"_data", dataset=scene.mesh, cell_arrays=[*_IDS, _TAG, _RGB])
+                            # Inspect source ownership on the server after the ray hit.
+                            # WebGL needs colors, not copies of every cell's IDs.
+                            vtk.VtkMesh(mode+"_data", dataset=scene.mesh,
+                                        point_arrays=[_UX], cell_arrays=[_RGB])
             with html.Div(style="position:absolute;right:12px;top:75px;padding:10px;background:#132434;pointer-events:none;min-width:236px"):
                 html.Div("Original Tet4", style="font-weight:600")
                 html.Div("{{ details }}", id="picked-id")
                 html.Div("Material tag", style="color:#a9bac9;margin-top:4px")
                 html.Div("{{ material }}", id="picked-material")
                 html.Div("{{ world_point }}", id="picked-point", style="color:#a9bac9;margin-top:4px")
+                html.Div("Physical displacement (x, y, z)",style="color:#a9bac9;margin-top:4px")
+                html.Div("{{ sampled_u }}",id="picked-u")
+                with html.Div(v_show="field_mode === 'ux'",id="ux-scale"):
+                    legend = (f"x displacement: {-ux_limit:.4g} to {ux_limit:.4g} µm"
+                              if ux_limit else "x displacement: 0 µm (constant)")
+                    html.Span(legend)
                 for tag, rgb in colors.items():
-                    html.Span(str(tag), style=f"display:inline-block;margin:6px 5px 0 0;padding:3px 7px;color:#07131e;background:rgb{rgb};border-radius:4px")
+                    html.Span(str(tag), v_show="field_mode === 'material'", style=f"display:inline-block;margin:6px 5px 0 0;padding:3px 7px;color:#07131e;background:rgb{rgb};border-radius:4px")
     return server
 
 
@@ -259,8 +302,8 @@ def main(argv=None):
     if not 1024 <= args.port <= 65535:
         parser.error("--port must be between 1024 and 65535")
     try:
-        scenes, colors = _scenes(args.vtu, args.section_z_mm, args.scale)
-        server = _app(scenes, colors, args.section_z_mm, args.scale)
+        scenes, colors, ux_limit = _scenes(args.vtu, args.section_z_mm, args.scale)
+        server = _app(scenes, colors, args.section_z_mm, args.scale, ux_limit)
         _restrict_to_local_origin(server, args.port)
     except ModuleNotFoundError as exc:
         if (exc.name or "").split(".")[0] not in {"vtkmodules", "trame", "trame_vtk", "aiohttp"}:
