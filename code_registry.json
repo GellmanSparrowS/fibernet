@@ -6963,5 +6963,31 @@
    "test_rustworkx_empty_and_isolate_parity",
    "test_requested_missing_rustworkx_does_not_silently_switch"
   ]
+ },
+ "fibernet/viz/tet4_browser.py": {
+  "purpose": "Inspect a trusted FiberNet Tet4 VTU in a local browser.",
+  "status": "active",
+  "symbols": [
+   "_Scene",
+   "_scenes",
+   "_ray_hit",
+   "_app",
+   "_restrict_to_local_origin",
+   "main"
+  ],
+  "sha256": "f50c353018532265f82df75d5959fb9945fa33078cd787dd0a5522949d498bb0"
+ },
+ "scripts/smoke_tet4_browser.py": {
+  "purpose": "Open the installed local Tet4 viewer and verify provenance with a native browser.",
+  "status": "active",
+  "symbols": [
+   "_port",
+   "_ready",
+   "_check_local_boundary",
+   "_native_tags",
+   "_render",
+   "main"
+  ],
+  "sha256": "740a32800e343ba5f9bf863436275334f8223e3c707ce7a683b09c8ab009908c"
  }
 }
