@@ -1,14 +1,16 @@
-<table>
-<tr><td align="center">
-<img src="docs/media/ui/homepage-cover-v2.svg" alt="FiberNet and FiberScope" width="820">
-</td></tr>
-</table>
-
 # FiberNet
 
 A Python library for generating fiber networks and studying how their architecture affects deformation and transport. Reuse the same network for analysis, learning, and fabrication planning.
 
-[Quick start](#quick-start) · [Examples](examples/README.md) · [中文](#fibernet-zh)
+[Quick start](#quick-start) · [Examples](examples/README.md) · [Animation gallery](docs/MEDIA_GALLERY.md) · [中文](#fibernet-zh)
+
+<table>
+<tr><td align="center">
+<img src="docs/media/homepage/network-morph.webp" alt="An 8 by 8 fiber lattice changes shape while its original and transformed routes visit the same edges in the same order" width="960">
+</td></tr>
+</table>
+
+**Same network, new shape.** Five control points change each fiber's geometry while the two closed routes visit the same 1,728 edge segments in the same order.
 
 <a name="fibernet-zh"></a>
 
@@ -25,16 +27,24 @@ python -m pip install fibernet
 python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 ```
 
-<img src="docs/media/three_dimensional_topologies.gif" alt="从不同角度观察固定的 octet、diamond 和 gyroid 三维纤维网络" width="750">
-
-*三种固定拓扑的旋转预览。[打开动图画廊](docs/MEDIA_GALLERY.md)*
-
 ## 接下来可以做什么
 
 - **建立与加载网络：**生成[二维或三维网络](docs/METHODS_3D_GENERATION_PARAMETERS.md)，在[三维实体网格](docs/TET4_STATIC.md)上计算小变形响应。
 - **看受力后电阻怎么变：**[360 杆网络](docs/DEFORMED_TRANSPORT_PREPARATION.md)和[含熔合节点的三通路实体网络](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice)都在变形后的几何上重算电阻。孔隙流动可从[变形前后流量对比](examples/README.md#how-solid-deformation-changes-pore-flow)入手。
 - **继续分析、学习或制造：**用同一个 `StructureGraph` [训练模型](examples/physical_learning_workflow.py)，或生成[闭合路径](docs/MANUFACTURING_GRAPH_MAPPING.md)和[多段路径](docs/MULTISTROKE_MANUFACTURING.md)。
 
+
+### 力学动图
+
+<img src="docs/media/homepage/woven-fracture.webp" alt="夹具从两侧拉伸预裂织物网络，纤维伸长后撕裂逐步扩展" width="960">
+
+**裂口在拉伸下扩展。** 动图重放简化弹簧网络计算。[查看动图说明](docs/MEDIA_GALLERY.md#tensile-fracture-of-a-notched-weave) · [更多动图](docs/MEDIA_GALLERY.md)。
+
+### 从取向场生成纤维束
+
+<img src="docs/media/homepage/orientation-to-bundle.webp" alt="平面取向矩阵逐格绘出并逐层展开，随后生成三维纤维束" width="960">
+
+**从二维排列方向出发。** 将平面矩阵扩展成多层三维取向场，再沿取向场生成纤维。[查看动图说明](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers)。
 
 用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
 
@@ -72,16 +82,25 @@ python -m pip install fibernet
 python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 ```
 
-<img src="docs/media/three_dimensional_topologies.gif" alt="Rotating views of fixed octet, diamond, and gyroid fiber networks" width="750">
-
-*Camera views of three fixed topologies. [Open the animation gallery](docs/MEDIA_GALLERY.md).*
-
 ## Choose a workflow
 
 - **Build and load a network:** generate a [2D or 3D network](docs/METHODS_3D_GENERATION_PARAMETERS.md), or compute small-deformation response on a [3D solid mesh](docs/TET4_STATIC.md).
 - **See how loading changes resistance:** recompute resistance on the deformed geometry of a [360-member network](docs/DEFORMED_TRANSPORT_PREPARATION.md) or a [three-path solid network with fused joints](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice). For fluids, [compare flow before and after deformation](examples/README.md#how-solid-deformation-changes-pore-flow).
 - **Reuse the network:** use the same `StructureGraph` to [train models](examples/physical_learning_workflow.py) or plan [closed](docs/MANUFACTURING_GRAPH_MAPPING.md) and [multi-stroke routes](docs/MULTISTROKE_MANUFACTURING.md).
 
+
+### Mechanics in motion
+
+<img src="docs/media/homepage/woven-fracture.webp" alt="Grips pull a pre-notched woven network; fibers stretch and a tear opens" width="960">
+
+**A tear opens under tension.** A notched woven network stretches as the grips separate. The demo replays a reduced spring-network calculation. [See the visual notes](docs/MEDIA_GALLERY.md#tensile-fracture-of-a-notched-weave) · [More animations](docs/MEDIA_GALLERY.md).
+
+
+### From orientation to fibers
+
+<img src="docs/media/homepage/orientation-to-bundle.webp" alt="A planar orientation matrix builds cell by cell, expands into stacked layers, and gives way to a 3D fiber bundle" width="960">
+
+**Start with a plane of fiber orientations.** Lift the matrix into a layered 3D orientation field and trace fibers through it. [See the visual notes](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers).
 
 For topology analysis from an AI client, start with the [local MCP quickstart](adapters/mcp/README.md) (Linux, matching source installs required).
 

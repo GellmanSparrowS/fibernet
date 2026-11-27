@@ -70,7 +70,7 @@ class InlineGifParserTests(unittest.TestCase):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
         english, _ = CHECK.check_locale_structure(readme, chinese)
-        image = re.search(r'<img[^>]+src="([^"]+\.gif)"[^>]*>', english)
+        image = re.search(r'<img[^>]+src="([^"]+\.webp)"[^>]*>', english)
         self.assertIsNotNone(image)
         target, src = image[0], image[1]
         for name, text in NEGATIVE.items():
@@ -78,7 +78,7 @@ class InlineGifParserTests(unittest.TestCase):
             # A fence can hide nested API controls before a later code fence
             # closes it, so either unbalanced-control direction may be found.
             message = ('Unclosed details control|Unmatched details close|Missing/duplicate en locale markers' if name == 'unclosed_fence'
-                       else 'inline animations must match the homepage selection')
+                       else 'must show only the selected workflow previews')
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
                     CHECK.check_locale_structure(readme.replace(english, bad), chinese)
@@ -88,9 +88,9 @@ class InlineGifParserTests(unittest.TestCase):
                 CHECK.check_locale_structure(readme.replace(english, good), chinese)
         for name, bad in [('missing', english.replace(target, '', 1)),
                           ('duplicate', english + '\n' + target),
-                          ('substituted', english.replace(src, 'unselected.gif', 1))]:
+                          ('substituted', english.replace(src, 'unselected.webp', 1))]:
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, 'inline animations must match the homepage selection'):
+                with self.assertRaisesRegex(ValueError, 'must show only the selected workflow previews'):
                     CHECK.check_locale_structure(readme.replace(english, bad), chinese)
 
 
@@ -163,7 +163,7 @@ class NativeDisclosureParserTests(unittest.TestCase):
 
 
 class PublicHomepageTests(unittest.TestCase):
-    def test_each_language_has_one_animation_and_links_to_detailed_docs(self):
+    def test_each_language_has_selected_animations_and_links_to_detailed_docs(self):
         selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
         originals = {record['path'] for record in selection['original_gifs']}
         self.assertEqual(len(originals), 19)
@@ -173,12 +173,12 @@ class PublicHomepageTests(unittest.TestCase):
             body = CHECK.locale_block(homepage, language)
             with self.subTest(language=language):
                 self.assertLess(len(body.splitlines()), 60)
-                self.assertEqual(CHECK.inline_gifs(body), ['docs/media/three_dimensional_topologies.gif'])
+                self.assertEqual(CHECK.inline_images(body, '.webp'), list(CHECK.LOCALE_MOTION))
                 self.assertIn('docs/MEDIA_GALLERY.md', CHECK.destinations(body))
                 self.assertIn('docs/api/WORKFLOW_MAP.md', CHECK.destinations(body))
                 self.assertIn('docs/DEFORMED_TRANSPORT_PREPARATION.md', CHECK.destinations(body))
                 self.assertNotIn('api-navigation:', body)
-        self.assertEqual(selection['displayed_gifs'], list(CHECK.HOMEPAGE_GIFS))
+        self.assertEqual(selection['displayed_gifs'], list(CHECK.HISTORICAL_HOMEPAGE_GIFS))
 
     def test_fast_path_uses_installed_package_before_folding_source_commands(self):
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
