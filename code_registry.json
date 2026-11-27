@@ -7056,16 +7056,18 @@
    "_serve",
    "main"
   ],
-  "sha256": "ee40cb7636414d3642a0b866e4d295ccf140c997a52692b80c0c8369afacdc40"
+  "sha256": "cd0e84c36da3805f32db03eb090c3ad3879d9f317eda94681917a34237b4716b"
  },
  "scripts/smoke_stokes_browser.py": {
   "purpose": "Exercise installed native pressure solve, VTU writer and local browser.",
   "status": "active",
   "symbols": [
    "_check_browser",
-   "main"
+   "main",
+   "_narrow_fixture",
+   "_replay"
   ],
-  "sha256": "936ca7c36733fb1556330375e18ad44fa7a6a5e912f319deaa29b1bbed4b3aa9"
+  "sha256": "ae4c0b2c35260a1e1bb425cea9009cbe5ba9ffb747807309a24bb6c1a441b148"
  },
  "fibernet/examples/tet4_stokes_browser_demo.py": {
   "purpose": "Generate and export a fixed-pressure flow example for the local browser.",
@@ -7074,5 +7076,15 @@
    "main"
   ],
   "sha256": "219b0a37bfa32af85e42a740a8f16188034cf5b413f53298adf753685ca9d22c"
+ },
+ "fibernet/viz/_stokes_cap_seeds.py": {
+  "purpose": "Bounded streamline seeding over planar cap components of an affine tetra mesh.",
+  "status": "active",
+  "symbols": [
+   "_groups",
+   "_allocation",
+   "cap_component_seeds"
+  ],
+  "sha256": "2a2b07936820f92e1f98cd352c0595698b42f4dd04d63fc4d728344438211782"
  }
 }

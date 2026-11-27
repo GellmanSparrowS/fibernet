@@ -2,6 +2,7 @@
 
 import argparse
 from io import BytesIO
+from itertools import product
 import json
 from pathlib import Path
 import socket
@@ -15,9 +16,11 @@ from PIL import Image, ImageChops
 from playwright.sync_api import sync_playwright
 
 from fibernet.viz.stokes_browser import _scenes
+from fibernet.examples.tet4_periodic_pore import _voxel_bundle
+from fibernet.sim.tet4_open_stokes import solve_open_pressure_stokes, write_open_stokes_velocity_vtu
 
 
-def _check_browser(url, args):
+def _check_browser(url, args, expected, coverage):
     with sync_playwright() as p:
         b = p.chromium.launch(
             executable_path=args.browser_executable,
@@ -33,7 +36,10 @@ def _check_browser(url, args):
             page.wait_for_function("document.querySelector('canvas') !== null")
             page.locator("#set-view").click()
             page.wait_for_timeout(700)
-            assert "49 streamlines · 2,268 tetra10 cells" in page.locator("#details").text_content()
+            assert expected in page.locator("#details").text_content()
+            if coverage is not None:
+                seen = page.locator("#cap-coverage").inner_text().strip()
+                assert seen == coverage, (seen, coverage)
             def image():
                 return Image.open(BytesIO(page.screenshot())).convert("RGB").crop((80,180,880,640))
             a=image()
@@ -81,27 +87,54 @@ def main():
         try: _scenes(nonsource)
         except ValueError as err: assert "regular" in str(err)
         else: raise AssertionError("Admitted a nonregular VTU input")
-        with socket.socket() as s:
-            s.bind(("127.0.0.1",0));port=s.getsockname()[1]
-        url=f"http://127.0.0.1:{port}"
-        with (run/"server.log").open("w",encoding="utf-8") as log:
-            proc=subprocess.Popen([sys.executable,"-I","-m","fibernet.viz.stokes_browser",str(pos),"--port",str(port)],
-                                  stdout=log,stderr=subprocess.STDOUT,cwd=run)
-            try:
-                for _ in range(100):
-                    try:
-                        with urlopen(url,timeout=.4) as response: assert response.status==200
-                        break
-                    except OSError:
-                        assert proc.poll() is None,(run/"server.log").read_text(encoding="utf-8")
-                        time.sleep(.2)
-                else: raise RuntimeError("Local Stokes browser did not start")
-                delta,colored=_check_browser(url,args)
-            finally:
-                proc.terminate()
-                proc.wait(timeout=5)
-        print(json.dumps(dict(cells=2268,render_changed_pixels=delta,
-            colored_pixels=colored,saved_file_replay=True,reverse_cap=True)))
+        narrow = _narrow_fixture(run)
+        _, _, previous, _ = _scenes(narrow)
+        _, skin, components, _ = _scenes(narrow, cap_components=True)
+        assert previous["traces"] == 9 and components["cap_traces"] == [45, 4]
+        assert not skin.GetCellData().HasArray("fibernet_surface_owner")
+        delta, colored = _replay(run, pos, args, "49 streamlines · 2,268 tetra10 cells")
+        narrow_delta, _ = _replay(run, narrow, args, "49 streamlines · 1,128 tetra10 cells",
+                                 "2 / 2 cap components traced")
+        print(json.dumps(dict(cells=2268, render_changed_pixels=delta,
+            colored_pixels=colored, saved_file_replay=True, reverse_cap=True,
+            offset_cap_traces=components["cap_traces"], offset_render_changed_pixels=narrow_delta)))
+
+
+def _narrow_fixture(run):
+    left = set(product(range(10), range(4), range(4)))
+    narrow = set(product(range(10), [8], [8]))
+    cross = set(product([4, 5], range(4, 9), [3])) | set(product([4, 5], [8], range(3, 9)))
+    grid = _voxel_bundle(left | narrow | cross)
+    result = solve_open_pressure_stokes(grid, pressure_drop_Pa=.0035,
+        viscosity_Pa_s=.001, solver="direct", include_quadratic_velocity=True)
+    assert len(grid.tetrahedra) == 1128 and result.axial_flow_m3_s > 0
+    assert result.cap_mass_relative_error < 1e-8
+    target = run / "offset-opening.vtu"
+    write_open_stokes_velocity_vtu(target, result.quadratic_velocity)
+    return target
+
+
+def _replay(run, path, args, expected, coverage=None):
+    flags = ["--cap-components"] if coverage else []
+    with socket.socket() as s:
+        s.bind(("127.0.0.1",0));port=s.getsockname()[1]
+    url=f"http://127.0.0.1:{port}"
+    with (run/"server.log").open("w",encoding="utf-8") as log:
+        proc=subprocess.Popen([sys.executable,"-I","-m","fibernet.viz.stokes_browser",str(path),"--port",str(port),*flags],
+                              stdout=log,stderr=subprocess.STDOUT,cwd=run)
+        try:
+            for _ in range(100):
+                try:
+                    with urlopen(url,timeout=.4) as response: assert response.status==200
+                    break
+                except OSError:
+                    assert proc.poll() is None,(run/"server.log").read_text(encoding="utf-8")
+                    time.sleep(.2)
+            else: raise RuntimeError("Local Stokes browser did not start")
+            return _check_browser(url,args,expected,coverage)
+        finally:
+            proc.terminate()
+            proc.wait(timeout=5)
 
 
 if __name__=="__main__":
