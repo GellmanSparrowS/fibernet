@@ -133,7 +133,7 @@ def tracks(poly,seeds):
     return records
 
 
-def _scenes(path, reverse=False):
+def _scenes(path, reverse=False, *, cap_components=False):
     points_m,nodes,velocity_m_s=read_own_quadratic_vtu(path)
     npnt,ne=len(points_m),len(nodes)
     if not np.max(abs(velocity_m_s))>0.:
@@ -158,12 +158,26 @@ def _scenes(path, reverse=False):
     size=hi-lo
     if not np.min(size)>0.:
         raise ValueError("The velocity domain must be three-dimensional")
-    x=hi[0]-.003*size[0] if reverse else lo[0]+.003*size[0]
-    values=np.linspace(.115,.885,7)
-    loc=vtkStaticCellLocator();loc.SetDataSet(linear);loc.BuildLocator()
-    checked=np.asarray([[x,lo[1]+i*size[1],lo[2]+j*size[2]] for i in values for j in values])
-    inside=np.asarray([loc.FindCell(seed)>=0 for seed in checked])
-    seeds=checked[inside]
+    exterior=vtkDataSetSurfaceFilter()
+    exterior.SetInputData(linear)
+    if cap_components:
+        exterior.PassThroughCellIdsOn()
+        exterior.SetOriginalCellIdsName("fibernet_surface_owner")
+    exterior.Update()
+    skin=exterior.GetOutput()
+    seed_groups=None
+    if cap_components:
+        from fibernet.viz._stokes_cap_seeds import cap_component_seeds
+
+        seeds,seed_groups,areas=cap_component_seeds(linear,skin,xyz,nodes[:,:4],reverse)
+        skin.GetCellData().RemoveArray("fibernet_surface_owner")
+    else:
+        x=hi[0]-.003*size[0] if reverse else lo[0]+.003*size[0]
+        values=np.linspace(.115,.885,7)
+        loc=vtkStaticCellLocator();loc.SetDataSet(linear);loc.BuildLocator()
+        checked=np.asarray([[x,lo[1]+i*size[1],lo[2]+j*size[2]] for i in values for j in values])
+        inside=np.asarray([loc.FindCell(seed)>=0 for seed in checked])
+        seeds=checked[inside]
     if not len(seeds):
         raise ValueError("None of the bounded seed candidates falls inside this cap")
     raw=tracer(g,seeds,.05,max_distance=2.5*np.linalg.norm(size))
@@ -178,13 +192,14 @@ def _scenes(path, reverse=False):
     q,stats=compact(raw,linear,tolerance_mm=.001*float(np.max(size)),tolerance_speed=.01*span)
     tube=vtkTubeFilter();tube.SetInputData(q);tube.SetRadius(.003*float(np.min(size)))
     tube.SetNumberOfSides(6);tube.CappingOn();tube.Update()
-    exterior=vtkDataSetSurfaceFilter();exterior.SetInputData(linear);exterior.Update()
     report=dict(cells=ne,traces=len(traced),point_count=npnt,span=span,**stats)
-    return tube.GetOutput(),exterior.GetOutput(),report,(lo,hi)
+    if seed_groups is not None:
+        report["cap_traces"]=np.bincount(seed_groups[list(traced)],minlength=len(areas)).tolist()
+    return tube.GetOutput(),skin,report,(lo,hi)
 
 
-def _serve(path,port,reverse):
-    tube,skin,r,bounds=_scenes(path,reverse)
+def _serve(path,port,reverse,*,cap_components=False):
+    tube,skin,r,bounds=_scenes(path,reverse,cap_components=cap_components)
     span=r["span"]
     lo,hi=bounds
     mid=(lo+hi)/2
@@ -211,6 +226,9 @@ def _serve(path,port,reverse):
                         vtk.VtkMesh("fluidDomainBoundary",dataset=skin)
                 with html.Div(id="details",style="position:absolute;z-index:2;right:12px;top:12px;max-width:calc(100% - 24px);box-sizing:border-box;padding:10px 14px;background:#fbfdf9;border:1px solid #c9d6cf;border-radius:6px"):
                     html.Div(f"{r['traces']} streamlines · {r['cells']:,} tetra10 cells")
+                    if cap_components:
+                        covered=sum(c>0 for c in r["cap_traces"])
+                        html.Div(f"{covered} / {len(r['cap_traces'])} cap components traced",id="cap-coverage")
                     html.Div("Speed on streamlines (µm/s)",style="margin-top:9px;font-size:12px")
                     html.Div(style="height:7px;margin:5px 0;background:linear-gradient(to right,#440154,#3b528b,#21918c,#5ec962,#fde725);border-radius:4px")
                     html.Div(f"0 – {span:.1f} (clips above the 99.5th percentile)",style="font-size:11px")
@@ -230,10 +248,12 @@ def main():
     p.add_argument("input",type=Path)
     p.add_argument("--port",type=int,default=8765)
     p.add_argument("--from-max-x",action="store_true",help="seed from the high-x cap")
+    p.add_argument("--cap-components",action="store_true",
+                   help="seed each opening of a planar extreme-x cap (49 seeds total)")
     a=p.parse_args()
     if not 1024<=a.port<=65535:
         p.error("port must be 1024 through 65535")
-    _serve(a.input,a.port,a.from_max_x)
+    _serve(a.input,a.port,a.from_max_x,cap_components=a.cap_components)
 
 
 if __name__=="__main__":

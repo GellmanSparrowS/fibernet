@@ -74,3 +74,9 @@ the stored velocity. The boundary button shows the entire fluid-domain
 boundary, including the outer duct. Lines are computed steady streamlines;
 use integrated cap flow from the solver for quantitative comparisons.
 The speed colors clip above the 99.5th percentile of the displayed lines.
+
+For a planar extreme-x boundary with several separate openings, add
+`--cap-components`. The 49-seed budget reserves at least one seed for each
+edge-connected opening and distributes the rest by area. The viewer reports
+how many openings produced a streamline. This setting is for inspection, not
+flow weighting, and does not change the saved field.
