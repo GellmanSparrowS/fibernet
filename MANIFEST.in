@@ -55,3 +55,6 @@ include benchmarks/electrothermal_two_node.py
 
 # Workflow-local PyPI visibility checks run only from the repository checkout.
 exclude tests/test_pypi_index_visibility.py
+
+# Verification example for the experimental open pressure solver.
+include scripts/smoke_tet4_open_stokes.py
