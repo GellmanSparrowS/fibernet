@@ -1,3 +1,9 @@
+## [4.40.0]
+
+- Compare two saved quadratic Stokes velocity fields on matching inlet and outlet caps, separating signed throughput from normal-velocity redistribution.
+- Gather cap geometry and velocities in batches without changing comparison results.
+- See the [4.40.0 release notes](docs/RELEASE_4_40_0.md).
+
 ## [4.39.0]
 
 - Add an explicit 3D transport-geometry preparation API for prescribed XYZ translations and fixed-area chord conductance.

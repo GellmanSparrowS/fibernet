@@ -51,7 +51,7 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 <details>
 <summary>从源码运行仓库算例</summary>
 
-**开发版源码：4.39.0**
+**开发版源码：4.40.0**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
@@ -107,7 +107,7 @@ For topology analysis from an AI client, start with the [local MCP quickstart](a
 <details>
 <summary>Run repository examples from source</summary>
 
-**Development checkout: 4.39.0**
+**Development checkout: 4.40.0**
 
 ```bash
 git clone https://github.com/GellmanSparrowS/fibernet.git
