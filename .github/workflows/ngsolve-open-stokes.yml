@@ -1,0 +1,57 @@
+name: Native NGSolve open Stokes
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ngsolve-open-stokes.yml"
+      - "fibernet/sim/tet4_open_stokes.py"
+      - "scripts/smoke_tet4_open_stokes.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-flow:
+    name: Open pressure flow (${{ matrix.os }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: windows-latest
+            arch: amd64
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+    env:
+      FIBERNET_EXPECTED_ARCH: ${{ matrix.arch }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build the FiberNet wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Install native dependencies and run both pressure solvers
+        shell: python
+        run: |
+          import os, platform, shutil, subprocess, sys, tempfile
+          from pathlib import Path
+          assert platform.machine().lower() == os.environ["FIBERNET_EXPECTED_ARCH"]
+          wheel, = Path("dist").glob("fibernet-*.whl")
+          subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
+                          str(wheel.resolve()) + "[solid-iterative]", "ngsolve==6.2.2608"], check=True)
+          subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
+          with tempfile.TemporaryDirectory() as folder:
+              runner = Path(folder) / "smoke_tet4_open_stokes.py"
+              shutil.copyfile("scripts/smoke_tet4_open_stokes.py", runner)
+              subprocess.run([sys.executable, "-I", str(runner)], cwd=folder, check=True)
