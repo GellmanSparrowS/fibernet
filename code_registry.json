@@ -7008,17 +7008,28 @@
   "purpose": "Experimental bounded Stokes flow under an open x-direction pressure drop.",
   "status": "active",
   "symbols": [
+   "OpenStokesQuadraticVelocity",
    "OpenStokesResult",
    "_amg_solution",
    "_native_mesh",
+   "_quadratic_velocity_field",
+   "write_open_stokes_velocity_vtu",
    "solve_open_pressure_stokes"
   ],
-  "sha256": "6dad89c778d2d71fd3fb6f45d48de20d4982927530bcc9f0ddfd1f24e02440d6"
+  "sha256": "ec950244e1009d9a101fcba6aaf78f87ea89eff7b6e3cb52d0856f98ba502032"
  },
  "scripts/smoke_tet4_open_stokes.py": {
   "purpose": "Reproduce a square duct and a generated three-path pore, using the load API.",
   "status": "active",
   "symbols": [],
   "sha256": "7dbf6473da7d3ad1c962eebcd1842cdb6c02bf5deb8c733de1890b91e35567fb"
+ },
+ "scripts/smoke_tet4_open_stokes_quadratic.py": {
+  "purpose": "Validate the opt-in complete P2 field through native solve and VTU readers.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "a626d48c6d415104268b5e671557eaad1d2da7aa6f87c478cae9f472f7d2bfdb"
  }
 }

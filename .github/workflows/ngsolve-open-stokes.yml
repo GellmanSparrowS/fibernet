@@ -5,6 +5,7 @@ on:
       - ".github/workflows/ngsolve-open-stokes.yml"
       - "fibernet/sim/tet4_open_stokes.py"
       - "scripts/smoke_tet4_open_stokes.py"
+      - "scripts/smoke_tet4_open_stokes_quadratic.py"
       - "pyproject.toml"
   workflow_dispatch:
 
@@ -49,9 +50,12 @@ jobs:
           assert platform.machine().lower() == os.environ["FIBERNET_EXPECTED_ARCH"]
           wheel, = Path("dist").glob("fibernet-*.whl")
           subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
-                          str(wheel.resolve()) + "[solid-iterative]", "ngsolve==6.2.2608"], check=True)
+                          str(wheel.resolve()) + "[solid-iterative,browser-viz]", "ngsolve==6.2.2608", "meshio==5.3.5"], check=True)
           subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
           with tempfile.TemporaryDirectory() as folder:
               runner = Path(folder) / "smoke_tet4_open_stokes.py"
               shutil.copyfile("scripts/smoke_tet4_open_stokes.py", runner)
+              subprocess.run([sys.executable, "-I", str(runner)], cwd=folder, check=True)
+              runner = Path(folder) / "smoke_tet4_open_stokes_quadratic.py"
+              shutil.copyfile("scripts/smoke_tet4_open_stokes_quadratic.py", runner)
               subprocess.run([sys.executable, "-I", str(runner)], cwd=folder, check=True)

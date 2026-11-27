@@ -23,3 +23,34 @@ UMFPACK when available. The API is bounded by mesh counts and raw operator
 size; the direct option admits at most 8,000 cells. These caps do not
 guarantee a peak-memory limit. This does not change
 existing periodic-flow or core dependency behavior.
+
+## Export the complete quadratic velocity to VTK
+
+Opt in at solve time if the full P2 velocity is needed for visualization.
+The default still returns only velocity samples at the original vertices,
+and does not build the P2 field or import Meshio.
+
+```python
+from fibernet.sim.tet4_open_stokes import (
+    solve_open_pressure_stokes, write_open_stokes_velocity_vtu,
+)
+
+result = solve_open_pressure_stokes(
+    pore_bundle, viscosity_Pa_s=0.001, pressure_drop_Pa=0.0035,
+    include_quadratic_velocity=True,
+)
+write_open_stokes_velocity_vtu("pressure-flow.vtu", result.quadratic_velocity)
+```
+
+The writer needs Meshio 5.3.5 and an existing destination directory that
+supports hard links. It publishes a complete new VTU without overwriting
+an existing path and rejects files larger than 16 MiB. The detached field stores SI coordinates
+and velocity on corners and shared edge midpoints of VTK tetra10 cells.
+Coordinates are metres and velocity is metres per second, regardless of
+the input length unit. This is a full quadratic velocity representation on
+affine cells, not streamlines or time-resolved trajectories. The two unsigned
+integer components of `source_node_ids` repeat a vertex's original ID
+or list the two original endpoint IDs (ascending) of a midside point.
+`source_cell_id` stores the original tetrahedron IDs. Do not coerce these
+identifiers to floating point. Use integrated cap flow, not visual line
+counts, to compare throughput.
