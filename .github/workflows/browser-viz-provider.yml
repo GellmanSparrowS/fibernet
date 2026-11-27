@@ -1,0 +1,74 @@
+name: Native Tet4 browser viewer
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/browser-viz-provider.yml"
+      - "fibernet/viz/tet4_browser.py"
+      - "fibernet/examples/tet4_tagged_grip_iterative.py"
+      - "scripts/smoke_tet4_browser.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-browser:
+    name: Tet4 browser (${{ matrix.os }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: windows-latest
+            arch: amd64
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+    env:
+      FIBERNET_EXPECTED_ARCH: ${{ matrix.arch }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build FiberNet wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Install wheel with native optional dependencies
+        shell: python
+        run: |
+          import os, platform, subprocess, sys
+          from pathlib import Path
+          assert platform.machine().lower() == os.environ["FIBERNET_EXPECTED_ARCH"]
+          wheel, = Path("dist").glob("fibernet-*.whl")
+          subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
+                          str(wheel.resolve()) + "[browser-viz,solid-iterative]",
+                          "meshio==5.3.5", "playwright==1.62.0"], check=True)
+          subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
+      - name: Install matching browser for Linux
+        if: runner.os == 'Linux'
+        run: python -m playwright install --with-deps chromium
+      - name: Install matching browser for Windows and macOS
+        if: runner.os != 'Linux'
+        run: python -m playwright install chromium
+      - name: Generate a real Tet4 result and test WebGL selections
+        shell: python
+        run: |
+          import shutil, subprocess, sys, tempfile
+          from pathlib import Path
+          from importlib.metadata import version
+          import vtkmodules, trame, trame_vtk
+          for provider, expected in (("vtk","9.3.1"),("trame","4.0.0"),("trame-vtk","2.11.17")):
+              assert version(provider) == expected
+          with tempfile.TemporaryDirectory() as folder:
+              run = Path(folder) / "smoke_tet4_browser.py"
+              shutil.copyfile("scripts/smoke_tet4_browser.py", run)
+              subprocess.run([sys.executable,"-I",str(run)], cwd=folder, check=True)
