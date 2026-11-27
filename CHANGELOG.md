@@ -1,3 +1,7 @@
+## [4.34.0]
+- Inspect material regions in a solved three-dimensional Tet4 mesh using a local browser.
+- See the [4.34.0 release notes](docs/RELEASE_4_34_0.md).
+
 ## [4.33.0]
 - Add an optional Rustworkx topology backend with the same FiberNet result schema.
 - Lower peak memory of prescribed-displacement Tet4 solves without changing physical outputs.

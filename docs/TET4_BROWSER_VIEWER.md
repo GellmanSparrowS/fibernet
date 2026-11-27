@@ -3,11 +3,11 @@
 Use the optional browser viewer to check the exterior and a cut through an existing FiberNet Tet4 calculation. Click a face to trace it back to the original tetrahedron and material tag. The viewer reads a file; it does not run the solver or change your results.
 
 ```sh
-python -m pip install ".[browser-viz]"
+python -m pip install "fibernet[browser-viz]==4.34.0"
 python -m fibernet.viz.tet4_browser result/deformation.vtu --section-z-mm 0.087
 ```
 
-From the matching source checkout, use CPython 3.12. The optional wheel set targets Windows x64, Linux x64, and macOS on Intel and Apple Silicon.
+Use CPython 3.12. From a matching source checkout, use `python -m pip install ".[browser-viz]"` instead. The optional wheel set targets Windows x64, Linux x64, and macOS on Intel and Apple Silicon.
 
 Open `http://127.0.0.1:8765` in a WebGL-capable browser. The app listens only on that loopback address and does not require hosting, an account, or a graphics card on the Python side. If the port is already in use, choose `--port 8766`.
 
