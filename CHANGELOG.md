@@ -1,3 +1,7 @@
+## [4.36.0]
+- Add an experimental NGSolve open-pressure Stokes solver for connected Tet4 pores, with integrated cap flow and conservation checks.
+- See the [4.36.0 release notes](docs/RELEASE_4_36_0.md).
+
 ## [4.35.0]
 - Color the Tet4 browser viewer by signed physical displacement and inspect its vector at the selected point.
 - Generate and solve the two-material round-fiber network from an installed FiberNet package.
