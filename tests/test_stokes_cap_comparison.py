@@ -120,3 +120,20 @@ def test_strict_native_vtu_replay(tmp_path):
         np.testing.assert_allclose([q["reference_outward_m3_s"], q["candidate_outward_m3_s"]],
                                    [r[side]["outward_flow_m3_s"] for r in audit], rtol=1e-15)
         np.testing.assert_allclose(q["normalized_profile_residual_L2"], .02, atol=2e-15)
+
+def test_every_local_cap_face_and_three_vertex_permutation():
+    from itertools import permutations
+    from fibernet.analysis.stokes_cap_comparison import _trace
+    points,cells = prism()
+    v = velocity(points,lambda y,z: 1.2+.11*y*y-.03*z+ .04*y*z)
+    for side in (False,True):
+        ref_plane,ref = _trace(points,cells,v,side)
+        for perm in permutations(range(4)):
+            edge_slot = {tuple(sorted(ij)): k for k,ij in enumerate(TET_EDGES,4)}
+            indices=list(perm)+[edge_slot[tuple(sorted((perm[i],perm[j])))] for i,j in TET_EDGES]
+            plane,rows = _trace(points,cells[:,indices],v,side)
+            assert plane==ref_plane and rows.keys()==ref.keys()
+            for k, (area, speed, mids) in rows.items():
+                a0, s0, m0 = ref[k]
+                assert area==a0 and mids==m0
+                np.testing.assert_array_equal(speed,s0)

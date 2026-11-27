@@ -2,7 +2,7 @@
 from math import factorial, fsum, sqrt
 import numpy as np
 
-from fibernet.analysis.stokes_cap_flux import _PAIRS as _TET_PAIRS, _cap_faces, _checked_affine_xyz
+from fibernet.analysis.stokes_cap_flux import _FACE, _PAIRS as _TET_PAIRS, _cap_faces, _checked_affine_xyz
 from fibernet.io._tet4_stokes_velocity_vtu import read_own_quadratic_vtu
 
 _PAIRS = ((0, 1), (1, 2), (0, 2))
@@ -19,32 +19,38 @@ def _mass_entry(f, g):
 _MASS = np.array([[_mass_entry(f,g) for g in _POLYNOMIALS] for f in _POLYNOMIALS])
 _MASS.setflags(write=False)
 _FLUX_EPS = 64*np.finfo(np.float64).eps
+# Symmetric tetra10 edge lookup from the same VTK ordering as the flux audit.
+_EDGE_COLUMN = np.full((4,4), -1, dtype=int)
+for _column, (_i,_j) in enumerate(_TET_PAIRS, start=4):
+    _EDGE_COLUMN[_i,_j] = _EDGE_COLUMN[_j,_i] = _column
+_EDGE_COLUMN.setflags(write=False)
 
 def _trace(points, tets, velocity, high):
-    plane, owner, _, vertices = _cap_faces(points, tets, high)
-    seen = {}
-    for cor, cell in zip(vertices, tets[owner]):
-        if len(set(cor)) != 3:
-            raise ValueError("Repeated cap corner")
-        yz=points[cor,1:]
-        order=np.lexsort((yz[:,1],yz[:,0]))
-        coords=yz[order]
-        key=tuple(coords.flat)
-        if key in seen:
-            raise ValueError("Repeated cap triangle in physical coordinates")
-        area=abs((coords[1,0]-coords[0,0])*(coords[2,1]-coords[0,1])-
-                 (coords[2,0]-coords[0,0])*(coords[1,1]-coords[0,1]))/2
-        if not np.isfinite(area) or area<=0:
-            raise ValueError("Invalid cap area")
-        edge_ids={tuple(sorted((cell[i],cell[j]))):k for (i,j),k in zip(_TET_PAIRS,cell[4:])}
-        q_ids=[edge_ids[tuple(sorted((cor[order[i]],cor[order[j]])))] for i,j in _PAIRS]
-        if not np.all(points[q_ids,0]==plane):
-            raise ValueError("Cap midpoint is off the exact plane")
-        # Midpoint correspondence must also be exact between the two files.
-        middle=tuple(points[q_ids,1:].flat)
-        v=(1 if high else -1)*velocity[np.r_[cor[order],q_ids],0].astype(np.float64,copy=False)
-        seen[key]=(area,v,middle)
+    plane, owner, local, corners = _cap_faces(points, tets, high)
+    if np.any(np.diff(np.sort(corners,axis=1),axis=1)==0):
+        raise ValueError("Repeated cap corner")
+    yz = points[corners,1:]
+    order = np.lexsort((yz[:,:,1],yz[:,:,0]),axis=1)
+    corner_ids = np.take_along_axis(corners,order,axis=1)
+    yz = np.take_along_axis(yz,order[:,:,None],axis=1)
+    a,b,c = yz.transpose(1,0,2)
+    p,q = b-a,c-a
+    area = np.abs(p[:,0]*q[:,1]-q[:,0]*p[:,1])/2
+    if np.any(area<=0) or not np.isfinite(area).all():
+        raise ValueError("Invalid cap area")
+    # Map canonical face edges through each original tet's local numbering.
+    ordinal = np.take_along_axis(_FACE[local],order,axis=1)
+    ci,cj = np.asarray(_PAIRS).T
+    mid = tets[owner[:,None],_EDGE_COLUMN[ordinal[:,ci],ordinal[:,cj]]]
+    if not np.all(points[mid,0]==plane):
+        raise ValueError("Cap midpoint is off the exact plane")
+    mids = points[mid,1:].reshape(-1,6)
+    speed = (1 if high else -1)*velocity[np.concatenate((corner_ids,mid),axis=1),0].astype(np.float64,copy=False)
+    seen = {tuple(row):(ar,v,tuple(m)) for row,ar,v,m in zip(yz.reshape(-1,6),area,speed,mids)}
+    if len(seen)!=len(owner):
+        raise ValueError("Repeated cap triangle in physical coordinates")
     return plane,seen
+
 
 def _compare_trace(before, after):
     x,a=before
