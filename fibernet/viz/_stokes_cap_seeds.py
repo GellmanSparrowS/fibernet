@@ -1,22 +1,14 @@
 """Bounded streamline seeding over planar cap components of an affine tetra mesh."""
 
 import numpy as np
-from scipy.sparse import csr_matrix
-from scipy.sparse.csgraph import connected_components
 from vtkmodules.util.numpy_support import vtk_to_numpy
 from vtkmodules.vtkCommonDataModel import vtkStaticCellLocator
 
+from fibernet.analysis._triangle_components import edge_connected_triangles
+
 
 def _groups(faces, canonical_order, budget):
-    incidence, links = {}, []
-    for i, (a, b, c) in enumerate(faces):
-        for u, v in ((a, b), (a, c), (b, c)):
-            prior = incidence.setdefault((min(u, v), max(u, v)), i)
-            if prior != i:
-                links.append((i, prior))
-    i, j = np.asarray(links).T if links else ([], [])
-    graph = csr_matrix((np.ones(len(i)), (i, j)), shape=(len(faces), len(faces)))
-    num, labels = connected_components(graph, directed=False)
+    num, labels = edge_connected_triangles(faces)
     if num > budget:
         raise ValueError("More cap components than seeds; reduce the selected cap complexity")
     ordered_labels = labels[canonical_order]

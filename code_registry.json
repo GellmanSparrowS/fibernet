@@ -7035,11 +7035,8 @@
  "fibernet/viz/_stokes_velocity_vtu.py": {
   "purpose": "Preflight the specific inline Meshio VTU schema before constructing a VTK grid.",
   "status": "active",
-  "symbols": [
-   "_blocks",
-   "read_own_quadratic_vtu"
-  ],
-  "sha256": "1a5b1577e7d8aa0350c1ebe486d319027831408f5e79fe871e63292cd23e3d65"
+  "symbols": [],
+  "sha256": "d29550bc745ce9161f1127740b414396a5ce5e9dfa5d119308a0bf1ac17c1363"
  },
  "fibernet/viz/stokes_browser.py": {
   "purpose": "Loopback VTK/Trame preview of a FiberNet quadratic velocity VTU.",
@@ -7085,6 +7082,44 @@
    "_allocation",
    "cap_component_seeds"
   ],
-  "sha256": "2a2b07936820f92e1f98cd352c0595698b42f4dd04d63fc4d728344438211782"
+  "sha256": "5dec7f0be7113ee8e789c14110116cdf30fdc61623a8c47693d6d173783349f5"
+ },
+ "fibernet/analysis/_triangle_components.py": {
+  "purpose": "Shared triangle connectivity for cap inspection and streamline assignment.",
+  "status": "active",
+  "symbols": [
+   "edge_connected_triangles"
+  ],
+  "sha256": "82b07c8ed291e53382331dc5c741318a966046dd923cbbd4b23dba8f41a59804"
+ },
+ "fibernet/analysis/stokes_cap_flux.py": {
+  "purpose": "Report signed flux by opening directly from a saved FiberNet P2 VTU.",
+  "status": "active",
+  "symbols": [
+   "_checked_affine_xyz",
+   "_side",
+   "audit_saved_stokes",
+   "main"
+  ],
+  "sha256": "6b9c3b13fbb31435f735f1da51e5a73d6f7515248d38460ff796560e30cf8714"
+ },
+ "fibernet/io/_tet4_stokes_velocity_vtu.py": {
+  "purpose": "Preflight the specific inline Meshio VTU schema before constructing a VTK grid.",
+  "status": "active",
+  "symbols": [
+   "_blocks",
+   "read_own_quadratic_vtu"
+  ],
+  "sha256": "1a5b1577e7d8aa0350c1ebe486d319027831408f5e79fe871e63292cd23e3d65"
+ },
+ "tests/test_stokes_cap_flux.py": {
+  "purpose": "Independent exact cap integrals and topology for a quadratic velocity field.",
+  "status": "active",
+  "symbols": [
+   "_touching_tets",
+   "test_quadratic_flux_and_full_edge_opening_connectivity",
+   "test_rejects_curved_quadratic_cells"
+  ],
+  "sha256": "5e83bed026cbf33c9d50c62391c44894e9886d6fc8ab294323257c7ed95176ba"
  }
 }
