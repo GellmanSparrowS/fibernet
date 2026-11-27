@@ -5912,7 +5912,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "a4fd1d6c484e0bc5968f68b58c324930f57b72f0ee2a33c4e4afef1699f0f9e5"
+  "sha256": "7bf57a5f4afcfc89e29d5974995e57d8ff83bbd2d83a55ef5eefea8c849a55de"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -6758,9 +6758,10 @@
    "test_packed_face_validation_keeps_first_reference_error",
    "test_packed_face_forest_keeps_high_point_bits",
    "test_initial_geometric_slope_requires_only_reference_dc",
-   "test_current_direction_uses_scaled_norm_with_signed_analytic_strain"
+   "test_current_direction_uses_scaled_norm_with_signed_analytic_strain",
+   "test_prescribed_releases_the_factor_before_element_recovery"
   ],
-  "sha256": "a30960ba6f7cf1af9b37a38b2da8e49c41afaf2fb05ba7511ea9b95de35124da"
+  "sha256": "ba05fc8468944f539dcf67da8dc9678d4173dc2cafe922055e2a62868789b1f7"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Source-tree wrapper for the installed Tet4 named-grip example.",
@@ -6987,6 +6988,6 @@
    "_render",
    "main"
   ],
-  "sha256": "930edbd54848b954c61604d8b8ec4547abc07d56f4cc6c840ac96a86df151f31"
+  "sha256": "740a32800e343ba5f9bf863436275334f8223e3c707ce7a683b09c8ab009908c"
  }
 }

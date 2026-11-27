@@ -61,12 +61,13 @@ def _native_tags(path):
     ))
 
 
-def _render(url, tags, executable):
+def _render(url, tags, executable, channel):
     with sync_playwright() as pw:
         args = []
         if sys.platform.startswith("linux"):
             args = ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
-        browser = pw.chromium.launch(executable_path=executable, chromium_sandbox=True, args=args)
+        browser = pw.chromium.launch(executable_path=executable, channel=channel,
+                                   chromium_sandbox=True, args=args)
         try:
             page = browser.new_page(viewport={"width": 980, "height": 680}, device_scale_factor=1)
             errors = []
@@ -117,7 +118,9 @@ def _render(url, tags, executable):
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--browser-executable", default=None)
+    choice = p.add_mutually_exclusive_group()
+    choice.add_argument("--browser-executable", default=None)
+    choice.add_argument("--browser-channel", choices=["chrome"], default=None)
     args = p.parse_args()
     with tempfile.TemporaryDirectory() as work:
         root = Path(work)
@@ -135,7 +138,7 @@ def main():
             try:
                 _ready(proc,url)
                 _check_local_boundary(url)
-                result = _render(url,tags,args.browser_executable)
+                result = _render(url,tags,args.browser_executable,args.browser_channel)
             finally:
                 proc.terminate()
                 try:

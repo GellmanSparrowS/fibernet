@@ -53,9 +53,9 @@ jobs:
                           str(wheel.resolve()) + "[browser-viz,solid-iterative]",
                           "meshio==5.3.5", "playwright==1.62.0"], check=True)
           subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
-      - name: Install matching browser for Linux
+      - name: Verify the runner-installed Chrome on Linux
         if: runner.os == 'Linux'
-        run: python -m playwright install --with-deps chromium
+        run: google-chrome --version
       - name: Install matching browser for Windows and macOS
         if: runner.os != 'Linux'
         run: python -m playwright install chromium
@@ -71,4 +71,5 @@ jobs:
           with tempfile.TemporaryDirectory() as folder:
               run = Path(folder) / "smoke_tet4_browser.py"
               shutil.copyfile("scripts/smoke_tet4_browser.py", run)
-              subprocess.run([sys.executable,"-I",str(run)], cwd=folder, check=True)
+              args = ["--browser-channel", "chrome"] if sys.platform.startswith("linux") else []
+              subprocess.run([sys.executable,"-I",str(run),*args], cwd=folder, check=True)
