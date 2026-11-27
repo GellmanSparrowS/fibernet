@@ -2,7 +2,6 @@
 
 import argparse
 from io import BytesIO
-from itertools import product
 import json
 from pathlib import Path
 import socket
@@ -15,8 +14,6 @@ from urllib.request import urlopen
 from PIL import Image, ImageChops
 from playwright.sync_api import sync_playwright
 
-from fibernet.examples.tet4_periodic_pore import _voxel_bundle
-from fibernet.sim.tet4_open_stokes import solve_open_pressure_stokes, write_open_stokes_velocity_vtu
 from fibernet.viz.stokes_browser import _scenes
 
 
@@ -36,7 +33,7 @@ def _check_browser(url, args):
             page.wait_for_function("document.querySelector('canvas') !== null")
             page.locator("#set-view").click()
             page.wait_for_timeout(700)
-            assert "49 streamlines · 1,152 tetra10 cells" in page.locator("#details").text_content()
+            assert "49 streamlines · 2,268 tetra10 cells" in page.locator("#details").text_content()
             def image():
                 return Image.open(BytesIO(page.screenshot())).convert("RGB").crop((80,180,880,640))
             a=image()
@@ -63,16 +60,18 @@ def main():
     args=parser.parse_args()
     with TemporaryDirectory() as directory:
         run=Path(directory)
-        brief=_voxel_bundle(product(range(12), range(4), range(4)))
-        bc=dict(viscosity_Pa_s=.001,solver="direct",include_quadratic_velocity=True)
-        positive=solve_open_pressure_stokes(brief,pressure_drop_Pa=.0035,**bc)
-        reverse=solve_open_pressure_stokes(brief,pressure_drop_Pa=-.0035,**bc)
-        assert positive.axial_flow_m3_s>0. and reverse.axial_flow_m3_s<0.
-        pos=run/"source-flow.vtu"; rev=run/"reverse-flow.vtu"
-        write_open_stokes_velocity_vtu(pos,positive.quadratic_velocity)
-        write_open_stokes_velocity_vtu(rev,reverse.quadratic_velocity)
+        files=[]
+        for name,flags,sign in (("forward",[],1),("reverse",["--reverse"],-1)):
+            target=run/name
+            subprocess.run([sys.executable,"-I","-m","fibernet.examples.tet4_stokes_browser_demo",
+                            "--output",str(target),*flags],cwd=run,check=True,timeout=45,capture_output=True)
+            physical=json.loads((target/"summary.json").read_text(encoding="utf-8"))
+            assert physical["tetrahedra"]==2268 and physical["axial_flow_m3_s"]*sign>0
+            assert physical["cap_mass_relative_error"]<1e-8
+            files.append(target/"velocity.vtu")
+        pos,rev=files
         _,_,meta,_=_scenes(rev,True)
-        assert meta["traces"]==49 and meta["cells"]==1152
+        assert meta["traces"]==49 and meta["cells"]==2268
         bad=run/"unsupported.vtu"; bad.write_text("<VTKFile type='ImageData'/>",encoding="utf-8")
         try: _scenes(bad)
         except ValueError as err: assert "Expected FiberNet's" in str(err)
@@ -101,7 +100,7 @@ def main():
             finally:
                 proc.terminate()
                 proc.wait(timeout=5)
-        print(json.dumps(dict(cells=len(brief.tetrahedra),render_changed_pixels=delta,
+        print(json.dumps(dict(cells=2268,render_changed_pixels=delta,
             colored_pixels=colored,saved_file_replay=True,reverse_cap=True)))
 
 

@@ -1902,7 +1902,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "f58ac002b218957cdbab27f18d78720be24e7c1e284add389065f2e487647d0d"
+  "sha256": "34e019fb26dc170a7cbbc58fce8471e2bde2d6fcf974be6193d57dc7711fd954"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -7065,6 +7065,14 @@
    "_check_browser",
    "main"
   ],
-  "sha256": "4d8caeb70cc81b695b91fd4f342e6499df6a245884175d1aa18d267260557f8e"
+  "sha256": "936ca7c36733fb1556330375e18ad44fa7a6a5e912f319deaa29b1bbed4b3aa9"
+ },
+ "fibernet/examples/tet4_stokes_browser_demo.py": {
+  "purpose": "Generate and export a fixed-pressure flow example for the local browser.",
+  "status": "active",
+  "symbols": [
+   "main"
+  ],
+  "sha256": "219b0a37bfa32af85e42a740a8f16188034cf5b413f53298adf753685ca9d22c"
  }
 }

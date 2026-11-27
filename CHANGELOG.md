@@ -1,3 +1,8 @@
+## [4.37.0]
+- Export an optional complete quadratic pressure-flow velocity field to VTK tetra10 with original mesh IDs.
+- Add a local viewer and an installed example to generate, solve, and view a fixed-pressure three-dimensional pore.
+- See the [4.37.0 release notes](docs/RELEASE_4_37_0.md).
+
 ## [4.36.0]
 - Add an experimental NGSolve open-pressure Stokes solver for connected Tet4 pores, with integrated cap flow and conservation checks.
 - See the [4.36.0 release notes](docs/RELEASE_4_36_0.md).

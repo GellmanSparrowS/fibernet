@@ -5,6 +5,7 @@ on:
       - ".github/workflows/browser-viz-provider.yml"
       - "fibernet/viz/tet4_browser.py"
       - "fibernet/viz/stokes_browser.py"
+      - "fibernet/examples/tet4_stokes_browser_demo.py"
       - "fibernet/viz/_stokes_velocity_vtu.py"
       - "fibernet/sim/tet4_open_stokes.py"
       - "scripts/smoke_stokes_browser.py"
