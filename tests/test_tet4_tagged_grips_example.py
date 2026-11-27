@@ -375,3 +375,46 @@ $EndElements
         prepare(source, tmp_path, length_unit="mm", axis="x", stroke_m=1.5e-6,
                 material_properties=config)
     assert not (tmp_path / "tagged-solid.zip").exists()
+
+
+def test_local_material_sensitivity_uses_only_the_one_grip_solve(tmp_path, monkeypatch):
+    from fibernet.examples import tet4_tagged_grip_iterative as example
+    src = tmp_path / "network.msh"
+    make_fixture(src, refinement=1)
+    common = dict(length_unit="mm", axis="x", stroke_m=-1.5e-6)
+    config = dict(material_low={"young_modulus_pa": 1e9, "poisson_ratio": .28},
+                  material_high={"young_modulus_pa": 2e9, "poisson_ratio": .34})
+    a = tmp_path / "nominal"
+    a.mkdir()
+    path, grip = prepare(src, a, material_properties=config, **common)
+    calls = []
+    native_solver = example.solve_static_tet4
+
+    def record(*a, **kwargs):
+        calls.append(1)
+        return native_solver(*a, **kwargs)
+
+    monkeypatch.setattr(example, "solve_static_tet4", record)
+    nominal = solve(path, a / "grips.json", a, prepared_grip_sha256=grip,
+                    material_sensitivities=True)
+    assert calls == [1]
+    g = nominal["material_sensitivities"]
+    assert set(g) == {"7", "19"}
+    dlog = "d_reaction_d_ln_young_modulus_N"
+    dnu = "d_reaction_d_poisson_ratio_N"
+    assert all(g[mid][dlog] < 0 for mid in g)
+    np.testing.assert_allclose(sum(v[dlog] for v in g.values()), nominal["reaction_N"], rtol=1e-9)
+    for param, analytical in (("young_modulus_pa", dlog), ("poisson_ratio", dnu)):
+        signed = []
+        step = 1e-4
+        for sign in (-1, 1):
+            dst = tmp_path / f"{param}-{sign}"
+            dst.mkdir()
+            value = config["material_high"][param]
+            changed = value + sign * step if analytical == dnu else value * np.exp(sign * step)
+            props = dict(config, material_high=dict(config["material_high"], **{param: float(changed)}))
+            path, grip = prepare(src, dst, material_properties=props, **common)
+            result = solve(path, dst / "grips.json", dst, prepared_grip_sha256=grip)
+            assert "material_sensitivities" not in result
+            signed.append(result["reaction_N"])
+        np.testing.assert_allclose((signed[1] - signed[0]) / (2 * step), g["19"][analytical], rtol=2e-6)

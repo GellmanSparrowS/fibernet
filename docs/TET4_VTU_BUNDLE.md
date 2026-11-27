@@ -403,6 +403,15 @@ both results. Each tetrahedral volume in Gmsh 4.1 must belong to exactly
 one declared physical volume group; overlapping physical volume groups
 are rejected rather than assigning whichever label comes first.
 
+Add `--material-sensitivities` to rank which material changes matter most
+for the signed grip reaction near the current settings. From the same
+solve, `summary.json` reports `d_reaction_d_ln_young_modulus_N` and
+`d_reaction_d_poisson_ratio_N` keyed by the Gmsh physical volume IDs.
+For small changes, multiply those slopes by the change in log modulus
+(or approximate fractional modulus change) and in Poisson ratio.
+The geometry and grip displacement stay fixed. The report does not
+predict a new displacement field; use a new solve for large changes.
+
 To inspect the displacement directly, pass `--write-vtu` in the same run.
 Open the resulting `deformation.vtu` in ParaView and select **Warp By Vector**
 with `displacement_m`. Use scale factor 1 for the physical deformation;

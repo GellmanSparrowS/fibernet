@@ -6783,9 +6783,10 @@
    "test_material_json_changes_properties_without_changing_network",
    "test_bad_material_config_refused_before_creating_output",
    "test_material_json_refuses_mixed_legacy_flags",
-   "test_multiple_materials_refuse_an_unnamed_secondary_gmsh41_tag"
+   "test_multiple_materials_refuse_an_unnamed_secondary_gmsh41_tag",
+   "test_local_material_sensitivity_uses_only_the_one_grip_solve"
   ],
-  "sha256": "67ff2ade66da1b204e74c7631e8571619f7a68993712d48f1a72a2f88cdefc22"
+  "sha256": "4981ec16d08e5272c4559a1a874f1d1d65c8c4c7f3fd4ab65b1f020d5706509c"
  },
  "examples/tet4_mechanoelectric_patch_screen.py": {
   "purpose": "Rank equal-area load patches by the initial resistance response.",
@@ -6922,9 +6923,10 @@
    "_read_material_properties",
    "prepare",
    "_write_display_vtu",
+   "_grip_material_sensitivities",
    "solve",
    "main"
   ],
-  "sha256": "046e70dc244e98e97906f60937281882d542b49a9b1435323ed5a663475702a5"
+  "sha256": "3ce7ba57cbda32d4e0ab0797b53f7bbaec92a7400bf6988c95262f4dc7576c0e"
  }
 }

@@ -48,7 +48,7 @@
   "examples/tet4_mechanoelectric_looped_network.py": "d051311e2681d4abd17bc06d23e54ab39c369dcb37192fa7029f372633ec0c94",
   "examples/tet4_periodic_pore.py": "92ee7d478be0239c02870d2a8d68dd48f9ff5a59e9a2f36e11a6dfc29eb37828",
   "examples/tet4_solid_to_pore_flow.py": "83eddcc0d584d0327a07555f511c85fce0970b3efd0cf2080ba4f287d2ced843",
-  "examples/tet4_tagged_grip_iterative.py": "046e70dc244e98e97906f60937281882d542b49a9b1435323ed5a663475702a5",
+  "examples/tet4_tagged_grip_iterative.py": "3ce7ba57cbda32d4e0ab0797b53f7bbaec92a7400bf6988c95262f4dc7576c0e",
   "gen/__init__.py": "2c19578df05617b97d39b36a2bf1888b0b09fbea0de5e3d731a7494f6f176eaf",
   "gen/_fixes.py": "16d9ff5262ab16c66052ada7737c7195305ee792d671172f33cb2d1b6231fafe",
   "gen/_graph_builder.py": "0a5af3d7d2808f9f28d0253ee961e77d6c7d1557c912ef87cc861f60934b6d47",
