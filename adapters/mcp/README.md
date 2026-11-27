@@ -1,21 +1,32 @@
 # FiberNet MCP adapter
 
-A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. This is an unreleased compatibility implementation. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
+A separate optional Linux stdio adapter exposing nine bounded native graph, electrical, prescribed-temperature mechanical, prepare-only and artifact tools. It uses Python SDK 1.29.0 and negotiated protocol 2025-11-25, with compatibility checks on Linux CPython 3.12; other SDK/protocol/platform combinations are not validated. The adapter is not published to PyPI; install it from the matching source checkout as shown below. Mechanical execution is limited to the experimental planar prescribed-temperature snapshot profile described below. It exposes no coupled electrothermal execution, generation, arbitrary code execution, URL fetching or remote HTTP service.
 
 ## Install with the matching native core
 
-The adapter requires Python >=3.10 and exactly mcp 1.29.0. Install FiberNet separately from the matching source checkout, then this adapter into the same virtual environment. A package merely named FiberNet 4.4.1 is not sufficient: every native Python source hash and the complete source inventory must match core_manifest.json. The immutable v1 `producer.fibernet_version` value `4.3.0` is a historical protocol label, not the installed package version. The current binding is to the validated 4.4.1 core module inventory. The historical native core snapshot is 6eabb154cd37d95c7c447a568b1b737c3ec883c8. This fixed label identifies the native-only repository projection for this adapter build, excluding the MCP adapter and its workflow; it is not the current enclosing source tree or commit. Test-only maintenance may change the repository projection without changing the bound runtime module bytes. Runtime compatibility checks enforce those module hashes, not the current Git tree; the snapshot label remains the historical producer/core snapshot label used by v1 outputs and operator configuration. It is not a unique identity for a subsequently changed core manifest; use the additive verified provenance resource below for that narrower identity. This whole-core pin includes unrelated modules: any change to a listed native module requires a refreshed manifest and renewed compatibility validation. No narrower API compatibility guarantee is implemented. Do not replace that manifest to bypass a mismatch; a different source requires an independently validated adapter build.
+Use Linux with CPython 3.12, the tested configuration. Install the native core and adapter from the **same reviewed Git revision** in one virtual environment. A matching version number is not enough: startup checks the complete Python source inventory and the SHA256 of every runtime source file against `core_manifest.json`. Do not mix the core wheel from PyPI with an adapter from a different checkout.
 
-From the repository containing this adapter:
+The v1 `producer.fibernet_version` value `4.3.0` and the operator manifest's `source_tree` value `6eabb154cd37d95c7c447a568b1b737c3ec883c8` are fixed historical wire values. They are not the installed version or current Git revision. Use [verified core provenance](#verified-core-provenance-resource-version-1) to identify the exact runtime binding. If startup rejects a mixed pair, reinstall the matching packages rather than editing the manifest.
+
+From your reviewed checkout, first verify the revision with `git rev-parse HEAD`:
 
 ```sh
-python -m venv .venv
+python3.12 -m venv .venv
 . .venv/bin/activate
-python -m pip install .
-python -m pip install ./adapters/mcp
+python -m pip install . ./adapters/mcp
 ```
 
-The first install is the native core from this checkout, not a PyPI version assumption. The second installs this independent distribution and its fixed SDK dependency. Native optional physics/ML dependencies are not required. Use a matching Python interpreter for the MCP client process. No server tool installs dependencies. No base FiberNet dependency or Python-version requirement is changed.
+The command installs both source packages into the same environment. The adapter is not installed by `pip install fibernet` alone. Native optional physics/ML dependencies are not required. Use a matching Python interpreter for the MCP client process. No server tool installs dependencies. No base FiberNet dependency or Python-version requirement is changed.
+
+### Run a first topology analysis
+
+```sh
+python adapters/mcp/examples/quickstart.py
+```
+
+It launches the installed local adapter, verifies the bound FiberNet source inventory through MCP, asks for topology of a synthetic 4,340-node network, and checks that the downloaded result matches the native analysis. The command prints the graph size and result hash. It uses a temporary local manifest and output directory, and does not need an AI account or a hosted service.
+
+To connect your own client or graph, continue with the launch instructions below.
 
 Earlier adapter builds used snapshot labels `195494f987805cc14dcf66f4713565e2e5c53b08` and `d04536e2261c9898b8b1eca91cb33d887cab977d`. Those labels remain historical; they do not identify this core. Operator manifests must use the snapshot label for their matching adapter build. A label mismatch is an explicit compatibility error, not permission to bypass core hash verification.
 
