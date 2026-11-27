@@ -103,3 +103,28 @@ This command integrates the affine quadratic velocity basis and accepts the
 native FiberNet quadratic VTU export, not curved cells or arbitrary external
 VTU files. NumPy and SciPy suffice to inspect the saved data. For Python use
 `from fibernet.analysis.stokes_cap_flux import audit_saved_stokes`.
+
+
+### Compare throughput and velocity redistribution on the same caps
+
+Use two native velocity exports to separate the change in total flow from
+a change in the distribution of normal velocity across the ends:
+
+```python
+from fibernet.analysis.stokes_cap_comparison import compare_saved_stokes_caps
+
+report = compare_saved_stokes_caps("compressed/velocity.vtu", "stretched/velocity.vtu")
+outlet = report["x_max"]
+print(outlet["throughput_ratio"], outlet["normalized_profile_residual_L2"])
+```
+
+The extreme-`x` cap planes and their physical triangles and edge midpoints
+must match exactly, independently of point and cell numbering. Both fields
+must have nonzero flux of the same direction on each matched cap. The two
+values express the candidate-to-reference signed flux ratio and the
+relative L2 norm of the remaining normal velocity after that uniform scaling
+is removed. For example, a proportional speed-up changes the first value
+but leaves the second at zero. The routine treats all triangles on each cap
+together. It does not reconstruct load conditions, infer permeability, or
+trace fluid paths through the interior. Check that the cases use comparable
+loads and boundary conditions before interpreting the difference.

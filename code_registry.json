@@ -7100,11 +7100,12 @@
   "status": "active",
   "symbols": [
    "_checked_affine_xyz",
+   "_cap_faces",
    "_side",
    "audit_saved_stokes",
    "main"
   ],
-  "sha256": "6b9c3b13fbb31435f735f1da51e5a73d6f7515248d38460ff796560e30cf8714"
+  "sha256": "66c1dffb555206b3f5f9efdab90de579e876e7de5346f144a561aa38d47e69f0"
  },
  "fibernet/io/_tet4_stokes_velocity_vtu.py": {
   "purpose": "Preflight the specific inline Meshio VTU schema before constructing a VTK grid.",
@@ -7139,5 +7140,29 @@
    "test_3d_preserves_existing_curve_rejection",
    "test_complete_3d_bcc_force_to_electrical_dense_oracle"
   ]
+ },
+ "fibernet/analysis/stokes_cap_comparison.py": {
+  "purpose": "Separate throughput and velocity-profile change on identical saved P2 caps.",
+  "status": "active",
+  "symbols": [
+   "_mass_entry",
+   "_trace",
+   "_compare_trace",
+   "compare_saved_stokes_caps"
+  ],
+  "sha256": "2a8e1a97ef239b0d54f7adb7338ca18240539368622e64b1739c4cb6058bda14"
+ },
+ "tests/test_stokes_cap_comparison.py": {
+  "purpose": "Independent analytical and fixed-cap correspondence regression.",
+  "status": "active",
+  "symbols": [
+   "prism",
+   "velocity",
+   "test_closed_form_polynomial_and_numbering",
+   "test_scope_and_gain_control",
+   "test_cancellation_dominated_candidate_is_not_nonzero",
+   "test_strict_native_vtu_replay"
+  ],
+  "sha256": "39adea5cd40b0585992b9f94e03f4eae70008ce243dfb20c91d0f1936ca30397"
  }
 }
