@@ -8,17 +8,20 @@ resource.setrlimit(resource.RLIMIT_FSIZE, (16*1024*1024, 16*1024*1024))
 resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 from .safety import canonical, strict_json, read_file, write_at, open_directory, _verify_core_result, sha
 
+from .translated_transport import OP as XYZ_OP, LIMITS as XYZ_LIMITS, run_worker as run_xyz
 from .tet4_contract import TET4_OP,run_worker as run_tet4,MAX_SOURCE as MAX_TET4_SOURCE
 
 def main():
     operation, source, output, expected_sha = sys.argv[1:5]
-    if operation not in ('validate','topology','linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP): raise ValueError('unknown operation')
-    if len(sys.argv) != (7 if operation in ('linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP) else 5):
+    if operation not in ('validate','topology','linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP,XYZ_OP): raise ValueError('unknown operation')
+    if len(sys.argv) != (7 if operation in ('linear_transport','prepare_deformed_transport','thermoelastic_snapshot','fiber_projection_report',TET4_OP,XYZ_OP) else 5):
         raise ValueError('invalid worker arguments')
     # The source was preflighted by the parent; reparse strict bytes here.
     core_verification = _verify_core_result()
     if operation==TET4_OP:
         raw=read_file(source,MAX_TET4_SOURCE)
+    elif operation==XYZ_OP:
+        raw=read_file(source,XYZ_LIMITS['source'])
     elif operation == 'thermoelastic_snapshot':
         from .thermoelastic import MAX_SNAPSHOT_SOURCE_BYTES
         raw=read_file(source,MAX_SNAPSHOT_SOURCE_BYTES)
@@ -31,6 +34,8 @@ def main():
     data = strict_json(raw)
     if operation==TET4_OP:
         result=run_tet4(raw,expected_sha,sys.argv[5],sys.argv[6],os.path.basename(source),core_verification.provenance())
+    elif operation == XYZ_OP:
+        result=run_xyz(raw,expected_sha,sys.argv[5],sys.argv[6])
     elif operation == 'thermoelastic_snapshot':
         from .thermoelastic import MAX_SNAPSHOT_REQUEST_BYTES, solve_snapshot
         request_raw=read_file(sys.argv[5],MAX_SNAPSHOT_REQUEST_BYTES)
@@ -80,6 +85,8 @@ def main():
             except ContractError:
                 payload['result']={'error_code':'PREPARATION_RESULT_LIMIT','error_category':'resource'}
                 raw=canonical(payload)
+        if operation == XYZ_OP and len(raw) > XYZ_LIMITS['result'] + 4096:
+            raise ValueError('translated transport worker envelope limit')
         if operation==TET4_OP:
             from .tet4_contract import MAX_ARTIFACT
             if len(raw)>MAX_ARTIFACT+4096: raise ValueError('Tet4 worker output limit')
