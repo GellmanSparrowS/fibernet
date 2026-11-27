@@ -20,7 +20,7 @@
   "analysis/snapshot_features.py": "ec1e7bb0161b4ec9eb4ffc344ab976f6265fe0f48d9117ba9cb4db3938423811",
   "analysis/spectrum_metrics.py": "97fe6c808c1b25b9072bacbe799407f86a1e7171aee48c378e656b49084cbf73",
   "analysis/tensile_recruitment.py": "5ef1f5ea0dcbebed942430ae214c81ceddc206638aa53edf0331fe948512704c",
-  "analysis/topology_metrics.py": "ebe3da4b038337cfb07c492fda89e5214a91cd5dc9bae923047997e08be83bec",
+  "analysis/topology_metrics.py": "154519e91202e5476aa3e228c405e3fd24c5ea34252e702d3b3e9ce2a516f575",
   "analysis/width_contact.py": "47ba97424dd46d6e8068a9ed45ed9c210cc1a54ec8916d27fe74b76aea26667c",
   "api.py": "6a852c9c3c27badc69d985635e6b3799d6f67021edc76ebc9c68e03d8bb09cfd",
   "core/__init__.py": "b82340b22d87cb24d1e47c235b685050745fd6ae97401dc3f0214045198663af",

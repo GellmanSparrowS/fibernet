@@ -6929,5 +6929,39 @@
    "main"
   ],
   "sha256": "3ce7ba57cbda32d4e0ab0797b53f7bbaec92a7400bf6988c95262f4dc7576c0e"
+ },
+ "fibernet/analysis/topology_metrics.py": {
+  "purpose": "Versioned, geometry-independent topology of explicit physical edges.",
+  "status": "active",
+  "sha256": "154519e91202e5476aa3e228c405e3fd24c5ea34252e702d3b3e9ce2a516f575",
+  "symbols": [
+   "TopologyMetricsV1",
+   "analyze_topology",
+   "_networkx_topology",
+   "_rustworkx_topology"
+  ]
+ },
+ "tests/test_topology_metrics.py": {
+  "purpose": "Independent finite multigraph oracles and frozen legacy numerical limits.",
+  "status": "active",
+  "sha256": "4f4d55d706ab66e00810d4938b1e4cccf9017dcd3936e68a5a0bafeb6d641f26",
+  "symbols": [
+   "graph",
+   "component_count",
+   "test_inventory_and_immutable_version",
+   "test_bridges_against_independent_single_physical_edge_deletion",
+   "test_empty_and_isolates",
+   "test_direction_geometry_material_and_insertion_invariance",
+   "test_type_and_corrupt_topology_rejection",
+   "test_record_identity_requires_nonnegative_strict_integer",
+   "test_negative_mapping_ids_and_endpoints_rejected",
+   "test_equal_looking_endpoint_and_mapping_ids_rejected",
+   "test_numpy_integral_ids_normalize_to_python_ints",
+   "test_backend_name_is_explicit",
+   "test_rustworkx_parity_preserves_sparse_integer_ids_and_parallel_edges",
+   "test_rustworkx_matches_real_generated_3d_network",
+   "test_rustworkx_empty_and_isolate_parity",
+   "test_requested_missing_rustworkx_does_not_silently_switch"
+  ]
  }
 }
