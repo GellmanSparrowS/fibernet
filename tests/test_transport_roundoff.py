@@ -212,3 +212,21 @@ def test_thermal_scale_ids_orientation(scale):
 def test_thermal_unresolved_precision_cap_stays_closed():
     with pytest.raises(th.ThermalSolveError,match='precision budget'):
         th.solve_transient_thermal(graph([(0,1)]),{0:1.,1:1.},{0:1.},{0:1e12,1:1e12+10},[0,1],length_unit='m')
+
+
+def test_normal_budget_fast_path_preserves_subnormal_gate(monkeypatch):
+    from fibernet.sim import _roundoff as budget
+
+    def no_gradual_underflow():
+        raise budget._SubnormalRoundoffError('test thread forbids subnormals')
+
+    monkeypatch.setattr(budget, '_require_gradual_underflow', no_gradual_underflow)
+    smallest_normal = sys.float_info.min
+    assert budget.upper_sum([smallest_normal]) == math.nextafter(smallest_normal, math.inf)
+    assert budget.upper_sum([-0.0]) == 0.0
+    for payload in ('0000000000000001', '000fffffffffffff'):
+        subnormal = struct.unpack('>d', bytes.fromhex(payload))[0]
+        with pytest.raises(budget._SubnormalRoundoffError, match='test thread forbids subnormals'):
+            budget.upper_sum([subnormal])
+    with pytest.raises(ArithmeticError, match='roundoff budget overflow'):
+        budget.upper_sum([sys.float_info.max])

@@ -38,6 +38,12 @@ def _nonnegative_values(values):
     result = []
     for value in values:
         value = float(value)
+        # A positive normal is in-domain without inspecting its stored bits.
+        # A nonzero subnormal can compare equal to zero under DAZ; leave it,
+        # signed zero and every invalid value on the existing bit-based path.
+        if sys.float_info.min <= value <= sys.float_info.max:
+            result.append(value)
+            continue
         bits, magnitude = _magnitude_bits(value)
         if bits >> 63 and magnitude:
             raise ArithmeticError('nonfinite roundoff budget')
