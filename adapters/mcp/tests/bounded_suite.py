@@ -67,6 +67,18 @@ def subreaper(value=None):
         raise OSError(ctypes.get_errno(), 'cannot set child-subreaper state')
 
 
+
+def encode_resource_report(report):
+    """Preserve all evidence without charging indentation against a large report."""
+    raw = json.dumps(report, indent=2) + '\n'
+    if len(raw.encode('utf-8')) <= REPORT_RESERVE:
+        return raw
+    compact = json.dumps(report, separators=(',', ':')) + '\n'
+    if len(compact.encode('utf-8')) > REPORT_RESERVE:
+        raise RuntimeError('supervisor report exceeds reserved output budget')
+    return compact
+
+
 def run_bounded(command, directory, disk_root, limits=None, interval=.05):
     limits = dict(DEFAULT_LIMITS if limits is None else limits)
     directory.mkdir(parents=True, exist_ok=False)
@@ -231,10 +243,7 @@ def run_bounded(command, directory, disk_root, limits=None, interval=.05):
                                                   for pid, born in observed],
                   'limits': limits,
                   'scope': 'Terminal kernel waited-child CPU plus supervisor CPU snapshot, with one CPU second reserved for finishing. RSS and intermediate observations sampled. No OS aggregate-memory sandbox.'}
-        raw = json.dumps(report, indent=2) + '\n'
-        if len(raw.encode()) > REPORT_RESERVE:
-            raise RuntimeError('supervisor report exceeds reserved output budget')
-        (directory / 'resource-report.json').write_text(raw)
+        (directory / 'resource-report.json').write_text(encode_resource_report(report), encoding='utf-8')
     if caught is not None:
         raise caught
     return report
