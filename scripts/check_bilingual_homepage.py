@@ -19,7 +19,10 @@ from PIL import Image, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
-HOMEPAGE_GIFS = ("docs/media/three_dimensional_topologies.gif",)
+HISTORICAL_HOMEPAGE_GIFS = ("docs/media/three_dimensional_topologies.gif",)
+HOMEPAGE_HERO = "docs/media/homepage/network-morph.webp"
+LOCALE_MOTION = ("docs/media/homepage/woven-fracture.webp",
+                 "docs/media/homepage/orientation-to-bundle.webp")
 
 
 def digest(path: Path) -> str:
@@ -117,35 +120,37 @@ def _without_markdown_code(text: str, preserve_offsets: bool = False) -> str:
                   (lambda m: blank(m[0])) if preserve_offsets else " ", prose, flags=re.S)
 
 
-class _InlineGifParser(HTMLParser):
+class _InlineImageParser(HTMLParser):
     """Collect exact img/src attributes and text, excluding HTML comments."""
 
-    def __init__(self) -> None:
+    def __init__(self, extension: str) -> None:
         super().__init__(convert_charrefs=False)
-        self.html_gifs: list[str] = []
+        self.extension = extension
+        self.html_images: list[str] = []
         self.markdown_parts: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "img":
             src = next((value for name, value in attrs if name == "src"), None)
-            if src and urlsplit(src).path.lower().endswith(".gif"):
-                self.html_gifs.append(src)
+            if src and urlsplit(src).path.lower().endswith(self.extension):
+                self.html_images.append(src)
 
     def handle_data(self, data: str) -> None:
         self.markdown_parts.append(data)
 
 
-def inline_gifs(text: str) -> list[str]:
-    """Count this README's inline GIF references, not code, comments or links.
-
-    This bounded source check is not a substitute for GitHub rendering QA.
-    """
-    parser = _InlineGifParser()
+def inline_images(text: str, extension: str) -> list[str]:
+    """Count inline image references, excluding links, code and comments."""
+    parser = _InlineImageParser(extension)
     parser.feed(_without_markdown_code(text))
     parser.close()
-    markdown = re.findall(r"!\[[^\]]*\]\(([^)]+\.gif)\)",
+    markdown = re.findall(r"!\[[^\]]*\]\(([^)]+" + re.escape(extension) + r")\)",
                           "\n".join(parser.markdown_parts), re.I)
-    return markdown + parser.html_gifs
+    return markdown + parser.html_images
+
+
+def inline_gifs(text: str) -> list[str]:
+    return inline_images(text, ".gif")
 
 
 class _DisclosureParser(HTMLParser):
@@ -268,9 +273,9 @@ def historical_match(path: Path, expected: str) -> str:
     raise ValueError(f"Historical content changed beyond line endings: {path.relative_to(ROOT)}")
 
 
-def decode_gif(path: Path) -> dict:
+def decode_gif(path: Path, expected_format: str = "GIF") -> dict:
     with Image.open(path) as im:
-        require(im.format == "GIF", f"Not a GIF: {path.name}")
+        require(im.format == expected_format, f"Unexpected image format: {path.name}")
         require(im.n_frames > 1, f"Not animated: {path.name}")
         size, frames = im.size, im.n_frames
         duration = 0
@@ -310,10 +315,12 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     require("selected" not in zh_summary.lower() + en_summary.lower(), "Static selection label is misleading")
     english, chinese = locale_block(en_section, "en"), locale_block(zh_section, "zh")
     require(chinese == locale_block(standalone, "zh"), "Standalone Chinese differs from inline source")
+    prelude = homepage.split("<details", 1)[0]
+    require(inline_images(prelude, ".webp") == [HOMEPAGE_HERO] and not inline_gifs(prelude),
+            "Expected one homepage hero before the language sections")
     for label, block in (("English", english), ("Chinese", chinese)):
-        gifs = inline_gifs(block)
-        require(len(gifs) == len(set(gifs)) == len(HOMEPAGE_GIFS) and set(gifs) == set(HOMEPAGE_GIFS),
-                f"{label} inline animations must match the homepage selection")
+        require(tuple(inline_images(block, ".webp")) == LOCALE_MOTION and not inline_gifs(block),
+                f"{label} must show only the selected workflow previews")
     return english, chinese
 
 
@@ -343,14 +350,14 @@ def main() -> None:
 
     selection = json.loads((MEDIA / "homepage_overview/selection.json").read_text())
     require(selection["schema"] == "fibernet.homepage-selection.v1", "Unknown homepage selection schema")
-    require(selection["displayed_gifs"] == list(HOMEPAGE_GIFS), "Homepage selection differs")
+    require(selection["displayed_gifs"] == list(HISTORICAL_HOMEPAGE_GIFS), "Homepage selection differs")
     originals = selection["original_gifs"]
     require(len(originals) == len({r["path"] for r in originals}) == 19,
             "Expected 19 preserved original GIFs")
     for record in originals + selection["derivatives"] + selection["renderers"]:
         require(digest(ROOT / record["path"]) == record["sha256"],
                 f"Homepage source/media hash differs: {record['path']}")
-    for relative in sorted({r["path"] for r in originals + selection["derivatives"]} | set(HOMEPAGE_GIFS)):
+    for relative in sorted({r["path"] for r in originals + selection["derivatives"]} | set(HISTORICAL_HOMEPAGE_GIFS)):
         if relative.lower().endswith(".gif"):
             decode_gif(ROOT / relative)
     check_links(ROOT / "docs/HOMEPAGE_OVERVIEW_MEDIA.md")
@@ -419,9 +426,13 @@ def main() -> None:
             "Hero decoded shape differs from manifest")
     require(hero_gif["duration_ms"] == hero["canvas"]["duration_ms"],
             "Hero decoded timing differs from manifest")
+    current_motion = [decode_gif(ROOT / path, "WEBP") for path in (HOMEPAGE_HERO, *LOCALE_MOTION)]
+    for media in current_motion:
+        require(media["size"] == [1280, 720] and media["bytes"] < 4_000_000,
+                f"Invalid homepage motion dimensions or size: {media['asset']}")
     report = {"status": "PASS", "documents": document_checks,
               "bilingual_code_and_link_parity": True, "language_disclosures": 2,
-              "displayed_gifs_per_language": len(HOMEPAGE_GIFS),
+              "homepage_motion": current_motion,
               "ui_svg_assets_checked": len(list((MEDIA / "ui").glob("*.svg"))),
               "historical_media": historical, "gifs": gifs,
               "physical_solver_executed": False}

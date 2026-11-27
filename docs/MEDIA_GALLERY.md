@@ -1,8 +1,26 @@
 # FiberNet animated gallery
 
-[English homepage](../README.md) · [中文主页](../README_CN.md)
+[English homepage](../README.md) · [中文](../README.md#fibernet-zh)
 
-Explore network geometry, saved deformation, thresholded connectivity, and continuous routes. Each visual below has a specific meaning: camera motion, parameterized geometry, recorded simulation, or route traversal. The corresponding manifests preserve source hashes and parameters; vector keyframes remain editable.
+Explore network geometry, saved deformation, thresholded connectivity, and continuous routes. Each visual below has a specific meaning: camera motion, parameterized geometry, recorded simulation, or route traversal. Where linked, manifests record source hashes and parameters, and vector keyframes are editable.
+
+## One topology, two shapes
+
+![An 8 by 8 lattice changes geometry without changing its closed route order](media/homepage/network-morph.webp)
+
+Five interior control points on each reference fiber change the geometry of an 8 × 8 square network. A local twist changes the center while leaving the outer region fixed. The right-hand panels traverse the same 1,728 edge segments in the same order. [Planar geometry and continuous routes](METHODS_MANUFACTURING_UNIFIED.md).
+
+## Tensile fracture of a notched weave
+
+![A reduced spring-network trajectory shows a pre-notched weave opening under tension](media/homepage/woven-fracture.webp)
+
+The synthetic weave starts with a notch and is pulled from opposing grips. The motion replays a damped spring-network calculation. The animated grips and colors help locate loading and failure; the model does not include yarn contact or friction. [Explore the reduced mechanical methods](METHODS_REDUCED_SOLVER_UNIFIED.md).
+
+## From orientation field to fibers
+
+![A planar matrix becomes a layered orientation field, then a three-dimensional bundle](media/homepage/orientation-to-bundle.webp)
+
+The planar matrix shows unoriented fiber axes using double-headed arrows. Nine display layers reveal a volume with synthetic through-thickness variation. The 298 curves follow the principal axes of the three-dimensional orientation field; their colors and widths distinguish depth and individual fibers in the animation.
 
 ## Geometry and response hero
 
@@ -100,7 +118,7 @@ A camera orbit presents the fixed voltage and current field of a saved 80-node, 
 
 ## Reproduce the visuals
 
-The new hero is a **render-only** composition of saved geometry and saved GIF frames. Its renderer uses NumPy, Pillow, and the DejaVu Sans / Sans Mono fonts:
+The legacy geometry-and-response montage above is a **render-only** composition of saved geometry and saved GIF frames. Its renderer uses NumPy, Pillow, and the DejaVu Sans / Sans Mono fonts:
 
 ```bash
 python scripts/render_saved_homepage_hero.py

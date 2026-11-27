@@ -41,7 +41,7 @@ class ManufacturingNavigationTests(unittest.TestCase):
             ('<details>', '中文'),
             ('<details open>', 'English'),
         ])
-        self.assertIn('<img src="docs/media/ui/homepage-cover-v2.svg"', readme)
+        self.assertIn(f'<img src="{CHECK.HOMEPAGE_HERO}"', readme)
         self.assertIn('](#quick-start)', readme)
         self.assertIn('quick-start', CHECK.headings(readme))
 
