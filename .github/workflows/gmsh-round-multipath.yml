@@ -1,0 +1,74 @@
+name: Native Gmsh round fiber network
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/gmsh-round-multipath.yml"
+      - "fibernet/examples/tet4_round_multipath.py"
+      - "fibernet/examples/tet4_tagged_grip_iterative.py"
+      - "fibernet/sim/tet4_dc.py"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-round:
+    name: Gmsh round network (${{ matrix.os }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: windows-latest
+            arch: amd64
+          - os: macos-15-intel
+            arch: x86_64
+          - os: macos-15
+            arch: arm64
+    env:
+      FIBERNET_EXPECTED_ARCH: ${{ matrix.arch }}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the system Gmsh runtime requirement on Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libglu1-mesa
+      - name: Build the FiberNet wheel
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Install native providers and solve the complete fused network
+        shell: python
+        run: |
+          import json, os, platform, subprocess, sys, tempfile
+          from pathlib import Path
+          assert platform.machine().lower() == os.environ["FIBERNET_EXPECTED_ARCH"]
+          wheel, = Path("dist").glob("fibernet-*.whl")
+          subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
+                          str(wheel.resolve()) + "[solid-iterative]", "gmsh==4.13.1", "meshio==5.3.5"], check=True)
+          subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
+          with tempfile.TemporaryDirectory() as work:
+              result = Path(work) / "result"
+              subprocess.run([sys.executable, "-I", "-m", "fibernet.examples.tet4_round_multipath",
+                              "--output", str(result), "--tier", "quick", "--write-vtu"], check=True, cwd=work)
+              report = json.loads((result / "round-mechanoelectric.json").read_text(encoding="utf-8"))
+              g, m, r = (report[k] for k in ("geometry", "mechanical", "resistance"))
+              assert g["paths"] == 3 and g["crosslinks"] == 5 and g["physical_volume_count"] == 2
+              assert 2000 < m["cells"] < 15000 and 0.03 < m["reaction_N"] < 0.15
+              assert set(r) == {"uniform", "contrast", "mirrored_contrast"}
+              for s in r.values():
+                  assert s["topology_components"] == 1 and s["shared_material_faces"] > 10
+                  assert s["R_minus_ohm"] < s["R0_ohm"] < s["R_plus_ohm"]
+                  assert s["shape_fd_rel_error"] < 2e-6
+              assert 1.65 < r["contrast"]["R0_ohm"] / r["uniform"]["R0_ohm"] < 1.85
+              assert (result / "deformation.vtu").stat().st_size > 10000

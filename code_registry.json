@@ -6991,5 +6991,17 @@
    "main"
   ],
   "sha256": "10e27672fa7265d1746688724fce15f0cb189d3d4134d685a552a28e3b799c4e"
+ },
+ "fibernet/examples/tet4_round_multipath.py": {
+  "purpose": "Generate and solve a synthetic two-material, round cross-section 3D fiber network.",
+  "status": "active",
+  "symbols": [
+   "_require",
+   "_generate",
+   "_electrical",
+   "run",
+   "main"
+  ],
+  "sha256": "73e709b368492c0aac6a8e800be299cb81a97d6dab94c7234d5195187e6ec484"
  }
 }
