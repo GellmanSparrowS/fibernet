@@ -4,6 +4,10 @@ on:
     paths:
       - ".github/workflows/browser-viz-provider.yml"
       - "fibernet/viz/tet4_browser.py"
+      - "fibernet/viz/stokes_browser.py"
+      - "fibernet/viz/_stokes_velocity_vtu.py"
+      - "fibernet/sim/tet4_open_stokes.py"
+      - "scripts/smoke_stokes_browser.py"
       - "fibernet/examples/tet4_tagged_grip_iterative.py"
       - "scripts/smoke_tet4_browser.py"
       - "pyproject.toml"
@@ -51,7 +55,7 @@ jobs:
           wheel, = Path("dist").glob("fibernet-*.whl")
           subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
                           str(wheel.resolve()) + "[browser-viz,solid-iterative]",
-                          "meshio==5.3.5", "playwright==1.62.0"], check=True)
+                          "meshio==5.3.5", "playwright==1.62.0", "ngsolve==6.2.2608"], check=True)
           subprocess.run([sys.executable, "-m", "pip", "check"], check=True)
       - name: Verify the runner-installed Chrome on Linux
         if: runner.os == 'Linux'
@@ -72,4 +76,7 @@ jobs:
               run = Path(folder) / "smoke_tet4_browser.py"
               shutil.copyfile("scripts/smoke_tet4_browser.py", run)
               args = ["--browser-channel", "chrome"] if sys.platform.startswith("linux") else []
+              subprocess.run([sys.executable,"-I",str(run),*args], cwd=folder, check=True)
+              run = Path(folder) / "smoke_stokes_browser.py"
+              shutil.copyfile("scripts/smoke_stokes_browser.py", run)
               subprocess.run([sys.executable,"-I",str(run),*args], cwd=folder, check=True)

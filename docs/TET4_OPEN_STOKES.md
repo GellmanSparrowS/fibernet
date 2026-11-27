@@ -54,3 +54,23 @@ or list the two original endpoint IDs (ascending) of a midside point.
 `source_cell_id` stores the original tetrahedron IDs. Do not coerce these
 identifiers to floating point. Use integrated cap flow, not visual line
 counts, to compare throughput.
+
+## View a saved velocity field without rerunning the solve
+
+Install the optional `browser-viz` extra for VTK, Trame and vtk.js. To plot
+a quadratic velocity file that you created with the writer above:
+
+```sh
+python -m fibernet.viz.stokes_browser pressure-flow.vtu
+```
+
+Open `http://127.0.0.1:8765` on the computer running the viewer. This is
+a loopback-only postprocessor, not a remote service or a file upload.
+It accepts only regular, locally generated files in FiberNet's single-piece
+tetra10 format, not arbitrary VTK datasets. It does not need the NGSolve solver to replay a saved file.
+Use `--from-max-x` to seed from the high-x cap, the inlet for negative
+pressure drop. It does not reverse
+the stored velocity. The boundary button shows the entire fluid-domain
+boundary, including the outer duct. Lines are computed steady streamlines;
+use integrated cap flow from the solver for quantitative comparisons.
+The speed colors clip above the 99.5th percentile of the displayed lines.
