@@ -6,7 +6,7 @@ import pytest
 pytest.importorskip("meshio")
 pytest.importorskip("pyamg")
 
-from examples.tet4_tagged_grip_iterative import make_fixture, prepare, solve
+from fibernet.examples.tet4_tagged_grip_iterative import make_fixture, prepare, solve
 from fibernet.io.tet4_meshio import read_tet4_vtu_bundle
 
 
@@ -89,7 +89,7 @@ def test_custom_external_gmsh_group_names_reproduce_same_inputs(tmp_path):
 def test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids(tmp_path,monkeypatch):
     from types import SimpleNamespace
     import meshio
-    from examples import tet4_tagged_grip_iterative as example
+    from fibernet.examples import tet4_tagged_grip_iterative as example
     source=tmp_path/"mesh.msh"
     make_fixture(source,refinement=2)
     path,h=prepare(source,tmp_path,length_unit="mm",axis="x",stroke_m=-1.5e-6)
@@ -173,7 +173,7 @@ def test_single_physical_volume_matches_two_equal_moduli(tmp_path):
 ])
 def test_single_material_flags_fail_before_creating_output(tmp_path,monkeypatch,flags):
     import sys
-    from examples import tet4_tagged_grip_iterative as example
+    from fibernet.examples import tet4_tagged_grip_iterative as example
     output=tmp_path/"must-not-exist"
     monkeypatch.setattr(sys,"argv",["tagged","--input","not-read.msh","--length-unit","mm",
                                   "--output",str(output),*flags])
@@ -228,3 +228,150 @@ $EndElements
         prepare(source,tmp_path,length_unit="mm",axis="x",stroke_m=1.5e-6,
                 material_groups=("Solid bulk",),moduli_Pa=(2e9,))
     assert not (tmp_path/"tagged-solid.zip").exists()
+
+
+def test_material_json_changes_properties_without_changing_network(tmp_path, monkeypatch):
+    import sys
+    import meshio
+    from fibernet.examples import tet4_tagged_grip_iterative as example
+
+    mesh = tmp_path / "three-regions.msh"
+    make_fixture(mesh, refinement=1)
+    raw = meshio.read(mesh)
+    raw.field_data["Bond region"] = np.array([21, 3])
+    for i, block in enumerate(raw.cells):
+        if block.type == "tetra":
+            x = raw.points[block.data, 0].mean(axis=1)
+            ids = np.select([x < 1, x > 2], [7, 19], default=21)
+            raw.cell_data["gmsh:physical"][i] = ids
+            raw.cell_data["gmsh:geometrical"][i] = ids
+    meshio.write(mesh, raw, file_format="gmsh22", binary=False)
+    materials = {
+        "material_low": {"young_modulus_pa": 1e9, "poisson_ratio": .24},
+        "Bond region": {"young_modulus_pa": 2e9, "poisson_ratio": .32},
+        "material_high": {"young_modulus_pa": 5e9, "poisson_ratio": .39},
+    }
+    config = tmp_path / "materials.json"
+    records = []
+    for scale in (1, 3):
+        output = tmp_path / f"run-{scale}"
+        data = {name: dict(p, young_modulus_pa=p["young_modulus_pa"] * scale)
+                for name, p in materials.items()}
+        config.write_text(json.dumps(data), encoding="utf-8")
+        monkeypatch.setattr(sys, "argv", [
+            "tagged", "--input", str(mesh), "--length-unit", "mm", "--output", str(output),
+            "--materials-json", str(config), "--write-vtu",
+        ])
+        example.main()
+        b = read_tet4_vtu_bundle(output / "tagged-solid.zip")
+        for mid, name in enumerate(("material_low", "material_high", "Bond region")):
+            assert b.materials[(7, 19, 21)[mid]] == data[name]
+        vtu = meshio.read(output / "deformation.vtu")
+        np.testing.assert_array_equal(vtu.get_cell_data("material_id", "tetra"), b.material_ids)
+        summary = json.loads((output / "summary.json").read_text())
+        with np.load(output / "nodal-fields.npz", allow_pickle=False) as fields:
+            assert summary["free_residual_inf_N"] < 1e-9
+            records.append((b, summary, dict(fields)))
+    (a, one, f_one), (b, three, f_three) = records
+    for key in ("points", "tetrahedra", "node_ids", "cell_ids", "material_ids"):
+        np.testing.assert_array_equal(getattr(a, key), getattr(b, key))
+    np.testing.assert_allclose(f_one["displacement_m"], f_three["displacement_m"],
+                               atol=1e-16, rtol=1e-9)
+    np.testing.assert_allclose(f_one["reaction_N"] * 3, f_three["reaction_N"],
+                               atol=1e-11, rtol=1e-9)
+    for key in ("reaction_N", "strain_energy_J"):
+        np.testing.assert_allclose(one[key] * 3, three[key], rtol=1e-9)
+
+
+@pytest.mark.parametrize("payload,message", [
+    ('{"V":{"young_modulus_pa":1e9,"poisson_ratio":0.3},"V":{}}', "Duplicate"),
+    ('{"V":{"young_modulus_pa":1e9,"poisson_ratio":0.3,"density":1}}', "needs"),
+    ('{"V":{"young_modulus_pa":true,"poisson_ratio":0.3}}', "Young modulus"),
+    ('{"V":{"young_modulus_pa":1e9,"poisson_ratio":0.50}}', "Poisson ratio"),
+    ('{"V":{"young_modulus_pa":1e9,"poisson_ratio":NaN}}', "Poisson ratio"),
+    ('{}', "named material volumes"),
+    (' ' * 16385, "at most 16 KiB"),
+])
+def test_bad_material_config_refused_before_creating_output(tmp_path, monkeypatch, capsys, payload, message):
+    import sys
+    from fibernet.examples import tet4_tagged_grip_iterative as example
+
+    config = tmp_path / "materials.json"
+    config.write_text(payload, encoding="utf-8")
+    output = tmp_path / "must-not-exist"
+    monkeypatch.setattr(sys, "argv", [
+        "tagged", "--input", "not-read.msh", "--length-unit", "mm",
+        "--output", str(output), "--materials-json", str(config),
+    ])
+    with pytest.raises(SystemExit, match="2"):
+        example.main()
+    assert message in capsys.readouterr().err
+    assert not output.exists()
+
+
+def test_material_json_refuses_mixed_legacy_flags(tmp_path, monkeypatch, capsys):
+    import sys
+    from fibernet.examples import tet4_tagged_grip_iterative as example
+
+    output = tmp_path / "must-not-exist"
+    monkeypatch.setattr(sys, "argv", [
+        "tagged", "--input", "not-read.msh", "--length-unit", "mm",
+        "--output", str(output), "--materials-json", "not-read.json", "--poisson-ratio", ".3",
+    ])
+    with pytest.raises(SystemExit, match="2"):
+        example.main()
+    assert "do not mix" in capsys.readouterr().err
+    assert not output.exists()
+
+
+def test_multiple_materials_refuse_an_unnamed_secondary_gmsh41_tag(tmp_path):
+    source = tmp_path / "ambiguous.msh"
+    source.write_text("""$MeshFormat
+4.1 0 8
+$EndMeshFormat
+$PhysicalNames
+4
+2 31 "hold_face"
+2 37 "pull_face"
+3 55 "Lower"
+3 56 "Upper"
+$EndPhysicalNames
+$Entities
+0 0 2 2
+31 0 0 0 1 1 0 1 31 0
+37 0 0 0 1 0 1 1 37 0
+1 0 0 0 1 1 1 2 55 99 0
+2 0 0 0 1 1 1 1 56 0
+$EndEntities
+$Nodes
+1 5 1 5
+3 1 0 5
+1
+2
+3
+4
+5
+0 0 0
+1 0 0
+0 1 0
+0 0 1
+1 1 1
+$EndNodes
+$Elements
+4 4 1 4
+2 31 2 1
+1 1 2 3
+2 37 2 1
+2 1 2 4
+3 1 4 1
+3 1 2 3 4
+3 2 4 1
+4 5 2 3 4
+$EndElements
+""", encoding="utf-8")
+    config = {name: {"young_modulus_pa": 2e9, "poisson_ratio": .31}
+              for name in ("Lower", "Upper")}
+    with pytest.raises(ValueError, match="exactly one declared physical tag"):
+        prepare(source, tmp_path, length_unit="mm", axis="x", stroke_m=1.5e-6,
+                material_properties=config)
+    assert not (tmp_path / "tagged-solid.zip").exists()

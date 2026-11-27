@@ -349,11 +349,11 @@ without editing the mesh file: `--material-groups "Soft phase" "Stiff phase"`
 sets the order for the low and high modulus inputs, and
 `--grip-groups "Fixed end" "Driven end"` selects the two exterior grips.
 
-Install the optional providers from the source checkout:
+Install from a matching FiberNet checkout with the iterative back end and Meshio:
 
 ~~~sh
-python -m pip install -e ".[solid-iterative]" "meshio==5.3.5"
-python -m examples.tet4_tagged_grip_iterative --input my-mesh.msh --output grip-run \
+python -m pip install ".[solid-iterative]" "meshio==5.3.5"
+python -m fibernet.examples.tet4_tagged_grip_iterative --input my-mesh.msh --output grip-run \
   --length-unit mm --axis x --stroke-um 1.5 --material-low-gpa 1 --material-high-gpa 2
 ~~~
 
@@ -377,9 +377,31 @@ For a homogeneous solid, provide one physical volume name and its
 modulus with `--material-group "Solid" --young-modulus-gpa 2` instead of
 the two-material flags. In Gmsh, assign the volume group to the whole
 solid you intend to export, even when it spans several geometric volumes.
-In Gmsh 4.1 each tetrahedral volume must have just that one physical tag
-for single-material mode. The two exterior grip groups and coordinate units are still
-required.
+The two exterior grip groups and coordinate units are still required.
+
+To compare different materials on the same geometry, keep the same mesh
+and pass `--materials-json materials.json` in place of the other material
+flags. Use the exact Gmsh physical volume names. Each of the 1–64 named
+regions has its own Young modulus in pascals and Poisson ratio:
+
+~~~json
+{
+  "Soft phase": {"young_modulus_pa": 1000000000, "poisson_ratio": 0.24},
+  "Junction phase": {"young_modulus_pa": 2000000000, "poisson_ratio": 0.32},
+  "Stiff phase": {"young_modulus_pa": 5000000000, "poisson_ratio": 0.39}
+}
+~~~
+
+~~~sh
+python -m fibernet.examples.tet4_tagged_grip_iterative --input my-mesh.msh \
+  --output grip-run --length-unit mm --materials-json materials.json --write-vtu
+~~~
+
+If the grip names differ from the defaults, also pass `--grip-groups`.
+Rerun with another material file and a new output directory to preserve
+both results. Each tetrahedral volume in Gmsh 4.1 must belong to exactly
+one declared physical volume group; overlapping physical volume groups
+are rejected rather than assigning whichever label comes first.
 
 To inspect the displacement directly, pass `--write-vtu` in the same run.
 Open the resulting `deformation.vtu` in ParaView and select **Warp By Vector**

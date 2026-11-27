@@ -6763,17 +6763,10 @@
   "sha256": "a30960ba6f7cf1af9b37a38b2da8e49c41afaf2fb05ba7511ea9b95de35124da"
  },
  "examples/tet4_tagged_grip_iterative.py": {
-  "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
+  "purpose": "Source-tree wrapper for the installed Tet4 named-grip example.",
   "status": "active",
-  "symbols": [
-   "make_fixture",
-   "_volume_entity_tags",
-   "prepare",
-   "_write_display_vtu",
-   "solve",
-   "main"
-  ],
-  "sha256": "ab49086d27fa7c16ba83620a7afe7a767e10860afb8ad9aa007875843d1d0127"
+  "symbols": [],
+  "sha256": "8810f3de477298f1c9ef4d2256bdfd29ff15cf795decda5292b72246020c5aa3"
  },
  "tests/test_tet4_tagged_grips_example.py": {
   "purpose": "Executable smoke tests for imported named grips above the banded limits.",
@@ -6786,9 +6779,13 @@
    "test_display_vtu_reuses_solve_and_keeps_si_and_exact_ids",
    "test_single_physical_volume_matches_two_equal_moduli",
    "test_single_material_flags_fail_before_creating_output",
-   "test_single_material_gmsh41_refuses_secondary_volume_tag"
+   "test_single_material_gmsh41_refuses_secondary_volume_tag",
+   "test_material_json_changes_properties_without_changing_network",
+   "test_bad_material_config_refused_before_creating_output",
+   "test_material_json_refuses_mixed_legacy_flags",
+   "test_multiple_materials_refuse_an_unnamed_secondary_gmsh41_tag"
   ],
-  "sha256": "e8190919a9631d947c93dbbbcfa9cf2fb747163243f106a5160f2539e2bacdbd"
+  "sha256": "67ff2ade66da1b204e74c7631e8571619f7a68993712d48f1a72a2f88cdefc22"
  },
  "examples/tet4_mechanoelectric_patch_screen.py": {
   "purpose": "Rank equal-area load patches by the initial resistance response.",
@@ -6914,5 +6911,20 @@
    "main"
   ],
   "sha256": "83eddcc0d584d0327a07555f511c85fce0970b3efd0cf2080ba4f287d2ced843"
+ },
+ "fibernet/examples/tet4_tagged_grip_iterative.py": {
+  "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
+  "status": "active",
+  "symbols": [
+   "make_fixture",
+   "_volume_entity_tags",
+   "_validated_material_properties",
+   "_read_material_properties",
+   "prepare",
+   "_write_display_vtu",
+   "solve",
+   "main"
+  ],
+  "sha256": "046e70dc244e98e97906f60937281882d542b49a9b1435323ed5a663475702a5"
  }
 }
