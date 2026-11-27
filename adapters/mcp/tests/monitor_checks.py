@@ -7,7 +7,29 @@ import uuid
 from unittest.mock import patch
 
 from bounded_suite import (DEFAULT_LIMITS, FINISHING_CPU_RESERVE, REPORT_RESERVE,
-                           ROOT, disk_bytes, run_bounded, subreaper)
+                           ROOT, disk_bytes, encode_resource_report, run_bounded, subreaper)
+
+def check_report_rendering():
+    source = {"returncode": 0, "failures": [], "remaining_descendants": [],
+              "terminal_accounted_cpu_seconds": 150.1}
+    def many(n):
+        return {**source, "observed_process_identities": [
+            {"pid": 500000 + i, "created": 1795816405.083214} for i in range(n)]}
+    small=encode_resource_report(many(1))
+    assert small.startswith('{\n') and json.loads(small)==many(1)
+    source_large=many(300)
+    assert len(json.dumps(source_large, indent=2).encode("utf-8"))>REPORT_RESERVE
+    compact=encode_resource_report(source_large)
+    assert len(compact.encode("utf-8"))<=REPORT_RESERVE and json.loads(compact)==source_large
+    try:
+        encode_resource_report(many(1000))
+    except RuntimeError as exc:
+        assert str(exc)=="supervisor report exceeds reserved output budget"
+    else:
+        raise AssertionError("oversized raw evidence was accepted")
+
+
+check_report_rendering()
 
 AREA = ROOT / 'evidence' / ('monitor-' + uuid.uuid4().hex[:8])
 AREA.mkdir()
