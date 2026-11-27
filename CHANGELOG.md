@@ -1,3 +1,9 @@
+## [4.39.0]
+
+- Add an explicit 3D transport-geometry preparation API for prescribed XYZ translations and fixed-area chord conductance.
+- Reduce repeated roundoff budget admission cost without changing numerical bounds or exceptional-value handling.
+- See the [4.39.0 release notes](docs/RELEASE_4_39_0.md).
+
 ## [4.38.0]
 
 - Report signed flow separately for each connected opening in a saved quadratic Stokes field.
