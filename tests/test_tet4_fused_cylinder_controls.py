@@ -250,12 +250,29 @@ def test_cte_six_constraints_guard_remains_active_in_optimized_python():
     probe = r"""
 import importlib.util
 import sys
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import numpy as np
 
 if sys.flags.optimize != 1:
     raise RuntimeError("not running under -O")
+
+# The test supplies a deliberately invalid solver result below. Isolate the
+# unrelated provider imports so that a cold provider startup cannot consume
+# the subprocess deadline before the actual optimized-Python guard is tested.
+def unexpected_provider(*args, **kwargs):
+    raise RuntimeError("optimized guard probe called an unrelated provider")
+
+for module_name, symbol in (
+    ("fibernet.io.tet4_meshio", "read_tet4_vtu_bundle"),
+    ("fibernet.sim.tet4_dc", "solve_dc_tet4"),
+    ("fibernet.sim.tet4_dc_thermal", "solve_dc_thermal_tet4_with_convection"),
+    ("fibernet.sim.tet4_thermoelastic", "solve_prescribed_temperature_tet4"),
+):
+    stub = ModuleType(module_name)
+    setattr(stub, symbol, unexpected_provider)
+    sys.modules[module_name] = stub
+
 spec = importlib.util.spec_from_file_location("fused_cte", sys.argv[1])
 example = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(example)
