@@ -30,7 +30,7 @@ TOOLS = (
     'fibernet_solve_thermoelastic_network_snapshot',
     'fibernet_project_fiber_network_report',
 )
-NATIVE_SOURCE_COUNT = 289
+NATIVE_SOURCE_COUNT = 292
 FORBIDDEN = frozenset((
     'fibernet', 'numpy', 'scipy', 'networkx', 'matplotlib', 'torch',
     'torch_geometric', 'taichi', 'lammps', 'exudyn', 'mujoco', 'pybullet',

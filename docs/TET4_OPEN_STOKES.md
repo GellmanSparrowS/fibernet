@@ -80,3 +80,26 @@ For a planar extreme-x boundary with several separate openings, add
 edge-connected opening and distributes the rest by area. The viewer reports
 how many openings produced a streamline. This setting is for inspection, not
 flow weighting, and does not change the saved field.
+
+### Quantify the flow through separate openings
+
+Once a solve has exported the native quadratic velocity VTU, integrate the
+saved solution through each opening without rerunning the solver:
+
+```bash
+python -m fibernet.analysis.stokes_cap_flux results/velocity.vtu
+```
+
+The JSON report groups triangles sharing a complete edge on each extreme-`x`
+cap. Each opening includes its area, centroid and signed volumetric flow in SI
+units. Positive flow leaves the domain, independent of the pressure-gradient
+direction. Use the total for each cap and the relative cap imbalance as a
+cap-balance check, not proof of zero interior divergence or wall leakage.
+Two zero cap totals yield zero imbalance. A count of displayed streamlines is
+not a flow fraction. Use geometric location, not array position, to compare
+openings against the viewer, which orders components differently.
+
+This command integrates the affine quadratic velocity basis and accepts the
+native FiberNet quadratic VTU export, not curved cells or arbitrary external
+VTU files. NumPy and SciPy suffice to inspect the saved data. For Python use
+`from fibernet.analysis.stokes_cap_flux import audit_saved_stokes`.
