@@ -1,0 +1,58 @@
+name: Native graph provider
+
+on:
+  pull_request:
+    paths: ['.github/workflows/graph-provider.yml', 'pyproject.toml', 'fibernet/core/**', 'fibernet/gen/**', 'fibernet/analysis/topology_metrics.py', 'fibernet/analysis/__init__.py', 'tests/test_topology_metrics.py']
+  push:
+    branches: [main]
+    paths: ['.github/workflows/graph-provider.yml', 'pyproject.toml', 'fibernet/core/**', 'fibernet/gen/**', 'fibernet/analysis/topology_metrics.py', 'fibernet/analysis/__init__.py', 'tests/test_topology_metrics.py']
+
+permissions:
+  contents: read
+
+jobs:
+  wheel-topology:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest, arch: x86_64 }
+          - { runner: windows-latest, arch: amd64 }
+          - { runner: macos-15, arch: arm64 }
+          - { runner: macos-15-intel, arch: x86_64 }
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 12
+    env:
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      FIBERNET_EXPECTED_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Build and install native graph provider from wheels
+        run: python -m pip wheel --no-deps --wheel-dir dist .
+      - name: Check real provider and topology from outside the checkout
+        shell: python
+        run: |
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          wheel, = Path("dist").glob("fibernet-*.whl")
+          subprocess.run([sys.executable, "-m", "pip", "install", "--only-binary=:all:",
+                          str(wheel.resolve()) + "[graph-fast]", "pytest"], check=True)
+          with tempfile.TemporaryDirectory() as root:
+              shutil.copyfile("tests/test_topology_metrics.py", Path(root) / "test_topology_metrics.py")
+              subprocess.run([sys.executable, "-I", "-c",
+                  "import importlib.metadata as m, os, platform, rustworkx; "
+                  "assert platform.machine().lower() == os.environ['FIBERNET_EXPECTED_ARCH']; "
+                  "assert m.version('rustworkx') == rustworkx.__version__ == '0.18.1'; "
+                  "assert rustworkx.connected_components(rustworkx.PyGraph()) == []; "
+                  "print(platform.system(), platform.machine(), m.version('rustworkx'))"],
+                  cwd=root, check=True)
+              subprocess.run([sys.executable, "-I", "-m", "pytest", "-q", "-rs"],
+                             cwd=root, check=True)

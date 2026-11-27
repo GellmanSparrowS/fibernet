@@ -188,3 +188,62 @@ def test_numpy_integral_ids_normalize_to_python_ints():
     assert m.node_ids == (0, 1) and m.edge_ids == (1,)
     assert all(type(value) is int for value in m.node_ids + m.edge_ids
                + m.component_by_node + m.bridge_edge_ids)
+
+
+def test_backend_name_is_explicit():
+    with pytest.raises(ValueError, match="topology backend"):
+        analyze_topology(graph(), backend="unknown")
+
+
+def test_rustworkx_parity_preserves_sparse_integer_ids_and_parallel_edges():
+    pytest.importorskip("rustworkx")
+    base = 2**67
+    nodes = (base + 90, base + 10, base + 30, base + 70)
+    edges = ((90, base+10, base+30), (7, base+30, base+10), (50, base+30, base+70))
+    g = graph(nodes, edges)
+    prior = copy.deepcopy(g.to_dict())
+    got = analyze_topology(g, backend="rustworkx")
+    assert got == analyze_topology(g)
+    assert got.bridge_edge_ids == (50,)
+    assert got.articulation_node_ids == (base + 30,)
+    assert got.cycle_rank_physical == 1
+    assert g.to_dict() == prior
+
+
+@pytest.mark.parametrize("topology", ("octet", "diamond"))
+def test_rustworkx_matches_real_generated_3d_network(topology):
+    pytest.importorskip("rustworkx")
+    from fibernet.gen.unified import lattice_3d
+
+    g = StructureGraph.from_fiber_network(lattice_3d(topology, cell_size=1.,
+                                                      grid_size=(7, 7, 7)))
+    start = next(iter(g.nodes))
+    tail = g.add_node((-1., -1., -1.))
+    tip = g.add_node((-2., -2., -2.))
+    g.add_node((-3., -3., -3.))
+    masked_bridge = g.add_edge(start, tail)
+    g.add_edge(tail, start, allow_parallel=True)
+    bridge = g.add_edge(tail, tip)
+    expected = analyze_topology(g)
+    actual = analyze_topology(g, backend="rustworkx")
+    assert actual == expected
+    assert actual.n_nodes > 500 and actual.n_physical_edges > 3000
+    assert bridge in actual.bridge_edge_ids and masked_bridge not in actual.bridge_edge_ids
+    assert tail in actual.articulation_node_ids
+
+
+@pytest.mark.parametrize("nodes", [(), (91,), (70, 10)])
+def test_rustworkx_empty_and_isolate_parity(nodes):
+    pytest.importorskip("rustworkx")
+    g = graph(nodes, ())
+    assert analyze_topology(g, backend="rustworkx") == analyze_topology(g)
+
+
+def test_requested_missing_rustworkx_does_not_silently_switch(monkeypatch):
+    import sys
+
+    monkeypatch.setitem(sys.modules, "rustworkx", None)
+    g = graph()
+    assert analyze_topology(g).bridge_edge_ids == (50,)
+    with pytest.raises(ImportError, match="graph-fast"):
+        analyze_topology(g, backend="rustworkx")
