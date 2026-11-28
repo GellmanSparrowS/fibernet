@@ -25,7 +25,8 @@ VISIBLE_MOTION = ("docs/media/homepage/woven-fracture.webp",
                  "docs/media/homepage/orientation-to-bundle.webp",
                  "docs/media/homepage/leaf-venation-gnn.webp",
                   "docs/media/homepage/porous-fiber-flow.webp",
-                  "docs/media/homepage/woven-contact-current.webp")
+                  "docs/media/homepage/woven-contact-current.webp",
+                  "docs/media/homepage/reinforcement-bridge.webp")
 
 
 def digest(path: Path) -> str:
@@ -437,7 +438,8 @@ def main() -> None:
         # The full-length pore-flow frame sequence needs its own bound.
         byte_limit = {"leaf-venation-gnn.webp": 7_000_000,
                       "porous-fiber-flow.webp": 11_000_000,
-                      "woven-contact-current.webp": 7_000_000}.get(media["asset"], 4_000_000)
+                      "woven-contact-current.webp": 7_000_000,
+                      "reinforcement-bridge.webp": 7_800_000}.get(media["asset"], 4_000_000)
         require(media["size"] == [1280, 720] and media["bytes"] < byte_limit,
                 f"Invalid homepage motion dimensions or size: {media['asset']}")
     report = {"status": "PASS", "documents": document_checks,

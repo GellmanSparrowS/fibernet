@@ -103,16 +103,19 @@ class InlineGifParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'before the language sections'):
             CHECK.check_locale_structure(misplaced, chinese)
 
-    def test_woven_contact_immediately_follows_pore_flow(self):
+    def test_new_previews_immediately_follow_pore_flow(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
-        first = 'docs/media/homepage/porous-fiber-flow.webp'
-        second = 'docs/media/homepage/woven-contact-current.webp'
+        clips = ['docs/media/homepage/porous-fiber-flow.webp',
+                 'docs/media/homepage/woven-contact-current.webp',
+                 'docs/media/homepage/reinforcement-bridge.webp']
         visible = readme.split('<details', 1)[0]
-        self.assertEqual(CHECK.inline_images(visible, '.webp')[-2:], [first, second])
-        reverse = readme.replace(first, 'swap.webp').replace(second, first).replace('swap.webp', second)
-        with self.assertRaisesRegex(ValueError, 'Expected all previews in order'):
-            CHECK.check_locale_structure(reverse, chinese)
+        self.assertEqual(CHECK.inline_images(visible, '.webp')[-3:], clips)
+        for first, second in zip(clips, clips[1:]):
+            with self.subTest(first=first, second=second):
+                reverse = readme.replace(first, 'swap.webp').replace(second, first).replace('swap.webp', second)
+                with self.assertRaisesRegex(ValueError, 'Expected all previews in order'):
+                    CHECK.check_locale_structure(reverse, chinese)
 
     def test_no_preview_is_hidden_inside_language_disclosure(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
