@@ -6088,7 +6088,7 @@
    "export_metadata",
    "named_runtime_hash_reserve"
   ],
-  "sha256": "440f4b925fa0cf22e6b5aa25ae82560f34e307bbfb19342bb2f40422e097f30a"
+  "sha256": "9c451034ff30a1452d9fdd6995f238612e6d3faeb960df5dd4a442bb649c8470"
  },
  "fibernet/integrations/lammps_planning.py": {
   "purpose": "Pure planning for existing small pair-free CG inputs; never runtime admission.",

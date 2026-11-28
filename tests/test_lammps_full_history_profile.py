@@ -276,3 +276,37 @@ def test_full_history_checks_nonfinal_fixed_and_mobile_states(step):
         bad=edit_raw(raw,step,nid,'positions_m',value)
         with pytest.raises(ValueError):adapter.to_sim_result(p,bad,RUNTIME,0.,True)
         with pytest.raises(ValueError):backend.parse_outputs(p,edit_dump(p,dump,step,nid,2,value),log)
+
+
+
+@pytest.mark.parametrize("indent", [None, 2, 3, "\t"])
+def test_budget_counter_matches_json_bytes_and_retains_fallback(indent):
+    from enum import IntEnum
+
+    class ExternalInt(IntEnum):
+        COUNT = 4
+
+    long_unicode = 'α🌿"\n' * 4097
+    fixtures = [
+        {"wire": [[-0., 1e-323, -1e308, 10**59, True, False, None], []],
+         "empty": ({}, ()), "escaped": long_unicode},
+        {"x": {True: ExternalInt.COUNT, -1.5: "numeric keys", None: "\x01"}},
+        ((([],),),),
+    ]
+    for value in fixtures:
+        expected = len(json.dumps(value, allow_nan=False, indent=indent).encode("utf-8"))
+        assert profiles.json_bytes(value, expected, indent=indent) == expected
+        with pytest.raises(ValueError, match="budget exceeded"):
+            profiles.json_bytes(value, expected - 1, indent=indent)
+
+
+@pytest.mark.parametrize("indent", [None, 2])
+def test_budget_counter_retains_depth_type_and_finite_rules(indent):
+    with pytest.raises(ValueError, match="Out of range"):
+        profiles.json_bytes([{"x": float("inf")}], 4096, indent=indent)
+    with pytest.raises(TypeError):
+        profiles.json_bytes([object()], 4096, indent=indent)
+    cycle = []
+    cycle.append(cycle)
+    with pytest.raises(ValueError, match="nesting exceeds"):
+        profiles.json_bytes(cycle, 4096, indent=indent)
