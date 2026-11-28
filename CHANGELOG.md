@@ -1,3 +1,8 @@
+## [4.42.1]
+
+- Match Tet4 resistance-attribution displacements by exact node ID, including IDs above 2⁵³.
+- See the [4.42.1 release notes](docs/RELEASE_4_42_1.md).
+
 ## [4.42.0]
 
 - Reuse a conforming solid-to-pore wall transfer across repeated displacement cases.

@@ -10,22 +10,23 @@ from fibernet.io.tet4_meshio import Tet4Bundle
 from fibernet.sim.tet4_resistance_attribution import compare_tet4_resistance
 
 
-def _bar():
+def _bar(first_id=2**63):
     vertices = list(product(range(2), repeat=3))
     rows = {v:i for i,v in enumerate(vertices)}
     axes = np.eye(3, dtype=int)
     cells = [[rows[tuple(v)] for v in np.vstack((np.zeros(3, int), axes[list(p)].cumsum(0)))]
              for p in permutations(range(3))]
     points = np.array(vertices) * [.003, .0005, .0004]
-    ids = np.arange(len(points), dtype=np.uint64) * 7 + 2**63
+    ids = np.arange(len(points), dtype=np.uint64) + np.uint64(first_id)
     mesh = Tet4Bundle(points, np.array(cells), ids, np.arange(len(cells)), np.full(len(cells), 7),
                       {7:{"young_modulus_pa":1e9, "poisson_ratio":.28}}, "m")
     return mesh, {int(i): .75 if p[0] else -.25 for i, p in zip(ids, points)}
 
 
 @pytest.mark.parametrize("solver", ["banded", "cg"])
-def test_affine_bar_exact_resistance_with_reordered_unsigned_ids(solver):
-    mesh, electrodes = _bar()
+@pytest.mark.parametrize("first_id", [2**53 + 1, 2**63])
+def test_affine_bar_exact_resistance_with_reordered_large_ids(solver, first_id):
+    mesh, electrodes = _bar(first_id)
     strain = .01
     motion = mesh.points * [strain, -.28 * strain, -.28 * strain]
     a = compare_tet4_resistance(replace(mesh, points=1000*mesh.points, length_unit="mm"),
