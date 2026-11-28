@@ -240,6 +240,17 @@ For a matching package and checkout, see the
 
 ## Separate geometry and conductivity effects
 
+From this checkout, run a fused solid with three current paths and two
+materials. The command writes JSON with four resistances in ohms and a
+uniform-conductivity check, whose interaction should be zero.
+
+```sh
+python -m fibernet.examples.tet4_mechanoelectric_looped_network --resistance-attribution
+```
+
+The conductivity changes are prescribed for comparison, not measured
+material properties.
+
 On a two-terminal Tet4 mesh, take the displacement and node IDs from a
 mechanics solve and supply both conductivity tables in S/m:
 

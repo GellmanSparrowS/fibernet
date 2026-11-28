@@ -1,13 +1,16 @@
 # SPDX-License-Identifier: MIT
 """Predict how small axial strain changes DC resistance in a fused 3D lattice.
 
-Run: python -m fibernet.examples.tet4_mechanoelectric_looped_network [--matched-force | --geometry-breakdown]
+Run: python -m fibernet.examples.tet4_mechanoelectric_looped_network
+Add --resistance-attribution for the finite shape/conductivity comparison.
 Three axial paths at different transverse positions share four crosslinks.
 They are idealized square-section bars, meshed as one bonded solid. Electrical
-conductivity is fixed: changes come from deformation, not piezoresistivity.
+conductivity is fixed in the default and small-force examples. The finite
+comparison accepts a prescribed synthetic conductivity change.
 """
 import argparse
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
+import json
 from itertools import permutations, product
 from math import fsum, isclose
 
@@ -16,6 +19,7 @@ import numpy as np
 from fibernet.io.tet4_meshio import Tet4Bundle
 from fibernet.sim.tet4 import solve_static_tet4
 from fibernet.sim.tet4_dc import solve_dc_tet4
+from fibernet.sim.tet4_resistance_attribution import compare_tet4_resistance
 
 
 VOLTAGE_V = 1.0
@@ -216,6 +220,48 @@ def run_geometry_breakdown():
     return results
 
 
+def run_resistance_attribution():
+    """Compare shape and prescribed conductivity on the same fused network."""
+    points, cells = _lattice()
+    mesh = _bundle(points, cells, "stiff_half")
+    right, grip_ids, held, electrodes, length_m = _fixture(mesh)
+    stroke_m = STRAIN * length_m
+    mechanical = solve_static_tet4(
+        mesh, forces_by_id={}, fixed_dofs_by_id=held,
+        prescribed_displacements_m_by_id={nid: {"x": stroke_m} for nid in grip_ids},
+    )
+    reaction = fsum(mechanical.reaction_N[right, 0])
+    if reaction <= 0. or not isclose(mechanical.strain_energy_J,
+                                    .5 * reaction * stroke_m, rel_tol=1e-8):
+        raise ValueError("Grip reaction and elastic work do not agree")
+    reference = {BASE_ID: 1., STIFF_ID: .7}
+    regional = {BASE_ID: 2., STIFF_ID: .35}
+    uniform = {mid: 2. * sigma for mid, sigma in reference.items()}
+
+    def evaluate(conductivity):
+        return compare_tet4_resistance(
+            mesh, mechanical.displacement_m, node_ids=mechanical.node_ids,
+            reference_conductivity_S_per_m_by_material=reference,
+            changed_conductivity_S_per_m_by_material=conductivity,
+            electrode_voltage_V_by_id=electrodes, solver="cg",
+        )
+
+    parts = evaluate(regional)
+    check = evaluate(uniform)
+    if (abs(check.interaction_log_ratio) > 2e-9
+            or not isclose(check.material_only_ohm, check.reference_ohm / 2., rel_tol=2e-9)
+            or not isclose(check.combined_ohm, check.shape_only_ohm / 2., rel_tol=2e-9)):
+        raise ValueError("Uniform conductivity scaling should halve both resistances")
+    return dict(
+        nodes=len(points), tetrahedra=len(cells), stroke_m=stroke_m,
+        tensile_reaction_N=reaction, electrode_voltage_span_V=VOLTAGE_V,
+        reference_S_per_m_by_material=reference,
+        prescribed_S_per_m_by_material=regional,
+        attribution=asdict(parts),
+        uniform_conductivity_control=dict(multiplier=2., **asdict(check)),
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     output = parser.add_mutually_exclusive_group()
@@ -223,7 +269,12 @@ def main():
                         help="compare the materials at the same signed total axial reaction")
     output.add_argument("--geometry-breakdown", action="store_true",
                         help="split the geometric force response along and across local current")
+    output.add_argument("--resistance-attribution", action="store_true",
+                        help="compare shape and prescribed conductivity as JSON")
     args = parser.parse_args()
+    if args.resistance_attribution:
+        print(json.dumps(run_resistance_attribution(), indent=2, allow_nan=False))
+        return
     if args.geometry_breakdown:
         for name, sample in run_geometry_breakdown().items():
             print(f"{name}: current-aligned stretch {sample.stretch_along_current_per_N:.6g} 1/N; "

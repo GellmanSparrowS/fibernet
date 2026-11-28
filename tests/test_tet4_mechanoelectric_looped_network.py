@@ -86,3 +86,32 @@ def test_geometric_breakdown_matches_two_signed_resolves():
         assert item.stretch_along_current_per_N > item.transverse_contraction_per_N > 0.
         np.testing.assert_allclose(item.resistance_slope_per_N,
                                    measured[mode].resistance_slope_per_N, rtol=2e-6)
+
+
+def test_finite_resistance_attribution_cli_reports_both_comparisons(monkeypatch, capsys):
+    import json
+    import sys
+    from fibernet.examples import tet4_mechanoelectric_looped_network as cli
+
+    monkeypatch.setattr(sys, "argv", ["fused-network", "--resistance-attribution"])
+    cli.main()
+    out = json.loads(capsys.readouterr().out)
+    assert (out["nodes"], out["tetrahedra"]) == (387, 1056)
+    assert out["stroke_m"] == 3e-6
+    assert out["tensile_reaction_N"] > 0.
+    got = out["attribution"]
+    null = out["uniform_conductivity_control"]
+    np.testing.assert_allclose(
+        [got[k] for k in ("reference_ohm", "shape_only_ohm", "material_only_ohm", "combined_ohm")],
+        [4406.11448556, 4412.48953600, 6090.80506718, 6098.07345719], rtol=2e-8,
+    )
+    assert abs(got["interaction_log_ratio"]) > 1e-6
+    np.testing.assert_allclose(got["combined_log_ratio"],
+                               got["shape_log_ratio"] + got["material_log_ratio"]
+                               + got["interaction_log_ratio"], atol=1e-13)
+    np.testing.assert_allclose(
+        [null["material_only_ohm"], null["combined_ohm"]],
+        [.5 * got["reference_ohm"], .5 * got["shape_only_ohm"]], rtol=2e-9,
+    )
+    assert null["multiplier"] == 2.
+    assert abs(null["interaction_log_ratio"]) < 2e-9
