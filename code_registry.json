@@ -6887,9 +6887,10 @@
    "run",
    "run_matched_force",
    "run_geometry_breakdown",
+   "run_resistance_attribution",
    "main"
   ],
-  "sha256": "d051311e2681d4abd17bc06d23e54ab39c369dcb37192fa7029f372633ec0c94"
+  "sha256": "1df7a2dff2ff2927fb15c2a06b81ce613d1b20bd184c642ea0d90194db339142"
  },
  "fibernet/examples/tet4_periodic_pore.py": {
   "purpose": "Compare a periodic duct with and without a synthetic three-path scaffold.",
@@ -7215,5 +7216,18 @@
    "test_two_materials_on_fused_three_path_network"
   ],
   "sha256": "f36861497e4137028edc6a5ea3b6c5ed707a98d06dbda9c54c60e6c6feb6041d"
+ },
+ "tests/test_tet4_mechanoelectric_looped_network.py": {
+  "purpose": "test_tet4_mechanoelectric_looped_network",
+  "status": "active",
+  "sha256": "c5f329269ce1c70da020e3dd113a4cc32ced0bc9aabbc06efe56c0bb4df67fb9",
+  "symbols": [
+   "test_looped_solid_has_one_manifold_and_three_terminal_paths",
+   "test_stiffness_changes_force_not_unstrained_electrical_geometry",
+   "test_centered_readout_converges_at_halved_strain_increment",
+   "test_same_rigid_grip_at_matched_signed_resultant",
+   "test_geometric_breakdown_matches_two_signed_resolves",
+   "test_finite_resistance_attribution_cli_reports_both_comparisons"
+  ]
  }
 }
