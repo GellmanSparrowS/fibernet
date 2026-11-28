@@ -6830,7 +6830,7 @@
    "solve_matched_pore_geometry",
    "solve_matched_pore_geometry_cases"
   ],
-  "sha256": "2c29238a0942734f047ee81762dda38f1a3b7a5f5c45ade3b66ac722c0d1ffb2"
+  "sha256": "3f56aa73e3d4468977c360a99f0298971ba87483b4e49a44611d8fe4fcf13fe4"
  },
  "examples/tet4_solid_to_pore_flow.py": {
   "purpose": "Compare one-way pore flow after small solid deformation at matched grip loads.",

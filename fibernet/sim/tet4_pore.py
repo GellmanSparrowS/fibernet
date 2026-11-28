@@ -145,6 +145,17 @@ def _solve_stokes_block(system, rhs, velocity_dofs, *, initial=None,
     return x
 
 
+def _x_period_m(x_m):
+    width = float(np.ptp(x_m))
+    if not 1e-10 <= width <= 1.:
+        raise ValueError("invalid x period in metres")
+    return width
+
+
+def _in_gradient_range(gradient):
+    return 1e-9 <= abs(gradient) <= 1e12
+
+
 def solve_x_periodic_stokes(
     bundle: Tet4Bundle,
     *,
@@ -167,7 +178,7 @@ def _solve_x_periodic_stokes(bundle, *, viscosity_Pa_s, pressure_gradient_Pa_per
     n,t,plan=_stokes_admission(bundle,workspace_limit_bytes)
     visc=core._float64(viscosity_Pa_s,'dynamic viscosity in Pa s')
     pg=core._float64(pressure_gradient_Pa_per_m,'signed driver in Pa/m')
-    if not 1e-9<=visc<=1e5 or not 1e-9<=abs(pg)<=1e12:
+    if not 1e-9<=visc<=1e5 or not _in_gradient_range(pg):
         raise ValueError('fluid viscosity or axial pressure gradient outside pilot range')
     m=core._validate(bundle.points,bundle.tetrahedra,bundle.node_ids,bundle.cell_ids,
                      bundle.material_ids,bundle.materials,bundle.length_unit)
@@ -179,8 +190,8 @@ def _solve_x_periodic_stokes(bundle, *, viscosity_Pa_s, pressure_gradient_Pa_per
     except ImportError as e:
         raise ImportError('periodic Stokes requires scikit-fem; install FiberNet with its pore-flow extra') from e
     xyz=m.points*core._LENGTH_TO_M[m.length_unit]
-    width=float(np.ptp(xyz[:,0]))
-    if not 1e-10<=width<=1. or not np.all(np.isfinite(xyz)):
+    width=_x_period_m(xyz[:,0])
+    if not np.all(np.isfinite(xyz)):
         raise ValueError('invalid x period in metres')
     x=(xyz-xyz.min(axis=0))/width
     if np.max(x)>20.:
@@ -363,26 +374,28 @@ def _matched_volume_range(a, b):
 
 
 def solve_matched_pore_geometry(reference, reshaped, *, viscosity_Pa_s,
-                                pressure_gradient_Pa_per_m,
+                                pressure_gradient_Pa_per_m=None, pressure_drop_Pa=None,
                                 workspace_limit_bytes=512*_MIB):
-    """Re-evaluate a fixed geometry pair, not ALE or solid/fluid feedback."""
+    """Compare a fixed geometry pair at an equal pressure gradient or drop."""
     return solve_matched_pore_geometry_cases(
         reference, (reshaped,), viscosity_Pa_s=viscosity_Pa_s,
         pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
+        pressure_drop_Pa=pressure_drop_Pa,
         workspace_limit_bytes=workspace_limit_bytes,
     )[0]
 
 
 def solve_matched_pore_geometry_cases(reference, reshaped_cases, *, viscosity_Pa_s,
-                                      pressure_gradient_Pa_per_m,
+                                      pressure_gradient_Pa_per_m=None, pressure_drop_Pa=None,
                                       workspace_limit_bytes=512*_MIB):
     """Reuse reference Stokes flow for 1–8 ordered fixed-geometry cases.
 
     Each case uses the same stable mesh IDs, ordered tetrahedra and pore
-    labels, with a shared signed driving pressure gradient (Pa/m) and
-    dynamic viscosity (Pa s). The usual cell, workspace and volume-ratio
-    bounds apply to every state. Periodicity and the flow residual/closure
-    criteria are checked independently on each solved geometry.
+    labels and shared dynamic viscosity (Pa s). Specify exactly one signed
+    driver: ``pressure_gradient_Pa_per_m`` is shared directly;
+    ``pressure_drop_Pa`` is divided by each mesh's x period in metres.
+    Positive values drive flow toward +x. The usual mesh, workspace,
+    volume-ratio and flow closure checks apply independently to every state.
 
     Return a tuple in input order, or raise without returning a partial
     result. The immutable reference flow is shared within the tuple and
@@ -390,6 +403,8 @@ def solve_matched_pore_geometry_cases(reference, reshaped_cases, *, viscosity_Pa
     """
     if type(reshaped_cases) not in (list, tuple) or not 1 <= len(reshaped_cases) <= 8:
         raise ValueError("reshaped_cases must be an ordered list or tuple of 1 to 8 geometries")
+    if (pressure_gradient_Pa_per_m is None) == (pressure_drop_Pa is None):
+        raise ValueError("specify exactly one pressure_gradient_Pa_per_m or pressure_drop_Pa")
     a = _validated_matched_mesh(reference, workspace_limit_bytes)
     candidates = []
     for geom in tuple(reshaped_cases):
@@ -397,24 +412,37 @@ def solve_matched_pore_geometry_cases(reference, reshaped_cases, *, viscosity_Pa
         bounds = _matched_volume_range(a, b)
         candidates.append((b, bounds))
 
+    meshes = (a, *(mesh for mesh, _ in candidates))
+    gradients = (pressure_gradient_Pa_per_m,) * len(meshes)
+    if pressure_drop_Pa is not None:
+        drop = core._float64(pressure_drop_Pa, "signed pressure drop in Pa")
+        computed = []
+        for mesh in meshes:
+            width = _x_period_m(mesh.points[:, 0] * core._LENGTH_TO_M[mesh.length_unit])
+            gradient = drop / width
+            if not _in_gradient_range(gradient):
+                raise ValueError("pressure drop implies an axial pressure gradient outside pilot range")
+            computed.append(gradient)
+        gradients = tuple(computed)
     settings = dict(viscosity_Pa_s=viscosity_Pa_s,
-                    pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
                     workspace_limit_bytes=workspace_limit_bytes)
     can_reserve = len(candidates) > 1 and all(
         _stokes_admission(mesh, workspace_limit_bytes)[2] + _REFERENCE_RESERVE_BYTES <= workspace_limit_bytes
-        for mesh in (a, *(mesh for mesh, _ in candidates))
+        for mesh in meshes
     )
     seed = _PeriodicReference() if can_reserve else None
     if seed is None:
-        q0 = solve_x_periodic_stokes(a, **settings)
+        q0 = solve_x_periodic_stokes(a, pressure_gradient_Pa_per_m=gradients[0], **settings)
     else:
-        q0 = _solve_x_periodic_stokes(a, **settings, reference=seed, record_reference=True)
+        q0 = _solve_x_periodic_stokes(a, pressure_gradient_Pa_per_m=gradients[0],
+                                     **settings, reference=seed, record_reference=True)
     output = []
-    for mesh, (lo, hi) in candidates:
+    for (mesh, (lo, hi)), driver in zip(candidates, gradients[1:]):
         if seed is None:
-            q1 = solve_x_periodic_stokes(mesh, **settings)
+            q1 = solve_x_periodic_stokes(mesh, pressure_gradient_Pa_per_m=driver, **settings)
         else:
-            q1 = _solve_x_periodic_stokes(mesh, **settings, reference=seed)
+            q1 = _solve_x_periodic_stokes(mesh, pressure_gradient_Pa_per_m=driver,
+                                         **settings, reference=seed)
         delta = tuple(p/q-1. for p, q in zip(q1.cap_flow_m3_s, q0.cap_flow_m3_s))
         output.append(MatchedPoreFlow(q0, q1, q1.axial_flow_m3_s/q0.axial_flow_m3_s-1., delta, lo, hi))
     return tuple(output)
