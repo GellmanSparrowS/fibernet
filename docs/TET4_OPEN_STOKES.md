@@ -108,7 +108,14 @@ VTU files. NumPy and SciPy suffice to inspect the saved data. For Python use
 ### Compare throughput and velocity redistribution on the same caps
 
 Use two native velocity exports to separate the change in total flow from
-a change in the distribution of normal velocity across the ends:
+a change in the distribution of normal velocity across the ends. From the shell,
+the comparison writes JSON to standard output:
+
+```sh
+python -m fibernet.analysis.stokes_cap_comparison compressed/velocity.vtu stretched/velocity.vtu
+```
+
+Or use the same report directly in Python:
 
 ```python
 from fibernet.analysis.stokes_cap_comparison import compare_saved_stokes_caps
