@@ -7148,9 +7148,10 @@
    "_mass_entry",
    "_trace",
    "_compare_trace",
-   "compare_saved_stokes_caps"
+   "compare_saved_stokes_caps",
+   "main"
   ],
-  "sha256": "79b62cc213b8a12f0dfae59b4fb30be4fe2d89c92d699e93e65f8775e0f38d14"
+  "sha256": "1d7ae11574f9da716d7d021904f6ff0fd4a530522ffb6fe48bc43774ff4c28d0"
  },
  "tests/test_stokes_cap_comparison.py": {
   "purpose": "Independent analytical and fixed-cap correspondence regression.",
@@ -7162,8 +7163,9 @@
    "test_scope_and_gain_control",
    "test_cancellation_dominated_candidate_is_not_nonzero",
    "test_strict_native_vtu_replay",
-   "test_every_local_cap_face_and_three_vertex_permutation"
+   "test_every_local_cap_face_and_three_vertex_permutation",
+   "test_cli_does_not_emit_partial_json_on_invalid_input"
   ],
-  "sha256": "7c925ef3e23cb565d3727a60745893dbe4309d54a0ee4df6ecb6ba6fa17164dd"
+  "sha256": "6f53eec0234efd3e4a27001de2ad84a75334246c5341102e236b72d1e1effb63"
  }
 }

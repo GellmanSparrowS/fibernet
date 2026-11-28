@@ -114,6 +114,16 @@ def test_strict_native_vtu_replay(tmp_path):
         files.append(tmp_path / f"state-{i}.vtu")
         write_open_stokes_velocity_vtu(files[-1], field)
     comparison = compare_saved_stokes_caps(*files)
+
+    from json import loads
+    from subprocess import run
+    from sys import executable
+
+    command = [executable, "-m", "fibernet.analysis.stokes_cap_comparison"]
+    result = run([*command, *files], capture_output=True, text=True, check=True, timeout=30)
+    assert result.stderr == ""
+    assert loads(result.stdout) == comparison
+
     audit = [audit_saved_stokes(path) for path in files]
     for side in ("x_min", "x_max"):
         q = comparison[side]
@@ -137,3 +147,18 @@ def test_every_local_cap_face_and_three_vertex_permutation():
                 a0, s0, m0 = ref[k]
                 assert area==a0 and mids==m0
                 np.testing.assert_array_equal(speed,s0)
+
+
+
+def test_cli_does_not_emit_partial_json_on_invalid_input(tmp_path):
+    from subprocess import run
+    from sys import executable
+
+    bad = tmp_path / "bad.vtu"
+    bad.write_text("<broken")
+    result = run([executable, "-m", "fibernet.analysis.stokes_cap_comparison",
+                  str(bad), str(bad)], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 2
+    assert result.stdout == ""
+    assert "Invalid VTU XML" in result.stderr
+    assert "Traceback" not in result.stderr

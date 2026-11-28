@@ -1,5 +1,8 @@
 """Separate throughput and velocity-profile change on identical saved P2 caps."""
+import argparse
+import json
 from math import factorial, fsum, sqrt
+from pathlib import Path
 import numpy as np
 
 from fibernet.analysis.stokes_cap_flux import _FACE, _PAIRS as _TET_PAIRS, _cap_faces, _checked_affine_xyz
@@ -108,3 +111,20 @@ def compare_saved_stokes_caps(reference_path, candidate_path):
     return {'schema':'fibernet-p2-cap-comparison-1',
             **{k:_compare_trace(_trace(*before,high),_trace(*after,high))
                for k,high in (('x_min',False),('x_max',True))}}
+
+def main(argv=None):
+    """Print the Python API report as JSON for shell workflows."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("reference", type=Path, help="reference FiberNet quadratic velocity VTU")
+    parser.add_argument("candidate", type=Path, help="candidate FiberNet quadratic velocity VTU")
+    args = parser.parse_args(argv)
+    try:
+        report = compare_saved_stokes_caps(args.reference, args.candidate)
+        output = json.dumps(report, allow_nan=False, indent=2)
+    except (ValueError, OSError) as exc:
+        parser.error(str(exc))
+    print(output)
+
+
+if __name__ == "__main__":
+    main()
