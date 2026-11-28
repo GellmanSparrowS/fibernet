@@ -108,11 +108,80 @@ def json_bytes(value, limit, *, indent=None):
             for v in x:walk(v,depth+1)
         if budget[0]<0: raise ValueError('harmonic JSON budget exceeded')
     walk(value)
+    if indent is None or type(indent) is int and indent == 2:
+        try:
+            return _plain_json_size(value, limit, indent)
+        except _UseStdlibJSON:
+            pass
     total=0
     for chunk in json.JSONEncoder(allow_nan=False,indent=indent).iterencode(value):
         total+=len(chunk.encode('utf-8'))
         if total>limit:raise ValueError('harmonic JSON byte budget exceeded')
     return total
+
+
+class _UseStdlibJSON(Exception):
+    pass
+
+
+def _plain_json_size(value, limit, indent):
+    """Count default stdlib JSON for plain trees without emitting the document."""
+    remaining = limit
+    size_error = 'harmonic JSON byte budget exceeded'
+    escape = json.encoder.encode_basestring_ascii
+
+    def count(x, depth):
+        nonlocal remaining
+        kind = type(x)
+        if kind is float:
+            if not math.isfinite(x):
+                raise _UseStdlibJSON
+            remaining -= len(repr(x))
+        elif kind is int:
+            remaining -= len(str(x))
+        elif kind is str:
+            if len(x) <= 4096:
+                remaining -= len(escape(x))
+            else:
+                remaining -= 2  # enclosing quotes; each slice is escaped separately
+                for start in range(0, len(x), 4096):
+                    remaining -= len(escape(x[start:start + 4096])) - 2
+                    if remaining < 0:
+                        raise ValueError(size_error)
+        elif kind is bool:
+            remaining -= 4 if x else 5
+        elif x is None:
+            remaining -= 4
+        elif kind in (list, tuple, dict):
+            n = len(x)
+            if not n:
+                remaining -= 2
+            else:
+                # Brackets, separators and exact default indentation; values
+                # start one level deeper in both sequences and mappings.
+                remaining -= (2*n if indent is None else
+                              2 + 2*n + indent*(n*(depth + 1) + depth))
+                if kind is dict:
+                    remaining -= 2*n  # ": " between each key and value
+                    if remaining < 0:
+                        raise ValueError(size_error)
+                    for key, val in x.items():
+                        if type(key) is not str:
+                            raise _UseStdlibJSON
+                        count(key, depth + 1)
+                        count(val, depth + 1)
+                else:
+                    if remaining < 0:
+                        raise ValueError(size_error)
+                    for val in x:
+                        count(val, depth + 1)
+        else:
+            raise _UseStdlibJSON
+        if remaining < 0:
+            raise ValueError(size_error)
+
+    count(value, 0)
+    return limit - remaining
 
 def pairs(value,label,expected=None):
     if not isinstance(value,(list,tuple)) or (expected is not None and len(value)!=expected):
