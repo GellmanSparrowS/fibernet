@@ -59,6 +59,12 @@ An agent places two bracing kits on a 49-node frame and tests it under the same 
 
 Two fibers share each grid edge. Five interior control points shape each fiber, and a local twist changes the pattern before the grips move. The example uses prescribed stretch and twist and a tension-only cable model with graded initial slack. The three highlighted paths share no fibers and connect the grips as their fibers cross a tensile-strain threshold. The threshold marks connectivity in the loaded network, not a rigidity transition. [Compare with recruitment on a recorded mechanical trajectory](#recorded-stretch-and-recruitment).
 
+## Current stops, heat lingers
+
+![Blue current stops when the circuit opens while the hot fiber network gradually cools](media/homepage/electrothermal-switch.webp)
+
+In this fixed-geometry example, Joule heating concentrates near the narrowed section, and the network keeps cooling after the current stops.
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)

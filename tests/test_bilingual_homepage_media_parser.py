@@ -109,7 +109,8 @@ class InlineGifParserTests(unittest.TestCase):
         clips = ['docs/media/homepage/porous-fiber-flow.webp',
                  'docs/media/homepage/woven-contact-current.webp',
                  'docs/media/homepage/reinforcement-bridge.webp',
-                 'docs/media/homepage/helical-recruitment.webp']
+                 'docs/media/homepage/helical-recruitment.webp',
+                 'docs/media/homepage/electrothermal-switch.webp']
         visible = readme.split('<details', 1)[0]
         self.assertEqual(CHECK.inline_images(visible, '.webp')[-len(clips):], clips)
         for first, second in zip(clips, clips[1:]):

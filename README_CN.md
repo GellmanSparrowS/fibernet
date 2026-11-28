@@ -5,7 +5,7 @@
 <!-- locale:zh:start -->
 ## 快速开始
 
-用 Python 3.9 或更高版本，从 [PyPI](https://pypi.org/project/fibernet/) 安装。内置算例会生成一个网络，计算小变形响应，并把结构、图和结果存到 `fibernet_demo/`。
+Python 3.9+ · [PyPI](https://pypi.org/project/fibernet/) · 算例输出：`fibernet_demo/`
 
 ```bash
 python -m pip install fibernet
@@ -14,13 +14,11 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 
 ## 接下来可以做什么
 
-- **建立与加载网络：**生成[二维或三维网络](docs/METHODS_3D_GENERATION_PARAMETERS.md)，在[三维实体网格](docs/TET4_STATIC.md)上计算小变形响应。
-- **看受力后电阻怎么变：**[360 杆网络](docs/DEFORMED_TRANSPORT_PREPARATION.md)和[含熔合节点的三通路实体网络](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice)都在变形后的几何上重算电阻。孔隙流动可从[变形前后流量对比](examples/README.md#how-solid-deformation-changes-pore-flow)入手。
-- **继续分析、学习或制造：**用同一个 `StructureGraph` [训练模型](examples/physical_learning_workflow.py)，或生成[闭合路径](docs/MANUFACTURING_GRAPH_MAPPING.md)和[多段路径](docs/MULTISTROKE_MANUFACTURING.md)。
+- **建模与模拟：**[二维/三维生成](docs/METHODS_3D_GENERATION_PARAMETERS.md) · [三维力学](docs/TET4_STATIC.md)。
+- **变形与输运：**[纤维网络电阻](docs/DEFORMED_TRANSPORT_PREPARATION.md) · [三维实体电阻](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice) · [孔隙流动](examples/README.md#how-solid-deformation-changes-pore-flow)。
+- **用 `StructureGraph` 学习与制造：**[模型训练](examples/physical_learning_workflow.py) · [闭合路径](docs/MANUFACTURING_GRAPH_MAPPING.md) · [多段路径](docs/MULTISTROKE_MANUFACTURING.md)。
 
-[动图画廊与说明](docs/MEDIA_GALLERY.md)。
-
-用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
+[动图画廊](docs/MEDIA_GALLERY.md) · [本地 MCP（Linux）](adapters/mcp/README.md)
 
 <details>
 <summary>从源码运行仓库算例</summary>
