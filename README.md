@@ -39,6 +39,12 @@ A Python library for generating fiber networks and studying how their architectu
 
 **Follow a tracer pulse through shifting pores.** Its paths split and rejoin across successive pore shapes. [See the visual notes](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network).
 
+### Electric current reroutes under compression
+
+<img src="docs/media/homepage/woven-contact-current.webp" alt="Opposing jaws bring two woven networks into contact, shifting current from an outside path to a direct path through the weave" width="960">
+
+**Press the weave and watch the current take a shortcut.** When two conductive tips meet, a new path carries most of the current. [See the visual notes](docs/MEDIA_GALLERY.md#electric-current-reroutes-under-compression).
+
 <a name="fibernet-zh"></a>
 
 <details>

@@ -79,7 +79,7 @@ class InlineGifParserTests(unittest.TestCase):
             # A fence can hide nested API controls before a later code fence
             # closes it, so either unbalanced-control direction may be found.
             message = ('Unclosed details control|Unmatched details close|Missing/duplicate' if name == 'unclosed_fence'
-                       else 'Expected all five previews in order before the language sections')
+                       else 'Expected all previews in order before the language sections')
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
                     CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
@@ -91,7 +91,7 @@ class InlineGifParserTests(unittest.TestCase):
                           ('duplicate', visible + '\n' + target),
                           ('substituted', visible.replace(src, 'unselected.webp', 1))]:
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, 'Expected all five previews in order before the language sections'):
+                with self.assertRaisesRegex(ValueError, 'Expected all previews in order before the language sections'):
                     CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
 
 
@@ -103,11 +103,22 @@ class InlineGifParserTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'before the language sections'):
             CHECK.check_locale_structure(misplaced, chinese)
 
+    def test_woven_contact_immediately_follows_pore_flow(self):
+        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+        chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
+        first = 'docs/media/homepage/porous-fiber-flow.webp'
+        second = 'docs/media/homepage/woven-contact-current.webp'
+        visible = readme.split('<details', 1)[0]
+        self.assertEqual(CHECK.inline_images(visible, '.webp')[-2:], [first, second])
+        reverse = readme.replace(first, 'swap.webp').replace(second, first).replace('swap.webp', second)
+        with self.assertRaisesRegex(ValueError, 'Expected all previews in order'):
+            CHECK.check_locale_structure(reverse, chinese)
+
     def test_no_preview_is_hidden_inside_language_disclosure(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
-        flow = f'<img src="{CHECK.VISIBLE_MOTION[-1]}">'
-        duplicated = readme.replace('<!-- locale:en:start -->', '<!-- locale:en:start -->\n'+flow+'\n', 1)
+        last_clip = f'<img src="{CHECK.VISIBLE_MOTION[-1]}">'
+        duplicated = readme.replace('<!-- locale:en:start -->', '<!-- locale:en:start -->\n'+last_clip+'\n', 1)
         with self.assertRaisesRegex(ValueError, 'must not be duplicated'):
             CHECK.check_locale_structure(duplicated, chinese)
 
