@@ -45,6 +45,12 @@ A Python library for generating fiber networks and studying how their architectu
 
 **Press the weave and watch the current take a shortcut.** When two conductive tips meet, a new path carries most of the current. [See the visual notes](docs/MEDIA_GALLERY.md#electric-current-reroutes-under-compression).
 
+### Learning where to brace a bridge
+
+<img src="docs/media/homepage/reinforcement-bridge.webp" alt="A learning agent places two pairs of braces on a three-dimensional bridge; repeated load tests give scores of 44, 52, and 85" width="960">
+
+**Two brace placements, three load tests.** A learning agent tries different placements on the same bridge. The final pair keeps both sides from sagging as much. [See the visual notes](docs/MEDIA_GALLERY.md#learning-where-to-brace-a-bridge).
+
 <a name="fibernet-zh"></a>
 
 <details>

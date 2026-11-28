@@ -47,6 +47,12 @@ continuum example, see [how deformation changes pore flow](../examples/README.md
 
 In this synthetic 3D weave, a prescribed displacement closes a gap between two conductive tips. A 1 V resistor-network calculation on 195 nodes and 483 connections shows current through the outside path dropping from 0.100 A to 0.045 A, while the new path carries 0.273 A. Brightness tracks branch current; the moving highlights mark its direction, not its speed. The motion prescribes the gap closure and contact conductance rather than solving the contact forces. [Deformation-to-transport workflow](DEFORMED_TRANSPORT_PREPARATION.md).
 
+## Learning where to brace a bridge
+
+![A three-dimensional bridge is braced and loaded in three trials, with scores of 44, 52, and 85](media/homepage/reinforcement-bridge.webp)
+
+An agent places two bracing kits on a 49-node frame and tests it under the same two loads. Each kit adds two diagonal members. The clip replays two selected training trials and a final greedy evaluation of a learned tabular Q policy. The score is the percent reduction in compliance relative to the unbraced frame under the same load. The final pair also gives the lowest calculated compliance among the six possible pairs in this example. Displacements from the linear frame model are enlarged 218× for visibility. [Reinforcement-learning tools](api/WORKFLOW_MAP.md).
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)
