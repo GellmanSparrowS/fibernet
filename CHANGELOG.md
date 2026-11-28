@@ -1,3 +1,9 @@
+## [4.42.0]
+
+- Reuse a conforming solid-to-pore wall transfer across repeated displacement cases.
+- Separate geometry and conductivity effects on two-terminal Tet4 resistance.
+- See the [4.42.0 release notes](docs/RELEASE_4_42_0.md).
+
 ## [4.41.0]
 
 - Recover the default open-pressure Stokes solve when global liquid continuity needs another iteration, without relaxing cap or energy acceptance.

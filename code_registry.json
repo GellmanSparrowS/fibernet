@@ -1902,7 +1902,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "3932f406379d06036ef1f35075945286fe7586918a49f8368554759173f66303"
+  "sha256": "35bbf2802411598920354761b31813565bf8f6ec2408de5cfd1c337b315b5edd"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
