@@ -1,3 +1,10 @@
+## [4.41.0]
+
+- Recover the default open-pressure Stokes solve when global liquid continuity needs another iteration, without relaxing cap or energy acceptance.
+- Run the signed throughput and velocity-profile comparison from the command line.
+- Reproduce a common-inlet, three-dimensional flow redistribution example with the existing bounded direct solver.
+- See the [4.41.0 release notes](docs/RELEASE_4_41_0.md).
+
 ## [4.40.0]
 
 - Compare two saved quadratic Stokes velocity fields on matching inlet and outlet caps, separating signed throughput from normal-velocity redistribution.

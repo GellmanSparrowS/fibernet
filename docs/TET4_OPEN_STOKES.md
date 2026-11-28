@@ -157,9 +157,8 @@ relative to the reference, after removing that uniform scaling. The files
 are ordered: swapping them gives a throughput ratio of about 0.980392 and
 a profile residual of about 0.019220.
 
-If you installed from repository main after the 4.40.0 release, the shell
-command below writes the same report as JSON. The PyPI 4.40.0 release
-supports the Python API above, not the shell command.
+With FiberNet 4.41.0 or later, the shell command below writes the same
+report as JSON. PyPI 4.40.0 supports only the Python API above.
 
 ```sh
 python -m fibernet.analysis.stokes_cap_comparison reference.vtu candidate.vtu

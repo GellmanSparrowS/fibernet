@@ -1902,7 +1902,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "e085694ca2d73283e4a43a2d471feeae9a2e2794eed3a3da358719507d5cd79a"
+  "sha256": "3932f406379d06036ef1f35075945286fe7586918a49f8368554759173f66303"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -7019,7 +7019,7 @@
    "write_open_stokes_velocity_vtu",
    "solve_open_pressure_stokes"
   ],
-  "sha256": "ec950244e1009d9a101fcba6aaf78f87ea89eff7b6e3cb52d0856f98ba502032"
+  "sha256": "1e3cf36d6ae3276dd76f1ba516e80f680eab99262161dd68a8082773fac40a5c"
  },
  "scripts/smoke_tet4_open_stokes.py": {
   "purpose": "Reproduce a square duct and a generated three-path pore, using the load API.",
