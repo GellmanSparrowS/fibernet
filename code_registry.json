@@ -7191,5 +7191,29 @@
    "test_prepared_wall_rejects_duplicate_unordered_tetrahedra"
   ],
   "sha256": "b4277581193b67730dd1b50262e8d25274e1ce46890d93ade56041828da601bd"
+ },
+ "fibernet/sim/tet4_resistance_attribution.py": {
+  "purpose": "Separate shape and scalar conductivity changes in two-terminal DC.",
+  "status": "active",
+  "symbols": [
+   "Tet4ResistanceAttribution",
+   "_log_ratio",
+   "_orientations",
+   "compare_tet4_resistance"
+  ],
+  "sha256": "fb44cc686334cb64dbb0d5f385a602f84769945a03419c1b6db5d480db641969"
+ },
+ "tests/test_tet4_resistance_attribution.py": {
+  "purpose": "Independent finite-scale reference for the DC attribution.",
+  "status": "active",
+  "symbols": [
+   "_bar",
+   "test_affine_bar_exact_resistance_with_reordered_unsigned_ids",
+   "test_inverted_cell_is_not_reoriented_and_solved",
+   "test_identical_states_reuse_dc_and_give_exact_zeros",
+   "test_rejects_bad_input_before_solves",
+   "test_two_materials_on_fused_three_path_network"
+  ],
+  "sha256": "f36861497e4137028edc6a5ea3b6c5ed707a98d06dbda9c54c60e6c6feb6041d"
  }
 }
