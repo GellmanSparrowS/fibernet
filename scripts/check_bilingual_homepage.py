@@ -318,15 +318,12 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     english, chinese = locale_block(en_section, "en"), locale_block(zh_section, "zh")
     require(chinese == locale_block(standalone, "zh"), "Standalone Chinese differs from inline source")
     prelude = homepage.split("<details", 1)[0]
-    require(inline_images(prelude, ".webp") == [HOMEPAGE_HERO] and not inline_gifs(prelude),
-            "Expected one homepage hero before the language sections")
-    visible_gallery = homepage.rsplit("</details>", 1)[1]
-    require(tuple(inline_images(visible_gallery, ".webp")) == VISIBLE_MOTION and
-            not inline_gifs(visible_gallery),
-            "Expected all workflow previews outside closed language sections")
-    for section in (zh_section, en_section):
+    require(inline_images(prelude, ".webp") == [HOMEPAGE_HERO, *VISIBLE_MOTION] and
+            not inline_gifs(prelude),
+            "Expected all five previews in order before the language sections")
+    for section in (zh_section, en_section, homepage.rsplit("</details>", 1)[1]):
         require(not inline_images(section, ".webp") and not inline_gifs(section),
-                "Workflow previews must not be duplicated inside language sections")
+                "Workflow previews must not be duplicated after the first language control")
     return english, chinese
 
 

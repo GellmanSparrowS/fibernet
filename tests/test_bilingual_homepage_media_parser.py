@@ -70,7 +70,7 @@ class InlineGifParserTests(unittest.TestCase):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
         CHECK.check_locale_structure(readme, chinese)
-        visible = readme.rsplit("</details>", 1)[1]
+        visible = readme.split("<details", 1)[0]
         image = re.search(r'<img[^>]+src="([^"]+\.webp)"[^>]*>', visible)
         self.assertIsNotNone(image)
         target, src = image[0], image[1]
@@ -78,7 +78,8 @@ class InlineGifParserTests(unittest.TestCase):
             bad = visible.replace(target, text.replace('x.gif', src), 1)
             # A fence can hide nested API controls before a later code fence
             # closes it, so either unbalanced-control direction may be found.
-            message = 'Expected all workflow previews outside closed language sections'
+            message = ('Unclosed details control|Unmatched details close|Missing/duplicate' if name == 'unclosed_fence'
+                       else 'Expected all five previews in order before the language sections')
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
                     CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
@@ -90,9 +91,17 @@ class InlineGifParserTests(unittest.TestCase):
                           ('duplicate', visible + '\n' + target),
                           ('substituted', visible.replace(src, 'unselected.webp', 1))]:
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, 'Expected all workflow previews outside closed language sections'):
+                with self.assertRaisesRegex(ValueError, 'Expected all five previews in order before the language sections'):
                     CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
 
+
+    def test_preview_after_language_disclosures_is_rejected(self):
+        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+        chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
+        fracture = re.search(r'<img[^>]+woven-fracture\.webp[^>]*>', readme)[0]
+        misplaced = readme.replace(fracture, '', 1) + '\n' + fracture
+        with self.assertRaisesRegex(ValueError, 'before the language sections'):
+            CHECK.check_locale_structure(misplaced, chinese)
 
     def test_no_preview_is_hidden_inside_language_disclosure(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
@@ -178,8 +187,8 @@ class PublicHomepageTests(unittest.TestCase):
         self.assertEqual(len(originals), 19)
         self.assertTrue(all((ROOT / path).is_file() for path in originals))
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
-        self.assertEqual(CHECK.inline_images(homepage.rsplit('</details>', 1)[1], '.webp'),
-                         list(CHECK.VISIBLE_MOTION))
+        self.assertEqual(CHECK.inline_images(homepage.split('<details', 1)[0], '.webp'),
+                         [CHECK.HOMEPAGE_HERO, *CHECK.VISIBLE_MOTION])
         for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
             with self.subTest(language=language):
