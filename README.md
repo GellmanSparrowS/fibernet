@@ -51,6 +51,12 @@ A Python library for generating fiber networks and studying how their architectu
 
 **Two brace placements, three load tests.** A learning agent tries different placements on the same bridge. The final pair keeps both sides from sagging as much. [See the visual notes](docs/MEDIA_GALLERY.md#learning-where-to-brace-a-bridge).
 
+### From a cylindrical mesh to helical load paths
+
+<img src="docs/media/homepage/helical-recruitment.webp" alt="A regular cylindrical fiber mesh becomes a curved pattern; as the ends stretch and twist, three taut helical paths appear one at a time" width="960">
+
+**Twist a fiber network and watch it recruit paths.** After a five-point shape change, stretching and twisting brings different fibers into tension. The highlighted helices connect the two grips one after another. [See the visual notes](docs/MEDIA_GALLERY.md#from-a-cylindrical-mesh-to-helical-load-paths).
+
 <a name="fibernet-zh"></a>
 
 <details>

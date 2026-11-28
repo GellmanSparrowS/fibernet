@@ -53,6 +53,12 @@ In this synthetic 3D weave, a prescribed displacement closes a gap between two c
 
 An agent places two bracing kits on a 49-node frame and tests it under the same two loads. Each kit adds two diagonal members. The clip replays two selected training trials and a final greedy evaluation of a learned tabular Q policy. The score is the percent reduction in compliance relative to the unbraced frame under the same load. The final pair also gives the lowest calculated compliance among the six possible pairs in this example. Displacements from the linear frame model are enlarged 218× for visibility. [Reinforcement-learning tools](api/WORKFLOW_MAP.md).
 
+## From a cylindrical mesh to helical load paths
+
+![Three helical paths emerge in sequence as a patterned cylindrical fiber network is stretched and twisted](media/homepage/helical-recruitment.webp)
+
+Two fibers share each grid edge. Five interior control points shape each fiber, and a local twist changes the pattern before the grips move. The example uses prescribed stretch and twist and a tension-only cable model with graded initial slack. The three highlighted paths share no fibers and connect the grips as their fibers cross a tensile-strain threshold. The threshold marks connectivity in the loaded network, not a rigidity transition. [Compare with recruitment on a recorded mechanical trajectory](#recorded-stretch-and-recruitment).
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)
