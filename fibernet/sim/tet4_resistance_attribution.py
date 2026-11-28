@@ -73,12 +73,16 @@ def compare_tet4_resistance(
     mesh = _validate(bundle.points, bundle.tetrahedra, bundle.node_ids,
                      bundle.cell_ids, bundle.material_ids, bundle.materials, bundle.length_unit)
     ids = _integers(node_ids, (n,), "displacement node_ids", unique=True).astype(np.uint64)
+    # Validated IDs are nonnegative. Keep both lookup operands integral:
+    # mixing uint64 with int64 promotes some NumPy comparisons to binary64.
+    mesh_ids = mesh.node_ids.astype(np.uint64, copy=False)
     order = np.argsort(ids)
-    if not np.array_equal(ids[order], np.sort(mesh.node_ids)):
+    sorted_ids = ids[order]
+    if not np.array_equal(sorted_ids, np.sort(mesh_ids)):
         raise ValueError("displacement node IDs must match the Tet4 mesh")
     if tet4._row_count(displacement_m, "displacement_m") != n:
         raise ValueError("displacement_m must contain one row per node")
-    u = _points(displacement_m)[order[np.searchsorted(ids[order], mesh.node_ids)]]
+    u = _points(displacement_m)[order[np.searchsorted(sorted_ids, mesh_ids)]]
     ref_sig = _table(reference_conductivity_S_per_m_by_material, set(mesh.materials),
                      1e-6, 1e6, "reference conductivity", True)
     new_sig = _table(changed_conductivity_S_per_m_by_material, set(mesh.materials),
