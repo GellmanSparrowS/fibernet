@@ -30,6 +30,17 @@ The camera follows a crop of a real magnolia leaf. The ten junctions and their t
 
 The animation adapts [Vein skeleton of a leaf](https://commons.wikimedia.org/wiki/File:Vein_skeleton_of_a_leaf.JPG) by Brocken Inaglory (Wikimedia Commons). The source is cropped, recolored and skeletonized. This animation is licensed [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), separate from the software license.
 
+## Flow through a 3D fiber network
+
+![A tracer pulse moves across a deforming three-dimensional fiber scaffold, splitting and rejoining along connected routes](media/homepage/porous-fiber-flow.webp)
+
+A passive tracer pulse goes through a synthetic biomimetic fiber scaffold.
+It splits and mixes at junctions as the pore geometry changes. Ribbon width
+tracks volumetric flow, hue tracks mean speed, and brightness follows the
+tracer. The animation uses a reduced hydraulic network solved on successive
+fixed shapes; its playback clock is illustrative. For an independent
+continuum example, see [how deformation changes pore flow](../examples/README.md#how-solid-deformation-changes-pore-flow).
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)
