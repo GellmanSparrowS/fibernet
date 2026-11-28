@@ -37,6 +37,8 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 
 **把一段叶脉变成图。** 从分叉提取节点和边，用邻接矩阵记录连接，再在同一张图上显示邻居间的信息传递。[图解及叶脉来源](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network)。
 
+**三维纤维孔隙流动。** 看示踪脉冲如何随孔隙形变分流、汇合。[播放动图](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network)。
+
 用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
 
 <details>

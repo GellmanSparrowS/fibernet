@@ -52,6 +52,8 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 
 **把一段叶脉变成图。** 从分叉提取节点和边，用邻接矩阵记录连接，再在同一张图上显示邻居间的信息传递。[图解及叶脉来源](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network)。
 
+**三维纤维孔隙流动。** 看示踪脉冲如何随孔隙形变分流、汇合。[播放动图](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network)。
+
 用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
 
 <details>
@@ -113,6 +115,8 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 <img src="docs/media/homepage/leaf-venation-gnn.webp" alt="Real leaf veins zoom into nodes and edges, form an adjacency matrix, and show neighborhood messages on the same graph" width="960">
 
 **Turn part of a leaf into a graph.** Extract junctions and veins, encode the connections in an adjacency matrix, and show messages passing between neighbors on the same graph. [Visual notes and photo credit](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network).
+
+**Flow through a 3D fiber network.** Follow a tracer pulse as it splits and rejoins across deforming pores. [Watch the animation](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network).
 
 For topology analysis from an AI client, start with the [local MCP quickstart](adapters/mcp/README.md) (Linux, matching source installs required).
 
