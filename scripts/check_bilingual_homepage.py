@@ -27,7 +27,8 @@ VISIBLE_MOTION = ("docs/media/homepage/woven-fracture.webp",
                   "docs/media/homepage/porous-fiber-flow.webp",
                   "docs/media/homepage/woven-contact-current.webp",
                   "docs/media/homepage/reinforcement-bridge.webp",
-                  "docs/media/homepage/helical-recruitment.webp")
+                  "docs/media/homepage/helical-recruitment.webp",
+                  "docs/media/homepage/electrothermal-switch.webp")
 
 
 def digest(path: Path) -> str:
@@ -441,7 +442,8 @@ def main() -> None:
                       "porous-fiber-flow.webp": 11_000_000,
                       "woven-contact-current.webp": 7_000_000,
                       "reinforcement-bridge.webp": 7_800_000,
-                      "helical-recruitment.webp": 12_000_000}.get(media["asset"], 4_000_000)
+                      "helical-recruitment.webp": 12_000_000,
+                      "electrothermal-switch.webp": 11_000_000}.get(media["asset"], 4_000_000)
         require(media["size"] == [1280, 720] and media["bytes"] < byte_limit,
                 f"Invalid homepage motion dimensions or size: {media['asset']}")
     report = {"status": "PASS", "documents": document_checks,
