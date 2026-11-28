@@ -1,3 +1,9 @@
+## [4.43.0]
+
+- Accelerate independent reaction and strain-energy recovery for banded Tet4 prescribed motion.
+- Run a three-dimensional resistance-attribution example from the installed package.
+- See the [4.43.0 release notes](docs/RELEASE_4_43_0.md).
+
 ## [4.42.1]
 
 - Match Tet4 resistance-attribution displacements by exact node ID, including IDs above 2⁵³.
