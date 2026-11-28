@@ -24,7 +24,8 @@ HOMEPAGE_HERO = "docs/media/homepage/network-morph.webp"
 VISIBLE_MOTION = ("docs/media/homepage/woven-fracture.webp",
                  "docs/media/homepage/orientation-to-bundle.webp",
                  "docs/media/homepage/leaf-venation-gnn.webp",
-                  "docs/media/homepage/porous-fiber-flow.webp")
+                  "docs/media/homepage/porous-fiber-flow.webp",
+                  "docs/media/homepage/woven-contact-current.webp")
 
 
 def digest(path: Path) -> str:
@@ -320,7 +321,7 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     prelude = homepage.split("<details", 1)[0]
     require(inline_images(prelude, ".webp") == [HOMEPAGE_HERO, *VISIBLE_MOTION] and
             not inline_gifs(prelude),
-            "Expected all five previews in order before the language sections")
+            "Expected all previews in order before the language sections")
     for section in (zh_section, en_section, homepage.rsplit("</details>", 1)[1]):
         require(not inline_images(section, ".webp") and not inline_gifs(section),
                 "Workflow previews must not be duplicated after the first language control")
@@ -435,7 +436,8 @@ def main() -> None:
         # versions left trails around the graph-to-matrix transition.
         # The full-length pore-flow frame sequence needs its own bound.
         byte_limit = {"leaf-venation-gnn.webp": 7_000_000,
-                      "porous-fiber-flow.webp": 11_000_000}.get(media["asset"], 4_000_000)
+                      "porous-fiber-flow.webp": 11_000_000,
+                      "woven-contact-current.webp": 7_000_000}.get(media["asset"], 4_000_000)
         require(media["size"] == [1280, 720] and media["bytes"] < byte_limit,
                 f"Invalid homepage motion dimensions or size: {media['asset']}")
     report = {"status": "PASS", "documents": document_checks,

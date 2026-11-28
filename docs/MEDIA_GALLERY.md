@@ -41,6 +41,12 @@ tracer. The animation uses a reduced hydraulic network solved on successive
 fixed shapes; its playback clock is illustrative. For an independent
 continuum example, see [how deformation changes pore flow](../examples/README.md#how-solid-deformation-changes-pore-flow).
 
+## Electric current reroutes under compression
+
+![Electric current switches from the outside path to a shorter path when two woven plies touch](media/homepage/woven-contact-current.webp)
+
+In this synthetic 3D weave, a prescribed displacement closes a gap between two conductive tips. A 1 V resistor-network calculation on 195 nodes and 483 connections shows current through the outside path dropping from 0.100 A to 0.045 A, while the new path carries 0.273 A. Brightness tracks branch current; the moving highlights mark its direction, not its speed. The motion prescribes the gap closure and contact conductance rather than solving the contact forces. [Deformation-to-transport workflow](DEFORMED_TRANSPORT_PREPARATION.md).
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)
