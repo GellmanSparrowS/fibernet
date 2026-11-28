@@ -46,6 +46,12 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 
 **从二维排列方向出发。** 将平面矩阵扩展成多层三维取向场，再沿取向场生成纤维。[查看动图说明](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers)。
 
+### 叶脉与图神经网络
+
+<img src="docs/media/homepage/leaf-venation-gnn.webp" alt="放大真实叶脉，抽出节点和边并形成邻接矩阵，再在原图上逐跳点亮" width="960">
+
+**把一段叶脉变成图。** 从分叉提取节点和边，用邻接矩阵记录连接，再在同一张图上显示邻居间的信息传递。[图解及叶脉来源](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network)。
+
 用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
 
 <details>
@@ -101,6 +107,12 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 <img src="docs/media/homepage/orientation-to-bundle.webp" alt="A planar orientation matrix builds cell by cell, expands into stacked layers, and gives way to a 3D fiber bundle" width="960">
 
 **Start with a plane of fiber orientations.** Lift the matrix into a layered 3D orientation field and trace fibers through it. [See the visual notes](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers).
+
+### From leaf veins to a graph neural network
+
+<img src="docs/media/homepage/leaf-venation-gnn.webp" alt="Real leaf veins zoom into nodes and edges, form an adjacency matrix, and show neighborhood messages on the same graph" width="960">
+
+**Turn part of a leaf into a graph.** Extract junctions and veins, encode the connections in an adjacency matrix, and show messages passing between neighbors on the same graph. [Visual notes and photo credit](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network).
 
 For topology analysis from an AI client, start with the [local MCP quickstart](adapters/mcp/README.md) (Linux, matching source installs required).
 

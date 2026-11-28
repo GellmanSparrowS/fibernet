@@ -22,6 +22,14 @@ The synthetic weave starts with a notch and is pulled from opposing grips. The m
 
 The planar matrix shows unoriented fiber axes using double-headed arrows. Nine display layers reveal a volume with synthetic through-thickness variation. The 298 curves follow the principal axes of the three-dimensional orientation field; their colors and widths distinguish depth and individual fibers in the animation.
 
+## From leaf venation to a graph neural network
+
+![A magnolia leaf zooms into traced connections, an adjacency matrix, and two-hop message passing](media/homepage/leaf-venation-gnn.webp)
+
+The camera follows a crop of a real magnolia leaf. The ten junctions and their traced connections define the same symmetric adjacency matrix shown in the animation. Light pulses illustrate one- and two-hop message passing on that graph. This is a visual explanation, not a prediction about the leaf.
+
+The animation adapts [Vein skeleton of a leaf](https://commons.wikimedia.org/wiki/File:Vein_skeleton_of_a_leaf.JPG) by Brocken Inaglory (Wikimedia Commons). The source is cropped, recolored and skeletonized. This animation is licensed [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/), separate from the software license.
+
 ## Geometry and response hero
 
 ![A fixed 3D network camera orbit beside recorded kagome deformation](media/network_workflow_hero.gif)
