@@ -248,6 +248,19 @@ The routine solves the reference geometry once and solves each deformed
 geometry independently. Each still needs the supported periodic caps
 and a cell volume ratio between 0.75 and 1.25 relative to the reference.
 
+For a solid enclosed by a pore with an exactly matching wall triangulation,
+prepare the transfer once and apply each solid displacement in meters:
+
+```python
+from fibernet.sim.tet4_pore_interface import prepare_conforming_pore_wall
+
+wall = prepare_conforming_pore_wall(solid, pore)
+reshaped = [wall.deform(u.displacement_m, node_ids=u.node_ids) for u in solid_results]
+```
+
+Both input meshes use the same coordinate unit. The pore's outer box stays
+fixed, and the harmonic extension factorization is reused across the loads.
+
 Using the same Python 3.10+ source checkout and `pore-flow` extra:
 
 ```bash

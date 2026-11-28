@@ -6906,7 +6906,6 @@
   "purpose": "Small one-way solid-to-pore calculation on a bonded three-path scaffold.",
   "status": "active",
   "symbols": [
-   "_boundary_faces",
    "_extend_interface",
    "_mechanics",
    "_reshaped_pore",
@@ -6915,7 +6914,7 @@
    "compare_materials",
    "main"
   ],
-  "sha256": "83eddcc0d584d0327a07555f511c85fce0970b3efd0cf2080ba4f287d2ced843"
+  "sha256": "05abc77f90be8b28dd1af52df725648730a9c5934348d7f81400692ad68b7e25"
  },
  "fibernet/examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Run iterative Tet4 mechanics on a Gmsh mesh with named grips and materials.",
@@ -7168,5 +7167,29 @@
    "test_cli_reads_saved_native_fixture_without_optional_writer"
   ],
   "sha256": "3ab2f0d2b49b5028a039054e1965501bde2399a227d705dceb15f870ab6a816e"
+ },
+ "fibernet/sim/tet4_pore_interface.py": {
+  "purpose": "Reusable harmonic wall-motion transfer for a conforming Tet4 pore.",
+  "status": "active",
+  "symbols": [
+   "_faces",
+   "_mesh",
+   "PoreWallMotion",
+   "prepare_conforming_pore_wall"
+  ],
+  "sha256": "e8af7b53db44e954ec43ce90b5cb203f4a715c7612b90f708064b63630367a13"
+ },
+ "tests/test_tet4_pore_interface.py": {
+  "purpose": "test_tet4_pore_interface",
+  "status": "active",
+  "symbols": [
+   "fixtures",
+   "test_prepared_wall_reuses_one_factor_and_returns_detached_geometry",
+   "test_prepared_wall_uses_declared_mesh_units_and_exact_node_identity",
+   "test_prepared_wall_fails_on_nonconforming_or_unusable_geometry",
+   "test_prepared_wall_is_independent_of_bundle_row_order_and_later_edits",
+   "test_prepared_wall_rejects_duplicate_unordered_tetrahedra"
+  ],
+  "sha256": "b4277581193b67730dd1b50262e8d25274e1ce46890d93ade56041828da601bd"
  }
 }
