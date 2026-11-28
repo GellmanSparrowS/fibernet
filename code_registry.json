@@ -6819,16 +6819,18 @@
   "symbols": [
    "PeriodicStokesResult",
    "_validate_pair",
+   "_PeriodicReference",
    "_stokes_admission",
    "_solve_stokes_block",
    "solve_x_periodic_stokes",
+   "_solve_x_periodic_stokes",
    "MatchedPoreFlow",
    "_validated_matched_mesh",
    "_matched_volume_range",
    "solve_matched_pore_geometry",
    "solve_matched_pore_geometry_cases"
   ],
-  "sha256": "7182c472f05e4a584cbaeb6858465fff6fa6dde9234807740ad723212c3f8d9c"
+  "sha256": "2c29238a0942734f047ee81762dda38f1a3b7a5f5c45ade3b66ac722c0d1ffb2"
  },
  "examples/tet4_solid_to_pore_flow.py": {
   "purpose": "Compare one-way pore flow after small solid deformation at matched grip loads.",
@@ -6850,9 +6852,13 @@
    "test_matched_cases_prevalidate_all_geometries_before_solving",
    "test_symmetric_mode_recovers_with_original_lu_settings",
    "test_stokes_block_solution_preserves_physics_and_falls_back",
-   "test_stokes_block_handles_input_with_first_node_on_high_cap"
+   "test_stokes_block_handles_input_with_first_node_on_high_cap",
+   "test_matched_pore_flow_ignores_reused_layout_for_reordered_mesh",
+   "test_warm_pore_failure_recovers_with_cold_block_and_respects_budget",
+   "test_large_normalized_shape_change_uses_cold_stokes_solve",
+   "test_large_reference_factor_is_not_retained"
   ],
-  "sha256": "61458ca23a8a0801c1eda3ff70fdf396130cbd4af5f49c242ee79cb824dd702c"
+  "sha256": "f0c2063a827ab20186da70d3b6801cfde817d8207fa885d9a06df160961599e8"
  },
  "examples/tet4_periodic_pore.py": {
   "purpose": "Source-tree entry point for :mod:`fibernet.examples.tet4_periodic_pore`.",
