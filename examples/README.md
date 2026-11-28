@@ -238,6 +238,26 @@ tetrahedral fluid mesh, separately from the geometric porosity example.
 For a matching package and checkout, see the
 [4.25.0 release guide](../docs/RELEASE_4_25_0.md#solve-a-small-periodic-pore-flow-problem).
 
+## Separate geometry and conductivity effects
+
+On a two-terminal Tet4 mesh, take the displacement and node IDs from a
+mechanics solve and supply both conductivity tables in S/m:
+
+```python
+from fibernet.sim.tet4_resistance_attribution import compare_tet4_resistance
+
+parts = compare_tet4_resistance(
+    mesh, mechanics.displacement_m, node_ids=mechanics.node_ids,
+    reference_conductivity_S_per_m_by_material=sigma_before,
+    changed_conductivity_S_per_m_by_material=sigma_after,
+    electrode_voltage_V_by_id=electrodes,
+)
+```
+
+The result contains four resistances in ohms. The shape, material and
+interaction log ratios sum to the combined log ratio. The supplied scalar
+conductivities are a material input; the mesh topology and electrodes stay fixed.
+
 ## How solid deformation changes pore flow
 
 For up to eight deformed meshes compared with the same pore, call
