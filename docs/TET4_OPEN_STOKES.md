@@ -108,22 +108,40 @@ VTU files. NumPy and SciPy suffice to inspect the saved data. For Python use
 ### Compare throughput and velocity redistribution on the same caps
 
 Use two native velocity exports to separate the change in total flow from
-a change in the distribution of normal velocity across the ends. From the shell,
-the comparison writes JSON to standard output:
+a change in the distribution of normal velocity across the ends.
 
-```sh
-python -m fibernet.analysis.stokes_cap_comparison compressed/velocity.vtu stretched/velocity.vtu
-```
+To try the comparison without running the solver, save
+[`reference.vtu`][stokes-reference] and [`candidate.vtu`][stokes-candidate]
+in the same directory. They contain two manufactured velocity fields on a
+triangular prism, not simulated or measured flows.
 
-Or use the same report directly in Python:
+With FiberNet 4.40.0 or later, run this in Python from that directory:
 
 ```python
 from fibernet.analysis.stokes_cap_comparison import compare_saved_stokes_caps
 
-report = compare_saved_stokes_caps("compressed/velocity.vtu", "stretched/velocity.vtu")
+report = compare_saved_stokes_caps("reference.vtu", "candidate.vtu")
 outlet = report["x_max"]
-print(outlet["throughput_ratio"], outlet["normalized_profile_residual_L2"])
+print(f"{outlet['throughput_ratio']:.2f}")                 # 1.02
+print(f"{outlet['normalized_profile_residual_L2']:.2f}")    # 0.02
 ```
+
+The signed outlet flux goes from 0.50 to 0.51 m³/s. The first result is the
+ratio of those fluxes; the second is the remaining velocity-profile change
+relative to the reference, after removing that uniform scaling. The files
+are ordered: swapping them gives a throughput ratio of about 0.980392 and
+a profile residual of about 0.019220.
+
+If you installed from repository main after the 4.40.0 release, the shell
+command below writes the same report as JSON. The PyPI 4.40.0 release
+supports the Python API above, not the shell command.
+
+```sh
+python -m fibernet.analysis.stokes_cap_comparison reference.vtu candidate.vtu
+```
+
+[stokes-reference]: https://raw.githubusercontent.com/GellmanSparrowS/fibernet/946f73a7a17b7f7ab8820b98dfa8d9a323d4209d/tests/fixtures/stokes_cap_cli_v1/reference.vtu
+[stokes-candidate]: https://raw.githubusercontent.com/GellmanSparrowS/fibernet/946f73a7a17b7f7ab8820b98dfa8d9a323d4209d/tests/fixtures/stokes_cap_cli_v1/candidate.vtu
 
 The extreme-`x` cap planes and their physical triangles and edge midpoints
 must match exactly, independently of point and cell numbering. Both fields
