@@ -778,27 +778,43 @@ def _prescribed_solve(mesh, k, force, fixed, values, plan, *, iterative_factor=N
             raise ValueError('Tet4 prescribed solve did not meet normalized backward residual criterion')
         # Recovery uses element matrices, not the residual's sparse slice.
         del kf
-    recover = _prescribed_element_response if recovery is None else recovery
-    internal, energy = recover(mesh, u.reshape(-1,3))
-    if len(free) and scale:
-        element_backward = float(np.max(np.abs(internal[free] - force[free]), initial=0.) / scale)
-        if not 0. <= element_backward <= tolerance:
-            raise ValueError('Tet4 prescribed cell forces did not meet normalized backward residual criterion')
-        backward = max(backward, element_backward)
-    # On a driven axis F_c and (Ku-F)_c share the same displacement. Combine
-    # them into (Ku)_c * u_c before multiplying; adding independently rounded
-    # reaction and load work can erase the real mechanical work.
-    terms = [*_checked_products(force[free], u[free], 'prescribed free-force work'),
-             *_checked_products(internal[fixed], u[fixed], 'prescribed held-axis work')]
-    # Sum signed contributions first, then halve the combined work.
-    work = math.fsum(terms)
-    half_work = float(_checked_normal_rescale(np.array([work]), 1., -1,
-                                             'prescribed half external work')[0])
-    denominator = max(energy, abs(half_work))
-    relative = abs(energy-half_work)/denominator if denominator else 0.
-    if not (0. <= relative <= 4096. * eps * u.size and half_work >= 0.):
-        raise ValueError('Tet4 prescribed energy and half external work do not agree')
-    return u, internal, energy, half_work, backward, relative
+    displacement = u.reshape(-1, 3)
+
+    def certify(response):
+        internal, energy = response
+        element_checked = backward
+        if len(free) and scale:
+            element_backward = float(np.max(np.abs(internal[free] - force[free]), initial=0.) / scale)
+            if not 0. <= element_backward <= tolerance:
+                raise ValueError('Tet4 prescribed cell forces did not meet normalized backward residual criterion')
+            element_checked = max(backward, element_backward)
+        # On a driven axis F_c and (Ku-F)_c share the same displacement. Combine
+        # them into (Ku)_c * u_c before multiplying; adding independently rounded
+        # reaction and load work can erase the real mechanical work.
+        terms = [*_checked_products(force[free], u[free], 'prescribed free-force work'),
+                 *_checked_products(internal[fixed], u[fixed], 'prescribed held-axis work')]
+        # Sum signed contributions first, then halve the combined work.
+        work = math.fsum(terms)
+        half_work = float(_checked_normal_rescale(np.array([work]), 1., -1,
+                                                 'prescribed half external work')[0])
+        denominator = max(energy, abs(half_work))
+        relative = abs(energy-half_work)/denominator if denominator else 0.
+        if not (0. <= relative <= 4096. * eps * u.size and half_work >= 0.):
+            raise ValueError('Tet4 prescribed energy and half external work do not agree')
+        return u, internal, energy, half_work, element_checked, relative
+
+    if recovery is not None:
+        return certify(recovery(mesh, displacement))
+    from ._tet4_recovery import guarded_banded_response
+    try:
+        candidate = guarded_banded_response(mesh, displacement)
+        if candidate is not None:
+            return certify(candidate)
+    except (FloatingPointError, ValueError):
+        # Unexpected numerical trouble in the vector estimate cannot change
+        # banded admission. Certify a new independent scalar recovery.
+        pass
+    return certify(_prescribed_element_response(mesh, displacement))
 
 
 def inspect_static_tet4_admission(bundle: Tet4Bundle, *, fixed_dofs_by_id: Mapping,
