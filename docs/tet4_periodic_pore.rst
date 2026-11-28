@@ -9,10 +9,18 @@ boundary faces use no-slip conditions. The input bundle's material entries
 keep geometric labels stable but do not set fluid properties. Supply dynamic
 viscosity separately in Pa s.
 
-On Python 3.10 or newer, install the ``pore-flow`` extra. From the repository
-checkout run ``python -m examples.tet4_periodic_pore`` for an empty duct,
-a synthetic fused three-path obstacle, and a manufactured scale check. No
-precomputed or external mesh files are needed.
+On Python 3.10 or newer:
+
+.. code-block:: console
+
+   pip install "fibernet[pore-flow]"
+   python -m fibernet.examples.tet4_periodic_pore
+   python -m fibernet.examples.tet4_solid_to_pore_flow --matched-force
+
+The first example checks flow through an empty duct and a three-path
+scaffold. The second compares two stiffnesses under equal signed grip
+forces by solving solid deformation, transferring the wall motion, and
+recomputing the flow. Neither example needs external meshes.
 
 .. code-block:: python
 
@@ -32,14 +40,12 @@ when assessing mesh convergence. The result includes a power check, pressure
 residual, end balance and relative cap/bulk difference.
 
 ``solve_matched_pore_geometry`` applies the same viscosity and axial pressure
-gradient to two supplied geometries, checking stable node and ordered cell IDs
-and small positive volume ratios. If the axial period changes, fixed gradient
-does not mean fixed end-to-end pressure drop. For a fixed drop, call
-``solve_x_periodic_stokes`` separately for each geometry with
-``pressure_gradient_Pa_per_m`` equal to the drop in Pa divided by that mesh's
-axial period in m. The matched solve neither computes the wall displacement
-nor moves the solid under the fluid forces. The example's uniform scale
-change is an analytical covariance check, not a mechanical material law.
+gradient to two supplied geometries when given ``pressure_gradient_Pa_per_m``.
+To hold the end-to-end pressure difference instead, pass ``pressure_drop_Pa``:
+each geometry uses that drop divided by its own axial period in metres.
+These controls differ when loading changes the period. The matched solve
+checks stable IDs and cell volumes; it does not compute wall motion or
+apply fluid forces to the solid.
 
 The reference scope is P2 velocity and P1 pressure on straight-sided
 tetrahedra, small meshes, a periodically driven connected pore, and a

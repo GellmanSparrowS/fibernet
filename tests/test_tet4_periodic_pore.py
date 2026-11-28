@@ -367,3 +367,47 @@ def test_large_reference_factor_is_not_retained(monkeypatch):
     pair = solve_matched_pore_geometry_cases(b, (b, b), **settings)
     assert route == ["reference", "cold", "cold"]
     assert all(r.relative_bulk_flow_change == 0. for r in pair)
+
+
+def test_fixed_drop_validates_exclusive_driver_before_assembling(monkeypatch):
+    import fibernet.sim.tet4_pore as solver
+
+    b = bundle()
+    def fail(*_, **__):
+        pytest.fail("invalid pressure driver reached flow assembly")
+
+    monkeypatch.setattr(solver, "solve_x_periodic_stokes", fail)
+    monkeypatch.setattr(solver, "_solve_x_periodic_stokes", fail)
+    for kw in ({}, {"pressure_drop_Pa": 0.8, "pressure_gradient_Pa_per_m": 500.}):
+        with pytest.raises(ValueError, match="exactly one"):
+            solve_matched_pore_geometry(b, b, viscosity_Pa_s=.001, **kw)
+    for drop in (0., 1e308):
+        with pytest.raises(ValueError, match="outside pilot range"):
+            solve_matched_pore_geometry(b, b, viscosity_Pa_s=.001, pressure_drop_Pa=drop)
+    scaled = replace(b, points=b.points*.98)
+    # First state passes; the narrower second state would exceed the bound.
+    near_bound = np.ptp(b.points[:, 0])*1e-3*.99e12
+    with pytest.raises(ValueError, match="outside pilot range"):
+        solve_matched_pore_geometry_cases(b, (b, scaled), viscosity_Pa_s=.001,
+                                          pressure_drop_Pa=near_bound)
+
+
+@pytest.mark.parametrize("drop", [.8, -.8])
+def test_matched_fixed_drop_signed_scale_and_independent_gradient(drop):
+    pytest.importorskip("skfem")
+    b = bundle()
+    stretch, shrink = 1.005, .998
+    expanded = replace(b, points=b.points*stretch)
+    contracted = replace(b, points=b.points*(.001*shrink), length_unit="m")
+    a, c = solve_matched_pore_geometry_cases(
+        b, (expanded, contracted), viscosity_Pa_s=.001, pressure_drop_Pa=drop)
+    assert c.baseline is a.baseline
+    assert a.baseline.axial_flow_m3_s*drop > 0.
+    for pair, mesh, factor, unit in ((a, expanded, stretch, .001), (c, contracted, shrink, 1.)):
+        direct = solve_x_periodic_stokes(
+            mesh, viscosity_Pa_s=.001, pressure_gradient_Pa_per_m=drop/(np.ptp(mesh.points[:, 0])*unit))
+        np.testing.assert_allclose(pair.deformed.axial_flow_m3_s, direct.axial_flow_m3_s, rtol=1e-9)
+        np.testing.assert_allclose(pair.deformed.cap_flow_m3_s, direct.cap_flow_m3_s, rtol=1e-9)
+        np.testing.assert_allclose(pair.deformed.power_W, direct.power_W, rtol=1e-9)
+        np.testing.assert_allclose(pair.relative_bulk_flow_change, factor**3-1, rtol=1e-7)
+        np.testing.assert_allclose(pair.relative_cap_flow_change, factor**3-1, rtol=1e-7)
