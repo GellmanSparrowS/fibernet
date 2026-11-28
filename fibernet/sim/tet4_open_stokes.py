@@ -103,13 +103,59 @@ def _amg_solution(n, A, B, U, P, S, z):
         nonlocal iterations
         iterations+=1
     rhs=np.asarray(B.vec.FV().NumPy())[idx]
-    tol = "rtol" if "rtol" in signature(minres).parameters else "tol"
-    ans,info=minres(sysmat,rhs,M=preconditioner,check=True,maxiter=600,callback=tick,**{tol:1e-13})
-    if info != 0: raise ValueError("Open Stokes block iteration did not converge")
-    if np.max(abs(sysmat@ans-rhs))>=1e-8*np.max(abs(rhs)):
-        raise ValueError("Open Stokes block residual exceeded tolerance")
+    ans = _minres_with_continuity_retry(sysmat, rhs, preconditioner, scaling, vel, tick, minres)
     z.vec.FV().NumPy()[idx]=ans
     return iterations
+
+
+def _minres_with_continuity_retry(operator, rhs, preconditioner, pressure_mass,
+                                   velocity_count, callback, minres):
+    from scipy.sparse.linalg import LinearOperator
+
+    tol = "rtol" if "rtol" in signature(minres).parameters else "tol"
+    initial, info = minres(operator, rhs, M=preconditioner, check=True,
+                           maxiter=600, callback=callback, **{tol: 1e-13})
+    if info != 0:
+        raise ValueError("Open Stokes block iteration did not converge")
+    rhs_scale = np.max(np.abs(rhs))
+    defect = operator @ initial - rhs
+    if not np.all(np.isfinite(defect)) or np.max(np.abs(defect)) >= 1e-8 * rhs_scale:
+        raise ValueError("Open Stokes block residual exceeded tolerance")
+
+    def continuity_error(solution, residual):
+        # P1 coefficients for q=1 are all one. Summing the pressure rows
+        # gives minus signed outward flow; rhs @ solution is inlet work.
+        inlet = float(rhs @ solution)
+        return abs(float(residual[velocity_count:].sum())) / inlet if inlet > 0 else np.inf
+
+    original_error = continuity_error(initial, defect)
+    if original_error < 7.5e-9:
+        return initial
+
+    # Keep the original mixed equations. Boost the constant-pressure
+    # direction in the SPD inverse preconditioner only for a bounded retry.
+    # The native cap and energy checks remain independent acceptance gates.
+    boost = 32.0 / float(pressure_mass.sum())
+
+    def pre_continuity(vector):
+        value = preconditioner @ vector
+        value[velocity_count:] += boost * float(vector[velocity_count:].sum())
+        return value
+
+    retry_pre = LinearOperator(operator.shape, matvec=pre_continuity, dtype=np.float64)
+    try:
+        repaired, info = minres(operator, rhs, M=retry_pre, check=True,
+                                 maxiter=600, callback=callback, **{tol: 1e-15})
+    except ValueError:
+        # A speculative retry can fail its own MINRES numerical checks.
+        # The initial result is still subject to all native acceptance gates.
+        return initial
+    if info == 0 and np.all(np.isfinite(repaired)):
+        new_defect = operator @ repaired - rhs
+        if (np.max(np.abs(new_defect)) < 1e-8 * rhs_scale
+                and continuity_error(repaired, new_defect) < original_error):
+            return repaired
+    return initial
 
 
 def _native_mesh(n, xyz, cells):
