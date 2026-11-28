@@ -1,3 +1,9 @@
+## [4.44.0]
+
+- Compare matched Tet4 pore meshes under the same pressure drop or pressure gradient.
+- Warm-start closely matched periodic Stokes solves from the reference geometry.
+- See the [4.44.0 release notes](docs/RELEASE_4_44_0.md).
+
 ## [4.43.0]
 
 - Accelerate independent reaction and strain-energy recovery for banded Tet4 prescribed motion.

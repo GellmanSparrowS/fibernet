@@ -277,7 +277,7 @@
   "utils/parametric.py": "2b015cee598191397637ef44150aa1e7bee81b3943003a25904fd309e3a83ec5",
   "utils/units.py": "14b08a370ad77420052eb858eb811fbb5a17eaa68e9ec76e9aae070cb62721fc",
   "utils/validation.py": "69df0f555a70af5f9d6e4bce16eb506f8d7db5479068669b28a7f5f0c7f2a927",
-  "version.py": "271b05e44c7e7264b400342807fffc9dd5363f2170c757c42b00123bebb1a0bd",
+  "version.py": "f4b4f4c24f3e5408ebebe239daebbde2c24bd6044b5e10b9d2df10b2ac096c80",
   "visualization.py": "0a42323486f655f7288e856d3a17d8f7006d0beed6328eb396b98eec3cb8bdcd",
   "viz/__init__.py": "c64befa58239e6a8f9e90da2751c9879721d9d56f04e2816d4a86e6be4dc9098",
   "viz/_stokes_cap_seeds.py": "5dec7f0be7113ee8e789c14110116cdf30fdc61623a8c47693d6d173783349f5",
