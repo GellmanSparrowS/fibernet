@@ -5915,7 +5915,7 @@
    "_solve_assembled_static",
    "solve_static_tet4_load_cases"
   ],
-  "sha256": "7bf57a5f4afcfc89e29d5974995e57d8ff83bbd2d83a55ef5eefea8c849a55de"
+  "sha256": "69f320c6ee8ed6f539df1364ef095db8bd39ad3ecb063676f87f042c41105c2e"
  },
  "tests/test_tet4_load_cases.py": {
   "purpose": "Verify per-case physics, validation and result ownership for ordered Tet4 load cases.",
@@ -6719,17 +6719,16 @@
   "sha256": "1d2eda6e816c9b1a0ae0c791efcb948cff0c007890ee9ecd790c7796bc9adb51"
  },
  "fibernet/sim/_tet4_amg.py": {
-  "purpose": "Internal bounded mechanics iteration and independent cell recovery.",
+  "purpose": "Bounded iterative Tet4 stiffness assembly and AMG factorization.",
   "status": "active",
   "symbols": [
-   "batched_response",
    "topology_parents",
    "IterativePlan",
    "_element_stiffness_batch",
    "chunked_assembly",
    "factor_constructor"
   ],
-  "sha256": "7c5f045dab0d6a2ac4689ff00a1d5fac092cead1c115990326c4eb75bdd3a760"
+  "sha256": "1d8d3b6184f3ebcb79ddb49ae2add7ec693bdba6d42e7fb9fef017515e347703"
  },
  "examples/tet4_mechanoelectric_looped_network.py": {
   "purpose": "Predict how small axial strain changes DC resistance in a fused 3D lattice.",
@@ -6764,7 +6763,7 @@
    "test_current_direction_uses_scaled_norm_with_signed_analytic_strain",
    "test_prescribed_releases_the_factor_before_element_recovery"
   ],
-  "sha256": "ba05fc8468944f539dcf67da8dc9678d4173dc2cafe922055e2a62868789b1f7"
+  "sha256": "919ed02352d3567d53c24cae382c9da4818657184d4b52fa139b24fbbba101ee"
  },
  "examples/tet4_tagged_grip_iterative.py": {
   "purpose": "Source-tree wrapper for the installed Tet4 named-grip example.",
@@ -7229,5 +7228,25 @@
    "test_geometric_breakdown_matches_two_signed_resolves",
    "test_finite_resistance_attribution_cli_reports_both_comparisons"
   ]
+ },
+ "fibernet/sim/_tet4_recovery.py": {
+  "purpose": "Guarded batched independent Tet4 reaction and strain-energy recovery.",
+  "status": "active",
+  "symbols": [
+   "batched_response",
+   "guarded_banded_response"
+  ],
+  "sha256": "c6dd41dbb873e18f793f35bfc3b108a0e61d1f2e26c5a008c953d3f6eba18e81"
+ },
+ "tests/test_tet4_guarded_recovery.py": {
+  "purpose": "Verify independent fast Tet4 recovery and scalar fallback.",
+  "status": "active",
+  "symbols": [
+   "_fixture",
+   "test_banded_recovery_uses_fast_path_on_deformed_welded_network",
+   "test_near_rigid_rotation_declines_vectorized_recovery",
+   "test_failed_vectorized_certificate_retries_scalar_without_refactoring"
+  ],
+  "sha256": "ef8587e57e38848b5c8ac57ec21b1a8117e7cd2db371f88ab66f3b7fa715e9bd"
  }
 }

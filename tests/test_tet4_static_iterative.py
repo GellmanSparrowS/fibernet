@@ -293,7 +293,9 @@ def test_prescribed_releases_the_factor_before_element_recovery(monkeypatch, sol
     else:
         module = tet4
         monkeypatch.setattr(module, "_factor_band", observe_factor(module._factor_band))
-        recovery_name = "_prescribed_element_response"
+        from fibernet.sim import _tet4_recovery
+        module = _tet4_recovery
+        recovery_name = "guarded_banded_response"
 
     native_recover = getattr(module, recovery_name)
 
