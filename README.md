@@ -2,7 +2,7 @@
 
 A Python library for generating fiber networks and studying how their architecture affects deformation and transport. Reuse the same network for analysis, learning, and fabrication planning.
 
-[Quick start](#quick-start) · [Examples](examples/README.md) · [Animation gallery](docs/MEDIA_GALLERY.md) · [中文](#fibernet-zh)
+[Quick start](#quick-start) · [Examples](examples/README.md) · [Animations](#animations) · [中文](#fibernet-zh)
 
 <table>
 <tr><td align="center">
@@ -33,26 +33,7 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 - **看受力后电阻怎么变：**[360 杆网络](docs/DEFORMED_TRANSPORT_PREPARATION.md)和[含熔合节点的三通路实体网络](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice)都在变形后的几何上重算电阻。孔隙流动可从[变形前后流量对比](examples/README.md#how-solid-deformation-changes-pore-flow)入手。
 - **继续分析、学习或制造：**用同一个 `StructureGraph` [训练模型](examples/physical_learning_workflow.py)，或生成[闭合路径](docs/MANUFACTURING_GRAPH_MAPPING.md)和[多段路径](docs/MULTISTROKE_MANUFACTURING.md)。
 
-
-### 力学动图
-
-<img src="docs/media/homepage/woven-fracture.webp" alt="夹具从两侧拉伸预裂织物网络，纤维伸长后撕裂逐步扩展" width="960">
-
-**裂口在拉伸下扩展。** 动图重放简化弹簧网络计算。[查看动图说明](docs/MEDIA_GALLERY.md#tensile-fracture-of-a-notched-weave) · [更多动图](docs/MEDIA_GALLERY.md)。
-
-### 从取向场生成纤维束
-
-<img src="docs/media/homepage/orientation-to-bundle.webp" alt="平面取向矩阵逐格绘出并逐层展开，随后生成三维纤维束" width="960">
-
-**从二维排列方向出发。** 将平面矩阵扩展成多层三维取向场，再沿取向场生成纤维。[查看动图说明](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers)。
-
-### 叶脉与图神经网络
-
-<img src="docs/media/homepage/leaf-venation-gnn.webp" alt="放大真实叶脉，抽出节点和边并形成邻接矩阵，再在原图上逐跳点亮" width="960">
-
-**把一段叶脉变成图。** 从分叉提取节点和边，用邻接矩阵记录连接，再在同一张图上显示邻居间的信息传递。[图解及叶脉来源](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network)。
-
-**三维纤维孔隙流动。** 看示踪脉冲如何随孔隙形变分流、汇合。[播放动图](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network)。
+[动图画廊与说明](docs/MEDIA_GALLERY.md)。
 
 用 AI 客户端做拓扑分析，可从 [本地 MCP 快速上手](adapters/mcp/README.md) 开始（Linux，需配套安装）。
 
@@ -96,27 +77,7 @@ python -m fibernet.examples.basic_usage --output-dir fibernet_demo
 - **See how loading changes resistance:** recompute resistance on the deformed geometry of a [360-member network](docs/DEFORMED_TRANSPORT_PREPARATION.md) or a [three-path solid network with fused joints](examples/README.md#predicting-strain-induced-resistance-in-a-fused-solid-lattice). For fluids, [compare flow before and after deformation](examples/README.md#how-solid-deformation-changes-pore-flow).
 - **Reuse the network:** use the same `StructureGraph` to [train models](examples/physical_learning_workflow.py) or plan [closed](docs/MANUFACTURING_GRAPH_MAPPING.md) and [multi-stroke routes](docs/MULTISTROKE_MANUFACTURING.md).
 
-
-### Mechanics in motion
-
-<img src="docs/media/homepage/woven-fracture.webp" alt="Grips pull a pre-notched woven network; fibers stretch and a tear opens" width="960">
-
-**A tear opens under tension.** A notched woven network stretches as the grips separate. The demo replays a reduced spring-network calculation. [See the visual notes](docs/MEDIA_GALLERY.md#tensile-fracture-of-a-notched-weave) · [More animations](docs/MEDIA_GALLERY.md).
-
-
-### From orientation to fibers
-
-<img src="docs/media/homepage/orientation-to-bundle.webp" alt="A planar orientation matrix builds cell by cell, expands into stacked layers, and gives way to a 3D fiber bundle" width="960">
-
-**Start with a plane of fiber orientations.** Lift the matrix into a layered 3D orientation field and trace fibers through it. [See the visual notes](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers).
-
-### From leaf veins to a graph neural network
-
-<img src="docs/media/homepage/leaf-venation-gnn.webp" alt="Real leaf veins zoom into nodes and edges, form an adjacency matrix, and show neighborhood messages on the same graph" width="960">
-
-**Turn part of a leaf into a graph.** Extract junctions and veins, encode the connections in an adjacency matrix, and show messages passing between neighbors on the same graph. [Visual notes and photo credit](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network).
-
-**Flow through a 3D fiber network.** Follow a tracer pulse as it splits and rejoins across deforming pores. [Watch the animation](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network).
+[Animation gallery and visual notes](docs/MEDIA_GALLERY.md).
 
 For topology analysis from an AI client, start with the [local MCP quickstart](adapters/mcp/README.md) (Linux, matching source installs required).
 
@@ -140,3 +101,30 @@ python -m examples.open_source_workflow --output-dir demo_output
 <!-- locale:en:end -->
 
 </details>
+
+## Animations
+
+### Mechanics in motion
+
+<img src="docs/media/homepage/woven-fracture.webp" alt="Grips pull a pre-notched woven network; fibers stretch and a tear opens" width="960">
+
+**A tear opens under tension.** A notched woven network stretches as the grips separate. The demo replays a reduced spring-network calculation. [See the visual notes](docs/MEDIA_GALLERY.md#tensile-fracture-of-a-notched-weave) · [More animations](docs/MEDIA_GALLERY.md).
+
+
+### From orientation to fibers
+
+<img src="docs/media/homepage/orientation-to-bundle.webp" alt="A planar orientation matrix builds cell by cell, expands into stacked layers, and gives way to a 3D fiber bundle" width="960">
+
+**Start with a plane of fiber orientations.** Lift the matrix into a layered 3D orientation field and trace fibers through it. [See the visual notes](docs/MEDIA_GALLERY.md#from-orientation-field-to-fibers).
+
+### From leaf veins to a graph neural network
+
+<img src="docs/media/homepage/leaf-venation-gnn.webp" alt="Real leaf veins zoom into nodes and edges, form an adjacency matrix, and show neighborhood messages on the same graph" width="960">
+
+**Turn part of a leaf into a graph.** Extract junctions and veins, encode the connections in an adjacency matrix, and show messages passing between neighbors on the same graph. [Visual notes and photo credit](docs/MEDIA_GALLERY.md#from-leaf-venation-to-a-graph-neural-network).
+
+### Flow through a 3D fiber network
+
+<img src="docs/media/homepage/porous-fiber-flow.webp" alt="A tracer pulse moves through a three-dimensional fiber scaffold, splitting and rejoining along connected routes" width="960">
+
+**Follow a tracer pulse through shifting pores.** Its paths split and rejoin across successive pore shapes. [See the visual notes](docs/MEDIA_GALLERY.md#flow-through-a-3d-fiber-network).

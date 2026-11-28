@@ -69,29 +69,38 @@ class InlineGifParserTests(unittest.TestCase):
     def test_actual_homepage_gate(self):
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
-        english, _ = CHECK.check_locale_structure(readme, chinese)
-        image = re.search(r'<img[^>]+src="([^"]+\.webp)"[^>]*>', english)
+        CHECK.check_locale_structure(readme, chinese)
+        visible = readme.rsplit("</details>", 1)[1]
+        image = re.search(r'<img[^>]+src="([^"]+\.webp)"[^>]*>', visible)
         self.assertIsNotNone(image)
         target, src = image[0], image[1]
         for name, text in NEGATIVE.items():
-            bad = english.replace(target, text.replace('x.gif', src), 1)
+            bad = visible.replace(target, text.replace('x.gif', src), 1)
             # A fence can hide nested API controls before a later code fence
             # closes it, so either unbalanced-control direction may be found.
-            message = ('Unclosed details control|Unmatched details close|Missing/duplicate en locale markers' if name == 'unclosed_fence'
-                       else 'must show only the selected workflow previews')
+            message = 'Expected all workflow previews outside closed language sections'
             with self.subTest(name=name):
                 with self.assertRaisesRegex(ValueError, message):
-                    CHECK.check_locale_structure(readme.replace(english, bad), chinese)
+                    CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
         for name, text in POSITIVE.items():
-            good = english.replace(target, text.replace('x.gif', src), 1)
+            good = visible.replace(target, text.replace('x.gif', src), 1)
             with self.subTest(name=name):
-                CHECK.check_locale_structure(readme.replace(english, good), chinese)
-        for name, bad in [('missing', english.replace(target, '', 1)),
-                          ('duplicate', english + '\n' + target),
-                          ('substituted', english.replace(src, 'unselected.webp', 1))]:
+                CHECK.check_locale_structure(readme.replace(visible, good), chinese)
+        for name, bad in [('missing', visible.replace(target, '', 1)),
+                          ('duplicate', visible + '\n' + target),
+                          ('substituted', visible.replace(src, 'unselected.webp', 1))]:
             with self.subTest(name=name):
-                with self.assertRaisesRegex(ValueError, 'must show only the selected workflow previews'):
-                    CHECK.check_locale_structure(readme.replace(english, bad), chinese)
+                with self.assertRaisesRegex(ValueError, 'Expected all workflow previews outside closed language sections'):
+                    CHECK.check_locale_structure(readme.replace(visible, bad), chinese)
+
+
+    def test_no_preview_is_hidden_inside_language_disclosure(self):
+        readme = (ROOT / 'README.md').read_text(encoding='utf-8')
+        chinese = (ROOT / 'README_CN.md').read_text(encoding='utf-8')
+        flow = f'<img src="{CHECK.VISIBLE_MOTION[-1]}">'
+        duplicated = readme.replace('<!-- locale:en:start -->', '<!-- locale:en:start -->\n'+flow+'\n', 1)
+        with self.assertRaisesRegex(ValueError, 'must not be duplicated'):
+            CHECK.check_locale_structure(duplicated, chinese)
 
 
 class NativeDisclosureParserTests(unittest.TestCase):
@@ -163,17 +172,19 @@ class NativeDisclosureParserTests(unittest.TestCase):
 
 
 class PublicHomepageTests(unittest.TestCase):
-    def test_each_language_has_selected_animations_and_links_to_detailed_docs(self):
+    def test_shared_visible_animations_and_bilingual_links_to_detailed_docs(self):
         selection = json.loads((ROOT / 'docs/media/homepage_overview/selection.json').read_text(encoding='utf-8'))
         originals = {record['path'] for record in selection['original_gifs']}
         self.assertEqual(len(originals), 19)
         self.assertTrue(all((ROOT / path).is_file() for path in originals))
         homepage = (ROOT / 'README.md').read_text(encoding='utf-8')
+        self.assertEqual(CHECK.inline_images(homepage.rsplit('</details>', 1)[1], '.webp'),
+                         list(CHECK.VISIBLE_MOTION))
         for language in ('en', 'zh'):
             body = CHECK.locale_block(homepage, language)
             with self.subTest(language=language):
                 self.assertLess(len(body.splitlines()), 60)
-                self.assertEqual(CHECK.inline_images(body, '.webp'), list(CHECK.LOCALE_MOTION))
+                self.assertEqual(CHECK.inline_images(body, '.webp'), [])
                 self.assertIn('docs/MEDIA_GALLERY.md', CHECK.destinations(body))
                 self.assertIn('docs/api/WORKFLOW_MAP.md', CHECK.destinations(body))
                 self.assertIn('docs/DEFORMED_TRANSPORT_PREPARATION.md', CHECK.destinations(body))

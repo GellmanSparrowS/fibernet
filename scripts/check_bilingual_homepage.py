@@ -21,9 +21,10 @@ ROOT = Path(__file__).resolve().parents[1]
 MEDIA = ROOT / "docs" / "media"
 HISTORICAL_HOMEPAGE_GIFS = ("docs/media/three_dimensional_topologies.gif",)
 HOMEPAGE_HERO = "docs/media/homepage/network-morph.webp"
-LOCALE_MOTION = ("docs/media/homepage/woven-fracture.webp",
+VISIBLE_MOTION = ("docs/media/homepage/woven-fracture.webp",
                  "docs/media/homepage/orientation-to-bundle.webp",
-                 "docs/media/homepage/leaf-venation-gnn.webp")
+                 "docs/media/homepage/leaf-venation-gnn.webp",
+                  "docs/media/homepage/porous-fiber-flow.webp")
 
 
 def digest(path: Path) -> str:
@@ -319,9 +320,13 @@ def check_locale_structure(homepage: str, standalone: str) -> tuple[str, str]:
     prelude = homepage.split("<details", 1)[0]
     require(inline_images(prelude, ".webp") == [HOMEPAGE_HERO] and not inline_gifs(prelude),
             "Expected one homepage hero before the language sections")
-    for label, block in (("English", english), ("Chinese", chinese)):
-        require(tuple(inline_images(block, ".webp")) == LOCALE_MOTION and not inline_gifs(block),
-                f"{label} must show only the selected workflow previews")
+    visible_gallery = homepage.rsplit("</details>", 1)[1]
+    require(tuple(inline_images(visible_gallery, ".webp")) == VISIBLE_MOTION and
+            not inline_gifs(visible_gallery),
+            "Expected all workflow previews outside closed language sections")
+    for section in (zh_section, en_section):
+        require(not inline_images(section, ".webp") and not inline_gifs(section),
+                "Workflow previews must not be duplicated inside language sections")
     return english, chinese
 
 
@@ -427,11 +432,13 @@ def main() -> None:
             "Hero decoded shape differs from manifest")
     require(hero_gif["duration_ms"] == hero["canvas"]["duration_ms"],
             "Hero decoded timing differs from manifest")
-    current_motion = [decode_gif(ROOT / path, "WEBP") for path in (HOMEPAGE_HERO, *LOCALE_MOTION)]
+    current_motion = [decode_gif(ROOT / path, "WEBP") for path in (HOMEPAGE_HERO, *VISIBLE_MOTION)]
     for media in current_motion:
         # Dense real venation and the zoom need a separate bound. More lossy
         # versions left trails around the graph-to-matrix transition.
-        byte_limit = 7_000_000 if media["asset"] == "leaf-venation-gnn.webp" else 4_000_000
+        # The full-length pore-flow frame sequence needs its own bound.
+        byte_limit = {"leaf-venation-gnn.webp": 7_000_000,
+                      "porous-fiber-flow.webp": 11_000_000}.get(media["asset"], 4_000_000)
         require(media["size"] == [1280, 720] and media["bytes"] < byte_limit,
                 f"Invalid homepage motion dimensions or size: {media['asset']}")
     report = {"status": "PASS", "documents": document_checks,
