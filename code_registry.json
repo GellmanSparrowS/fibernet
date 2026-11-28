@@ -1902,7 +1902,7 @@
   "purpose": "FiberNet Version Information",
   "status": "active",
   "symbols": [],
-  "sha256": "35bbf2802411598920354761b31813565bf8f6ec2408de5cfd1c337b315b5edd"
+  "sha256": "8a73f5eb544b6d17fad69b5e53451e8767b08e1878a24bc3c5e409eef1d22867"
  },
  "fibernet/visualization.py": {
   "purpose": "Visualization Module for Fiber Networks",
@@ -7190,7 +7190,7 @@
    "test_prepared_wall_is_independent_of_bundle_row_order_and_later_edits",
    "test_prepared_wall_rejects_duplicate_unordered_tetrahedra"
   ],
-  "sha256": "b4277581193b67730dd1b50262e8d25274e1ce46890d93ade56041828da601bd"
+  "sha256": "95dcda6262fcb3efde3340bc00766b91071462e66e55a33bdaee3eebe136193b"
  },
  "fibernet/sim/tet4_resistance_attribution.py": {
   "purpose": "Separate shape and scalar conductivity changes in two-terminal DC.",
@@ -7201,19 +7201,19 @@
    "_orientations",
    "compare_tet4_resistance"
   ],
-  "sha256": "fb44cc686334cb64dbb0d5f385a602f84769945a03419c1b6db5d480db641969"
+  "sha256": "ebe28a0446de85191b63dd55cd9b106a88c5fa85c471e99c379821886ec74824"
  },
  "tests/test_tet4_resistance_attribution.py": {
   "purpose": "Independent finite-scale reference for the DC attribution.",
   "status": "active",
   "symbols": [
    "_bar",
-   "test_affine_bar_exact_resistance_with_reordered_unsigned_ids",
+   "test_affine_bar_exact_resistance_with_reordered_large_ids",
    "test_inverted_cell_is_not_reoriented_and_solved",
    "test_identical_states_reuse_dc_and_give_exact_zeros",
    "test_rejects_bad_input_before_solves",
    "test_two_materials_on_fused_three_path_network"
   ],
-  "sha256": "f36861497e4137028edc6a5ea3b6c5ed707a98d06dbda9c54c60e6c6feb6041d"
+  "sha256": "15bf3f74be61383a68b5a653ad234258cf874c63437dbe45bef2bdfff7ac16c0"
  }
 }

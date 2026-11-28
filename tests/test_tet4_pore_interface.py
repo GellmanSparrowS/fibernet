@@ -11,8 +11,12 @@ def fixtures():
     return _voxel_bundle(_scaffold_voxels(), elastic_modulus=2.e9), bundle()
 
 
-def test_prepared_wall_reuses_one_factor_and_returns_detached_geometry(monkeypatch):
+@pytest.mark.parametrize("first_id", [None, 2**53 + 1, 2**63])
+def test_prepared_wall_reuses_one_factor_and_returns_detached_geometry(monkeypatch, first_id):
     solid, pore = fixtures()
+    if first_id is not None:
+        tags = np.arange(len(solid.points), dtype=np.uint64) + np.uint64(first_id)
+        solid = replace(solid, node_ids=tags)
     calls = []
     sparse_lu = transfer.splu
 
