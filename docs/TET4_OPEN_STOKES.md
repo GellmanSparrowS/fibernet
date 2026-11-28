@@ -24,6 +24,31 @@ size; the direct option admits at most 8,000 cells. These caps do not
 guarantee a peak-memory limit. This does not change
 existing periodic-flow or core dependency behavior.
 
+## Worked example: when a narrower passage increases flow elsewhere
+
+The [three-dimensional feeder example](../examples/feeder_repartition_stokes.py)
+uses one common narrow inlet, three curved passages and one shared exit. It
+builds two meshes and changes only the throat of one passage, holding the
+pressure drop at 3.5 mPa and viscosity at 1 mPa·s. It uses the bounded direct
+solver and writes both quadratic velocity fields as VTU.
+
+From the repository checkout, use CPython 3.12. On Linux, the Gmsh wheel
+also needs the system GLU library (for example, `libglu1-mesa` on Debian
+and Ubuntu).
+
+```sh
+python -m pip install "fibernet==4.40.0" "gmsh==4.13.1" "meshio==5.3.5" "ngsolve==6.2.2608"
+python examples/feeder_repartition_stokes.py shared-feeder-results
+```
+
+Use a new output directory. The validated meshes had 5,822 and 4,582
+tetrahedra. At the shared comparison section, the other two passages
+carried about 27% more flow in the narrowed case, while the total outlet
+flow fell by about 29%. Use `summary.json` for the signed section and
+cap fluxes; the VTUs are for inspecting the field. The two geometries are
+synthetic and fixed during each solve. This demonstrates redistribution for
+this shared-inlet geometry, not transient or fluid–structure coupling.
+
 ## Export the complete quadratic velocity to VTK
 
 Opt in at solve time if the full P2 velocity is needed for visualization.
