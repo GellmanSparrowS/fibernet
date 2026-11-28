@@ -131,14 +131,14 @@ def test_elastic_modulus_comparison_uses_matched_signed_grip_reactions(monkeypat
 
     from fibernet.sim import tet4_pore
     raw = bundle()
-    original = tet4_pore.solve_x_periodic_stokes
+    original = tet4_pore._solve_x_periodic_stokes
     calls = []
 
     def counted(candidate, **kw):
         calls.append(np.array_equal(candidate.points, raw.points))
         return original(candidate, **kw)
 
-    monkeypatch.setattr(tet4_pore, "solve_x_periodic_stokes", counted)
+    monkeypatch.setattr(tet4_pore, "_solve_x_periodic_stokes", counted)
     report = compare_materials()
     assert calls == [True, False, False, False, False]
     soft, stiff = report["materials"]
@@ -160,7 +160,7 @@ def test_matched_cases_prevalidate_all_geometries_before_solving(monkeypatch):
     def forbidden(*args, **kwargs):
         pytest.fail("matched validation must precede any numeric reference solve")
 
-    monkeypatch.setattr(tet4_pore, "solve_x_periodic_stokes", forbidden)
+    monkeypatch.setattr(tet4_pore, "_solve_x_periodic_stokes", forbidden)
     b = bundle()
     first = replace(b, points=b.points*1.01)
     malformed = (
@@ -280,3 +280,90 @@ def test_stokes_block_handles_input_with_first_node_on_high_cap(monkeypatch):
     assert len(sizes) == 1 and sizes[0] < 3000
     np.testing.assert_allclose(actual.axial_flow_m3_s, expected.axial_flow_m3_s, rtol=1e-9)
     np.testing.assert_allclose(actual.power_W, expected.power_W, rtol=1e-9)
+
+def test_matched_pore_flow_ignores_reused_layout_for_reordered_mesh(monkeypatch):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+    b = bundle()
+    native = replace(b, points=b.points*1.025)
+    order = np.arange(len(b.points))[::-1]
+    changed = replace(native, points=native.points[order], node_ids=native.node_ids[order],
+                      tetrahedra=np.argsort(order)[native.tetrahedra])
+    original = tet4_pore._solve_stokes_block
+    route = []
+    def observe(*args, **kwargs):
+        route.append(("reference" if "capture" in kwargs else
+                      "reuse" if "velocity_factor" in kwargs else "cold"))
+        return original(*args, **kwargs)
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", observe)
+    pair, reordered = solve_matched_pore_geometry_cases(b, (native, changed), **settings)
+    assert route == ["reference", "reuse", "cold"]
+    for state in (pair, reordered):
+        np.testing.assert_allclose(state.relative_bulk_flow_change, 1.025**4-1, rtol=1e-9)
+        np.testing.assert_allclose(state.relative_cap_flow_change, 1.025**4-1, rtol=1e-9)
+
+
+def test_warm_pore_failure_recovers_with_cold_block_and_respects_budget(monkeypatch):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+    b = bundle()
+    cases = tuple(replace(b, points=b.points*k) for k in (1.01, .99))
+    original = tet4_pore._solve_stokes_block
+    route = []
+    def warm_bad(*args, **kwargs):
+        if "initial" in kwargs:
+            route.append("reuse")
+            return np.zeros_like(args[1])  # fails the same independent physics gate
+        route.append("reference" if "capture" in kwargs else "cold")
+        return original(*args, **kwargs)
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", warm_bad)
+    recovered = solve_matched_pore_geometry_cases(b, cases, **settings)
+    assert route == ["reference", "reuse", "cold", "reuse", "cold"]
+    route.clear()
+    tight = tet4_pore._stokes_admission(b, 512*1024**2)[2]
+    direct = solve_matched_pore_geometry_cases(b, cases, workspace_limit_bytes=tight, **settings)
+    assert route == ["cold", "cold", "cold"]
+    for a, d in zip(recovered, direct):
+        assert d.baseline.planned_workspace_bytes == tight
+        assert a.baseline.planned_workspace_bytes <= 512*1024**2
+        np.testing.assert_array_equal(a.relative_bulk_flow_change, d.relative_bulk_flow_change)
+        np.testing.assert_array_equal(a.relative_cap_flow_change, d.relative_cap_flow_change)
+
+
+def test_large_normalized_shape_change_uses_cold_stokes_solve(monkeypatch):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+    b = bundle()
+    # Both caps keep the same physical triangulation and positive volumes.
+    same = replace(b, points=b.points*1.025)
+    wide = replace(b, points=b.points * [1., 1.04, 1.])
+    expected = solve_x_periodic_stokes(wide, **settings)
+    original = tet4_pore._solve_stokes_block
+    route = []
+    def observe(*args, **kwargs):
+        route.append(("reference" if "capture" in kwargs else
+                      "reuse" if "velocity_factor" in kwargs else "cold"))
+        return original(*args, **kwargs)
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", observe)
+    _, adjusted = solve_matched_pore_geometry_cases(b, (same, wide), **settings)
+    assert route == ["reference", "reuse", "cold"]
+    np.testing.assert_array_equal(adjusted.deformed.axial_flow_m3_s, expected.axial_flow_m3_s)
+    np.testing.assert_array_equal(adjusted.deformed.cap_flow_m3_s, expected.cap_flow_m3_s)
+    np.testing.assert_array_equal(adjusted.deformed.power_W, expected.power_W)
+
+
+def test_large_reference_factor_is_not_retained(monkeypatch):
+    pytest.importorskip("skfem")
+    from fibernet.sim import tet4_pore
+    monkeypatch.setattr(tet4_pore, "_REFERENCE_FACTOR_NNZ", 1)
+    original = tet4_pore._solve_stokes_block
+    route = []
+    def observe(*args, **kwargs):
+        route.append(("reference" if "capture" in kwargs else
+                      "reuse" if "velocity_factor" in kwargs else "cold"))
+        return original(*args, **kwargs)
+    monkeypatch.setattr(tet4_pore, "_solve_stokes_block", observe)
+    b = bundle()
+    pair = solve_matched_pore_geometry_cases(b, (b, b), **settings)
+    assert route == ["reference", "cold", "cold"]
+    assert all(r.relative_bulk_flow_change == 0. for r in pair)

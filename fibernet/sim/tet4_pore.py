@@ -61,6 +61,25 @@ _MIB=1024**2
 _MAX_NODES=2300
 _MAX_TETS=3400
 _MAX_DOF=14000
+# Charge the one retained factor, row layout and warm vector separately
+# from the normal per-case work estimate, including during a cold retry.
+_REFERENCE_RESERVE_BYTES=32*_MIB
+_REFERENCE_FACTOR_NNZ=1_000_000
+_REFERENCE_MAX_NORMALIZED_MOTION=.01
+
+
+@dataclass
+class _PeriodicReference:
+    layout: tuple[bytes, ...] | None = None
+    normalized_points: np.ndarray | None = None
+    factor: object = None
+    seed: np.ndarray | None = None
+
+    def can_reuse(self, layout, points):
+        return (self.layout is not None and self.layout == layout
+                and np.max(np.abs(points-self.normalized_points), initial=0.)
+                <= _REFERENCE_MAX_NORMALIZED_MOTION)
+
 
 
 def _stokes_admission(bundle,cap_bytes):
@@ -80,7 +99,8 @@ def _stokes_admission(bundle,cap_bytes):
         raise ValueError('periodic Stokes planned work buffers exceed requested limit')
     return n,t,plan
 
-def _solve_stokes_block(system, rhs, velocity_dofs):
+def _solve_stokes_block(system, rhs, velocity_dofs, *, initial=None,
+                        velocity_factor=None, capture=None):
     """Try MINRES with one direct scalar velocity solve and a pressure diagonal."""
     n = system.shape[0]
     if not 3 <= velocity_dofs < n or velocity_dofs % 3:
@@ -102,7 +122,9 @@ def _solve_stokes_block(system, rhs, velocity_dofs):
     pressure_diag = coupling.power(2) @ (1. / vel_diag)
     if np.any(~np.isfinite(pressure_diag)) or np.any(pressure_diag <= 0.):
         raise ValueError("periodic Stokes pressure diagonal is not supported")
-    scalar_factor = splu(scalar, permc_spec="MMD_AT_PLUS_A", options={"SymmetricMode": True})
+    scalar_factor = velocity_factor
+    if scalar_factor is None:
+        scalar_factor = splu(scalar, permc_spec="MMD_AT_PLUS_A", options={"SymmetricMode": True})
 
     def apply(x):
         v = scalar_factor.solve(x[:velocity_dofs].reshape((-1, 3))).ravel()
@@ -111,11 +133,15 @@ def _solve_stokes_block(system, rhs, velocity_dofs):
     preconditioner = LinearOperator(system.shape, matvec=apply, dtype=np.float64)
     # SciPy 1.12 uses tol; newer supported releases use rtol.
     tolerance = "rtol" if "rtol" in signature(minres).parameters else "tol"
-    x, info = minres(system, rhs, M=preconditioner, maxiter=300, check=True, **{tolerance: 2e-13})
+    warm = {} if initial is None else {"x0": initial.copy()}
+    x, info = minres(system, rhs, M=preconditioner, maxiter=300, check=True,
+                     **warm, **{tolerance: 2e-13})
     error = np.linalg.norm(system @ x - rhs, np.inf)
     scale = np.linalg.norm(rhs, np.inf)
     if info != 0 or not np.isfinite(error) or not error <= 1e-9 * scale:
         raise ValueError("periodic Stokes block iteration did not reach the algebraic tolerance")
+    if capture is not None and scalar_factor.nnz <= _REFERENCE_FACTOR_NNZ:
+        capture.extend((scalar_factor, x.copy()))
     return x
 
 
@@ -131,6 +157,13 @@ def solve_x_periodic_stokes(
     A uniform body force represents the prescribed axial pressure gradient.
     The sign is the force exerted on the fluid in +x, i.e. minus dp/dx.
     """
+    return _solve_x_periodic_stokes(bundle, viscosity_Pa_s=viscosity_Pa_s,
+                                    pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
+                                    workspace_limit_bytes=workspace_limit_bytes)
+
+
+def _solve_x_periodic_stokes(bundle, *, viscosity_Pa_s, pressure_gradient_Pa_per_m,
+                             workspace_limit_bytes, reference=None, record_reference=False):
     n,t,plan=_stokes_admission(bundle,workspace_limit_bytes)
     visc=core._float64(viscosity_Pa_s,'dynamic viscosity in Pa s')
     pg=core._float64(pressure_gradient_Pa_per_m,'signed driver in Pa/m')
@@ -214,11 +247,25 @@ def solve_x_periodic_stokes(
     # end of the entire reduced velocity block, not the pressure gauge index.
     velocity_dofs = int(np.searchsorted(free, inverse[:nv].max() + 1))
 
+    layout = None
+    if reference is not None:
+        plan += _REFERENCE_RESERVE_BYTES
+        for_layout = (free, inverse, sv.element_dofs, bp.element_dofs,
+                      m.node_ids, m.cell_ids, m.tetrahedra)
+        layout = tuple(np.asarray(a).tobytes() for a in for_layout)
+    capture = [] if record_reference else None
+
     def solve_and_check(mode):
         u=np.zeros(len(reduced))
         try:
-            if mode == 'block':
-                u[free] = _solve_stokes_block(system, reduced[free], velocity_dofs)
+            if mode == 'warm-block':
+                u[free] = _solve_stokes_block(system, reduced[free], velocity_dofs,
+                                             initial=reference.seed, velocity_factor=reference.factor)
+            elif mode == 'block':
+                if capture is not None:
+                    u[free] = _solve_stokes_block(system, reduced[free], velocity_dofs, capture=capture)
+                else:
+                    u[free] = _solve_stokes_block(system, reduced[free], velocity_dofs)
             else:
                 kwargs = {'options': {'SymmetricMode': True}} if mode == 'structured-lu' else {}
                 u[free] = splu(system, permc_spec='MMD_AT_PLUS_A', **kwargs).solve(reduced[free])
@@ -251,11 +298,23 @@ def solve_x_periodic_stokes(
 
     # The saddle operator is symmetric but indefinite. Test each candidate
     # against the same physical gates, and keep both direct LU paths.
+    if reference is not None and not record_reference and reference.can_reuse(layout, x):
+        try:
+            return solve_and_check('warm-block')
+        except ValueError:
+            # Always try a cold solve on this geometry before the direct fallbacks.
+            pass
     for mode in ('block', 'structured-lu'):
         try:
-            return solve_and_check(mode)
+            result = solve_and_check(mode)
+            if record_reference and mode == 'block' and capture:
+                reference.layout = layout
+                reference.normalized_points = x
+                reference.factor, reference.seed = capture
+            return result
         except ValueError:
-            pass
+            if capture:
+                capture.clear()
     return solve_and_check('original-lu')
 
 
@@ -341,10 +400,21 @@ def solve_matched_pore_geometry_cases(reference, reshaped_cases, *, viscosity_Pa
     settings = dict(viscosity_Pa_s=viscosity_Pa_s,
                     pressure_gradient_Pa_per_m=pressure_gradient_Pa_per_m,
                     workspace_limit_bytes=workspace_limit_bytes)
-    q0 = solve_x_periodic_stokes(a, **settings)
+    can_reserve = len(candidates) > 1 and all(
+        _stokes_admission(mesh, workspace_limit_bytes)[2] + _REFERENCE_RESERVE_BYTES <= workspace_limit_bytes
+        for mesh in (a, *(mesh for mesh, _ in candidates))
+    )
+    seed = _PeriodicReference() if can_reserve else None
+    if seed is None:
+        q0 = solve_x_periodic_stokes(a, **settings)
+    else:
+        q0 = _solve_x_periodic_stokes(a, **settings, reference=seed, record_reference=True)
     output = []
     for mesh, (lo, hi) in candidates:
-        q1 = solve_x_periodic_stokes(mesh, **settings)
+        if seed is None:
+            q1 = solve_x_periodic_stokes(mesh, **settings)
+        else:
+            q1 = _solve_x_periodic_stokes(mesh, **settings, reference=seed)
         delta = tuple(p/q-1. for p, q in zip(q1.cap_flow_m3_s, q0.cap_flow_m3_s))
         output.append(MatchedPoreFlow(q0, q1, q1.axial_flow_m3_s/q0.axial_flow_m3_s-1., delta, lo, hi))
     return tuple(output)
