@@ -162,3 +162,25 @@ def test_cli_does_not_emit_partial_json_on_invalid_input(tmp_path):
     assert result.stdout == ""
     assert "Invalid VTU XML" in result.stderr
     assert "Traceback" not in result.stderr
+
+
+
+def test_cli_reads_saved_native_fixture_without_optional_writer(tmp_path):
+    from json import loads
+    from subprocess import run
+    from sys import executable
+
+    folder = Path(__file__).resolve().parent / "fixtures" / "stokes_cap_cli_v1"
+    result = run([executable, "-m", "fibernet.analysis.stokes_cap_comparison",
+                  str(folder / "reference.vtu"), str(folder / "candidate.vtu")],
+                 cwd=tmp_path, capture_output=True, text=True, check=True, timeout=30)
+    assert result.stderr == ""
+    report = loads(result.stdout)
+    assert report["schema"] == "fibernet-p2-cap-comparison-1"
+    for key, sign in (("x_min", -1), ("x_max", 1)):
+        cap = report[key]
+        assert cap["triangles"] == 1 and cap["area_m2"] == .5
+        np.testing.assert_allclose(
+            [cap["reference_outward_m3_s"], cap["candidate_outward_m3_s"],
+             cap["throughput_ratio"], cap["normalized_profile_residual_L2"]],
+            [sign * .5, sign * .51, 1.02, .02], rtol=0, atol=2e-15)
